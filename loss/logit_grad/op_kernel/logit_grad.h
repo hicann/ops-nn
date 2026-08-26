@@ -29,10 +29,10 @@ constexpr int64_t ONE_REPEAT_ELE_NUM_FP32 = 64;
 constexpr int64_t ALIGN = 16;
 
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
-constexpr AscendC::MicroAPI::CastTrait G5_FP16_TO_FP32_CAST_TRAIT = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait G5_FP16_TO_FP32_CAST_TRAIT = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 #endif
@@ -249,19 +249,19 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<half> regXHalf;
-        AscendC::MicroAPI::RegTensor<half> regDyHalf;
-        AscendC::MicroAPI::RegTensor<float> regX;
-        AscendC::MicroAPI::RegTensor<float> regDy;
-        AscendC::MicroAPI::RegTensor<float> regTmp;
-        AscendC::MicroAPI::RegTensor<float> regOut;
-        AscendC::MicroAPI::RegTensor<float> regLo;
-        AscendC::MicroAPI::RegTensor<float> regHi;
-        AscendC::MicroAPI::RegTensor<float> regInvalid;
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg maskGE;
-        AscendC::MicroAPI::MaskReg maskLE;
-        AscendC::MicroAPI::MaskReg maskValid;
+        AscendC::Reg::RegTensor<half> regXHalf;
+        AscendC::Reg::RegTensor<half> regDyHalf;
+        AscendC::Reg::RegTensor<float> regX;
+        AscendC::Reg::RegTensor<float> regDy;
+        AscendC::Reg::RegTensor<float> regTmp;
+        AscendC::Reg::RegTensor<float> regOut;
+        AscendC::Reg::RegTensor<float> regLo;
+        AscendC::Reg::RegTensor<float> regHi;
+        AscendC::Reg::RegTensor<float> regInvalid;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg maskGE;
+        AscendC::Reg::MaskReg maskLE;
+        AscendC::Reg::MaskReg maskValid;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
         uint16_t vfLoopNum = static_cast<uint16_t>((count + vfLen - 1) / vfLen);
@@ -269,31 +269,28 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedFp16(int64_t dataCount)
         __local_mem__ half* dyAddr = (__local_mem__ half*)x2Tmp.GetPhyAddr();
         __local_mem__ float* outAddr = (__local_mem__ float*)x1TensorFp32.GetPhyAddr();
 
-        AscendC::MicroAPI::Duplicate<float>(regLo, lo);
-        AscendC::MicroAPI::Duplicate<float>(regHi, hi);
-        AscendC::MicroAPI::Duplicate<float>(regInvalid, selectValue);
+        AscendC::Reg::Duplicate<float>(regLo, lo);
+        AscendC::Reg::Duplicate<float>(regHi, hi);
+        AscendC::Reg::Duplicate<float>(regInvalid, selectValue);
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(rem);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(regXHalf,
-                                                                                            xAddr + i * vfLen);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(regDyHalf,
-                                                                                            dyAddr + i * vfLen);
-            AscendC::MicroAPI::Cast<float, half, G5_FP16_TO_FP32_CAST_TRAIT>(regX, regXHalf, preg0);
-            AscendC::MicroAPI::Cast<float, half, G5_FP16_TO_FP32_CAST_TRAIT>(regDy, regDyHalf, preg0);
-            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                regTmp, regX, static_cast<float>(-1.0), preg0);
-            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                regTmp, regTmp, static_cast<float>(1.0), preg0);
-            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(regTmp, regX, regTmp, preg0);
-            AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(regDy, regDy, regTmp, preg0);
-            AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::GE>(maskGE, regX, regLo, preg0);
-            AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
-            AscendC::MicroAPI::MaskAnd(maskValid, maskGE, maskLE, preg0);
-            AscendC::MicroAPI::Select<float>(regOut, regDy, regInvalid, maskValid);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(outAddr + i * vfLen, regOut,
-                                                                                            preg0);
+            preg0 = AscendC::Reg::UpdateMask<float>(rem);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(regXHalf, xAddr + i * vfLen);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(regDyHalf, dyAddr + i * vfLen);
+            AscendC::Reg::Cast<float, half, G5_FP16_TO_FP32_CAST_TRAIT>(regX, regXHalf, preg0);
+            AscendC::Reg::Cast<float, half, G5_FP16_TO_FP32_CAST_TRAIT>(regDy, regDyHalf, preg0);
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX,
+                                                                                   static_cast<float>(-1.0), preg0);
+            AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regTmp,
+                                                                                   static_cast<float>(1.0), preg0);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX, regTmp, preg0);
+            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(regDy, regDy, regTmp, preg0);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::GE>(maskGE, regX, regLo, preg0);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
+            AscendC::Reg::MaskAnd(maskValid, maskGE, maskLE, preg0);
+            AscendC::Reg::Select<float>(regOut, regDy, regInvalid, maskValid);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(outAddr + i * vfLen, regOut, preg0);
         }
     }
     PipeBarrier<PIPE_V>();
@@ -309,44 +306,43 @@ __aicore__ inline void LogitGradND<T>::ComputeFusedBf16(int64_t dataCount)
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> regX;
-        AscendC::MicroAPI::RegTensor<float> regDy;
-        AscendC::MicroAPI::RegTensor<float> regTmp;
-        AscendC::MicroAPI::RegTensor<float> regOut;
-        AscendC::MicroAPI::RegTensor<float> regLo;
-        AscendC::MicroAPI::RegTensor<float> regHi;
-        AscendC::MicroAPI::RegTensor<float> regInvalid;
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg maskGE;
-        AscendC::MicroAPI::MaskReg maskLE;
-        AscendC::MicroAPI::MaskReg maskValid;
+        AscendC::Reg::RegTensor<float> regX;
+        AscendC::Reg::RegTensor<float> regDy;
+        AscendC::Reg::RegTensor<float> regTmp;
+        AscendC::Reg::RegTensor<float> regOut;
+        AscendC::Reg::RegTensor<float> regLo;
+        AscendC::Reg::RegTensor<float> regHi;
+        AscendC::Reg::RegTensor<float> regInvalid;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg maskGE;
+        AscendC::Reg::MaskReg maskLE;
+        AscendC::Reg::MaskReg maskValid;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
         uint16_t vfLoopNum = static_cast<uint16_t>((count + vfLen - 1) / vfLen);
         __local_mem__ float* xAddr = (__local_mem__ float*)x1TensorFp32.GetPhyAddr();
         __local_mem__ float* dyAddr = (__local_mem__ float*)x2TensorFp32.GetPhyAddr();
 
-        AscendC::MicroAPI::Duplicate<float>(regLo, lo);
-        AscendC::MicroAPI::Duplicate<float>(regHi, hi);
-        AscendC::MicroAPI::Duplicate<float>(regInvalid, selectValue);
+        AscendC::Reg::Duplicate<float>(regLo, lo);
+        AscendC::Reg::Duplicate<float>(regHi, hi);
+        AscendC::Reg::Duplicate<float>(regInvalid, selectValue);
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(rem);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(regX, xAddr + i * vfLen);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(regDy, dyAddr + i * vfLen);
-            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                regTmp, regX, static_cast<float>(-1.0), preg0);
-            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                regTmp, regTmp, static_cast<float>(1.0), preg0);
-            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(regTmp, regX, regTmp, preg0);
-            AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(regDy, regDy, regTmp, preg0);
-            AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::GE>(maskGE, regX, regLo, preg0);
-            AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
-            AscendC::MicroAPI::MaskAnd(maskValid, maskGE, maskLE, preg0);
-            AscendC::MicroAPI::Select<float>(regOut, regDy, regInvalid, maskValid);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(xAddr + i * vfLen, regOut,
-                                                                                            preg0);
+            preg0 = AscendC::Reg::UpdateMask<float>(rem);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(regX, xAddr + i * vfLen);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(regDy, dyAddr + i * vfLen);
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX,
+                                                                                   static_cast<float>(-1.0), preg0);
+            AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regTmp,
+                                                                                   static_cast<float>(1.0), preg0);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX, regTmp, preg0);
+            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(regDy, regDy, regTmp, preg0);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::GE>(maskGE, regX, regLo, preg0);
+            AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(maskLE, regX, regHi, preg0);
+            AscendC::Reg::MaskAnd(maskValid, maskGE, maskLE, preg0);
+            AscendC::Reg::Select<float>(regOut, regDy, regInvalid, maskValid);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(xAddr + i * vfLen, regOut, preg0);
         }
     }
     PipeBarrier<PIPE_V>();

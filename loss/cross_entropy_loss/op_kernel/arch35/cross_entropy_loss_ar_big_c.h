@@ -20,15 +20,15 @@
 
 namespace CrossEntropyLoss {
 using namespace AscendC;
-using AscendC::MicroAPI::AddrReg;
-using AscendC::MicroAPI::CastTrait;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::AddrReg;
+using AscendC::Reg::CastTrait;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 static constexpr int32_t VF_LEN_B32 = platform::GetVRegSize() / sizeof(float);
 static constexpr int32_t ONE_BLOCK_SIZE = platform::GetUbBlockSize();
@@ -40,10 +40,10 @@ static constexpr int32_t CONST_64 = 64; // N方向固定成64
 static constexpr int32_t CONST_96 = 96; // loss weight smooth reduce后的结果ub大小，3*8*4=96
 static constexpr float MIN_FP32 = -3.402823466e+38;
 
-constexpr static CastTrait castB32ToB16 = {AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                                           AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-constexpr static CastTrait castB16ToB32 = {AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-                                           AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+constexpr static CastTrait castB32ToB16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+constexpr static CastTrait castB16ToB32 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
 class CrossEntropyLossBigC {
@@ -211,8 +211,8 @@ __aicore__ inline void CleanMaxUb(LocalTensor<float>& maxUb)
     {
         MaskReg preg = CreateMask<float, MaskPattern::VL8>();
         RegTensor<float> srcReg0;
-        AscendC::MicroAPI::Duplicate(srcReg0, minValue);
-        AscendC::MicroAPI::StoreAlign(maxUbAddr, srcReg0, preg);
+        AscendC::Reg::Duplicate(srcReg0, minValue);
+        AscendC::Reg::StoreAlign(maxUbAddr, srcReg0, preg);
     }
 }
 
@@ -270,36 +270,36 @@ __aicore__ inline void GetRowMax(int32_t onceC, LocalTensor<float>& maxUb, Local
         RegTensor<float> maxRegLast;
         RegTensor<float> maxUbReg;
         RegTensor<float> maxUbRegLast;
-        AscendC::MicroAPI::Duplicate(maxReg, minValue);
+        AscendC::Reg::Duplicate(maxReg, minValue);
         MaskReg preg = CreateMask<T1, MaskPattern::ALL>();
         MaskReg preg2 = CreateMask<float, MaskPattern::ALL>();
         for (uint16_t jj = 0; jj < repeatTimes1; jj++) {
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(jj, vfLen);
-            AscendC::MicroAPI::LoadAlign(srcReg, inputUbAddr, srcOffset);
-            AscendC::MicroAPI::Max(maxReg, srcReg, maxReg, preg);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<T1>(jj, vfLen);
+            AscendC::Reg::LoadAlign(srcReg, inputUbAddr, srcOffset);
+            AscendC::Reg::Max(maxReg, srcReg, maxReg, preg);
         }
         MaskReg preg1 = UpdateMask<T1>(tailNum);
-        AscendC::MicroAPI::LoadAlign(srcRegT, inputUbAddr + repeatTimes1 * vfLen);
-        AscendC::MicroAPI::Max(maxRegT, maxReg, srcRegT, preg1);
-        AscendC::MicroAPI::Move<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(maxReg, maxRegT, preg1);
+        AscendC::Reg::LoadAlign(srcRegT, inputUbAddr + repeatTimes1 * vfLen);
+        AscendC::Reg::Max(maxRegT, maxReg, srcRegT, preg1);
+        AscendC::Reg::Move<T1, AscendC::Reg::MaskMergeMode::MERGING>(maxReg, maxRegT, preg1);
         if constexpr (sizeof(T1) == sizeof(half)) {
             // 再做reducemax操作，因为bf16不支持vcmax, FP32不用做这个unpack操作
-            AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(
-                (RegTensor<int32_t>&)maxLowReg, (RegTensor<int16_t>&)maxReg);
-            AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
-                (RegTensor<int32_t>&)maxHighReg, (RegTensor<int16_t>&)maxReg);
-            AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxLowRegFp32, maxLowReg, preg2);
-            AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxHighRegFp32, maxHighReg, preg2);
-            AscendC::MicroAPI::Max(maxRegFp32, maxLowRegFp32, maxHighRegFp32, preg2);
-            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxRegLast, maxRegFp32, preg2);
+            AscendC::Reg::UnPack<int32_t, int16_t, AscendC::Reg::HighLowPart::LOWEST>((RegTensor<int32_t>&)maxLowReg,
+                                                                                      (RegTensor<int16_t>&)maxReg);
+            AscendC::Reg::UnPack<int32_t, int16_t, AscendC::Reg::HighLowPart::HIGHEST>((RegTensor<int32_t>&)maxHighReg,
+                                                                                       (RegTensor<int16_t>&)maxReg);
+            AscendC::Reg::Cast<float, T1, castB16ToB32>(maxLowRegFp32, maxLowReg, preg2);
+            AscendC::Reg::Cast<float, T1, castB16ToB32>(maxHighRegFp32, maxHighReg, preg2);
+            AscendC::Reg::Max(maxRegFp32, maxLowRegFp32, maxHighRegFp32, preg2);
+            AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MAX>(maxRegLast, maxRegFp32, preg2);
         } else {
-            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>((RegTensor<T1>&)maxRegLast, maxReg, preg);
+            AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MAX>((RegTensor<T1>&)maxRegLast, maxReg, preg);
         }
         // 再和上一次max做比较
-        AscendC::MicroAPI::LoadAlign(maxUbReg, maxUbAddr);
-        AscendC::MicroAPI::Max(maxUbRegLast, maxRegLast, maxUbReg, preg2);
+        AscendC::Reg::LoadAlign(maxUbReg, maxUbAddr);
+        AscendC::Reg::Max(maxUbRegLast, maxRegLast, maxUbReg, preg2);
         MaskReg maskOne = CreateMask<float, MaskPattern::VL1>();
-        AscendC::MicroAPI::StoreAlign(maxUbAddr, maxUbRegLast, maskOne);
+        AscendC::Reg::StoreAlign(maxUbAddr, maxUbRegLast, maskOne);
     }
 }
 
@@ -323,21 +323,20 @@ __aicore__ inline void ComputeSubExp(LocalTensor<T1>& x1Local, LocalTensor<float
         RegTensor<float> maxReg;
         RegTensor<float> subReg;
         RegTensor<float> expReg;
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr);
         for (uint16_t jj = 0; jj < repeatTimes; jj++) {
             preg = UpdateMask<float>(num);
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(jj, vfLenB32);
-            AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(jj, vfLenB32);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<T1>(jj, vfLenB32);
+            AddrReg outOffset = AscendC::Reg::CreateAddrReg<float>(jj, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr,
-                                                                                               srcOffset);
-                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, preg);
+                AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr, srcOffset);
+                AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, preg);
             } else {
-                AscendC::MicroAPI::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
+                AscendC::Reg::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
             }
-            AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, preg);
-            AscendC::MicroAPI::Exp(expReg, subReg, preg);
-            AscendC::MicroAPI::StoreAlign(tmpUbAddr, expReg, outOffset, preg);
+            AscendC::Reg::Sub(subReg, srcRegfp32, maxReg, preg);
+            AscendC::Reg::Exp(expReg, subReg, preg);
+            AscendC::Reg::StoreAlign(tmpUbAddr, expReg, outOffset, preg);
         }
     }
 }
@@ -364,32 +363,31 @@ __aicore__ inline void ComputeSubExpTail(LocalTensor<T1>& x1Local, LocalTensor<f
         RegTensor<float> subReg;
         RegTensor<float> expReg;
         MaskReg copyOutReg = CreateMask<float, MaskPattern::ALL>();
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr);
         for (uint16_t jj = 0; jj < repeatTimes; jj++) {
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(jj, vfLenB32);
-            AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(jj, vfLenB32);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<T1>(jj, vfLenB32);
+            AddrReg outOffset = AscendC::Reg::CreateAddrReg<float>(jj, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr,
-                                                                                               srcOffset);
-                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, copyOutReg);
+                AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, inputUbAddr, srcOffset);
+                AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, copyOutReg);
             } else {
-                AscendC::MicroAPI::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
+                AscendC::Reg::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr, srcOffset);
             }
-            AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
-            AscendC::MicroAPI::Exp(expReg, subReg, copyOutReg);
-            AscendC::MicroAPI::StoreAlign(tmpUbAddr, expReg, outOffset, copyOutReg);
+            AscendC::Reg::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
+            AscendC::Reg::Exp(expReg, subReg, copyOutReg);
+            AscendC::Reg::StoreAlign(tmpUbAddr, expReg, outOffset, copyOutReg);
         }
         if constexpr (sizeof(T1) == 2) {
-            AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                vreg0, inputUbAddr + repeatTimes * vfLenB32);
-            AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, preg);
+            AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0,
+                                                                                 inputUbAddr + repeatTimes * vfLenB32);
+            AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegfp32, vreg0, preg);
         } else {
-            AscendC::MicroAPI::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr + repeatTimes * vfLenB32);
+            AscendC::Reg::LoadAlign((RegTensor<T1>&)srcRegfp32, inputUbAddr + repeatTimes * vfLenB32);
         }
 
-        AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, preg);
-        AscendC::MicroAPI::Exp(expReg, subReg, preg);
-        AscendC::MicroAPI::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, expReg, preg1);
+        AscendC::Reg::Sub(subReg, srcRegfp32, maxReg, preg);
+        AscendC::Reg::Exp(expReg, subReg, preg);
+        AscendC::Reg::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, expReg, preg1);
     }
 }
 
@@ -412,11 +410,11 @@ __aicore__ inline void FoldAddVF(LocalTensor<float>& tmpUb, LocalTensor<float>& 
         RegTensor<float> expReg;
         for (uint16_t jj = 0; jj < repeatTimes; jj++) {
             preg = UpdateMask<float>(num);
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(jj, vfLenB32);
-            AscendC::MicroAPI::LoadAlign(vreg0, tmpUbAddr, srcOffset);
-            AscendC::MicroAPI::LoadAlign(vreg1, tmpUb1Addr, srcOffset);
-            AscendC::MicroAPI::Add(addReg, vreg0, vreg1, preg);
-            AscendC::MicroAPI::StoreAlign(tmpUbAddr, addReg, srcOffset, preg);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<float>(jj, vfLenB32);
+            AscendC::Reg::LoadAlign(vreg0, tmpUbAddr, srcOffset);
+            AscendC::Reg::LoadAlign(vreg1, tmpUb1Addr, srcOffset);
+            AscendC::Reg::Add(addReg, vreg0, vreg1, preg);
+            AscendC::Reg::StoreAlign(tmpUbAddr, addReg, srcOffset, preg);
         }
     }
 }
@@ -435,13 +433,13 @@ __aicore__ inline void UpdateCache(LocalTensor<float>& srcUb, LocalTensor<float>
     {
         RegTensor<float> aReg, bReg;
         MaskReg pMask = CreateMask<float, MaskPattern::VL1>();
-        AscendC::MicroAPI::LoadAlign(aReg, srcUbAddr);
+        AscendC::Reg::LoadAlign(aReg, srcUbAddr);
         for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-            AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<float>(j, stride);
-            AscendC::MicroAPI::LoadAlign(bReg, dstUbAddr, srcOffsetJ);
-            AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+            AddrReg srcOffsetJ = AscendC::Reg::CreateAddrReg<float>(j, stride);
+            AscendC::Reg::LoadAlign(bReg, dstUbAddr, srcOffsetJ);
+            AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         }
-        AscendC::MicroAPI::StoreAlign(cahUbAddr, aReg, pMask);
+        AscendC::Reg::StoreAlign(cahUbAddr, aReg, pMask);
     }
 }
 
@@ -461,25 +459,24 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
     {
         RegTensor<float> maxReg, sumReg, logReg, srcRegFp32, subMaxReg, dstReg;
         RegTensor<T1> srcReg, dstRegB16;
-        MaskReg maskAll = MicroAPI::CreateMask<float, MaskPattern::ALL>();
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
-        AscendC::MicroAPI::Log(logReg, sumReg, maskAll);
+        MaskReg maskAll = Reg::CreateMask<float, MaskPattern::ALL>();
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
+        AscendC::Reg::Log(logReg, sumReg, maskAll);
         MaskReg pMask;
         for (uint16_t j = 0; j < repeatTimes; ++j) {
             pMask = UpdateMask<float>(sreg);
-            AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLenB32);
-            AddrReg srcOffsety = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLenB32);
+            AddrReg srcOffsetJ = AscendC::Reg::CreateAddrReg<T1>(j, vfLenB32);
+            AddrReg srcOffsety = AscendC::Reg::CreateAddrReg<float>(j, vfLenB32);
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr,
-                                                                                               srcOffsetJ);
-                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, pMask);
+                AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr, srcOffsetJ);
+                AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, pMask);
             } else {
-                AscendC::MicroAPI::LoadAlign((RegTensor<T1>&)srcRegFp32, srcUbAddr, srcOffsetJ);
+                AscendC::Reg::LoadAlign((RegTensor<T1>&)srcRegFp32, srcUbAddr, srcOffsetJ);
             }
-            AscendC::MicroAPI::Sub(subMaxReg, srcRegFp32, maxReg, pMask);
-            AscendC::MicroAPI::Sub(dstReg, subMaxReg, logReg, pMask);
-            AscendC::MicroAPI::StoreAlign(yAddr, dstReg, srcOffsety, pMask);
+            AscendC::Reg::Sub(subMaxReg, srcRegFp32, maxReg, pMask);
+            AscendC::Reg::Sub(dstReg, subMaxReg, logReg, pMask);
+            AscendC::Reg::StoreAlign(yAddr, dstReg, srcOffsety, pMask);
         }
     }
 }
@@ -559,58 +556,58 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
             preg = CreateMask<float, MaskPattern::VL32>();
         }
         if constexpr (ignorex == 1) {
-            AscendC::MicroAPI::Duplicate(srcReg0, 0.0f);
+            AscendC::Reg::Duplicate(srcReg0, 0.0f);
         }
         for (uint16_t j = 0; j < repeatTimes1; j++) {
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLen);
-            AscendC::MicroAPI::LoadAlign(lossReg0, lossOutUbAddr, srcOffset);
-            AscendC::MicroAPI::Muls(lossMulReg, lossReg0, -1.0f, preg);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<float>(j, vfLen);
+            AscendC::Reg::LoadAlign(lossReg0, lossOutUbAddr, srcOffset);
+            AscendC::Reg::Muls(lossMulReg, lossReg0, -1.0f, preg);
             if constexpr (isWeight == 1) {
-                AscendC::MicroAPI::LoadAlign(weightReg0, weightInUbAddr, srcOffset);
-                AscendC::MicroAPI::Mul(lossMulReg, lossMulReg, weightReg0, preg);
+                AscendC::Reg::LoadAlign(weightReg0, weightInUbAddr, srcOffset);
+                AscendC::Reg::Mul(lossMulReg, lossMulReg, weightReg0, preg);
             }
             if constexpr (labelS != 0) {
-                AscendC::MicroAPI::LoadAlign(smoothReg0, smoothUbAddr, srcOffset);
-                AscendC::MicroAPI::Muls(smoothMulReg, smoothReg0, -1.0f, preg);
+                AscendC::Reg::LoadAlign(smoothReg0, smoothUbAddr, srcOffset);
+                AscendC::Reg::Muls(smoothMulReg, smoothReg0, -1.0f, preg);
             }
             if constexpr (ignorex == 1) {
                 preg1 = UpdateMask<T2>(nSize2);
-                AddrReg maskOffset = AscendC::MicroAPI::CreateAddrReg<T2>(j, vfLen);
-                AscendC::MicroAPI::LoadAlign(targetReg, targetUbAddr, maskOffset);
-                AscendC::MicroAPI::Compares<T2, CMPMODE::NE>(dstMask, targetReg, ignoreData, preg1);
+                AddrReg maskOffset = AscendC::Reg::CreateAddrReg<T2>(j, vfLen);
+                AscendC::Reg::LoadAlign(targetReg, targetUbAddr, maskOffset);
+                AscendC::Reg::Compares<T2, CMPMODE::NE>(dstMask, targetReg, ignoreData, preg1);
                 if constexpr (sizeof(T2) == sizeof(int64_t)) {
-                    AscendC::MicroAPI::Pack(dstMask1, dstMask);
-                    AscendC::MicroAPI::Select(lossMulReg1, lossMulReg, srcReg0, dstMask1);
+                    AscendC::Reg::Pack(dstMask1, dstMask);
+                    AscendC::Reg::Select(lossMulReg1, lossMulReg, srcReg0, dstMask1);
                     if constexpr (labelS != 0) {
-                        AscendC::MicroAPI::Select(lossMulRegS1, smoothMulReg, srcReg0, dstMask1);
+                        AscendC::Reg::Select(lossMulRegS1, smoothMulReg, srcReg0, dstMask1);
                     }
                 } else {
-                    AscendC::MicroAPI::Select(lossMulReg1, lossMulReg, srcReg0, dstMask);
+                    AscendC::Reg::Select(lossMulReg1, lossMulReg, srcReg0, dstMask);
                     if constexpr (labelS != 0) {
-                        AscendC::MicroAPI::Select(lossMulRegS1, smoothMulReg, srcReg0, dstMask);
+                        AscendC::Reg::Select(lossMulRegS1, smoothMulReg, srcReg0, dstMask);
                     }
                 }
                 if constexpr (sizeof(T1) == sizeof(half) && reduction == 0 && labelS == 0) {
-                    AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLen);
-                    AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg1, preg);
-                    AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16,
-                                                                                outOffset, preg);
+                    AddrReg outOffset = AscendC::Reg::CreateAddrReg<T1>(j, vfLen);
+                    AscendC::Reg::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg1, preg);
+                    AscendC::Reg::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16, outOffset,
+                                                                           preg);
                 } else {
-                    AscendC::MicroAPI::StoreAlign(lossOutUbAddr, lossMulReg1, srcOffset, preg);
+                    AscendC::Reg::StoreAlign(lossOutUbAddr, lossMulReg1, srcOffset, preg);
                     if constexpr (labelS != 0) {
-                        AscendC::MicroAPI::StoreAlign(smoothUbAddr, lossMulRegS1, srcOffset, preg);
+                        AscendC::Reg::StoreAlign(smoothUbAddr, lossMulRegS1, srcOffset, preg);
                     }
                 }
             } else {
                 if constexpr (sizeof(T1) == sizeof(half) && reduction == 0 && labelS == 0) {
-                    AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLen);
-                    AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg, preg);
-                    AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16,
-                                                                                outOffset, preg);
+                    AddrReg outOffset = AscendC::Reg::CreateAddrReg<T1>(j, vfLen);
+                    AscendC::Reg::Cast<T1, float, castB32ToB16>(lossMulRegB16, lossMulReg, preg);
+                    AscendC::Reg::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossOutUbAddrB16, lossMulRegB16, outOffset,
+                                                                           preg);
                 } else {
-                    AscendC::MicroAPI::StoreAlign(lossOutUbAddr, lossMulReg, srcOffset, preg);
+                    AscendC::Reg::StoreAlign(lossOutUbAddr, lossMulReg, srcOffset, preg);
                     if constexpr (labelS != 0) {
-                        AscendC::MicroAPI::StoreAlign(smoothUbAddr, smoothMulReg, srcOffset, preg);
+                        AscendC::Reg::StoreAlign(smoothUbAddr, smoothMulReg, srcOffset, preg);
                     }
                 }
             }
@@ -749,8 +746,8 @@ __aicore__ inline void CleanRUb(LocalTensor<float>& clearUb)
     {
         RegTensor<float> srcReg0;
         MaskReg preg = UpdateMask<float>(aa);
-        AscendC::MicroAPI::Duplicate(srcReg0, 0.0f);
-        AscendC::MicroAPI::StoreAlign(clearUbAddr, srcReg0, preg);
+        AscendC::Reg::Duplicate(srcReg0, 0.0f);
+        AscendC::Reg::StoreAlign(clearUbAddr, srcReg0, preg);
     }
 }
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
@@ -768,11 +765,11 @@ __aicore__ inline void ReduceSumOne(MaskReg& preg, MaskReg& preg2, __ubuf__ floa
     RegTensor<float> regClean;
     RegTensor<float> srcRegLoss;
     RegTensor<float> srcRegLossSum;
-    AscendC::MicroAPI::LoadAlign(regClean, clearAddr);
-    AscendC::MicroAPI::LoadAlign(srcRegLoss, lossUbAddr);
-    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegLossSum, srcRegLoss, preg);
-    AscendC::MicroAPI::Add(srcRegLoss, srcRegLossSum, regClean, preg2);
-    AscendC::MicroAPI::StoreAlign(clearAddr, srcRegLoss, preg2);
+    AscendC::Reg::LoadAlign(regClean, clearAddr);
+    AscendC::Reg::LoadAlign(srcRegLoss, lossUbAddr);
+    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegLossSum, srcRegLoss, preg);
+    AscendC::Reg::Add(srcRegLoss, srcRegLossSum, regClean, preg2);
+    AscendC::Reg::StoreAlign(clearAddr, srcRegLoss, preg2);
 }
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
 __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS, ignorex>::ComputeReduceN(
@@ -822,19 +819,19 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
 __aicore__ inline void DataCopyAdd(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, MaskReg& regAllFp32,
                                    __ubuf__ float* srcAddr, AddrReg& srcOffset)
 {
-    AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr, srcOffset);
-    AscendC::MicroAPI::Add(srcReg0, srcReg1, srcReg0, regAllFp32);
+    AscendC::Reg::LoadAlign(srcReg1, srcAddr, srcOffset);
+    AscendC::Reg::Add(srcReg0, srcReg1, srcReg0, regAllFp32);
 }
 
 __aicore__ inline void DataCopyAddSumT(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT,
                                        MaskReg& preg, MaskReg& regAllFp32, MaskReg& preg2, uint16_t repeatTimes1,
                                        uint32_t vfLen, __ubuf__ float* srcAddr, __ubuf__ float* dstAddr)
 {
-    AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + repeatTimes1 * vfLen);
-    AscendC::MicroAPI::Add(srcRegT, srcReg1, srcReg0, preg);
-    AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
-    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
-    AscendC::MicroAPI::StoreAlign(dstAddr, srcRegT, preg2);
+    AscendC::Reg::LoadAlign(srcReg1, srcAddr + repeatTimes1 * vfLen);
+    AscendC::Reg::Add(srcRegT, srcReg1, srcReg0, preg);
+    AscendC::Reg::Move<float, AscendC::Reg::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
+    AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
+    AscendC::Reg::StoreAlign(dstAddr, srcRegT, preg2);
 }
 
 template <uint64_t reduction, uint64_t labelS>
@@ -869,15 +866,15 @@ __aicore__ inline void VfAllSum(int32_t size, LocalTensor<float>& allReduceUb, L
         preg = UpdateMask<float>(tail);
         MaskReg preg2 = CreateMask<float, MaskPattern::VL1>();
 
-        AscendC::MicroAPI::Duplicate(srcReg0, 0.0f);
+        AscendC::Reg::Duplicate(srcReg0, 0.0f);
         if constexpr (reduction == 1) {
-            AscendC::MicroAPI::Duplicate(srcRegW0, 0.0f);
+            AscendC::Reg::Duplicate(srcRegW0, 0.0f);
         }
         if constexpr (labelS != 0) {
-            AscendC::MicroAPI::Duplicate(srcRegS0, 0.0f);
+            AscendC::Reg::Duplicate(srcRegS0, 0.0f);
         }
         for (uint16_t j = 0; j < repeatTimes1; j++) {
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLen);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<float>(j, vfLen);
             DataCopyAdd(srcReg0, srcReg1, regAllFp32, allReduceUbLddr, srcOffset);
             if constexpr (reduction == 1) {
                 DataCopyAdd(srcRegW0, srcRegW1, regAllFp32, allReduceUbWddr, srcOffset);
@@ -918,16 +915,16 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
         RegTensor<float> srcRegAdd;
         RegTensor<T1> srcRegAddT1;
         MaskReg preg = CreateMask<float, MaskPattern::VL1>();
-        AscendC::MicroAPI::LoadAlign(srcReg0, srcAddr);
-        AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + 16);
-        AscendC::MicroAPI::Muls(srcRegMul, srcReg0, labelS1, preg);
-        AscendC::MicroAPI::Muls(srcRegMulS, srcReg1, labelSc, preg);
-        AscendC::MicroAPI::Add(srcRegAdd, srcRegMul, srcRegMulS, preg);
+        AscendC::Reg::LoadAlign(srcReg0, srcAddr);
+        AscendC::Reg::LoadAlign(srcReg1, srcAddr + 16);
+        AscendC::Reg::Muls(srcRegMul, srcReg0, labelS1, preg);
+        AscendC::Reg::Muls(srcRegMulS, srcReg1, labelSc, preg);
+        AscendC::Reg::Add(srcRegAdd, srcRegMul, srcRegMulS, preg);
         if constexpr (sizeof(T1) == sizeof(half)) {
-            AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegAdd, preg);
-            AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(dstAddr, srcRegAddT1, preg);
+            AscendC::Reg::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegAdd, preg);
+            AscendC::Reg::StoreAlign<T1, StoreDist::DIST_PACK_B32>(dstAddr, srcRegAddT1, preg);
         } else {
-            AscendC::MicroAPI::StoreAlign(dstAddr, (RegTensor<T1>&)srcRegAdd, preg);
+            AscendC::Reg::StoreAlign(dstAddr, (RegTensor<T1>&)srcRegAdd, preg);
         }
     }
 }
@@ -952,23 +949,23 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
         RegTensor<float> srcRegMulsc;
         RegTensor<T1> srcRegAddT1;
         MaskReg preg = CreateMask<float, MaskPattern::VL1>();
-        AscendC::MicroAPI::LoadAlign(srcReg0, srcAddr);
-        AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + 8);
+        AscendC::Reg::LoadAlign(srcReg0, srcAddr);
+        AscendC::Reg::LoadAlign(srcReg1, srcAddr + 8);
         if constexpr (labelS != 0) {
-            AscendC::MicroAPI::LoadAlign(srcReg2, srcAddr + 16);
-            AscendC::MicroAPI::Div(srcRegDiv1, srcReg2, srcReg1, preg);
+            AscendC::Reg::LoadAlign(srcReg2, srcAddr + 16);
+            AscendC::Reg::Div(srcRegDiv1, srcReg2, srcReg1, preg);
         }
-        AscendC::MicroAPI::Div(srcRegDiv, srcReg0, srcReg1, preg);
+        AscendC::Reg::Div(srcRegDiv, srcReg0, srcReg1, preg);
         if constexpr (labelS != 0) {
-            AscendC::MicroAPI::Muls(srcRegMuls1, srcRegDiv, label1, preg);
-            AscendC::MicroAPI::Muls(srcRegMulsc, srcRegDiv1, labelc, preg);
-            AscendC::MicroAPI::Add(srcRegDiv, srcRegMuls1, srcRegMulsc, preg);
+            AscendC::Reg::Muls(srcRegMuls1, srcRegDiv, label1, preg);
+            AscendC::Reg::Muls(srcRegMulsc, srcRegDiv1, labelc, preg);
+            AscendC::Reg::Add(srcRegDiv, srcRegMuls1, srcRegMulsc, preg);
         }
         if constexpr (sizeof(T1) == sizeof(half)) {
-            AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegDiv, preg);
-            AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(dstAddr, srcRegAddT1, preg);
+            AscendC::Reg::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegDiv, preg);
+            AscendC::Reg::StoreAlign<T1, StoreDist::DIST_PACK_B32>(dstAddr, srcRegAddT1, preg);
         } else {
-            AscendC::MicroAPI::StoreAlign(dstAddr, (RegTensor<T1>&)srcRegDiv, preg);
+            AscendC::Reg::StoreAlign(dstAddr, (RegTensor<T1>&)srcRegDiv, preg);
         }
     }
 }
@@ -1045,51 +1042,50 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
     {
         RegTensor<float> maxReg, sumReg, logReg, srcRegFp32, subMaxReg, dstReg, weightReg;
         RegTensor<T1> srcReg, dstRegB16;
-        MaskReg maskAll = MicroAPI::CreateMask<float, MaskPattern::ALL>();
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
-        AscendC::MicroAPI::Log(logReg, sumReg, maskAll);
+        MaskReg maskAll = Reg::CreateMask<float, MaskPattern::ALL>();
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
+        AscendC::Reg::Log(logReg, sumReg, maskAll);
         MaskReg pMask = UpdateMask<float>(sreg);
         for (uint16_t j = 0; j < repeatTimes; ++j) {
-            AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLenB32);
-            AddrReg srcOffsety = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLenB32);
+            AddrReg srcOffsetJ = AscendC::Reg::CreateAddrReg<T1>(j, vfLenB32);
+            AddrReg srcOffsety = AscendC::Reg::CreateAddrReg<float>(j, vfLenB32);
             if constexpr (sizeof(T1) == sizeof(half)) {
-                AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr,
-                                                                                               srcOffsetJ);
-                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, maskAll);
+                AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(srcReg, srcUbAddr, srcOffsetJ);
+                AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, maskAll);
             } else {
-                AscendC::MicroAPI::LoadAlign(srcRegFp32, srcUbAddrB32, srcOffsety);
+                AscendC::Reg::LoadAlign(srcRegFp32, srcUbAddrB32, srcOffsety);
             }
-            AscendC::MicroAPI::Sub(subMaxReg, srcRegFp32, maxReg, maskAll);
-            AscendC::MicroAPI::Sub(dstReg, subMaxReg, logReg, maskAll);
+            AscendC::Reg::Sub(subMaxReg, srcRegFp32, maxReg, maskAll);
+            AscendC::Reg::Sub(dstReg, subMaxReg, logReg, maskAll);
             if constexpr (isWeight == 1) {
-                AscendC::MicroAPI::LoadAlign(weightReg, weightUbAddr, srcOffsety);
-                AscendC::MicroAPI::Mul(weightReg, dstReg, weightReg, maskAll);
-                AscendC::MicroAPI::StoreAlign(tmpUbAddr, weightReg, srcOffsety, maskAll);
+                AscendC::Reg::LoadAlign(weightReg, weightUbAddr, srcOffsety);
+                AscendC::Reg::Mul(weightReg, dstReg, weightReg, maskAll);
+                AscendC::Reg::StoreAlign(tmpUbAddr, weightReg, srcOffsety, maskAll);
             } else {
-                AscendC::MicroAPI::StoreAlign(tmpUbAddr, dstReg, srcOffsety, maskAll);
+                AscendC::Reg::StoreAlign(tmpUbAddr, dstReg, srcOffsety, maskAll);
             }
 
-            AscendC::MicroAPI::StoreAlign(yAddr, dstReg, srcOffsety, maskAll);
+            AscendC::Reg::StoreAlign(yAddr, dstReg, srcOffsety, maskAll);
         }
         MaskReg pMask1 = UpdateMask<float>(sreg1);
         if constexpr (sizeof(T1) == sizeof(half)) {
-            AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                srcReg, srcUbAddr + repeatTimes * vfLenB32);
-            AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, pMask);
+            AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(srcReg,
+                                                                                 srcUbAddr + repeatTimes * vfLenB32);
+            AscendC::Reg::Cast<float, T1, castB16ToB32>(srcRegFp32, srcReg, pMask);
         } else {
-            AscendC::MicroAPI::LoadAlign(srcRegFp32, srcUbAddrB32 + repeatTimes * vfLenB32);
+            AscendC::Reg::LoadAlign(srcRegFp32, srcUbAddrB32 + repeatTimes * vfLenB32);
         }
-        AscendC::MicroAPI::Sub(subMaxReg, srcRegFp32, maxReg, pMask);
-        AscendC::MicroAPI::Sub(dstReg, subMaxReg, logReg, pMask);
+        AscendC::Reg::Sub(subMaxReg, srcRegFp32, maxReg, pMask);
+        AscendC::Reg::Sub(dstReg, subMaxReg, logReg, pMask);
         if constexpr (isWeight == 1) {
-            AscendC::MicroAPI::LoadAlign(weightReg, weightUbAddr + repeatTimes * vfLenB32);
-            AscendC::MicroAPI::Mul(weightReg, dstReg, weightReg, pMask);
-            AscendC::MicroAPI::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, weightReg, pMask1);
+            AscendC::Reg::LoadAlign(weightReg, weightUbAddr + repeatTimes * vfLenB32);
+            AscendC::Reg::Mul(weightReg, dstReg, weightReg, pMask);
+            AscendC::Reg::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, weightReg, pMask1);
         } else {
-            AscendC::MicroAPI::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, dstReg, pMask1);
+            AscendC::Reg::StoreAlign(tmpUbAddr + repeatTimes * vfLenB32, dstReg, pMask1);
         }
-        AscendC::MicroAPI::StoreAlign(yAddr + repeatTimes * vfLenB32, dstReg, pMask);
+        AscendC::Reg::StoreAlign(yAddr + repeatTimes * vfLenB32, dstReg, pMask);
     }
 }
 
@@ -1233,18 +1229,18 @@ __aicore__ inline void CrossEntropyLossBigC<T1, T2, reduction, isWeight, labelS,
         RegTensor<T1> srcRegAddT1;
         for (uint16_t t = 0; t < times; t++) {
             preg = UpdateMask<float>(size);
-            AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(t, vfLenB32);
-            AscendC::MicroAPI::LoadAlign(srcReg0, lossAddr, srcOffset);
-            AscendC::MicroAPI::LoadAlign(srcReg1, smoothAddr, srcOffset);
-            AscendC::MicroAPI::Muls(srcReg2, srcReg0, label1, preg);
-            AscendC::MicroAPI::Muls(srcReg3, srcReg1, labelc, preg);
-            AscendC::MicroAPI::Add(srcRegAdd, srcReg2, srcReg3, preg);
+            AddrReg srcOffset = AscendC::Reg::CreateAddrReg<float>(t, vfLenB32);
+            AscendC::Reg::LoadAlign(srcReg0, lossAddr, srcOffset);
+            AscendC::Reg::LoadAlign(srcReg1, smoothAddr, srcOffset);
+            AscendC::Reg::Muls(srcReg2, srcReg0, label1, preg);
+            AscendC::Reg::Muls(srcReg3, srcReg1, labelc, preg);
+            AscendC::Reg::Add(srcRegAdd, srcReg2, srcReg3, preg);
             if constexpr (sizeof(T1) == sizeof(half)) {
-                AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegAdd, preg);
-                AddrReg dstOffset = AscendC::MicroAPI::CreateAddrReg<T1>(t, vfLenB32);
-                AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossAddrT1, srcRegAddT1, dstOffset, preg);
+                AscendC::Reg::Cast<T1, float, castB32ToB16>(srcRegAddT1, srcRegAdd, preg);
+                AddrReg dstOffset = AscendC::Reg::CreateAddrReg<T1>(t, vfLenB32);
+                AscendC::Reg::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossAddrT1, srcRegAddT1, dstOffset, preg);
             } else {
-                AscendC::MicroAPI::StoreAlign(lossAddr, srcRegAdd, srcOffset, preg);
+                AscendC::Reg::StoreAlign(lossAddr, srcRegAdd, srcOffset, preg);
             }
         }
     }

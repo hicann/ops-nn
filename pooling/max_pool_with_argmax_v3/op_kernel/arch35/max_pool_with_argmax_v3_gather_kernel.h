@@ -46,17 +46,17 @@ private:
                                             uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
                                             uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset);
     __aicore__ inline void DupAndCopyToCalcBuffer(__ubuf__ T1* dstAddr, __ubuf__ T1* srcAddr);
-    __aicore__ inline void ConvertIndexWithoutPadAlign(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
-                                                       T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-                                                       MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset);
-    __aicore__ inline void ConvertIndexWithoutPadAlignNc(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+    __aicore__ inline void ConvertIndexWithoutPadAlign(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left,
+                                                       T2 wInputActualNoPad, T2 hIndexBase, Reg::RegTensor<T2>& dstReg,
+                                                       int32_t ncInputOffset);
+    __aicore__ inline void ConvertIndexWithoutPadAlignNc(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
                                                          T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-                                                         MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset,
+                                                         Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset,
                                                          int32_t ncOutputCount, int32_t inputNcSize);
     __aicore__ inline void ProcessW(__ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr, int32_t hOffset,
-                                    uint16_t wStrideOffset, MicroAPI::RegTensor<int32_t>& indexReg, uint16_t hKernel,
+                                    uint16_t wStrideOffset, Reg::RegTensor<int32_t>& indexReg, uint16_t hKernel,
                                     uint16_t wKernel, uint16_t repeatElem, int32_t outputOffset,
-                                    MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation);
+                                    Reg::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation);
     __aicore__ inline void SingleRowGather(__ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr,
                                            __ubuf__ T2* argmaxAddr);
     __aicore__ inline void MultiRowGather(__ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr);
@@ -239,15 +239,15 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::DupBuffe
                                                                                         uint32_t repeatElm,
                                                                                         uint16_t loop, uint32_t tail)
 {
-    MicroAPI::RegTensor<T1> v0;
+    Reg::RegTensor<T1> v0;
     DuplicateNegInfReg<T1>(v0);
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<T1, MicroAPI::MaskPattern::ALL>();
+    Reg::MaskReg preg = Reg::CreateMask<T1, Reg::MaskPattern::ALL>();
     uint32_t maskCount = tail;
     for (uint16_t i = 0; i < loop; i++) {
-        MicroAPI::StoreAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+        Reg::StoreAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
     }
-    preg = MicroAPI::UpdateMask<T1>(maskCount);
-    MicroAPI::StoreAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+    preg = Reg::UpdateMask<T1>(maskCount);
+    Reg::StoreAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::CopyToCalcBuffer(
@@ -255,19 +255,19 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::CopyToCa
     uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride,
     uint32_t dstRowOffset, uint32_t dstColOffset)
 {
-    MicroAPI::RegTensor<T1> v0;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::RegTensor<T1> v0;
+    Reg::UnalignRegForStore u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
             __ubuf__ T1* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
             __ubuf__ T1* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
-                MicroAPI::LoadAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
+                Reg::LoadAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
             }
-            MicroAPI::LoadAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-            MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
+            Reg::LoadAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+            Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+            Reg::StoreUnAlignPost(curDstAddr, u0, 0);
         }
     }
 }
@@ -327,16 +327,16 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::Compute(
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertIndexWithoutPadAlignNc(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
+    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+    Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
 {
     ConvertIndexWithoutPadAlignNcCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
                                                     ncInputOffset, ncOutputCount, inputNcSize);
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertIndexWithoutPadAlign(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
+    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+    Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset)
 {
     ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
                                                   ncInputOffset);
@@ -344,50 +344,50 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertI
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ProcessW(
     __ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr, int32_t hOffset, uint16_t wStrideOffset,
-    MicroAPI::RegTensor<int32_t>& indexReg, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
-    int32_t outputOffset, MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation)
+    Reg::RegTensor<int32_t>& indexReg, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem, int32_t outputOffset,
+    Reg::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation)
 {
-    MicroAPI::RegTensor<int32_t> indexWithOffset;
-    MicroAPI::RegTensor<T1> calcReg;
-    MicroAPI::RegTensor<int32_t> calcMaxIndexReg;
+    Reg::RegTensor<int32_t> indexWithOffset;
+    Reg::RegTensor<T1> calcReg;
+    Reg::RegTensor<int32_t> calcMaxIndexReg;
     uint32_t maskCount = repeatElem;
-    MicroAPI::MaskReg allMaskU32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg gatherMask = MicroAPI::UpdateMask<T1>(maskCount);
-    MicroAPI::RegTensor<T1> maxReg;
-    MicroAPI::MaskReg neMask;
-    MicroAPI::MaskReg gtMask;
-    MicroAPI::MaskReg tmpMask;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::MaskReg allMaskU32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg gatherMask = Reg::UpdateMask<T1>(maskCount);
+    Reg::RegTensor<T1> maxReg;
+    Reg::MaskReg neMask;
+    Reg::MaskReg gtMask;
+    Reg::MaskReg tmpMask;
+    Reg::UnalignRegForStore u0;
 
     __ubuf__ T1* maxValueAddrLocal = maxValueAddr + outputOffset;
     DuplicateNegInfReg<T1>(maxReg);
-    MicroAPI::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
+    Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
     for (uint16_t i = 0; i < hKernel; i++) {
         for (uint16_t j = 0; j < wKernel; j++) {
             int32_t relIndex = i * wStrideOffset * hDilation + j * wDilation;
             int32_t offset = static_cast<int32_t>(hOffset + relIndex);
-            MicroAPI::Adds(indexWithOffset, indexReg, offset, allMaskU32);
+            Reg::Adds(indexWithOffset, indexReg, offset, allMaskU32);
             if constexpr (std::is_same<T1, float>::value) {
-                MicroAPI::Gather(calcReg, computeAddr, (MicroAPI::RegTensor<uint32_t>&)indexWithOffset, gatherMask);
+                Reg::Gather(calcReg, computeAddr, (Reg::RegTensor<uint32_t>&)indexWithOffset, gatherMask);
             } else {
-                MicroAPI::RegTensor<uint16_t> indexConvert;
-                MicroAPI::Pack(indexConvert, indexWithOffset);
-                MicroAPI::Gather(calcReg, computeAddr, indexConvert, gatherMask);
+                Reg::RegTensor<uint16_t> indexConvert;
+                Reg::Pack(indexConvert, indexWithOffset);
+                Reg::Gather(calcReg, computeAddr, indexConvert, gatherMask);
             }
-            MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, calcReg, maxReg, gatherMask);
-            MicroAPI::Compare<T1, CMPMODE::NE>(neMask, calcReg, calcReg, gatherMask);
-            MicroAPI::Or(gtMask, gtMask, neMask, gatherMask);
+            Reg::Compare<T1, CMPMODE::GT>(gtMask, calcReg, maxReg, gatherMask);
+            Reg::Compare<T1, CMPMODE::NE>(neMask, calcReg, calcReg, gatherMask);
+            Reg::Or(gtMask, gtMask, neMask, gatherMask);
             if constexpr (sizeof(int32_t) / sizeof(T1) == 1) {
-                MicroAPI::Select(maxIndexReg, indexWithOffset, maxIndexReg, gtMask);
+                Reg::Select(maxIndexReg, indexWithOffset, maxIndexReg, gtMask);
             } else {
-                MicroAPI::UnPack(tmpMask, gtMask);
-                MicroAPI::Select(maxIndexReg, indexWithOffset, maxIndexReg, tmpMask);
+                Reg::UnPack(tmpMask, gtMask);
+                Reg::Select(maxIndexReg, indexWithOffset, maxIndexReg, tmpMask);
             }
-            MicroAPI::Max(maxReg, maxReg, calcReg, gatherMask);
+            Reg::Max(maxReg, maxReg, calcReg, gatherMask);
         }
     }
-    MicroAPI::StoreUnAlign(maxValueAddrLocal, maxReg, u0, repeatElem);
-    MicroAPI::StoreUnAlignPost(maxValueAddrLocal, u0, 0);
+    Reg::StoreUnAlign(maxValueAddrLocal, maxReg, u0, repeatElem);
+    Reg::StoreUnAlignPost(maxValueAddrLocal, u0, 0);
     return;
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
@@ -420,13 +420,13 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::SingleRo
     for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<int32_t> indexReg;
-            MicroAPI::RegTensor<int32_t> maxIndexReg;
-            MicroAPI::RegTensor<T2> maxIndexConvertReg;
-            MicroAPI::UnalignRegForStore u1;
-            MicroAPI::Arange(indexReg, static_cast<int32_t>(0));
-            MicroAPI::MaskReg preg = MicroAPI::CreateMask<T1, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Muls(indexReg, indexReg, static_cast<int32_t>(wStride), preg);
+            Reg::RegTensor<int32_t> indexReg;
+            Reg::RegTensor<int32_t> maxIndexReg;
+            Reg::RegTensor<T2> maxIndexConvertReg;
+            Reg::UnalignRegForStore u1;
+            Reg::Arange(indexReg, static_cast<int32_t>(0));
+            Reg::MaskReg preg = Reg::CreateMask<T1, Reg::MaskPattern::ALL>();
+            Reg::Muls(indexReg, indexReg, static_cast<int32_t>(wStride), preg);
             int32_t ncInputOffset = nc * hInputActualPad * wInputActualAlignedPad;
             int32_t ncOutputOffset = nc * hOutputActual * wOutputActual;
             __ubuf__ T2* argmaxAddrLocal = argmaxAddr + ncOutputOffset;
@@ -439,8 +439,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::SingleRo
                              repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
                     ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
                                                 maxIndexConvertReg, ncInputOffset);
-                    MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-                    MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+                    Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+                    Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
                 }
                 int32_t wOffsetTail = ncInputOffset + hLoop * wInputActualAlignedPad * hStride +
                                       loopW * repeatsElem * wStride;
@@ -449,8 +449,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::SingleRo
                          tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
                 ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
                                             maxIndexConvertReg, ncInputOffset);
-                MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-                MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+                Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+                Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
             }
         }
     }
@@ -488,10 +488,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
     uint32_t wDilation = tilingData_.wDilation;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int32_t> indexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<T2> maxIndexConvertReg;
-        MicroAPI::UnalignRegForStore u1;
+        Reg::RegTensor<int32_t> indexReg;
+        Reg::RegTensor<int32_t> maxIndexReg;
+        Reg::RegTensor<T2> maxIndexConvertReg;
+        Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr;
         GenGatterIndex2D<int32_t>(indexReg, rate2D, wOutputActual, wStride);
         for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
@@ -503,8 +503,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
                          repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
                 ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
                                             maxIndexConvertReg, ncInputOffset);
-                MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-                MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+                Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+                Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
             }
             int32_t wOffsetTail = ncInputOffset + hLoopTimes * hBatchCount * hStride * wInputActualAlignedPad;
             int32_t wOutputOffsetTail = nc * hOutputActual * wOutputActual + hLoopTimes * hBatchCount * wOutputActual;
@@ -512,8 +512,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
                      tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
             ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
                                         maxIndexConvertReg, ncInputOffset);
-            MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-            MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+            Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+            Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
         }
     }
     return;
@@ -551,10 +551,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiNcG
     uint32_t wDilation = tilingData_.wDilation;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int32_t> indexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<T2> maxIndexConvertReg;
-        MicroAPI::UnalignRegForStore u1;
+        Reg::RegTensor<int32_t> indexReg;
+        Reg::RegTensor<int32_t> maxIndexReg;
+        Reg::RegTensor<T2> maxIndexConvertReg;
+        Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr;
         GenGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
         for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
@@ -564,8 +564,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiNcG
                      repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
             ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
                                           maxIndexConvertReg, wOffset, num2D, rate3D);
-            MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-            MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+            Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+            Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
         }
         uint32_t wOffsetTail = ncLoopTimes * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
         uint32_t wOutputOffsetTail = ncLoopTimes * ncBatchCount * hOutputActual * wOutputActual;
@@ -573,8 +573,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiNcG
                  tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
         ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase, maxIndexConvertReg,
                                       wOffsetTail, num2D, rate3D);
-        MicroAPI::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-        MicroAPI::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
+        Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+        Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
     }
     return;
 }

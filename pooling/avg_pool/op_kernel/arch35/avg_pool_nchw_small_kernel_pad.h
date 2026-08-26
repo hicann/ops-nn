@@ -254,7 +254,7 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::CopyAndPad(LocalTe
         __VEC_SCOPE__
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
             CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, srcColStride, oneChannelElements, dstColStride,
                        rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
         }
@@ -275,10 +275,10 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::CopyAndPad(LocalTe
         }
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
             CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
                                                dstBatchStride, dstRowStride, dstOffset, loopN, loopRows, repeatElm,
                                                tailRepeatElm);
@@ -296,7 +296,7 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::CopyAndPad(LocalTe
         __VEC_SCOPE__
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
             CustomCopyByScatterSingleRow<M, U>(xLocalAddr, inLocalAddr, srcBatchStride, srcColStride,
                                                oneChannelElements, dstColStride, rowOffsetInUb, colOffsetInUb,
                                                ubFactorN, hInUb, preColsLoop, totalCols, repeatElm);
@@ -384,8 +384,8 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::ComputeSingleRow(i
     if (ubFactorN == 1U) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             AvgPoolSplitW<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                             oneLoopStrideW, inCols, oneLoopElements, tailLoopElements, halfLoopOut0,
                                             halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor);
@@ -396,8 +396,8 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::ComputeSingleRow(i
             __ubuf__ Z* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::LoadAlign(v0, indexAddr);
+                Reg::RegTensor<U> v0;
+                Reg::LoadAlign(v0, indexAddr);
                 AvgPoolSplitW<T, U, Z, OUT_DIV>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                                 oneLoopStrideW, inCols, oneLoopElements, tailLoopElements, halfLoopOut0,
                                                 halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor);
@@ -464,8 +464,8 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::ComputeMultiRow(in
     CopyAndPad<M, U>(inLocal, n, inRows, inCols, expectRowStart, expectColStart, realRows, realCols);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitH<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, inCols,
                                         oneLoopStrideH, oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1,
                                         tailHalfLoopOut0, tailHalfLoopOut1, divisor);
@@ -527,8 +527,8 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::ComputeMultiBatch(
     CopyAndPad<M, U>(inLocal, n, inRows, inCols, expectRowStart, expectColStart, realRows, realCols);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitBatch<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inCols, oneLoopStride,
                                             oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1,
                                             tailHalfLoopOut0, tailHalfLoopOut1, divisor);

@@ -27,7 +27,7 @@
  *          3. CalAvgOneHo: divide outBuf by kernelH * kernelW
  *          4. TransOut + CopyOut
  *
- * \arch Ascend950 / A5 / DAV_3510 only, RegBase (MicroAPI) main path, VL = 256 Byte.
+ * \arch Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *       [RegBase-native] Host-side gate: AdaptivePool2dBaseTiling::GetShapeAttrsInfo
  *       rejects GetCurNpuArch() != NpuArch::DAV_3510.
  */
@@ -49,31 +49,31 @@ __simd_vf__ inline void UpsampleHAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ f
                                                uint32_t rowBase, uint32_t outBase, uint16_t woNum, uint32_t vlNum,
                                                uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = 0; wo < woNum; wo++) {
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(wStartAddr[wo])) * vlNum;
         uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
+        Reg::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t k = 0; k < kernelW; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
+        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
+            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < kernelW; k++) {
                 uint32_t inputOffset1 = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset1);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -82,33 +82,33 @@ template <typename T, const uint32_t NC_FACTOR>
 __simd_vf__ inline void UpsampleHAccumulateWBulkVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr, uint32_t rowBase,
                                                    uint32_t outBase, uint16_t woNum, uint32_t vlNum, uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::RegTensor<float> outReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = 0; wo < woNum; wo++) {
         uint32_t inputOffset = (rowBase + static_cast<uint32_t>(wo)) * vlNum;
         uint32_t outOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::Duplicate(sumReg, 0.0f);
+        Reg::Duplicate(sumReg, 0.0f);
         ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-        MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
         ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum);
-        MicroAPI::Add(sumReg, sumReg, inputReg, preg);
-        MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-        MicroAPI::Add(outReg, outReg, sumReg, preg);
-        MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
+        Reg::LoadAlign(outReg, outAddr + outOffset);
+        Reg::Add(outReg, outReg, sumReg, preg);
+        Reg::StoreAlign(outAddr + outOffset, outReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::Duplicate(sumReg, 0.0f);
+            Reg::Duplicate(sumReg, 0.0f);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vfLenFp32);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum + vfLenFp32);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
-            MicroAPI::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
-            MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+            Reg::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
+            Reg::Add(outReg, outReg, sumReg, preg);
+            Reg::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
         }
     }
 }
@@ -119,9 +119,9 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
                                                        uint32_t rowBase, uint32_t outBase, uint16_t wiNum,
                                                        uint32_t vlNum, uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> outReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wi = 0; wi < wiNum; wi++) {
         uint32_t inputOffset = (rowBase + static_cast<uint32_t>(wi)) * vlNum;
@@ -132,9 +132,9 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
         for (uint16_t j = 0; j < woCount; j++) {
             uint32_t wo = woStart + static_cast<uint32_t>(j);
             uint32_t outOffset = outBase + wo * vlNum;
-            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-            MicroAPI::Add(outReg, outReg, inputReg, preg);
-            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+            Reg::LoadAlign(outReg, outAddr + outOffset);
+            Reg::Add(outReg, outReg, inputReg, preg);
+            Reg::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
@@ -143,9 +143,9 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
             for (uint16_t j = 0; j < woCount; j++) {
                 uint32_t wo = woStart + static_cast<uint32_t>(j);
                 uint32_t outOffset1 = outBase + wo * vlNum + vfLenFp32;
-                MicroAPI::LoadAlign(outReg, outAddr + outOffset1);
-                MicroAPI::Add(outReg, outReg, inputReg, preg);
-                MicroAPI::StoreAlign(outAddr + outOffset1, outReg, preg);
+                Reg::LoadAlign(outReg, outAddr + outOffset1);
+                Reg::Add(outReg, outReg, inputReg, preg);
+                Reg::StoreAlign(outAddr + outOffset1, outReg, preg);
             }
         }
     }
@@ -161,37 +161,37 @@ __simd_vf__ inline void UpsampleHCalWiToWoInfoVf(__ubuf__ int32_t* wiWoStartAddr
     AapIndexRegType<ID_T> countReg;
     AapIndexRegType<ID_T> dupReg;
     // See CalWKernelInfo: Pack narrows b64->b32 and requires an unsigned destination.
-    MicroAPI::RegTensor<uint32_t> startDstReg;
-    MicroAPI::RegTensor<uint32_t> countDstReg;
-    MicroAPI::MaskReg calMask;
+    Reg::RegTensor<uint32_t> startDstReg;
+    Reg::RegTensor<uint32_t> countDstReg;
+    Reg::MaskReg calMask;
 
-    MicroAPI::Duplicate(dupReg, static_cast<ID_T>(wInDim));
+    Reg::Duplicate(dupReg, static_cast<ID_T>(wInDim));
     for (uint16_t i = 0; i < loopSize; i++) {
         if constexpr (IsSameType<ID_T, int64_t>::value) {
-            calMask = MicroAPI::UpdateMask<ID_T, MicroAPI::RegTraitNumTwo>(dataLen);
+            calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
         } else {
-            calMask = MicroAPI::UpdateMask<ID_T>(dataLen);
+            calMask = Reg::UpdateMask<ID_T>(dataLen);
         }
         ID_T startIdx = i * vfLen;
-        MicroAPI::Arange(startIdxReg, startIdx);
-        MicroAPI::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-        MicroAPI::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        MicroAPI::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        MicroAPI::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wInDim - 1), calMask);
-        MicroAPI::Div(startIdxReg, startIdxReg, dupReg, calMask);
-        MicroAPI::Div(endIdxReg, endIdxReg, dupReg, calMask);
-        MicroAPI::Sub(countReg, endIdxReg, startIdxReg, calMask);
+        Reg::Arange(startIdxReg, startIdx);
+        Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
+        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wOutDim), calMask);
+        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim), calMask);
+        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wInDim - 1), calMask);
+        Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
+        Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
+        Reg::Sub(countReg, endIdxReg, startIdxReg, calMask);
 
         if constexpr (IsSameType<ID_T, int64_t>::value) {
             // Narrow b64 indices to b32; see CalWKernelInfo. Under RegTraitNumTwo
             // reg[0] already holds the low words of all 64 elements.
-            MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(startDstReg, startIdxReg);
-            MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(countDstReg, countReg);
-            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
-            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
+            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(startDstReg, startIdxReg);
+            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(countDstReg, countReg);
+            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
+            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
         } else {
-            MicroAPI::StoreAlign(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
-            MicroAPI::StoreAlign(wiWoCountAddr + i * vfLen, countReg, calMask);
+            Reg::StoreAlign(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
+            Reg::StoreAlign(wiWoCountAddr + i * vfLen, countReg, calMask);
         }
     }
 }
@@ -199,12 +199,12 @@ __simd_vf__ inline void UpsampleHCalWiToWoInfoVf(__ubuf__ int32_t* wiWoStartAddr
 __simd_vf__ inline void UpsampleHBroadcastRowVf(__ubuf__ float* outAddr, uint32_t srcOffset, uint32_t dstOffset,
                                                 uint16_t loopSize, uint32_t remaining, uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> rowReg;
+    Reg::RegTensor<float> rowReg;
     for (uint16_t i = 0; i < loopSize; i++) {
-        MicroAPI::MaskReg mask = MicroAPI::UpdateMask<float>(remaining);
-        MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<float>(i, vfLenFp32);
-        MicroAPI::LoadAlign(rowReg, outAddr + srcOffset, offset);
-        MicroAPI::StoreAlign(outAddr + dstOffset, rowReg, offset, mask);
+        Reg::MaskReg mask = Reg::UpdateMask<float>(remaining);
+        Reg::AddrReg offset = Reg::CreateAddrReg<float>(i, vfLenFp32);
+        Reg::LoadAlign(rowReg, outAddr + srcOffset, offset);
+        Reg::StoreAlign(outAddr + dstOffset, rowReg, offset, mask);
     }
 }
 
@@ -214,43 +214,43 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterVf(__ubuf__ T* inputAddr, __ub
                                                      uint32_t rowBase, uint16_t woNum, uint16_t hoCnt, uint32_t vlNum,
                                                      uint32_t wOutAlign, uint32_t vfLenFp32, int64_t hoStart)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::RegTensor<float> outReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = 0; wo < woNum; wo++) {
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(wStartAddr[wo])) * vlNum;
         uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
 
-        MicroAPI::Duplicate(sumReg, 0.0f);
+        Reg::Duplicate(sumReg, 0.0f);
         for (uint16_t k = 0; k < kernelW; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
         }
 
         for (uint16_t j = 0; j < hoCnt; j++) {
             uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * wOutAlign * vlNum +
                                  static_cast<uint32_t>(wo) * vlNum;
-            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-            MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+            Reg::LoadAlign(outReg, outAddr + outOffset);
+            Reg::Add(outReg, outReg, sumReg, preg);
+            Reg::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::Duplicate(sumReg, 0.0f);
+            Reg::Duplicate(sumReg, 0.0f);
             for (uint16_t k = 0; k < kernelW; k++) {
                 uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
             for (uint16_t j = 0; j < hoCnt; j++) {
                 uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * wOutAlign * vlNum +
                                      static_cast<uint32_t>(wo) * vlNum + vfLenFp32;
-                MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-                MicroAPI::Add(outReg, outReg, sumReg, preg);
-                MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+                Reg::LoadAlign(outReg, outAddr + outOffset);
+                Reg::Add(outReg, outReg, sumReg, preg);
+                Reg::StoreAlign(outAddr + outOffset, outReg, preg);
             }
         }
     }
@@ -262,39 +262,39 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterBulkVf(__ubuf__ T* inputAddr, 
                                                          uint16_t hoCnt, uint32_t vlNum, uint32_t vfLenFp32,
                                                          int64_t hoStart)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::RegTensor<float> outReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = 0; wo < woNum; wo++) {
         uint32_t inputOffset = (rowBase + static_cast<uint32_t>(wo)) * vlNum;
 
-        MicroAPI::Duplicate(sumReg, 0.0f);
+        Reg::Duplicate(sumReg, 0.0f);
         ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-        MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
         ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum);
-        MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
         for (uint16_t j = 0; j < hoCnt; j++) {
             uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * rowStride +
                                  static_cast<uint32_t>(wo) * vlNum;
-            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-            MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+            Reg::LoadAlign(outReg, outAddr + outOffset);
+            Reg::Add(outReg, outReg, sumReg, preg);
+            Reg::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::Duplicate(sumReg, 0.0f);
+            Reg::Duplicate(sumReg, 0.0f);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vfLenFp32);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum + vfLenFp32);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
             for (uint16_t j = 0; j < hoCnt; j++) {
                 uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * rowStride +
                                      static_cast<uint32_t>(wo) * vlNum + vfLenFp32;
-                MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-                MicroAPI::Add(outReg, outReg, sumReg, preg);
-                MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+                Reg::LoadAlign(outReg, outAddr + outOffset);
+                Reg::Add(outReg, outReg, sumReg, preg);
+                Reg::StoreAlign(outAddr + outOffset, outReg, preg);
             }
         }
     }

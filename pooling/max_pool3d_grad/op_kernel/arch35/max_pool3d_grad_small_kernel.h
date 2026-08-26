@@ -40,20 +40,22 @@ public:
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
     __aicore__ inline void Process();
-    __aicore__ inline void ConvertIndexWithoutPadAlign(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+    __aicore__ inline void ConvertIndexWithoutPadAlign(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
                                                        uint32_t hInputActualPad, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
                                                        TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput,
-                                                       TYPE_ARGMAX dIndexBase, MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg,
+                                                       TYPE_ARGMAX dIndexBase, Reg::RegTensor<TYPE_ARGMAX>& dstReg,
                                                        int32_t ncInputOffset);
     __aicore__ inline void ProcessW(__local_mem__ TYPE_ORIG_X* computeAddr, int32_t hOffset, uint16_t wStrideOffset,
-                                    uint16_t hInputActualPad, MicroAPI::RegTensor<int32_t>& indexReg, uint16_t dKernel,
+                                    uint16_t hInputActualPad, Reg::RegTensor<int32_t>& indexReg, uint16_t dKernel,
                                     uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
-                                    MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t dDilation, uint32_t hDilation,
+                                    Reg::RegTensor<int32_t>& maxIndexReg, uint32_t dDilation, uint32_t hDilation,
                                     uint32_t wDilation);
-    __aicore__ inline void ConvertIndexWithoutPadAlignNc(
-        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t hInputActualPad, TYPE_ARGMAX left,
-        TYPE_ARGMAX wInput, TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput, TYPE_ARGMAX dIndexBase,
-        MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize);
+    __aicore__ inline void ConvertIndexWithoutPadAlignNc(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+                                                         int32_t hInputActualPad, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
+                                                         TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput,
+                                                         TYPE_ARGMAX dIndexBase, Reg::RegTensor<TYPE_ARGMAX>& dstReg,
+                                                         int32_t ncInputOffset, int32_t ncOutputCount,
+                                                         int32_t inputNcSize);
     __aicore__ inline void MultiNcGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr);
     __aicore__ inline void MultiDepGather(__local_mem__ TYPE_ORIG_X* computeAddr,
                                           __local_mem__ TYPE_ARGMAX* argmaxAddr);
@@ -393,7 +395,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     wOutputAligned_ = (wOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
                       MAX_DATA_NUM_IN_ONE_BLOCK;
     dArgmaxActualStart = PStart(dAxisIndex_ * dOutputInner_, padD_, kernelD_, dilationD_,
-                                strideD_); //当处理的大窗口大小
+                                strideD_); // 当处理的大窗口大小
     dArgmaxActualEnd = PEnd(dAxisIndex_ * dOutputInner_ + dOutputActual_ - 1, padD_, strideD_, dArgmax_);
     hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, dilationH_, strideH_);
     hArgmaxActualEnd = PEnd(hAxisIndex_ * hOutputInner_ + hOutputActual_ - 1, padH_, strideH_, hArgmax_);

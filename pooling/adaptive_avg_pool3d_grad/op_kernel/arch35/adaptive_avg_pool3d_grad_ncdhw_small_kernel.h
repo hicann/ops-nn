@@ -464,13 +464,13 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(fullMaskCount);
+            Reg::RegTensor<COMPUTE_TYPE> srcReg;
+            Reg::RegTensor<COMPUTE_TYPE> scaledReg;
+            Reg::RegTensor<COMPUTE_TYPE> dstReg;
+            Reg::MaskReg computeMask = Reg::UpdateMask<uint32_t>(fullMaskCount);
 
-            MicroAPI::LoadAlign(srcReg, srcAddr);
-            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
+            Reg::LoadAlign(srcReg, srcAddr);
+            Reg::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t od = 0; od < dLoopCount; ++od) {
                 const int64_t dRowBase = dRowBase0 + static_cast<int64_t>(od) * hOutputActual_ * wOutputAligned_;
@@ -482,9 +482,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                         __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed]
                                                              .GetPhyAddr();
 
-                        MicroAPI::LoadAlign(dstReg, dstAddr);
-                        MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
+                        Reg::LoadAlign(dstReg, dstAddr);
+                        Reg::Add(dstReg, dstReg, scaledReg, computeMask);
+                        Reg::StoreAlign(dstAddr, dstReg, computeMask);
                     }
                 }
             }
@@ -498,13 +498,13 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(tail);
+            Reg::RegTensor<COMPUTE_TYPE> srcReg;
+            Reg::RegTensor<COMPUTE_TYPE> scaledReg;
+            Reg::RegTensor<COMPUTE_TYPE> dstReg;
+            Reg::MaskReg computeMask = Reg::UpdateMask<uint32_t>(tail);
 
-            MicroAPI::LoadAlign(srcReg, srcAddr);
-            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
+            Reg::LoadAlign(srcReg, srcAddr);
+            Reg::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t od = 0; od < dLoopCount; ++od) {
                 const int64_t dRowBase = dRowBase0 + static_cast<int64_t>(od) * hOutputActual_ * wOutputAligned_;
@@ -516,9 +516,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                         __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed]
                                                              .GetPhyAddr();
 
-                        MicroAPI::LoadAlign(dstReg, dstAddr);
-                        MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
+                        Reg::LoadAlign(dstReg, dstAddr);
+                        Reg::Add(dstReg, dstReg, scaledReg, computeMask);
+                        Reg::StoreAlign(dstAddr, dstReg, computeMask);
                     }
                 }
             }
@@ -531,7 +531,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeF
     LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, uint32_t dstElemCount)
 {
     Duplicate(dstLocal, static_cast<COMPUTE_TYPE>(0), dstElemCount);
-    __VEC_SCOPE__ { MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>(); }
+    __VEC_SCOPE__ { Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>(); }
 
     for (int64_t sdLocal = 0; sdLocal < dGradInputActual_; ++sdLocal) {
         int64_t stD = 0;

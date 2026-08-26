@@ -35,11 +35,11 @@
 
 namespace SoftmaxFocalLossGrad {
 using namespace AscendC;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 
 template <typename T, typename TW, uint64_t hasWeight>
 class SoftmaxFocalLossGradND {
@@ -61,11 +61,11 @@ private:
     // VF 域内复用: 取一段 pred/target/weight 到 fp32 寄存器 / 由它们算出四路行和的逐元素项
     __aicore__ inline void LoadPTW(RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32,
                                    __ubuf__ T* predAddr, __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr,
-                                   AscendC::MicroAPI::AddrReg offT, AscendC::MicroAPI::AddrReg offW,
-                                   AscendC::MicroAPI::AddrReg offF, MaskReg preg);
+                                   AscendC::Reg::AddrReg offT, AscendC::Reg::AddrReg offW, AscendC::Reg::AddrReg offF,
+                                   MaskReg preg);
     __aicore__ inline void SumsOfSeg(__ubuf__ float* wfAddr, __ubuf__ float* wbAddr, __ubuf__ float* ceAddr,
                                      __ubuf__ float* wtAddr, RegTensor<float>& p32, RegTensor<float>& t32,
-                                     RegTensor<float>& w32, AscendC::MicroAPI::AddrReg offF, MaskReg preg);
+                                     RegTensor<float>& w32, AscendC::Reg::AddrReg offF, MaskReg preg);
     __aicore__ inline void SumsVec(__ubuf__ T* predAddr, __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr,
                                    __ubuf__ float* wfAddr, __ubuf__ float* wbAddr, __ubuf__ float* ceAddr,
                                    __ubuf__ float* wtAddr, int64_t rows, int64_t len);
@@ -73,10 +73,10 @@ private:
     __aicore__ inline void GradOfSeg(__ubuf__ float* gradAddr, RegTensor<float>& p32, RegTensor<float>& t32,
                                      RegTensor<float>& w32, RegTensor<float>& d32, RegTensor<float>& wfB,
                                      RegTensor<float>& wbB, RegTensor<float>& ceB, RegTensor<float>& wB,
-                                     AscendC::MicroAPI::AddrReg offO, MaskReg preg);
-    __aicore__ inline void MakeSegOffsets(AscendC::MicroAPI::AddrReg& offT, AscendC::MicroAPI::AddrReg& offW,
-                                          AscendC::MicroAPI::AddrReg& offF, AscendC::MicroAPI::AddrReg& offO,
-                                          uint16_t i, uint16_t j, int64_t strideT, int64_t strideW, int64_t strideF,
+                                     AscendC::Reg::AddrReg offO, MaskReg preg);
+    __aicore__ inline void MakeSegOffsets(AscendC::Reg::AddrReg& offT, AscendC::Reg::AddrReg& offW,
+                                          AscendC::Reg::AddrReg& offF, AscendC::Reg::AddrReg& offO, uint16_t i,
+                                          uint16_t j, int64_t strideT, int64_t strideW, int64_t strideF,
                                           uint32_t vfLen);
     __aicore__ inline void LoadRowScalars(RegTensor<float>& wfB, RegTensor<float>& wbB, RegTensor<float>& ceB,
                                           RegTensor<float>& wB, __ubuf__ float* accAddr, int64_t accStride,
@@ -101,12 +101,12 @@ private:
     }
 
 protected:
-    constexpr static AscendC::MicroAPI::CastTrait castB16ToB32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
-    constexpr static AscendC::MicroAPI::CastTrait castI32ToF32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castB16ToB32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castI32ToF32 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                                             AscendC::Reg::MaskMergeMode::ZEROING,
+                                                             AscendC::RoundMode::CAST_RINT};
 
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);

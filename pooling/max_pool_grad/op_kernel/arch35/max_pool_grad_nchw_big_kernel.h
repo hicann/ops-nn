@@ -314,13 +314,13 @@ private:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<float> negInfVal;
-            MicroAPI::Duplicate(negInfVal, negInf);
-            MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
+            Reg::RegTensor<float> negInfVal;
+            Reg::Duplicate(negInfVal, negInf);
+            Reg::MaskReg pregOne = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
             StoreOneElement<float, float>(maxValAddr, negInfVal, pregOne, 0);
 
-            MicroAPI::RegTensor<int32_t> initResIndex;
-            MicroAPI::Duplicate(initResIndex, static_cast<int32_t>(initIndex));
+            Reg::RegTensor<int32_t> initResIndex;
+            Reg::Duplicate(initResIndex, static_cast<int32_t>(initIndex));
             StoreOneElement<int32_t, int32_t>(argmaxAddr, initResIndex, pregOne, bufferOffset);
         }
         PipeBarrier<PIPE_ALL>();
@@ -352,58 +352,58 @@ private:
         {
             DuplicateNegInf<T1>(xLocalAddr, padNum, dataCount);
 
-            MicroAPI::RegTensor<float> res;
-            MicroAPI::RegTensor<int32_t> resIndex;
-            MicroAPI::RegTensor<int32_t> index;
-            MicroAPI::RegTensor<float> vd0;
+            Reg::RegTensor<float> res;
+            Reg::RegTensor<int32_t> resIndex;
+            Reg::RegTensor<int32_t> index;
+            Reg::RegTensor<float> vd0;
 
-            MicroAPI::MaskReg nanMaskReg;
-            MicroAPI::MaskReg cmpMaskReg;
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+            Reg::MaskReg nanMaskReg;
+            Reg::MaskReg cmpMaskReg;
+            Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-            MicroAPI::Duplicate(resIndex, padIndex);
-            MicroAPI::Duplicate(res, negInf);
-            MicroAPI::Arange(index, 0);
+            Reg::Duplicate(resIndex, padIndex);
+            Reg::Duplicate(res, negInf);
+            Reg::Arange(index, 0);
 
             for (uint16_t i = 0; i < repeatTimes; ++i) {
                 uint32_t maskNum = num;
-                MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<float>(maskNum);
-                MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T1>(i, repeatElm);
+                Reg::MaskReg p0 = Reg::UpdateMask<float>(maskNum);
+                Reg::AddrReg offset = Reg::CreateAddrReg<T1>(i, repeatElm);
                 LoadOneTensor<T1>(xLocalAddr, vd0, p0, offset);
 
-                MicroAPI::Compare<float, CMPMODE::NE>(nanMaskReg, vd0, vd0, maskAll);
-                MicroAPI::Compare<float, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll);
-                MicroAPI::MaskXor(cmpMaskReg, cmpMaskReg, nanMaskReg, maskAll);
-                MicroAPI::Select(res, vd0, res, cmpMaskReg);
-                MicroAPI::Select(resIndex, index, resIndex, cmpMaskReg);
-                MicroAPI::Adds(index, index, repeatElm, maskAll);
+                Reg::Compare<float, CMPMODE::NE>(nanMaskReg, vd0, vd0, maskAll);
+                Reg::Compare<float, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll);
+                Reg::MaskXor(cmpMaskReg, cmpMaskReg, nanMaskReg, maskAll);
+                Reg::Select(res, vd0, res, cmpMaskReg);
+                Reg::Select(resIndex, index, resIndex, cmpMaskReg);
+                Reg::Adds(index, index, repeatElm, maskAll);
             }
 
             ReduceMaxWithIndex<float>(res, index, res, resIndex, padIndex);
 
-            MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::RegTensor<int32_t> realResIndex;
+            Reg::MaskReg pregOne = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
+            Reg::RegTensor<int32_t> realResIndex;
 
             CalcRealIndex<int32_t, SPLITKW>(realResIndex, index, curKw, Base::wOutput_, curOriginIndex);
 
             if constexpr (MERGE) {
-                MicroAPI::RegTensor<int32_t> lastResIndex;
+                Reg::RegTensor<int32_t> lastResIndex;
                 LoadOneElement<int32_t, int32_t>(argmaxAddr, lastResIndex, pregOne, bufferOffset);
 
-                MicroAPI::RegTensor<float> lastRes;
+                Reg::RegTensor<float> lastRes;
                 LoadOneElement<float, float>(maxValAddr, lastRes, pregOne, 0);
 
-                MicroAPI::MaskReg curNanMaskReg;
-                MicroAPI::MaskReg selReg;
+                Reg::MaskReg curNanMaskReg;
+                Reg::MaskReg selReg;
 
-                MicroAPI::Compare<float, CMPMODE::NE>(curNanMaskReg, res, res, maskAll);
-                MicroAPI::Compare<float, CMPMODE::GT>(selReg, res, lastRes, maskAll);
-                MicroAPI::MaskXor(selReg, selReg, curNanMaskReg, maskAll);
+                Reg::Compare<float, CMPMODE::NE>(curNanMaskReg, res, res, maskAll);
+                Reg::Compare<float, CMPMODE::GT>(selReg, res, lastRes, maskAll);
+                Reg::MaskXor(selReg, selReg, curNanMaskReg, maskAll);
 
-                MicroAPI::Select(res, res, lastRes, selReg);
-                MicroAPI::Select(realResIndex, realResIndex, lastResIndex, selReg);
+                Reg::Select(res, res, lastRes, selReg);
+                Reg::Select(realResIndex, realResIndex, lastResIndex, selReg);
 
-                MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
+                Reg::LocalMemBar<Reg::MemType::VEC_LOAD, Reg::MemType::VEC_STORE>();
             }
 
             StoreOneElement<int32_t, int32_t>(argmaxAddr, realResIndex, pregOne, bufferOffset);

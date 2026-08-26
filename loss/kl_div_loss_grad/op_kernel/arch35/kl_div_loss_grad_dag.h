@@ -31,7 +31,7 @@ using namespace Ops::Base;
 using namespace Ops::Base::Vec;
 
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::RegTensor;
 constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 #endif
 
@@ -49,15 +49,15 @@ struct CalcInput : public ElemwiseBinaryOP<U, U, T> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regGrad;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regGrad;
 
             // gt = maximizeFactor * gt
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
-                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
-                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(gradOutAddr, regGrad,
-                                                                                 (int32_t)oneRepeat, pregUp);
+                pregUp = Reg::UpdateMask<U>(totalLen);
+                Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(gradOutAddr, regGrad, (int32_t)oneRepeat,
+                                                                       pregUp);
             }
         }
 #endif

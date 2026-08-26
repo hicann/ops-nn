@@ -46,12 +46,12 @@ constexpr uint16_t MIN_BFLOAT16 = 0xFF80;    // bfloat16's -inf
 constexpr int32_t HALF_OVERFLOW_MODE_CTRL = 48;
 constexpr int32_t ALIGNBLOCK = 32;
 
-constexpr MicroAPI::CastTrait CASTB4TOB2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-constexpr MicroAPI::CastTrait CASTB2TOB4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-constexpr MicroAPI::CastTrait CASTB4TOB8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr Reg::CastTrait CASTB4TOB2 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING,
+                                       RoundMode::CAST_RINT};
+constexpr Reg::CastTrait CASTB2TOB4 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                       RoundMode::UNKNOWN};
+constexpr Reg::CastTrait CASTB4TOB8 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                       RoundMode::UNKNOWN};
 
 template <typename T>
 class AdaptivePool3dBigKernel {

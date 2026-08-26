@@ -17,7 +17,7 @@
  *        without the SmallKernel kernel<128 restriction (which would otherwise fall
  *        through to the slow scalar BigKernel path).
  *
- * \arch Ascend950 / A5 / DAV_3510 only, RegBase (MicroAPI) main path, VL = 256 Byte.
+ * \arch Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *       [RegBase-native] Host-side gate: AdaptivePool2dBaseTiling::GetShapeAttrsInfo
  *       rejects GetCurNpuArch() != NpuArch::DAV_3510.
  */
@@ -41,31 +41,31 @@ __simd_vf__ inline void SplitWAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ floa
                                             uint32_t rowBase, uint32_t outBase, uint16_t woNum, uint32_t vlNum,
                                             uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumRegtensor;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumRegtensor;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t w_o = 0; w_o < woNum; w_o++) {
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(wStartAddr[w_o])) * vlNum;
         uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[w_o]);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(w_o) * vlNum;
 
-        MicroAPI::LoadAlign(sumRegtensor, outAddr + sumOffset);
+        Reg::LoadAlign(sumRegtensor, outAddr + sumOffset);
         for (uint16_t k = 0; k < kernelW; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            MicroAPI::Add(sumRegtensor, sumRegtensor, inputReg, preg);
+            Reg::Add(sumRegtensor, sumRegtensor, inputReg, preg);
         }
-        MicroAPI::StoreAlign(outAddr + sumOffset, sumRegtensor, preg);
+        Reg::StoreAlign(outAddr + sumOffset, sumRegtensor, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumRegtensor, outAddr + sumOffset + vfLenFp32);
+            Reg::LoadAlign(sumRegtensor, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < kernelW; k++) {
                 uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-                MicroAPI::Add(sumRegtensor, sumRegtensor, inputReg, preg);
+                Reg::Add(sumRegtensor, sumRegtensor, inputReg, preg);
             }
-            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumRegtensor, preg);
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumRegtensor, preg);
         }
     }
 }

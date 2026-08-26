@@ -32,11 +32,11 @@
 
 namespace SoftmaxFocalLoss {
 using namespace AscendC;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 
 template <typename T, typename TW, uint64_t hasWeight>
 class SoftmaxFocalLossND {
@@ -62,9 +62,8 @@ private:
     template <bool byAddrReg>
     __aicore__ inline void LoadPredTargetWeight(RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32,
                                                 __ubuf__ T* predPtr, __ubuf__ int32_t* targetPtr,
-                                                __ubuf__ TW* weightPtr, AscendC::MicroAPI::AddrReg offT,
-                                                AscendC::MicroAPI::AddrReg offW, AscendC::MicroAPI::AddrReg offF,
-                                                MaskReg preg);
+                                                __ubuf__ TW* weightPtr, AscendC::Reg::AddrReg offT,
+                                                AscendC::Reg::AddrReg offW, AscendC::Reg::AddrReg offF, MaskReg preg);
     __aicore__ inline void CeFwOfSeg(RegTensor<float>& ceReg, RegTensor<float>& fwReg, RegTensor<float>& p32,
                                      RegTensor<float>& t32, RegTensor<float>& w32, float gamma, float alpha,
                                      MaskReg preg);
@@ -86,12 +85,12 @@ private:
     }
 
 protected:
-    constexpr static AscendC::MicroAPI::CastTrait castB16ToB32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
-    constexpr static AscendC::MicroAPI::CastTrait castI32ToF32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castB16ToB32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castI32ToF32 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                                             AscendC::Reg::MaskMergeMode::ZEROING,
+                                                             AscendC::RoundMode::CAST_RINT};
 
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
@@ -304,13 +303,13 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::CopyOutRow(int64_t 
     __VEC_SCOPE__
     {
         RegTensor<float> valReg;
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, MaskPattern::ALL>();
+        MaskReg pregMain = AscendC::Reg::CreateMask<float, MaskPattern::ALL>();
         for (uint16_t i = 0; i < aTimes; ++i) {
-            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(valReg, rowValAddr + i);
+            AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(valReg, rowValAddr + i);
             for (uint16_t j = 0; j < repeatTimes; ++j) {
-                AscendC::MicroAPI::AddrReg offF = AscendC::MicroAPI::CreateAddrReg<float>(
-                    i, static_cast<uint32_t>(strideT), j, vfLen);
-                AscendC::MicroAPI::StoreAlign(yF32Addr, valReg, offF, pregMain);
+                AscendC::Reg::AddrReg offF = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideT), j,
+                                                                                vfLen);
+                AscendC::Reg::StoreAlign(yF32Addr, valReg, offF, pregMain);
             }
         }
     }

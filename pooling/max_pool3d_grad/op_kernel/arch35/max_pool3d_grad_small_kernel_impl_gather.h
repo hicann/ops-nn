@@ -21,83 +21,83 @@
 namespace MaxPool3DSmallKernelNameSpace {
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlign(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, uint32_t hInputActualPad, TYPE_ARGMAX left,
+    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, uint32_t hInputActualPad, TYPE_ARGMAX left,
     TYPE_ARGMAX wInput, TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput, TYPE_ARGMAX dIndexBase,
-    MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset)
+    Reg::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset)
 {
-    MicroAPI::RegTensor<TYPE_ARGMAX> hIndexReg;
-    MicroAPI::RegTensor<TYPE_ARGMAX> dIndexReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::RegTensor<int32_t> t3Reg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<int32_t> t1Reg;
-    MicroAPI::RegTensor<int32_t> t2Reg;
-    MicroAPI::RegTensor<TYPE_ARGMAX> divResultRegUnpack;
-    MicroAPI::RegTensor<TYPE_ARGMAX> dIndexRegUnpack;
-    MicroAPI::RegTensor<TYPE_ARGMAX> wIndexReg;
-    MicroAPI::RegTensor<int32_t> wIndexRegUnpack;
-    MicroAPI::RegTensor<TYPE_ARGMAX> zeroReg;
-    MicroAPI::MaskReg negInfMask;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg allMaskT2 = MicroAPI::CreateMask<TYPE_ARGMAX, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
-    MicroAPI::Duplicate(t3Reg, static_cast<int32_t>(wStrideOffset * hInputActualPad));
-    MicroAPI::Duplicate(zeroReg, static_cast<TYPE_ARGMAX>(0));
-    MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
-    MicroAPI::Div(t1Reg, srcReg, t3Reg, allMaskB32);
-    MicroAPI::Muls(t2Reg, t1Reg, static_cast<int32_t>(-1 * wStrideOffset * hInputActualPad), allMaskB32);
-    MicroAPI::Add(t2Reg, srcReg, t2Reg, allMaskB32);
-    MicroAPI::Div(divResultReg, t2Reg, constReg, allMaskB32);
-    MicroAPI::Mul(t3Reg, divResultReg, constReg, allMaskB32);
-    MicroAPI::Sub(wIndexRegUnpack, t2Reg, t3Reg, allMaskB32);
+    Reg::RegTensor<TYPE_ARGMAX> hIndexReg;
+    Reg::RegTensor<TYPE_ARGMAX> dIndexReg;
+    Reg::RegTensor<int32_t> constReg;
+    Reg::RegTensor<int32_t> t3Reg;
+    Reg::RegTensor<int32_t> divResultReg;
+    Reg::RegTensor<int32_t> t1Reg;
+    Reg::RegTensor<int32_t> t2Reg;
+    Reg::RegTensor<TYPE_ARGMAX> divResultRegUnpack;
+    Reg::RegTensor<TYPE_ARGMAX> dIndexRegUnpack;
+    Reg::RegTensor<TYPE_ARGMAX> wIndexReg;
+    Reg::RegTensor<int32_t> wIndexRegUnpack;
+    Reg::RegTensor<TYPE_ARGMAX> zeroReg;
+    Reg::MaskReg negInfMask;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg allMaskT2 = Reg::CreateMask<TYPE_ARGMAX, Reg::MaskPattern::ALL>();
+    Reg::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
+    Reg::Duplicate(t3Reg, static_cast<int32_t>(wStrideOffset * hInputActualPad));
+    Reg::Duplicate(zeroReg, static_cast<TYPE_ARGMAX>(0));
+    Reg::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
+    Reg::Div(t1Reg, srcReg, t3Reg, allMaskB32);
+    Reg::Muls(t2Reg, t1Reg, static_cast<int32_t>(-1 * wStrideOffset * hInputActualPad), allMaskB32);
+    Reg::Add(t2Reg, srcReg, t2Reg, allMaskB32);
+    Reg::Div(divResultReg, t2Reg, constReg, allMaskB32);
+    Reg::Mul(t3Reg, divResultReg, constReg, allMaskB32);
+    Reg::Sub(wIndexRegUnpack, t2Reg, t3Reg, allMaskB32);
     if constexpr (std::is_same<TYPE_ARGMAX, int64_t>::value) {
-        MicroAPI::UnPack(dIndexRegUnpack, t1Reg);
-        MicroAPI::UnPack(divResultRegUnpack, divResultReg);
-        MicroAPI::UnPack(wIndexReg, wIndexRegUnpack);
-        MicroAPI::Adds(dIndexReg, dIndexRegUnpack, dIndexBase, allMaskT2);
-        MicroAPI::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
-        MicroAPI::Adds(wIndexReg, wIndexReg, left, allMaskT2);
+        Reg::UnPack(dIndexRegUnpack, t1Reg);
+        Reg::UnPack(divResultRegUnpack, divResultReg);
+        Reg::UnPack(wIndexReg, wIndexRegUnpack);
+        Reg::Adds(dIndexReg, dIndexRegUnpack, dIndexBase, allMaskT2);
+        Reg::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
+        Reg::Adds(wIndexReg, wIndexReg, left, allMaskT2);
     } else {
-        MicroAPI::Adds(dIndexReg, t1Reg, dIndexBase, allMaskB32);
-        MicroAPI::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
-        MicroAPI::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
+        Reg::Adds(dIndexReg, t1Reg, dIndexBase, allMaskB32);
+        Reg::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
+        Reg::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
     }
     if (IS_PAD) {
-        MicroAPI::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, dIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(dIndexReg, zeroReg, dIndexReg, negInfMask);
-        MicroAPI::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
-        MicroAPI::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
+        Reg::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, dIndexReg, zeroReg, allMaskT2);
+        Reg::Select(dIndexReg, zeroReg, dIndexReg, negInfMask);
+        Reg::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
+        Reg::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
+        Reg::Compare<TYPE_ARGMAX, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
+        Reg::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
     }
-    MicroAPI::Muls(dIndexReg, dIndexReg, (wInput * hInput), allMaskT2);
-    MicroAPI::Muls(hIndexReg, hIndexReg, wInput, allMaskT2);
-    MicroAPI::Add(dstReg, hIndexReg, dIndexReg, allMaskT2);
-    MicroAPI::Add(dstReg, dstReg, wIndexReg, allMaskT2);
+    Reg::Muls(dIndexReg, dIndexReg, (wInput * hInput), allMaskT2);
+    Reg::Muls(hIndexReg, hIndexReg, wInput, allMaskT2);
+    Reg::Add(dstReg, hIndexReg, dIndexReg, allMaskT2);
+    Reg::Add(dstReg, dstReg, wIndexReg, allMaskT2);
     return;
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ProcessW(
     __local_mem__ TYPE_ORIG_X* computeAddr, int32_t hOffset, uint16_t wStrideOffset, uint16_t hInputActualPad,
-    MicroAPI::RegTensor<int32_t>& indexReg, uint16_t dKernel, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
-    MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t dDilation, uint32_t hDilation, uint32_t wDilation)
+    Reg::RegTensor<int32_t>& indexReg, uint16_t dKernel, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
+    Reg::RegTensor<int32_t>& maxIndexReg, uint32_t dDilation, uint32_t hDilation, uint32_t wDilation)
 {
-    MicroAPI::RegTensor<int32_t> indexWithOffset;
-    MicroAPI::RegTensor<TYPE_ORIG_X> calcReg;
-    MicroAPI::RegTensor<int32_t> calcMaxIndexReg;
+    Reg::RegTensor<int32_t> indexWithOffset;
+    Reg::RegTensor<TYPE_ORIG_X> calcReg;
+    Reg::RegTensor<int32_t> calcMaxIndexReg;
     uint32_t maskCount = repeatElem;
-    MicroAPI::MaskReg allMaskU32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg gatherMask = MicroAPI::UpdateMask<TYPE_ORIG_X>(maskCount);
-    MicroAPI::RegTensor<TYPE_ORIG_X> maxReg;
-    MicroAPI::MaskReg neMask;
-    MicroAPI::MaskReg gtMask;
-    MicroAPI::MaskReg tmpMask;
-    MicroAPI::UnalignReg u0;
+    Reg::MaskReg allMaskU32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg gatherMask = Reg::UpdateMask<TYPE_ORIG_X>(maskCount);
+    Reg::RegTensor<TYPE_ORIG_X> maxReg;
+    Reg::MaskReg neMask;
+    Reg::MaskReg gtMask;
+    Reg::MaskReg tmpMask;
+    Reg::UnalignReg u0;
 
     SetNegInfReg<TYPE_ORIG_X>(maxReg);
 
-    MicroAPI::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
+    Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
 
     for (uint16_t d = 0; d < dKernel; d++) {
         for (uint16_t i = 0; i < hKernel; i++) {
@@ -105,25 +105,24 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                 int32_t relIndex = d * hInputActualPad * wStrideOffset * dDilation + i * wStrideOffset * hDilation +
                                    j * wDilation;
                 int32_t offset = static_cast<int32_t>(hOffset + relIndex);
-                MicroAPI::Adds(indexWithOffset, indexReg, offset, allMaskU32);
+                Reg::Adds(indexWithOffset, indexReg, offset, allMaskU32);
                 if constexpr (std::is_same<TYPE_ORIG_X, float>::value) {
-                    MicroAPI::DataCopyGather(calcReg, computeAddr, (MicroAPI::RegTensor<uint32_t>&)indexWithOffset,
-                                             gatherMask);
+                    Reg::DataCopyGather(calcReg, computeAddr, (Reg::RegTensor<uint32_t>&)indexWithOffset, gatherMask);
                 } else {
-                    MicroAPI::RegTensor<uint16_t> indexConvert;
-                    MicroAPI::Pack(indexConvert, indexWithOffset);
-                    MicroAPI::DataCopyGather(calcReg, computeAddr, indexConvert, gatherMask);
+                    Reg::RegTensor<uint16_t> indexConvert;
+                    Reg::Pack(indexConvert, indexWithOffset);
+                    Reg::DataCopyGather(calcReg, computeAddr, indexConvert, gatherMask);
                 }
-                MicroAPI::Compare<TYPE_ORIG_X, CMPMODE::GT>(gtMask, calcReg, maxReg, gatherMask);
-                MicroAPI::Compare<TYPE_ORIG_X, CMPMODE::NE>(neMask, calcReg, calcReg, gatherMask);
-                MicroAPI::MaskOr(gtMask, gtMask, neMask, gatherMask);
+                Reg::Compare<TYPE_ORIG_X, CMPMODE::GT>(gtMask, calcReg, maxReg, gatherMask);
+                Reg::Compare<TYPE_ORIG_X, CMPMODE::NE>(neMask, calcReg, calcReg, gatherMask);
+                Reg::MaskOr(gtMask, gtMask, neMask, gatherMask);
                 if constexpr (sizeof(int32_t) / sizeof(TYPE_ORIG_X) == 1) {
-                    MicroAPI::Select(maxIndexReg, indexWithOffset, maxIndexReg, gtMask);
+                    Reg::Select(maxIndexReg, indexWithOffset, maxIndexReg, gtMask);
                 } else {
-                    MicroAPI::MaskUnPack(tmpMask, gtMask);
-                    MicroAPI::Select(maxIndexReg, indexWithOffset, maxIndexReg, tmpMask);
+                    Reg::MaskUnPack(tmpMask, gtMask);
+                    Reg::Select(maxIndexReg, indexWithOffset, maxIndexReg, tmpMask);
                 }
-                MicroAPI::Max(maxReg, maxReg, calcReg, gatherMask);
+                Reg::Max(maxReg, maxReg, calcReg, gatherMask);
             }
         }
     }
@@ -133,19 +132,19 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void
 Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlignNc(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t hInputActualPad, TYPE_ARGMAX left,
+    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t hInputActualPad, TYPE_ARGMAX left,
     TYPE_ARGMAX wInput, TYPE_ARGMAX hIndexBase, TYPE_ARGMAX hInput, TYPE_ARGMAX dIndexBase,
-    MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
+    Reg::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
 {
-    MicroAPI::RegTensor<int32_t> ncIndexReg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
-    MicroAPI::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
-    MicroAPI::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
-    MicroAPI::Sub(srcReg, srcReg, divResultReg, allMaskB32);
+    Reg::RegTensor<int32_t> ncIndexReg;
+    Reg::RegTensor<int32_t> divResultReg;
+    Reg::RegTensor<int32_t> constReg;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::Arange(ncIndexReg, static_cast<int32_t>(0));
+    Reg::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
+    Reg::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
+    Reg::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
+    Reg::Sub(srcReg, srcReg, divResultReg, allMaskB32);
     ConvertIndexWithoutPadAlign(srcReg, wStrideOffset, hInputActualPad, left, wInput, hIndexBase, hInput, dIndexBase,
                                 dstReg, ncInputOffset);
 }
@@ -190,10 +189,10 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     uint32_t wDilation = tilingData_.dilationW;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int32_t> indexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
-        MicroAPI::UnalignReg u1;
+        Reg::RegTensor<int32_t> indexReg;
+        Reg::RegTensor<int32_t> maxIndexReg;
+        Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+        Reg::UnalignReg u1;
         __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
         CalGatterIndex4D<int32_t>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual, wStride);
         for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
@@ -202,16 +201,16 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                      repeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
             ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                           hIndexBase, hInput, dIndexBase, maxIndexConvertReg, wOffset, num3D, rate4D);
-            MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-            MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+            Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+            Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
         }
         uint32_t wOffsetTail = ncLoopTimes * ncBatchCount * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
         ProcessW(computeAddr, wOffsetTail, wInputActualAlignedPad, hInputActualPad, indexReg, dKernel, hKernel, wKernel,
                  tailRepeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
         ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput, hIndexBase,
                                       hInput, dIndexBase, maxIndexConvertReg, wOffsetTail, num3D, rate4D);
-        MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-        MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+        Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+        Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
     }
     return;
 }
@@ -258,10 +257,10 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<int32_t> indexReg;
-            MicroAPI::RegTensor<int32_t> maxIndexReg;
-            MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
-            MicroAPI::UnalignReg u1;
+            Reg::RegTensor<int32_t> indexReg;
+            Reg::RegTensor<int32_t> maxIndexReg;
+            Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+            Reg::UnalignReg u1;
             __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
             CalGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
             argmaxAddrLocal = argmaxAddr + nc * dOutputActual * hOutputActual * wOutputActual;
@@ -273,8 +272,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                          wKernel, repeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
                 ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                             hIndexBase, hInput, dIndexBase, maxIndexConvertReg, ncInputOffset);
-                MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-                MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+                Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+                Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
             }
             int32_t wOffsetTail = ncInputOffset +
                                   dLoopTimes * dBatchCount * dStride * hInputActualPad * wInputActualAlignedPad;
@@ -282,8 +281,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                      wKernel, tailRepeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
             ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput, hIndexBase,
                                         hInput, dIndexBase, maxIndexConvertReg, ncInputOffset);
-            MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-            MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+            Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+            Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
         }
     }
     return;
@@ -330,10 +329,10 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
         for (uint16_t dLoop = 0; dLoop < static_cast<uint16_t>(dOutputActual); dLoop++) {
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<int32_t> indexReg;
-                MicroAPI::RegTensor<int32_t> maxIndexReg;
-                MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
-                MicroAPI::UnalignReg u1;
+                Reg::RegTensor<int32_t> indexReg;
+                Reg::RegTensor<int32_t> maxIndexReg;
+                Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+                Reg::UnalignReg u1;
                 __local_mem__ TYPE_ARGMAX* argmaxAddrLocal;
                 int32_t ncInputOffset = nc * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
                 argmaxAddrLocal = argmaxAddr + nc * dOutputActual * hOutputActual * wOutputActual +
@@ -346,8 +345,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                              wKernel, repeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
                     ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                                 hIndexBase, hInput, dIndexBase, maxIndexConvertReg, ncInputOffset);
-                    MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-                    MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+                    Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+                    Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
                 }
                 int32_t wOffsetTail = ncInputOffset + dLoop * dStride * hInputActualPad * wInputActualAlignedPad +
                                       hLoopTimes * hBatchCount * hStride * wInputActualAlignedPad;
@@ -355,8 +354,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                          wKernel, tailRepeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
                 ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                             hIndexBase, hInput, dIndexBase, maxIndexConvertReg, ncInputOffset);
-                MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-                MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+                Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+                Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
             }
         }
     }
@@ -401,13 +400,13 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
             for (uint16_t hLoop = 0; hLoop < static_cast<uint16_t>(hOutputActual); hLoop++) {
                 __VEC_SCOPE__
                 {
-                    MicroAPI::RegTensor<int32_t> indexReg;
-                    MicroAPI::RegTensor<int32_t> maxIndexReg;
-                    MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
-                    MicroAPI::UnalignReg u1;
-                    MicroAPI::Arange(indexReg, static_cast<int32_t>(0));
-                    MicroAPI::MaskReg preg = MicroAPI::CreateMask<TYPE_ORIG_X, MicroAPI::MaskPattern::ALL>();
-                    MicroAPI::Muls(indexReg, indexReg, static_cast<int32_t>(wStride), preg);
+                    Reg::RegTensor<int32_t> indexReg;
+                    Reg::RegTensor<int32_t> maxIndexReg;
+                    Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+                    Reg::UnalignReg u1;
+                    Reg::Arange(indexReg, static_cast<int32_t>(0));
+                    Reg::MaskReg preg = Reg::CreateMask<TYPE_ORIG_X, Reg::MaskPattern::ALL>();
+                    Reg::Muls(indexReg, indexReg, static_cast<int32_t>(wStride), preg);
 
                     int32_t ncInOffset = nc * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
                     int32_t ncOutOffset = nc * dOutputActual * hOutputActual * wOutputActual;
@@ -422,8 +421,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
 
                         ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                                     hIndexBase, hInput, dIndexBase, maxIndexConvertReg, ncInOffset);
-                        MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-                        MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+                        Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
+                        Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
                     }
                     int32_t wOffsetTail = ncInOffset + dLoop * dStride * hInputActualPad * wInputActualAlignedPad +
                                           hLoop * wInputActualAlignedPad * hStride + loopW * repeatsElem * wStride;
@@ -431,8 +430,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                              hKernel, wKernel, tailRepeatsElem, maxIndexReg, dDilation, hDilation, wDilation);
                     ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, hInputActualPad, left, wInput,
                                                 hIndexBase, hInput, dIndexBase, maxIndexConvertReg, ncInOffset);
-                    MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-                    MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+                    Reg::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
+                    Reg::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
                 }
             }
         }
@@ -444,15 +443,15 @@ template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_
 __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::DupBufferNegInf(
     __local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
-    MicroAPI::RegTensor<TYPE_ORIG_X> v0;
+    Reg::RegTensor<TYPE_ORIG_X> v0;
     SetNegInfReg<TYPE_ORIG_X>(v0);
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<TYPE_ORIG_X, MicroAPI::MaskPattern::ALL>();
+    Reg::MaskReg preg = Reg::CreateMask<TYPE_ORIG_X, Reg::MaskPattern::ALL>();
     uint32_t maskCount = tail;
     for (uint16_t i = 0; i < loop; i++) {
-        MicroAPI::DataCopy<TYPE_ORIG_X, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+        Reg::DataCopy<TYPE_ORIG_X, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
     }
-    preg = MicroAPI::UpdateMask<TYPE_ORIG_X>(maskCount);
-    MicroAPI::DataCopy<TYPE_ORIG_X, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+    preg = Reg::UpdateMask<TYPE_ORIG_X>(maskCount);
+    Reg::DataCopy<TYPE_ORIG_X, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
@@ -462,8 +461,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     uint32_t srcDepStride, uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstDepStride, uint32_t dstRowStride,
     uint32_t dstDepOffset, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
-    MicroAPI::RegTensor<TYPE_ORIG_X> v0;
-    MicroAPI::UnalignReg u0;
+    Reg::RegTensor<TYPE_ORIG_X> v0;
+    Reg::UnalignReg u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t t = 0; t < deps; t++) {
             for (uint16_t j = 0; j < rows; j++) {
@@ -473,12 +472,12 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                                         (t + dstDepOffset) * dstDepStride +
                                                         (j + dstRowOffset) * dstRowStride + dstColOffset;
                 for (uint16_t k = 0; k < loopCols; k++) {
-                    MicroAPI::DataCopy<TYPE_ORIG_X, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                    MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                    Reg::DataCopy<TYPE_ORIG_X, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                    Reg::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::DataCopy<TYPE_ORIG_X, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
-                MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+                Reg::DataCopy<TYPE_ORIG_X, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                Reg::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
+                Reg::DataCopyUnAlignPost(curDstAddr, u0, 0);
             }
         }
     }

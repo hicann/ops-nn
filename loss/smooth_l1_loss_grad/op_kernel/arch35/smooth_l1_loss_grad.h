@@ -76,12 +76,12 @@ __simd_vf__ inline void SmoothL1LossGradVF(__ubuf__ T* dstAddr, __ubuf__ T* pred
 
 // bf16 cast trait（与同仓 relu6_d / fused_mul_add_n_half.h 一致）：
 //   widen：bf16→fp32（无舍入）；narrow：fp32→bf16（CAST_RINT 就近舍入，输出边界处唯一一次降精度）。
-constexpr static AscendC::MicroAPI::CastTrait g_castWiden = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait g_castNarrow = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+constexpr static AscendC::Reg::CastTrait g_castWiden = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                        AscendC::Reg::MaskMergeMode::ZEROING,
+                                                        AscendC::RoundMode::UNKNOWN};
+constexpr static AscendC::Reg::CastTrait g_castNarrow = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                         AscendC::Reg::MaskMergeMode::ZEROING,
+                                                         AscendC::RoundMode::CAST_RINT};
 
 // ============================================================================
 // RegBase VF 5 步链 —— bf16 cast-compute 路径（KEY_BF16)
@@ -92,29 +92,28 @@ __simd_vf__ inline void SmoothL1LossGradVFBf16(__ubuf__ bfloat16_t* dstAddr, __u
                                                float sigmaVal, float negSigmaVal, float recipSigmaVal, uint32_t count,
                                                uint32_t fp32Lane, uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::RegTensor<bfloat16_t> predictRegB, labelRegB, doutRegB, dstRegB;
-    AscendC::MicroAPI::RegTensor<float> predictRegF, labelRegF, doutRegF;
-    AscendC::MicroAPI::RegTensor<float> diffReg, cReg, sReg, gradReg;
-    AscendC::MicroAPI::MaskReg mask;
+    AscendC::Reg::RegTensor<bfloat16_t> predictRegB, labelRegB, doutRegB, dstRegB;
+    AscendC::Reg::RegTensor<float> predictRegF, labelRegF, doutRegF;
+    AscendC::Reg::RegTensor<float> diffReg, cReg, sReg, gradReg;
+    AscendC::Reg::MaskReg mask;
     for (uint16_t i = 0; i < repeatTimes; ++i) {
-        mask = AscendC::MicroAPI::UpdateMask<float>(count);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-            predictRegB, predictAddr + i * fp32Lane);
-        AscendC::MicroAPI::Cast<float, bfloat16_t, g_castWiden>(predictRegF, predictRegB, mask);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(labelRegB,
-                                                                                              labelAddr + i * fp32Lane);
-        AscendC::MicroAPI::Cast<float, bfloat16_t, g_castWiden>(labelRegF, labelRegB, mask);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(doutRegB,
-                                                                                              doutAddr + i * fp32Lane);
-        AscendC::MicroAPI::Cast<float, bfloat16_t, g_castWiden>(doutRegF, doutRegB, mask);
-        AscendC::MicroAPI::Sub(diffReg, predictRegF, labelRegF, mask);
-        AscendC::MicroAPI::Mins(cReg, diffReg, sigmaVal, mask);
-        AscendC::MicroAPI::Maxs(cReg, cReg, negSigmaVal, mask);
-        AscendC::MicroAPI::Muls(sReg, cReg, recipSigmaVal, mask);
-        AscendC::MicroAPI::Mul(gradReg, sReg, doutRegF, mask);
-        AscendC::MicroAPI::Cast<bfloat16_t, float, g_castNarrow>(dstRegB, gradReg, mask);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane,
-                                                                                             dstRegB, mask);
+        mask = AscendC::Reg::UpdateMask<float>(count);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(predictRegB,
+                                                                                    predictAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(predictRegF, predictRegB, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(labelRegB,
+                                                                                    labelAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(labelRegF, labelRegB, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(doutRegB, doutAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(doutRegF, doutRegB, mask);
+        AscendC::Reg::Sub(diffReg, predictRegF, labelRegF, mask);
+        AscendC::Reg::Mins(cReg, diffReg, sigmaVal, mask);
+        AscendC::Reg::Maxs(cReg, cReg, negSigmaVal, mask);
+        AscendC::Reg::Muls(sReg, cReg, recipSigmaVal, mask);
+        AscendC::Reg::Mul(gradReg, sReg, doutRegF, mask);
+        AscendC::Reg::Cast<bfloat16_t, float, g_castNarrow>(dstRegB, gradReg, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane, dstRegB,
+                                                                                   mask);
     }
 }
 

@@ -355,7 +355,7 @@ private:
     //     the value (no arithmetic), so target slots become an exact 0 and non-target inf/nan propagate
     //     as torch's IEEE result.
     // Accumulate each label's masked margins into accVec, then one ReduceSum per row (sum_k sum_i == sum_i sum_k).
-    // arch35 regbase(MicroAPI VF)实现: 外层 target 标量循环(数据依赖,-1 哨兵 break + 越界守卫),
+    // arch35 regbase(Reg VF)实现: 外层 target 标量循环(数据依赖,-1 哨兵 break + 越界守卫),
     // 内层按 C 用 RegTensor 硬件向量循环(VF, 尾块 UpdateMask)。语义与 A2 完全一致:
     //   margin[i] = relu((1 - x[k]) + x[i]) 严格 >0 select(nan-safe,对齐 torch `if(z>0)`),
     //   非目标位用 Select 屏蔽(非乘法,避免 target 位 inf*0=NaN)。逐 k 累加进 UB 的 accVec,
@@ -366,7 +366,7 @@ private:
         if (cnt == 0u) {
             return 0.0f;
         }
-        using namespace AscendC::MicroAPI;
+        using namespace AscendC::Reg;
         LocalTensor<float> accVec = reduceBuf.Get<float>();
         auto accAddr = (__ubuf__ float*)accVec.GetPhyAddr();
         auto xAddr = (__ubuf__ float*)xRow.GetPhyAddr();
@@ -431,7 +431,7 @@ private:
 
     // 硬件 ReduceSum(树规约)求 src[0,cnt) 之和。不用逐元素 GetValue 标量单链:单链误差随 C
     // 线性累积(~eps*C),树规约 ~eps*log2(C),且省掉 C 次标量读 UB。
-    // 独立成函数以避开调用点 using namespace MicroAPI 引入的同名重载。
+    // 独立成函数以避开调用点 using namespace Reg 引入的同名重载。
     __aicore__ inline float LocalReduceSum(LocalTensor<float>& src, uint32_t cnt)
     {
         LocalTensor<float> work = workBuf.Get<float>();
@@ -456,7 +456,7 @@ private:
         if (cnt == 0u || nLab == 0u) {
             return 0.0f;
         }
-        using namespace AscendC::MicroAPI;
+        using namespace AscendC::Reg;
         LocalTensor<float> accVec = reduceBuf.Get<float>();
         auto accAddr = (__ubuf__ float*)accVec.GetPhyAddr();
         auto xAddr = (__ubuf__ float*)xTile.GetPhyAddr();

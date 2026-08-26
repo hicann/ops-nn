@@ -137,32 +137,32 @@ template <typename T, uint32_t DEFAULT_MODE>
 __aicore__ inline void CustomDuplicate(__ubuf__ T* dstAddr, uint32_t calNum, int16_t loop)
 {
     uint32_t sreg = calNum;
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT v0;
     // if use vaule batter then mode, like T value
     if constexpr (DEFAULT_MODE == DEFAULT_MODE_NEG_INF) {
         if constexpr (std::is_same<T, bfloat16_t>::value) {
-            MicroAPI::Duplicate((MicroAPI::RegTensor<uint16_t>&)v0, BFLOAT16_NEG_INF);
+            Reg::Duplicate((Reg::RegTensor<uint16_t>&)v0, BFLOAT16_NEG_INF);
         } else {
             T value = GetDefaultNegInf<T>();
-            MicroAPI::Duplicate(v0, value);
+            Reg::Duplicate(v0, value);
         }
     } else {
-        MicroAPI::Duplicate(v0, (T)0);
+        Reg::Duplicate(v0, (T)0);
     }
     if constexpr (sizeof(T) == B64) {
         constexpr int16_t repeatElm = TWO * platform::GetVRegSize() / sizeof(T);
         for (int16_t i = 0; i < loop; i++) {
-            MicroAPI::MaskReg preg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(sreg);
-            MicroAPI::StoreAlign(dstAddr + i * repeatElm, v0, preg);
+            Reg::MaskReg preg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(sreg);
+            Reg::StoreAlign(dstAddr + i * repeatElm, v0, preg);
         }
     } else {
         constexpr int16_t repeatElm = platform::GetVRegSize() / sizeof(T);
         for (int16_t i = 0; i < loop; i++) {
-            MicroAPI::MaskReg preg = MicroAPI::UpdateMask<T>(sreg);
-            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-            MicroAPI::StoreAlign(dstAddr, v0, offset, preg);
+            Reg::MaskReg preg = Reg::UpdateMask<T>(sreg);
+            Reg::AddrReg offset = Reg::CreateAddrReg<T>(i, repeatElm);
+            Reg::StoreAlign(dstAddr, v0, offset, preg);
         }
     }
 }
@@ -171,10 +171,10 @@ template <typename T>
 __aicore__ inline void CustomCopy(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr, const CopyPadShapeInfo& params,
                                   int16_t loopCols, int16_t tailCols, int16_t repeatElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT v0;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::UnalignRegForStore u0;
 
     for (int16_t i = 0; i < params.inSize[DIM3]; i++) {
         auto srcAddr1 = (__ubuf__ T*)srcAddr + i * params.srcStride[DIM3];
@@ -186,12 +186,12 @@ __aicore__ inline void CustomCopy(const __ubuf__ T* dstAddr, const __ubuf__ T* s
                 auto curSrcAddr = srcAddr2 + j * params.srcStride[DIM1];
                 auto curDstAddr = dstAddr2 + j * params.dstStride[DIM1];
                 for (int16_t k = 0; k < loopCols; k++) {
-                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                    MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
+                    Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                    Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-                MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+                Reg::StoreUnAlignPost(curDstAddr, u0, 0);
             }
         }
     }
@@ -202,13 +202,13 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, c
                                                     const CopyPadShapeInfo& params, int16_t loopCols, int16_t elems,
                                                     int16_t repeatElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT v0;
-    MicroAPI::RegTensor<U> sIndex;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<U> sIndex;
+    Reg::MaskReg preg;
     using regType = typename indexTypeGet<U>::type;
-    MicroAPI::Arange((MicroAPI::RegTensor<regType>&)sIndex, 0);
+    Reg::Arange((Reg::RegTensor<regType>&)sIndex, 0);
     for (int16_t i = 0; i < params.inSize[DIM3]; i++) {
         auto dstAddr2 = (__ubuf__ T*)dstAddr + i * params.dstStride[DIM3];
         auto srcAddr0 = (__ubuf__ T*)srcAddr + i * params.srcStride[DIM3];
@@ -220,18 +220,17 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, c
                 auto curDstAddr = dstAddr3 + j * repeatElm;
                 auto curSrcAddr = srcAddr1 + j * repeatElm;
                 if constexpr (sizeof(T) == B64) {
-                    preg = MicroAPI::UpdateMask<U, MicroAPI::RegTraitNumTwo>(sreg);
+                    preg = Reg::UpdateMask<U, Reg::RegTraitNumTwo>(sreg);
                 } else {
-                    preg = MicroAPI::UpdateMask<U>(sreg);
+                    preg = Reg::UpdateMask<U>(sreg);
                 }
                 for (int16_t k = 0; k < params.inSize[DIM1]; k++) {
                     if constexpr (sizeof(T) == B8) {
-                        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B8>(
-                            v0, curSrcAddr + k * params.srcStride[DIM1]);
+                        Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B8>(v0, curSrcAddr + k * params.srcStride[DIM1]);
                     } else {
-                        MicroAPI::LoadAlign(v0, curSrcAddr + k * params.srcStride[DIM1]);
+                        Reg::LoadAlign(v0, curSrcAddr + k * params.srcStride[DIM1]);
                     }
-                    MicroAPI::Scatter(curDstAddr + k * params.dstStride[DIM1], v0, sIndex, preg);
+                    Reg::Scatter(curDstAddr + k * params.dstStride[DIM1], v0, sIndex, preg);
                 }
             }
         }
@@ -240,57 +239,57 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, c
 
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterTwoDims(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
-                                                  MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
+                                                  Reg::RegTensor<U> index, const CopyPadShapeInfo& params,
                                                   uint32_t srcStrideDim2, uint32_t dstStrideDim2, int16_t loopRows,
                                                   uint32_t repeatElm, uint32_t tailElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT vd1;
-    MicroAPI::RegTensor<U> v1, v2, v3, v4, v5, v6, v7, v8;
-    MicroAPI::RegTensor<U> gIndex;
+    Reg::RegTensor<U> v1, v2, v3, v4, v5, v6, v7, v8;
+    Reg::RegTensor<U> gIndex;
     uint32_t sreg = repeatElm;
     uint32_t tailSreg = tailElm;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg preg;
-    MicroAPI::MaskReg tailPreg;
+    Reg::MaskReg maskAll = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
+    Reg::MaskReg preg;
+    Reg::MaskReg tailPreg;
     if constexpr (sizeof(T) == B64) {
-        preg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(sreg);
-        tailPreg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(tailSreg);
+        preg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(sreg);
+        tailPreg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(tailSreg);
     } else {
-        preg = MicroAPI::UpdateMask<U>(sreg);
-        tailPreg = MicroAPI::UpdateMask<U>(tailSreg);
+        preg = Reg::UpdateMask<U>(sreg);
+        tailPreg = Reg::UpdateMask<U>(tailSreg);
     }
-    MicroAPI::RegTensor<U> vd0;
+    Reg::RegTensor<U> vd0;
     using regType = typename indexTypeGet<U>::type;
-    MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
+    Reg::Arange((Reg::RegTensor<regType>&)gIndex, 0);
     __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr;
     for (uint32_t k = 0; k < params.inSize[DIM4]; k++) {
-        MicroAPI::Adds(v1, index, k * params.dstStride[DIM4], maskAll);
-        MicroAPI::Adds(v2, gIndex, k * params.srcStride[DIM4], maskAll);
+        Reg::Adds(v1, index, k * params.dstStride[DIM4], maskAll);
+        Reg::Adds(v2, gIndex, k * params.srcStride[DIM4], maskAll);
         for (int16_t i = 0; i < params.inSize[DIM3]; i++) {
-            MicroAPI::Adds(v3, v1, i * params.dstStride[DIM3], maskAll);
-            MicroAPI::Adds(v4, v2, i * params.srcStride[DIM3], maskAll);
+            Reg::Adds(v3, v1, i * params.dstStride[DIM3], maskAll);
+            Reg::Adds(v4, v2, i * params.srcStride[DIM3], maskAll);
             for (int16_t d = 0; d < params.inSize[DIM2]; d++) {
-                MicroAPI::Adds(v5, v3, d * params.dstStride[DIM2], maskAll);
-                MicroAPI::Adds(v6, v4, d * params.srcStride[DIM2], maskAll);
+                Reg::Adds(v5, v3, d * params.dstStride[DIM2], maskAll);
+                Reg::Adds(v6, v4, d * params.srcStride[DIM2], maskAll);
                 for (int16_t j = 0; j < loopRows; j++) {
-                    MicroAPI::Adds(v7, v5, j * dstStrideDim2, preg);
-                    MicroAPI::Adds(v8, v6, j * srcStrideDim2, preg);
-                    MicroAPI::Gather(vd1, srcAddr, v8, preg);
+                    Reg::Adds(v7, v5, j * dstStrideDim2, preg);
+                    Reg::Adds(v8, v6, j * srcStrideDim2, preg);
+                    Reg::Gather(vd1, srcAddr, v8, preg);
                     if constexpr (sizeof(T) == B8) {
-                        MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v7, preg);
+                        Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v7, preg);
                     } else {
-                        MicroAPI::Scatter(curDstAddr, vd1, v7, preg);
+                        Reg::Scatter(curDstAddr, vd1, v7, preg);
                     }
                 }
-                MicroAPI::Adds(v7, v5, loopRows * dstStrideDim2, tailPreg);
-                MicroAPI::Adds(v8, v6, loopRows * srcStrideDim2, tailPreg);
-                MicroAPI::Gather(vd1, srcAddr, v8, tailPreg);
+                Reg::Adds(v7, v5, loopRows * dstStrideDim2, tailPreg);
+                Reg::Adds(v8, v6, loopRows * srcStrideDim2, tailPreg);
+                Reg::Gather(vd1, srcAddr, v8, tailPreg);
                 if constexpr (sizeof(T) == B8) {
-                    MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v7, tailPreg);
+                    Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v7, tailPreg);
                 } else {
-                    MicroAPI::Scatter(curDstAddr, vd1, v7, tailPreg);
+                    Reg::Scatter(curDstAddr, vd1, v7, tailPreg);
                 }
             }
         }
@@ -299,54 +298,54 @@ __aicore__ inline void CustomCopyByScatterTwoDims(const __ubuf__ T* dstAddr, con
 
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterThreeDims(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
-                                                    MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
+                                                    Reg::RegTensor<U> index, const CopyPadShapeInfo& params,
                                                     uint32_t srcStrideDim3, uint32_t dstStrideDim3, int16_t loopDeps,
                                                     uint32_t repeatElm, uint32_t tailElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT vd1;
-    MicroAPI::RegTensor<U> v1, v2, v3, v4, v5, v6;
-    MicroAPI::RegTensor<U> gIndex;
+    Reg::RegTensor<U> v1, v2, v3, v4, v5, v6;
+    Reg::RegTensor<U> gIndex;
     uint32_t sreg = repeatElm;
     uint32_t tailSreg = tailElm;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg preg;
-    MicroAPI::MaskReg tailPreg;
+    Reg::MaskReg maskAll = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
+    Reg::MaskReg preg;
+    Reg::MaskReg tailPreg;
     if constexpr (sizeof(T) == B64) {
-        preg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(sreg);
-        tailPreg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(tailSreg);
+        preg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(sreg);
+        tailPreg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(tailSreg);
     } else {
-        preg = MicroAPI::UpdateMask<U>(sreg);
-        tailPreg = MicroAPI::UpdateMask<U>(tailSreg);
+        preg = Reg::UpdateMask<U>(sreg);
+        tailPreg = Reg::UpdateMask<U>(tailSreg);
     }
     using regType = typename indexTypeGet<U>::type;
-    MicroAPI::RegTensor<U> vd0;
-    MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
+    Reg::RegTensor<U> vd0;
+    Reg::Arange((Reg::RegTensor<regType>&)gIndex, 0);
     __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr;
     for (int16_t i = 0; i < params.inSize[DIM4]; i++) {
-        MicroAPI::Adds(v1, index, i * params.dstStride[DIM4], maskAll);
-        MicroAPI::Adds(v2, gIndex, i * params.srcStride[DIM4], maskAll);
+        Reg::Adds(v1, index, i * params.dstStride[DIM4], maskAll);
+        Reg::Adds(v2, gIndex, i * params.srcStride[DIM4], maskAll);
         for (int16_t d = 0; d < params.inSize[DIM3]; d++) {
-            MicroAPI::Adds(v3, v1, d * params.dstStride[DIM3], maskAll);
-            MicroAPI::Adds(v4, v2, d * params.srcStride[DIM3], maskAll);
+            Reg::Adds(v3, v1, d * params.dstStride[DIM3], maskAll);
+            Reg::Adds(v4, v2, d * params.srcStride[DIM3], maskAll);
             for (int16_t j = 0; j < loopDeps; j++) {
-                MicroAPI::Adds(v5, v3, j * dstStrideDim3, preg);
-                MicroAPI::Adds(v6, v4, j * srcStrideDim3, preg);
-                MicroAPI::Gather(vd1, srcAddr, v6, preg);
+                Reg::Adds(v5, v3, j * dstStrideDim3, preg);
+                Reg::Adds(v6, v4, j * srcStrideDim3, preg);
+                Reg::Gather(vd1, srcAddr, v6, preg);
                 if constexpr (sizeof(T) == B8) {
-                    MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v5, preg);
+                    Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v5, preg);
                 } else {
-                    MicroAPI::Scatter(curDstAddr, vd1, v5, preg);
+                    Reg::Scatter(curDstAddr, vd1, v5, preg);
                 }
             }
-            MicroAPI::Adds(v5, v3, loopDeps * dstStrideDim3, tailPreg);
-            MicroAPI::Adds(v6, v4, loopDeps * srcStrideDim3, tailPreg);
-            MicroAPI::Gather(vd1, srcAddr, v6, tailPreg);
+            Reg::Adds(v5, v3, loopDeps * dstStrideDim3, tailPreg);
+            Reg::Adds(v6, v4, loopDeps * srcStrideDim3, tailPreg);
+            Reg::Gather(vd1, srcAddr, v6, tailPreg);
             if constexpr (sizeof(T) == B8) {
-                MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v5, tailPreg);
+                Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v5, tailPreg);
             } else {
-                MicroAPI::Scatter(curDstAddr, vd1, v5, tailPreg);
+                Reg::Scatter(curDstAddr, vd1, v5, tailPreg);
             }
         }
     }
@@ -354,99 +353,99 @@ __aicore__ inline void CustomCopyByScatterThreeDims(const __ubuf__ T* dstAddr, c
 
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterFourDims(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
-                                                   MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
+                                                   Reg::RegTensor<U> index, const CopyPadShapeInfo& params,
                                                    uint32_t srcStrideDim4, uint32_t dstStrideDim4, int16_t loopDim4,
                                                    uint32_t repeatElm, uint32_t tailElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT vd1;
-    MicroAPI::RegTensor<U> v1, v2, v3, v4, v5, v6;
-    MicroAPI::RegTensor<U> gIndex;
+    Reg::RegTensor<U> v1, v2, v3, v4, v5, v6;
+    Reg::RegTensor<U> gIndex;
     uint32_t sreg = repeatElm;
     uint32_t tailSreg = tailElm;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg preg;
-    MicroAPI::MaskReg tailPreg;
+    Reg::MaskReg maskAll = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
+    Reg::MaskReg preg;
+    Reg::MaskReg tailPreg;
     if constexpr (sizeof(T) == B64) {
-        preg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(sreg);
-        tailPreg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(tailSreg);
+        preg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(sreg);
+        tailPreg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(tailSreg);
     } else {
-        preg = MicroAPI::UpdateMask<U>(sreg);
-        tailPreg = MicroAPI::UpdateMask<U>(tailSreg);
+        preg = Reg::UpdateMask<U>(sreg);
+        tailPreg = Reg::UpdateMask<U>(tailSreg);
     }
     using regType = typename indexTypeGet<U>::type;
-    MicroAPI::RegTensor<U> vd0;
-    MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
+    Reg::RegTensor<U> vd0;
+    Reg::Arange((Reg::RegTensor<regType>&)gIndex, 0);
     __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr;
     for (int16_t i = 0; i < params.inSize[DIM4]; i++) {
-        MicroAPI::Adds(v1, index, i * params.dstStride[DIM4], maskAll);
-        MicroAPI::Adds(v2, gIndex, i * params.srcStride[DIM4], maskAll);
+        Reg::Adds(v1, index, i * params.dstStride[DIM4], maskAll);
+        Reg::Adds(v2, gIndex, i * params.srcStride[DIM4], maskAll);
         for (int16_t j = 0; j < loopDim4; j++) {
-            MicroAPI::Adds(v3, v1, j * dstStrideDim4, preg);
-            MicroAPI::Adds(v4, v2, j * srcStrideDim4, preg);
-            MicroAPI::Gather(vd1, srcAddr, v4, preg);
+            Reg::Adds(v3, v1, j * dstStrideDim4, preg);
+            Reg::Adds(v4, v2, j * srcStrideDim4, preg);
+            Reg::Gather(vd1, srcAddr, v4, preg);
             if constexpr (sizeof(T) == B8) {
-                MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v3, preg);
+                Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v3, preg);
             } else {
-                MicroAPI::Scatter(curDstAddr, vd1, v3, preg);
+                Reg::Scatter(curDstAddr, vd1, v3, preg);
             }
         }
-        MicroAPI::Adds(v3, v1, loopDim4 * dstStrideDim4, tailPreg);
-        MicroAPI::Adds(v4, v2, loopDim4 * srcStrideDim4, tailPreg);
-        MicroAPI::Gather(vd1, srcAddr, v4, tailPreg);
+        Reg::Adds(v3, v1, loopDim4 * dstStrideDim4, tailPreg);
+        Reg::Adds(v4, v2, loopDim4 * srcStrideDim4, tailPreg);
+        Reg::Gather(vd1, srcAddr, v4, tailPreg);
         if constexpr (sizeof(T) == B8) {
-            MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v3, tailPreg);
+            Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v3, tailPreg);
         } else {
-            MicroAPI::Scatter(curDstAddr, vd1, v3, tailPreg);
+            Reg::Scatter(curDstAddr, vd1, v3, tailPreg);
         }
     }
 }
 
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterFiveDims(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
-                                                   MicroAPI::RegTensor<U> index, const CopyPadShapeInfo& params,
+                                                   Reg::RegTensor<U> index, const CopyPadShapeInfo& params,
                                                    uint32_t srcStrideDim5, uint32_t dstStrideDim5, int16_t loopDim5,
                                                    uint32_t repeatElm, uint32_t tailElm)
 {
-    using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                              Reg::RegTensor<T>>::type;
     RegDstT vd1;
-    MicroAPI::RegTensor<U> v1, v2, v3, v4, v5, v6;
-    MicroAPI::RegTensor<U> gIndex;
+    Reg::RegTensor<U> v1, v2, v3, v4, v5, v6;
+    Reg::RegTensor<U> gIndex;
     uint32_t sreg = repeatElm;
     uint32_t tailSreg = tailElm;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg preg;
-    MicroAPI::MaskReg tailPreg;
+    Reg::MaskReg maskAll = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
+    Reg::MaskReg preg;
+    Reg::MaskReg tailPreg;
     if constexpr (sizeof(T) == B64) {
-        preg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(sreg);
-        tailPreg = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumTwo>(tailSreg);
+        preg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(sreg);
+        tailPreg = Reg::UpdateMask<T, Reg::RegTraitNumTwo>(tailSreg);
     } else {
-        preg = MicroAPI::UpdateMask<U>(sreg);
-        tailPreg = MicroAPI::UpdateMask<U>(tailSreg);
+        preg = Reg::UpdateMask<U>(sreg);
+        tailPreg = Reg::UpdateMask<U>(tailSreg);
     }
     using regType = typename indexTypeGet<U>::type;
-    MicroAPI::RegTensor<U> vd0;
-    MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
+    Reg::RegTensor<U> vd0;
+    Reg::Arange((Reg::RegTensor<regType>&)gIndex, 0);
     __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr;
     for (int16_t j = 0; j < loopDim5; j++) { // 用dim2 计算loopDeps
-        MicroAPI::Adds(v1, index, j * dstStrideDim5, preg);
-        MicroAPI::Adds(v2, gIndex, j * srcStrideDim5, preg);
-        MicroAPI::Gather(vd1, srcAddr, v2, preg);
+        Reg::Adds(v1, index, j * dstStrideDim5, preg);
+        Reg::Adds(v2, gIndex, j * srcStrideDim5, preg);
+        Reg::Gather(vd1, srcAddr, v2, preg);
         if constexpr (sizeof(T) == B8) {
-            MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v1, preg);
+            Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v1, preg);
         } else {
-            MicroAPI::Scatter(curDstAddr, vd1, v1, preg);
+            Reg::Scatter(curDstAddr, vd1, v1, preg);
         }
     }
-    MicroAPI::Adds(v1, index, loopDim5 * dstStrideDim5, tailPreg);
-    MicroAPI::Adds(v2, gIndex, loopDim5 * srcStrideDim5, tailPreg);
-    MicroAPI::Gather(vd1, srcAddr, v2, tailPreg);
+    Reg::Adds(v1, index, loopDim5 * dstStrideDim5, tailPreg);
+    Reg::Adds(v2, gIndex, loopDim5 * srcStrideDim5, tailPreg);
+    Reg::Gather(vd1, srcAddr, v2, tailPreg);
     if constexpr (sizeof(T) == B8) {
-        MicroAPI::Scatter(curDstAddr, (MicroAPI::RegTensor<T>&)vd1, v1, tailPreg);
+        Reg::Scatter(curDstAddr, (Reg::RegTensor<T>&)vd1, v1, tailPreg);
     } else {
-        MicroAPI::Scatter(curDstAddr, vd1, v1, tailPreg);
+        Reg::Scatter(curDstAddr, vd1, v1, tailPreg);
     }
 }
 
@@ -490,8 +489,8 @@ __aicore__ inline void ScatterTwoDims(const __ubuf__ T* dstAddr, const __ubuf__ 
     auto curDstAddr = dstAddr + dstOffset;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         CustomCopyByScatterTwoDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim2, dstStrideDim2, loopRows,
                                          repeatElm, tailRepeatElm);
     }
@@ -517,8 +516,8 @@ __aicore__ inline void ScatterThreeDims(const __ubuf__ T* dstAddr, const __ubuf_
     auto curDstAddr = dstAddr + dstOffset;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         CustomCopyByScatterThreeDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim3, dstStrideDim3, loopDeps,
                                            repeatElm, tailRepeatElm);
     }
@@ -543,8 +542,8 @@ __aicore__ inline void ScatterFourDims(const __ubuf__ T* dstAddr, const __ubuf__
     auto curDstAddr = dstAddr + dstOffset;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         CustomCopyByScatterFourDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim4, dstStrideDim4, loopDim4,
                                           repeatElm, tailRepeatElm);
     }
@@ -569,8 +568,8 @@ __aicore__ inline void ScatterFiveDims(const __ubuf__ T* dstAddr, const __ubuf__
     auto curDstAddr = dstAddr + dstOffset;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         CustomCopyByScatterFiveDims<T, U>(curDstAddr, srcAddr, v0, params, srcStrideDim5, dstStrideDim5, loopDim5,
                                           repeatElm, tailRepeatElm);
     }
@@ -611,7 +610,7 @@ __aicore__ inline void CopyAndPad(LocalTensor<T>& inLocal, LocalTensor<T>& outLo
     __VEC_SCOPE__
     {
         CustomDuplicate<T, DEFAULT_MODE>(outLocalAddr, totalDupNum, dupLoop);
-        MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+        Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
     }
     if (copyMode == SCATTER_ONE_DIM) {
         ScatterOneDim<T, U>(outLocalAddr, inLocalAddr, params);

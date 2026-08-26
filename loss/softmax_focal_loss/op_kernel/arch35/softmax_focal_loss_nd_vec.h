@@ -33,8 +33,8 @@ template <typename T, typename TW, uint64_t hasWeight>
 template <bool byAddrReg>
 __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::LoadPredTargetWeight(
     RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32, __ubuf__ T* predPtr,
-    __ubuf__ int32_t* targetPtr, __ubuf__ TW* weightPtr, AscendC::MicroAPI::AddrReg offT,
-    AscendC::MicroAPI::AddrReg offW, AscendC::MicroAPI::AddrReg offF, MaskReg preg)
+    __ubuf__ int32_t* targetPtr, __ubuf__ TW* weightPtr, AscendC::Reg::AddrReg offT, AscendC::Reg::AddrReg offW,
+    AscendC::Reg::AddrReg offF, MaskReg preg)
 {
     RegTensor<T> predReg;
     RegTensor<int32_t> targetRegI32;
@@ -42,43 +42,43 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::LoadPredTargetWeigh
 
     if constexpr (sizeof(T) == sizeof(half)) {
         if constexpr (byAddrReg) {
-            AscendC::MicroAPI::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predPtr, offT);
+            AscendC::Reg::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predPtr, offT);
         } else {
-            AscendC::MicroAPI::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predPtr);
+            AscendC::Reg::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predPtr);
         }
-        AscendC::MicroAPI::Cast<float, T, castB16ToB32>(p32, predReg, preg);
+        AscendC::Reg::Cast<float, T, castB16ToB32>(p32, predReg, preg);
     } else {
         if constexpr (byAddrReg) {
-            AscendC::MicroAPI::LoadAlign(p32, predPtr, offT);
+            AscendC::Reg::LoadAlign(p32, predPtr, offT);
         } else {
-            AscendC::MicroAPI::LoadAlign(p32, predPtr);
+            AscendC::Reg::LoadAlign(p32, predPtr);
         }
     }
 
     if constexpr (byAddrReg) {
-        AscendC::MicroAPI::LoadAlign(targetRegI32, targetPtr, offF);
+        AscendC::Reg::LoadAlign(targetRegI32, targetPtr, offF);
     } else {
-        AscendC::MicroAPI::LoadAlign(targetRegI32, targetPtr);
+        AscendC::Reg::LoadAlign(targetRegI32, targetPtr);
     }
-    AscendC::MicroAPI::Cast<float, int32_t, castI32ToF32>(t32, targetRegI32, preg);
+    AscendC::Reg::Cast<float, int32_t, castI32ToF32>(t32, targetRegI32, preg);
 
     if constexpr (hasWeight == 1) {
         if constexpr (sizeof(TW) == sizeof(half)) {
             if constexpr (byAddrReg) {
-                AscendC::MicroAPI::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightPtr, offW);
+                AscendC::Reg::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightPtr, offW);
             } else {
-                AscendC::MicroAPI::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightPtr);
+                AscendC::Reg::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightPtr);
             }
-            AscendC::MicroAPI::Cast<float, TW, castB16ToB32>(w32, weightReg, preg);
+            AscendC::Reg::Cast<float, TW, castB16ToB32>(w32, weightReg, preg);
         } else {
             if constexpr (byAddrReg) {
-                AscendC::MicroAPI::LoadAlign(w32, weightPtr, offW);
+                AscendC::Reg::LoadAlign(w32, weightPtr, offW);
             } else {
-                AscendC::MicroAPI::LoadAlign(w32, weightPtr);
+                AscendC::Reg::LoadAlign(w32, weightPtr);
             }
         }
     } else {
-        AscendC::MicroAPI::Duplicate(w32, 1.0f);
+        AscendC::Reg::Duplicate(w32, 1.0f);
     }
 }
 
@@ -92,19 +92,19 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::CeFwOfSeg(RegTensor
     RegTensor<float> tmpReg;
 
     // ce = -log(p) * t * w
-    AscendC::MicroAPI::Log(tmpReg, p32, preg);
-    AscendC::MicroAPI::Muls(ceReg, tmpReg, -1.0f, preg);
-    AscendC::MicroAPI::Mul(ceReg, ceReg, t32, preg);
-    AscendC::MicroAPI::Mul(ceReg, ceReg, w32, preg);
+    AscendC::Reg::Log(tmpReg, p32, preg);
+    AscendC::Reg::Muls(ceReg, tmpReg, -1.0f, preg);
+    AscendC::Reg::Mul(ceReg, ceReg, t32, preg);
+    AscendC::Reg::Mul(ceReg, ceReg, w32, preg);
 
     // fw = alpha * exp(gamma * log(1 - p)) * t
-    AscendC::MicroAPI::Duplicate(oneReg, 1.0f);
-    AscendC::MicroAPI::Sub(tmpReg, oneReg, p32, preg);
-    AscendC::MicroAPI::Log(tmpReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, tmpReg, gamma, preg);
-    AscendC::MicroAPI::Exp(fwReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(fwReg, fwReg, alpha, preg);
-    AscendC::MicroAPI::Mul(fwReg, fwReg, t32, preg);
+    AscendC::Reg::Duplicate(oneReg, 1.0f);
+    AscendC::Reg::Sub(tmpReg, oneReg, p32, preg);
+    AscendC::Reg::Log(tmpReg, tmpReg, preg);
+    AscendC::Reg::Muls(tmpReg, tmpReg, gamma, preg);
+    AscendC::Reg::Exp(fwReg, tmpReg, preg);
+    AscendC::Reg::Muls(fwReg, fwReg, alpha, preg);
+    AscendC::Reg::Mul(fwReg, fwReg, t32, preg);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -124,13 +124,13 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::CeFwTailSeg(
     __ubuf__ float* ceTail = ceAddr + rowIdx * strideF + doneCols;
     __ubuf__ float* fwTail = fwAddr + rowIdx * strideF + doneCols;
     __ubuf__ TW* weightTail = hasWeight == 1 ? weightAddr + rowIdx * strideW + doneCols : weightAddr;
-    AscendC::MicroAPI::AddrReg dummy = AscendC::MicroAPI::CreateAddrReg<float>(0, 0, 0, VL_FP32);
+    AscendC::Reg::AddrReg dummy = AscendC::Reg::CreateAddrReg<float>(0, 0, 0, VL_FP32);
 
     LoadPredTargetWeight<false>(p32, t32, w32, predTail, targetTail, weightTail, dummy, dummy, dummy, preg);
     CeFwOfSeg(ceReg, fwReg, p32, t32, w32, gamma_, alpha_, preg);
 
-    AscendC::MicroAPI::StoreAlign(ceTail, ceReg, preg);
-    AscendC::MicroAPI::StoreAlign(fwTail, fwReg, preg);
+    AscendC::Reg::StoreAlign(ceTail, ceReg, preg);
+    AscendC::Reg::StoreAlign(fwTail, fwReg, preg);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -160,23 +160,23 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::CeFwVec(__ubuf__ T*
         RegTensor<float> ceReg;
         RegTensor<float> fwReg;
 
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, MaskPattern::ALL>();
+        MaskReg pregMain = AscendC::Reg::CreateMask<float, MaskPattern::ALL>();
         MaskReg pregTail = UpdateMask<float>(tailAlign);
 
         for (uint16_t i = 0; i < aTimes; ++i) {
             for (uint16_t j = 0; j < repeatTimes; ++j) {
-                AscendC::MicroAPI::AddrReg offT = AscendC::MicroAPI::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT),
-                                                                                      j, vfLen);
-                AscendC::MicroAPI::AddrReg offW = AscendC::MicroAPI::CreateAddrReg<TW>(
-                    i, static_cast<uint32_t>(strideW), j, vfLen);
-                AscendC::MicroAPI::AddrReg offF = AscendC::MicroAPI::CreateAddrReg<float>(
-                    i, static_cast<uint32_t>(strideF), j, vfLen);
+                AscendC::Reg::AddrReg offT = AscendC::Reg::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT), j,
+                                                                            vfLen);
+                AscendC::Reg::AddrReg offW = AscendC::Reg::CreateAddrReg<TW>(i, static_cast<uint32_t>(strideW), j,
+                                                                             vfLen);
+                AscendC::Reg::AddrReg offF = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideF), j,
+                                                                                vfLen);
 
                 LoadPredTargetWeight<true>(p32, t32, w32, predAddr, targetAddr, weightAddr, offT, offW, offF, pregMain);
                 CeFwOfSeg(ceReg, fwReg, p32, t32, w32, gamma, alpha, pregMain);
 
-                AscendC::MicroAPI::StoreAlign(ceAddr, ceReg, offF, pregMain);
-                AscendC::MicroAPI::StoreAlign(fwAddr, fwReg, offF, pregMain);
+                AscendC::Reg::StoreAlign(ceAddr, ceReg, offF, pregMain);
+                AscendC::Reg::StoreAlign(fwAddr, fwReg, offF, pregMain);
             }
 
             for (uint16_t k = 0; k < tailLoop; ++k) {

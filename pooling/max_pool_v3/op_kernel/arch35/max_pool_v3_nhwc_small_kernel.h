@@ -343,8 +343,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiBatch(int64_t n,
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements,
                                 tailLoopElements, channels);
     }
@@ -383,8 +383,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeMultiRow(int64_t n, i
     uint32_t tailLoopElements = static_cast<uint32_t>(tailH * outUbFactorW * channels);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, inColsElms,
                             oneLoopStrideH, oneLoopElements, tailLoopElements, channels);
     }
@@ -428,8 +428,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(int64_t n, 
     if (ubFactorN == 1U) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                 inColsElms, oneLoopElements, tailLoopElements, channels);
         }
@@ -439,8 +439,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::ComputeSingleRow(int64_t n, 
             __ubuf__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::LoadAlign(v0, indexAddr);
+                Reg::RegTensor<U> v0;
+                Reg::LoadAlign(v0, indexAddr);
                 MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                     inColsElms, oneLoopElements, tailLoopElements, channels);
             }

@@ -46,16 +46,16 @@ struct BlockSplitParam {
     int64_t xOffset;
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB642B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB642B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitI32F32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTraitI32F32 = {AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING,
+                                                     AscendC::RoundMode::CAST_RINT};
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 class AdaptiveAvgPool2dSmallKernel {
@@ -105,9 +105,8 @@ protected:
     BlockSplitParam blockPara_;
     const AdaptivePool2dSmallKernelTilingData* tilingData_;
     using IndexRegType = typename std::conditional<
-        IsSameType<ID_T, int64_t>::value,
-        typename AscendC::MicroAPI::RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo>,
-        typename AscendC::MicroAPI::RegTensor<int32_t>>::type;
+        IsSameType<ID_T, int64_t>::value, typename AscendC::Reg::RegTensor<int64_t, AscendC::Reg::RegTraitNumTwo>,
+        typename AscendC::Reg::RegTensor<int32_t>>::type;
 };
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
@@ -335,39 +334,39 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalKern
         IndexRegType kerSizeReg;
         IndexRegType dupReg;
         IndexRegType gblStIdxReg;
-        MicroAPI::RegTensor<int32_t> startDstReg;
-        MicroAPI::RegTensor<int32_t> kSizeDstReg;
-        MicroAPI::MaskReg calMask;
+        Reg::RegTensor<int32_t> startDstReg;
+        Reg::RegTensor<int32_t> kSizeDstReg;
+        Reg::MaskReg calMask;
 
         ID_T globalStartIdx = kernelIdx * dimIn / dimOut;
-        MicroAPI::Duplicate(dupReg, static_cast<ID_T>(dimOut));
-        MicroAPI::Duplicate(gblStIdxReg, globalStartIdx);
+        Reg::Duplicate(dupReg, static_cast<ID_T>(dimOut));
+        Reg::Duplicate(gblStIdxReg, globalStartIdx);
         for (uint16_t i = 0; i < loopSize; i++) {
             if constexpr (IsSameType<ID_T, int64_t>::value) {
-                calMask = MicroAPI::UpdateMask<ID_T, MicroAPI::RegTraitNumTwo>(dataLen);
+                calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
             } else {
-                calMask = MicroAPI::UpdateMask<ID_T>(dataLen);
+                calMask = Reg::UpdateMask<ID_T>(dataLen);
             }
             ID_T startIdx = kernelIdx + i * vfLen;
-            MicroAPI::Arange(startIdxReg, startIdx);
-            MicroAPI::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-            MicroAPI::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(dimIn), calMask);
-            MicroAPI::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(dimIn), calMask);
-            MicroAPI::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(dimOut - 1), calMask);
+            Reg::Arange(startIdxReg, startIdx);
+            Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
+            Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(dimIn), calMask);
+            Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(dimIn), calMask);
+            Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(dimOut - 1), calMask);
 
-            MicroAPI::Div(startIdxReg, startIdxReg, dupReg, calMask);
-            MicroAPI::Div(endIdxReg, endIdxReg, dupReg, calMask);
-            MicroAPI::Sub(kerSizeReg, endIdxReg, startIdxReg, calMask);
-            MicroAPI::Sub(startIdxReg, startIdxReg, gblStIdxReg, calMask);
+            Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
+            Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
+            Reg::Sub(kerSizeReg, endIdxReg, startIdxReg, calMask);
+            Reg::Sub(startIdxReg, startIdxReg, gblStIdxReg, calMask);
 
             if constexpr (IsSameType<ID_T, int64_t>::value) {
-                startDstReg = (AscendC::MicroAPI::RegTensor<int32_t>&)startIdxReg.reg[0];
-                kSizeDstReg = (AscendC::MicroAPI::RegTensor<int32_t>&)kerSizeReg.reg[0];
-                MicroAPI::StoreAlign(startIdxAddr + i * vfLen, startDstReg, calMask);
-                MicroAPI::StoreAlign(kernelSizeAddr + i * vfLen, kSizeDstReg, calMask);
+                startDstReg = (AscendC::Reg::RegTensor<int32_t>&)startIdxReg.reg[0];
+                kSizeDstReg = (AscendC::Reg::RegTensor<int32_t>&)kerSizeReg.reg[0];
+                Reg::StoreAlign(startIdxAddr + i * vfLen, startDstReg, calMask);
+                Reg::StoreAlign(kernelSizeAddr + i * vfLen, kSizeDstReg, calMask);
             } else {
-                MicroAPI::StoreAlign(startIdxAddr + i * vfLen, startIdxReg, calMask);
-                MicroAPI::StoreAlign(kernelSizeAddr + i * vfLen, kerSizeReg, calMask);
+                Reg::StoreAlign(startIdxAddr + i * vfLen, startIdxReg, calMask);
+                Reg::StoreAlign(kernelSizeAddr + i * vfLen, kerSizeReg, calMask);
             }
         }
     }
@@ -387,10 +386,10 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CustomS
     uint32_t vfLenFp32 = V_REG_SIZE / sizeof(float);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> inputReg;
-        MicroAPI::RegTensor<float> sumReg;
+        Reg::RegTensor<float> inputReg;
+        Reg::RegTensor<float> sumReg;
 
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
         for (uint16_t i = 0; i < static_cast<uint16_t>(repeatTimes); i++) {
             uint32_t srcOffset = i * srcMidStride * vlNum_;
@@ -399,18 +398,18 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CustomS
             ops::LoadOneTensorForDtypeT<U>(inputAddr, sumReg, preg, srcOffset);
             for (uint16_t k = 1; k < static_cast<uint16_t>(kernelSize); k++) {
                 ops::LoadOneTensorForDtypeT<U>(inputAddr, inputReg, preg, srcOffset + k * vlNum_);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::StoreAlign(outAddr + dstOffset, sumReg, preg);
+            Reg::StoreAlign(outAddr + dstOffset, sumReg, preg);
 
             // fp16/bf16 ncFactor 是128时，再来一次累加
             if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
                 ops::LoadOneTensorForDtypeT<U>(inputAddr, sumReg, preg, srcOffset + vfLenFp32);
                 for (uint16_t k = 1; k < static_cast<uint16_t>(kernelSize); k++) {
                     ops::LoadOneTensorForDtypeT<U>(inputAddr, inputReg, preg, srcOffset + k * vlNum_ + vfLenFp32);
-                    MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                    Reg::Add(sumReg, sumReg, inputReg, preg);
                 }
-                MicroAPI::StoreAlign(outAddr + dstOffset + vfLenFp32, sumReg, preg);
+                Reg::StoreAlign(outAddr + dstOffset + vfLenFp32, sumReg, preg);
             }
         }
     }
@@ -492,11 +491,11 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalAvg(
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> sumReg;
-        MicroAPI::RegTensor<float> avgReg;
-        MicroAPI::RegTensor<int32_t> divisorReg;
-        MicroAPI::RegTensor<float> divisorCastReg;
-        MicroAPI::MaskReg calMask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<float> sumReg;
+        Reg::RegTensor<float> avgReg;
+        Reg::RegTensor<int32_t> divisorReg;
+        Reg::RegTensor<float> divisorCastReg;
+        Reg::MaskReg calMask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
         for (uint16_t hIdx = 0; hIdx < static_cast<uint16_t>(hoNum); hIdx++) {
             int32_t hSize = hKerSizeAddr[hIdx];
             int64_t hOffset = hIdx * woNumAlign;
@@ -504,17 +503,17 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalAvg(
                 int32_t wSize = wKerSizeAddr[wIdx];
                 int64_t srcOffset = (hOffset + wIdx) * vlNum_;
                 int32_t kerSize = hSize * wSize;
-                MicroAPI::Duplicate(divisorReg, kerSize);
-                MicroAPI::Cast<float, int32_t, castTraitI32F32>(divisorCastReg, divisorReg, calMask);
-                MicroAPI::LoadAlign(sumReg, sumAddr + srcOffset);
-                MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-                MicroAPI::StoreAlign(sumAddr + srcOffset, avgReg, calMask);
+                Reg::Duplicate(divisorReg, kerSize);
+                Reg::Cast<float, int32_t, castTraitI32F32>(divisorCastReg, divisorReg, calMask);
+                Reg::LoadAlign(sumReg, sumAddr + srcOffset);
+                Reg::Div(avgReg, sumReg, divisorCastReg, calMask);
+                Reg::StoreAlign(sumAddr + srcOffset, avgReg, calMask);
                 // fp16/bf16 ncFactor 是128时，再来一次
                 if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
                     srcOffset += vfLenFp32;
-                    MicroAPI::LoadAlign(sumReg, sumAddr + srcOffset);
-                    MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-                    MicroAPI::StoreAlign(sumAddr + srcOffset, avgReg, calMask);
+                    Reg::LoadAlign(sumReg, sumAddr + srcOffset);
+                    Reg::Div(avgReg, sumReg, divisorCastReg, calMask);
+                    Reg::StoreAlign(sumAddr + srcOffset, avgReg, calMask);
                 }
             }
         }

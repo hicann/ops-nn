@@ -219,14 +219,14 @@ __aicore__ inline void AvgPoolBigKernel<T>::CopyResultToUb(int64_t curIdx)
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> res;
-        MicroAPI::UnalignRegForLoad u0;
-        MicroAPI::LoadUnAlignPre(u0, srcAddr);
-        MicroAPI::LoadUnAlign(res, u0, srcAddr, ONE);
+        Reg::RegTensor<T> res;
+        Reg::UnalignRegForLoad u0;
+        Reg::LoadUnAlignPre(u0, srcAddr);
+        Reg::LoadUnAlign(res, u0, srcAddr, ONE);
 
-        MicroAPI::UnalignRegForStore u1;
-        MicroAPI::StoreUnAlign(dstAddr, res, u1, ONE);
-        MicroAPI::StoreUnAlignPost(dstAddr, u1, 0);
+        Reg::UnalignRegForStore u1;
+        Reg::StoreUnAlign(dstAddr, res, u1, ONE);
+        Reg::StoreUnAlignPost(dstAddr, u1, 0);
     }
 }
 
@@ -331,15 +331,15 @@ __aicore__ inline void AvgPoolBigKernel<T>::InitOutLocal(int32_t localCurIdx)
     __ubuf__ T* addr = (__ubuf__ T*)dstAddr;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> v0;
-        MicroAPI::Duplicate(v0, zero);
+        Reg::RegTensor<T> v0;
+        Reg::Duplicate(v0, zero);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
+            Reg::MaskReg p0 = Reg::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::StoreAlign(addr + i * repeatElm, v0, p0);
+                Reg::StoreAlign(addr + i * repeatElm, v0, p0);
             } else {
-                MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::StoreAlign(addr, v0, offsetReg, p0);
+                Reg::AddrReg offsetReg = Reg::CreateAddrReg<T>(i, repeatElm);
+                Reg::StoreAlign(addr, v0, offsetReg, p0);
             }
         }
     }

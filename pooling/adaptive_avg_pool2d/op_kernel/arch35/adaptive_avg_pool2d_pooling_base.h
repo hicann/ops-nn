@@ -17,7 +17,7 @@
  *        Derived classes shadow TransOut/CopyOut/CopyInputBatch/TransInputBatch
  *        when their layouts differ from the default padded-wOutAlign version.
  *
- * \arch  Ascend950 / A5 / DAV_3510 only, RegBase (MicroAPI) main path, VL = 256 Byte.
+ * \arch  Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *        [RegBase-native] Enforced on the host side: AdaptivePool2dBaseTiling::
  *        GetShapeAttrsInfo rejects GetCurNpuArch() != NpuArch::DAV_3510, so these
  *        templates are never dispatched on another architecture.
@@ -46,9 +46,9 @@ constexpr static uint64_t AAP_TRANS_LEN_B32 = 8;
 constexpr static uint32_t AAP_UB_BLOCK_SIZE = platform::GetUbBlockSize();
 constexpr static uint32_t AAP_V_REG_SIZE = platform::GetVRegSize();
 
-constexpr AscendC::MicroAPI::CastTrait aapCastTraitI32F32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait aapCastTraitI32F32 = {
+    AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 struct BlockParam {
     int64_t ncIdx;
@@ -61,8 +61,8 @@ struct BlockParam {
 // the free VF functions below can name it too (the class re-exports it as IndexRegType).
 template <typename ID_T>
 using AapIndexRegType = typename std::conditional<
-    IsSameType<ID_T, int64_t>::value, typename AscendC::MicroAPI::RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo>,
-    typename AscendC::MicroAPI::RegTensor<int32_t>>::type;
+    IsSameType<ID_T, int64_t>::value, typename AscendC::Reg::RegTensor<int64_t, AscendC::Reg::RegTraitNumTwo>,
+    typename AscendC::Reg::RegTensor<int32_t>>::type;
 
 // ---------------------------------------------------------------------------
 // VF functions extracted from the base class vector-scope blocks. They must be
@@ -73,12 +73,12 @@ using AapIndexRegType = typename std::conditional<
 __simd_vf__ inline void ClearOutBufVf(__ubuf__ float* outAddr, uint16_t loopSize, uint32_t remaining,
                                       uint32_t vfLenFp32)
 {
-    MicroAPI::RegTensor<float> zeroReg;
-    MicroAPI::Duplicate(zeroReg, 0.0f);
+    Reg::RegTensor<float> zeroReg;
+    Reg::Duplicate(zeroReg, 0.0f);
     for (uint16_t i = 0; i < loopSize; i++) {
-        MicroAPI::MaskReg mask = MicroAPI::UpdateMask<float>(remaining);
-        MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<float>(i, vfLenFp32);
-        MicroAPI::StoreAlign(outAddr, zeroReg, offset, mask);
+        Reg::MaskReg mask = Reg::UpdateMask<float>(remaining);
+        Reg::AddrReg offset = Reg::CreateAddrReg<float>(i, vfLenFp32);
+        Reg::StoreAlign(outAddr, zeroReg, offset, mask);
     }
 }
 
@@ -93,40 +93,40 @@ __simd_vf__ inline void CalWKernelInfoVf(__ubuf__ int32_t* wStartAddr, __ubuf__ 
     AapIndexRegType<ID_T> dupReg;
     // Pack narrows b64->b32 and only supports unsigned destinations; wStart/wKerSize
     // are non-negative and far below 2^31, so the uint32->int32 store is value-preserving.
-    MicroAPI::RegTensor<uint32_t> startDstReg;
-    MicroAPI::RegTensor<uint32_t> kSizeDstReg;
-    MicroAPI::MaskReg calMask;
+    Reg::RegTensor<uint32_t> startDstReg;
+    Reg::RegTensor<uint32_t> kSizeDstReg;
+    Reg::MaskReg calMask;
 
-    MicroAPI::Duplicate(dupReg, static_cast<ID_T>(wOutDim));
+    Reg::Duplicate(dupReg, static_cast<ID_T>(wOutDim));
     for (uint16_t i = 0; i < loopSize; i++) {
         if constexpr (IsSameType<ID_T, int64_t>::value) {
-            calMask = MicroAPI::UpdateMask<ID_T, MicroAPI::RegTraitNumTwo>(dataLen);
+            calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
         } else {
-            calMask = MicroAPI::UpdateMask<ID_T>(dataLen);
+            calMask = Reg::UpdateMask<ID_T>(dataLen);
         }
         ID_T startIdx = i * vfLen;
-        MicroAPI::Arange(startIdxReg, startIdx);
-        MicroAPI::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-        MicroAPI::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wIn), calMask);
-        MicroAPI::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wIn), calMask);
-        MicroAPI::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim - 1), calMask);
+        Reg::Arange(startIdxReg, startIdx);
+        Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
+        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wIn), calMask);
+        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wIn), calMask);
+        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim - 1), calMask);
 
-        MicroAPI::Div(startIdxReg, startIdxReg, dupReg, calMask);
-        MicroAPI::Div(endIdxReg, endIdxReg, dupReg, calMask);
-        MicroAPI::Sub(kerSizeReg, endIdxReg, startIdxReg, calMask);
+        Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
+        Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
+        Reg::Sub(kerSizeReg, endIdxReg, startIdxReg, calMask);
 
         if constexpr (IsSameType<ID_T, int64_t>::value) {
             // Narrow b64 indices to b32 for the int32 UB buffers. Under RegTraitNumTwo the
             // low words of all 64 elements live in reg[0] (reg[1] holds the high words), so
             // Pack reduces to a copy of reg[0] -- matching the vfLen=64 store stride and the
             // b32 mask that UpdateMask<int64_t, RegTraitNumTwo> produces.
-            MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(startDstReg, startIdxReg);
-            MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(kSizeDstReg, kerSizeReg);
-            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wStartAddr + i * vfLen, startDstReg, calMask);
-            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wKerSizeAddr + i * vfLen, kSizeDstReg, calMask);
+            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(startDstReg, startIdxReg);
+            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(kSizeDstReg, kerSizeReg);
+            Reg::StoreAlign((__ubuf__ uint32_t*)wStartAddr + i * vfLen, startDstReg, calMask);
+            Reg::StoreAlign((__ubuf__ uint32_t*)wKerSizeAddr + i * vfLen, kSizeDstReg, calMask);
         } else {
-            MicroAPI::StoreAlign(wStartAddr + i * vfLen, startIdxReg, calMask);
-            MicroAPI::StoreAlign(wKerSizeAddr + i * vfLen, kerSizeReg, calMask);
+            Reg::StoreAlign(wStartAddr + i * vfLen, startIdxReg, calMask);
+            Reg::StoreAlign(wKerSizeAddr + i * vfLen, kerSizeReg, calMask);
         }
     }
 }
@@ -135,26 +135,26 @@ template <const uint32_t NC_FACTOR>
 __simd_vf__ inline void CalAvgOneHoVf(__ubuf__ float* outAddr, __ubuf__ int32_t* wKerSizeAddr, uint16_t woNum,
                                       uint32_t outBaseOffset, uint32_t vlNum, uint32_t vfLenFp32, int32_t kh)
 {
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::RegTensor<float> avgReg;
-    MicroAPI::RegTensor<int32_t> divisorReg;
-    MicroAPI::RegTensor<float> divisorCastReg;
-    MicroAPI::MaskReg calMask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> avgReg;
+    Reg::RegTensor<int32_t> divisorReg;
+    Reg::RegTensor<float> divisorCastReg;
+    Reg::MaskReg calMask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = 0; wo < woNum; wo++) {
         uint32_t offset = outBaseOffset + static_cast<uint32_t>(wo) * vlNum;
         int32_t totalKer = kh * wKerSizeAddr[wo];
 
-        MicroAPI::Duplicate(divisorReg, totalKer);
-        MicroAPI::Cast<float, int32_t, aapCastTraitI32F32>(divisorCastReg, divisorReg, calMask);
-        MicroAPI::LoadAlign(sumReg, outAddr + offset);
-        MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-        MicroAPI::StoreAlign(outAddr + offset, avgReg, calMask);
+        Reg::Duplicate(divisorReg, totalKer);
+        Reg::Cast<float, int32_t, aapCastTraitI32F32>(divisorCastReg, divisorReg, calMask);
+        Reg::LoadAlign(sumReg, outAddr + offset);
+        Reg::Div(avgReg, sumReg, divisorCastReg, calMask);
+        Reg::StoreAlign(outAddr + offset, avgReg, calMask);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumReg, outAddr + offset + vfLenFp32);
-            MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-            MicroAPI::StoreAlign(outAddr + offset + vfLenFp32, avgReg, calMask);
+            Reg::LoadAlign(sumReg, outAddr + offset + vfLenFp32);
+            Reg::Div(avgReg, sumReg, divisorCastReg, calMask);
+            Reg::StoreAlign(outAddr + offset + vfLenFp32, avgReg, calMask);
         }
     }
 }

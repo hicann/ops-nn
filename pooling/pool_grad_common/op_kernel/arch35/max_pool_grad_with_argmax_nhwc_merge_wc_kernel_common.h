@@ -57,12 +57,11 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-            GenInitial3DIndices((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+            AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+            GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
                                 wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
-            AscendC::MicroAPI::MaskReg
-                allMask = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::DataCopy(helpAddr, initialRegIndex, allMask);
+            AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::DataCopy(helpAddr, initialRegIndex, allMask);
         }
 
         for (uint16_t nIdx = 0; nIdx < nOutputActual; ++nIdx) {
@@ -71,15 +70,14 @@ public:
 
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::RegTensor<T3> wOutputConstReg;
-                AscendC::MicroAPI::Duplicate(wOutputConstReg, T3(wOutput));
+                AscendC::Reg::RegTensor<T3> wOutputConstReg;
+                AscendC::Reg::Duplicate(wOutputConstReg, T3(wOutput));
 
-                AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-                AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
+                AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+                AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
 
-                AscendC::MicroAPI::MaskReg
-                    allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-                AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
+                AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+                AscendC::Reg::DataCopy(initialRegIndex, helpAddr);
                 for (uint16_t hIdx = 0; hIdx < hArgmaxActual; hIdx++) {
                     for (uint16_t wRepeatIdx = 0; wRepeatIdx < repeatimes; wRepeatIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
@@ -88,7 +86,7 @@ public:
                                             cOutputAligned +
                                         nArgmaxOffset;
 
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                             DoMulCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(yAddr, gradAddr, argmaxAddr, parallelRegIndex,
                                                                         mask0, curHIndex, curWIndex, wOutputActual,
                                                                         hOutputActual, cOutputAligned, 0, nOffset,
@@ -106,22 +104,22 @@ public:
             for (uint16_t hIdx = 0; hIdx < hArgmaxActual; hIdx++) {
                 __VEC_SCOPE__
                 {
-                    AscendC::MicroAPI::RegTensor<T3> wOutputConstReg;
-                    AscendC::MicroAPI::Duplicate(wOutputConstReg, T3(wOutput));
+                    AscendC::Reg::RegTensor<T3> wOutputConstReg;
+                    AscendC::Reg::Duplicate(wOutputConstReg, T3(wOutput));
 
-                    AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-                    AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
+                    AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
 
-                    AscendC::MicroAPI::MaskReg
-                        allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-                    AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
+                    AscendC::Reg::MaskReg
+                        allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+                    AscendC::Reg::DataCopy(initialRegIndex, helpAddr);
                     // batch  mask
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = (wBatchIdx + repeatimes * concurrencyCount * wProBatchSize + hIdx * wArgmaxActual) *
                                         cOutputAligned +
                                     nArgmaxOffset;
 
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoMulCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
@@ -132,15 +130,14 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<T3> wOutputConstReg;
-            AscendC::MicroAPI::Duplicate(wOutputConstReg, T3(wOutput));
+            AscendC::Reg::RegTensor<T3> wOutputConstReg;
+            AscendC::Reg::Duplicate(wOutputConstReg, T3(wOutput));
 
-            AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-            AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
+            AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+            AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
 
-            AscendC::MicroAPI::MaskReg
-                allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
+            AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::DataCopy(initialRegIndex, helpAddr);
 
             for (uint16_t nIdx = 0; nIdx < nOutputActual; ++nIdx) {
                 uint32_t nOffset = nIdx * hOutputActual * wOutputActual * cOutputAligned;
@@ -151,7 +148,7 @@ public:
                                      repeatimes * concurrencyCount * wProBatchSize + hIdx * wArgmaxActual) *
                                         cOutputAligned +
                                     nArgmaxOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoMulCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);

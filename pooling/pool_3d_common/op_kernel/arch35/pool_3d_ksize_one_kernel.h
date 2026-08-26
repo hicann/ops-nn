@@ -198,27 +198,27 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::ComputeAvg(uint32_t dat
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> src;
-        MicroAPI::RegTensor<float32_t> div;
-        MicroAPI::RegTensor<float32_t> tmp;
-        MicroAPI::RegTensor<T> res;
-        MicroAPI::Duplicate(div, divisor);
+        Reg::RegTensor<T> src;
+        Reg::RegTensor<float32_t> div;
+        Reg::RegTensor<float32_t> tmp;
+        Reg::RegTensor<T> res;
+        Reg::Duplicate(div, divisor);
         uint32_t sreg = datalen;
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-            MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-            MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(sreg);
+            Reg::AddrReg srcOffset = Reg::CreateAddrReg<T>(i, repeatElm);
+            Reg::AddrReg dstOffset = Reg::CreateAddrReg<T>(i, repeatElm);
+            Reg::MaskReg pMask = Reg::UpdateMask<float32_t>(sreg);
 
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::LoadAlign(src, srcAddr, srcOffset);
-                MicroAPI::Div(res, src, div, pMask);
-                MicroAPI::StoreAlign(dstAddr, res, dstOffset, pMask);
+                Reg::LoadAlign(src, srcAddr, srcOffset);
+                Reg::Div(res, src, div, pMask);
+                Reg::StoreAlign(dstAddr, res, dstOffset, pMask);
             } else {
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);
-                MicroAPI::Cast<float32_t, T, Pool3D::castTraitB16ToB32>(tmp, src, pMask);
-                MicroAPI::Div(tmp, tmp, div, pMask);
-                MicroAPI::Cast<T, float32_t, Pool3D::castTraitB32ToB16>(res, tmp, pMask);
-                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr, res, dstOffset, pMask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);
+                Reg::Cast<float32_t, T, Pool3D::castTraitB16ToB32>(tmp, src, pMask);
+                Reg::Div(tmp, tmp, div, pMask);
+                Reg::Cast<T, float32_t, Pool3D::castTraitB32ToB16>(res, tmp, pMask);
+                Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(dstAddr, res, dstOffset, pMask);
             }
         }
     }

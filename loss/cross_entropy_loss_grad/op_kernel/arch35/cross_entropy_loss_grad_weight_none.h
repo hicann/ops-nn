@@ -71,22 +71,21 @@ __aicore__ inline void CrossEntropyLossGradWeightNone<T1, T2>::SmoothLabel(uint6
     auto xGradAddr = (__ubuf__ T1*)xGradLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
-        MicroAPI::MaskReg pregUp;
-        MicroAPI::MaskReg pregT;
-        MicroAPI::RegTensor<float> regLogProb;
-        MicroAPI::RegTensor<float> regXGrad;
-        MicroAPI::RegTensor<float> regSmooth;
-        MicroAPI::RegTensor<float> regSmoothGrad;
+        Reg::MaskReg pregUp;
+        Reg::MaskReg pregT;
+        Reg::RegTensor<float> regLogProb;
+        Reg::RegTensor<float> regXGrad;
+        Reg::RegTensor<float> regSmooth;
+        Reg::RegTensor<float> regSmoothGrad;
         for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-            pregUp = MicroAPI::UpdateMask<float>(totalLen);
+            pregUp = Reg::UpdateMask<float>(totalLen);
             this->LoadRegTensor(regLogProb, logProbAddr, pregUp, (int32_t)oneRepeat);
-            MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regXGrad, xGradTmpAddr,
-                                                                                (int32_t)oneRepeat);
-            MicroAPI::Exp(regLogProb, regLogProb, pregUp);
-            MicroAPI::Muls(regSmooth, regLogProb, smoothGradreduceSum, pregUp);
-            MicroAPI::Duplicate(regSmoothGrad, smoothGradScalar, pregUp);
-            MicroAPI::Sub(regSmooth, regSmooth, regSmoothGrad, pregUp);
-            MicroAPI::Add(regSmooth, regSmooth, regXGrad, pregUp);
+            Reg::LoadAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(regXGrad, xGradTmpAddr, (int32_t)oneRepeat);
+            Reg::Exp(regLogProb, regLogProb, pregUp);
+            Reg::Muls(regSmooth, regLogProb, smoothGradreduceSum, pregUp);
+            Reg::Duplicate(regSmoothGrad, smoothGradScalar, pregUp);
+            Reg::Sub(regSmooth, regSmooth, regSmoothGrad, pregUp);
+            Reg::Add(regSmooth, regSmooth, regXGrad, pregUp);
             this->CopyOutRegTensor(xGradAddr, regSmooth, pregUp, (int32_t)oneRepeat);
         }
     }

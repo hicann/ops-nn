@@ -29,7 +29,7 @@ namespace AscendC {
 using namespace Ops::Base;
 using namespace AscendC;
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::RegTensor;
 
 constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 
@@ -53,68 +53,66 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<T> regX;
-            MicroAPI::RegTensor<T> regY;
-            MicroAPI::RegTensor<T> regWeight;
-            MicroAPI::RegTensor<T> regPosWeight;
-            MicroAPI::RegTensor<T> regLoss;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<T> regX;
+            Reg::RegTensor<T> regY;
+            Reg::RegTensor<T> regWeight;
+            Reg::RegTensor<T> regPosWeight;
+            Reg::RegTensor<T> regLoss;
 
-            MicroAPI::RegTensor<T> regMinVal;
-            MicroAPI::RegTensor<T> regAbsX;
-            MicroAPI::RegTensor<T> regNegAbsX;
-            MicroAPI::RegTensor<T> regExpNegAbsX;
-            MicroAPI::RegTensor<T> regOneAddExp;
-            MicroAPI::RegTensor<T> regLog;
-            MicroAPI::RegTensor<T> regLogSigmoid;
-            MicroAPI::RegTensor<T> regPWSubOne;
-            MicroAPI::RegTensor<T> regPWSubOneMulY;
-            MicroAPI::RegTensor<T> regPWSubOneMulYAddOne;
-            MicroAPI::RegTensor<T> regOneSubY;
-            MicroAPI::RegTensor<T> regOneSubYMulX;
+            Reg::RegTensor<T> regMinVal;
+            Reg::RegTensor<T> regAbsX;
+            Reg::RegTensor<T> regNegAbsX;
+            Reg::RegTensor<T> regExpNegAbsX;
+            Reg::RegTensor<T> regOneAddExp;
+            Reg::RegTensor<T> regLog;
+            Reg::RegTensor<T> regLogSigmoid;
+            Reg::RegTensor<T> regPWSubOne;
+            Reg::RegTensor<T> regPWSubOneMulY;
+            Reg::RegTensor<T> regPWSubOneMulYAddOne;
+            Reg::RegTensor<T> regOneSubY;
+            Reg::RegTensor<T> regOneSubYMulX;
 
-            MicroAPI::RegTensor<T> regOne;
+            Reg::RegTensor<T> regOne;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<T>(totalLen);
-                AscendC::MicroAPI::Duplicate(regOne, (T)1.0f, pregUp);
-                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
-                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
+                pregUp = Reg::UpdateMask<T>(totalLen);
+                AscendC::Reg::Duplicate(regOne, (T)1.0f, pregUp);
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
                 if constexpr (HAS_WEIGHT) {
-                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr,
-                                                                                    (int32_t)oneRepeat);
+                    Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr, (int32_t)oneRepeat);
                 }
                 if constexpr (HAS_POS_WEIGHT) {
-                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr,
-                                                                                    (int32_t)oneRepeat);
+                    Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr,
+                                                                          (int32_t)oneRepeat);
                 }
 
-                MicroAPI::Mins(regMinVal, regX, (T)0.0f, pregUp);
-                MicroAPI::Abs(regAbsX, regX, pregUp);
-                MicroAPI::Neg(regNegAbsX, regAbsX, pregUp);
-                MicroAPI::Exp(regExpNegAbsX, regNegAbsX, pregUp);
-                MicroAPI::Adds(regOneAddExp, regExpNegAbsX, (T)1.0f, pregUp);
-                MicroAPI::Log(regLog, regOneAddExp, pregUp);
+                Reg::Mins(regMinVal, regX, (T)0.0f, pregUp);
+                Reg::Abs(regAbsX, regX, pregUp);
+                Reg::Neg(regNegAbsX, regAbsX, pregUp);
+                Reg::Exp(regExpNegAbsX, regNegAbsX, pregUp);
+                Reg::Adds(regOneAddExp, regExpNegAbsX, (T)1.0f, pregUp);
+                Reg::Log(regLog, regOneAddExp, pregUp);
 
-                MicroAPI::Sub(regLogSigmoid, regMinVal, regLog, pregUp);
+                Reg::Sub(regLogSigmoid, regMinVal, regLog, pregUp);
 
                 if constexpr (HAS_POS_WEIGHT) {
-                    MicroAPI::Sub(regPWSubOne, regPosWeight, regOne, pregUp);
-                    MicroAPI::Mul(regPWSubOneMulY, regPWSubOne, regY, pregUp);
-                    MicroAPI::Adds(regPWSubOneMulYAddOne, regPWSubOneMulY, (T)1.0f, pregUp);
-                    MicroAPI::Mul(regLogSigmoid, regLogSigmoid, regPWSubOneMulYAddOne, pregUp);
+                    Reg::Sub(regPWSubOne, regPosWeight, regOne, pregUp);
+                    Reg::Mul(regPWSubOneMulY, regPWSubOne, regY, pregUp);
+                    Reg::Adds(regPWSubOneMulYAddOne, regPWSubOneMulY, (T)1.0f, pregUp);
+                    Reg::Mul(regLogSigmoid, regLogSigmoid, regPWSubOneMulYAddOne, pregUp);
                 }
 
-                MicroAPI::Sub(regOneSubY, regOne, regY, pregUp);
-                MicroAPI::Mul(regOneSubYMulX, regOneSubY, regX, pregUp);
-                MicroAPI::Sub(regLoss, regOneSubYMulX, regLogSigmoid, pregUp);
+                Reg::Sub(regOneSubY, regOne, regY, pregUp);
+                Reg::Mul(regOneSubYMulX, regOneSubY, regX, pregUp);
+                Reg::Sub(regLoss, regOneSubYMulX, regLogSigmoid, pregUp);
 
                 if constexpr (HAS_WEIGHT) {
-                    MicroAPI::Mul(regLoss, regLoss, regWeight, pregUp);
+                    Reg::Mul(regLoss, regLoss, regWeight, pregUp);
                 }
 
-                MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat,
-                                                                                 pregUp);
+                Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat, pregUp);
             }
         }
 #endif

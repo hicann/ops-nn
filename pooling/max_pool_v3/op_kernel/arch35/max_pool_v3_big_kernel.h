@@ -293,19 +293,19 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::InitOutLocal(int32_t localCurIdx)
     __ubuf__ T* addr = (__ubuf__ T*)dstAddr;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> v0;
+        Reg::RegTensor<T> v0;
         if constexpr (IsSame<T, bfloat16_t>::value) {
-            MicroAPI::Duplicate((MicroAPI::RegTensor<uint16_t>&)v0, BFLOAT16_NEG_INF);
+            Reg::Duplicate((Reg::RegTensor<uint16_t>&)v0, BFLOAT16_NEG_INF);
         } else {
-            MicroAPI::Duplicate(v0, negInf);
+            Reg::Duplicate(v0, negInf);
         }
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
+            Reg::MaskReg p0 = Reg::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::StoreAlign(addr + i * repeatElm, v0, p0);
+                Reg::StoreAlign(addr + i * repeatElm, v0, p0);
             } else {
-                MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::StoreAlign(addr, v0, offsetReg, p0);
+                Reg::AddrReg offsetReg = Reg::CreateAddrReg<T>(i, repeatElm);
+                Reg::StoreAlign(addr, v0, offsetReg, p0);
             }
         }
     }
@@ -327,23 +327,23 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::ComputeSingle(int32_t localCurIdx,
     __VEC_SCOPE__
     {
         DuplicateNegInf<T>(xLocalAddr, padNum, dataCount);
-        MicroAPI::RegTensor<T> vd0;
-        MicroAPI::RegTensor<T> res;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<T> vd0;
+        Reg::RegTensor<T> res;
+        Reg::MaskReg maskAll = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
         if constexpr (IsSame<T, bfloat16_t>::value) {
-            MicroAPI::Duplicate((MicroAPI::RegTensor<uint16_t>&)res, BFLOAT16_NEG_INF);
+            Reg::Duplicate((Reg::RegTensor<uint16_t>&)res, BFLOAT16_NEG_INF);
         } else {
-            MicroAPI::Duplicate(res, negInf);
+            Reg::Duplicate(res, negInf);
         }
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
+            Reg::MaskReg p0 = Reg::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::LoadAlign(vd0, xLocalAddr + i * repeatElm);
+                Reg::LoadAlign(vd0, xLocalAddr + i * repeatElm);
             } else {
-                MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::LoadAlign(vd0, xLocalAddr, offset);
+                Reg::AddrReg offset = Reg::CreateAddrReg<T>(i, repeatElm);
+                Reg::LoadAlign(vd0, xLocalAddr, offset);
             }
-            MicroAPI::Max(res, vd0, res, maskAll);
+            Reg::Max(res, vd0, res, maskAll);
         }
         ReduceMaxAll<T>(res, res, maskAll);
         if constexpr (MERGE) {

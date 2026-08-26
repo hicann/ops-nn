@@ -57,65 +57,65 @@ __aicore__ inline void GenGatherFiveDim(const ShapeInfo& param, LocalTensor<U>& 
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
-        MicroAPI::RegTensor<U> v3;
-        MicroAPI::RegTensor<U> v4;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
+        Reg::RegTensor<U> v3;
+        Reg::RegTensor<U> v4;
 
-        MicroAPI::RegTensor<U> vd0;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::RegTensor<U> vd8;
-        MicroAPI::RegTensor<U> vd9;
-        MicroAPI::RegTensor<U> vd10;
-        MicroAPI::RegTensor<U> vd11;
-        MicroAPI::RegTensor<U> vd12;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> vd0;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::RegTensor<U> vd8;
+        Reg::RegTensor<U> vd9;
+        Reg::RegTensor<U> vd10;
+        Reg::RegTensor<U> vd11;
+        Reg::RegTensor<U> vd12;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(v1, (U)param.gatherSize[0], p0);
-        MicroAPI::Duplicate(v2, (U)twoDimElemtsOut, p0);
-        MicroAPI::Duplicate(v3, (U)threeDimElemtsOut, p0);
-        MicroAPI::Duplicate(v4, (U)fourDimElemtsOut, p0);
+        Reg::Duplicate(v1, (U)param.gatherSize[0], p0);
+        Reg::Duplicate(v2, (U)twoDimElemtsOut, p0);
+        Reg::Duplicate(v3, (U)threeDimElemtsOut, p0);
+        Reg::Duplicate(v4, (U)fourDimElemtsOut, p0);
 
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
-            MicroAPI::Div(vd1, v0, v4, p0); // i / (dim3 * dim2 * dim1 * dim0)
-            MicroAPI::Muls(vd2, vd1, (U)fourDimElemtsIn,
-                           p0); // i / (dim3 * dim2 * dim1 * dim0) * (dim3in * dim2in * dim1in * dim0in)
-            MicroAPI::Muls(vd2, vd2, (U)param.gatherStride[4], p0);
-            MicroAPI::Mul(vd3, vd1, v4, p0); // i / dim3 * dim2 * dim1 * dim0) * (dim3 * dim2 * dim1 * dim0)
-            MicroAPI::Sub(vd4, v0, vd3, p0); // i % (dim3 * dim2 * dim1 * dim0)
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * oneRegLength);
+            Reg::Div(vd1, v0, v4, p0); // i / (dim3 * dim2 * dim1 * dim0)
+            Reg::Muls(vd2, vd1, (U)fourDimElemtsIn,
+                      p0); // i / (dim3 * dim2 * dim1 * dim0) * (dim3in * dim2in * dim1in * dim0in)
+            Reg::Muls(vd2, vd2, (U)param.gatherStride[4], p0);
+            Reg::Mul(vd3, vd1, v4, p0); // i / dim3 * dim2 * dim1 * dim0) * (dim3 * dim2 * dim1 * dim0)
+            Reg::Sub(vd4, v0, vd3, p0); // i % (dim3 * dim2 * dim1 * dim0)
 
-            MicroAPI::Div(vd1, vd4, v3, p0);                   // i / (dim2 * dim1 * dim0)
-            MicroAPI::Muls(vd3, vd1, (U)threeDimElemtsIn, p0); // i / (dim2 * dim1 * dim0) * (dim2in * dim1in * dim0in)
-            MicroAPI::Muls(vd3, vd3, (U)param.gatherStride[3], p0);
-            MicroAPI::Mul(vd1, vd1, v3, p0);  // i / dim2 * dim1 * dim0) * (dim2 * dim1 * dim0)
-            MicroAPI::Sub(vd4, vd4, vd1, p0); // i % (dim2 * dim1 * dim0)
+            Reg::Div(vd1, vd4, v3, p0);                   // i / (dim2 * dim1 * dim0)
+            Reg::Muls(vd3, vd1, (U)threeDimElemtsIn, p0); // i / (dim2 * dim1 * dim0) * (dim2in * dim1in * dim0in)
+            Reg::Muls(vd3, vd3, (U)param.gatherStride[3], p0);
+            Reg::Mul(vd1, vd1, v3, p0);  // i / dim2 * dim1 * dim0) * (dim2 * dim1 * dim0)
+            Reg::Sub(vd4, vd4, vd1, p0); // i % (dim2 * dim1 * dim0)
 
-            MicroAPI::Div(vd5, vd4, v2, p0);                 // i / ( dim1 * dim0)
-            MicroAPI::Muls(vd6, vd5, (U)twoDimElemtsIn, p0); // i / (dim1 * dim0) * (dim1in * dim0in)
-            MicroAPI::Muls(vd6, vd6, (U)param.gatherStride[2], p0);
-            MicroAPI::Mul(vd7, vd5, v2, p0);  // i / dim1 * dim0) * (dim1 * dim0)
-            MicroAPI::Sub(vd8, vd4, vd7, p0); // i % (dim1 * dim0)
+            Reg::Div(vd5, vd4, v2, p0);                 // i / ( dim1 * dim0)
+            Reg::Muls(vd6, vd5, (U)twoDimElemtsIn, p0); // i / (dim1 * dim0) * (dim1in * dim0in)
+            Reg::Muls(vd6, vd6, (U)param.gatherStride[2], p0);
+            Reg::Mul(vd7, vd5, v2, p0);  // i / dim1 * dim0) * (dim1 * dim0)
+            Reg::Sub(vd8, vd4, vd7, p0); // i % (dim1 * dim0)
 
-            MicroAPI::Div(vd9, vd8, v1, p0);                     // i / ( dim1 * dim0)
-            MicroAPI::Muls(vd10, vd9, (U)param.inStride[1], p0); // i / (dim1 * dim0) * (dim1in * dim0in)
-            MicroAPI::Muls(vd10, vd10, (U)param.gatherStride[1], p0);
-            MicroAPI::Mul(vd11, vd9, v1, p0);   // i / dim1 * dim0) * (dim1 * dim0)
-            MicroAPI::Sub(vd12, vd8, vd11, p0); // i % (dim1 * dim0)
-            MicroAPI::Muls(vd12, vd12, (U)param.gatherStride[0], p0);
+            Reg::Div(vd9, vd8, v1, p0);                     // i / ( dim1 * dim0)
+            Reg::Muls(vd10, vd9, (U)param.inStride[1], p0); // i / (dim1 * dim0) * (dim1in * dim0in)
+            Reg::Muls(vd10, vd10, (U)param.gatherStride[1], p0);
+            Reg::Mul(vd11, vd9, v1, p0);   // i / dim1 * dim0) * (dim1 * dim0)
+            Reg::Sub(vd12, vd8, vd11, p0); // i % (dim1 * dim0)
+            Reg::Muls(vd12, vd12, (U)param.gatherStride[0], p0);
 
-            MicroAPI::Add(vd2, vd2, vd3, p0);
-            MicroAPI::Add(vd6, vd6, vd10, p0);
-            MicroAPI::Add(vd6, vd2, vd6, p0);
-            MicroAPI::Add(vd12, vd12, vd6, p0);
-            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
+            Reg::Add(vd2, vd2, vd3, p0);
+            Reg::Add(vd6, vd6, vd10, p0);
+            Reg::Add(vd6, vd2, vd6, p0);
+            Reg::Add(vd12, vd12, vd6, p0);
+            Reg::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -133,55 +133,55 @@ __aicore__ inline void GenGatherFourDim(const ShapeInfo& param, LocalTensor<U>& 
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
-        MicroAPI::RegTensor<U> v3;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
+        Reg::RegTensor<U> v3;
 
-        MicroAPI::RegTensor<U> vd0;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::RegTensor<U> vd8;
-        MicroAPI::RegTensor<U> vd9;
-        MicroAPI::RegTensor<U> vd10;
-        MicroAPI::RegTensor<U> vd11;
-        MicroAPI::RegTensor<U> vd12;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> vd0;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::RegTensor<U> vd8;
+        Reg::RegTensor<U> vd9;
+        Reg::RegTensor<U> vd10;
+        Reg::RegTensor<U> vd11;
+        Reg::RegTensor<U> vd12;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(v1, (U)param.gatherSize[0], p0);
-        MicroAPI::Duplicate(v2, (U)twoDimElemtsOut, p0);
-        MicroAPI::Duplicate(v3, (U)threeDimElemtsOut, p0);
+        Reg::Duplicate(v1, (U)param.gatherSize[0], p0);
+        Reg::Duplicate(v2, (U)twoDimElemtsOut, p0);
+        Reg::Duplicate(v3, (U)threeDimElemtsOut, p0);
 
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
-            MicroAPI::Div(vd1, v0, v3, p0);                    // i / (dim2 * dim1 * dim0)
-            MicroAPI::Muls(vd2, vd1, (U)threeDimElemtsIn, p0); // i / (dim2 * dim1 * dim0) * (dim2in * dim1in * dim0in)
-            MicroAPI::Muls(vd2, vd2, (U)param.gatherStride[3], p0);
-            MicroAPI::Mul(vd3, vd1, v3, p0); // i / dim2 * dim1 * dim0) * (dim2 * dim1 * dim0)
-            MicroAPI::Sub(vd4, v0, vd3, p0); // i % (dim2 * dim1 * dim0)
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * oneRegLength);
+            Reg::Div(vd1, v0, v3, p0);                    // i / (dim2 * dim1 * dim0)
+            Reg::Muls(vd2, vd1, (U)threeDimElemtsIn, p0); // i / (dim2 * dim1 * dim0) * (dim2in * dim1in * dim0in)
+            Reg::Muls(vd2, vd2, (U)param.gatherStride[3], p0);
+            Reg::Mul(vd3, vd1, v3, p0); // i / dim2 * dim1 * dim0) * (dim2 * dim1 * dim0)
+            Reg::Sub(vd4, v0, vd3, p0); // i % (dim2 * dim1 * dim0)
 
-            MicroAPI::Div(vd5, vd4, v2, p0);                 // i / ( dim1 * dim0)
-            MicroAPI::Muls(vd6, vd5, (U)twoDimElemtsIn, p0); // i / (dim1 * dim0) * (dim1in * dim0in)
-            MicroAPI::Muls(vd6, vd6, (U)param.gatherStride[2], p0);
-            MicroAPI::Mul(vd7, vd5, v2, p0);  // i / dim1 * dim0) * (dim1 * dim0)
-            MicroAPI::Sub(vd8, vd4, vd7, p0); // i % (dim1 * dim0)
+            Reg::Div(vd5, vd4, v2, p0);                 // i / ( dim1 * dim0)
+            Reg::Muls(vd6, vd5, (U)twoDimElemtsIn, p0); // i / (dim1 * dim0) * (dim1in * dim0in)
+            Reg::Muls(vd6, vd6, (U)param.gatherStride[2], p0);
+            Reg::Mul(vd7, vd5, v2, p0);  // i / dim1 * dim0) * (dim1 * dim0)
+            Reg::Sub(vd8, vd4, vd7, p0); // i % (dim1 * dim0)
 
-            MicroAPI::Div(vd9, vd8, v1, p0);                     // i / ( dim1 * dim0)
-            MicroAPI::Muls(vd10, vd9, (U)param.inStride[1], p0); // i / (dim1 * dim0) * (dim1in * dim0in)
-            MicroAPI::Muls(vd10, vd10, (U)param.gatherStride[1], p0);
-            MicroAPI::Mul(vd11, vd9, v1, p0);   // i / dim1 * dim0) * (dim1 * dim0)
-            MicroAPI::Sub(vd12, vd8, vd11, p0); // i % (dim1 * dim0)
-            MicroAPI::Muls(vd12, vd12, (U)param.gatherStride[0], p0);
+            Reg::Div(vd9, vd8, v1, p0);                     // i / ( dim1 * dim0)
+            Reg::Muls(vd10, vd9, (U)param.inStride[1], p0); // i / (dim1 * dim0) * (dim1in * dim0in)
+            Reg::Muls(vd10, vd10, (U)param.gatherStride[1], p0);
+            Reg::Mul(vd11, vd9, v1, p0);   // i / dim1 * dim0) * (dim1 * dim0)
+            Reg::Sub(vd12, vd8, vd11, p0); // i % (dim1 * dim0)
+            Reg::Muls(vd12, vd12, (U)param.gatherStride[0], p0);
 
-            MicroAPI::Add(vd2, vd2, vd6, p0);
-            MicroAPI::Add(vd12, vd12, vd10, p0);
-            MicroAPI::Add(vd12, vd12, vd2, p0);
-            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
+            Reg::Add(vd2, vd2, vd6, p0);
+            Reg::Add(vd12, vd12, vd10, p0);
+            Reg::Add(vd12, vd12, vd2, p0);
+            Reg::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -197,45 +197,45 @@ __aicore__ inline void GenGatherIndexThreeDim(const ShapeInfo& param, LocalTenso
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
 
-        MicroAPI::RegTensor<U> vd0;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::RegTensor<U> vd8;
-        MicroAPI::RegTensor<U> vd9;
-        MicroAPI::RegTensor<U> vd10;
-        MicroAPI::RegTensor<U> vd11;
-        MicroAPI::RegTensor<U> vd12;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> vd0;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::RegTensor<U> vd8;
+        Reg::RegTensor<U> vd9;
+        Reg::RegTensor<U> vd10;
+        Reg::RegTensor<U> vd11;
+        Reg::RegTensor<U> vd12;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(v1, (U)param.gatherSize[0], p0);
-        MicroAPI::Duplicate(v2, (U)twoDimElemtsOut, p0);
+        Reg::Duplicate(v1, (U)param.gatherSize[0], p0);
+        Reg::Duplicate(v2, (U)twoDimElemtsOut, p0);
 
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
-            MicroAPI::Div(vd1, v0, v2, p0);                  // i / (rows * cols)
-            MicroAPI::Muls(vd2, vd1, (U)twoDimElemtsIn, p0); // i / (rows * cols) * batchElemtsIn
-            MicroAPI::Muls(vd2, vd2, (U)param.gatherStride[2], p0);
-            MicroAPI::Mul(vd3, vd1, v2, p0); // (i / wFactorOut * wIn * hStride)
-            MicroAPI::Sub(vd4, v0, vd3, p0); // i % (rows * cols)
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * oneRegLength);
+            Reg::Div(vd1, v0, v2, p0);                  // i / (rows * cols)
+            Reg::Muls(vd2, vd1, (U)twoDimElemtsIn, p0); // i / (rows * cols) * batchElemtsIn
+            Reg::Muls(vd2, vd2, (U)param.gatherStride[2], p0);
+            Reg::Mul(vd3, vd1, v2, p0); // (i / wFactorOut * wIn * hStride)
+            Reg::Sub(vd4, v0, vd3, p0); // i % (rows * cols)
 
-            MicroAPI::Div(vd5, vd4, v1, p0);                         // hwoffset / cols
-            MicroAPI::Muls(vd6, vd5, (U)param.inStride[1], p0);      // hwoffset / cols * wIn
-            MicroAPI::Muls(vd7, vd6, (U)param.gatherStride[1], p0);  // hwoffset / cols * wIn * hStride
-            MicroAPI::Mul(vd8, vd5, v1, p0);                         // hwoffset / cols * cols
-            MicroAPI::Sub(vd9, vd4, vd8, p0);                        // hwoffset % cols
-            MicroAPI::Muls(vd10, vd9, (U)param.gatherStride[0], p0); // hwoffset % cols * wStride
-            MicroAPI::Add(vd11, vd7, vd10, p0); // hwoffset / cols * wIn * hStride + hwoffset % cols * wStride
-            MicroAPI::Add(vd12, vd2, vd11, p0);
-            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
+            Reg::Div(vd5, vd4, v1, p0);                         // hwoffset / cols
+            Reg::Muls(vd6, vd5, (U)param.inStride[1], p0);      // hwoffset / cols * wIn
+            Reg::Muls(vd7, vd6, (U)param.gatherStride[1], p0);  // hwoffset / cols * wIn * hStride
+            Reg::Mul(vd8, vd5, v1, p0);                         // hwoffset / cols * cols
+            Reg::Sub(vd9, vd4, vd8, p0);                        // hwoffset % cols
+            Reg::Muls(vd10, vd9, (U)param.gatherStride[0], p0); // hwoffset % cols * wStride
+            Reg::Add(vd11, vd7, vd10, p0); // hwoffset / cols * wIn * hStride + hwoffset % cols * wStride
+            Reg::Add(vd12, vd2, vd11, p0);
+            Reg::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -250,37 +250,37 @@ __aicore__ inline void GenGatherIndexTwoDim(uint32_t wFactorOut, uint32_t wIn, u
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
-        MicroAPI::RegTensor<U> v3;
-        MicroAPI::RegTensor<U> v4;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
+        Reg::RegTensor<U> v3;
+        Reg::RegTensor<U> v4;
 
-        MicroAPI::RegTensor<U> vd0;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> vd0;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(v1, (U)wFactorOut, p0);
-        MicroAPI::Duplicate(v2, (U)wIn, p0);
-        MicroAPI::Duplicate(v3, (U)hStride, p0);
-        MicroAPI::Duplicate(v4, (U)wStride, p0);
+        Reg::Duplicate(v1, (U)wFactorOut, p0);
+        Reg::Duplicate(v2, (U)wIn, p0);
+        Reg::Duplicate(v3, (U)hStride, p0);
+        Reg::Duplicate(v4, (U)wStride, p0);
 
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
-            MicroAPI::Div(vd1, v0, v1, p0);   // i / wFactorOut
-            MicroAPI::Mul(vd2, vd1, v2, p0);  // (i / wFactorOut * wIn)
-            MicroAPI::Mul(vd3, vd2, v3, p0);  // (i / wFactorOut * wIn * hStride)
-            MicroAPI::Mul(vd4, vd1, v1, p0);  // (i / wFactorOut * wFactorOut)
-            MicroAPI::Sub(vd5, v0, vd4, p0);  // i % wFactor
-            MicroAPI::Mul(vd6, vd5, v4, p0);  // i % wFactorOut * wStride
-            MicroAPI::Add(vd7, vd3, vd6, p0); // (i / wFactorOut * wIn * hStride + i % wFactorOut * wStride)
-            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd7, p0);
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * oneRegLength);
+            Reg::Div(vd1, v0, v1, p0);   // i / wFactorOut
+            Reg::Mul(vd2, vd1, v2, p0);  // (i / wFactorOut * wIn)
+            Reg::Mul(vd3, vd2, v3, p0);  // (i / wFactorOut * wIn * hStride)
+            Reg::Mul(vd4, vd1, v1, p0);  // (i / wFactorOut * wFactorOut)
+            Reg::Sub(vd5, v0, vd4, p0);  // i % wFactor
+            Reg::Mul(vd6, vd5, v4, p0);  // i % wFactorOut * wStride
+            Reg::Add(vd7, vd3, vd6, p0); // (i / wFactorOut * wIn * hStride + i % wFactorOut * wStride)
+            Reg::StoreAlign(dstAddr + i * oneRegLength, vd7, p0);
         }
     }
 }
@@ -294,15 +294,15 @@ __aicore__ inline void GenGatherIndexOneDim(uint32_t wStride, LocalTensor<U>& in
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
+        Reg::RegTensor<U> v0;
 
-        MicroAPI::RegTensor<U> vd0;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> vd0;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
 
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
-            MicroAPI::Muls(vd0, v0, (U)wStride, p0); // (i / wFactorOut * wIn)
-            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd0, p0);
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * oneRegLength);
+            Reg::Muls(vd0, v0, (U)wStride, p0); // (i / wFactorOut * wIn)
+            Reg::StoreAlign(dstAddr + i * oneRegLength, vd0, p0);
         }
     }
 }

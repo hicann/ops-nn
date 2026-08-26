@@ -25,14 +25,14 @@ using namespace AscendC;
 constexpr uint32_t VEC_LENGTH_B32 = 64;
 
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
-__aicore__ inline void SigmoidCustomImpl(MicroAPI::RegTensor<float>& yReg, MicroAPI::RegTensor<float>& xReg,
-                                         MicroAPI::RegTensor<float>& oneReg, MicroAPI::MaskReg& mask)
+using AscendC::Reg::RegTensor;
+__aicore__ inline void SigmoidCustomImpl(Reg::RegTensor<float>& yReg, Reg::RegTensor<float>& xReg,
+                                         Reg::RegTensor<float>& oneReg, Reg::MaskReg& mask)
 {
-    MicroAPI::Muls(yReg, xReg, -1.0f, mask);
-    MicroAPI::Exp(yReg, yReg, mask);
-    MicroAPI::Add(yReg, yReg, oneReg, mask);
-    MicroAPI::Div(yReg, oneReg, yReg, mask);
+    Reg::Muls(yReg, xReg, -1.0f, mask);
+    Reg::Exp(yReg, yReg, mask);
+    Reg::Add(yReg, yReg, oneReg, mask);
+    Reg::Div(yReg, oneReg, yReg, mask);
 }
 #endif
 
@@ -56,54 +56,54 @@ __aicore__ inline void SigmoidCrossEntropyWithLogitsGradV2Impl(LocalTensor<float
 
     __VEC_SCOPE__
     {
-        MicroAPI::MaskReg mask0 = MicroAPI::CreateMask<uint32_t>();
-        MicroAPI::RegTensor<float> oneReg;
-        MicroAPI::Duplicate(oneReg, 1.0f, mask0);
+        Reg::MaskReg mask0 = Reg::CreateMask<uint32_t>();
+        Reg::RegTensor<float> oneReg;
+        Reg::Duplicate(oneReg, 1.0f, mask0);
 
-        MicroAPI::RegTensor<float> predictReg;
-        MicroAPI::RegTensor<float> targetReg;
-        MicroAPI::RegTensor<float> doutReg;
-        MicroAPI::RegTensor<float> weightReg;
-        MicroAPI::RegTensor<float> posWeightReg;
-        MicroAPI::RegTensor<float> gradientReg;
-        MicroAPI::RegTensor<float> posWeightTargetReg;
-        MicroAPI::RegTensor<float> tmpReg;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<float> predictReg;
+        Reg::RegTensor<float> targetReg;
+        Reg::RegTensor<float> doutReg;
+        Reg::RegTensor<float> weightReg;
+        Reg::RegTensor<float> posWeightReg;
+        Reg::RegTensor<float> gradientReg;
+        Reg::RegTensor<float> posWeightTargetReg;
+        Reg::RegTensor<float> tmpReg;
+        Reg::MaskReg mask;
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-            mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(predictReg, predictAddr, vlSize);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetReg, targetAddr, vlSize);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(doutReg, doutAddr, vlSize);
+            mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+            Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(predictReg, predictAddr, vlSize);
+            Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(targetReg, targetAddr, vlSize);
+            Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(doutReg, doutAddr, vlSize);
             if constexpr (HAS_WEIGHT) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(weightReg, weightAddr, vlSize);
+                Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(weightReg, weightAddr, vlSize);
             }
             if constexpr (HAS_POS_WEIGHT) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(posWeightReg, posWeightAddr, vlSize);
+                Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(posWeightReg, posWeightAddr, vlSize);
             }
 
             SigmoidCustomImpl(gradientReg, predictReg, oneReg, mask);
 
             if constexpr (HAS_POS_WEIGHT) {
-                MicroAPI::Mul(posWeightTargetReg, posWeightReg, targetReg, mask);
-                MicroAPI::Adds(tmpReg, posWeightTargetReg, 1.0f, mask);
-                MicroAPI::Sub(tmpReg, tmpReg, targetReg, mask);
-                MicroAPI::Mul(gradientReg, tmpReg, gradientReg, mask);
-                MicroAPI::Sub(gradientReg, gradientReg, posWeightTargetReg, mask);
+                Reg::Mul(posWeightTargetReg, posWeightReg, targetReg, mask);
+                Reg::Adds(tmpReg, posWeightTargetReg, 1.0f, mask);
+                Reg::Sub(tmpReg, tmpReg, targetReg, mask);
+                Reg::Mul(gradientReg, tmpReg, gradientReg, mask);
+                Reg::Sub(gradientReg, gradientReg, posWeightTargetReg, mask);
             } else {
-                MicroAPI::Sub(gradientReg, gradientReg, targetReg, mask);
+                Reg::Sub(gradientReg, gradientReg, targetReg, mask);
             }
 
-            MicroAPI::Mul(gradientReg, gradientReg, doutReg, mask);
+            Reg::Mul(gradientReg, gradientReg, doutReg, mask);
 
             if constexpr (HAS_WEIGHT) {
-                MicroAPI::Mul(gradientReg, gradientReg, weightReg, mask);
+                Reg::Mul(gradientReg, gradientReg, weightReg, mask);
             }
 
             if constexpr (IS_MEAN == 1) {
-                MicroAPI::Muls(gradientReg, gradientReg, scale, mask);
+                Reg::Muls(gradientReg, gradientReg, scale, mask);
             }
 
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, gradientReg, vlSize, mask);
+            Reg::DataCopy<float, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, gradientReg, vlSize, mask);
         }
     }
 #endif

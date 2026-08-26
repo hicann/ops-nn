@@ -312,14 +312,14 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Ini
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T1> negInfReg;
-        AscendC::MicroAPI::RegTensor<T2> negOne;
+        AscendC::Reg::RegTensor<T1> negInfReg;
+        AscendC::Reg::RegTensor<T2> negOne;
         DuplicateLowestReg(negInfReg);
-        AscendC::MicroAPI::Duplicate(negOne, T2(-1));
-        AscendC::MicroAPI::MaskReg pregAll = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg pregAllT2 = AscendC::MicroAPI::CreateMask<T2, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::StoreAlign(maxValueHelp, negInfReg, pregAll);
-        AscendC::MicroAPI::StoreAlign(argmaxHelp, negOne, pregAllT2);
+        AscendC::Reg::Duplicate(negOne, T2(-1));
+        AscendC::Reg::MaskReg pregAll = AscendC::Reg::CreateMask<T1, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg pregAllT2 = AscendC::Reg::CreateMask<T2, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::StoreAlign(maxValueHelp, negInfReg, pregAll);
+        AscendC::Reg::StoreAlign(argmaxHelp, negOne, pregAllT2);
     }
 }
 
@@ -332,14 +332,14 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Cop
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T1> vreg0;
-        AscendC::MicroAPI::RegTensor<T2> argmaxUpdateVreg;
-        AscendC::MicroAPI::MaskReg pregAllT1 = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg pregAllT2 = AscendC::MicroAPI::CreateMask<T2, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
-        AscendC::MicroAPI::LoadAlign(argmaxUpdateVreg, argmaxHelp);
-        AscendC::MicroAPI::StoreAlign(maxValueLocal, vreg0, pregAllT1);
-        AscendC::MicroAPI::StoreAlign(argmaxLocal, argmaxUpdateVreg, pregAllT2);
+        AscendC::Reg::RegTensor<T1> vreg0;
+        AscendC::Reg::RegTensor<T2> argmaxUpdateVreg;
+        AscendC::Reg::MaskReg pregAllT1 = AscendC::Reg::CreateMask<T1, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg pregAllT2 = AscendC::Reg::CreateMask<T2, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::LoadAlign(vreg0, maxValueHelp);
+        AscendC::Reg::LoadAlign(argmaxUpdateVreg, argmaxHelp);
+        AscendC::Reg::StoreAlign(maxValueLocal, vreg0, pregAllT1);
+        AscendC::Reg::StoreAlign(argmaxLocal, argmaxUpdateVreg, pregAllT2);
     }
 }
 
@@ -441,17 +441,17 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
             uint32_t computeLoopVLT2 = computeLoopTmp;
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::RegTensor<T1> vreg0;
-                AscendC::MicroAPI::RegTensor<T1> vreg1;
-                AscendC::MicroAPI::RegTensor<T2> argmaxUpdateVreg;
-                AscendC::MicroAPI::RegTensor<T2> argmaxResVreg;
-                AscendC::MicroAPI::MaskReg neMask;
-                AscendC::MicroAPI::MaskReg gtMask;
-                AscendC::MicroAPI::MaskReg gtMaskT2;
-                AscendC::MicroAPI::MaskReg gtMaskT4;
+                AscendC::Reg::RegTensor<T1> vreg0;
+                AscendC::Reg::RegTensor<T1> vreg1;
+                AscendC::Reg::RegTensor<T2> argmaxUpdateVreg;
+                AscendC::Reg::RegTensor<T2> argmaxResVreg;
+                AscendC::Reg::MaskReg neMask;
+                AscendC::Reg::MaskReg gtMask;
+                AscendC::Reg::MaskReg gtMaskT2;
+                AscendC::Reg::MaskReg gtMaskT4;
 
-                AscendC::MicroAPI::MaskReg computeMaskT1 = AscendC::MicroAPI::UpdateMask<T1>(computeLoopVL);
-                AscendC::MicroAPI::MaskReg computeMaskT2 = AscendC::MicroAPI::UpdateMask<T2>(computeLoopVLT2);
+                AscendC::Reg::MaskReg computeMaskT1 = AscendC::Reg::UpdateMask<T1>(computeLoopVL);
+                AscendC::Reg::MaskReg computeMaskT2 = AscendC::Reg::UpdateMask<T2>(computeLoopVLT2);
                 for (uint16_t hIndex = 0; hIndex < static_cast<uint16_t>(hOutputActual); ++hIndex) {
                     for (uint16_t wIndex = 0; wIndex < static_cast<uint16_t>(wOutputActual); ++wIndex) {
                         int64_t outputOffset = nIndex * hOutputActual * wOutputActual * cOutputActualAlign +
@@ -469,49 +469,49 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
                                                  (hIndex * hStride * wInput + wIndex * wStride) * cInput_ + offsetC;
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
-                            AscendC::MicroAPI::LoadAlign(argmaxResVreg, argmaxHelp);
+                            AscendC::Reg::LoadAlign(vreg0, maxValueHelp);
+                            AscendC::Reg::LoadAlign(argmaxResVreg, argmaxHelp);
                         } else {
                             DuplicateLowestReg(vreg0);
-                            AscendC::MicroAPI::Duplicate(argmaxResVreg, T2(-1));
+                            AscendC::Reg::Duplicate(argmaxResVreg, T2(-1));
                         }
 
                         for (uint16_t hKernelIdx = 0; hKernelIdx < static_cast<uint16_t>(hKernel); ++hKernelIdx) {
                             for (uint16_t wKernelIdx = 0; wKernelIdx < static_cast<uint16_t>(wKernel); wKernelIdx++) {
-                                AscendC::MicroAPI::LoadAlign(
+                                AscendC::Reg::LoadAlign(
                                     vreg1,
                                     xLocal + startInUb + (hKernelIdx * wInputActual + wKernelIdx) * cOutputActualAlign);
-                                AscendC::MicroAPI::Arange(
-                                    argmaxUpdateVreg, scopeHWCOffset + (hKernelIdx * wInput + wKernelIdx) * cInput_);
+                                AscendC::Reg::Arange(argmaxUpdateVreg,
+                                                     scopeHWCOffset + (hKernelIdx * wInput + wKernelIdx) * cInput_);
 
                                 if constexpr (NANPROP == 1) {
-                                    AscendC::MicroAPI::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
-                                    AscendC::MicroAPI::Not(gtMask, gtMask, computeMaskT1);
+                                    AscendC::Reg::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
+                                    AscendC::Reg::Not(gtMask, gtMask, computeMaskT1);
                                 } else {
-                                    AscendC::MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
+                                    AscendC::Reg::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
                                 }
 
                                 if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_1) {
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
                                 } else if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_2) {
-                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
+                                    AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
                                 } else {
-                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::UnPack(gtMaskT4, gtMaskT2);
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
+                                    AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                                    AscendC::Reg::UnPack(gtMaskT4, gtMaskT2);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
                                 }
 
-                                AscendC::MicroAPI::Select(vreg0, vreg1, vreg0, gtMask);
+                                AscendC::Reg::Select(vreg0, vreg1, vreg0, gtMask);
                             }
                         }
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
+                            AscendC::Reg::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
+                            AscendC::Reg::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
                         } else {
-                            AscendC::MicroAPI::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
+                            AscendC::Reg::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
+                            AscendC::Reg::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
                         }
                     }
                 }
@@ -596,69 +596,68 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
 
                     __VEC_SCOPE__
                     {
-                        AscendC::MicroAPI::RegTensor<T1> vreg0;
-                        AscendC::MicroAPI::RegTensor<T1> vreg1;
+                        AscendC::Reg::RegTensor<T1> vreg0;
+                        AscendC::Reg::RegTensor<T1> vreg1;
 
-                        AscendC::MicroAPI::RegTensor<T2> argmaxUpdateVreg;
-                        AscendC::MicroAPI::RegTensor<T2> argmaxResVreg;
+                        AscendC::Reg::RegTensor<T2> argmaxUpdateVreg;
+                        AscendC::Reg::RegTensor<T2> argmaxResVreg;
 
-                        AscendC::MicroAPI::RegTensor<uint32_t> startOffsetRegU32;
-                        AscendC::MicroAPI::RegTensor<uint32_t> separateOffsetRegU32;
-                        AscendC::MicroAPI::RegTensor<uint16_t> separateOffsetRegU16;
-                        AscendC::MicroAPI::MaskReg computeMaskT1 = AscendC::MicroAPI::UpdateMask<T1>(computeLoopVL);
-                        AscendC::MicroAPI::MaskReg computeMaskT2 = AscendC::MicroAPI::UpdateMask<T2>(computeLoopVLT2);
-                        AscendC::MicroAPI::MaskReg neMask;
-                        AscendC::MicroAPI::MaskReg gtMask;
-                        AscendC::MicroAPI::MaskReg gtMaskT2;
-                        AscendC::MicroAPI::MaskReg gtMaskT4;
+                        AscendC::Reg::RegTensor<uint32_t> startOffsetRegU32;
+                        AscendC::Reg::RegTensor<uint32_t> separateOffsetRegU32;
+                        AscendC::Reg::RegTensor<uint16_t> separateOffsetRegU16;
+                        AscendC::Reg::MaskReg computeMaskT1 = AscendC::Reg::UpdateMask<T1>(computeLoopVL);
+                        AscendC::Reg::MaskReg computeMaskT2 = AscendC::Reg::UpdateMask<T2>(computeLoopVLT2);
+                        AscendC::Reg::MaskReg neMask;
+                        AscendC::Reg::MaskReg gtMask;
+                        AscendC::Reg::MaskReg gtMaskT2;
+                        AscendC::Reg::MaskReg gtMaskT4;
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
-                            AscendC::MicroAPI::LoadAlign(argmaxResVreg, argmaxHelp);
+                            AscendC::Reg::LoadAlign(vreg0, maxValueHelp);
+                            AscendC::Reg::LoadAlign(argmaxResVreg, argmaxHelp);
                         } else {
                             DuplicateLowestReg(vreg0);
-                            AscendC::MicroAPI::Duplicate(argmaxResVreg, T2(-1));
+                            AscendC::Reg::Duplicate(argmaxResVreg, T2(-1));
                         }
 
                         for (uint16_t hKernelIdx = 0; hKernelIdx < static_cast<uint16_t>(correctHKernel);
                              ++hKernelIdx) {
                             for (uint16_t wKernelIdx = 0; wKernelIdx < static_cast<uint16_t>(correctWKernel);
                                  ++wKernelIdx) {
-                                AscendC::MicroAPI::LoadAlign(
+                                AscendC::Reg::LoadAlign(
                                     vreg1, xLocal + startInUb +
                                                (hKernelIdx * wInputActualPad + wKernelIdx) * cOutputActualAlign);
-                                AscendC::MicroAPI::Arange(
-                                    argmaxUpdateVreg,
-                                    (hKernelIdx * wInput + wKernelIdx) * cInput_ + kernelStartArgmaxOffset);
+                                AscendC::Reg::Arange(argmaxUpdateVreg, (hKernelIdx * wInput + wKernelIdx) * cInput_ +
+                                                                           kernelStartArgmaxOffset);
 
                                 if constexpr (NANPROP == 1) {
-                                    AscendC::MicroAPI::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
-                                    AscendC::MicroAPI::Not(gtMask, gtMask, computeMaskT1);
+                                    AscendC::Reg::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
+                                    AscendC::Reg::Not(gtMask, gtMask, computeMaskT1);
                                 } else {
-                                    AscendC::MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
+                                    AscendC::Reg::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
                                 }
 
                                 if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_1) {
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
                                 } else if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_2) {
-                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
+                                    AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
                                 } else {
-                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::UnPack(gtMaskT4, gtMaskT2);
-                                    AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
+                                    AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                                    AscendC::Reg::UnPack(gtMaskT4, gtMaskT2);
+                                    AscendC::Reg::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
                                 }
 
-                                AscendC::MicroAPI::Select(vreg0, vreg1, vreg0, gtMask);
+                                AscendC::Reg::Select(vreg0, vreg1, vreg0, gtMask);
                             }
                         }
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
+                            AscendC::Reg::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
+                            AscendC::Reg::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
                         } else {
-                            AscendC::MicroAPI::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
+                            AscendC::Reg::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
+                            AscendC::Reg::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
                         }
                     }
                 }
@@ -730,15 +729,15 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Fil
     __VEC_SCOPE__
 
     {
-        AscendC::MicroAPI::RegTensor<T1> negInfReg;
+        AscendC::Reg::RegTensor<T1> negInfReg;
         DuplicateNegInfReg(negInfReg);
         for (uint16_t n = 0; n < nOutputActual; n++) {
             int32_t nOffset = n * nStartOffset;
             // top
             uint32_t topCountTmp = topCount;
             for (uint16_t i = 0; i < topRepeatTimes; i++) {
-                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(topCountTmp);
-                AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
+                AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(topCountTmp);
+                AscendC::Reg::StoreAlign(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
             }
 
             // left
@@ -746,8 +745,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Fil
                 int32_t leftOffset = hIndex * wInputActualAmend * cOutputActualAlign + leftStartOffset;
                 uint32_t leftCount = leftSingleRowCount;
                 for (uint16_t i = 0; i < leftSingleRowRepeatTimes; i++) {
-                    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(leftCount);
-                    AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + leftOffset + i * computeSize, negInfReg, preg);
+                    AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(leftCount);
+                    AscendC::Reg::StoreAlign(xLocalAddr + nOffset + leftOffset + i * computeSize, negInfReg, preg);
                 }
             }
 
@@ -756,18 +755,16 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Fil
                 int32_t rightOffset = hIndex * wInputActualAmend * cOutputActualAlign + rightStartOffset;
                 uint32_t rightCount = rightSingleRowCount;
                 for (uint16_t i = 0; i < rightSingleRowRepeatTimes; i++) {
-                    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(rightCount);
-                    AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + rightOffset + i * computeSize, negInfReg,
-                                                  preg);
+                    AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(rightCount);
+                    AscendC::Reg::StoreAlign(xLocalAddr + nOffset + rightOffset + i * computeSize, negInfReg, preg);
                 }
             }
 
             // down
             uint32_t downCountTmp = downCount;
             for (uint16_t i = 0; i < downRepeatTimes; i++) {
-                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(downCountTmp);
-                AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg,
-                                              preg);
+                AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(downCountTmp);
+                AscendC::Reg::StoreAlign(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg, preg);
             }
         }
     }

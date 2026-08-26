@@ -29,19 +29,19 @@
 namespace AscendC {
 namespace Vec {
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::RegTensor;
 
 constexpr static uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
 
 template <typename U = float>
-__aicore__ inline void CalcYLogX(MicroAPI::RegTensor<U>& regYLogX, MicroAPI::RegTensor<U>& regX,
-                                 MicroAPI::RegTensor<U>& regY, MicroAPI::MaskReg& pregUp)
+__aicore__ inline void CalcYLogX(Reg::RegTensor<U>& regYLogX, Reg::RegTensor<U>& regX, Reg::RegTensor<U>& regY,
+                                 Reg::MaskReg& pregUp)
 {
-    MicroAPI::RegTensor<U> regLogX;
-    MicroAPI::RegTensor<U> regClipLogX;
-    MicroAPI::Log(regLogX, regX, pregUp);
-    MicroAPI::Maxs(regClipLogX, regLogX, (U)-100.0, pregUp);
-    MicroAPI::Mul(regYLogX, regClipLogX, regY, pregUp);
+    Reg::RegTensor<U> regLogX;
+    Reg::RegTensor<U> regClipLogX;
+    Reg::Log(regLogX, regX, pregUp);
+    Reg::Maxs(regClipLogX, regLogX, (U)-100.0, pregUp);
+    Reg::Mul(regYLogX, regClipLogX, regY, pregUp);
 }
 #endif
 template <typename U = float>
@@ -61,32 +61,32 @@ struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regX;
-            MicroAPI::RegTensor<U> regY;
-            MicroAPI::RegTensor<U> regTensorOne;
-            MicroAPI::RegTensor<U> regOneSubX;
-            MicroAPI::RegTensor<U> regOneSubY;
-            MicroAPI::RegTensor<U> regOneSubYLogX;
-            MicroAPI::RegTensor<U> regYLogX;
-            MicroAPI::RegTensor<U> regDataSum;
-            MicroAPI::RegTensor<U> regBinaryYLogX;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regX;
+            Reg::RegTensor<U> regY;
+            Reg::RegTensor<U> regTensorOne;
+            Reg::RegTensor<U> regOneSubX;
+            Reg::RegTensor<U> regOneSubY;
+            Reg::RegTensor<U> regOneSubYLogX;
+            Reg::RegTensor<U> regYLogX;
+            Reg::RegTensor<U> regDataSum;
+            Reg::RegTensor<U> regBinaryYLogX;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
-                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
-                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
+                pregUp = Reg::UpdateMask<U>(totalLen);
+                Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
+                Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
 
                 CalcYLogX<U>(regYLogX, regX, regY, pregUp);
-                MicroAPI::Duplicate(regTensorOne, (U)1.0f, pregUp);
-                MicroAPI::Sub(regOneSubX, regTensorOne, regX, pregUp);
-                MicroAPI::Sub(regOneSubY, regTensorOne, regY, pregUp);
+                Reg::Duplicate(regTensorOne, (U)1.0f, pregUp);
+                Reg::Sub(regOneSubX, regTensorOne, regX, pregUp);
+                Reg::Sub(regOneSubY, regTensorOne, regY, pregUp);
                 CalcYLogX<U>(regOneSubYLogX, regOneSubX, regOneSubY, pregUp);
-                MicroAPI::Add(regDataSum, regYLogX, regOneSubYLogX, pregUp);
-                MicroAPI::Muls(regBinaryYLogX, regDataSum, (U)-1.0f, pregUp);
+                Reg::Add(regDataSum, regYLogX, regOneSubYLogX, pregUp);
+                Reg::Muls(regBinaryYLogX, regDataSum, (U)-1.0f, pregUp);
 
-                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX,
-                                                                                 (int32_t)oneRepeat, pregUp);
+                Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX, (int32_t)oneRepeat,
+                                                                       pregUp);
             }
         }
 #endif

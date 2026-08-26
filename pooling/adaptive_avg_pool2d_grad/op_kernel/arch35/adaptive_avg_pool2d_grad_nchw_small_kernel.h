@@ -363,13 +363,13 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<COMPUTE_TYPE>(fullMaskCount);
+            Reg::RegTensor<COMPUTE_TYPE> srcReg;
+            Reg::RegTensor<COMPUTE_TYPE> scaledReg;
+            Reg::RegTensor<COMPUTE_TYPE> dstReg;
+            Reg::MaskReg computeMask = Reg::UpdateMask<COMPUTE_TYPE>(fullMaskCount);
 
-            MicroAPI::LoadAlign(srcReg, srcAddr);
-            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
+            Reg::LoadAlign(srcReg, srcAddr);
+            Reg::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
                 const int64_t hRowBase = hRowBase0 + static_cast<int64_t>(oh) * wOutputAligned_;
@@ -378,9 +378,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                     const int64_t outBase = outRow * highAxisLocalStride_;
                     __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
-                    MicroAPI::LoadAlign(dstReg, dstAddr);
-                    MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                    MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
+                    Reg::LoadAlign(dstReg, dstAddr);
+                    Reg::Add(dstReg, dstReg, scaledReg, computeMask);
+                    Reg::StoreAlign(dstAddr, dstReg, computeMask);
                 }
             }
         }
@@ -393,13 +393,13 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
-            MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<COMPUTE_TYPE>(tail);
+            Reg::RegTensor<COMPUTE_TYPE> srcReg;
+            Reg::RegTensor<COMPUTE_TYPE> scaledReg;
+            Reg::RegTensor<COMPUTE_TYPE> dstReg;
+            Reg::MaskReg computeMask = Reg::UpdateMask<COMPUTE_TYPE>(tail);
 
-            MicroAPI::LoadAlign(srcReg, srcAddr);
-            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
+            Reg::LoadAlign(srcReg, srcAddr);
+            Reg::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
                 const int64_t hRowBase = hRowBase0 + static_cast<int64_t>(oh) * wOutputAligned_;
@@ -408,9 +408,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                     const int64_t outBase = outRow * highAxisLocalStride_;
                     __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
-                    MicroAPI::LoadAlign(dstReg, dstAddr);
-                    MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                    MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
+                    Reg::LoadAlign(dstReg, dstAddr);
+                    Reg::Add(dstReg, dstReg, scaledReg, computeMask);
+                    Reg::StoreAlign(dstAddr, dstReg, computeMask);
                 }
             }
         }
@@ -422,7 +422,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
     LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, uint32_t dstElemCount)
 {
     Duplicate(dstLocal, static_cast<COMPUTE_TYPE>(0), dstElemCount);
-    __VEC_SCOPE__ { MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>(); }
+    __VEC_SCOPE__ { Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>(); }
 
     LocalTensor<INDEX> stWLocal = stWRegBuf_.Get<INDEX>();
     LocalTensor<INDEX> edWLocal = edWRegBuf_.Get<INDEX>();
@@ -462,41 +462,41 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<INDEX> hIdx;
-            MicroAPI::Arange(hIdx, hBaseIdx);
+            Reg::RegTensor<INDEX> hIdx;
+            Reg::Arange(hIdx, hBaseIdx);
 
-            MicroAPI::MaskReg hAllMask = MicroAPI::CreateMask<INDEX, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg hBatchMask = MicroAPI::UpdateMask<INDEX>(hBatchCountMask);
+            Reg::MaskReg hAllMask = Reg::CreateMask<INDEX, Reg::MaskPattern::ALL>();
+            Reg::MaskReg hBatchMask = Reg::UpdateMask<INDEX>(hBatchCountMask);
 
-            MicroAPI::RegTensor<INDEX> hRegOut;
-            MicroAPI::Duplicate(hRegOut, hOutput);
+            Reg::RegTensor<INDEX> hRegOut;
+            Reg::Duplicate(hRegOut, hOutput);
 
-            MicroAPI::RegTensor<INDEX> hRegIn;
-            MicroAPI::Duplicate(hRegIn, hGradInput);
+            Reg::RegTensor<INDEX> hRegIn;
+            Reg::Duplicate(hRegIn, hGradInput);
 
-            MicroAPI::RegTensor<INDEX> hStGlobal;
-            MicroAPI::Mul(hStGlobal, hIdx, hRegOut, hAllMask);
-            MicroAPI::Div(hStGlobal, hStGlobal, hRegIn, hAllMask);
+            Reg::RegTensor<INDEX> hStGlobal;
+            Reg::Mul(hStGlobal, hIdx, hRegOut, hAllMask);
+            Reg::Div(hStGlobal, hStGlobal, hRegIn, hAllMask);
 
-            MicroAPI::RegTensor<INDEX> hEdGlobal;
-            MicroAPI::Adds(hEdGlobal, hIdx, INDEX(1), hAllMask);
-            MicroAPI::Mul(hEdGlobal, hEdGlobal, hRegOut, hAllMask);
-            MicroAPI::Add(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
-            MicroAPI::Adds(hEdGlobal, hEdGlobal, INDEX(-1), hAllMask);
-            MicroAPI::Div(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
+            Reg::RegTensor<INDEX> hEdGlobal;
+            Reg::Adds(hEdGlobal, hIdx, INDEX(1), hAllMask);
+            Reg::Mul(hEdGlobal, hEdGlobal, hRegOut, hAllMask);
+            Reg::Add(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
+            Reg::Adds(hEdGlobal, hEdGlobal, INDEX(-1), hAllMask);
+            Reg::Div(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
 
-            MicroAPI::RegTensor<INDEX> hCover;
-            MicroAPI::Sub(hCover, hEdGlobal, hStGlobal, hAllMask);
+            Reg::RegTensor<INDEX> hCover;
+            Reg::Sub(hCover, hEdGlobal, hStGlobal, hAllMask);
 
-            MicroAPI::Maxs(hStGlobal, hStGlobal, hTileStart, hAllMask);
-            MicroAPI::Adds(hStGlobal, hStGlobal, INDEX(-hTileStart), hAllMask);
+            Reg::Maxs(hStGlobal, hStGlobal, hTileStart, hAllMask);
+            Reg::Adds(hStGlobal, hStGlobal, INDEX(-hTileStart), hAllMask);
 
-            MicroAPI::Mins(hEdGlobal, hEdGlobal, hTileEnd, hAllMask);
-            MicroAPI::Adds(hEdGlobal, hEdGlobal, INDEX(-hTileStart), hAllMask);
+            Reg::Mins(hEdGlobal, hEdGlobal, hTileEnd, hAllMask);
+            Reg::Adds(hEdGlobal, hEdGlobal, INDEX(-hTileStart), hAllMask);
 
-            MicroAPI::StoreAlign(stHAddr, hStGlobal, hBatchMask);
-            MicroAPI::StoreAlign(edHAddr, hEdGlobal, hBatchMask);
-            MicroAPI::StoreAlign(coverHAddr, hCover, hBatchMask);
+            Reg::StoreAlign(stHAddr, hStGlobal, hBatchMask);
+            Reg::StoreAlign(edHAddr, hEdGlobal, hBatchMask);
+            Reg::StoreAlign(coverHAddr, hCover, hBatchMask);
         }
 
         for (int64_t swLocalBatch = 0; swLocalBatch < wGradInputActual_; swLocalBatch += INDEX_VF_LEN) {
@@ -508,41 +508,41 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
 
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<INDEX> idx;
-                MicroAPI::Arange(idx, wBaseIdx);
+                Reg::RegTensor<INDEX> idx;
+                Reg::Arange(idx, wBaseIdx);
 
-                MicroAPI::MaskReg allMask = MicroAPI::CreateMask<INDEX, MicroAPI::MaskPattern::ALL>();
-                MicroAPI::MaskReg batchMask = MicroAPI::UpdateMask<INDEX>(batchCountMask);
+                Reg::MaskReg allMask = Reg::CreateMask<INDEX, Reg::MaskPattern::ALL>();
+                Reg::MaskReg batchMask = Reg::UpdateMask<INDEX>(batchCountMask);
 
-                MicroAPI::RegTensor<INDEX> regConstOutput;
-                MicroAPI::Duplicate(regConstOutput, wOutput);
+                Reg::RegTensor<INDEX> regConstOutput;
+                Reg::Duplicate(regConstOutput, wOutput);
 
-                MicroAPI::RegTensor<INDEX> regConstInput;
-                MicroAPI::Duplicate(regConstInput, wGradInput);
+                Reg::RegTensor<INDEX> regConstInput;
+                Reg::Duplicate(regConstInput, wGradInput);
 
-                MicroAPI::RegTensor<INDEX> stGlobal;
-                MicroAPI::Mul(stGlobal, idx, regConstOutput, allMask);
-                MicroAPI::Div(stGlobal, stGlobal, regConstInput, allMask);
+                Reg::RegTensor<INDEX> stGlobal;
+                Reg::Mul(stGlobal, idx, regConstOutput, allMask);
+                Reg::Div(stGlobal, stGlobal, regConstInput, allMask);
 
-                MicroAPI::RegTensor<INDEX> edGlobal;
-                MicroAPI::Adds(edGlobal, idx, INDEX(1), allMask);
-                MicroAPI::Mul(edGlobal, edGlobal, regConstOutput, allMask);
-                MicroAPI::Add(edGlobal, edGlobal, regConstInput, allMask);
-                MicroAPI::Adds(edGlobal, edGlobal, INDEX(-1), allMask);
-                MicroAPI::Div(edGlobal, edGlobal, regConstInput, allMask);
+                Reg::RegTensor<INDEX> edGlobal;
+                Reg::Adds(edGlobal, idx, INDEX(1), allMask);
+                Reg::Mul(edGlobal, edGlobal, regConstOutput, allMask);
+                Reg::Add(edGlobal, edGlobal, regConstInput, allMask);
+                Reg::Adds(edGlobal, edGlobal, INDEX(-1), allMask);
+                Reg::Div(edGlobal, edGlobal, regConstInput, allMask);
 
-                MicroAPI::RegTensor<INDEX> cover;
-                MicroAPI::Sub(cover, edGlobal, stGlobal, allMask);
+                Reg::RegTensor<INDEX> cover;
+                Reg::Sub(cover, edGlobal, stGlobal, allMask);
 
-                MicroAPI::Maxs(stGlobal, stGlobal, wTileStart, allMask);
-                MicroAPI::Adds(stGlobal, stGlobal, INDEX(-wTileStart), allMask);
+                Reg::Maxs(stGlobal, stGlobal, wTileStart, allMask);
+                Reg::Adds(stGlobal, stGlobal, INDEX(-wTileStart), allMask);
 
-                MicroAPI::Mins(edGlobal, edGlobal, wTileEnd, allMask);
-                MicroAPI::Adds(edGlobal, edGlobal, INDEX(-wTileStart), allMask);
+                Reg::Mins(edGlobal, edGlobal, wTileEnd, allMask);
+                Reg::Adds(edGlobal, edGlobal, INDEX(-wTileStart), allMask);
 
-                MicroAPI::StoreAlign(stWAddr, stGlobal, batchMask);
-                MicroAPI::StoreAlign(edWAddr, edGlobal, batchMask);
-                MicroAPI::StoreAlign(coverWAddr, cover, batchMask);
+                Reg::StoreAlign(stWAddr, stGlobal, batchMask);
+                Reg::StoreAlign(edWAddr, edGlobal, batchMask);
+                Reg::StoreAlign(coverWAddr, cover, batchMask);
             }
 
             PIPE_V_S();

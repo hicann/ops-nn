@@ -316,8 +316,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernel<T>::ComputeMultiBatch(int64_t n, i
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitBatch<T, U, T, false>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride,
                                           oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor, channels);
     }
@@ -356,8 +356,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernel<T>::ComputeMultiRow(int64_t n, int
     uint32_t tailLoopElements = static_cast<uint32_t>(tailH * outUbFactorW * channels);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitH<T, U, T, false>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements,
                                       inColsElms, oneLoopStrideH, oneLoopElements, tailLoopElements, 0, 0, 0, 0,
                                       divisor, channels);
@@ -403,8 +403,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernel<T>::ComputeSingleRow(int64_t n, in
     if (ubFactorN == 1U) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             AvgPoolSplitW<T, U, T, false>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                           oneLoopStrideW, inColsElms, oneLoopElements, tailLoopElements, 0, 0, 0, 0,
                                           divisor, channels);
@@ -415,8 +415,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernel<T>::ComputeSingleRow(int64_t n, in
             __ubuf__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::LoadAlign(v0, indexAddr);
+                Reg::RegTensor<U> v0;
+                Reg::LoadAlign(v0, indexAddr);
                 AvgPoolSplitW<T, U, T, false>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                               oneLoopStrideW, inColsElms, oneLoopElements, tailLoopElements, 0, 0, 0, 0,
                                               divisor, channels);

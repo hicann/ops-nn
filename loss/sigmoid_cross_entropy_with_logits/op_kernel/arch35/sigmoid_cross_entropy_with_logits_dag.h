@@ -30,7 +30,7 @@ using namespace Ops::Base;
 using namespace AscendC;
 
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::RegTensor;
 
 constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 
@@ -50,46 +50,46 @@ struct CalcSigmoidCrossEntropyWithLogits : public Vec::ElemwiseBinaryOP<T, T, T>
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregPredict;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregTarget;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregMaxPredict;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregAbsPredict;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregNegAbsPredict;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregExpNegAbs;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOneAddExp;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregLog;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregMulPredictTarget;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregPredict;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregTarget;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregMaxPredict;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregAbsPredict;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregNegAbsPredict;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregExpNegAbs;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOneAddExp;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregLog;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregMulPredictTarget;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
 
         __VEC_SCOPE__
         {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
 
-                MicroAPI::DataCopy(vregPredict, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                MicroAPI::DataCopy(vregTarget, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                Reg::DataCopy(vregPredict, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                Reg::DataCopy(vregTarget, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
 
-                MicroAPI::Duplicate(vregOneAddExp, (T)1.0f, mask);
+                Reg::Duplicate(vregOneAddExp, (T)1.0f, mask);
 
-                MicroAPI::Maxs(vregMaxPredict, vregPredict, (T)0.0f, mask);
+                Reg::Maxs(vregMaxPredict, vregPredict, (T)0.0f, mask);
 
-                MicroAPI::Abs(vregAbsPredict, vregPredict, mask);
+                Reg::Abs(vregAbsPredict, vregPredict, mask);
 
-                MicroAPI::Neg(vregNegAbsPredict, vregAbsPredict, mask);
+                Reg::Neg(vregNegAbsPredict, vregAbsPredict, mask);
 
-                MicroAPI::Exp(vregExpNegAbs, vregNegAbsPredict, mask);
+                Reg::Exp(vregExpNegAbs, vregNegAbsPredict, mask);
 
-                MicroAPI::Add(vregOneAddExp, vregExpNegAbs, vregOneAddExp, mask);
+                Reg::Add(vregOneAddExp, vregExpNegAbs, vregOneAddExp, mask);
 
-                MicroAPI::Log(vregLog, vregOneAddExp, mask);
+                Reg::Log(vregLog, vregOneAddExp, mask);
 
-                MicroAPI::Mul(vregMulPredictTarget, vregPredict, vregTarget, mask);
+                Reg::Mul(vregMulPredictTarget, vregPredict, vregTarget, mask);
 
-                MicroAPI::Sub(vregOutput, vregMaxPredict, vregMulPredictTarget, mask);
-                MicroAPI::Add(vregOutput, vregOutput, vregLog, mask);
+                Reg::Sub(vregOutput, vregMaxPredict, vregMulPredictTarget, mask);
+                Reg::Add(vregOutput, vregOutput, vregLog, mask);
 
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                Reg::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
 #endif

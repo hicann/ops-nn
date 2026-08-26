@@ -212,13 +212,12 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<float> main1, main2, tail1, tail2, res;
-            AscendC::MicroAPI::MaskReg
-                pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg pregLoop;
+            AscendC::Reg::RegTensor<float> main1, main2, tail1, tail2, res;
+            AscendC::Reg::MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg pregLoop;
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(tailLoop); ++i) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(tailReduceLength);
+                pregLoop = AscendC::Reg::UpdateMask<float>(tailReduceLength);
                 LoadAlign(main1, mainAddr + i * DOUBLE * vfFloatNum_);
                 LoadAlign(main2, mainAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 LoadAlign(tail1, tailAddr + i * DOUBLE * vfFloatNum_);
@@ -228,41 +227,37 @@ public:
                 Add(main2, main2, tail2, pregLoop);
                 Add(main1, main1, main2, pregLoop);
                 Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(mainLoop); ++i) {
                 uint32_t sreg0 = mainReduceLength - tailReduceLength;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(main1, remainAddr + i * DOUBLE * vfFloatNum_);
                 LoadAlign(main2, remainAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
                 Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
-                                                                                        pregMain);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
+                                                                                   pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(restLoop); ++i) {
                 uint32_t sreg0 = tailLoop + mainLoop;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(main1, midResAddr + i * DOUBLE * vfFloatNum_);
                 LoadAlign(main2, midResAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
                 Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
             {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(lengthBeforeLastReduce);
+                pregLoop = AscendC::Reg::UpdateMask<float>(lengthBeforeLastReduce);
                 LoadAlign(main1, midResAddr);
                 Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
         }
     }
 
@@ -273,11 +268,10 @@ public:
         __ubuf__ float* outAddr = (__ubuf__ float*)nextLevelReduceBuf.GetPhyAddr();
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<float> main1, main2, main3, main4, res;
+            AscendC::Reg::RegTensor<float> main1, main2, main3, main4, res;
             uint32_t sreg0 = vfFloatNum_;
-            AscendC::MicroAPI::MaskReg pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-            AscendC::MicroAPI::MaskReg
-                pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
+            AscendC::Reg::MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             LoadAlign(main1, mainAddr);
             LoadAlign(main2, mainAddr + vfFloatNum_);
             LoadAlign(main3, mainAddr + DOUBLE * vfFloatNum_);
@@ -287,9 +281,8 @@ public:
             Add(main3, main3, main4, pregLoop);
             Add(main1, main1, main3, pregLoop);
             Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
         }
     }
 

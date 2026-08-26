@@ -26,132 +26,131 @@ using Pool3D::FastDivImpl;
 
 // 默认 rate1D = 1 生成 0 1 2 3 ...         rate1D = 0 生成  0 0 0 0 ...
 template <typename T>
-__aicore__ inline void GenGatterIndex2D(MicroAPI::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex2D(Reg::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segmentScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segmentScalarReg;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
 
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
 }
 
 template <typename T>
-__simd_callee__ inline void GenGatterIndex2DVF(MicroAPI::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
+__simd_callee__ inline void GenGatterIndex2DVF(Reg::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
 {
-    MicroAPI::Arange(indexReg, 0);
-    MicroAPI::RegTensor<T> segmentScalarReg;
-    MicroAPI::RegTensor<T> tmpReg;
-    MicroAPI::RegTensor<T> constReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(constReg, T(num1D));
-    MicroAPI::Div(segmentScalarReg, indexReg, constReg, preg);
-    MicroAPI::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
-    MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    MicroAPI::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+    Reg::Arange(indexReg, 0);
+    Reg::RegTensor<T> segmentScalarReg;
+    Reg::RegTensor<T> tmpReg;
+    Reg::RegTensor<T> constReg;
+    Reg::MaskReg preg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+    Reg::Duplicate(constReg, T(num1D));
+    Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
 
-    MicroAPI::Add(indexReg, indexReg, segmentScalarReg, preg);
+    Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
-                                        T rate1D = 1)
+__aicore__ inline void GenGatterIndex3D(Reg::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg2;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num2D));
-    AscendC::MicroAPI::Div(segmentScalarReg2, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segmentScalarReg;
+    AscendC::Reg::RegTensor<T> segmentScalarReg2;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segmentScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segmentScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
 
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
 }
 
 template <typename T>
-__simd_callee__ inline void GenGatterIndex3DVF(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+__simd_callee__ inline void GenGatterIndex3DVF(Reg::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
                                                T rate1D = 1)
 {
-    MicroAPI::Arange(indexReg, 0);
-    MicroAPI::RegTensor<T> segmentScalarReg;
-    MicroAPI::RegTensor<T> segmentScalarReg2;
-    MicroAPI::RegTensor<T> tmpReg;
-    MicroAPI::RegTensor<T> constReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(constReg, T(num2D));
-    MicroAPI::Div(segmentScalarReg2, indexReg, constReg, preg);
-    MicroAPI::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
-    MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    MicroAPI::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
+    Reg::Arange(indexReg, 0);
+    Reg::RegTensor<T> segmentScalarReg;
+    Reg::RegTensor<T> segmentScalarReg2;
+    Reg::RegTensor<T> tmpReg;
+    Reg::RegTensor<T> constReg;
+    Reg::MaskReg preg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+    Reg::Duplicate(constReg, T(num2D));
+    Reg::Div(segmentScalarReg2, indexReg, constReg, preg);
+    Reg::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
+    Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
 
-    MicroAPI::Duplicate(constReg, T(num1D));
-    MicroAPI::Div(segmentScalarReg, indexReg, constReg, preg);
-    MicroAPI::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
-    MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    MicroAPI::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+    Reg::Duplicate(constReg, T(num1D));
+    Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
 
-    MicroAPI::Add(indexReg, indexReg, segmentScalarReg, preg);
-    MicroAPI::Add(indexReg, indexReg, segmentScalarReg2, preg);
+    Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
+    Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D,
-                                        T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex4D(Reg::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D, T rate2D,
+                                        T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg2;
-    AscendC::MicroAPI::RegTensor<T> segmentScalarReg3;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num3D));
-    AscendC::MicroAPI::Div(segmentScalarReg3, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg3, T(num3D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg3, segmentScalarReg3, T(rate4D), preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segmentScalarReg;
+    AscendC::Reg::RegTensor<T> segmentScalarReg2;
+    AscendC::Reg::RegTensor<T> segmentScalarReg3;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num3D));
+    AscendC::Reg::Div(segmentScalarReg3, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg3, T(num3D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg3, segmentScalarReg3, T(rate4D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num2D));
-    AscendC::MicroAPI::Div(segmentScalarReg2, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segmentScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rate3D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segmentScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segmentScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rate2D), preg);
 
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg2, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segmentScalarReg3, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg3, preg);
 }
 
 template <typename T>
-__aicore__ inline void DuplicateNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
+__aicore__ inline void DuplicateNegInfReg(Reg::RegTensor<T>& negInfReg)
 {
     // -inf
     constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;
@@ -160,16 +159,16 @@ __aicore__ inline void DuplicateNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
     using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
 
     if constexpr (std::is_same<T, float>::value) {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
     } else if constexpr (std::is_same<T, half>::value) {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
     } else {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
     }
 }
 
 template <typename T>
-__simd_callee__ inline void DuplicateNegInfRegVF(MicroAPI::RegTensor<T>& negInfReg)
+__simd_callee__ inline void DuplicateNegInfRegVF(Reg::RegTensor<T>& negInfReg)
 {
     constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;
     constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;
@@ -177,11 +176,11 @@ __simd_callee__ inline void DuplicateNegInfRegVF(MicroAPI::RegTensor<T>& negInfR
     using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
 
     if constexpr (std::is_same<T, float>::value) {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
     } else if constexpr (std::is_same<T, half>::value) {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
     } else {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
     }
 }
 
@@ -195,14 +194,14 @@ __simd_callee__ inline void DuplicateNegInfRegVF(MicroAPI::RegTensor<T>& negInfR
 template <typename T>
 __aicore__ inline void DupBufferNegInfCommon(__ubuf__ T* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
-    MicroAPI::RegTensor<T> v0;
+    Reg::RegTensor<T> v0;
     DuplicateNegInfReg<T>(v0);
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+    Reg::MaskReg preg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
     for (uint16_t i = 0; i < loop; i++) {
-        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+        Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
     }
-    preg = MicroAPI::UpdateMask<T>(tail);
-    MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+    preg = Reg::UpdateMask<T>(tail);
+    Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
 }
 
 /**
@@ -214,19 +213,19 @@ __aicore__ inline void CopyToCalcBuffer2DCommon(__ubuf__ T* dstAddr, __ubuf__ T*
                                                 uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
                                                 uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
-    MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::RegTensor<T> v0;
+    Reg::UnalignRegForStore u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
             __ubuf__ T* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
             __ubuf__ T* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
-                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
             }
-            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-            MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
+            Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+            Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+            Reg::StoreUnAlignPost(curDstAddr, u0, 0);
         }
     }
 }
@@ -241,8 +240,8 @@ __aicore__ inline void CopyToCalcBuffer3DCommon(__ubuf__ T* dstAddr, __ubuf__ T*
                                                 uint32_t dstBatchStride, uint32_t dstDepStride, uint32_t dstRowStride,
                                                 uint32_t dstDepOffset, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
-    MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::RegTensor<T> v0;
+    Reg::UnalignRegForStore u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t t = 0; t < deps; t++) {
             for (uint16_t j = 0; j < rows; j++) {
@@ -250,12 +249,12 @@ __aicore__ inline void CopyToCalcBuffer3DCommon(__ubuf__ T* dstAddr, __ubuf__ T*
                 __ubuf__ T* curDstAddr = dstAddr + i * dstBatchStride + (t + dstDepOffset) * dstDepStride +
                                          (j + dstRowOffset) * dstRowStride + dstColOffset;
                 for (uint16_t k = 0; k < loopCols; k++) {
-                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                    MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
+                    Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                    Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-                MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
+                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+                Reg::StoreUnAlignPost(curDstAddr, u0, 0);
             }
         }
     }
@@ -274,48 +273,48 @@ __aicore__ inline void CopyToCalcBuffer3DCommon(__ubuf__ T* dstAddr, __ubuf__ T*
  * \param ncInputOffset NC batch input offset
  */
 template <typename T2, const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignCommon(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+__aicore__ inline void ConvertIndexWithoutPadAlignCommon(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
                                                          T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-                                                         MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
+                                                         Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset)
 {
-    MicroAPI::RegTensor<T2> hIndexReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<T2> divResultRegUnpack;
-    MicroAPI::RegTensor<T2> wIndexReg;
-    MicroAPI::RegTensor<int32_t> wIndexRegUnpack;
-    MicroAPI::RegTensor<T2> zeroReg;
-    MicroAPI::MaskReg negInfMask;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg allMaskT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
-    MicroAPI::Duplicate(zeroReg, static_cast<T2>(0));
-    MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
-    MicroAPI::Div(divResultReg, srcReg, constReg, allMaskB32);
+    Reg::RegTensor<T2> hIndexReg;
+    Reg::RegTensor<int32_t> constReg;
+    Reg::RegTensor<int32_t> divResultReg;
+    Reg::RegTensor<T2> divResultRegUnpack;
+    Reg::RegTensor<T2> wIndexReg;
+    Reg::RegTensor<int32_t> wIndexRegUnpack;
+    Reg::RegTensor<T2> zeroReg;
+    Reg::MaskReg negInfMask;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg allMaskT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
+    Reg::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
+    Reg::Duplicate(zeroReg, static_cast<T2>(0));
+    Reg::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
+    Reg::Div(divResultReg, srcReg, constReg, allMaskB32);
     if constexpr (std::is_same<T2, int64_t>::value) {
-        MicroAPI::UnPack(divResultRegUnpack, divResultReg);
-        MicroAPI::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
+        Reg::UnPack(divResultRegUnpack, divResultReg);
+        Reg::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
     } else {
-        MicroAPI::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
+        Reg::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
     }
     if constexpr (IS_PAD) {
-        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
+        Reg::Compare<T2, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
+        Reg::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
     }
-    MicroAPI::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskT2);
-    MicroAPI::Mul(divResultReg, divResultReg, constReg, allMaskB32);
-    MicroAPI::Sub(wIndexRegUnpack, srcReg, divResultReg, allMaskB32);
+    Reg::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskT2);
+    Reg::Mul(divResultReg, divResultReg, constReg, allMaskB32);
+    Reg::Sub(wIndexRegUnpack, srcReg, divResultReg, allMaskB32);
     if constexpr (std::is_same<T2, int64_t>::value) {
-        MicroAPI::UnPack(wIndexReg, wIndexRegUnpack);
-        MicroAPI::Adds(wIndexReg, wIndexReg, left, allMaskT2);
+        Reg::UnPack(wIndexReg, wIndexRegUnpack);
+        Reg::Adds(wIndexReg, wIndexReg, left, allMaskT2);
     } else {
-        MicroAPI::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
+        Reg::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
     }
     if constexpr (IS_PAD) {
-        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
+        Reg::Compare<T2, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
+        Reg::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
     }
-    MicroAPI::Add(dstReg, hIndexReg, wIndexReg, allMaskT2);
+    Reg::Add(dstReg, hIndexReg, wIndexReg, allMaskT2);
     return;
 }
 
@@ -334,86 +333,83 @@ __aicore__ inline void ConvertIndexWithoutPadAlignCommon(MicroAPI::RegTensor<int
  * \param inputNcSize Input NC size
  */
 template <typename T2, const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+__aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
                                                            T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-                                                           MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset,
+                                                           Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset,
                                                            int32_t ncOutputCount, int32_t inputNcSize)
 {
-    MicroAPI::RegTensor<int32_t> ncIndexReg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
-    MicroAPI::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
-    MicroAPI::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
-    MicroAPI::Sub(srcReg, srcReg, divResultReg, allMaskB32);
+    Reg::RegTensor<int32_t> ncIndexReg;
+    Reg::RegTensor<int32_t> divResultReg;
+    Reg::RegTensor<int32_t> constReg;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::Arange(ncIndexReg, static_cast<int32_t>(0));
+    Reg::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
+    Reg::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
+    Reg::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
+    Reg::Sub(srcReg, srcReg, divResultReg, allMaskB32);
 
     ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
                                                   ncInputOffset);
 }
 
 template <const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(MicroAPI::RegTensor<int32_t>& srcReg,
-                                                                uint32_t wStrideOffset, int32_t left,
-                                                                int32_t wInputActualNoPad, int32_t hIndexBase,
-                                                                MicroAPI::RegTensor<int32_t>& dstReg,
+__aicore__ inline void ConvertIndexWithoutPadAlignCommonFastDiv(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
+                                                                int32_t left, int32_t wInputActualNoPad,
+                                                                int32_t hIndexBase, Reg::RegTensor<int32_t>& dstReg,
                                                                 int32_t ncInputOffset, uint32_t magic, uint32_t shift)
 {
-    MicroAPI::RegTensor<int32_t> hIndexReg;
-    MicroAPI::RegTensor<int32_t> wIndexReg;
-    MicroAPI::RegTensor<int32_t> zeroReg;
-    MicroAPI::RegTensor<uint32_t> divResultU32;
-    MicroAPI::RegTensor<uint32_t> magicReg;
-    MicroAPI::MaskReg negInfMask;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<int32_t> hIndexReg;
+    Reg::RegTensor<int32_t> wIndexReg;
+    Reg::RegTensor<int32_t> zeroReg;
+    Reg::RegTensor<uint32_t> divResultU32;
+    Reg::RegTensor<uint32_t> magicReg;
+    Reg::MaskReg negInfMask;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
 
-    MicroAPI::Duplicate(zeroReg, static_cast<int32_t>(0));
-    MicroAPI::Duplicate(magicReg, magic);
-    MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
+    Reg::Duplicate(zeroReg, static_cast<int32_t>(0));
+    Reg::Duplicate(magicReg, magic);
+    Reg::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
 
-    FastDivImpl(divResultU32, (MicroAPI::RegTensor<uint32_t>&)srcReg, magicReg, static_cast<int16_t>(shift),
-                allMaskB32);
+    FastDivImpl(divResultU32, (Reg::RegTensor<uint32_t>&)srcReg, magicReg, static_cast<int16_t>(shift), allMaskB32);
 
-    MicroAPI::Adds(hIndexReg, (MicroAPI::RegTensor<int32_t>&)divResultU32, hIndexBase, allMaskB32);
-
-    if constexpr (IS_PAD) {
-        MicroAPI::Compare<int32_t, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskB32);
-        MicroAPI::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
-    }
-
-    MicroAPI::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskB32);
-
-    MicroAPI::Muls(divResultU32, divResultU32, wStrideOffset, allMaskB32);
-    MicroAPI::Sub((MicroAPI::RegTensor<uint32_t>&)srcReg, (MicroAPI::RegTensor<uint32_t>&)srcReg, divResultU32,
-                  allMaskB32);
-    MicroAPI::Adds(wIndexReg, srcReg, left, allMaskB32);
+    Reg::Adds(hIndexReg, (Reg::RegTensor<int32_t>&)divResultU32, hIndexBase, allMaskB32);
 
     if constexpr (IS_PAD) {
-        MicroAPI::Compare<int32_t, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskB32);
-        MicroAPI::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
+        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskB32);
+        Reg::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
     }
 
-    MicroAPI::Add(dstReg, hIndexReg, wIndexReg, allMaskB32);
+    Reg::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskB32);
+
+    Reg::Muls(divResultU32, divResultU32, wStrideOffset, allMaskB32);
+    Reg::Sub((Reg::RegTensor<uint32_t>&)srcReg, (Reg::RegTensor<uint32_t>&)srcReg, divResultU32, allMaskB32);
+    Reg::Adds(wIndexReg, srcReg, left, allMaskB32);
+
+    if constexpr (IS_PAD) {
+        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskB32);
+        Reg::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
+    }
+
+    Reg::Add(dstReg, hIndexReg, wIndexReg, allMaskB32);
 }
 
 template <const uint32_t IS_PAD>
 __aicore__ inline void ConvertIndexWithoutPadAlignNcCommonFastDiv(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInputActualNoPad,
-    int32_t hIndexBase, MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount,
+    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInputActualNoPad,
+    int32_t hIndexBase, Reg::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount,
     int32_t inputNcSize, uint32_t magicNc, uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride)
 {
-    MicroAPI::RegTensor<int32_t> ncIndexReg;
-    MicroAPI::RegTensor<uint32_t> divResultU32;
-    MicroAPI::RegTensor<uint32_t> magicReg;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<int32_t> ncIndexReg;
+    Reg::RegTensor<uint32_t> divResultU32;
+    Reg::RegTensor<uint32_t> magicReg;
+    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
 
-    MicroAPI::Duplicate(magicReg, magicNc);
-    MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
-    FastDivImpl(divResultU32, (MicroAPI::RegTensor<uint32_t>&)ncIndexReg, magicReg, static_cast<int16_t>(shiftNc),
+    Reg::Duplicate(magicReg, magicNc);
+    Reg::Arange(ncIndexReg, static_cast<int32_t>(0));
+    FastDivImpl(divResultU32, (Reg::RegTensor<uint32_t>&)ncIndexReg, magicReg, static_cast<int16_t>(shiftNc),
                 allMaskB32);
-    MicroAPI::Muls(ncIndexReg, (MicroAPI::RegTensor<int32_t>&)divResultU32, inputNcSize, allMaskB32);
-    MicroAPI::Sub(srcReg, srcReg, ncIndexReg, allMaskB32);
+    Reg::Muls(ncIndexReg, (Reg::RegTensor<int32_t>&)divResultU32, inputNcSize, allMaskB32);
+    Reg::Sub(srcReg, srcReg, ncIndexReg, allMaskB32);
 
     ConvertIndexWithoutPadAlignCommonFastDiv<IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
                                                      ncInputOffset, magicWStride, shiftWStride);

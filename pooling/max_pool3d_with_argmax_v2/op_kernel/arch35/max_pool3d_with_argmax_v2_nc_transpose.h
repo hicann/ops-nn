@@ -391,12 +391,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
         uint32_t computeVL = (ncChunk == ncLoop - 1) ? ncTail : ncStep;
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<T1> vreg0;
-            MicroAPI::RegTensor<T1> vreg1;
-            MicroAPI::RegTensor<IDX_T> argDeltaVreg;
-            MicroAPI::RegTensor<IDX_T> argUpdateVreg;
-            MicroAPI::MaskReg gtMask, neMask;
-            MicroAPI::MaskReg computeMaskT1 = MicroAPI::UpdateMask<T1>(computeVL);
+            Reg::RegTensor<T1> vreg0;
+            Reg::RegTensor<T1> vreg1;
+            Reg::RegTensor<IDX_T> argDeltaVreg;
+            Reg::RegTensor<IDX_T> argUpdateVreg;
+            Reg::MaskReg gtMask, neMask;
+            Reg::MaskReg computeMaskT1 = Reg::UpdateMask<T1>(computeVL);
 
             for (uint16_t dOut = 0; dOut < static_cast<uint16_t>(dOutputReal_); dOut++) {
                 for (uint16_t hOut = 0; hOut < static_cast<uint16_t>(hOutputReal_); hOut++) {
@@ -407,8 +407,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         int64_t baseSpatialIdx = localDStart * dSpatialStride + localHStart * hSpatialStride +
                                                  localWStart * wSpatialStride;
 
-                        MicroAPI::LoadAlign(vreg0, transInputAddr + baseSpatialIdx * ncAligned + ncOffset);
-                        MicroAPI::Duplicate(argDeltaVreg, static_cast<IDX_T>(0));
+                        Reg::LoadAlign(vreg0, transInputAddr + baseSpatialIdx * ncAligned + ncOffset);
+                        Reg::Duplicate(argDeltaVreg, static_cast<IDX_T>(0));
 
                         int32_t dIdx = 0;
                         for (uint16_t kd = 0; kd < correctDK; kd++) {
@@ -416,15 +416,15 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                                 for (uint16_t kw = 0; kw < correctWK; kw++) {
                                     int64_t spatialIdx = baseSpatialIdx + kd * dSpatialStride + kh * hSpatialStride +
                                                          kw * wSpatialStride;
-                                    MicroAPI::LoadAlign(vreg1, transInputAddr + spatialIdx * ncAligned + ncOffset);
+                                    Reg::LoadAlign(vreg1, transInputAddr + spatialIdx * ncAligned + ncOffset);
 
-                                    MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
-                                    MicroAPI::Compare<T1, CMPMODE::NE>(neMask, vreg1, vreg1, computeMaskT1);
-                                    MicroAPI::Or(gtMask, gtMask, neMask, computeMaskT1);
+                                    Reg::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
+                                    Reg::Compare<T1, CMPMODE::NE>(neMask, vreg1, vreg1, computeMaskT1);
+                                    Reg::Or(gtMask, gtMask, neMask, computeMaskT1);
 
-                                    MicroAPI::LoadAlign(argUpdateVreg, deltaUbAddr + dIdx * vlIDX_);
-                                    MicroAPI::Select(argDeltaVreg, argUpdateVreg, argDeltaVreg, gtMask);
-                                    MicroAPI::Max(vreg0, vreg0, vreg1, computeMaskT1);
+                                    Reg::LoadAlign(argUpdateVreg, deltaUbAddr + dIdx * vlIDX_);
+                                    Reg::Select(argDeltaVreg, argUpdateVreg, argDeltaVreg, gtMask);
+                                    Reg::Max(vreg0, vreg0, vreg1, computeMaskT1);
                                     dIdx++;
                                 }
                             }
@@ -433,8 +433,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         int64_t outputOffset = (dOut * hOutputReal_ * wOutputReal_ + hOut * wOutputReal_ + wOut) *
                                                    ncAligned +
                                                ncOffset;
-                        MicroAPI::StoreAlign(maxValueAddr + outputOffset, vreg0, computeMaskT1);
-                        MicroAPI::StoreAlign((__ubuf__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg, computeMaskT1);
+                        Reg::StoreAlign(maxValueAddr + outputOffset, vreg0, computeMaskT1);
+                        Reg::StoreAlign((__ubuf__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg, computeMaskT1);
                     }
                 }
             }

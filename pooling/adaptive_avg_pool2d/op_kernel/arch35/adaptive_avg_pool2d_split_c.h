@@ -30,7 +30,7 @@
  *        Hides base CopyInputBatch/TransInputBatch with wi-chunk versions
  *        (different signatures: wiBase/wiLen/wChunkAlign parameters).
  *
- * \arch Ascend950 / A5 / DAV_3510 only, RegBase (MicroAPI) main path, VL = 256 Byte.
+ * \arch Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *       [RegBase-native] Host-side gate: AdaptivePool2dBaseTiling::GetShapeAttrsInfo
  *       rejects GetCurNpuArch() != NpuArch::DAV_3510.
  */
@@ -53,9 +53,9 @@ __simd_vf__ inline void SplitCAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ floa
                                             int32_t chunkStart, int32_t chunkEnd, uint16_t woChunkFirst,
                                             uint16_t woChunkLast)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     uint16_t woFirst = woChunkFirst;
     uint16_t woLast = woChunkLast;
@@ -69,22 +69,22 @@ __simd_vf__ inline void SplitCAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ floa
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(ovStart - chunkStart)) * vlNum;
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
+        Reg::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t k = 0; k < cnt; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
+        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
+            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < cnt; k++) {
                 uint32_t inputOffsetC = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffsetC);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -97,9 +97,9 @@ __simd_vf__ inline void SplitCAccumulateWBatchedRegVf(__ubuf__ T* inputAddr, __u
                                                       int32_t chunkStart, int32_t chunkEnd, uint16_t woChunkFirst,
                                                       uint16_t woChunkLast)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     uint16_t woFirst = woChunkFirst;
     uint16_t woLast = woChunkLast;
@@ -113,28 +113,28 @@ __simd_vf__ inline void SplitCAccumulateWBatchedRegVf(__ubuf__ T* inputAddr, __u
         uint32_t wiOffset = static_cast<uint32_t>(ovStart - chunkStart);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
+        Reg::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t hiOff = hiStart; hiOff < hiEnd; hiOff++) {
             uint32_t baseOffset = (static_cast<uint32_t>(hiOff) * wChunkAlign + wiOffset) * vlNum;
             for (uint16_t k = 0; k < cnt; k++) {
                 uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
         }
-        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
+        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
+            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t hiOff = hiStart; hiOff < hiEnd; hiOff++) {
                 uint32_t baseOffset = (static_cast<uint32_t>(hiOff) * wChunkAlign + wiOffset) * vlNum;
                 for (uint16_t k = 0; k < cnt; k++) {
                     uint32_t inputOffsetC = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                     ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffsetC);
-                    MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                    Reg::Add(sumReg, sumReg, inputReg, preg);
                 }
             }
-            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -146,9 +146,9 @@ __simd_vf__ inline void SplitCWReduceChunkToSumVf(__ubuf__ T* inputAddr, __ubuf_
                                                   int32_t chunkStart, int32_t chunkEnd, uint16_t woFirst,
                                                   uint16_t woLast)
 {
-    MicroAPI::RegTensor<float> inputReg;
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = woFirst; wo < woLast; wo++) {
         int32_t wStart = wStartAddr[wo];
@@ -159,22 +159,22 @@ __simd_vf__ inline void SplitCWReduceChunkToSumVf(__ubuf__ T* inputAddr, __ubuf_
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(ovStart - chunkStart)) * vlNum;
         uint32_t sumOffset = static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::Duplicate(sumReg, 0.0f);
+        Reg::Duplicate(sumReg, 0.0f);
         for (uint16_t k = 0; k < cnt; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::StoreAlign(sumAddr + sumOffset, sumReg, preg);
+        Reg::StoreAlign(sumAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::Duplicate(sumReg, 0.0f);
+            Reg::Duplicate(sumReg, 0.0f);
             for (uint16_t k = 0; k < cnt; k++) {
                 uint32_t inputOffsetC = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffsetC);
-                MicroAPI::Add(sumReg, sumReg, inputReg, preg);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::StoreAlign(sumAddr + sumOffset + vfLenFp32, sumReg, preg);
+            Reg::StoreAlign(sumAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -183,24 +183,24 @@ template <const uint32_t NC_FACTOR>
 __simd_vf__ inline void SplitCScatterSumToHoVf(__ubuf__ float* sumAddr, __ubuf__ float* outAddr, uint32_t outBase,
                                                uint32_t vlNum, uint32_t vfLenFp32, uint16_t woFirst, uint16_t woLast)
 {
-    MicroAPI::RegTensor<float> sumReg;
-    MicroAPI::RegTensor<float> outReg;
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     for (uint16_t wo = woFirst; wo < woLast; wo++) {
         uint32_t sumOffset = static_cast<uint32_t>(wo) * vlNum;
         uint32_t outOffset = outBase + sumOffset;
 
-        MicroAPI::LoadAlign(sumReg, sumAddr + sumOffset);
-        MicroAPI::LoadAlign(outReg, outAddr + outOffset);
-        MicroAPI::Add(outReg, outReg, sumReg, preg);
-        MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
+        Reg::LoadAlign(sumReg, sumAddr + sumOffset);
+        Reg::LoadAlign(outReg, outAddr + outOffset);
+        Reg::Add(outReg, outReg, sumReg, preg);
+        Reg::StoreAlign(outAddr + outOffset, outReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::LoadAlign(sumReg, sumAddr + sumOffset + vfLenFp32);
-            MicroAPI::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
-            MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
+            Reg::LoadAlign(sumReg, sumAddr + sumOffset + vfLenFp32);
+            Reg::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
+            Reg::Add(outReg, outReg, sumReg, preg);
+            Reg::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
         }
     }
 }

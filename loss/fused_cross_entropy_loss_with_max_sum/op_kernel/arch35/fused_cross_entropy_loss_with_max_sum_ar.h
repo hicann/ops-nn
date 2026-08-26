@@ -27,10 +27,10 @@
 namespace FusedCrossEntropyLossWithMaxSumOps {
 using namespace AscendC;
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB16ToFp32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB16ToFp32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
@@ -64,8 +64,8 @@ private:
     __aicore__ inline void ProcessMemory();
     __aicore__ inline void ComputeLossChunk(const LocalTensor<float>& sumExpUb, const LocalTensor<float>& predictedUb,
                                             const LocalTensor<float>& lossUb, int64_t len);
-    __aicore__ inline void LoadVocabToFp32(__ubuf__ T* src, AscendC::MicroAPI::RegTensor<float>& dst,
-                                           AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void LoadVocabToFp32(__ubuf__ T* src, AscendC::Reg::RegTensor<float>& dst,
+                                           AscendC::Reg::MaskReg& preg, uint32_t offset);
 
 private:
     static constexpr uint32_t VL_FP32 = Ops::Base::GetVRegSize() / sizeof(float);
@@ -245,16 +245,16 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
     __VEC_SCOPE__
     {
         uint32_t count = static_cast<uint32_t>(aRows);
-        AscendC::MicroAPI::RegTensor<float> sumReg, predReg, logReg, oneReg, invReg;
-        AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-        AscendC::MicroAPI::DataCopy(sumReg, sumAddr);
-        AscendC::MicroAPI::DataCopy(predReg, predAddr);
-        AscendC::MicroAPI::Log(logReg, sumReg, pMask);
-        AscendC::MicroAPI::Sub(logReg, logReg, predReg, pMask);
-        AscendC::MicroAPI::DataCopy(lossAddr, logReg, pMask);
-        AscendC::MicroAPI::Duplicate(oneReg, 1.0f, pMask);
-        AscendC::MicroAPI::Div(invReg, oneReg, sumReg, pMask);
-        AscendC::MicroAPI::DataCopy(invAddr, invReg, pMask);
+        AscendC::Reg::RegTensor<float> sumReg, predReg, logReg, oneReg, invReg;
+        AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+        AscendC::Reg::DataCopy(sumReg, sumAddr);
+        AscendC::Reg::DataCopy(predReg, predAddr);
+        AscendC::Reg::Log(logReg, sumReg, pMask);
+        AscendC::Reg::Sub(logReg, logReg, predReg, pMask);
+        AscendC::Reg::DataCopy(lossAddr, logReg, pMask);
+        AscendC::Reg::Duplicate(oneReg, 1.0f, pMask);
+        AscendC::Reg::Div(invReg, oneReg, sumReg, pMask);
+        AscendC::Reg::DataCopy(invAddr, invReg, pMask);
     }
 }
 
@@ -279,14 +279,14 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Copy
 
 template <typename T, bool fullPath>
 __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::LoadVocabToFp32(
-    __ubuf__ T* src, AscendC::MicroAPI::RegTensor<float>& dst, AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+    __ubuf__ T* src, AscendC::Reg::RegTensor<float>& dst, AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(dst, src + offset);
+        AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(dst, src + offset);
     } else {
-        AscendC::MicroAPI::RegTensor<T> b16Reg;
-        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, src + offset);
-        AscendC::MicroAPI::Cast<float, T, castTraitB16ToFp32>(dst, b16Reg, preg);
+        AscendC::Reg::RegTensor<T> b16Reg;
+        AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, src + offset);
+        AscendC::Reg::Cast<float, T, castTraitB16ToFp32>(dst, b16Reg, preg);
     }
 }
 
@@ -307,30 +307,29 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
     uint32_t rowStride = static_cast<uint32_t>(tl_->vPerLoop);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> maxReg, invReg, xReg, yReg;
-        AscendC::MicroAPI::MaskReg
-            fullMask = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<float> maxReg, invReg, xReg, yReg;
+        AscendC::Reg::MaskReg fullMask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
         for (uint16_t j = 0; j < aRowsU16; j++) {
             // 每行的 max / inv_sum 广播加载进寄存器
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, maxAddr + j);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(invReg, invAddr + j);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(maxReg, maxAddr + j);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(invReg, invAddr + j);
             uint32_t offset = j * rowStride;
             for (uint16_t i = 0; i < fullLoops; i++) {
                 LoadVocabToFp32(vocabAddr, xReg, fullMask, offset);
-                AscendC::MicroAPI::Sub(yReg, xReg, maxReg, fullMask);
-                AscendC::MicroAPI::Exp(yReg, yReg, fullMask);
-                AscendC::MicroAPI::Mul(yReg, yReg, invReg, fullMask);
-                AscendC::MicroAPI::DataCopy(outAddr + offset, yReg, fullMask);
+                AscendC::Reg::Sub(yReg, xReg, maxReg, fullMask);
+                AscendC::Reg::Exp(yReg, yReg, fullMask);
+                AscendC::Reg::Mul(yReg, yReg, invReg, fullMask);
+                AscendC::Reg::DataCopy(outAddr + offset, yReg, fullMask);
                 offset += VL_FP32;
             }
             for (uint16_t i = fullLoops; i < totalLoops; i++) {
                 uint32_t tail = tailCount;
-                AscendC::MicroAPI::MaskReg tailMask = AscendC::MicroAPI::UpdateMask<float>(tail);
+                AscendC::Reg::MaskReg tailMask = AscendC::Reg::UpdateMask<float>(tail);
                 LoadVocabToFp32(vocabAddr, xReg, tailMask, offset);
-                AscendC::MicroAPI::Sub(yReg, xReg, maxReg, tailMask);
-                AscendC::MicroAPI::Exp(yReg, yReg, tailMask);
-                AscendC::MicroAPI::Mul(yReg, yReg, invReg, tailMask);
-                AscendC::MicroAPI::DataCopy(outAddr + offset, yReg, tailMask);
+                AscendC::Reg::Sub(yReg, xReg, maxReg, tailMask);
+                AscendC::Reg::Exp(yReg, yReg, tailMask);
+                AscendC::Reg::Mul(yReg, yReg, invReg, tailMask);
+                AscendC::Reg::DataCopy(outAddr + offset, yReg, tailMask);
             }
         }
     }
@@ -396,26 +395,25 @@ __aicore__ inline void FusedCrossEntropyLossWithMaxSumRegBase<T, fullPath>::Comp
     uint32_t tailCount = static_cast<uint32_t>(len) - fullLoops * VL_FP32;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> sumReg, predReg, logReg;
-        AscendC::MicroAPI::MaskReg
-            fullMask = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<float> sumReg, predReg, logReg;
+        AscendC::Reg::MaskReg fullMask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
         uint32_t offset = 0;
         for (uint16_t i = 0; i < fullLoops; i++) {
-            AscendC::MicroAPI::DataCopy(sumReg, sumAddr + offset);
-            AscendC::MicroAPI::DataCopy(predReg, predAddr + offset);
-            AscendC::MicroAPI::Log(logReg, sumReg, fullMask);
-            AscendC::MicroAPI::Sub(logReg, logReg, predReg, fullMask);
-            AscendC::MicroAPI::DataCopy(lossAddr + offset, logReg, fullMask);
+            AscendC::Reg::DataCopy(sumReg, sumAddr + offset);
+            AscendC::Reg::DataCopy(predReg, predAddr + offset);
+            AscendC::Reg::Log(logReg, sumReg, fullMask);
+            AscendC::Reg::Sub(logReg, logReg, predReg, fullMask);
+            AscendC::Reg::DataCopy(lossAddr + offset, logReg, fullMask);
             offset += VL_FP32;
         }
         for (uint16_t i = fullLoops; i < totalLoops; i++) {
             uint32_t tail = tailCount;
-            AscendC::MicroAPI::MaskReg tailMask = AscendC::MicroAPI::UpdateMask<float>(tail);
-            AscendC::MicroAPI::DataCopy(sumReg, sumAddr + offset);
-            AscendC::MicroAPI::DataCopy(predReg, predAddr + offset);
-            AscendC::MicroAPI::Log(logReg, sumReg, tailMask);
-            AscendC::MicroAPI::Sub(logReg, logReg, predReg, tailMask);
-            AscendC::MicroAPI::DataCopy(lossAddr + offset, logReg, tailMask);
+            AscendC::Reg::MaskReg tailMask = AscendC::Reg::UpdateMask<float>(tail);
+            AscendC::Reg::DataCopy(sumReg, sumAddr + offset);
+            AscendC::Reg::DataCopy(predReg, predAddr + offset);
+            AscendC::Reg::Log(logReg, sumReg, tailMask);
+            AscendC::Reg::Sub(logReg, logReg, predReg, tailMask);
+            AscendC::Reg::DataCopy(lossAddr + offset, logReg, tailMask);
         }
     }
 }

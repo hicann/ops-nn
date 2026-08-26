@@ -47,17 +47,17 @@ public:
         uint16_t cRemainLoopTimes = cRemain == 0 ? 0 : 1;
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-            AscendC::MicroAPI::RegTensor<int32_t> wMaxReg;
-            AscendC::MicroAPI::RegTensor<int32_t> hMaxReg;
+            AscendC::Reg::RegTensor<int32_t> zeroConstReg;
+            AscendC::Reg::RegTensor<int32_t> wMaxReg;
+            AscendC::Reg::RegTensor<int32_t> hMaxReg;
             if constexpr (IS_CHECK_RANGE == 1) {
-                AscendC::MicroAPI::Duplicate(zeroConstReg, T2(0));
-                AscendC::MicroAPI::Duplicate(wMaxReg, int32_t(wOutputActual));
-                AscendC::MicroAPI::Duplicate(hMaxReg, int32_t(hOutputActual));
+                AscendC::Reg::Duplicate(zeroConstReg, T2(0));
+                AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
+                AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
             }
 
-            AscendC::MicroAPI::RegTensor<T3> wOutputConstReg;
-            AscendC::MicroAPI::Duplicate(wOutputConstReg, T3(wOutput));
+            AscendC::Reg::RegTensor<T3> wOutputConstReg;
+            AscendC::Reg::Duplicate(wOutputConstReg, T3(wOutput));
 
             for (uint16_t cIdx = 0; cIdx < cRepeatimes; ++cIdx) {
                 uint32_t cOffset = cIdx * computeSizeT2;
@@ -80,17 +80,17 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-            AscendC::MicroAPI::RegTensor<int32_t> wMaxReg;
-            AscendC::MicroAPI::RegTensor<int32_t> hMaxReg;
+            AscendC::Reg::RegTensor<int32_t> zeroConstReg;
+            AscendC::Reg::RegTensor<int32_t> wMaxReg;
+            AscendC::Reg::RegTensor<int32_t> hMaxReg;
             if constexpr (IS_CHECK_RANGE == 1) {
-                AscendC::MicroAPI::Duplicate(zeroConstReg, T2(0));
-                AscendC::MicroAPI::Duplicate(wMaxReg, int32_t(wOutputActual));
-                AscendC::MicroAPI::Duplicate(hMaxReg, int32_t(hOutputActual));
+                AscendC::Reg::Duplicate(zeroConstReg, T2(0));
+                AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
+                AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
             }
 
-            AscendC::MicroAPI::RegTensor<T3> wOutputConstReg;
-            AscendC::MicroAPI::Duplicate(wOutputConstReg, T3(wOutput));
+            AscendC::Reg::RegTensor<T3> wOutputConstReg;
+            AscendC::Reg::Duplicate(wOutputConstReg, T3(wOutput));
 
             // cRemain
             for (uint16_t cIdx = 0; cIdx < cRemainLoopTimes; ++cIdx) {

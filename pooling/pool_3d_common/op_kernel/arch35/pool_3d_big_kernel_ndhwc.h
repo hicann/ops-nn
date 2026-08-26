@@ -486,21 +486,21 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSum(LocalTensor<
     uint32_t len = dataCount;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> in;
-        MicroAPI::RegTensor<float> inFp32;
-        MicroAPI::RegTensor<float> sum;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T> in;
+        Reg::RegTensor<float> inFp32;
+        Reg::RegTensor<float> sum;
+        Reg::MaskReg mask;
         uint32_t num = len;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            mask = MicroAPI::UpdateMask<float>(num);
-            auto sumReg = MicroAPI::CreateAddrReg<float>(i, static_cast<uint16_t>(repeatElm));
-            auto srcReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(repeatElm));
-            MicroAPI::LoadAlign(in, xLocalAddr, srcReg);
-            MicroAPI::LoadAlign(sum, sumLocalAddr, sumReg);
-            MicroAPI::UnPack((MicroAPI::RegTensor<uint32_t>&)in, (MicroAPI::RegTensor<uint16_t>&)in);
-            MicroAPI::Cast<float, T, castTraitT2Fp32>(inFp32, in, mask);
-            MicroAPI::Add(sum, inFp32, sum, mask);
-            MicroAPI::StoreAlign(sumLocalAddr, sum, sumReg, mask);
+            mask = Reg::UpdateMask<float>(num);
+            auto sumReg = Reg::CreateAddrReg<float>(i, static_cast<uint16_t>(repeatElm));
+            auto srcReg = Reg::CreateAddrReg<T>(i, static_cast<uint16_t>(repeatElm));
+            Reg::LoadAlign(in, xLocalAddr, srcReg);
+            Reg::LoadAlign(sum, sumLocalAddr, sumReg);
+            Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
+            Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, mask);
+            Reg::Add(sum, inFp32, sum, mask);
+            Reg::StoreAlign(sumLocalAddr, sum, sumReg, mask);
         }
     }
 }
@@ -613,23 +613,23 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNorm(int32
     uint32_t padNum = tilingData_->onceOutNum > 1 ? repeatTimes * repeatElm - dataCount : 0;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> vd0;
-        MicroAPI::RegTensor<T> res;
-        AscendC::MicroAPI::UnalignRegForStore u0;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<T> vd0;
+        Reg::RegTensor<T> res;
+        AscendC::Reg::UnalignRegForStore u0;
+        Reg::MaskReg maskAll = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
         uint32_t sregChannel = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(sregChannel);
+            Reg::MaskReg p0 = Reg::UpdateMask<T>(sregChannel);
             auto srcAddr = xLocalAddr + i * repeatElm;
             auto dstAddr = dstLocalAddr + i * repeatElm;
             DuplicateReg<T, OP_TYPE>(res, maskAll);
             for (uint16_t j = 0; j < loopNum; j++) {
-                MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(j, channelStride);
-                MicroAPI::LoadAlign(vd0, srcAddr, offset);
+                Reg::AddrReg offset = Reg::CreateAddrReg<T>(j, channelStride);
+                Reg::LoadAlign(vd0, srcAddr, offset);
                 if constexpr (OP_TYPE == OP_TYPE_MAX_POOL_3D) {
-                    MicroAPI::Max(res, vd0, res, p0);
+                    Reg::Max(res, vd0, res, p0);
                 } else {
-                    MicroAPI::Add(res, vd0, res, p0);
+                    Reg::Add(res, vd0, res, p0);
                 }
             }
             if constexpr (MERGE) {
@@ -637,10 +637,10 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNorm(int32
                 MergeMaxParaRes<T, OP_TYPE>(res, dstAddr, repeatElm);
             }
             if constexpr (OP_TYPE == OP_TYPE_AVG_POOL_3D && IS_LAST_LOOP) {
-                MicroAPI::Muls(res, res, mulsFactor_, p0);
+                Reg::Muls(res, res, mulsFactor_, p0);
             }
-            MicroAPI::StoreUnAlign(dstAddr, res, u0, repeatElm);
-            MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
+            Reg::StoreUnAlign(dstAddr, res, u0, repeatElm);
+            Reg::StoreUnAlignPost(dstAddr, u0, 0);
         }
         DuplicateValue<T, OP_TYPE>(dstLocalAddr, padNum, dataCount);
     }
@@ -666,37 +666,37 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNormForAvg
     uint32_t padNum = tilingData_->onceOutNum > 1 ? repeatTimes * repeatElm - dataCount : 0;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> in;
-        MicroAPI::RegTensor<float> inFp32;
-        MicroAPI::RegTensor<float> resFp32;
-        MicroAPI::UnalignRegForStore u0;
+        Reg::RegTensor<T> in;
+        Reg::RegTensor<float> inFp32;
+        Reg::RegTensor<float> resFp32;
+        Reg::UnalignRegForStore u0;
         uint32_t sregChannel = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<float>(sregChannel);
+            Reg::MaskReg p0 = Reg::UpdateMask<float>(sregChannel);
             auto srcAddr = xLocalAddr + i * repeatElm;
             auto sumAddr = sumLocalAddr + i * repeatElm;
             auto dstAddr = dstLocalAddr + i * repeatElm;
-            MicroAPI::Duplicate(resFp32, 0);
+            Reg::Duplicate(resFp32, 0);
             for (uint16_t j = 0; j < loopNum; j++) {
-                MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(j, channelStride);
-                MicroAPI::LoadAlign(in, srcAddr, offset);
-                MicroAPI::UnPack((MicroAPI::RegTensor<uint32_t>&)in, (MicroAPI::RegTensor<uint16_t>&)in);
-                MicroAPI::Cast<float, T, castTraitT2Fp32>(inFp32, in, p0);
-                MicroAPI::Add(resFp32, inFp32, resFp32, p0);
+                Reg::AddrReg offset = Reg::CreateAddrReg<T>(j, channelStride);
+                Reg::LoadAlign(in, srcAddr, offset);
+                Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
+                Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, p0);
+                Reg::Add(resFp32, inFp32, resFp32, p0);
             }
             if constexpr (MERGE) {
                 // merge cur result with last result
                 MergeMaxParaRes<float, OP_TYPE>(resFp32, sumAddr, repeatElm);
             }
             if constexpr (!IS_LAST_LOOP) {
-                MicroAPI::StoreUnAlign(sumAddr, resFp32, u0, repeatElm);
-                MicroAPI::StoreUnAlignPost(sumAddr, u0, 0);
+                Reg::StoreUnAlign(sumAddr, resFp32, u0, repeatElm);
+                Reg::StoreUnAlignPost(sumAddr, u0, 0);
             } else {
-                MicroAPI::Muls(resFp32, resFp32, mulsFactor_, p0);
-                MicroAPI::Cast<T, float, castTraitFp322T>(in, resFp32, p0);
-                MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)in, (MicroAPI::RegTensor<uint32_t>&)in);
-                MicroAPI::StoreUnAlign(dstAddr, in, u0, repeatElm);
-                MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
+                Reg::Muls(resFp32, resFp32, mulsFactor_, p0);
+                Reg::Cast<T, float, castTraitFp322T>(in, resFp32, p0);
+                Reg::Pack((Reg::RegTensor<uint16_t>&)in, (Reg::RegTensor<uint32_t>&)in);
+                Reg::StoreUnAlign(dstAddr, in, u0, repeatElm);
+                Reg::StoreUnAlignPost(dstAddr, u0, 0);
             }
         }
         DuplicateValue<float, OP_TYPE>(sumLocalAddr, padNum, dataCount);
@@ -724,53 +724,53 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
     uint16_t loopNum = dataCount;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> res;
-        MicroAPI::RegTensor<T> in;
-        MicroAPI::RegTensor<float> inFp32;
-        MicroAPI::RegTensor<uint16_t> v0;
-        AscendC::MicroAPI::UnalignRegForStore u0;
-        MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)v0, 0);
+        Reg::RegTensor<float> res;
+        Reg::RegTensor<T> in;
+        Reg::RegTensor<float> inFp32;
+        Reg::RegTensor<uint16_t> v0;
+        AscendC::Reg::UnalignRegForStore u0;
+        Reg::Arange((Reg::RegTensor<int16_t>&)v0, 0);
         uint32_t tailSreg = tailLoop;
         uint32_t mainSreg = repeatElm;
         uint32_t tailLen = tailLoop;
         uint32_t mainLen = repeatElm;
-        MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<T>(tailSreg);
-        MicroAPI::MaskReg pMain = MicroAPI::UpdateMask<T>(mainSreg);
-        MicroAPI::MaskReg maskFp32 = MicroAPI::UpdateMask<float>(mainLen);
-        MicroAPI::MaskReg tailMaskFp32 = MicroAPI::UpdateMask<float>(tailLen);
-        MicroAPI::Muls(v0, v0, channelNum, pMain);
+        Reg::MaskReg pTail = Reg::UpdateMask<T>(tailSreg);
+        Reg::MaskReg pMain = Reg::UpdateMask<T>(mainSreg);
+        Reg::MaskReg maskFp32 = Reg::UpdateMask<float>(mainLen);
+        Reg::MaskReg tailMaskFp32 = Reg::UpdateMask<float>(tailLen);
+        Reg::Muls(v0, v0, channelNum, pMain);
         for (uint16_t i = 0; i < loopNum; i++) {
             auto srcAddr = xLocalAddr + i;
             auto dstAddr = dstLocalAddr + i;
             auto sumAddr = sumLocalAddr + i;
-            MicroAPI::Duplicate(res, 0);
+            Reg::Duplicate(res, 0);
             for (uint16_t j = 0; j < repeatTimes; j++) {
-                MicroAPI::Gather(in, srcAddr + j * channelStride, v0, pMain);
-                MicroAPI::UnPack((MicroAPI::RegTensor<uint32_t>&)in, (MicroAPI::RegTensor<uint16_t>&)in);
-                MicroAPI::Cast<float, T, castTraitT2Fp32>(inFp32, in, maskFp32);
-                MicroAPI::Add(res, inFp32, res, maskFp32);
+                Reg::Gather(in, srcAddr + j * channelStride, v0, pMain);
+                Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
+                Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, maskFp32);
+                Reg::Add(res, inFp32, res, maskFp32);
             }
-            MicroAPI::RegTensor<float> tmp;
-            MicroAPI::Gather(in, srcAddr + repeatTimes * channelStride, v0, pTail);
-            MicroAPI::UnPack((MicroAPI::RegTensor<uint32_t>&)in, (MicroAPI::RegTensor<uint16_t>&)in);
-            MicroAPI::Cast<float, T, castTraitT2Fp32>(inFp32, in, tailMaskFp32);
-            MicroAPI::Add(tmp, inFp32, res, tailMaskFp32);
-            MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(res, tmp, tailMaskFp32);
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Reduce<Reg::ReduceType::SUM>(res, res, maskAll);
+            Reg::RegTensor<float> tmp;
+            Reg::Gather(in, srcAddr + repeatTimes * channelStride, v0, pTail);
+            Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
+            Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, tailMaskFp32);
+            Reg::Add(tmp, inFp32, res, tailMaskFp32);
+            Reg::Move<float, Reg::MaskMergeMode::MERGING>(res, tmp, tailMaskFp32);
+            Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::Reduce<Reg::ReduceType::SUM>(res, res, maskAll);
             if constexpr (MERGE) {
                 // merge cur result with last result
                 MergeMaxRes<float, OP_TYPE>(res, sumAddr, 0);
             }
             if constexpr (!IS_LAST_LOOP) {
-                MicroAPI::StoreUnAlign(sumAddr, res, u0, 1);
-                MicroAPI::StoreUnAlignPost(sumAddr, u0, 0);
+                Reg::StoreUnAlign(sumAddr, res, u0, 1);
+                Reg::StoreUnAlignPost(sumAddr, u0, 0);
             } else {
-                MicroAPI::Muls(res, res, mulsFactor_, maskAll);
-                MicroAPI::Cast<T, float, castTraitFp322T>(in, res, maskAll);
-                MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)in, (MicroAPI::RegTensor<uint32_t>&)in);
-                MicroAPI::StoreUnAlign(dstAddr, in, u0, 1);
-                MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
+                Reg::Muls(res, res, mulsFactor_, maskAll);
+                Reg::Cast<T, float, castTraitFp322T>(in, res, maskAll);
+                Reg::Pack((Reg::RegTensor<uint16_t>&)in, (Reg::RegTensor<uint32_t>&)in);
+                Reg::StoreUnAlign(dstAddr, in, u0, 1);
+                Reg::StoreUnAlignPost(dstAddr, u0, 0);
             }
         }
     }
@@ -797,16 +797,16 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<T> res;
-        MicroAPI::RegTensor<U> v0;
-        AscendC::MicroAPI::UnalignRegForStore u0;
-        MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, 0);
+        Reg::RegTensor<T> res;
+        Reg::RegTensor<U> v0;
+        AscendC::Reg::UnalignRegForStore u0;
+        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
         uint32_t tailSreg = tailLoop;
         uint32_t mainSreg = repeatElm;
-        MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailSreg);
-        MicroAPI::MaskReg pMain = MicroAPI::UpdateMask<U>(mainSreg);
-        MicroAPI::MaskReg maskAllForT = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::Muls(v0, v0, channelNum, pMain);
+        Reg::MaskReg pTail = Reg::UpdateMask<U>(tailSreg);
+        Reg::MaskReg pMain = Reg::UpdateMask<U>(mainSreg);
+        Reg::MaskReg maskAllForT = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+        Reg::Muls(v0, v0, channelNum, pMain);
         for (uint16_t i = 0; i < loopNum; i++) {
             auto srcAddr = xLocalAddr + i;
             auto dstAddr = dstLocalAddr + i;
@@ -814,7 +814,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 MaxWithGather<false, OP_TYPE>(res, srcAddr + j * channelStride, v0, pMain);
             }
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+            Reg::MaskReg maskAll = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
             MaxWithGather<true, OP_TYPE>(res, srcAddr + repeatTimes * channelStride, v0, pTail);
             ReduceAll<T, OP_TYPE>(res, res, maskAll);
             if constexpr (MERGE) {
@@ -822,10 +822,10 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
                 MergeMaxRes<T, OP_TYPE>(res, dstAddr, 0);
             }
             if constexpr (OP_TYPE == OP_TYPE_AVG_POOL_3D && IS_LAST_LOOP) {
-                MicroAPI::Muls(res, res, mulsFactor_, maskAll);
+                Reg::Muls(res, res, mulsFactor_, maskAll);
             }
-            MicroAPI::StoreUnAlign(dstAddr, res, u0, 1);
-            MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
+            Reg::StoreUnAlign(dstAddr, res, u0, 1);
+            Reg::StoreUnAlignPost(dstAddr, u0, 0);
         }
     }
     inputQue_.FreeTensor<T>(xLocal);

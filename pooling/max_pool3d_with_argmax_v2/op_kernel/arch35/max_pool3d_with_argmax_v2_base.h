@@ -23,86 +23,85 @@
 using namespace AscendC;
 
 template <typename T>
-__aicore__ inline void CalGatterIndex2D(MicroAPI::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void CalGatterIndex2D(Reg::RegTensor<T>& indexReg, T rate2D, T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segScalarReg;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg, preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segScalarReg;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg, preg);
 }
 
 template <typename T>
-__aicore__ inline void CalGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
-                                        T rate1D = 1)
+__aicore__ inline void CalGatterIndex3D(Reg::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segScalarReg;
-    AscendC::MicroAPI::RegTensor<T> segScalarReg2;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num2D));
-    AscendC::MicroAPI::Div(segScalarReg2, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg2, T(num2D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segScalarReg2, segScalarReg2, T(rate3D), preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segScalarReg;
+    AscendC::Reg::RegTensor<T> segScalarReg2;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segScalarReg2, segScalarReg2, T(rate3D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
 
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg2, preg);
 }
 
 template <typename T>
-__aicore__ inline void CalGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D,
-                                        T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void CalGatterIndex4D(Reg::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D, T rate2D,
+                                        T num1D, T rate1D = 1)
 {
-    AscendC::MicroAPI::Arange(indexReg, 0);
-    AscendC::MicroAPI::RegTensor<T> segScalarReg;
-    AscendC::MicroAPI::RegTensor<T> segScalarReg2;
-    AscendC::MicroAPI::RegTensor<T> segScalarReg3;
-    AscendC::MicroAPI::RegTensor<T> tmpReg;
-    AscendC::MicroAPI::RegTensor<T> constReg;
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(constReg, T(num3D));
-    AscendC::MicroAPI::Div(segScalarReg3, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg3, T(num3D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segScalarReg3, segScalarReg3, T(rate4D), preg);
+    AscendC::Reg::Arange(indexReg, 0);
+    AscendC::Reg::RegTensor<T> segScalarReg;
+    AscendC::Reg::RegTensor<T> segScalarReg2;
+    AscendC::Reg::RegTensor<T> segScalarReg3;
+    AscendC::Reg::RegTensor<T> tmpReg;
+    AscendC::Reg::RegTensor<T> constReg;
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(constReg, T(num3D));
+    AscendC::Reg::Div(segScalarReg3, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg3, T(num3D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segScalarReg3, segScalarReg3, T(rate4D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num2D));
-    AscendC::MicroAPI::Div(segScalarReg2, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg2, T(num2D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(segScalarReg2, segScalarReg2, T(rate3D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num2D));
+    AscendC::Reg::Div(segScalarReg2, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg2, T(num2D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(segScalarReg2, segScalarReg2, T(rate3D), preg);
 
-    AscendC::MicroAPI::Duplicate(constReg, T(num1D));
-    AscendC::MicroAPI::Div(segScalarReg, indexReg, constReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, segScalarReg, T(num1D), preg);
-    AscendC::MicroAPI::Sub(indexReg, indexReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(indexReg, indexReg, T(rate1D), preg);
-    AscendC::MicroAPI::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
+    AscendC::Reg::Duplicate(constReg, T(num1D));
+    AscendC::Reg::Div(segScalarReg, indexReg, constReg, preg);
+    AscendC::Reg::Muls(tmpReg, segScalarReg, T(num1D), preg);
+    AscendC::Reg::Sub(indexReg, indexReg, tmpReg, preg);
+    AscendC::Reg::Muls(indexReg, indexReg, T(rate1D), preg);
+    AscendC::Reg::Muls(segScalarReg, segScalarReg, T(rate2D), preg);
 
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg2, preg);
-    AscendC::MicroAPI::Add(indexReg, indexReg, segScalarReg3, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg2, preg);
+    AscendC::Reg::Add(indexReg, indexReg, segScalarReg3, preg);
 }
 
 template <typename T>
-__aicore__ inline void SetNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
+__aicore__ inline void SetNegInfReg(Reg::RegTensor<T>& negInfReg)
 {
     // -inf
     constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;
@@ -111,11 +110,11 @@ __aicore__ inline void SetNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
     using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
 
     if constexpr (std::is_same<T, float>::value) {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
     } else if constexpr (std::is_same<T, half>::value) {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
     } else {
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
     }
 }
 

@@ -333,8 +333,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputePar
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride,
                                 oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor);
     }
@@ -377,8 +377,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiRow(const ComputeParam
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         AvgPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, param.inCols,
                             oneLoopStrideH, oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor);
     }
@@ -426,8 +426,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputePara
     if (ubFactorN == 1U) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             AvgPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                 param.inCols, num, tailW, 0, 0, 0, 0, divisor);
         }
@@ -437,8 +437,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputePara
             __ubuf__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::LoadAlign(v0, indexAddr);
+                Reg::RegTensor<U> v0;
+                Reg::LoadAlign(v0, indexAddr);
                 AvgPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                     param.inCols, num, tailW, 0, 0, 0, 0, divisor);
             }

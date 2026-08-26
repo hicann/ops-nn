@@ -334,17 +334,17 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CustomSelect(
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> inputReg;
-        MicroAPI::RegTensor<T> maxReg;
-        MicroAPI::RegTensor<int32_t> inputIndexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg1;
+        Reg::RegTensor<T> inputReg;
+        Reg::RegTensor<T> maxReg;
+        Reg::RegTensor<int32_t> inputIndexReg;
+        Reg::RegTensor<int32_t> maxIndexReg;
+        Reg::RegTensor<int32_t> maxIndexReg1;
 
-        MicroAPI::MaskReg fullMask = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg indexMask = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg cmpMask = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg cmpMaskNan = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg cmpIndexMask = MicroAPI::CreateMask<int32_t>();
+        Reg::MaskReg fullMask = Reg::CreateMask<T>();
+        Reg::MaskReg indexMask = Reg::CreateMask<T>();
+        Reg::MaskReg cmpMask = Reg::CreateMask<T>();
+        Reg::MaskReg cmpMaskNan = Reg::CreateMask<T>();
+        Reg::MaskReg cmpIndexMask = Reg::CreateMask<int32_t>();
 
         for (uint16_t i = 0; i < repeatTimes; i++) {
             auto srcStrideOfset = i * srcStride * vfLen;
@@ -354,35 +354,35 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CustomSelect(
             auto dstOfset = outAddr + dstStrideOfset;
             auto dstIdxOfset = outIndexAddr + dstStrideOfset;
 
-            MicroAPI::DataCopy(maxReg, srcOfset);
-            MicroAPI::DataCopy(maxIndexReg, srcIdxOfset);
+            Reg::DataCopy(maxReg, srcOfset);
+            Reg::DataCopy(maxIndexReg, srcIdxOfset);
             if constexpr (!IsSameType<T, float>::value) {
-                MicroAPI::DataCopy(maxIndexReg1, srcIdxOfset + vfLenInt);
+                Reg::DataCopy(maxIndexReg1, srcIdxOfset + vfLenInt);
             }
             for (uint16_t k = 1; k < kernelSize; k++) {
-                MicroAPI::DataCopy(inputReg, srcOfset + k * vfLen);
-                MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, inputReg, maxReg, fullMask);
-                MicroAPI::Compare<T, CMPMODE::NE>(cmpMaskNan, inputReg, inputReg, fullMask);
-                MicroAPI::Or(cmpMask, cmpMask, cmpMaskNan, fullMask);
-                AscendC::MicroAPI::Select(maxReg, inputReg, maxReg, cmpMask);
+                Reg::DataCopy(inputReg, srcOfset + k * vfLen);
+                Reg::Compare<T, CMPMODE::GT>(cmpMask, inputReg, maxReg, fullMask);
+                Reg::Compare<T, CMPMODE::NE>(cmpMaskNan, inputReg, inputReg, fullMask);
+                Reg::Or(cmpMask, cmpMask, cmpMaskNan, fullMask);
+                AscendC::Reg::Select(maxReg, inputReg, maxReg, cmpMask);
 
-                MicroAPI::DataCopy(inputIndexReg, srcIdxOfset + k * vfLen);
+                Reg::DataCopy(inputIndexReg, srcIdxOfset + k * vfLen);
                 if constexpr (IsSameType<T, float>::value) {
-                    AscendC::MicroAPI::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpMask);
+                    AscendC::Reg::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpMask);
                 } else {
-                    AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(cmpIndexMask, cmpMask);
-                    AscendC::MicroAPI::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpIndexMask);
+                    AscendC::Reg::UnPack<AscendC::Reg::HighLowPart::LOWEST>(cmpIndexMask, cmpMask);
+                    AscendC::Reg::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpIndexMask);
 
-                    MicroAPI::DataCopy(inputIndexReg, srcIdxOfset + k * vfLen + vfLenInt);
-                    AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(cmpIndexMask, cmpMask);
-                    AscendC::MicroAPI::Select(maxIndexReg1, inputIndexReg, maxIndexReg1, cmpIndexMask);
+                    Reg::DataCopy(inputIndexReg, srcIdxOfset + k * vfLen + vfLenInt);
+                    AscendC::Reg::UnPack<AscendC::Reg::HighLowPart::HIGHEST>(cmpIndexMask, cmpMask);
+                    AscendC::Reg::Select(maxIndexReg1, inputIndexReg, maxIndexReg1, cmpIndexMask);
                 }
             }
 
-            MicroAPI::DataCopy(dstOfset, maxReg, fullMask);
-            MicroAPI::DataCopy(dstIdxOfset, maxIndexReg, indexMask);
+            Reg::DataCopy(dstOfset, maxReg, fullMask);
+            Reg::DataCopy(dstIdxOfset, maxIndexReg, indexMask);
             if constexpr (!IsSameType<T, float>::value) {
-                MicroAPI::DataCopy(dstIdxOfset + vfLenInt, maxIndexReg1, indexMask);
+                Reg::DataCopy(dstIdxOfset + vfLenInt, maxIndexReg1, indexMask);
             }
         }
     }
@@ -403,17 +403,17 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CustomSelectOnW(
     int64_t vfLenInt = platform::GetVRegSize() / sizeof(int32_t);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> inputReg;
-        MicroAPI::RegTensor<int32_t> inputIndexReg;
-        MicroAPI::RegTensor<T> maxReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg1;
+        Reg::RegTensor<T> inputReg;
+        Reg::RegTensor<int32_t> inputIndexReg;
+        Reg::RegTensor<T> maxReg;
+        Reg::RegTensor<int32_t> maxIndexReg;
+        Reg::RegTensor<int32_t> maxIndexReg1;
 
-        MicroAPI::MaskReg fullMask = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg cmpMask = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg cmpMaskNan = MicroAPI::CreateMask<T>();
-        MicroAPI::MaskReg indexMask = MicroAPI::CreateMask<int32_t>();
-        MicroAPI::MaskReg cmpIndexMask = MicroAPI::CreateMask<int32_t>();
+        Reg::MaskReg fullMask = Reg::CreateMask<T>();
+        Reg::MaskReg cmpMask = Reg::CreateMask<T>();
+        Reg::MaskReg cmpMaskNan = Reg::CreateMask<T>();
+        Reg::MaskReg indexMask = Reg::CreateMask<int32_t>();
+        Reg::MaskReg cmpIndexMask = Reg::CreateMask<int32_t>();
 
         for (uint16_t dIdx = 0; dIdx < diDataLen; dIdx++) {
             auto srcOfsetOnD = inputAddr + dIdx * hiDataLen * srcStride * vfLen;
@@ -427,34 +427,34 @@ __aicore__ inline void AdaptiveMaxPool3dParaPool<T, U>::CustomSelectOnW(
                 auto dstIdxOfset = dstIdxOfsetOnD + hIdx * vfLen;
                 auto assistIdx = assistIdxOnD + hIdx * tilingData_.wIn + indexOfset;
 
-                MicroAPI::DataCopy(maxReg, srcOfset);
-                MicroAPI::Duplicate(inputIndexReg, assistIdx);
-                MicroAPI::Duplicate(maxIndexReg, assistIdx);
+                Reg::DataCopy(maxReg, srcOfset);
+                Reg::Duplicate(inputIndexReg, assistIdx);
+                Reg::Duplicate(maxIndexReg, assistIdx);
                 if constexpr (!IsSameType<T, float>::value) {
-                    MicroAPI::Duplicate(maxIndexReg1, assistIdx);
+                    Reg::Duplicate(maxIndexReg1, assistIdx);
                 }
                 for (uint16_t k = 1; k < kernelSize; k++) {
-                    MicroAPI::DataCopy(inputReg, srcOfset + k * vfLen);
-                    MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, inputReg, maxReg, fullMask);
-                    MicroAPI::Compare<T, CMPMODE::NE>(cmpMaskNan, inputReg, inputReg, fullMask);
-                    MicroAPI::Or(cmpMask, cmpMask, cmpMaskNan, fullMask);
-                    AscendC::MicroAPI::Select(maxReg, inputReg, maxReg, cmpMask);
+                    Reg::DataCopy(inputReg, srcOfset + k * vfLen);
+                    Reg::Compare<T, CMPMODE::GT>(cmpMask, inputReg, maxReg, fullMask);
+                    Reg::Compare<T, CMPMODE::NE>(cmpMaskNan, inputReg, inputReg, fullMask);
+                    Reg::Or(cmpMask, cmpMask, cmpMaskNan, fullMask);
+                    AscendC::Reg::Select(maxReg, inputReg, maxReg, cmpMask);
 
-                    MicroAPI::Adds(inputIndexReg, inputIndexReg, static_cast<int32_t>(1), indexMask);
+                    Reg::Adds(inputIndexReg, inputIndexReg, static_cast<int32_t>(1), indexMask);
                     if constexpr (IsSameType<T, float>::value) {
-                        AscendC::MicroAPI::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpMask);
+                        AscendC::Reg::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpMask);
                     } else {
-                        AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(cmpIndexMask, cmpMask);
-                        AscendC::MicroAPI::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpIndexMask);
+                        AscendC::Reg::UnPack<AscendC::Reg::HighLowPart::LOWEST>(cmpIndexMask, cmpMask);
+                        AscendC::Reg::Select(maxIndexReg, inputIndexReg, maxIndexReg, cmpIndexMask);
 
-                        AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(cmpIndexMask, cmpMask);
-                        AscendC::MicroAPI::Select(maxIndexReg1, inputIndexReg, maxIndexReg1, cmpIndexMask);
+                        AscendC::Reg::UnPack<AscendC::Reg::HighLowPart::HIGHEST>(cmpIndexMask, cmpMask);
+                        AscendC::Reg::Select(maxIndexReg1, inputIndexReg, maxIndexReg1, cmpIndexMask);
                     }
                 }
-                MicroAPI::DataCopy(dstIdxOfset, maxIndexReg, indexMask);
-                MicroAPI::DataCopy(dstOfset, maxReg, fullMask);
+                Reg::DataCopy(dstIdxOfset, maxIndexReg, indexMask);
+                Reg::DataCopy(dstOfset, maxReg, fullMask);
                 if constexpr (!IsSameType<T, float>::value) {
-                    MicroAPI::DataCopy(dstIdxOfset + vfLenInt, maxIndexReg1, indexMask);
+                    Reg::DataCopy(dstIdxOfset + vfLenInt, maxIndexReg1, indexMask);
                 }
             }
         }

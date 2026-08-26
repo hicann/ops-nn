@@ -400,74 +400,74 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
 }
 
 template <typename T>
-__aicore__ inline void IndexConvNcNcdhwFullLoad(MicroAPI::RegTensor<T>& argmaxReg, int64_t highOutputOffset,
-                                                int64_t highOutputSize, MicroAPI::RegTensor<uint32_t>& magicHighReg,
-                                                int16_t shiftHigh, MicroAPI::MaskReg& pregT3,
-                                                MicroAPI::RegTensor<int32_t>& indexIncReg)
+__aicore__ inline void IndexConvNcNcdhwFullLoad(Reg::RegTensor<T>& argmaxReg, int64_t highOutputOffset,
+                                                int64_t highOutputSize, Reg::RegTensor<uint32_t>& magicHighReg,
+                                                int16_t shiftHigh, Reg::MaskReg& pregT3,
+                                                Reg::RegTensor<int32_t>& indexIncReg)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> localIndexIncReg;
-    AscendC::MicroAPI::Arange(localIndexIncReg, 0);
-    AscendC::MicroAPI::RegTensor<uint32_t> ncIndexIncRegU32;
-    FastDivImpl(ncIndexIncRegU32, (MicroAPI::RegTensor<uint32_t>&)localIndexIncReg, magicHighReg, shiftHigh, pregT3);
+    AscendC::Reg::RegTensor<int32_t> localIndexIncReg;
+    AscendC::Reg::Arange(localIndexIncReg, 0);
+    AscendC::Reg::RegTensor<uint32_t> ncIndexIncRegU32;
+    FastDivImpl(ncIndexIncRegU32, (Reg::RegTensor<uint32_t>&)localIndexIncReg, magicHighReg, shiftHigh, pregT3);
 
-    AscendC::MicroAPI::Muls((MicroAPI::RegTensor<int32_t>&)ncIndexIncRegU32,
-                            (MicroAPI::RegTensor<int32_t>&)ncIndexIncRegU32, highOutputSize, pregT3);
+    AscendC::Reg::Muls((Reg::RegTensor<int32_t>&)ncIndexIncRegU32, (Reg::RegTensor<int32_t>&)ncIndexIncRegU32,
+                       highOutputSize, pregT3);
 
-    AscendC::MicroAPI::Adds(argmaxReg, argmaxReg, highOutputOffset, pregT3);
-    AscendC::MicroAPI::Add(argmaxReg, argmaxReg, (MicroAPI::RegTensor<int32_t>&)ncIndexIncRegU32, pregT3);
+    AscendC::Reg::Adds(argmaxReg, argmaxReg, highOutputOffset, pregT3);
+    AscendC::Reg::Add(argmaxReg, argmaxReg, (Reg::RegTensor<int32_t>&)ncIndexIncRegU32, pregT3);
 }
 
 template <typename T>
-__aicore__ inline void IndexConvNcdhwFullLoad(MicroAPI::RegTensor<T>& argmaxReg, int64_t highOutputOffset,
-                                              MicroAPI::MaskReg& pregT3)
+__aicore__ inline void IndexConvNcdhwFullLoad(Reg::RegTensor<T>& argmaxReg, int64_t highOutputOffset,
+                                              Reg::MaskReg& pregT3)
 {
-    AscendC::MicroAPI::Adds(argmaxReg, argmaxReg, highOutputOffset, pregT3);
+    AscendC::Reg::Adds(argmaxReg, argmaxReg, highOutputOffset, pregT3);
 }
 
 template <typename T1, typename T2>
 __aicore__ inline void DoMulNCNcdhwFullLoad(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
-                                            MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
+                                            Reg::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
                                             int32_t highOutputOffset, int32_t highOutputPlaneActual,
-                                            int32_t highArgmaxPlaneActual, MicroAPI::RegTensor<uint32_t>& magicHighReg,
-                                            int16_t shiftHigh, MicroAPI::RegTensor<int32_t>& indexIncReg)
+                                            int32_t highArgmaxPlaneActual, Reg::RegTensor<uint32_t>& magicHighReg,
+                                            int16_t shiftHigh, Reg::RegTensor<int32_t>& indexIncReg)
 {
-    AscendC::MicroAPI::RegTensor<computeType> gradReg;
-    AscendC::MicroAPI::RegTensor<int32_t> argmaxReg;
+    AscendC::Reg::RegTensor<computeType> gradReg;
+    AscendC::Reg::RegTensor<int32_t> argmaxReg;
 
     uint32_t maskT1 = argmaxMaskCount;
     uint32_t maskT2 = argmaxMaskCount;
     uint32_t maskT3 = argmaxMaskCount;
-    AscendC::MicroAPI::MaskReg pregT1 = AscendC::MicroAPI::UpdateMask<T1>(maskT1);
-    AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
-    AscendC::MicroAPI::MaskReg pregT3 = AscendC::MicroAPI::UpdateMask<int32_t>(maskT3);
+    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
+    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
+    AscendC::Reg::MaskReg pregT3 = AscendC::Reg::UpdateMask<int32_t>(maskT3);
     GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, pregT1, pregT2);
 
     IndexConvNcNcdhwFullLoad<int32_t>(argmaxReg, highOutputOffset, highOutputPlaneActual, magicHighReg, shiftHigh,
                                       pregT3, indexIncReg);
     uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
+    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
     GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
 }
 
 template <typename T1, typename T2>
 __aicore__ inline void DoSingleNchwFullLoad(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
-                                            MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
+                                            Reg::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
                                             int32_t highOutputOffset)
 {
-    AscendC::MicroAPI::RegTensor<computeType> gradReg;
-    AscendC::MicroAPI::RegTensor<int32_t> argmaxReg;
+    AscendC::Reg::RegTensor<computeType> gradReg;
+    AscendC::Reg::RegTensor<int32_t> argmaxReg;
 
     uint32_t maskT1 = argmaxMaskCount;
     uint32_t maskT2 = argmaxMaskCount;
     uint32_t maskT3 = argmaxMaskCount;
-    AscendC::MicroAPI::MaskReg pregT1 = AscendC::MicroAPI::UpdateMask<T1>(maskT1);
-    AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
-    AscendC::MicroAPI::MaskReg pregT3 = AscendC::MicroAPI::UpdateMask<int32_t>(maskT3);
+    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
+    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2>(maskT2);
+    AscendC::Reg::MaskReg pregT3 = AscendC::Reg::UpdateMask<int32_t>(maskT3);
     GetConCurrentInput<T1, T2>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, pregT1, pregT2);
 
     IndexConvNcdhwFullLoad<int32_t>(argmaxReg, highOutputOffset, pregT3);
     uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
+    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
 
     GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
 }
@@ -495,11 +495,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
     uint32_t all = computeSizeT2;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-        GenInitial1DIndices((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize);
-        AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg
-            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+        GenInitial1DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize);
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
 
         for (uint16_t highIdx = 0; highIdx < highAxisActual; ++highIdx) {
             uint32_t highArgmaxOffset = highIdx * dhwPlaneAligned_;
@@ -511,7 +510,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                             uint32_t offset = (wBatchIdx + wRepeatIdx * computeSizeT2 * wProBatchSize +
                                                hIdx * wArgmaxAligned + dArgmaxOffset + highArgmaxOffset);
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, all,
                                                          highOutputOffset);
                         }
@@ -519,7 +518,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         uint32_t offset = (wBatchIdx + repeatimes * computeSizeT2 * wProBatchSize +
                                            hIdx * wArgmaxAligned + dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, wRemainBatchCount,
                                                      highOutputOffset);
                     }
@@ -528,7 +527,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
                         uint32_t offset = (wBatchIdx + wRemainBatchCount * wProBatchSize +
                                            repeatimes * computeSizeT2 * wProBatchSize + hIdx * wArgmaxAligned +
                                            dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, one,
                                                      highOutputOffset);
                     }
@@ -579,14 +578,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndexOne;
-        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize,
-                                   hProBatchSize, wArgmaxAligned, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxAligned);
-        AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg
-            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initialRegIndexOne;
+        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                   wArgmaxAligned, wFullBatchCount, divW);
+        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxAligned);
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
 
         for (uint16_t highIdx = 0; highIdx < highAxisActual; ++highIdx) {
             uint32_t highArgmaxOffset = highIdx * dhwPlaneAligned_;
@@ -598,7 +596,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                             T2 offset = (dArgmaxOffset + highArgmaxOffset + wBatchIdx + hProBatchIdx * wArgmaxAligned +
                                          hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount);
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskBlock,
                                                          highOutputOffset);
                         }
@@ -606,7 +604,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                             T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
                                          hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount + dArgmaxOffset +
                                          highArgmaxOffset);
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, blockOne,
                                                          highOutputOffset);
                         }
@@ -618,7 +616,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                         T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
                                      blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
                                      dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskRemainBatch,
                                                      highOutputOffset);
                     }
@@ -626,7 +624,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                         T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
                                      blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
                                      dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, remainBatchOne,
                                                      highOutputOffset);
                     }
@@ -637,7 +635,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                                      hRemainBatchCount * hProBatchSize * wArgmaxAligned +
                                      blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
                                      dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskRemainTail,
                                                      highOutputOffset);
                     }
@@ -646,7 +644,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                                      hRemainBatchCount * hProBatchSize * wArgmaxAligned +
                                      blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
                                      dArgmaxOffset + highArgmaxOffset);
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, remainTailOne,
                                                      highOutputOffset);
                     }
@@ -716,28 +714,26 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndexOne;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndexDw;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndexOneDw;
-        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, dProBatchSize, hProBatchSize,
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOne;
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexDw;
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOneDw;
+        GenInitial3DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, dProBatchSize, hProBatchSize,
                                 wProBatchSize, hFullBatchCount, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divWH,
                                 divW);
-        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, dProBatchSize, hProBatchSize,
+        Gen3DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, dProBatchSize, hProBatchSize,
                           wArgmaxAligned, hFullBatchCount, hArgmaxActual, divH);
-        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexDw, dProBatchSize,
-                                hProBatchSize, wProBatchSize, 1, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divW,
-                                divW);
-        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOneDw, dProBatchSize, hProBatchSize,
+        GenInitial3DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexDw, dProBatchSize, hProBatchSize,
+                                wProBatchSize, 1, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divW, divW);
+        Gen3DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOneDw, dProBatchSize, hProBatchSize,
                           wArgmaxAligned, 1, hArgmaxActual, div1);
-        AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndexOne;
-        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
-                                   hProBatchSize, wArgmaxAligned, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndexOne, hProBatchSize, wArgmaxAligned);
-        AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg
-            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
+        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize, hProBatchSize,
+                                   wArgmaxAligned, wFullBatchCount, divW);
+        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, hProBatchSize, wArgmaxAligned);
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
 
         uint32_t highArgmaxOffset = 0;
         uint32_t highOutputOffset = 0;
@@ -751,13 +747,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                         T2 hOffset = hProBatchIdx * wArgmaxAligned + dhOffset;
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                             T2 offset = wBatchIdx + hOffset;
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0,
                                                          highOutputOffset);
                         }
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                             T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1,
                                                          highOutputOffset);
                         }
@@ -766,13 +762,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                         T2 hOffset = (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned + dhOffset;
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                             T2 offset = wBatchIdx + hOffset;
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2,
                                                          highOutputOffset);
                         }
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                             T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                            AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
+                            AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
                             DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3,
                                                          highOutputOffset);
                         }
@@ -789,13 +785,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = hProBatchIdx * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4,
                                                      highOutputOffset);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5,
                                                      highOutputOffset);
                     }
@@ -804,13 +800,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask6,
                                                      highOutputOffset);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask7,
                                                      highOutputOffset);
                     }
@@ -826,13 +822,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = hProBatchIdx * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask8,
                                                      highOutputOffset);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask9,
                                                      highOutputOffset);
                     }
@@ -841,13 +837,13 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask10,
                                                      highOutputOffset);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                         DoSingleNchwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask11,
                                                      highOutputOffset);
                     }
@@ -949,38 +945,36 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint32_t> initial4DRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial4DRegIndexOne;
-        GenInitial4DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndex, wProBatchSize, hProBatchSize,
+        AscendC::Reg::RegTensor<uint32_t> initial4DRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initial4DRegIndexOne;
+        GenInitial4DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial4DRegIndex, wProBatchSize, hProBatchSize,
                                 wArgmaxAligned, wFullBatchCount, hFullBatchCount, dFullBatchCount, depthStride,
                                 highStride, divDHW, divWH, divW);
-        Gen4DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOne, hProBatchSize, wArgmaxAligned,
+        Gen4DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial4DRegIndexOne, hProBatchSize, wArgmaxAligned,
                           hFullBatchCount, dFullBatchCount, depthStride, highStride, divHD, divH);
-        AscendC::MicroAPI::RegTensor<uint32_t> initial4DRegIndexDW;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial4DRegIndexOneHD;
-        GenInitial4DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexDW, wProBatchSize,
-                                hProBatchSize, wArgmaxAligned, wFullBatchCount, 1, dFullBatchCount, depthStride,
-                                highStride, divWD, divW, divW);
-        Gen4DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOneHD, hProBatchSize, wArgmaxAligned,
-                          1, dFullBatchCount, depthStride, highStride, divD, div1);
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndexOne;
-        GenInitial3DHighIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, highStride,
-                                    wProBatchSize, hProBatchSize, wArgmaxAligned, wFullBatchCount, hFullBatchCount,
-                                    divWH, divW);
-        Gen3DHighIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, highStride, hProBatchSize,
+        AscendC::Reg::RegTensor<uint32_t> initial4DRegIndexDW;
+        AscendC::Reg::RegTensor<uint32_t> initial4DRegIndexOneHD;
+        GenInitial4DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial4DRegIndexDW, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, 1, dFullBatchCount, depthStride, highStride, divWD,
+                                divW, divW);
+        Gen4DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial4DRegIndexOneHD, hProBatchSize, wArgmaxAligned, 1,
+                          dFullBatchCount, depthStride, highStride, divD, div1);
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOne;
+        GenInitial3DHighIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, highStride, wProBatchSize,
+                                    hProBatchSize, wArgmaxAligned, wFullBatchCount, hFullBatchCount, divWH, divW);
+        Gen3DHighIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, highStride, hProBatchSize,
                               wArgmaxAligned, hFullBatchCount, divH);
-        AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndex;
-        AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndexOne;
-        GenInitial2DHighIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, highStride,
-                                    wProBatchSize, wFullBatchCount, divW);
-        Gen2DHighIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndexOne, highStride);
-        AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg
-            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::RegTensor<uint32_t> magicHighReg;
-        AscendC::MicroAPI::RegTensor<int32_t> indexIncReg;
-        AscendC::MicroAPI::Arange(indexIncReg, 0);
+        AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
+        GenInitial2DHighIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, highStride, wProBatchSize,
+                                    wFullBatchCount, divW);
+        Gen2DHighIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, highStride);
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<uint32_t> magicHighReg;
+        AscendC::Reg::RegTensor<int32_t> indexIncReg;
+        AscendC::Reg::Arange(indexIncReg, 0);
 
         for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
             uint32_t curHighArgmaxOffset = highBlockIdx * highArgmaxStride;
@@ -991,8 +985,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = hProBatchIdx * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dhw);
+                        AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_dhw);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0,
                                                      curHighOutputOffset, highOutputPlaneActual,
                                                      dFullBatchCount * hFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1000,8 +994,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dh);
+                        AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_dh);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1,
                                                      curHighOutputOffset, highOutputPlaneActual,
                                                      dFullBatchCount * hFullBatchCount, magicHighReg,
@@ -1012,8 +1006,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned + dhOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dw);
+                        AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_dw);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2,
                                                      curHighOutputOffset, highOutputPlaneActual,
                                                      dFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1021,8 +1015,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_d);
+                        AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_d);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3,
                                                      curHighOutputOffset, highOutputPlaneActual, dFullBatchCount,
                                                      magicHighReg, static_cast<int16_t>(shiftHigh_d), indexIncReg);
@@ -1041,8 +1035,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = hProBatchIdx * wArgmaxAligned + dOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_hw);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_hw);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4,
                                                      curHighOutputOffset, highOutputPlaneActual,
                                                      hFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1050,8 +1044,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_h);
+                        AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_h);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5,
                                                      curHighOutputOffset, highOutputPlaneActual, hFullBatchCount,
                                                      magicHighReg, static_cast<int16_t>(shiftHigh_h), indexIncReg);
@@ -1061,16 +1055,16 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                     T2 hOffset = (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned + dOffset;
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = wBatchIdx + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_w);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_w);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask6,
                                                      curHighOutputOffset, highOutputPlaneActual, wFullBatchCount,
                                                      magicHighReg, static_cast<int16_t>(shiftHigh_w), indexIncReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                        AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
-                        AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_1);
+                        AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
+                        AscendC::Reg::Duplicate(magicHighReg, magicHigh_1);
                         DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask7,
                                                      curHighOutputOffset, highOutputPlaneActual, 1, magicHighReg,
                                                      static_cast<int16_t>(shiftHigh_1), indexIncReg);
@@ -1087,8 +1081,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 T2 hOffset = hProBatchIdx * wArgmaxAligned + dhOffset;
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                     T2 offset = wBatchIdx + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dhw);
+                    AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_dhw);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask8, highOutputOffset,
                                                  highOutputPlaneActual,
                                                  dFullBatchCount * hFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1096,8 +1090,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                     T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dh);
+                    AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_dh);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask9, highOutputOffset,
                                                  highOutputPlaneActual, dFullBatchCount * hFullBatchCount, magicHighReg,
                                                  static_cast<int16_t>(shiftHigh_dh), indexIncReg);
@@ -1107,8 +1101,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 T2 hOffset = (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned + dhOffset;
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                     T2 offset = wBatchIdx + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dw);
+                    AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_dw);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask10,
                                                  highOutputOffset, highOutputPlaneActual,
                                                  dFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1116,8 +1110,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                     T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_d);
+                    AscendC::Reg::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_d);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask11,
                                                  highOutputOffset, highOutputPlaneActual, dFullBatchCount, magicHighReg,
                                                  static_cast<int16_t>(shiftHigh_d), indexIncReg);
@@ -1132,8 +1126,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 T2 hOffset = hProBatchIdx * wArgmaxAligned + dOffset;
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                     T2 offset = wBatchIdx + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_hw);
+                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_hw);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask12,
                                                  highOutputOffset, highOutputPlaneActual,
                                                  hFullBatchCount * wFullBatchCount, magicHighReg,
@@ -1141,8 +1135,8 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                     T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_h);
+                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_h);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask13,
                                                  highOutputOffset, highOutputPlaneActual, hFullBatchCount, magicHighReg,
                                                  static_cast<int16_t>(shiftHigh_h), indexIncReg);
@@ -1152,16 +1146,16 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
                 T2 hOffset = (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned + dOffset;
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                     T2 offset = wBatchIdx + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_w);
+                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_w);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask14,
                                                  highOutputOffset, highOutputPlaneActual, wFullBatchCount, magicHighReg,
                                                  static_cast<int16_t>(shiftHigh_w), indexIncReg);
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                     T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount + hOffset;
-                    AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
-                    AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_1);
+                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
+                    AscendC::Reg::Duplicate(magicHighReg, magicHigh_1);
                     DoMulNCNcdhwFullLoad<T1, T2>(yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask15,
                                                  highOutputOffset, highOutputPlaneActual, 1, magicHighReg,
                                                  static_cast<int16_t>(shiftHigh_1), indexIncReg);

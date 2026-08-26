@@ -35,37 +35,37 @@ namespace SoftmaxFocalLossGrad {
 template <typename T, typename TW, uint64_t hasWeight>
 __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::LoadPTW(
     RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32, __ubuf__ T* predAddr,
-    __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr, AscendC::MicroAPI::AddrReg offT,
-    AscendC::MicroAPI::AddrReg offW, AscendC::MicroAPI::AddrReg offF, MaskReg preg)
+    __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr, AscendC::Reg::AddrReg offT, AscendC::Reg::AddrReg offW,
+    AscendC::Reg::AddrReg offF, MaskReg preg)
 {
     RegTensor<T> predReg;
     RegTensor<int32_t> targetRegI32;
     RegTensor<TW> weightReg;
 
     if constexpr (sizeof(T) == sizeof(half)) {
-        AscendC::MicroAPI::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predAddr, offT);
-        AscendC::MicroAPI::Cast<float, T, castB16ToB32>(p32, predReg, preg);
+        AscendC::Reg::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(predReg, predAddr, offT);
+        AscendC::Reg::Cast<float, T, castB16ToB32>(p32, predReg, preg);
     } else {
-        AscendC::MicroAPI::LoadAlign(p32, predAddr, offT);
+        AscendC::Reg::LoadAlign(p32, predAddr, offT);
     }
-    AscendC::MicroAPI::LoadAlign(targetRegI32, targetAddr, offF);
-    AscendC::MicroAPI::Cast<float, int32_t, castI32ToF32>(t32, targetRegI32, preg);
+    AscendC::Reg::LoadAlign(targetRegI32, targetAddr, offF);
+    AscendC::Reg::Cast<float, int32_t, castI32ToF32>(t32, targetRegI32, preg);
     if constexpr (hasWeight == 1) {
         if constexpr (sizeof(TW) == sizeof(half)) {
-            AscendC::MicroAPI::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightAddr, offW);
-            AscendC::MicroAPI::Cast<float, TW, castB16ToB32>(w32, weightReg, preg);
+            AscendC::Reg::LoadAlign<TW, LoadDist::DIST_UNPACK_B16>(weightReg, weightAddr, offW);
+            AscendC::Reg::Cast<float, TW, castB16ToB32>(w32, weightReg, preg);
         } else {
-            AscendC::MicroAPI::LoadAlign(w32, weightAddr, offW);
+            AscendC::Reg::LoadAlign(w32, weightAddr, offW);
         }
     } else {
-        AscendC::MicroAPI::Duplicate(w32, 1.0f);
+        AscendC::Reg::Duplicate(w32, 1.0f);
     }
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
 __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::SumsOfSeg(
     __ubuf__ float* wfAddr, __ubuf__ float* wbAddr, __ubuf__ float* ceAddr, __ubuf__ float* wtAddr,
-    RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32, AscendC::MicroAPI::AddrReg offF, MaskReg preg)
+    RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32, AscendC::Reg::AddrReg offF, MaskReg preg)
 {
     RegTensor<float> oneReg;
     RegTensor<float> l1p;
@@ -76,34 +76,34 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::SumsOfSeg(
     float alpha = alpha_;
 
     // l1p = log(1 - p)
-    AscendC::MicroAPI::Duplicate(oneReg, 1.0f);
-    AscendC::MicroAPI::Sub(tmpReg, oneReg, p32, preg);
-    AscendC::MicroAPI::Log(l1p, tmpReg, preg);
+    AscendC::Reg::Duplicate(oneReg, 1.0f);
+    AscendC::Reg::Sub(tmpReg, oneReg, p32, preg);
+    AscendC::Reg::Log(l1p, tmpReg, preg);
 
     // wf = alpha * exp(gamma * l1p) * t
-    AscendC::MicroAPI::Muls(tmpReg, l1p, gamma, preg);
-    AscendC::MicroAPI::Exp(outReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(outReg, outReg, alpha, preg);
-    AscendC::MicroAPI::Mul(outReg, outReg, t32, preg);
-    AscendC::MicroAPI::StoreAlign(wfAddr, outReg, offF, preg);
+    AscendC::Reg::Muls(tmpReg, l1p, gamma, preg);
+    AscendC::Reg::Exp(outReg, tmpReg, preg);
+    AscendC::Reg::Muls(outReg, outReg, alpha, preg);
+    AscendC::Reg::Mul(outReg, outReg, t32, preg);
+    AscendC::Reg::StoreAlign(wfAddr, outReg, offF, preg);
 
     // wb = alpha * exp((gamma - 1) * l1p) * t
-    AscendC::MicroAPI::Muls(tmpReg, l1p, gammaSub1, preg);
-    AscendC::MicroAPI::Exp(outReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(outReg, outReg, alpha, preg);
-    AscendC::MicroAPI::Mul(outReg, outReg, t32, preg);
-    AscendC::MicroAPI::StoreAlign(wbAddr, outReg, offF, preg);
+    AscendC::Reg::Muls(tmpReg, l1p, gammaSub1, preg);
+    AscendC::Reg::Exp(outReg, tmpReg, preg);
+    AscendC::Reg::Muls(outReg, outReg, alpha, preg);
+    AscendC::Reg::Mul(outReg, outReg, t32, preg);
+    AscendC::Reg::StoreAlign(wbAddr, outReg, offF, preg);
 
     // ce = -log(p) * t * w
-    AscendC::MicroAPI::Log(tmpReg, p32, preg);
-    AscendC::MicroAPI::Muls(outReg, tmpReg, -1.0f, preg);
-    AscendC::MicroAPI::Mul(outReg, outReg, t32, preg);
-    AscendC::MicroAPI::Mul(outReg, outReg, w32, preg);
-    AscendC::MicroAPI::StoreAlign(ceAddr, outReg, offF, preg);
+    AscendC::Reg::Log(tmpReg, p32, preg);
+    AscendC::Reg::Muls(outReg, tmpReg, -1.0f, preg);
+    AscendC::Reg::Mul(outReg, outReg, t32, preg);
+    AscendC::Reg::Mul(outReg, outReg, w32, preg);
+    AscendC::Reg::StoreAlign(ceAddr, outReg, offF, preg);
 
     // wt = w * t
-    AscendC::MicroAPI::Mul(outReg, w32, t32, preg);
-    AscendC::MicroAPI::StoreAlign(wtAddr, outReg, offF, preg);
+    AscendC::Reg::Mul(outReg, w32, t32, preg);
+    AscendC::Reg::StoreAlign(wtAddr, outReg, offF, preg);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -128,18 +128,18 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::SumsVec(
         RegTensor<float> t32;
         RegTensor<float> w32;
 
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, MaskPattern::ALL>();
+        MaskReg pregMain = AscendC::Reg::CreateMask<float, MaskPattern::ALL>();
         MaskReg pregTail = UpdateMask<float>(tailAlign);
 
         for (uint16_t i = 0; i < aTimes; ++i) {
             for (uint16_t j = 0; j < repeatTimes + tailLoop; ++j) {
                 MaskReg preg = (j < repeatTimes) ? pregMain : pregTail;
-                AscendC::MicroAPI::AddrReg offT = AscendC::MicroAPI::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT),
-                                                                                      j, vfLen);
-                AscendC::MicroAPI::AddrReg offW = AscendC::MicroAPI::CreateAddrReg<TW>(
-                    i, static_cast<uint32_t>(strideW), j, vfLen);
-                AscendC::MicroAPI::AddrReg offF = AscendC::MicroAPI::CreateAddrReg<float>(
-                    i, static_cast<uint32_t>(strideF), j, vfLen);
+                AscendC::Reg::AddrReg offT = AscendC::Reg::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT), j,
+                                                                            vfLen);
+                AscendC::Reg::AddrReg offW = AscendC::Reg::CreateAddrReg<TW>(i, static_cast<uint32_t>(strideW), j,
+                                                                             vfLen);
+                AscendC::Reg::AddrReg offF = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideF), j,
+                                                                                vfLen);
 
                 LoadPTW(p32, t32, w32, predAddr, targetAddr, weightAddr, offT, offW, offF, preg);
                 SumsOfSeg(wfAddr, wbAddr, ceAddr, wtAddr, p32, t32, w32, offF, preg);
@@ -180,15 +180,14 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::ComputeSums(int
 
 template <typename T, typename TW, uint64_t hasWeight>
 __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::MakeSegOffsets(
-    AscendC::MicroAPI::AddrReg& offT, AscendC::MicroAPI::AddrReg& offW, AscendC::MicroAPI::AddrReg& offF,
-    AscendC::MicroAPI::AddrReg& offO, uint16_t i, uint16_t j, int64_t strideT, int64_t strideW, int64_t strideF,
-    uint32_t vfLen)
+    AscendC::Reg::AddrReg& offT, AscendC::Reg::AddrReg& offW, AscendC::Reg::AddrReg& offF, AscendC::Reg::AddrReg& offO,
+    uint16_t i, uint16_t j, int64_t strideT, int64_t strideW, int64_t strideF, uint32_t vfLen)
 {
     // offO 走 T 的行距(grad 落 fp32 缓冲但按输出行布局), 与 offF 的 fp32 行距区分
-    offT = AscendC::MicroAPI::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT), j, vfLen);
-    offW = AscendC::MicroAPI::CreateAddrReg<TW>(i, static_cast<uint32_t>(strideW), j, vfLen);
-    offF = AscendC::MicroAPI::CreateAddrReg<float>(i, static_cast<uint32_t>(strideF), j, vfLen);
-    offO = AscendC::MicroAPI::CreateAddrReg<float>(i, static_cast<uint32_t>(strideT), j, vfLen);
+    offT = AscendC::Reg::CreateAddrReg<T>(i, static_cast<uint32_t>(strideT), j, vfLen);
+    offW = AscendC::Reg::CreateAddrReg<TW>(i, static_cast<uint32_t>(strideW), j, vfLen);
+    offF = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideF), j, vfLen);
+    offO = AscendC::Reg::CreateAddrReg<float>(i, static_cast<uint32_t>(strideT), j, vfLen);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -197,17 +196,19 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::LoadRowScalars(
     int64_t accStride, uint16_t rowIdx)
 {
     // 行标量广播: WF / WB / CE / W
-    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(wfB, accAddr + rowIdx);
-    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(wbB, accAddr + accStride + rowIdx);
-    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(ceB, accAddr + 2 * accStride + rowIdx);
-    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(wB, accAddr + 3 * accStride + rowIdx);
+    AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(wfB, accAddr + rowIdx);
+    AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(wbB, accAddr + accStride + rowIdx);
+    AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(ceB, accAddr + 2 * accStride + rowIdx);
+    AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(wB, accAddr + 3 * accStride + rowIdx);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::GradOfSeg(
-    __ubuf__ float* gradAddr, RegTensor<float>& p32, RegTensor<float>& t32, RegTensor<float>& w32,
-    RegTensor<float>& d32, RegTensor<float>& wfB, RegTensor<float>& wbB, RegTensor<float>& ceB, RegTensor<float>& wB,
-    AscendC::MicroAPI::AddrReg offO, MaskReg preg)
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::GradOfSeg(__ubuf__ float* gradAddr,
+                                                                           RegTensor<float>& p32, RegTensor<float>& t32,
+                                                                           RegTensor<float>& w32, RegTensor<float>& d32,
+                                                                           RegTensor<float>& wfB, RegTensor<float>& wbB,
+                                                                           RegTensor<float>& ceB, RegTensor<float>& wB,
+                                                                           AscendC::Reg::AddrReg offO, MaskReg preg)
 {
     RegTensor<float> oneReg;
     RegTensor<float> tmpReg;
@@ -219,32 +220,32 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::GradOfSeg(
     float coef = coef_;
 
     // d_ce = p * W - t * w
-    AscendC::MicroAPI::Mul(dCe, p32, wB, preg);
-    AscendC::MicroAPI::Mul(tmpReg, t32, w32, preg);
-    AscendC::MicroAPI::Sub(dCe, dCe, tmpReg, preg);
+    AscendC::Reg::Mul(dCe, p32, wB, preg);
+    AscendC::Reg::Mul(tmpReg, t32, w32, preg);
+    AscendC::Reg::Sub(dCe, dCe, tmpReg, preg);
 
     // wb(逐元素) = alpha * exp((gamma - 1) * log(1 - p)) * t
-    AscendC::MicroAPI::Duplicate(oneReg, 1.0f);
-    AscendC::MicroAPI::Sub(tmpReg, oneReg, p32, preg);
-    AscendC::MicroAPI::Log(tmpReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, tmpReg, gammaSub1, preg);
-    AscendC::MicroAPI::Exp(tmpReg, tmpReg, preg);
-    AscendC::MicroAPI::Muls(tmpReg, tmpReg, alpha, preg);
-    AscendC::MicroAPI::Mul(tmpReg, tmpReg, t32, preg);
+    AscendC::Reg::Duplicate(oneReg, 1.0f);
+    AscendC::Reg::Sub(tmpReg, oneReg, p32, preg);
+    AscendC::Reg::Log(tmpReg, tmpReg, preg);
+    AscendC::Reg::Muls(tmpReg, tmpReg, gammaSub1, preg);
+    AscendC::Reg::Exp(tmpReg, tmpReg, preg);
+    AscendC::Reg::Muls(tmpReg, tmpReg, alpha, preg);
+    AscendC::Reg::Mul(tmpReg, tmpReg, t32, preg);
 
     // d_wf = -gamma * ((WF - WB) + wb) * p
-    AscendC::MicroAPI::Sub(dWf, wfB, wbB, preg);
-    AscendC::MicroAPI::Add(dWf, dWf, tmpReg, preg);
-    AscendC::MicroAPI::Mul(dWf, dWf, p32, preg);
-    AscendC::MicroAPI::Muls(dWf, dWf, gammaNeg, preg);
+    AscendC::Reg::Sub(dWf, wfB, wbB, preg);
+    AscendC::Reg::Add(dWf, dWf, tmpReg, preg);
+    AscendC::Reg::Mul(dWf, dWf, p32, preg);
+    AscendC::Reg::Muls(dWf, dWf, gammaNeg, preg);
 
     // grad = (d_ce * WF + d_wf * CE) * dout * coef
-    AscendC::MicroAPI::Mul(dCe, dCe, wfB, preg);
-    AscendC::MicroAPI::Mul(dWf, dWf, ceB, preg);
-    AscendC::MicroAPI::Add(dCe, dCe, dWf, preg);
-    AscendC::MicroAPI::Mul(dCe, dCe, d32, preg);
-    AscendC::MicroAPI::Muls(dCe, dCe, coef, preg);
-    AscendC::MicroAPI::StoreAlign(gradAddr, dCe, offO, preg);
+    AscendC::Reg::Mul(dCe, dCe, wfB, preg);
+    AscendC::Reg::Mul(dWf, dWf, ceB, preg);
+    AscendC::Reg::Add(dCe, dCe, dWf, preg);
+    AscendC::Reg::Mul(dCe, dCe, d32, preg);
+    AscendC::Reg::Muls(dCe, dCe, coef, preg);
+    AscendC::Reg::StoreAlign(gradAddr, dCe, offO, preg);
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
@@ -276,7 +277,7 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::GradVec(
         RegTensor<float> ceB;
         RegTensor<float> wB;
 
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, MaskPattern::ALL>();
+        MaskReg pregMain = AscendC::Reg::CreateMask<float, MaskPattern::ALL>();
         MaskReg pregTail = UpdateMask<float>(tailAlign);
 
         for (uint16_t i = 0; i < aTimes; ++i) {
@@ -284,18 +285,18 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::GradVec(
 
             for (uint16_t j = 0; j < repeatTimes + tailLoop; ++j) {
                 MaskReg preg = (j < repeatTimes) ? pregMain : pregTail;
-                AscendC::MicroAPI::AddrReg offT;
-                AscendC::MicroAPI::AddrReg offW;
-                AscendC::MicroAPI::AddrReg offF;
-                AscendC::MicroAPI::AddrReg offO;
+                AscendC::Reg::AddrReg offT;
+                AscendC::Reg::AddrReg offW;
+                AscendC::Reg::AddrReg offF;
+                AscendC::Reg::AddrReg offO;
                 MakeSegOffsets(offT, offW, offF, offO, i, j, strideT, strideW, strideF, vfLen);
 
                 LoadPTW(p32, t32, w32, predAddr, targetAddr, weightAddr, offT, offW, offF, preg);
                 if constexpr (sizeof(T) == sizeof(half)) {
-                    AscendC::MicroAPI::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(doutReg, doutAddr, offT);
-                    AscendC::MicroAPI::Cast<float, T, castB16ToB32>(d32, doutReg, preg);
+                    AscendC::Reg::LoadAlign<T, LoadDist::DIST_UNPACK_B16>(doutReg, doutAddr, offT);
+                    AscendC::Reg::Cast<float, T, castB16ToB32>(d32, doutReg, preg);
                 } else {
-                    AscendC::MicroAPI::LoadAlign(d32, doutAddr, offT);
+                    AscendC::Reg::LoadAlign(d32, doutAddr, offT);
                 }
 
                 GradOfSeg(gradAddr, p32, t32, w32, d32, wfB, wbB, ceB, wB, offO, preg);

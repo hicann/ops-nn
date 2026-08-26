@@ -328,8 +328,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeMultiBatch(const ComputeP
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride,
                                 oneLoopElements, tailLoopElements);
     }
@@ -371,8 +371,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeMultiRow(const ComputePar
     uint32_t tailLoopElements = static_cast<uint32_t>(tailH * outUbFactorW);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::LoadAlign(v0, indexAddr);
+        Reg::RegTensor<U> v0;
+        Reg::LoadAlign(v0, indexAddr);
         MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, param.inCols,
                             oneLoopStrideH, oneLoopElements, tailLoopElements);
     }
@@ -419,8 +419,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeSingleRow(const ComputePa
     if (ubFactorN == 1U) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::LoadAlign(v0, indexAddr);
+            Reg::RegTensor<U> v0;
+            Reg::LoadAlign(v0, indexAddr);
             MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                 param.inCols, num, tailW);
         }
@@ -430,8 +430,8 @@ __aicore__ inline void MaxPoolV3SmallKernel<T>::ComputeSingleRow(const ComputePa
             __ubuf__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::LoadAlign(v0, indexAddr);
+                Reg::RegTensor<U> v0;
+                Reg::LoadAlign(v0, indexAddr);
                 MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                     param.inCols, num, tailW);
             }

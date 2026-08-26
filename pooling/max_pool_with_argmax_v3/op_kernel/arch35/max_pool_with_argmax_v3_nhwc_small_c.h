@@ -28,37 +28,37 @@ using namespace AscendC;
 constexpr int64_t THREE = 3;
 constexpr int64_t DOUBLE = 2;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitU32U16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
 template <typename T1, typename T2, const uint32_t IS_PAD = 0>
 __aicore__ inline void MaxPoolWithArgMaxV3GatherImpl(
     __ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr, uint16_t kH, uint16_t kW,
-    uint32_t rowStrideInUb, uint16_t alignedC, int32_t gatterIndexOffset, MicroAPI::RegTensor<uint32_t>& gatterStartIdx,
-    int32_t count, MicroAPI::RegTensor<T2>& argmaxHStart, MicroAPI::RegTensor<T2>& argmaxWStart, T2 argmaxHOffset,
-    T2 argmaxWOffset, MicroAPI::RegTensor<uint32_t>& scatterStartIdx, int32_t scatterOffset, int32_t padH, int32_t padW,
+    uint32_t rowStrideInUb, uint16_t alignedC, int32_t gatterIndexOffset, Reg::RegTensor<uint32_t>& gatterStartIdx,
+    int32_t count, Reg::RegTensor<T2>& argmaxHStart, Reg::RegTensor<T2>& argmaxWStart, T2 argmaxHOffset,
+    T2 argmaxWOffset, Reg::RegTensor<uint32_t>& scatterStartIdx, int32_t scatterOffset, int32_t padH, int32_t padW,
     int32_t wInput)
 {
-    MicroAPI::RegTensor<T1> vd0;
-    MicroAPI::RegTensor<T1> vd1;
-    MicroAPI::RegTensor<uint32_t> gatterIndexReg;
-    MicroAPI::RegTensor<uint32_t> scatterIndexReg;
-    MicroAPI::RegTensor<uint16_t> gatterIdxU16Reg;
-    MicroAPI::RegTensor<uint16_t> scatterIdxU16Reg;
+    Reg::RegTensor<T1> vd0;
+    Reg::RegTensor<T1> vd1;
+    Reg::RegTensor<uint32_t> gatterIndexReg;
+    Reg::RegTensor<uint32_t> scatterIndexReg;
+    Reg::RegTensor<uint16_t> gatterIdxU16Reg;
+    Reg::RegTensor<uint16_t> scatterIdxU16Reg;
 
-    AscendC::MicroAPI::RegTensor<T2> argmaxUpdateHVreg;
-    AscendC::MicroAPI::RegTensor<T2> argmaxUpdateWVreg;
-    AscendC::MicroAPI::RegTensor<T2> argmaxHRes;
-    AscendC::MicroAPI::RegTensor<T2> argmaxWRes;
+    AscendC::Reg::RegTensor<T2> argmaxUpdateHVreg;
+    AscendC::Reg::RegTensor<T2> argmaxUpdateWVreg;
+    AscendC::Reg::RegTensor<T2> argmaxHRes;
+    AscendC::Reg::RegTensor<T2> argmaxWRes;
 
-    AscendC::MicroAPI::MaskReg neMask;
-    AscendC::MicroAPI::MaskReg gtMask;
-    AscendC::MicroAPI::MaskReg gtMaskT2;
-    AscendC::MicroAPI::MaskReg gtMaskT4;
+    AscendC::Reg::MaskReg neMask;
+    AscendC::Reg::MaskReg gtMask;
+    AscendC::Reg::MaskReg gtMaskT2;
+    AscendC::Reg::MaskReg gtMaskT4;
 
     DuplicateNegInfReg<T1>(vd0);
 
@@ -66,14 +66,14 @@ __aicore__ inline void MaxPoolWithArgMaxV3GatherImpl(
     uint32_t numT1 = count;
     uint32_t numT2 = count;
 
-    MicroAPI::MaskReg computeT1 = MicroAPI::UpdateMask<T1>(numT1);
-    MicroAPI::MaskReg computeT2 = MicroAPI::UpdateMask<T2>(numT2);
-    MicroAPI::MaskReg computeU32 = MicroAPI::UpdateMask<uint32_t>(numU32);
-    MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+    Reg::MaskReg computeT1 = Reg::UpdateMask<T1>(numT1);
+    Reg::MaskReg computeT2 = Reg::UpdateMask<T2>(numT2);
+    Reg::MaskReg computeU32 = Reg::UpdateMask<uint32_t>(numU32);
+    Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-    MicroAPI::Adds(argmaxHRes, argmaxHStart, argmaxHOffset, computeT2);
-    MicroAPI::Adds(argmaxWRes, argmaxWStart, argmaxWOffset, computeT2);
+    Reg::Adds(argmaxHRes, argmaxHStart, argmaxHOffset, computeT2);
+    Reg::Adds(argmaxWRes, argmaxWStart, argmaxWOffset, computeT2);
 
     for (uint16_t hIdx = 0; hIdx < kH; hIdx++) {
         int32_t hKernelOffset = hIdx * rowStrideInUb;
@@ -84,70 +84,69 @@ __aicore__ inline void MaxPoolWithArgMaxV3GatherImpl(
             T2 argmaxWKernelOffset = wIdx + argmaxWOffset;
 
             int32_t gatterIndexOffsetTotal = gatterIndexOffset + hKernelOffset + wKernelOffset;
-            MicroAPI::Adds(gatterIndexReg, gatterStartIdx, gatterIndexOffsetTotal, computeU32);
+            Reg::Adds(gatterIndexReg, gatterStartIdx, gatterIndexOffsetTotal, computeU32);
 
             if constexpr (std::is_same<T1, float>::value) {
-                MicroAPI::Gather(vd1, xAddr, gatterIndexReg, computeT1);
+                Reg::Gather(vd1, xAddr, gatterIndexReg, computeT1);
             } else {
-                AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(gatterIdxU16Reg, gatterIndexReg,
-                                                                             computeU32);
-                AscendC::MicroAPI::Pack(gatterIdxU16Reg, (AscendC::MicroAPI::RegTensor<uint32_t>&)gatterIdxU16Reg);
-                AscendC::MicroAPI::Gather(vd1, xAddr, gatterIdxU16Reg, computeT1);
+                AscendC::Reg::Cast<uint16_t, uint32_t, castTraitU32U16>(gatterIdxU16Reg, gatterIndexReg, computeU32);
+                AscendC::Reg::Pack(gatterIdxU16Reg, (AscendC::Reg::RegTensor<uint32_t>&)gatterIdxU16Reg);
+                AscendC::Reg::Gather(vd1, xAddr, gatterIdxU16Reg, computeT1);
             }
 
-            AscendC::MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vd1, vd0, computeT1);
-            AscendC::MicroAPI::Compare<T1, CMPMODE::NE>(neMask, vd1, vd1, computeT1);
-            AscendC::MicroAPI::Or(gtMask, gtMask, neMask, computeT1);
+            AscendC::Reg::Compare<T1, CMPMODE::GT>(gtMask, vd1, vd0, computeT1);
+            AscendC::Reg::Compare<T1, CMPMODE::NE>(neMask, vd1, vd1, computeT1);
+            AscendC::Reg::Or(gtMask, gtMask, neMask, computeT1);
 
-            MicroAPI::Adds(argmaxUpdateHVreg, argmaxHStart, argmaxHKernelOffset, computeT2);
-            MicroAPI::Adds(argmaxUpdateWVreg, argmaxWStart, argmaxWKernelOffset, computeT2);
+            Reg::Adds(argmaxUpdateHVreg, argmaxHStart, argmaxHKernelOffset, computeT2);
+            Reg::Adds(argmaxUpdateWVreg, argmaxWStart, argmaxWKernelOffset, computeT2);
             if constexpr (sizeof(T2) / sizeof(T1) == 1) {
-                AscendC::MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMask);
-                AscendC::MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMask);
+                AscendC::Reg::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMask);
+                AscendC::Reg::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMask);
             } else if constexpr (sizeof(T2) / sizeof(T1) == DOUBLE) {
-                AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                AscendC::MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT2);
-                AscendC::MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT2);
+                AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                AscendC::Reg::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT2);
+                AscendC::Reg::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT2);
             } else {
-                AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
-                AscendC::MicroAPI::UnPack(gtMaskT4, gtMaskT2);
-                AscendC::MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT4);
-                AscendC::MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT4);
+                AscendC::Reg::UnPack(gtMaskT2, gtMask);
+                AscendC::Reg::UnPack(gtMaskT4, gtMaskT2);
+                AscendC::Reg::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT4);
+                AscendC::Reg::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT4);
             }
 
-            MicroAPI::Max(vd0, vd1, vd0, computeT1);
+            Reg::Max(vd0, vd1, vd0, computeT1);
         }
     }
 
     if constexpr (IS_PAD == 1) {
         // 修正argmax
-        MicroAPI::Adds(argmaxHRes, argmaxHRes, -padH, computeT2);
-        MicroAPI::Adds(argmaxWRes, argmaxWRes, -padW, computeT2);
+        Reg::Adds(argmaxHRes, argmaxHRes, -padH, computeT2);
+        Reg::Adds(argmaxWRes, argmaxWRes, -padW, computeT2);
 
-        AscendC::MicroAPI::MaskReg hMask;
-        AscendC::MicroAPI::MaskReg wMask;
-        MicroAPI::RegTensor<T2> argmaxZero;
-        AscendC::MicroAPI::Duplicate(argmaxZero, 0);
+        AscendC::Reg::MaskReg hMask;
+        AscendC::Reg::MaskReg wMask;
+        Reg::RegTensor<T2> argmaxZero;
+        AscendC::Reg::Duplicate(argmaxZero, 0);
 
-        AscendC::MicroAPI::Compare<T2, CMPMODE::GE>(hMask, argmaxHRes, argmaxZero, computeT2);
-        AscendC::MicroAPI::Select(argmaxHRes, argmaxHRes, argmaxZero, hMask);
-        AscendC::MicroAPI::Compare<T2, CMPMODE::GE>(wMask, argmaxWRes, argmaxZero, computeT2);
-        AscendC::MicroAPI::Select(argmaxWRes, argmaxWRes, argmaxZero, wMask);
+        AscendC::Reg::Compare<T2, CMPMODE::GE>(hMask, argmaxHRes, argmaxZero, computeT2);
+        AscendC::Reg::Select(argmaxHRes, argmaxHRes, argmaxZero, hMask);
+        AscendC::Reg::Compare<T2, CMPMODE::GE>(wMask, argmaxWRes, argmaxZero, computeT2);
+        AscendC::Reg::Select(argmaxWRes, argmaxWRes, argmaxZero, wMask);
     }
 
-    MicroAPI::RegTensor<T2> argmaxRes;
-    MicroAPI::Muls(argmaxRes, argmaxHRes, wInput, computeT2);
-    MicroAPI::Add(argmaxRes, argmaxRes, argmaxWRes, computeT2);
+    Reg::RegTensor<T2> argmaxRes;
+    Reg::Muls(argmaxRes, argmaxHRes, wInput, computeT2);
+    Reg::Add(argmaxRes, argmaxRes, argmaxWRes, computeT2);
 
-    MicroAPI::Adds(scatterIndexReg, scatterStartIdx, scatterOffset, computeU32);
+    Reg::Adds(scatterIndexReg, scatterStartIdx, scatterOffset, computeU32);
 
-    AscendC::MicroAPI::Scatter(argmaxAddr, argmaxRes, scatterIndexReg, computeT2);
+    AscendC::Reg::Scatter(argmaxAddr, argmaxRes, scatterIndexReg, computeT2);
     if constexpr (std::is_same<T1, float>::value) {
-        AscendC::MicroAPI::Scatter(maxValueAddr, vd0, scatterIndexReg, computeT1);
+        AscendC::Reg::Scatter(maxValueAddr, vd0, scatterIndexReg, computeT1);
     } else {
-        AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(scatterIdxU16Reg, scatterIndexReg, computeU32);
-        AscendC::MicroAPI::Pack(scatterIdxU16Reg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scatterIdxU16Reg);
-        AscendC::MicroAPI::Scatter(maxValueAddr, vd0, scatterIdxU16Reg, computeT1);
+        AscendC::Reg::Cast<uint16_t, uint32_t, castTraitU32U16>(scatterIdxU16Reg, scatterIndexReg, computeU32);
+        AscendC::Reg::Pack(scatterIdxU16Reg, (AscendC::Reg::RegTensor<uint32_t>&)scatterIdxU16Reg);
+        AscendC::Reg::Scatter(maxValueAddr, vd0, scatterIdxU16Reg, computeT1);
     }
 }
 
@@ -278,25 +277,25 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiBa
     // 产生N的输出索引的索引
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> gatterNStartIdx;
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> scatterNStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<uint32_t> gatterNStartIdx;
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::RegTensor<uint32_t> scatterNStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex4D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
+        GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
                                   num1D);
         GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0);
         GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, static_cast<T2>(hStride), argNum2D, 0);
-        GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
-            MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, nIdex * nFactor * ubNumHWC, maskAllU32);
-            MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
+            Reg::Adds(gatterNStartIdx, gatterStartIdx, nIdex * nFactor * ubNumHWC, maskAllU32);
+            Reg::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
 
             int32_t gatterIndexOffset = 0;
             T2 argmaxHOffset = hBlockArgmaxOffset;
@@ -310,8 +309,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiBa
         }
 
         // tail N
-        MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, loopN * nFactor * ubNumHWC, maskAllU32);
-        MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
+        Reg::Adds(gatterNStartIdx, gatterStartIdx, loopN * nFactor * ubNumHWC, maskAllU32);
+        Reg::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
 
         int32_t gatterIndexOffset = 0;
         T2 argmaxHOffset = hBlockArgmaxOffset;
@@ -377,55 +376,54 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiBa
     // 产生N的输出索引的索引
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex4D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
+        GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
                                   num1D);
         GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, hStride, argNum2D, 0);
 
-        AscendC::MicroAPI::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t),
-                                      (MicroAPI::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), (Reg::RegTensor<uint32_t>&)argmaxHStart,
+                                 maskAllU32);
     }
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
         GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0);
-        GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
-                                      (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE, scatterStartIdx, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
+                                 (Reg::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE, scatterStartIdx, maskAllU32);
     }
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> gatterNStartIdx;
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> scatterNStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<uint32_t> gatterNStartIdx;
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::RegTensor<uint32_t> scatterNStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::LoadAlign(gatterStartIdx, helpAddr);
-        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
-                                     helpAddr + V_REG_SIZE / sizeof(uint32_t));
-        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
-                                     helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
-        AscendC::MicroAPI::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
+        AscendC::Reg::LoadAlign(gatterStartIdx, helpAddr);
+        AscendC::Reg::LoadAlign((Reg::RegTensor<uint32_t>&)argmaxHStart, helpAddr + V_REG_SIZE / sizeof(uint32_t));
+        AscendC::Reg::LoadAlign((Reg::RegTensor<uint32_t>&)argmaxWStart,
+                                helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
+        AscendC::Reg::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
-            MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, nIdex * nFactor * ubNumHWC, maskAllU32);
-            MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
+            Reg::Adds(gatterNStartIdx, gatterStartIdx, nIdex * nFactor * ubNumHWC, maskAllU32);
+            Reg::Adds(scatterNStartIdx, scatterStartIdx, nIdex * nFactor * oneNOutScatterElements, maskAllU32);
 
             int32_t gatterIndexOffset = 0;
             T2 argmaxHOffset = hBlockArgmaxOffset;
@@ -439,8 +437,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiBa
         }
 
         // tail N
-        MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, loopN * nFactor * ubNumHWC, maskAllU32);
-        MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
+        Reg::Adds(gatterNStartIdx, gatterStartIdx, loopN * nFactor * ubNumHWC, maskAllU32);
+        Reg::Adds(scatterNStartIdx, scatterStartIdx, loopN * nFactor * oneNOutScatterElements, maskAllU32);
 
         int32_t gatterIndexOffset = 0;
         T2 argmaxHOffset = hBlockArgmaxOffset;
@@ -503,24 +501,24 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiRo
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> gatterNStartIdx;
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> scatterNStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<uint32_t> gatterNStartIdx;
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::RegTensor<uint32_t> scatterNStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex3D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
+        GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
         GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
         GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
-        GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
-            MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
-            MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
+            Reg::Adds(gatterNStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
+            Reg::Adds(scatterNStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
 
             for (uint16_t j = 0; j < loopH; j++) {
                 int32_t gatterIndexOffset = j * oneLoopStrideH;
@@ -598,54 +596,54 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeMultiRo
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex3D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
-        GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
+        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
-        AscendC::MicroAPI::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), scatterStartIdx, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), scatterStartIdx, maskAllU32);
     }
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
         GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
         GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
 
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
-                                      (MicroAPI::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
-        AscendC::MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE,
-                                      (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
+                                 (Reg::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
+        AscendC::Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE,
+                                 (Reg::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
     }
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> gatterNStartIdx;
-        MicroAPI::RegTensor<T2> argmaxHStart;
-        MicroAPI::RegTensor<T2> argmaxWStart;
-        MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-        MicroAPI::RegTensor<uint32_t> scatterNStartIdx;
-        MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<uint32_t> gatterStartIdx;
+        Reg::RegTensor<uint32_t> gatterNStartIdx;
+        Reg::RegTensor<T2> argmaxHStart;
+        Reg::RegTensor<T2> argmaxWStart;
+        Reg::RegTensor<uint32_t> scatterStartIdx;
+        Reg::RegTensor<uint32_t> scatterNStartIdx;
+        Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::LoadAlign(gatterStartIdx, helpAddr);
-        AscendC::MicroAPI::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t));
-        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
-                                     helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
-        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
-                                     helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
+        AscendC::Reg::LoadAlign(gatterStartIdx, helpAddr);
+        AscendC::Reg::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t));
+        AscendC::Reg::LoadAlign((Reg::RegTensor<uint32_t>&)argmaxHStart,
+                                helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
+        AscendC::Reg::LoadAlign((Reg::RegTensor<uint32_t>&)argmaxWStart,
+                                helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
-            MicroAPI::Adds(gatterNStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
-            MicroAPI::Adds(scatterNStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
+            Reg::Adds(gatterNStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
+            Reg::Adds(scatterNStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
 
             for (uint16_t j = 0; j < loopH; j++) {
                 int32_t gatterIndexOffset = j * oneLoopStrideH;
@@ -723,21 +721,20 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeSingleR
     for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<uint32_t> gatterStartIdx;
-            MicroAPI::RegTensor<T2> argmaxHStart;
-            MicroAPI::RegTensor<T2> argmaxWStart;
-            MicroAPI::RegTensor<uint32_t> scatterStartIdx;
-            MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+            Reg::RegTensor<uint32_t> gatterStartIdx;
+            Reg::RegTensor<T2> argmaxHStart;
+            Reg::RegTensor<T2> argmaxWStart;
+            Reg::RegTensor<uint32_t> scatterStartIdx;
+            Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
+            Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-            GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate2D, num1D);
+            GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate2D, num1D);
             GenGatterIndex2D<T2>(argmaxWStart, argmaxRate2D, static_cast<T2>(argmaxNum1D), 0);
-            AscendC::MicroAPI::Duplicate(argmaxHStart, 0);
-            GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
-                                      scatterIdxNum1D);
+            AscendC::Reg::Duplicate(argmaxHStart, 0);
+            GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
-            MicroAPI::Adds(gatterStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
-            MicroAPI::Adds(scatterStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
+            Reg::Adds(gatterStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
+            Reg::Adds(scatterStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);
 
             for (uint16_t i = 0; i < loopH; i++) {
                 int32_t hOffset = i * oneLoopStrideH;

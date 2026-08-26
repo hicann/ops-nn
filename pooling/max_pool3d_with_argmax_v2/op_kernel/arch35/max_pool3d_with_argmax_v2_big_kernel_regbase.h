@@ -38,149 +38,147 @@ constexpr int32_t ONE = 1;
 constexpr int32_t ZERO = 0;
 constexpr int64_t BLOCK_DATA = 32;
 
-constexpr MicroAPI::CastTrait castB42B2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                           MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+constexpr Reg::CastTrait castB42B2 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING,
+                                      RoundMode::CAST_RINT};
 
-constexpr MicroAPI::CastTrait castB22B4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                           MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr Reg::CastTrait castB22B4 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                      RoundMode::UNKNOWN};
 
-constexpr MicroAPI::CastTrait castB42B8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                           MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr Reg::CastTrait castB42B8 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                      RoundMode::UNKNOWN};
 
 template <typename T, typename U>
-__aicore__ inline void StoreOneNum(const __ubuf__ void* output, MicroAPI::RegTensor<U>& src, MicroAPI::MaskReg& preg,
+__aicore__ inline void StoreOneNum(const __ubuf__ void* output, Reg::RegTensor<U>& src, Reg::MaskReg& preg,
                                    uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::StoreAlign<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(((__ubuf__ half*)(output)) + offset,
-                                                                                (MicroAPI::RegTensor<half>&)src, preg);
+        Reg::StoreAlign<half, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>(((__ubuf__ half*)(output)) + offset,
+                                                                      (Reg::RegTensor<half>&)src, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        MicroAPI::Cast<bfloat16_t, float, castB42B2>(xBf16, src, preg);
-        MicroAPI::StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(
-            (__ubuf__ bfloat16_t*)(output) + offset, xBf16, preg);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        Reg::Cast<bfloat16_t, float, castB42B2>(xBf16, src, preg);
+        Reg::StoreAlign<bfloat16_t, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ bfloat16_t*)(output) + offset,
+                                                                            xBf16, preg);
     } else if constexpr (sizeof(T) == FOUR) {
-        MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-            ((__ubuf__ float*)output) + offset, (MicroAPI::RegTensor<float>&)src, preg);
+        Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)output) + offset,
+                                                                       (Reg::RegTensor<float>&)src, preg);
     } else {
-        MicroAPI::UnalignRegForStore u0;
+        Reg::UnalignRegForStore u0;
         auto dstAddr = (__ubuf__ T*)(output) + offset;
-        MicroAPI::StoreUnAlign(dstAddr, src, u0, 1);
-        MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
+        Reg::StoreUnAlign(dstAddr, src, u0, 1);
+        Reg::StoreUnAlignPost(dstAddr, u0, 0);
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void LoadOneNum(const __ubuf__ void* input, MicroAPI::RegTensor<U>& dst, MicroAPI::MaskReg& preg,
+__aicore__ inline void LoadOneNum(const __ubuf__ void* input, Reg::RegTensor<U>& dst, Reg::MaskReg& preg,
                                   uint32_t offset)
 {
     if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_BRC_B16>(xBf16,
-                                                                          (__ubuf__ bfloat16_t*)(input) + offset);
-        MicroAPI::Cast<float, bfloat16_t, castB22B4>(dst, xBf16, preg);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_BRC_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
+        Reg::Cast<float, bfloat16_t, castB22B4>(dst, xBf16, preg);
     } else if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_BRC_B16>(dst, (__ubuf__ half*)(input) + offset);
+        Reg::LoadAlign<half, Reg::LoadDist::DIST_BRC_B16>(dst, (__ubuf__ half*)(input) + offset);
     } else if constexpr (sizeof(T) == FOUR) {
-        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ T*)(input)) + offset);
+        Reg::LoadAlign<T, Reg::LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ T*)(input)) + offset);
     } else {
-        MicroAPI::UnalignRegForLoad u0;
+        Reg::UnalignRegForLoad u0;
         auto srcAddr = (__ubuf__ T*)(input) + offset;
-        MicroAPI::LoadUnAlignPre(u0, srcAddr);
-        MicroAPI::LoadUnAlign(dst, u0, srcAddr, 1);
+        Reg::LoadUnAlignPre(u0, srcAddr);
+        Reg::LoadUnAlign(dst, u0, srcAddr, 1);
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void LoadOneRegTensor(const __ubuf__ void* input, MicroAPI::RegTensor<U>& dst,
-                                        MicroAPI::MaskReg& preg, int32_t offset)
+__aicore__ inline void LoadOneRegTensor(const __ubuf__ void* input, Reg::RegTensor<U>& dst, Reg::MaskReg& preg,
+                                        int32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::LoadAlign<half>(dst, (__ubuf__ half*)(input) + offset);
+        Reg::LoadAlign<half>(dst, (__ubuf__ half*)(input) + offset);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16,
-                                                                             (__ubuf__ bfloat16_t*)(input) + offset);
-        MicroAPI::Cast<float, bfloat16_t, castB22B4>(dst, xBf16, preg);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
+        Reg::Cast<float, bfloat16_t, castB22B4>(dst, xBf16, preg);
     } else {
-        MicroAPI::LoadAlign(dst, (__ubuf__ float*)(input) + offset);
+        Reg::LoadAlign(dst, (__ubuf__ float*)(input) + offset);
     }
 }
 
 template <typename T>
-__aicore__ inline void SetAllNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
+__aicore__ inline void SetAllNegInfReg(Reg::RegTensor<T>& negInfReg)
 {
     using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
 
     if constexpr (std::is_same<T, float>::value) {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
     } else if constexpr (std::is_same<T, half>::value) {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
     } else {
-        MicroAPI::Duplicate((MicroAPI::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
+        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
     }
 }
 
 template <typename T>
 __aicore__ inline void SetNegInfLocalMem(const __ubuf__ void* dstAddr, uint32_t calNum, uint32_t offset)
 {
-    MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignRegForStore u0;
+    Reg::RegTensor<T> v0;
+    Reg::UnalignRegForStore u0;
     SetAllNegInfReg<T>(v0);
     __ubuf__ T* addr = (__ubuf__ T*)dstAddr + offset;
-    MicroAPI::StoreUnAlign(addr, v0, u0, calNum);
-    MicroAPI::StoreUnAlignPost(addr, u0, 0);
-    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+    Reg::StoreUnAlign(addr, v0, u0, calNum);
+    Reg::StoreUnAlignPost(addr, u0, 0);
+    Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
 }
 
 template <typename T, typename MIDINDEX>
-__aicore__ inline void GetMaxAndIndex(MicroAPI::RegTensor<T>& dst, MicroAPI::RegTensor<MIDINDEX>& dstIndex,
-                                      MicroAPI::RegTensor<T>& src, MicroAPI::RegTensor<MIDINDEX>& srcIndex,
-                                      MIDINDEX indexPadValue, MicroAPI::MaskReg& maskAll, MicroAPI::MaskReg& nanMaskReg,
-                                      MicroAPI::MaskReg& notNanMaskReg, MicroAPI::RegTensor<T>& vd1)
+__aicore__ inline void GetMaxAndIndex(Reg::RegTensor<T>& dst, Reg::RegTensor<MIDINDEX>& dstIndex,
+                                      Reg::RegTensor<T>& src, Reg::RegTensor<MIDINDEX>& srcIndex,
+                                      MIDINDEX indexPadValue, Reg::MaskReg& maskAll, Reg::MaskReg& nanMaskReg,
+                                      Reg::MaskReg& notNanMaskReg, Reg::RegTensor<T>& vd1)
 {
     // select first max value or last nan from one reg
-    MicroAPI::RegTensor<T> vd2;
-    MicroAPI::RegTensor<MIDINDEX> nanIndex;
-    MicroAPI::Duplicate(nanIndex, indexPadValue);
-    MicroAPI::Compare<T, CMPMODE::NE>(nanMaskReg, src, src, maskAll);               // nan mask
-    MicroAPI::Not(notNanMaskReg, nanMaskReg, maskAll);                              // not nan mask
-    MicroAPI::Select(nanIndex, srcIndex, nanIndex, nanMaskReg);                     // nan index
-    MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(nanIndex, nanIndex, maskAll);       // max nan index
-    MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vd1, src, notNanMaskReg);           // max value
-    MicroAPI::Duplicate(vd2, vd1, maskAll);                                         // max value
-    MicroAPI::Compare<T, CMPMODE::EQ>(notNanMaskReg, src, vd2, maskAll);            // nan mask, all max value index
-    MicroAPI::Reduce<MicroAPI::ReduceType::MIN>(dstIndex, srcIndex, notNanMaskReg); // not nan max index
-    MicroAPI::Compares<MIDINDEX, CMPMODE::NE>(nanMaskReg, nanIndex, indexPadValue, maskAll);
-    MicroAPI::Select(dstIndex, nanIndex, dstIndex, nanMaskReg);
-    MicroAPI::Duplicate(dstIndex, dstIndex, maskAll);
-    MicroAPI::Compare<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, srcIndex, maskAll);
-    MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(dst, src, notNanMaskReg);
+    Reg::RegTensor<T> vd2;
+    Reg::RegTensor<MIDINDEX> nanIndex;
+    Reg::Duplicate(nanIndex, indexPadValue);
+    Reg::Compare<T, CMPMODE::NE>(nanMaskReg, src, src, maskAll);          // nan mask
+    Reg::Not(notNanMaskReg, nanMaskReg, maskAll);                         // not nan mask
+    Reg::Select(nanIndex, srcIndex, nanIndex, nanMaskReg);                // nan index
+    Reg::Reduce<Reg::ReduceType::MAX>(nanIndex, nanIndex, maskAll);       // max nan index
+    Reg::Reduce<Reg::ReduceType::MAX>(vd1, src, notNanMaskReg);           // max value
+    Reg::Duplicate(vd2, vd1, maskAll);                                    // max value
+    Reg::Compare<T, CMPMODE::EQ>(notNanMaskReg, src, vd2, maskAll);       // nan mask, all max value index
+    Reg::Reduce<Reg::ReduceType::MIN>(dstIndex, srcIndex, notNanMaskReg); // not nan max index
+    Reg::Compares<MIDINDEX, CMPMODE::NE>(nanMaskReg, nanIndex, indexPadValue, maskAll);
+    Reg::Select(dstIndex, nanIndex, dstIndex, nanMaskReg);
+    Reg::Duplicate(dstIndex, dstIndex, maskAll);
+    Reg::Compare<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, srcIndex, maskAll);
+    Reg::Reduce<Reg::ReduceType::MAX>(dst, src, notNanMaskReg);
     // all value in the kernel is -inf
-    MicroAPI::Compares<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, indexPadValue, maskAll);
-    MicroAPI::Duplicate(nanIndex, static_cast<MIDINDEX>(0));
-    MicroAPI::Select(dstIndex, nanIndex, dstIndex, notNanMaskReg);
+    Reg::Compares<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, indexPadValue, maskAll);
+    Reg::Duplicate(nanIndex, static_cast<MIDINDEX>(0));
+    Reg::Select(dstIndex, nanIndex, dstIndex, notNanMaskReg);
 }
 
 template <typename T, typename U, typename TINDEX>
-__aicore__ inline void MergeMaxAndIndex(MicroAPI::RegTensor<U>& res, MicroAPI::RegTensor<TINDEX>& realResIndex,
+__aicore__ inline void MergeMaxAndIndex(Reg::RegTensor<U>& res, Reg::RegTensor<TINDEX>& realResIndex,
                                         const __ubuf__ T* dstLocalAddr, const __ubuf__ TINDEX* indexLocalAddr,
-                                        int32_t offset, int32_t isPadValue, MicroAPI::MaskReg& maskAll,
-                                        MicroAPI::MaskReg& nanMaskReg, MicroAPI::MaskReg& notNanMaskReg,
-                                        MicroAPI::MaskReg& pregOne, MicroAPI::RegTensor<U>& lastRes)
+                                        int32_t offset, int32_t isPadValue, Reg::MaskReg& maskAll,
+                                        Reg::MaskReg& nanMaskReg, Reg::MaskReg& notNanMaskReg, Reg::MaskReg& pregOne,
+                                        Reg::RegTensor<U>& lastRes)
 {
     // merge cur result with pre result
-    MicroAPI::RegTensor<TINDEX> lastResIndex;
+    Reg::RegTensor<TINDEX> lastResIndex;
     LoadOneNum<T, U>(dstLocalAddr, lastRes, pregOne, offset);
-    MicroAPI::Compare<U, CMPMODE::NE>(nanMaskReg, res, res, maskAll);        // cur nan
-    MicroAPI::Compare<U, CMPMODE::GT>(notNanMaskReg, res, lastRes, maskAll); // cur large > last
-    MicroAPI::Xor(notNanMaskReg, notNanMaskReg, nanMaskReg, maskAll);        // gt & nan
-    MicroAPI::Select(res, res, lastRes, notNanMaskReg);                      // nan index
+    Reg::Compare<U, CMPMODE::NE>(nanMaskReg, res, res, maskAll);        // cur nan
+    Reg::Compare<U, CMPMODE::GT>(notNanMaskReg, res, lastRes, maskAll); // cur large > last
+    Reg::Xor(notNanMaskReg, notNanMaskReg, nanMaskReg, maskAll);        // gt & nan
+    Reg::Select(res, res, lastRes, notNanMaskReg);                      // nan index
     LoadOneNum<TINDEX, TINDEX>(indexLocalAddr, lastResIndex, pregOne, offset);
-    MicroAPI::Compares<TINDEX, CMPMODE::EQ>(nanMaskReg, lastResIndex, isPadValue, maskAll);
-    MicroAPI::Select(lastResIndex, realResIndex, lastResIndex, nanMaskReg);
-    MicroAPI::Select(realResIndex, realResIndex, lastResIndex, notNanMaskReg);
-    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
+    Reg::Compares<TINDEX, CMPMODE::EQ>(nanMaskReg, lastResIndex, isPadValue, maskAll);
+    Reg::Select(lastResIndex, realResIndex, lastResIndex, nanMaskReg);
+    Reg::Select(realResIndex, realResIndex, lastResIndex, notNanMaskReg);
+    Reg::LocalMemBar<Reg::MemType::VEC_LOAD, Reg::MemType::VEC_STORE>();
 }
 
 template <typename T1, typename TINDEX>
@@ -208,9 +206,8 @@ private:
     template <bool SPLIT_KERNEL>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx, int64_t maxCount);
     template <typename T, typename MIDINDEX, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-    __aicore__ inline void CalcRealIndex(MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<MIDINDEX>& index,
-                                         int64_t curkW, int64_t curkH, int64_t curkHW, int64_t inputH, int64_t inputW,
-                                         int64_t offset);
+    __aicore__ inline void CalcRealIndex(Reg::RegTensor<T>& resIndex, Reg::RegTensor<MIDINDEX>& index, int64_t curkW,
+                                         int64_t curkH, int64_t curkHW, int64_t inputH, int64_t inputW, int64_t offset);
     __aicore__ inline void CopyInLine(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyInPlane(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyInCube(int64_t offset, int64_t blockLen, int64_t curkHWAlign, int64_t curkHW,
@@ -354,71 +351,73 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CalcRe
 
 template <typename T1, typename TINDEX>
 template <typename T, typename MIDINDEX, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CalcRealIndex(
-    MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<MIDINDEX>& index, int64_t curkW, int64_t curkH,
-    int64_t curkHW, int64_t inputH, int64_t inputW, int64_t offset)
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CalcRealIndex(Reg::RegTensor<T>& resIndex,
+                                                                                        Reg::RegTensor<MIDINDEX>& index,
+                                                                                        int64_t curkW, int64_t curkH,
+                                                                                        int64_t curkHW, int64_t inputH,
+                                                                                        int64_t inputW, int64_t offset)
 {
-    MicroAPI::MaskReg pregOneIndex = MicroAPI::CreateMask<MIDINDEX, MicroAPI::MaskPattern::VL1>();
-    MicroAPI::MaskReg pregOneIndexB4 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::VL1>();
-    MicroAPI::RegTensor<T> indexCast;
-    MicroAPI::RegTensor<int32_t> indexCast32;
+    Reg::MaskReg pregOneIndex = Reg::CreateMask<MIDINDEX, Reg::MaskPattern::VL1>();
+    Reg::MaskReg pregOneIndexB4 = Reg::CreateMask<int32_t, Reg::MaskPattern::VL1>();
+    Reg::RegTensor<T> indexCast;
+    Reg::RegTensor<int32_t> indexCast32;
     if constexpr (IsSameType<MIDINDEX, int16_t>::value && IsSameType<T, int32_t>::value) {
-        MicroAPI::Cast<int32_t, MIDINDEX, castB22B4>(indexCast, index, pregOneIndex);
+        Reg::Cast<int32_t, MIDINDEX, castB22B4>(indexCast, index, pregOneIndex);
     } else if constexpr (IsSameType<MIDINDEX, int16_t>::value && IsSameType<T, int64_t>::value) {
-        MicroAPI::Cast<int32_t, MIDINDEX, castB22B4>(indexCast32, index, pregOneIndex);
-        MicroAPI::Cast<int64_t, int32_t, castB42B8>(indexCast, indexCast32, pregOneIndexB4);
+        Reg::Cast<int32_t, MIDINDEX, castB22B4>(indexCast32, index, pregOneIndex);
+        Reg::Cast<int64_t, int32_t, castB42B8>(indexCast, indexCast32, pregOneIndexB4);
 
     } else if constexpr (IsSameType<MIDINDEX, int32_t>::value && IsSameType<T, int64_t>::value) {
-        MicroAPI::Cast<int64_t, MIDINDEX, castB42B8>(indexCast, index, pregOneIndex);
+        Reg::Cast<int64_t, MIDINDEX, castB42B8>(indexCast, index, pregOneIndex);
     } else {
-        MicroAPI::Move(indexCast, index, pregOneIndex);
+        Reg::Move(indexCast, index, pregOneIndex);
     }
     if constexpr (SPLITKDHW) {
-        MicroAPI::RegTensor<T> tempHW;
-        MicroAPI::RegTensor<T> wLen;
-        MicroAPI::RegTensor<T> hReg;
-        MicroAPI::Duplicate(tempHW, (T)curkHW, pregOneIndex);
-        MicroAPI::Duplicate(wLen, (T)curkW, pregOneIndex);
-        MicroAPI::Duplicate(hReg, (T)inputH, pregOneIndex);
+        Reg::RegTensor<T> tempHW;
+        Reg::RegTensor<T> wLen;
+        Reg::RegTensor<T> hReg;
+        Reg::Duplicate(tempHW, (T)curkHW, pregOneIndex);
+        Reg::Duplicate(wLen, (T)curkW, pregOneIndex);
+        Reg::Duplicate(hReg, (T)inputH, pregOneIndex);
         // d = index / curkHW, remainder = index % curkHW
-        MicroAPI::RegTensor<T> d;
-        MicroAPI::Div(d, indexCast, tempHW, pregOneIndex);
-        MicroAPI::RegTensor<T> prod;
-        MicroAPI::Mul(prod, d, tempHW, pregOneIndex);
-        MicroAPI::RegTensor<T> remainder;
-        MicroAPI::Sub(remainder, indexCast, prod, pregOneIndex);
+        Reg::RegTensor<T> d;
+        Reg::Div(d, indexCast, tempHW, pregOneIndex);
+        Reg::RegTensor<T> prod;
+        Reg::Mul(prod, d, tempHW, pregOneIndex);
+        Reg::RegTensor<T> remainder;
+        Reg::Sub(remainder, indexCast, prod, pregOneIndex);
         // h = remainder / curkW
-        MicroAPI::RegTensor<T> h;
-        MicroAPI::Div(h, remainder, wLen, pregOneIndex);
+        Reg::RegTensor<T> h;
+        Reg::Div(h, remainder, wLen, pregOneIndex);
         // independent Muls grouped together; remainder is already computed before prod is reused
-        MicroAPI::RegTensor<T> inputHW;
-        MicroAPI::RegTensor<T> hOffset;
-        MicroAPI::Muls(inputHW, hReg, inputW, pregOneIndex);
-        MicroAPI::Muls(prod, h, (T)curkW, pregOneIndex);
-        MicroAPI::Muls(hOffset, h, inputW, pregOneIndex);
+        Reg::RegTensor<T> inputHW;
+        Reg::RegTensor<T> hOffset;
+        Reg::Muls(inputHW, hReg, inputW, pregOneIndex);
+        Reg::Muls(prod, h, (T)curkW, pregOneIndex);
+        Reg::Muls(hOffset, h, inputW, pregOneIndex);
         // w = remainder % curkW, dOffset = d * inputHW
-        MicroAPI::RegTensor<T> w;
-        MicroAPI::Sub(w, remainder, prod, pregOneIndex);
-        MicroAPI::RegTensor<T> dOffset;
-        MicroAPI::Mul(dOffset, d, inputHW, pregOneIndex);
+        Reg::RegTensor<T> w;
+        Reg::Sub(w, remainder, prod, pregOneIndex);
+        Reg::RegTensor<T> dOffset;
+        Reg::Mul(dOffset, d, inputHW, pregOneIndex);
         // resIndex = dOffset + offset + hOffset + w
-        MicroAPI::Adds(resIndex, dOffset, (T)offset, pregOneIndex);
-        MicroAPI::Add(resIndex, resIndex, hOffset, pregOneIndex);
-        MicroAPI::Add(resIndex, resIndex, w, pregOneIndex);
+        Reg::Adds(resIndex, dOffset, (T)offset, pregOneIndex);
+        Reg::Add(resIndex, resIndex, hOffset, pregOneIndex);
+        Reg::Add(resIndex, resIndex, w, pregOneIndex);
     }
     if constexpr (SPLITKHW) {
-        MicroAPI::RegTensor<T> wLen;
-        MicroAPI::RegTensor<T> v0;
-        MicroAPI::Duplicate(wLen, (T)curkW, pregOneIndex);
-        MicroAPI::Div(v0, indexCast, wLen, pregOneIndex);
-        MicroAPI::Muls(resIndex, v0, inputW, pregOneIndex);
-        MicroAPI::Adds(resIndex, resIndex, (T)offset, pregOneIndex);
-        MicroAPI::Mul(wLen, wLen, v0, pregOneIndex);
-        MicroAPI::Sub(v0, indexCast, wLen, pregOneIndex);
-        MicroAPI::Add(resIndex, resIndex, v0, pregOneIndex);
+        Reg::RegTensor<T> wLen;
+        Reg::RegTensor<T> v0;
+        Reg::Duplicate(wLen, (T)curkW, pregOneIndex);
+        Reg::Div(v0, indexCast, wLen, pregOneIndex);
+        Reg::Muls(resIndex, v0, inputW, pregOneIndex);
+        Reg::Adds(resIndex, resIndex, (T)offset, pregOneIndex);
+        Reg::Mul(wLen, wLen, v0, pregOneIndex);
+        Reg::Sub(v0, indexCast, wLen, pregOneIndex);
+        Reg::Add(resIndex, resIndex, v0, pregOneIndex);
     }
     if constexpr (SPLITKW) {
-        MicroAPI::Adds(resIndex, indexCast, (T)offset, pregOneIndex);
+        Reg::Adds(resIndex, indexCast, (T)offset, pregOneIndex);
     }
 }
 
@@ -685,19 +684,19 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::InitOu
     TINDEX defaultIndex = -1;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T1> v0;
+        Reg::RegTensor<T1> v0;
         SetAllNegInfReg<T1>(v0);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T1>(maxNum);
-            MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T1>(i, repeatElm);
-            MicroAPI::StoreAlign(dstAddr, v0, offsetReg, p0);
+            Reg::MaskReg p0 = Reg::UpdateMask<T1>(maxNum);
+            Reg::AddrReg offsetReg = Reg::CreateAddrReg<T1>(i, repeatElm);
+            Reg::StoreAlign(dstAddr, v0, offsetReg, p0);
         }
-        MicroAPI::RegTensor<TINDEX> v1;
-        MicroAPI::Duplicate(v1, defaultIndex);
+        Reg::RegTensor<TINDEX> v1;
+        Reg::Duplicate(v1, defaultIndex);
         for (uint16_t i = 0; i < repeatIndexTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<TINDEX>(indexNum);
-            MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<TINDEX>(i, repeatIndexElm);
-            MicroAPI::StoreAlign(indexAddr, v1, offsetReg, p0);
+            Reg::MaskReg p0 = Reg::UpdateMask<TINDEX>(indexNum);
+            Reg::AddrReg offsetReg = Reg::CreateAddrReg<TINDEX>(i, repeatIndexElm);
+            Reg::StoreAlign(indexAddr, v1, offsetReg, p0);
         }
     }
 }
@@ -737,96 +736,95 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::Comput
     __VEC_SCOPE__
     {
         SetNegInfLocalMem<T1>(xLocalAddr, padNum, dataCount);
-        MicroAPI::RegTensor<calculateType> val0;
-        MicroAPI::RegTensor<calculateType> val1;
-        MicroAPI::RegTensor<calculateType> res0;
-        MicroAPI::RegTensor<calculateType> res1;
-        MicroAPI::RegTensor<calIndexType> resIndex0;
-        MicroAPI::RegTensor<calIndexType> resIndex1;
-        MicroAPI::RegTensor<calIndexType> index0;
-        MicroAPI::RegTensor<calIndexType> index1;
-        MicroAPI::RegTensor<calIndexType> idxMin;
-        MicroAPI::RegTensor<calIndexType> idxMax;
-        MicroAPI::MaskReg nanReg0;
-        MicroAPI::MaskReg gtReg0;
-        MicroAPI::MaskReg nanReg1;
-        MicroAPI::MaskReg gtReg1;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<calculateType> val0;
+        Reg::RegTensor<calculateType> val1;
+        Reg::RegTensor<calculateType> res0;
+        Reg::RegTensor<calculateType> res1;
+        Reg::RegTensor<calIndexType> resIndex0;
+        Reg::RegTensor<calIndexType> resIndex1;
+        Reg::RegTensor<calIndexType> index0;
+        Reg::RegTensor<calIndexType> index1;
+        Reg::RegTensor<calIndexType> idxMin;
+        Reg::RegTensor<calIndexType> idxMax;
+        Reg::MaskReg nanReg0;
+        Reg::MaskReg gtReg0;
+        Reg::MaskReg nanReg1;
+        Reg::MaskReg gtReg1;
+        Reg::MaskReg maskAll = Reg::CreateMask<calculateType, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(resIndex0, padIndex);
-        MicroAPI::Duplicate(resIndex1, padIndex);
-        MicroAPI::Duplicate(res0, minValue.f);
-        MicroAPI::Duplicate(res1, minValue.f);
-        MicroAPI::Arange(index0, 0);
-        MicroAPI::Adds(index1, index0, repeatElm, maskAll); // stream 1 starts one VReg later
+        Reg::Duplicate(resIndex0, padIndex);
+        Reg::Duplicate(resIndex1, padIndex);
+        Reg::Duplicate(res0, minValue.f);
+        Reg::Duplicate(res1, minValue.f);
+        Reg::Arange(index0, 0);
+        Reg::Adds(index1, index0, repeatElm, maskAll); // stream 1 starts one VReg later
 
         uint16_t halfLoops = repeatTimes / 2;
         for (uint16_t i = 0; i < halfLoops; i++) {
             LoadOneRegTensor<T1, calculateType>(xLocalAddr, val0, maskAll, 2 * i * repeatElm);
             LoadOneRegTensor<T1, calculateType>(xLocalAddr, val1, maskAll, (2 * i + 1) * repeatElm);
-            MicroAPI::Compare<calculateType, CMPMODE::NE>(nanReg0, val0, val0, maskAll);
-            MicroAPI::Compare<calculateType, CMPMODE::NE>(nanReg1, val1, val1, maskAll);
-            MicroAPI::Compare<calculateType, CMPMODE::GT>(gtReg0, val0, res0, maskAll);
-            MicroAPI::Compare<calculateType, CMPMODE::GT>(gtReg1, val1, res1, maskAll);
-            MicroAPI::Xor(gtReg0, gtReg0, nanReg0, maskAll);
-            MicroAPI::Xor(gtReg1, gtReg1, nanReg1, maskAll);
-            MicroAPI::Select(res0, val0, res0, gtReg0);
-            MicroAPI::Select(res1, val1, res1, gtReg1);
-            MicroAPI::Select(resIndex0, index0, resIndex0, gtReg0);
-            MicroAPI::Select(resIndex1, index1, resIndex1, gtReg1);
-            MicroAPI::Adds(index0, index0, 2 * repeatElm, maskAll);
-            MicroAPI::Adds(index1, index1, 2 * repeatElm, maskAll);
+            Reg::Compare<calculateType, CMPMODE::NE>(nanReg0, val0, val0, maskAll);
+            Reg::Compare<calculateType, CMPMODE::NE>(nanReg1, val1, val1, maskAll);
+            Reg::Compare<calculateType, CMPMODE::GT>(gtReg0, val0, res0, maskAll);
+            Reg::Compare<calculateType, CMPMODE::GT>(gtReg1, val1, res1, maskAll);
+            Reg::Xor(gtReg0, gtReg0, nanReg0, maskAll);
+            Reg::Xor(gtReg1, gtReg1, nanReg1, maskAll);
+            Reg::Select(res0, val0, res0, gtReg0);
+            Reg::Select(res1, val1, res1, gtReg1);
+            Reg::Select(resIndex0, index0, resIndex0, gtReg0);
+            Reg::Select(resIndex1, index1, resIndex1, gtReg1);
+            Reg::Adds(index0, index0, 2 * repeatElm, maskAll);
+            Reg::Adds(index1, index1, 2 * repeatElm, maskAll);
         }
         // Odd tail: repeatTimes need not be even.
         uint16_t tailLoops = repeatTimes & 1;
         for (uint16_t t = 0; t < tailLoops; t++) {
             LoadOneRegTensor<T1, calculateType>(xLocalAddr, val0, maskAll, (repeatTimes - 1) * repeatElm);
-            MicroAPI::Compare<calculateType, CMPMODE::NE>(nanReg0, val0, val0, maskAll);
-            MicroAPI::Compare<calculateType, CMPMODE::GT>(gtReg0, val0, res0, maskAll);
-            MicroAPI::Xor(gtReg0, gtReg0, nanReg0, maskAll);
-            MicroAPI::Select(res0, val0, res0, gtReg0);
-            MicroAPI::Select(resIndex0, index0, resIndex0, gtReg0);
+            Reg::Compare<calculateType, CMPMODE::NE>(nanReg0, val0, val0, maskAll);
+            Reg::Compare<calculateType, CMPMODE::GT>(gtReg0, val0, res0, maskAll);
+            Reg::Xor(gtReg0, gtReg0, nanReg0, maskAll);
+            Reg::Select(res0, val0, res0, gtReg0);
+            Reg::Select(resIndex0, index0, resIndex0, gtReg0);
         }
         // Merge stream 1 into stream 0
-        MicroAPI::Compare<calIndexType, CMPMODE::GT>(gtReg0, resIndex1, resIndex0, maskAll); // i1 > i0
-        MicroAPI::Select(idxMin, resIndex0, resIndex1, gtReg0);
-        MicroAPI::Select(idxMax, resIndex1, resIndex0, gtReg0);
-        MicroAPI::Compare<calculateType, CMPMODE::NE>(nanReg0, res0, res0, maskAll); // res0 nan
-        MicroAPI::Compare<calculateType, CMPMODE::NE>(nanReg1, res1, res1, maskAll); // res1 nan
-        MicroAPI::Compare<calculateType, CMPMODE::GT>(gtReg1, res1, res0, maskAll);  // res1 > res0
-        MicroAPI::Compare<calculateType, CMPMODE::EQ>(gtReg0, res1, res0, maskAll);  // res1 == res0 (tie)
-        MicroAPI::Xor(gtReg1, gtReg1, nanReg1, maskAll);                             // choose res1 as winner
-        MicroAPI::And(nanReg1, nanReg0, nanReg1, maskAll);                           // both nan
-        MicroAPI::Select(resIndex0, resIndex1, resIndex0, gtReg1);                   // default: follow value winner
-        MicroAPI::Select(resIndex0, idxMin, resIndex0, gtReg0);                      // tie -> first index
-        MicroAPI::Select(resIndex0, idxMax, resIndex0, nanReg1);                     // both nan -> last index
-        MicroAPI::Select(res0, res1, res0, gtReg1);
+        Reg::Compare<calIndexType, CMPMODE::GT>(gtReg0, resIndex1, resIndex0, maskAll); // i1 > i0
+        Reg::Select(idxMin, resIndex0, resIndex1, gtReg0);
+        Reg::Select(idxMax, resIndex1, resIndex0, gtReg0);
+        Reg::Compare<calculateType, CMPMODE::NE>(nanReg0, res0, res0, maskAll); // res0 nan
+        Reg::Compare<calculateType, CMPMODE::NE>(nanReg1, res1, res1, maskAll); // res1 nan
+        Reg::Compare<calculateType, CMPMODE::GT>(gtReg1, res1, res0, maskAll);  // res1 > res0
+        Reg::Compare<calculateType, CMPMODE::EQ>(gtReg0, res1, res0, maskAll);  // res1 == res0 (tie)
+        Reg::Xor(gtReg1, gtReg1, nanReg1, maskAll);                             // choose res1 as winner
+        Reg::And(nanReg1, nanReg0, nanReg1, maskAll);                           // both nan
+        Reg::Select(resIndex0, resIndex1, resIndex0, gtReg1);                   // default: follow value winner
+        Reg::Select(resIndex0, idxMin, resIndex0, gtReg0);                      // tie -> first index
+        Reg::Select(resIndex0, idxMax, resIndex0, nanReg1);                     // both nan -> last index
+        Reg::Select(res0, res1, res0, gtReg1);
 
         GetMaxAndIndex<calculateType, calIndexType>(res0, index0, res0, resIndex0, padIndex, maskAll, nanReg0, gtReg0,
                                                     val0);
-        MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::VL1>();
+        Reg::MaskReg pregOne = Reg::CreateMask<calculateType, Reg::MaskPattern::VL1>();
         StoreOneNum<calculateType, calculateType>(resMidAddr, res0, pregOne, 0);
-        StoreOneNum<calculateType, calculateType>(indexMidAddr, (MicroAPI::RegTensor<calculateType>&)index0, pregOne,
-                                                  0);
-        MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+        StoreOneNum<calculateType, calculateType>(indexMidAddr, (Reg::RegTensor<calculateType>&)index0, pregOne, 0);
+        Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
     }
 
     __VEC_SCOPE__
     {
-        MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::VL1>();
-        MicroAPI::RegTensor<calculateType> res;
-        MicroAPI::RegTensor<calIndexType> index;
+        Reg::MaskReg pregOne = Reg::CreateMask<calculateType, Reg::MaskPattern::VL1>();
+        Reg::RegTensor<calculateType> res;
+        Reg::RegTensor<calIndexType> index;
         LoadOneNum<calculateType, calculateType>(resMidAddr, res, pregOne, 0);
-        LoadOneNum<calculateType, calculateType>(indexMidAddr, (MicroAPI::RegTensor<calculateType>&)index, pregOne, 0);
+        LoadOneNum<calculateType, calculateType>(indexMidAddr, (Reg::RegTensor<calculateType>&)index, pregOne, 0);
 
-        MicroAPI::RegTensor<TINDEX> realResIndex;
+        Reg::RegTensor<TINDEX> realResIndex;
         CalcRealIndex<TINDEX, calIndexType, SPLITKW, SPLITKHW, SPLITKDHW>(realResIndex, index, curkW, curkH, curkHW,
                                                                           inputH, inputW, offset);
         if constexpr (MERGE) {
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg cmpMaskNanReg;
-            MicroAPI::MaskReg cmpMaskReg;
-            MicroAPI::RegTensor<calculateType> vd0;
+            Reg::MaskReg maskAll = Reg::CreateMask<calculateType, Reg::MaskPattern::ALL>();
+            Reg::MaskReg cmpMaskNanReg;
+            Reg::MaskReg cmpMaskReg;
+            Reg::RegTensor<calculateType> vd0;
             MergeMaxAndIndex<T1, calculateType, TINDEX>(res, realResIndex, dstLocalAddr, indexLocalAddr, localCurIdx,
                                                         padIndex, maskAll, cmpMaskNanReg, cmpMaskReg, pregOne, vd0);
         }

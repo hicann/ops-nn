@@ -26,15 +26,15 @@
 
 namespace ChamferDistance {
 using namespace AscendC;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 
 // fp16/bf16 → fp32 的随路 cast trait(与 activation/clipped_swiglu 同款)
-constexpr static AscendC::MicroAPI::CastTrait CAST_B16_TO_FP32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait CAST_B16_TO_FP32 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
 
 // VF 计算段: 一次算一段被查点到查询点的平方距离。
@@ -45,33 +45,33 @@ template <typename T>
 __simd_vf__ inline void ChamferDistVF(__ubuf__ float* distAddr, __ubuf__ T* xAddr, __ubuf__ T* yAddr, float negX1,
                                       float negY1, uint32_t count, uint32_t fp32Lane, uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::RegTensor<float> dx;
-    AscendC::MicroAPI::RegTensor<float> dy;
-    AscendC::MicroAPI::RegTensor<float> sqX;
-    AscendC::MicroAPI::RegTensor<float> sqY;
-    AscendC::MicroAPI::MaskReg mask;
+    AscendC::Reg::RegTensor<float> dx;
+    AscendC::Reg::RegTensor<float> dy;
+    AscendC::Reg::RegTensor<float> sqX;
+    AscendC::Reg::RegTensor<float> sqY;
+    AscendC::Reg::MaskReg mask;
     uint32_t remain = count; // UpdateMask 每轮自行按 VL 递减, 无需外部再算余量
 
     for (uint16_t i = 0; i < repeatTimes; ++i) {
-        mask = AscendC::MicroAPI::UpdateMask<float>(remain);
+        mask = AscendC::Reg::UpdateMask<float>(remain);
         if constexpr (IsSameType<T, float>::value) {
-            AscendC::MicroAPI::LoadAlign(dx, xAddr + i * fp32Lane);
-            AscendC::MicroAPI::LoadAlign(dy, yAddr + i * fp32Lane);
+            AscendC::Reg::LoadAlign(dx, xAddr + i * fp32Lane);
+            AscendC::Reg::LoadAlign(dy, yAddr + i * fp32Lane);
         } else {
-            AscendC::MicroAPI::RegTensor<T> rawX;
-            AscendC::MicroAPI::RegTensor<T> rawY;
-            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(rawX, xAddr + i * fp32Lane);
-            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(rawY, yAddr + i * fp32Lane);
-            AscendC::MicroAPI::Cast<float, T, CAST_B16_TO_FP32>(dx, rawX, mask);
-            AscendC::MicroAPI::Cast<float, T, CAST_B16_TO_FP32>(dy, rawY, mask);
+            AscendC::Reg::RegTensor<T> rawX;
+            AscendC::Reg::RegTensor<T> rawY;
+            AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(rawX, xAddr + i * fp32Lane);
+            AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(rawY, yAddr + i * fp32Lane);
+            AscendC::Reg::Cast<float, T, CAST_B16_TO_FP32>(dx, rawX, mask);
+            AscendC::Reg::Cast<float, T, CAST_B16_TO_FP32>(dy, rawY, mask);
         }
         // d = (x2 - x1)^2 + (y2 - y1)^2, 标量用加负值
-        AscendC::MicroAPI::Adds(dx, dx, negX1, mask);
-        AscendC::MicroAPI::Adds(dy, dy, negY1, mask);
-        AscendC::MicroAPI::Mul(sqX, dx, dx, mask);
-        AscendC::MicroAPI::Mul(sqY, dy, dy, mask);
-        AscendC::MicroAPI::Add(sqX, sqX, sqY, mask);
-        AscendC::MicroAPI::StoreAlign(distAddr + i * fp32Lane, sqX, mask);
+        AscendC::Reg::Adds(dx, dx, negX1, mask);
+        AscendC::Reg::Adds(dy, dy, negY1, mask);
+        AscendC::Reg::Mul(sqX, dx, dx, mask);
+        AscendC::Reg::Mul(sqY, dy, dy, mask);
+        AscendC::Reg::Add(sqX, sqX, sqY, mask);
+        AscendC::Reg::StoreAlign(distAddr + i * fp32Lane, sqX, mask);
     }
 }
 
