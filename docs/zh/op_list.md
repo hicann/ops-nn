@@ -3408,6 +3408,15 @@
     <td>BN3DTrainingUpdate算子用于3D BatchNorm训练流程的更新环节，结合前驱算子产出的逐通道sum和square_sum对输入做批归一化，输出归一化结果y，同时以factor为EMA权重更新running mean和running variance。</td>
   </tr>
   <tr>
+    <td><a href="../../norm/bn_training_reduce_grad/README.md">bn_training_reduce_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>批归一化训练反向的reduce-grad阶段。给定上层梯度grads、前向输入x、BNTrainingUpdateGrad产出的逐通道统计量diff_scale/diff_offset以及scale/batch_mean/batch_variance，计算回传给x的梯度y。该算子在GE图内由FusedBatchNormGrad融合展开生成，与BNTrainingUpdateGrad配套使用。</td>
+  </tr>
+  <tr>
     <td>norm</td>
     <td><a href="../../norm/bn_training_update_grad/README.md">bn_training_update_grad</a></td>
     <td>✓</td>
