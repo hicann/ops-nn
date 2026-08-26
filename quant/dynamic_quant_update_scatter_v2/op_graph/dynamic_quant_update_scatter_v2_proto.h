@@ -41,6 +41,8 @@ namespace ge {
 * @li var_offset: A tensor with shape (1, B, S). Result tensor after an in-place scatter.
 * The type support float32, format support ND.
 */
+#ifndef OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTERV2
+#define OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTERV2
 REG_OP(DynamicQuantUpdateScatterV2)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(indices, TensorType({DT_INT32}))
@@ -51,6 +53,7 @@ REG_OP(DynamicQuantUpdateScatterV2)
     .OUTPUT(var_scale, TensorType({DT_FLOAT}))
     .OUTPUT(var_offset, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(DynamicQuantUpdateScatterV2)
+#endif // OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTERV2
 
 } // namespace ge
 

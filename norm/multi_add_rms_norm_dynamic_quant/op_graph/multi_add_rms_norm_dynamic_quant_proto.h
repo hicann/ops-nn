@@ -67,6 +67,8 @@ namespace ge {
 * @li scale2: A tensor. Describing of the factor for the second dynamic quantization.
 *                  Support dtype: float32, support format: ND.
 */
+#ifndef OPS_PROTO_DEF_MULTIADDRMSNORMDYNAMICQUANT
+#define OPS_PROTO_DEF_MULTIADDRMSNORMDYNAMICQUANT
 REG_OP(MultiAddRmsNormDynamicQuant)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(x2, TensorType({DT_FLOAT16, DT_BF16}))
@@ -81,6 +83,7 @@ REG_OP(MultiAddRmsNormDynamicQuant)
     .OUTPUT(scale2, TensorType({DT_FLOAT}))
     .ATTR(epsilon, Float, 1e-6)
     .OP_END_FACTORY_REG(MultiAddRmsNormDynamicQuant)
+#endif // OPS_PROTO_DEF_MULTIADDRMSNORMDYNAMICQUANT
 } // namespace ge
 
 #endif // OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_GRAPH_H_

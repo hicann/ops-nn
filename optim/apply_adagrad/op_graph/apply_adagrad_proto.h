@@ -46,6 +46,8 @@ namespace ge {
  *Compatible with the TensorFlow operator ApplyAdagrad.
  *
  */
+#ifndef OPS_PROTO_DEF_APPLYADAGRAD
+#define OPS_PROTO_DEF_APPLYADAGRAD
 REG_OP(ApplyAdagrad)
     .INPUT(var, TensorType::NumberType())
     .INPUT(accum, TensorType::NumberType())
@@ -55,5 +57,6 @@ REG_OP(ApplyAdagrad)
     .ATTR(update_slots, Bool, true)
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdagrad)
+#endif // OPS_PROTO_DEF_APPLYADAGRAD
 } // namespace ge
 #endif // OPS_NN_APPLY_ADAGRAD_PROTO_H

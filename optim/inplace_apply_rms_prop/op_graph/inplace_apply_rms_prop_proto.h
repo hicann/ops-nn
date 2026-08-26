@@ -59,6 +59,8 @@ namespace ge {
  * Compatible with the RMSProp state-update semantics used by the training
  * optimizer family. Framework adapters must preserve all three outputs.
  */
+#ifndef OPS_PROTO_DEF_INPLACEAPPLYRMSPROP
+#define OPS_PROTO_DEF_INPLACEAPPLYRMSPROP
 REG_OP(InplaceApplyRMSProp)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(ms, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -73,6 +75,7 @@ REG_OP(InplaceApplyRMSProp)
     .OUTPUT(mom, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(InplaceApplyRMSProp)
+#endif // OPS_PROTO_DEF_INPLACEAPPLYRMSPROP
 
 } // namespace ge
 

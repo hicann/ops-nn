@@ -44,6 +44,8 @@ namespace ge {
  * @par Third-party framework compatibility
  * @li Compatible with the backward of the TensorFlow operator InstanceNormGrad.
  */
+#ifndef OPS_PROTO_DEF_INSTANCENORMGRAD
+#define OPS_PROTO_DEF_INSTANCENORMGRAD
 REG_OP(InstanceNormGrad)
     .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
@@ -54,5 +56,6 @@ REG_OP(InstanceNormGrad)
     .OUTPUT(pd_gamma, TensorType({DT_FLOAT, DT_FLOAT16}))
     .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16}))
     .OP_END_FACTORY_REG(InstanceNormGrad)
+#endif // OPS_PROTO_DEF_INSTANCENORMGRAD
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_INSTANCE_NORM_GRAD_OPS_H_

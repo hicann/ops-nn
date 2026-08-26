@@ -40,6 +40,8 @@ namespace ge {
 * @attention The epsilon added to variance is a compile-time constant 1e-6 (not an attribute).
 */
 
+#ifndef OPS_PROTO_DEF_INTRAININGUPDATEGRAD
+#define OPS_PROTO_DEF_INTRAININGUPDATEGRAD
 REG_OP(INTrainingUpdateGrad)
     .INPUT(dy, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -48,6 +50,7 @@ REG_OP(INTrainingUpdateGrad)
     .OUTPUT(res_gamma, TensorType({DT_FLOAT}))
     .OUTPUT(res_beta, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(INTrainingUpdateGrad)
+#endif // OPS_PROTO_DEF_INTRAININGUPDATEGRAD
 } // namespace ge
 
 #endif // OPS_NORM_IN_TRAINING_UPDATE_GRAD_PROTO_H_

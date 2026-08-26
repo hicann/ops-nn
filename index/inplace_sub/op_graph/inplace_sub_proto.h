@@ -35,12 +35,15 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with the TensorFlow operator InplaceSub.
  */
+#ifndef OPS_PROTO_DEF_INPLACESUB
+#define OPS_PROTO_DEF_INPLACESUB
 REG_OP(InplaceSub)
     .INPUT(x, TensorType::BasicType())
     .INPUT(indices, TensorType({DT_INT32}))
     .INPUT(v, TensorType::BasicType())
     .OUTPUT(y, TensorType::BasicType())
     .OP_END_FACTORY_REG(InplaceSub)
+#endif // OPS_PROTO_DEF_INPLACESUB
 
 } // namespace ge
 

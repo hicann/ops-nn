@@ -42,6 +42,8 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with the L2 scenario of the PyTorch operator NormalizeGrad.
  */
+#ifndef OPS_PROTO_DEF_L2NORMALIZEGRAD
+#define OPS_PROTO_DEF_L2NORMALIZEGRAD
 REG_OP(L2NormalizeGrad)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
@@ -50,6 +52,7 @@ REG_OP(L2NormalizeGrad)
     .ATTR(dim, ListInt, {1})
     .ATTR(eps, Float, 0.0001f)
     .OP_END_FACTORY_REG(L2NormalizeGrad)
+#endif // OPS_PROTO_DEF_L2NORMALIZEGRAD
 
 } // namespace ge
 #endif // OPS_NORM_L2_NORMALIZE_GRAD_PROTO_H_

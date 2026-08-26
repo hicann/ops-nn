@@ -36,6 +36,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the mmcv operator chamfer_distance.
 */
+#ifndef OPS_PROTO_DEF_CHAMFERDISTANCE
+#define OPS_PROTO_DEF_CHAMFERDISTANCE
 REG_OP(ChamferDistance)
     .INPUT(xyz1, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
     .INPUT(xyz2, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
@@ -44,6 +46,7 @@ REG_OP(ChamferDistance)
     .OUTPUT(idx1, TensorType({DT_INT32}))
     .OUTPUT(idx2, TensorType({DT_INT32}))
     .OP_END_FACTORY_REG(ChamferDistance)
+#endif // OPS_PROTO_DEF_CHAMFERDISTANCE
 } // namespace ge
 
 #endif // OPS_LOSS_CHAMFER_DISTANCE_PROTO_H_

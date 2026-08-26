@@ -41,10 +41,13 @@ namespace ge {
  *@par Third-party framework compatibility
  * Compatible with the PyTorch operator HardSwishGrad after v2.8.
  */
+#ifndef OPS_PROTO_DEF_HARDSWISHGRADV2
+#define OPS_PROTO_DEF_HARDSWISHGRADV2
 REG_OP(HardSwishGradV2)
     .INPUT(gradOutput, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(self, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(out, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(HardSwishGradV2)
+#endif // OPS_PROTO_DEF_HARDSWISHGRADV2
 } // namespace ge
 #endif // OPS_ACTIVATION_HARD_SWISH_GRAD_V2_GRAPH_PLUGIN_HARD_SWISH_GRAD_V2_PROTO_H_

@@ -46,6 +46,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the Mindspore operator Scatter.
 */
+#ifndef OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTER
+#define OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTER
 REG_OP(DynamicQuantUpdateScatter)
     .INPUT(var, TensorType({DT_INT8}))
     .INPUT(var_scale, TensorType({DT_FLOAT}))
@@ -57,6 +59,7 @@ REG_OP(DynamicQuantUpdateScatter)
     .REQUIRED_ATTR(reduce, String)
     .ATTR(axis, Int, 0)
     .OP_END_FACTORY_REG(DynamicQuantUpdateScatter)
+#endif // OPS_PROTO_DEF_DYNAMICQUANTUPDATESCATTER
 
 } // namespace ge
 

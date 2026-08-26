@@ -46,6 +46,8 @@ namespace ge {
 * The dim dimension of x must be divisible by 2, and the dim dimension of y must be equal to the dim dimension of x
 divided by 2.
 */
+#ifndef OPS_PROTO_DEF_CLIPPEDSWIGLU
+#define OPS_PROTO_DEF_CLIPPEDSWIGLU
 REG_OP(ClippedSwiglu)
     .INPUT(x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
@@ -57,5 +59,6 @@ REG_OP(ClippedSwiglu)
     .ATTR(interleaved, Bool, true)
     .ATTR(clamp_mode, Int, 0)
     .OP_END_FACTORY_REG(ClippedSwiglu)
+#endif // OPS_PROTO_DEF_CLIPPEDSWIGLU
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_CLIPPED_SWIGLU_PROTO_H_

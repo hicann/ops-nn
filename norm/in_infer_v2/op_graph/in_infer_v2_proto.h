@@ -44,6 +44,8 @@ Defaults to "0.00001" . \n
 *@attention Constraints:
 *For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 0.001 due to the square root instruction.
 */
+#ifndef OPS_PROTO_DEF_ININFERV2
+#define OPS_PROTO_DEF_ININFERV2
 REG_OP(INInferV2)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OPTIONAL_INPUT(gamma, TensorType({DT_FLOAT}))
@@ -55,6 +57,7 @@ REG_OP(INInferV2)
     .OUTPUT(batch_mean, TensorType({DT_FLOAT}))
     .OUTPUT(batch_variance, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(INInferV2)
+#endif // OPS_PROTO_DEF_ININFERV2
 
 } // namespace ge
 

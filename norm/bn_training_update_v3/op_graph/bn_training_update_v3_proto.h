@@ -61,6 +61,8 @@ format as "x".
 * @li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to
 * the square root instruction.
 */
+#ifndef OPS_PROTO_DEF_BNTRAININGUPDATEV3
+#define OPS_PROTO_DEF_BNTRAININGUPDATEV3
 REG_OP(BNTrainingUpdateV3)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(sum, TensorType({DT_FLOAT}))
@@ -74,6 +76,7 @@ REG_OP(BNTrainingUpdateV3)
     .OUTPUT(reserve_1, TensorType({DT_FLOAT}))
     .OUTPUT(reserve_2, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(BNTrainingUpdateV3)
+#endif // OPS_PROTO_DEF_BNTRAININGUPDATEV3
 
 } // namespace ge
 

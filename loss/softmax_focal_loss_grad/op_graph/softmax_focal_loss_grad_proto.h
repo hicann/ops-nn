@@ -40,6 +40,8 @@ namespace ge {
 *@par Outputs:
 *grad: A Tensor. Has the same type and shape as "pred". \n
 */
+#ifndef OPS_PROTO_DEF_SOFTMAXFOCALLOSSGRAD
+#define OPS_PROTO_DEF_SOFTMAXFOCALLOSSGRAD
 REG_OP(SoftmaxFocalLossGrad)
     .INPUT(pred, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(target, TensorType({DT_INT32}))
@@ -50,6 +52,7 @@ REG_OP(SoftmaxFocalLossGrad)
     .ATTR(alpha, Float, 0.25)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLossGrad)
+#endif // OPS_PROTO_DEF_SOFTMAXFOCALLOSSGRAD
 
 } // namespace ge
 

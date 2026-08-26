@@ -35,12 +35,15 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with the PyTorch operator torch.nn.Hardsigmoid.
  */
+#ifndef OPS_PROTO_DEF_HARDSIGMOID
+#define OPS_PROTO_DEF_HARDSIGMOID
 REG_OP(HardSigmoid)
     .INPUT(input_x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32}))
     .OUTPUT(output_y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32}))
     .ATTR(alpha, Float, 0.16666666)
     .ATTR(beta, Float, 0.5)
     .OP_END_FACTORY_REG(HardSigmoid)
+#endif // OPS_PROTO_DEF_HARDSIGMOID
 } // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_HARD_SIGMOID_H_

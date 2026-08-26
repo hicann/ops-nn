@@ -45,6 +45,8 @@ namespace ge {
 * The first several dimensions refer to the dimension of "x" minus the dimension of "gamma",
 * indicating that the norm is not required.
 */
+#ifndef OPS_PROTO_DEF_GEMMARMSNORM
+#define OPS_PROTO_DEF_GEMMARMSNORM
 REG_OP(GemmaRmsNorm)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -52,5 +54,6 @@ REG_OP(GemmaRmsNorm)
     .OUTPUT(rstd, TensorType({DT_FLOAT, DT_FLOAT, DT_FLOAT}))
     .ATTR(epsilon, Float, 1e-6f)
     .OP_END_FACTORY_REG(GemmaRmsNorm)
+#endif // OPS_PROTO_DEF_GEMMARMSNORM
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_GEMMA_RMS_NORM_OPS_H_

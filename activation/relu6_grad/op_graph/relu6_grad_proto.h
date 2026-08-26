@@ -44,11 +44,14 @@ namespace ge {
 * Compatible with the TensorFlow operator Relu6Grad and PyTorch
 * hardtanh_backward(min=0, max=6) at boundary x in {0, 6} returning 0.
 */
+#ifndef OPS_PROTO_DEF_RELU6GRAD
+#define OPS_PROTO_DEF_RELU6GRAD
 REG_OP(Relu6Grad)
     .INPUT(gradients, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(features, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(backprops, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(Relu6Grad)
+#endif // OPS_PROTO_DEF_RELU6GRAD
 
 } // namespace ge
 

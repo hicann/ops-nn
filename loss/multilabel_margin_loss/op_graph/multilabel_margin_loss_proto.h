@@ -41,6 +41,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with pytorch MultiLabelMarginLoss operator
 */
+#ifndef OPS_PROTO_DEF_MULTILABELMARGINLOSS
+#define OPS_PROTO_DEF_MULTILABELMARGINLOSS
 REG_OP(MultilabelMarginLoss)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(target, TensorType({DT_INT32}))
@@ -48,6 +50,7 @@ REG_OP(MultilabelMarginLoss)
     .OUTPUT(is_target, TensorType({DT_INT32}))
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(MultilabelMarginLoss)
+#endif // OPS_PROTO_DEF_MULTILABELMARGINLOSS
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_MULTILABEL_MARGIN_LOSS_OPS_H_

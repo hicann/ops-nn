@@ -38,6 +38,8 @@ namespace ge {
  * @li dbeta: A Tensor. Support dtype: [float32], support format: [ND].
  * @li dgamma: A Tensor. Support dtype: [float32], support format: [ND].
  */
+#ifndef OPS_PROTO_DEF_DEEPNORMGRAD
+#define OPS_PROTO_DEF_DEEPNORMGRAD
 REG_OP(DeepNormGrad)
     .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -51,5 +53,6 @@ REG_OP(DeepNormGrad)
     .OUTPUT(dgamma, TensorType({DT_FLOAT}))
     .ATTR(alpha, Float, 0.3f)
     .OP_END_FACTORY_REG(DeepNormGrad);
+#endif // OPS_PROTO_DEF_DEEPNORMGRAD
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_DEEP_NORM_GRAD_OPS_H_

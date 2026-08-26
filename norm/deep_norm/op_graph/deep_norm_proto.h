@@ -41,6 +41,8 @@ namespace ge {
  * @li rstd: A Tensor. Support dtype: [float32], support format: [ND].
  * @li y: A Tensor. Support dtype: [float32, float16, bfloat16], support format: [ND].
  */
+#ifndef OPS_PROTO_DEF_DEEPNORM
+#define OPS_PROTO_DEF_DEEPNORM
 REG_OP(DeepNorm)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(gx, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -52,6 +54,7 @@ REG_OP(DeepNorm)
     .ATTR(alpha, Float, 0.3f)
     .ATTR(epsilon, Float, 1e-06f)
     .OP_END_FACTORY_REG(DeepNorm);
+#endif // OPS_PROTO_DEF_DEEPNORM
 } // namespace ge
 
 #endif // OPS_NORM_DEEP_NORM_PROTO_H_

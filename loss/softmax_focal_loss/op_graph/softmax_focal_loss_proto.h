@@ -40,6 +40,8 @@ namespace ge {
 *y: A Tensor. Has the same type and shape as "pred". All elements within one row share the same
 *value, which is the focal loss of that row. \n
 */
+#ifndef OPS_PROTO_DEF_SOFTMAXFOCALLOSS
+#define OPS_PROTO_DEF_SOFTMAXFOCALLOSS
 REG_OP(SoftmaxFocalLoss)
     .INPUT(pred, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(target, TensorType({DT_INT32}))
@@ -49,6 +51,7 @@ REG_OP(SoftmaxFocalLoss)
     .ATTR(alpha, Float, 0.25)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
+#endif // OPS_PROTO_DEF_SOFTMAXFOCALLOSS
 
 } // namespace ge
 

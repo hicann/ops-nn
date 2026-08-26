@@ -43,6 +43,8 @@ namespace ge {
  * @par Third-party framework compatibility
  * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
  */
+#ifndef OPS_PROTO_DEF_GROUPNORMSILUQUANT
+#define OPS_PROTO_DEF_GROUPNORMSILUQUANT
 REG_OP(GroupNormSiluQuant)
     .INPUT(x, TensorType({DT_BF16, DT_FLOAT16}))
     .OPTIONAL_INPUT(gamma, TensorType({DT_BF16, DT_FLOAT16}))
@@ -55,6 +57,7 @@ REG_OP(GroupNormSiluQuant)
     .ATTR(eps, Float, 0.00001f)
     .ATTR(activate_silu, Bool, true)
     .OP_END_FACTORY_REG(GroupNormSiluQuant)
+#endif // OPS_PROTO_DEF_GROUPNORMSILUQUANT
 
 } // namespace ge
 

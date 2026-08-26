@@ -44,6 +44,8 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with PyTorch operator PoissonNLLLoss.
  */
+#ifndef OPS_PROTO_DEF_POISSONNLLLOSS
+#define OPS_PROTO_DEF_POISSONNLLLOSS
 REG_OP(PoissonNllLoss)
     .INPUT(input_x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(target, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -53,6 +55,7 @@ REG_OP(PoissonNllLoss)
     .ATTR(eps, Float, 1e-8)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(PoissonNllLoss)
+#endif // OPS_PROTO_DEF_POISSONNLLLOSS
 
 } // namespace ge
 

@@ -39,6 +39,8 @@ A2上支持8个，实际内部只支持3个
 * @par Third-party framework compatibility
 * Compatible with the PyTorch operator CosineEmbeddingLoss.
 */
+#ifndef OPS_PROTO_DEF_COSINEEMBEDDINGLOSS
+#define OPS_PROTO_DEF_COSINEEMBEDDINGLOSS
 REG_OP(CosineEmbeddingLoss)
     .INPUT(x1, TensorType({DT_INT32, DT_FLOAT16, DT_FLOAT}))
     .INPUT(x2, TensorType({DT_INT32, DT_FLOAT16, DT_FLOAT}))
@@ -47,5 +49,6 @@ REG_OP(CosineEmbeddingLoss)
     .ATTR(reduction, String, "mean")
     .OUTPUT(y, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(CosineEmbeddingLoss)
+#endif // OPS_PROTO_DEF_COSINEEMBEDDINGLOSS
 } // namespace ge
 #endif // COSINE_EMBEDDING_LOSS_OP_PROTO_H_

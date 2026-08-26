@@ -52,6 +52,8 @@ namespace ge {
 * Compatible with the PyTorch operator NonZeroWithValue.
 */
 
+#ifndef OPS_PROTO_DEF_NONZEROWITHVALUE
+#define OPS_PROTO_DEF_NONZEROWITHVALUE
 REG_OP(NonZeroWithValue)
     .INPUT(x, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32,
                           DT_INT64, DT_UINT64, DT_BOOL}))
@@ -62,6 +64,7 @@ REG_OP(NonZeroWithValue)
     .ATTR(transpose, Bool, false)
     .ATTR(dtype, Type, DT_INT32)
     .OP_END_FACTORY_REG(NonZeroWithValue)
+#endif // OPS_PROTO_DEF_NONZEROWITHVALUE
 
 } // namespace ge
 

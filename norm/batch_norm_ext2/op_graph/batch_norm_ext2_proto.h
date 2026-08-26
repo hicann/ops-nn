@@ -67,6 +67,8 @@ namespace ge {
  *        - Training mode: The saved inverse std (1/sqrt(epsilon + variance)).
  *        - Inference mode: Same as input "input_variance".
  */
+#ifndef OPS_PROTO_DEF_BATCHNORMEXT2
+#define OPS_PROTO_DEF_BATCHNORMEXT2
 REG_OP(BatchNormExt2)
     .INPUT(input_x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(input_scale, TensorType({DT_FLOAT}))
@@ -82,6 +84,7 @@ REG_OP(BatchNormExt2)
     .ATTR(data_format, String, "NHWC")
     .ATTR(is_training, Bool, true)
     .OP_END_FACTORY_REG(BatchNormExt2)
+#endif // OPS_PROTO_DEF_BATCHNORMEXT2
 } // namespace ge
 
 #endif // OPS_NORM_BATCH_NORM_EXT2_PROTO_H_
