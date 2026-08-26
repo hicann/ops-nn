@@ -36,6 +36,7 @@ struct ConvBackpropAttrs {
     int64_t opImplModeEnum = 0;
     bool hf32 = false;
     bool from_depthwise = false;
+    ge::AscendString padding = "";
 
     void Reset()
     {
@@ -48,6 +49,7 @@ struct ConvBackpropAttrs {
         opImplModeEnum = 0;
         hf32 = false;
         from_depthwise = false;
+        padding = "";
     }
 };
 
