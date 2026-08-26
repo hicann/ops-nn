@@ -100,7 +100,7 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 }
 
 // CPU Golden: ActsULQ computation (float32 precision)
-// cmin and cmax are scalars (broadcast to all elements)
+// cmin and cmax are scalars (shape must be 1)
 void ActsUlqGolden(const float* data, const float* cmin, const float* cmax, float* out, float* min_mask,
                    float* max_mask, float* loss, size_t size, bool fixed_min)
 {
