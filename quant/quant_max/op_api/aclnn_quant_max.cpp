@@ -60,7 +60,7 @@ static bool IsShapeEquals(const aclTensor* tensor1, const aclTensor* tensor2)
 {
     auto shape1 = tensor1->GetViewShape();
     auto shape2 = tensor2->GetViewShape();
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape %ld, y shape %ld", shape1.GetShapeSize(), shape2.GetShapeSize());
+    OP_LOGD("QuantMax", "x shape %ld, y shape %ld", shape1.GetShapeSize(), shape2.GetShapeSize());
     if (shape1.GetDimNum() != shape2.GetDimNum()) {
         return false;
     }

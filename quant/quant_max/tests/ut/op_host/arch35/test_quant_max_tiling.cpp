@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
- * Please refer to the License for details. You may not use the License.
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
@@ -30,9 +30,9 @@ using namespace ge;
 
 class QuantMaxTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "QuantMaxTilingTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "QuantMaxTilingTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 // Test that QuantMax OpImpl is registered correctly
@@ -51,8 +51,6 @@ TEST_F(QuantMaxTilingTest, quant_max_op_impl_registered)
     // Check if tiling_parse function is registered
     auto tiling_parse_func = op_impl->tiling_parse;
     ASSERT_NE(tiling_parse_func, nullptr);
-
-    std::cout << "QuantMax OpImpl registered successfully" << std::endl;
 }
 
 // DISABLED: These tests require real hardware platform info (coreNum, ubSize)
@@ -160,8 +158,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_fp32_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for FP32 input" << std::endl;
 }
 
 // DISABLED: Requires real hardware platform info
@@ -225,8 +221,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_fp16_hifloat8_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for FP16 to HIFLOAT8" << std::endl;
 }
 
 // DISABLED: Requires real hardware platform info
@@ -290,8 +284,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_bf16_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for BF16 input" << std::endl;
 }
 
 // DISABLED: Requires real hardware platform info
@@ -355,8 +347,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_fp8_e4m3fn_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for FLOAT8_E4M3FN output" << std::endl;
 }
 
 // DISABLED: Requires real hardware platform info
@@ -420,8 +410,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_hifloat8_hybrid_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for HIFLOAT8 with Hybrid mode" << std::endl;
 }
 
 // DISABLED: Requires real hardware platform info
@@ -485,8 +473,6 @@ TEST_F(QuantMaxTilingTest, DISABLED_quant_max_tiling_large_shape_success)
 
     // Actually call tiling function and verify result
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-
-    std::cout << "QuantMax tiling executed successfully for large shape" << std::endl;
 }
 
 // Test CheckDtype failure: x dtype not in FLOAT/FLOAT16/BF16
@@ -541,8 +527,6 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_invalid_x_dtype)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check dtype failure for INT32 input" << std::endl;
 }
 
 // Test CheckShape failure: x dim > 8
@@ -598,8 +582,6 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_x_dim_exceed_max)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check shape failure for 9-dim input" << std::endl;
 }
 
 // Test CheckShape failure: scale dim != 1
@@ -654,8 +636,6 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_invalid_scale_dim)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check shape failure for invalid scale dim" << std::endl;
 }
 
 // Test CheckShape failure: amax dim != 1
@@ -710,8 +690,6 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_invalid_amax_dim)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check shape failure for invalid amax dim" << std::endl;
 }
 
 // Test CheckAttrs failure: dstType not in 34/35/36
@@ -768,8 +746,6 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_invalid_dst_type)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check attrs failure for invalid dstType" << std::endl;
 }
 
 // Test CheckAttrs failure: roundMode mismatch with dstType
@@ -825,6 +801,4 @@ TEST_F(QuantMaxTilingTest, quant_max_tiling_roundmode_mismatch)
     ASSERT_NE(tiling_func, nullptr);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-
-    std::cout << "QuantMax tiling check attrs failure for roundMode mismatch" << std::endl;
 }

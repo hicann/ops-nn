@@ -85,7 +85,7 @@ ge::graphStatus ReverseSequenceBSTiling::InitializationVars()
 {
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / inputData_.xDtypeSize;
     OP_CHECK_IF((ubSize_ <= DCACHE_SIZE),
-                OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
+                OP_LOGE(context_->GetNodeName(), "ub size:%lu is less than Dcache size:128k", ubSize_),
                 return ge::GRAPH_FAILED);
     ubSize_ = ubSize_ - DCACHE_SIZE;
     availableUb_ = static_cast<int64_t>(ubSize_) / inputData_.xDtypeSize;
@@ -129,7 +129,7 @@ void ReverseSequenceBSTiling::CalcSplitDimB()
     ubFactorB_ = inDimBLower;
     ubFactorS_ = inputData_.inputDim[dimS_];
     if (ubFactorB_ <= 0) {
-        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorB_ is %ld.", ubFactorB_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorB_ must be greater than 0, but got %ld.", ubFactorB_);
         return;
     }
 
@@ -143,7 +143,7 @@ void ReverseSequenceBSTiling::CalcSplitDimS()
 {
     ubFactorS_ = std::min(inputData_.inputDim[dimS_], (availableUb_ / DIGIT_FOUR));
     if (ubFactorS_ <= 0) {
-        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorS_ is %ld.", ubFactorS_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorS_ must be greater than 0, but got %ld.", ubFactorS_);
         return;
     }
 
@@ -220,7 +220,7 @@ void ReverseSequenceBSTiling::DoUBTiling()
 ge::graphStatus ReverseSequenceBSTiling::DoOpTiling()
 {
     OP_CHECK_IF(InitializationVars() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize_),
+                OP_LOGE(context_->GetNodeName(), "ub size:%lu is less than Dcache size:128k", ubSize_),
                 return ge::GRAPH_FAILED);
     DoUBTiling();
     DoBlockTiling();

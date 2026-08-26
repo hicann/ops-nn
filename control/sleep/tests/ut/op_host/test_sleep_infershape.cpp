@@ -16,8 +16,8 @@ using namespace ge;
 
 class SleepInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "SleepInferShapeTest SetUp" << std::endl; }
-    static void TearDownTestCase() { std::cout << "SleepInferShapeTest TearDown" << std::endl; }
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
 TEST_F(SleepInferShapeTest, InferShape_success)

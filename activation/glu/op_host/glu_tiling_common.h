@@ -138,7 +138,7 @@ inline ge::graphStatus CheckInputParams(gert::TilingContext* context)
     int32_t typeSize = ge::GetSizeByDataType(dtype);
 
     OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_FLOAT,
-                OP_LOGE(context, "input dtype only support fp16, fp32, bf16 currently, please check."),
+                OP_LOGE(context, "input dtype only supports fp16, fp32, bf16 currently, please check."),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((typeSize <= 0), OP_LOGE(context, "typeSize is invalid %d, please check.", typeSize),
@@ -227,7 +227,7 @@ inline ge::graphStatus RunCommonTiling(gert::TilingContext* context, int64_t com
     tilingData.set_ny(tilingParam.ny);
 
     OP_CHECK_IF(SetTilingDataForGlu(context, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GluSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GluSetTilingData failed to set tiling data."), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());

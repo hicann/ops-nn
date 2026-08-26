@@ -60,7 +60,7 @@ ge::graphStatus ReverseSequenceSimtTiling::DoReverseSequenceSimtTiling()
 
     int64_t oneBlockNum = Ops::Base::GetUbBlockSize(context_) / inputData.xDtypeSize;
     OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-                OP_LOGE(context_->GetNodeName(), "ub size:%lu less than Dcache Size:128k", ubSize),
+                OP_LOGE(context_->GetNodeName(), "ub size:%lu is less than Dcache size:128k", ubSize),
                 return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
     ubSize = ubSize - RESERVE_BUF_SIZE;

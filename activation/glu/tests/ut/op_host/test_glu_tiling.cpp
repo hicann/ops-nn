@@ -28,9 +28,9 @@ using namespace ge;
 
 class GluTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "GluTiling SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "GluTiling TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 TEST_F(GluTiling, glu_tiling_bigshape)

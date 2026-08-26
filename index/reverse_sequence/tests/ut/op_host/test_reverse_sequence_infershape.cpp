@@ -22,9 +22,9 @@
 
 class ReverseSequenceInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "ReverseSequenceInfershapeTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "ReverseSequenceInfershapeTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 TEST_F(ReverseSequenceInfershapeTest, reverse_sequence_infershape_float16_2d)

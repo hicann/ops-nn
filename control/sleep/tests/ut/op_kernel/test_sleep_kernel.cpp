@@ -35,8 +35,8 @@ using namespace std;
 
 class sleep_kernel_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { cout << "sleep_kernel_test SetUp" << endl; }
-    static void TearDownTestCase() { cout << "sleep_kernel_test TearDown" << endl; }
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
 // 正常 cycles：kernel 应正常执行（CPU stub 下 SIMT 路径不编译，仅验证不崩溃）

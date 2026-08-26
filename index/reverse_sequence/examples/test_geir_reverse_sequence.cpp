@@ -54,7 +54,7 @@ using std::vector;
     ret = GenOnesDataInt64(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex,                       \
                            placeholder##inputIndex##_desc, val);                                                  \
     if (ret != SUCCESS) {                                                                                         \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                            \
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Generate input data failed\n", GetTime().c_str());      \
         return FAILED;                                                                                            \
     }                                                                                                             \
     placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                  \
@@ -74,7 +74,7 @@ using std::vector;
     ret = GenOnesDataDouble(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex,                      \
                             placeholder##inputIndex##_desc, val);                                                 \
     if (ret != SUCCESS) {                                                                                         \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                            \
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Generate input data failed\n", GetTime().c_str());      \
         return FAILED;                                                                                            \
     }                                                                                                             \
     placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                  \
@@ -179,7 +179,8 @@ bool InitEnv()
     std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
     if (ret != SUCCESS) {
-        LOG_PRINT("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Initialize ge using ge global options failed\n",
+                  GetTime().c_str());
         return false;
     }
     return true;
@@ -192,7 +193,8 @@ bool CreateAndConfigGraph(Graph& graph, std::vector<ge::Tensor>& input)
 
     Status ret = CreateOppInGraph(DT_DOUBLE, DT_INT64, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
-        LOG_PRINT("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Create ir session using build options failed\n",
+                  GetTime().c_str());
         return false;
     }
 
@@ -210,11 +212,11 @@ bool AddGraphToSession(ge::Session* session, Graph& graph, uint32_t graph_id)
     if (ret != SUCCESS) {
         ge::AscendString error_msg = ge::GEGetErrorMsgV2();
         std::string error_str(error_msg.GetString());
-        std::cout << "Error message: " << error_str << std::endl;
+        LOG_PRINT("Error message: %s\n", error_str.c_str());
         ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
         std::string warning_str(warning_msg.GetString());
-        std::cout << "Warning message: " << warning_str << std::endl;
-        LOG_PRINT("%s - INFO - [XIR]: Add graph failed\n", GetTime().c_str());
+        LOG_PRINT("Warning message: %s\n", warning_str.c_str());
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Add graph failed\n", GetTime().c_str());
         delete session;
         ge::GEFinalize();
         return false;
@@ -230,7 +232,7 @@ bool DumpAndRunGraph(ge::Session* session, Graph& graph, std::vector<ge::Tensor>
 
     Status ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
-        LOG_PRINT("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Run graph failed\n", GetTime().c_str());
         delete session;
         ge::GEFinalize();
         return false;
@@ -243,17 +245,17 @@ void ProcessOutputData(std::vector<ge::Tensor>& output)
     int output_num = output.size();
     double epsilon = 1e-9;
     for (int i = 0; i < output_num; i++) {
-        std::cout << "output " << i << " dtype :  " << output[i].GetTensorDesc().GetDataType() << std::endl;
+        LOG_PRINT("output %d dtype: %d\n", i, static_cast<int>(output[i].GetTensorDesc().GetDataType()));
         double* output_data_i = (double*)output[i].GetData();
         int64_t output_size = output[i].GetTensorDesc().GetShape().GetShapeSize();
         double expect_out[9] = {1.0, 5.0, 9.0, 4.0, 2.0, 6.0, 7.0, 8.0, 3.0};
         for (int64_t j = 0; j < output_size; j++) {
             if (std::abs(expect_out[j] - output_data_i[j]) > epsilon) {
-                LOG_PRINT("ERROR - [XIR]: Precision is fail, please check. \n");
+                LOG_PRINT("ERROR - [REVERSE_SEQUENCE_GE_IR]: Precision check failed, please check. \n");
                 return;
             }
         }
-        LOG_PRINT("INFO - [XIR]: Precison is ok. \n");
+        LOG_PRINT("INFO - [REVERSE_SEQUENCE_GE_IR]: Precision is ok. \n");
     }
 }
 
@@ -261,7 +263,7 @@ int FinalizeRes()
 {
     Status ret = ge::GEFinalize();
     if (ret != SUCCESS) {
-        LOG_PRINT("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
+        LOG_PRINT("%s - ERROR - [REVERSE_SEQUENCE_GE_IR]: Finalize ir graph session failed\n", GetTime().c_str());
         return FAILED;
     }
 

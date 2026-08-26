@@ -23,9 +23,9 @@
 
 class GLU : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "GLU Proto Test SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "GLU Proto Test TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 TEST_F(GLU, GLU_infershape_diff_test_legal_input)

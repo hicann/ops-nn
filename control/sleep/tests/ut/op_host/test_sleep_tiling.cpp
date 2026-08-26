@@ -29,8 +29,8 @@ using namespace ge;
 
 class SleepTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "SleepTilingTest SetUp" << std::endl; }
-    static void TearDownTestCase() { std::cout << "SleepTilingTest TearDown" << std::endl; }
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
 template <typename T>

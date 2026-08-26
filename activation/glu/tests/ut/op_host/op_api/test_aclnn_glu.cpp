@@ -20,9 +20,9 @@ using namespace std;
 
 class l2_glu_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "glu_tensor_test SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "glu_tensor_test TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 // 正常场景 float dim正数

@@ -133,7 +133,7 @@ void ReverseSequenceSBACommonTiling::CalcSplitDimA()
     ubFactorA_ = inDimA;
 
     if (ubFactorA_ <= 0) {
-        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorA_ is %ld.", ubFactorA_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorA_ must be greater than 0, but got %ld.", ubFactorA_);
         return;
     }
     ubFactorB_ = 1;

@@ -33,9 +33,9 @@ using namespace ge;
 
 class ConcatOffsetTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "ConcatOffsetTiling SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "ConcatOffsetTiling TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 };
 
 template <typename T>
@@ -173,9 +173,5 @@ TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1)
 
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    auto block_dim = tiling_context->GetBlockDim();
-    auto raw_tiling_data = tiling_context->GetRawTilingData();
-    auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     EXPECT_EQ(tiling_key, 1000);
-    std::cout << tiling_data_result << std::endl;
 }
