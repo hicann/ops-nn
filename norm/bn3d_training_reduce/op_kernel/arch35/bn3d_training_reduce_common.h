@@ -52,8 +52,7 @@ constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
 // 载入一整段（VL 宽）输入并统一提升为 fp32 寄存器。
 // fp32 直载；fp16 / bf16 走同一条 B16 解包 + Cast 路径（两者只是位解释不同，指令序列一致）。
 template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
-                                             uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
@@ -65,7 +64,7 @@ __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<
 }
 
 // 把 fp32 寄存器的首元素（水平归约结果）写回 UB 的第 offset 个 fp32 槽位。
-__aicore__ inline void StoreOneFp32(__local_mem__ float* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneFp32(__ubuf__ float* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
 {
     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + offset, src, preg);
 }
