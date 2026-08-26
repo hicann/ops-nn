@@ -129,6 +129,56 @@ function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     )
 endfunction()
 
+function(add_framework_ut_modules OP_FRAMEWORK_MODULE_NAME)
+    # 与 tiling/infershape UT 模块逻辑类似：ONNX 插件（framework）解析逻辑属 host 侧，
+    # 用例按算子拆分存放于各算子 tests/ut/framework 目录下，统一汇入 op_host UT 可执行文件。
+    set(UT_COMMON_INC ${PROJECT_SOURCE_DIR}/tests/ut/common)
+    add_opbase_ut_common()
+    # add framework (onnx plugin) ut test cases obj
+    add_library(${OP_FRAMEWORK_MODULE_NAME}_cases_obj OBJECT)
+    add_dependencies(${OP_FRAMEWORK_MODULE_NAME}_cases_obj json)
+    target_include_directories(${OP_FRAMEWORK_MODULE_NAME}_cases_obj PRIVATE
+        ${UT_COMMON_INC}
+        ${ONNX_PLUGIN_INCLUDE}
+        ${JSON_INCLUDE}
+        ${GTEST_INCLUDE}
+        ${OPBASE_INC_DIRS}
+        ${PROJECT_SOURCE_DIR}/common/inc
+        ${ASCEND_DIR}/include
+        ${ASCEND_DIR}/pkg_inc
+        ${ASCEND_DIR}/include/external
+        ${ASCEND_DIR}/include/exe_graph
+        ${ASCEND_DIR}/include/base/context_builder
+    )
+    target_link_libraries(${OP_FRAMEWORK_MODULE_NAME}_cases_obj PRIVATE
+        $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        $<BUILD_INTERFACE:dlog_headers>
+        metadef
+        graph
+        gtest
+    )
+
+    target_compile_options(${OP_FRAMEWORK_MODULE_NAME}_cases_obj PRIVATE
+        ${UT_DEBUG_FLAG}
+        -fno-access-control
+        -Dgoogle=ascend_private
+    )
+
+    target_compile_definitions(${OP_FRAMEWORK_MODULE_NAME}_cases_obj PRIVATE
+        _GLIBCXX_USE_CXX11_ABI=0
+        LOG_CPP
+    )
+
+    # add framework ut static lib
+    add_library(${OP_FRAMEWORK_MODULE_NAME}_static_lib STATIC
+        $<TARGET_OBJECTS:${OP_FRAMEWORK_MODULE_NAME}_cases_obj>
+    )
+    target_link_libraries(${OP_FRAMEWORK_MODULE_NAME}_static_lib PRIVATE
+        ${OP_FRAMEWORK_MODULE_NAME}_cases_obj
+        opbase_ut_common
+    )
+endfunction()
+
 function(add_opapi_ut_modules OP_API_MODULE_NAME)
     ## add opapi ut L2 obj
     add_library(${OP_API_MODULE_NAME}_cases_obj OBJECT)
@@ -386,6 +436,16 @@ function(add_modules_ut_sources)
         endif()
         target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_OPGRAPH_SRCS})
         message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_OPGRAPH_SRCS}")
+    endif()
+
+    string(FIND "${MODULE_HOSTNAME}_cases_obj" "framework" FRAMEWORK_FOUND_INDEX)
+    if(${FRAMEWORK_FOUND_INDEX} GREATER_EQUAL 0)
+        file(GLOB OPHOST_FRAMEWORK_SRCS ${MODULE_DIR}/test_*_onnx_plugin.cpp)
+        if (NOT TARGET ${MODULE_HOSTNAME}_cases_obj)
+            add_framework_ut_modules(${OP_FRAMEWORK_MODULE_NAME})
+        endif()
+        target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_FRAMEWORK_SRCS})
+        message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_FRAMEWORK_SRCS}")
     endif()
 endfunction()
 

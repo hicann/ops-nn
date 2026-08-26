@@ -156,6 +156,9 @@ if(ENABLE_TEST)
     set(OP_TILING_MODULE_NAME ${PKG_NAME}_op_tiling_ut)
 
     set(OP_INFERSHAPE_MODULE_NAME ${PKG_NAME}_op_infershape_ut)
+
+    # onnx 插件（framework）解析逻辑属 host 侧，随 op_host ut 一起构建
+    set(OP_FRAMEWORK_MODULE_NAME ${PKG_NAME}_op_framework_ut)
   endif()
 
   # op api ut

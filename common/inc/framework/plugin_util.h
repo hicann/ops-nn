@@ -16,10 +16,29 @@
 #ifndef FRAMEWORK_PLUGIN_UTIL_H
 #define FRAMEWORK_PLUGIN_UTIL_H
 
+#include <cerrno>
+#include <cstdlib>
+#include <string>
+
 #include "log/log.h"
 #include "graph/ascend_string.h"
 
 namespace domi {
+
+inline bool StrToFloat(const std::string& str, float& value)
+{
+    if (str.empty()) {
+        return false;
+    }
+    errno = 0;
+    char* end_ptr = nullptr;
+    const float parsed = std::strtof(str.c_str(), &end_ptr);
+    if (end_ptr == str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
+        return false;
+    }
+    value = parsed;
+    return true;
+}
 
 template <typename T>
 inline std::string GetOpName(const T& op)

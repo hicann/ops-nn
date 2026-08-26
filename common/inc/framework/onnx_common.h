@@ -28,35 +28,10 @@
 #include "graph/graph.h"
 #include "base/err_msg.h"
 #include "log/log.h"
+#include "plugin_util.h"
 #include "onnx/proto/ge_onnx.pb.h"
 
 namespace domi {
-inline bool StrToFloat(const std::string& str, float& value)
-{
-    if (str.empty()) {
-        return false;
-    }
-    errno = 0;
-    char* end_ptr = nullptr;
-    const float parsed = std::strtof(str.c_str(), &end_ptr);
-    if (end_ptr == str.c_str() || *end_ptr != '\0' || errno == ERANGE) {
-        return false;
-    }
-    value = parsed;
-    return true;
-}
-
-template <typename T>
-inline std::string GetOpName(const T& op)
-{
-    ge::AscendString op_ascend_name;
-    ge::graphStatus ret = op.GetName(op_ascend_name);
-    if (ret != ge::GRAPH_SUCCESS) {
-        std::string op_name = "None";
-        return op_name;
-    }
-    return op_ascend_name.GetString();
-}
 
 template <typename T>
 inline ge::Tensor Vec2Tensor(vector<T>& vals, const vector<int64_t>& dims, ge::DataType dtype,

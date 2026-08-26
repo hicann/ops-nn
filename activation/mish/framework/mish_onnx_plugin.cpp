@@ -8,20 +8,12 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsMish(const Message* op_src, ge::Operator& op_dest)
-{
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
-
-    return SUCCESS;
-}
+static Status ParseParamsMish(const ge::Operator&, ge::Operator&) { return SUCCESS; }
 // register Mish op info to GE
 REGISTER_CUSTOM_OP("Mish")
     .FrameworkType(ONNX)
@@ -30,6 +22,6 @@ REGISTER_CUSTOM_OP("Mish")
                    ge::AscendString("ai.onnx::13::NPUMish"), ge::AscendString("ai.onnx::14::NPUMish"),
                    ge::AscendString("ai.onnx::15::NPUMish"), ge::AscendString("ai.onnx::16::NPUMish"),
                    ge::AscendString("ai.onnx::17::NPUMish"), ge::AscendString("ai.onnx::18::NPUMish")})
-    .ParseParamsFn(ParseParamsMish)
+    .ParseParamsByOperatorFn(ParseParamsMish)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

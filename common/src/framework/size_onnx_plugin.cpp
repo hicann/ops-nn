@@ -8,17 +8,13 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsSize(const Message* op_src, ge::Operator& op_dest)
+static Status ParseParamsSize(const ge::Operator&, ge::Operator& op_dest)
 {
-    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
     // set output's default type to int64.
     ge::DataType output_type = ge::DT_INT64;
     op_dest.SetAttr("dtype", output_type);
@@ -33,6 +29,6 @@ REGISTER_CUSTOM_OP("Size")
                    ge::AscendString("ai.onnx::14::Size"), ge::AscendString("ai.onnx::15::Size"),
                    ge::AscendString("ai.onnx::16::Size"), ge::AscendString("ai.onnx::17::Size"),
                    ge::AscendString("ai.onnx::18::Size")})
-    .ParseParamsFn(ParseParamsSize)
+    .ParseParamsByOperatorFn(ParseParamsSize)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

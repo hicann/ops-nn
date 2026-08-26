@@ -1329,6 +1329,10 @@ macro(add_all_ut_sources)
       add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/op_host)
       add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/op_host)
     endif()
+    # onnx 插件（framework）解析逻辑属 host 侧，目录结构与 tiling/infershape 逻辑类似
+    if(DEFINED OP_FRAMEWORK_MODULE_NAME AND EXISTS "${_UT_ROOT}/framework")
+      add_modules_ut_sources(HOSTNAME ${OP_FRAMEWORK_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/framework)
+    endif()
   endif()
 
   if(UT_TEST_ALL OR OP_GRAPH_UT)

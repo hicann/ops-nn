@@ -8,25 +8,40 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsElu(const Message* op_src, ge::Operator& op_dest)
+using json = nlohmann::json;
+static Status ParseParamsElu(const ge::Operator& op_src, ge::Operator& op_dest)
 {
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
     float alpha_value = 1.0;
-    op_dest.SetAttr("alpha", alpha_value);
-    for (const auto& attr : node->attribute()) {
-        if (attr.name() == "alpha" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-            alpha_value = attr.f();
-            op_dest.SetAttr("alpha", alpha_value);
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    if (attr.value("name", "") == "alpha" && attr.contains("f")) {
+                        std::string alpha_str = attr["f"];
+                        if (!StrToFloat(alpha_str, alpha_value)) {
+                            OP_LOGE(GetOpName(op_dest).c_str(), "invalid alpha value: %s", alpha_str.c_str());
+                            return FAILED;
+                        }
+                    }
+                }
+            }
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(op_dest).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(op_dest).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
+    op_dest.SetAttr("alpha", alpha_value);
     return SUCCESS;
 }
 // register Elu op info to GE
@@ -38,6 +53,6 @@ REGISTER_CUSTOM_OP("Elu")
                    ge::AscendString("ai.onnx::14::Elu"), ge::AscendString("ai.onnx::15::Elu"),
                    ge::AscendString("ai.onnx::16::Elu"), ge::AscendString("ai.onnx::17::Elu"),
                    ge::AscendString("ai.onnx::18::Elu")})
-    .ParseParamsFn(ParseParamsElu)
+    .ParseParamsByOperatorFn(ParseParamsElu)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

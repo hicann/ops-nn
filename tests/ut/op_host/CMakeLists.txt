@@ -18,6 +18,13 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
         endif()
     endforeach()
 
+    if(EXISTS ${OPS_NN_DIR}/common/tests/ut/framework/CMakeLists.txt)
+        if(NOT ASCEND_OP_NAME)
+            add_subdirectory(${OPS_NN_DIR}/common/tests/ut/framework
+                            ${CMAKE_CURRENT_BINARY_DIR}/common_op_framework)
+        endif()
+    endif()
+
     ## add ophost_nn_ut so
     if(TARGET ${OPHOST_NAME}_infer_obj)
         message(STATUS "Found infershape file.")
@@ -72,6 +79,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
         -Wl,--whole-archive
         $<$<TARGET_EXISTS:${OP_TILING_MODULE_NAME}_static_lib>:${OP_TILING_MODULE_NAME}_static_lib>
         $<$<TARGET_EXISTS:${OP_INFERSHAPE_MODULE_NAME}_static_lib>:${OP_INFERSHAPE_MODULE_NAME}_static_lib>
+        $<$<TARGET_EXISTS:${OP_FRAMEWORK_MODULE_NAME}_static_lib>:${OP_FRAMEWORK_MODULE_NAME}_static_lib>
         -Wl,--no-whole-archive
         -Wl,--no-as-needed
         metadef

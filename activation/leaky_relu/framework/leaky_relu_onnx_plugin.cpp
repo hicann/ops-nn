@@ -8,22 +8,37 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsLeakyRelu(const Message* op_src, ge::Operator& op_dst)
+using json = nlohmann::json;
+static Status ParseParamsLeakyRelu(const ge::Operator& op_src, ge::Operator& op_dst)
 {
-    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dst).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
-
     float negative_slope = 0.01f;
-    for (auto attr : node->attribute()) {
-        if (attr.name() == "alpha" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-            negative_slope = attr.f();
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    if (attr.value("name", "") == "alpha" && attr.contains("f")) {
+                        std::string alpha_str = attr["f"];
+                        if (!StrToFloat(alpha_str, negative_slope)) {
+                            OP_LOGE(GetOpName(op_dst).c_str(), "invalid alpha value: %s", alpha_str.c_str());
+                            return FAILED;
+                        }
+                    }
+                }
+            }
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(op_dst).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(op_dst).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
     op_dst.SetAttr("negative_slope", negative_slope);
@@ -38,6 +53,6 @@ REGISTER_CUSTOM_OP("LeakyRelu")
                    ge::AscendString("ai.onnx::14::LeakyRelu"), ge::AscendString("ai.onnx::15::LeakyRelu"),
                    ge::AscendString("ai.onnx::16::LeakyRelu"), ge::AscendString("ai.onnx::17::LeakyRelu"),
                    ge::AscendString("ai.onnx::18::LeakyRelu")})
-    .ParseParamsFn(ParseParamsLeakyRelu)
+    .ParseParamsByOperatorFn(ParseParamsLeakyRelu)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

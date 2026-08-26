@@ -8,20 +8,33 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
-static Status parse_params_hard_max(const Message* op_src, ge::Operator& op_dest)
+using json = nlohmann::json;
+static Status parse_params_hard_max(const ge::Operator& op_src, ge::Operator& op_dest)
 {
-    const ge::onnx::NodeProto* node = reinterpret_cast<const ge::onnx::NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
     int axis = -1;
-    for (auto attr : node->attribute()) {
-        if (attr.name() == "axis") {
-            axis = attr.i();
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    if (attr.value("name", "") == "axis" && attr.contains("i")) {
+                        axis = attr["i"].get<int>();
+                    }
+                }
+            }
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(op_dest).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(op_dest).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
     op_dest.SetAttr("axis", axis);
@@ -36,6 +49,6 @@ REGISTER_CUSTOM_OP("HardMax")
                    ge::AscendString("ai.onnx::14::Hardmax"), ge::AscendString("ai.onnx::15::Hardmax"),
                    ge::AscendString("ai.onnx::16::Hardmax"), ge::AscendString("ai.onnx::17::Hardmax"),
                    ge::AscendString("ai.onnx::18::Hardmax")})
-    .ParseParamsFn(parse_params_hard_max)
+    .ParseParamsByOperatorFn(parse_params_hard_max)
     .ImplyType(ImplyType::TVM);
 } // namespace domi
