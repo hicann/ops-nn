@@ -47,7 +47,6 @@ bool PreluTiling::IsCapable() { return true; }
 
 ge::graphStatus PreluTiling::DoOpTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "PreluTiling RunTiling enter.");
     auto xInputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     ge::DataType xInputDtype = xInputDesc->GetDataType();
@@ -81,26 +80,26 @@ ge::graphStatus PreluTiling::DoOpTiling()
     if (xInputDtype == ge::DT_FLOAT16) {
         BroadcastBaseTiling<PreluDAG<half>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(), "BroadcastBaseTiling<PreluDAG<half>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(), "BroadcastBaseTiling failed, x dtype: %s.",
+                                                ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (xInputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<PreluDAG<bfloat16_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(),
-                                                "BroadcastBaseTiling<PreluDAG<bfloat16_t>::OpDag> failed"),
+                    OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(), "BroadcastBaseTiling failed, x dtype: %s.",
+                                                ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
                     return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (xInputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<PreluDAG<float>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(), "BroadcastBaseTiling<PreluDAG<float>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OPS_REPORT_VECTOR_INNER_ERR(context_->GetNodeName(), "BroadcastBaseTiling failed, x dtype: %s.",
+                                                ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xInputDtype),
@@ -136,16 +135,13 @@ ge::graphStatus Tiling4PRelu(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepare4PRelu(gert::TilingParseContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "begin to do TilingPrepare4PRelu.");
     auto compileInfoPtr = context->GetCompiledInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    OP_LOGD("BroadCastTiling", "Current is regbase soc version.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
-    OP_LOGD(context->GetNodeName(), "end to do TilingPrepare4PRelu.");
     return ge::GRAPH_SUCCESS;
 }
 

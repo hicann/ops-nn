@@ -79,7 +79,10 @@ ge::graphStatus ReluTiling::RunTiling()
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "DoTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "DoTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
@@ -112,8 +115,6 @@ static ge::graphStatus Tiling4Relu(gert::TilingContext* context)
 
     auto compileInfo = context->GetCompileInfo<ReluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    // 走新的模板tiling
-    OP_LOGD("ReluTiling", "Enter new ReluTiling");
     ReluTiling tiling(context);
     return tiling.RunTiling();
 }

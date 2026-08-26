@@ -47,7 +47,6 @@ static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 
 ge::graphStatus LeakyReluTiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
@@ -63,7 +62,6 @@ ge::graphStatus LeakyReluTiling::CalcInputDtype()
 
 ge::graphStatus LeakyReluTiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
@@ -83,7 +81,6 @@ ge::graphStatus LeakyReluTiling::CheckShape()
 
 ge::graphStatus LeakyReluTiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -99,7 +96,6 @@ ge::graphStatus LeakyReluTiling::CalcOutputDtype()
 
 ge::graphStatus LeakyReluTiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling RunTiling enter.");
     ElewiseBaseTiling eleBaseTiling(tilingContext);
 
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
@@ -130,7 +126,9 @@ ge::graphStatus LeakyReluTiling::RunTiling()
                                   "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
                 return ge::GRAPH_FAILED);
 
     eleBaseTiling.SetScalar<float>(negativeSlope);
@@ -156,7 +154,6 @@ static ge::graphStatus TilingForLeakyRelu(gert::TilingContext* context)
 
     auto compileInfo = context->GetCompileInfo<LeakrReluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    OP_LOGD("LeakyReluTiling", "Enter new LeakyReluTiling");
     LeakyReluTiling tiling(context);
     return tiling.RunTiling();
 }

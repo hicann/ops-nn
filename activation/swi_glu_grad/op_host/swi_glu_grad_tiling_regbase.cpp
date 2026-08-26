@@ -103,7 +103,6 @@ bool GluBaseTiling4RegBase::CheckShapeValid(const gert::Shape& gradYShape, const
 // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
 ge::graphStatus GluBaseTiling4RegBase::GetPlatformInfo()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase GetPlatformInfo.");
     auto platformInfo = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     blockDim_ = platformInfo.GetCoreNumAiv();
 
@@ -120,7 +119,6 @@ ge::graphStatus GluBaseTiling4RegBase::GetPlatformInfo()
 // 2、获取INPUT/OUTPUT/ATTR信息
 ge::graphStatus GluBaseTiling4RegBase::GetShapeAttrsInfo()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase GetShapeAttrsInfo.");
     auto inputGrad = context_->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
 
@@ -151,7 +149,6 @@ bool GluBaseTiling4RegBase::IsCapable() { return true; }
 // 3、计算数据切分TilingData
 ge::graphStatus GluBaseTiling4RegBase::DoOpTiling()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase DoOpTiling.");
     dataSize_ = ge::GetSizeByDataType(this->dataType_);
     if (dataSize_ <= static_cast<uint64_t>(0)) {
         return ge::GRAPH_FAILED;
@@ -175,7 +172,6 @@ ge::graphStatus GluBaseTiling4RegBase::DoLibApiTiling() { return ge::GRAPH_SUCCE
 // 5、计算TilingKey
 uint64_t GluBaseTiling4RegBase::GetTilingKey() const
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase GetTilingKey.");
     enum class DtypeEnum : uint8_t { FLOAT16 = 0, FLOAT32 = 1, BFLOAT16 = 2 };
 
     DtypeEnum inDtype = DtypeEnum::FLOAT16;
@@ -202,7 +198,6 @@ ge::graphStatus GluBaseTiling4RegBase::GetWorkspaceSize() { return ge::GRAPH_SUC
 // 7、保存Tiling数据
 ge::graphStatus GluBaseTiling4RegBase::PostTiling()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase PostTiling.");
     SetTilingData();
     context_->SetBlockDim(static_cast<uint32_t>(usedCoreNum_));
 
@@ -214,7 +209,6 @@ ge::graphStatus GluBaseTiling4RegBase::PostTiling()
 
 void GluBaseTiling4RegBase::AutoTiling()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase AutoTiling Enter.");
     int64_t base = static_cast<int64_t>(static_cast<uint64_t>(BASE_BLOCK_COPY_ALIGN) / dataSize_);
     int64_t colNumAlign = (colTotalNum_ + base - 1) / base;
     /*
@@ -315,7 +309,6 @@ uint64_t GluBaseTiling4RegBase::ComputeTiling(const std::vector<uint32_t>& args)
 
 void GluBaseTiling4RegBase::SetTilingData()
 {
-    OP_LOGD(opName_, "GluBaseTiling4RegBase SetTilingData.");
     GluBaseTilingData* tilingData = context_->GetTilingData<GluBaseTilingData>();
     tilingData->rowTotal = rowTotalNum_;
     tilingData->colTotal = colTotalNum_;

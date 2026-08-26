@@ -31,8 +31,6 @@ const size_t ASCEND_WORKSPACE = 16777216; // 16M
 
 ge::graphStatus SwishGradTiling::SetTilingData() const
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishGradTiling SetTilingData enter.");
-
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = ASCEND_WORKSPACE;
@@ -129,7 +127,6 @@ ge::graphStatus SwishGradTiling::CalcOutputDtype()
 
 ge::graphStatus SwishGradTiling::SetAttr()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishGradTiling SetAttr enter.");
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const float* scaleValueAttr = attrs->GetAttrPointer<float>(0);
@@ -141,8 +138,6 @@ ge::graphStatus SwishGradTiling::SetAttr()
 
 ge::graphStatus SwishGradTiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishGradTiling RunTiling enter.");
-
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
                 return ge::GRAPH_FAILED);
@@ -173,7 +168,9 @@ ge::graphStatus SwishGradTiling::RunTiling()
                                               "The dtype of grad_x must be DT_FLOAT16, DT_BF16 or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
                 return ge::GRAPH_FAILED);
 
     return SetTilingData();

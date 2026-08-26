@@ -135,8 +135,8 @@ ge::graphStatus SigmoidTiling::DoOpTiling()
 
     ElewiseTilingData elewiseTilingData;
     auto status = ElewiseTiling(elewiseTilingParams, elewiseTilingData);
-    OP_CHECK_IF((status == ge::GRAPH_FAILED), OP_LOGE(context_->GetNodeName(), "elewise tiling failed"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((status == ge::GRAPH_FAILED),
+                OP_LOGE(context_->GetNodeName(), "elewise tiling failed, opKey: %lu.", opKey), return ge::GRAPH_FAILED);
 
     tilingKey_ = GenerateTilingKey(elewiseTilingData.innerKey);
     blockNum = elewiseTilingData.blockNum;

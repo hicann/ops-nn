@@ -42,7 +42,7 @@ const gert::Shape g_vec_1_shape = {1};
 
 class ReluV2Tiling {
 public:
-    explicit ReluV2Tiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ReluV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
     ReluV2TilingData* tiling = nullptr;
 
@@ -60,7 +60,6 @@ private:
 
 ge::graphStatus ReluV2Tiling::SetTilingData()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "Enter SetTilingData");
     auto rawTilingData = tilingContext->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
@@ -146,7 +145,6 @@ ge::graphStatus ReluV2Tiling::CalcOutputDtype()
 
 ge::graphStatus ReluV2Tiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "ReluV2Tiling RunTiling Enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get input dtype failed"),
                 return ge::GRAPH_FAILED);
@@ -187,7 +185,10 @@ ge::graphStatus ReluV2Tiling::RunTiling()
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "DoTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "DoTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+                return ge::GRAPH_FAILED);
     return SetTilingData();
 }
 
@@ -200,8 +201,6 @@ static ge::graphStatus Tiling4ReluV2(gert::TilingContext* context)
     }
     auto compileInfo = context->GetCompileInfo<ReluV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    // 走新的模板tiling
-    OP_LOGD("ReluV2Tiling", "Enter new ReluV2Tiling");
     ReluV2Tiling tiling(context);
     return tiling.RunTiling();
 }

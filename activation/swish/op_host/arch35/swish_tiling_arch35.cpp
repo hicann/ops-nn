@@ -41,7 +41,6 @@ static constexpr float ZERO = 0.0;
 
 ge::graphStatus SwishTiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
@@ -56,7 +55,6 @@ ge::graphStatus SwishTiling::CalcInputDtype()
 
 ge::graphStatus SwishTiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -77,7 +75,6 @@ ge::graphStatus SwishTiling::CalcOutputDtype()
 
 ge::graphStatus SwishTiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
@@ -97,7 +94,6 @@ ge::graphStatus SwishTiling::CheckShape()
 
 ge::graphStatus SwishTiling::SetAttr()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishTiling GetAttrs enter.");
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const float* scaleValueAttr = attrs->GetAttrPointer<float>(SwishDag::PLACEHOLDER_INDEX_0);
@@ -118,7 +114,6 @@ ge::graphStatus SwishTiling::SetAttr()
 
 ge::graphStatus SwishTiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "SwishTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
 
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
@@ -160,7 +155,9 @@ ge::graphStatus SwishTiling::RunTiling()
                                   "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
                 return ge::GRAPH_FAILED);
     elewiseBaseTiling.SetScalar<float>(attrScale);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);

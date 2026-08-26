@@ -74,7 +74,9 @@ ge::graphStatus ReluGradTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(status != ge::GRAPH_SUCCESS, OP_LOGE(context_, "BroadcastBaseTiling do tiling failed."),
+    OP_CHECK_IF(status != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling do tiling failed, input dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str()),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -98,7 +100,6 @@ static ge::graphStatus TilingForReluGrad(gert::TilingContext* context)
     }
     auto compileInfo = context->GetCompileInfo<BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    OP_LOGD("ReluGradTiling", "Enter new ReluGradTiling");
     ReluGradTiling tiling(context);
     return tiling.DoTiling();
 }
