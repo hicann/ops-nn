@@ -89,7 +89,6 @@ ge::graphStatus EluTiling::CalcOutputDtype()
 
 ge::graphStatus EluTiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
@@ -132,7 +131,10 @@ ge::graphStatus EluTiling::RunTiling()
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "DoTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext->GetNodeName(), "DoTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     auto runtimeAttrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, runtimeAttrs);
@@ -163,7 +165,6 @@ static ge::graphStatus TilingForElu(gert::TilingContext* context)
 
     auto compileInfo = context->GetCompileInfo<EluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    OP_LOGD("EluTiling", "Enter new EluTiling");
     EluTiling eluTiling(context);
     return eluTiling.RunTiling();
 }

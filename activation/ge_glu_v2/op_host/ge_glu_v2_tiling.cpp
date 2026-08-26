@@ -284,19 +284,15 @@ static ge::graphStatus CheckInputParams(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
 {
-    OP_LOGD(context, "TilingPrepare4GeGluV2 enter.");
-
     auto compileInfo = context->GetCompiledInfo<GeGluV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
     if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002) {
         compileInfo->totalCoreNum = compileInfo->totalCoreNum + ascendcPlatform.GetCoreNumVector();
     }
-    OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
 
     OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get core num."),
                 return ge::GRAPH_FAILED);
@@ -309,8 +305,6 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
 
     compileInfo->isAscend310P = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002;
     compileInfo->isRegbase = IsRegbaseSocVersion(context);
-    OP_LOGD(context, "TilingPrepare4GeGluV2 exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
-            compileInfo->ubSizePlatForm);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -432,7 +426,6 @@ static void GetTillingData(ge::DataType dtype, TilingParam& tilingParam, GeGluV2
 
 static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
 {
-    OP_LOGD(context, "Tiling4GeGluV2 enter.");
     context->SetScheduleMode(BATCH_MODE);
     OP_CHECK_IF(CheckInputParams(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InputParams not valid."),
                 return ge::GRAPH_FAILED);
@@ -468,7 +461,6 @@ static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
             tilingData.get_blockSize(), tilingData.get_activateLeft(), tilingData.get_ny(),
             tilingData.get_approximate());
 
-    OP_LOGD(context, "Tiling4GeGluV2 exit.");
     return ge::GRAPH_SUCCESS;
 }
 

@@ -76,7 +76,7 @@ static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF_950 = {
 
 class GeGluGradV2Tiling {
 public:
-    explicit GeGluGradV2Tiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit GeGluGradV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling4GeGluGradV2();
 
 private:
@@ -371,12 +371,10 @@ void GeGluGradV2Tiling::ProcessTilingCore()
 
 ge::graphStatus Tiling4GeGluGradV2(gert::TilingContext* context)
 {
-    OP_LOGD(NODE_NAME, "Tiling4GeGluGradV2 tiling begin.");
     context->SetScheduleMode(BATCH_MODE);
     GeGluGradV2Tiling tilingObject(context);
     OP_CHECK_IF(tilingObject.RunTiling4GeGluGradV2() != ge::GRAPH_SUCCESS,
-                OP_LOGE(NODE_NAME, "RunTiling4GeGluGradV2 failed."), return ge::GRAPH_FAILED);
-    OP_LOGD(NODE_NAME, "Tiling4GeGluGradV2 tiling end.");
+                OP_LOGE(context->GetNodeName(), "RunTiling4GeGluGradV2 failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

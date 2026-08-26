@@ -158,7 +158,9 @@ ge::graphStatus FastGeluGradTiling::RunTiling()
             "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(status == ge::GRAPH_FAILED, OP_CHECK_NULL_WITH_CONTEXT(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(status == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)).c_str()),
                 return ge::GRAPH_FAILED);
     const uint64_t tilingKey = GET_TPL_TILING_KEY(tiling->scheMode, dType);
     OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%ld.", tilingKey);

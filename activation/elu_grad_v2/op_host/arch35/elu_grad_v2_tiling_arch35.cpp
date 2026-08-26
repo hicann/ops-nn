@@ -53,7 +53,6 @@ inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 
 ge::graphStatus EluGradV2Tiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling CalcInputDtype enter.");
     auto gradsDesc = tilingContext->GetInputDesc(0);
     auto activationsDesc = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradsDesc);
@@ -78,7 +77,6 @@ ge::graphStatus EluGradV2Tiling::CalcInputDtype()
 
 ge::graphStatus EluGradV2Tiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -100,7 +98,6 @@ ge::graphStatus EluGradV2Tiling::CalcOutputDtype()
 
 ge::graphStatus EluGradV2Tiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling CheckShape enter.");
     auto gradsStorageShapeV2 = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradsStorageShapeV2);
     const gert::Shape& gradsShape = EnsureNotScalar(gradsStorageShapeV2->GetStorageShape());
@@ -125,7 +122,6 @@ ge::graphStatus EluGradV2Tiling::CheckShape()
 
 ge::graphStatus EluGradV2Tiling::SetTilingData(bool is_result)
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling SetTilingData enter.");
     if (this->outputDtype == ge::DT_FLOAT16 && is_result) {
         dType = static_cast<uint64_t>(EluGradV2_TPL_FP16);
     } else if (this->outputDtype == ge::DT_BF16 && is_result) {
@@ -149,7 +145,6 @@ ge::graphStatus EluGradV2Tiling::SetTilingData(bool is_result)
 
 ge::graphStatus EluGradV2Tiling::SetAttr()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling SetAttr enter.");
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const float* alphaValueAttr = attrs->GetAttrPointer<float>(ALPHA_ATTR_IDX);
@@ -177,7 +172,6 @@ ge::graphStatus EluGradV2Tiling::SetAttr()
 
 ge::graphStatus EluGradV2Tiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     ge::graphStatus status = ge::GRAPH_FAILED;
     tiling = tilingContext->GetTilingData<EluGradV2TilingData>();
@@ -211,7 +205,9 @@ ge::graphStatus EluGradV2Tiling::RunTiling()
                                               "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(status == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(status == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
                 return ge::GRAPH_FAILED);
     schMode = tiling->baseTiling.scheMode;
     const uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, dType);
@@ -232,7 +228,6 @@ static ge::graphStatus Tiling4EluGradV2(gert::TilingContext* tilingContextSelf)
     OP_LOGD(tilingContextSelf->GetNodeName(), "Tiling4EluGradV2 rt2.0 is running.");
     auto compileInfo = tilingContextSelf->GetCompileInfo<EluGradV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextSelf, compileInfo);
-    OP_LOGD("EluGradV2Tiling", "Enter new EluGradV2Tiling");
     EluGradV2Tiling eluGradV2Tiling(tilingContextSelf);
     return eluGradV2Tiling.RunTiling();
 }
