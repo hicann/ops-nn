@@ -62,19 +62,6 @@ inline static int64_t Div(int64_t value, int64_t factor)
 
 OP_TYPE_REGISTER(AvgPoolV2);
 
-// REG_OP(AvgPoolV2)
-//     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
-//     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
-//     .REQUIRED_ATTR(ksize, ListInt)
-//     .REQUIRED_ATTR(strides, ListInt)
-//     .ATTR(padding_mode, String, "CALCULATED")
-//     .ATTR(pads, ListInt, {0, 0, 0, 0})
-//     .ATTR(data_format, String, "NCHW")
-//     .ATTR(global_pooling, Bool, false)
-//     .ATTR(ceil_mode, Bool, false)
-//     .ATTR(exclusive, Bool, true)
-//     .ATTR(divisor_override, Int, 0)
-//     .OP_END_FACTORY_REG(AvgPoolV2)
 const aclTensor* AvgPoolNchw(const aclTensor* x, const aclIntArray* window, const aclIntArray* stride,
                              const std::string& paddingMode, const aclIntArray* pad, const std::string& dataFormat,
                              const bool globalPooling, const bool ceilMode, const bool exclusive,
