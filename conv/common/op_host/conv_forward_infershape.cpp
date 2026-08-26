@@ -854,14 +854,14 @@ static bool CheckOutputNegative(const InferShapeContext* context, const ConvOpIn
     if (opInfo.isConv2DLike) {
         yInferredShape = {opInfo.on, opInfo.oc, opInfo.oh, opInfo.ow};
         if (conv2dNegFlag) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(infered)",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(inferred)",
                                                   VectorToString(yInferredShape).c_str(), reason.c_str());
             return false;
         }
     } else if (opInfo.isConv3DLike) {
         yInferredShape = {opInfo.on, opInfo.oc, opInfo.od, opInfo.oh, opInfo.ow};
         if (conv2dNegFlag || opInfo.od < 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(infered)",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(inferred)",
                                                   VectorToString(yInferredShape).c_str(), reason.c_str());
             return false;
         }
@@ -885,7 +885,7 @@ static bool CheckOutputZeroTensor(const InferShapeContext* context, ConvOpInfo& 
     if (opInfo.isConv2DLike) {
         xyInferredShapes = {{opInfo.in, opInfo.ic, opInfo.ih, opInfo.iw}, {opInfo.on, opInfo.oc, opInfo.oh, opInfo.ow}};
         if (conv2dNoneZeroFlag) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(inferred)",
                                                    VectorsToString(xyInferredShapes).c_str(), reason2.str().c_str());
             return false;
         }
@@ -893,7 +893,7 @@ static bool CheckOutputZeroTensor(const InferShapeContext* context, ConvOpInfo& 
         xyInferredShapes = {{opInfo.in, opInfo.ic, opInfo.id, opInfo.ih, opInfo.iw},
                             {opInfo.on, opInfo.oc, opInfo.od, opInfo.oh, opInfo.ow}};
         if (conv2dNoneZeroFlag && opInfo.od != 0) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(inferred)",
                                                    VectorsToString(xyInferredShapes).c_str(), reason2.str().c_str());
             return false;
         }
@@ -903,7 +903,7 @@ static bool CheckOutputZeroTensor(const InferShapeContext* context, ConvOpInfo& 
                           std::to_string(opInfo.wFormatIdx[IDX_LIST_N_IDX]) + "] of filter cannot be 0";
     if (opInfo.opType == ConvOptype::QUANT_CONV3D || opInfo.opType == ConvOptype::QUANT_CONV2D) {
         if (opInfo.isInputZeroTensor || opInfo.isOutputZeroTensor) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(inferred)",
                                                    VectorsToString(xyInferredShapes).c_str(), reason3.c_str());
             return false;
         }

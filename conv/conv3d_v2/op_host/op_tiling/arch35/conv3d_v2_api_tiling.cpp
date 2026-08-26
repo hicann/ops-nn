@@ -422,7 +422,7 @@ bool Conv3dTiling::CheckInputShape()
 bool Conv3dTiling::CheckSoc()
 {
     if (this->platformInfo.npuArch != NpuArch::DAV_3510) {
-        OP_LOGE(nodeType, "current Soc Version is not support");
+        OP_LOGE(nodeType, "current Soc Version does not support");
         return false;
     }
     return true;

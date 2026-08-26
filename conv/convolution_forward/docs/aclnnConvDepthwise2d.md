@@ -124,7 +124,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td><ul><li>数组长度需等于self维度-2。</li><li>strideH和strideW∈[1,63]。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>输入</td>
   <td>对self的填充。</td>
   <td><ul><li>数组长度需等于self维度-2。</li><li>paddingH、paddingW∈[0,255]。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td><ul><li>数组长度需等于self维度-2。</li><li>dilationH、dilationW∈[1,255]。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>

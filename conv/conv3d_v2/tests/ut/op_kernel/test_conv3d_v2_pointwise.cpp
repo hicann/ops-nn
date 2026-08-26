@@ -40,8 +40,8 @@ constexpr uint8_t BF16_SIZE = 2;
 
 class KernelConv3DV2PointWise_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "KernelConv3DV2PointWise_test SetUp\n" << std::endl; }
-    static void TearDownTestCase() { std::cout << "KernelConv3DV2PointWise_test TearDown\n" << std::endl; }
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
 uint32_t CountOutShape(const uint32_t& inShape, const uint32_t& padFirst, const uint32_t& padSecond,

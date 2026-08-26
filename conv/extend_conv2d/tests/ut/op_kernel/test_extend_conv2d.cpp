@@ -30,9 +30,9 @@ constexpr uint32_t NUM_16 = 16;
 
 class ExtendConv2DKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "ExtendConv2DKernelTest SetUp." << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "ExtendConv2DKernelTest TearDown." << std::endl; }
+    static void TearDownTestCase() {}
 };
 namespace {
 struct ConvShape {

@@ -144,7 +144,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td><ul><li>2d场景下数组长度=2，3d场景下数组长度=3。</li><li>strideH和strideW应在 [1,63] 范围内。</li><li>conv3d场景下strideD应在 [1,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>输入</td>
   <td>对input的填充。</td>
   <td><ul><li>值应≥0。</li><li>paddingH和paddingW应在 [0,255] 范围内。</li><li>conv3d场景下paddingD应在 [0,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td><ul><li>2d场景下数组长度=2，3d场景下数组长度=3。</li><li>值应>0。</li><li>dilationH和dilationW应在 [1,255] 范围内。</li><li>conv3d场景下dilationD应在 [1,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>输入</td>
   <td>预留参数。表示转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下，忽略该属性配置。目前暂不支持，传入空指针nullptr即可。</td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>

@@ -807,44 +807,36 @@ public:
     };
 };
 
-class DimCheckerTbc : public ConvolutionChecker {
-public:
-    DimCheckerTbc() = default;
-    ~DimCheckerTbc() override = default;
-    aclnnStatus Check(ConvEngine& engine) override
-    {
-        size_t inputDim = engine.meta.input.shape.size();
-        if (!Any(inputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDim),
-                                         std::to_string(CONV_1D_DIM_SIZE));
-            return ACLNN_ERR_PARAM_INVALID;
-        }
+aclnnStatus CheckTbcDim(const std::string& entityName, const aclTensor* self, const aclTensor* weight,
+                        const aclTensor* bias, const aclTensor* output)
+{
+    size_t inputDim = self->GetViewShape().GetDimNum();
+    if (!Any(inputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, "x", std::to_string(inputDim), std::to_string(CONV_1D_DIM_SIZE));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
-        size_t weightDim = engine.meta.weight.shape.size();
-        if (!Any(weightDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "filter", std::to_string(weightDim),
-                                         std::to_string(CONV_1D_DIM_SIZE));
-            return ACLNN_ERR_PARAM_INVALID;
-        }
+    size_t weightDim = weight->GetViewShape().GetDimNum();
+    if (!Any(weightDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, "filter", std::to_string(weightDim), std::to_string(CONV_1D_DIM_SIZE));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
-        size_t outputDim = engine.meta.output.shape.size();
-        if (!Any(outputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "y", std::to_string(outputDim),
-                                         std::to_string(CONV_1D_DIM_SIZE));
-            return ACLNN_ERR_PARAM_INVALID;
-        }
+    size_t outputDim = output->GetViewShape().GetDimNum();
+    if (!Any(outputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, "y", std::to_string(outputDim), std::to_string(CONV_1D_DIM_SIZE));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
-        constexpr size_t biasDimAllowTbc = 1;
-        size_t biasDim = engine.meta.bias.shape.size();
-        if (!Any(biasDim, Equal<size_t>, biasDimAllowTbc)) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "bias", std::to_string(biasDim),
-                                         std::to_string(biasDimAllowTbc));
-            return ACLNN_ERR_PARAM_INVALID;
-        }
+    constexpr size_t biasDimAllowTbc = 1;
+    size_t biasDim = bias->GetViewShape().GetDimNum();
+    if (!Any(biasDim, Equal<size_t>, biasDimAllowTbc)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, "bias", std::to_string(biasDim), std::to_string(biasDimAllowTbc));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
-        return ACLNN_SUCCESS;
-    };
-};
+    return ACLNN_SUCCESS;
+}
 
 class DimCheckerDepthwise2d : public ConvolutionChecker {
 public:
@@ -2230,7 +2222,6 @@ static aclnnStatus CheckConvTbcParams(ConvEngine& engine)
     // math level check
     // common checkers: nullptr, dims, format
     checkList.push_back(make_unique<DtypeCheckerTbc>());
-    checkList.push_back(make_unique<DimCheckerTbc>());
     checkList.push_back(make_unique<FormatCheckerTbc>());
     checkList.push_back(make_unique<ValueCheckerTbc>());
     // different conv checkers: infershape and so on
@@ -3429,7 +3420,7 @@ static bool isNotDMA(const aclTensor* input, const aclTensor* weight, const aclT
                      (dilationW > DILATION_DMA) || (weightH > weight_DMA) || (weightW > weight_DMA);
     isDMASpec = isNotDMAFromPad(isDMASpec, padding);
     if (isDMASpec) {
-        OP_LOGD("Fulfill DMA requirement，return False");
+        OP_LOGD("Fulfill DMA requirement, return False");
         return false;
     }
 
@@ -3682,7 +3673,7 @@ static aclIntArray* ViewConv2dPad2dAs4d(const aclIntArray* intArray, aclOpExecut
 
 aclIntArray* View1dAs2d(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor)
 {
-    //将1维改成2维
+    // 将1维改成2维
     constexpr uint64_t newDimSize = 2;
     int64_t data[newDimSize];
     uint64_t size = intArray->Size();
@@ -3697,7 +3688,7 @@ aclIntArray* View1dAs2d(const aclIntArray* intArray, int64_t expandValue, aclOpE
 
 aclIntArray* View1dAs2dw(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor)
 {
-    //将1维改成2维
+    // 将1维改成2维
     constexpr uint64_t newDimSize = 2;
     int64_t data[newDimSize];
     uint64_t size = intArray->Size();
@@ -4192,7 +4183,7 @@ public:
           useHf32(useHf32Param),
           cubeMathType(cubeMathTypeParam),
           executor(executorParam),
-          entityName(entityNameParam){};
+          entityName(entityNameParam) {};
     virtual ~ConvolutionImpl()
     {
         input = nullptr;
@@ -4364,7 +4355,7 @@ public:
                                     outputPadding, groups, useHf32, executor);
         }
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv2d raise an unknown error");
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv2d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -4433,7 +4424,7 @@ public:
     {
         // conv1d is implement by conv2d
         return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
-                              outputPadding, groups, useHf32, executor, convOut, "convTbc raise an unknown error");
+                              outputPadding, groups, useHf32, executor, convOut, "convTbc raised an unknown error");
     };
 
     aclnnStatus PostProcess() override
@@ -4596,7 +4587,7 @@ public:
         }
         // conv1d is implement by conv2d
         return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
-                              outputPadding, groups, useHf32, executor, convOut, "conv1d raise an unknown error");
+                              outputPadding, groups, useHf32, executor, convOut, "conv1d raised an unknown error");
     };
 
     aclnnStatus PostProcess() override
@@ -4697,7 +4688,7 @@ public:
     {
         return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                               outputPadding, groups, useHf32, executor, convOut,
-                              "conv3d->conv2d raise an unknown error");
+                              "conv3d->conv2d raised an unknown error");
     };
 
     aclnnStatus PostProcess() override
@@ -4771,7 +4762,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv3d raise an unknown error");
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv3d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -4870,7 +4861,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv1d raise an unknown error");
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv1d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -4912,7 +4903,7 @@ private:
     bool ConvTranspose1dSwapHW = false;
     bool isConvTransposed1dSwitchHW() const
     {
-        //针对特定场景进行优化 outW>4096 N=1 inC<=768
+        // 针对特定场景进行优化 outW>4096 N=1 inC<=768
         if (!op::IsSupportND() && output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
             input->GetViewShape().GetDim(N_DIM_NCL_INDEX) == 1 &&
             input->GetViewShape().GetDim(C_DIM_NCL_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
@@ -4958,7 +4949,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose2d raise an unknown error");
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose2d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -4999,7 +4990,7 @@ private:
     bool ConvTransposed2dSwitchHW = false;
     bool isConvTransposed2dSwitchHW() const
     {
-        //针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
+        // 针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
         if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 &&
             (*outputPadding)[0] == 0 &&
             output->GetViewShape().GetDim(W_DIM_NCHW_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
@@ -5088,7 +5079,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose3d raise an unknown error");
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose3d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -5484,6 +5475,9 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(const aclTensor* self, const aclTensor*
 
     auto ret = CheckParamsNullptrTbc(entityName, self, weight, bias, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (CheckTbcDim(entityName, self, weight, bias, output) != ACLNN_SUCCESS) {
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         ret = CheckParamsEmpty(entityName, output, bias);
@@ -5517,6 +5511,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(const aclTensor* self, const aclTensor*
                          cubeMathType,  workspaceSize, executor};
     ConvEngine convEngine(params);
     convEngine.entityName = entityName;
+
     // conv_tbc param check
     ret = CheckConvTbcParams(convEngine);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

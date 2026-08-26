@@ -34,9 +34,9 @@ using Ops::NN::Conv3dV2::Conv3DV2TilingDataV2;
 
 class QuantConv3DKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "QuantConv3DKernelTest SetUp." << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "QuantConv3DKernelTest TearDown." << std::endl; }
+    static void TearDownTestCase() {}
 };
 namespace {
 struct Conv3DShape {

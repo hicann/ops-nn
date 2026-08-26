@@ -125,7 +125,7 @@ aclnnStatus aclnnConvolution(
   <td>bias（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的bias，表示卷积偏置。</td>
-  <td><ul><li>无bias场景，可传入nullptr。</li><li>当transposed=false时为一维且数值与weight第一维相等；当transposed=true时为一维且数值与weight.shape[1] * groups相等，format仅支持ND格式。</li></ul></td>
+  <td><ul><li>无bias场景，可传入nullptr。</li><li>当transposed=false时为一维且数值与weight第一维相等；当transposed=true时为一维且数值与weight.shape[1] * groups相等。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16</td>
   <td>ND、NCL、NCHW、NCDHW</td>
   <td>1-5</td>
@@ -176,7 +176,7 @@ aclnnStatus aclnnConvolution(
   <td>输入</td>
   <td>转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下忽略该配置。数组长度需等于input的维度减2。值应大于等于0，且小于stride或dilation对应维度的值。</td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>

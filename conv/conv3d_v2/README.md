@@ -111,7 +111,7 @@
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。</td>
+<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。stride_n, stride_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -125,7 +125,7 @@
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。</td>
+<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。dilation_n, dilation_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -153,14 +153,14 @@
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"。</td>
+<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>是否启用HF32计算，支持true、false。</td>
+<td>是否启用HF32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启HF32计算。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -236,9 +236,11 @@
   </table>
 
 - Ascend 950PR/Ascend 950DT：
-  - 对于`x`输入，`N`维度大小应该大于等于0。`D`、`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`D`、`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。`N`维度大小应该大于等于0（等于0的场景仅在输入`bias`、输出`y`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度一致。
-
+  - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCDHW`。
+  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
+  - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
+  - 当`x`数据类型为`INT8`时，`x`的数据格式仅支持`NCDHW`，`filter`的数据格式支持`NCDHW`和`FRACTAL_Z_3D`，`output`的数据格式仅支持`NDHWC`。
+  - 支持的数据类型和Format组合如下表：
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -322,12 +324,7 @@
   </tr>
   </table>
 
-- `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
-- 当`x`数据类型为`INT8`时，`x`、`filter`的数据格式仅支持`NCDHW`，`output`的数据格式仅支持`NDHWC`。
-- `groups` ∈ [1, 65535]。
-
 - 如果任何参数超出上述范围，算子的正确性无法保证。
-
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明

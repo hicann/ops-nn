@@ -75,9 +75,9 @@ public:
     }
 
 protected:
-    static void SetUpTestCase() { std::cout << "Conv3dToConv3dV2FusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "Conv3dToConv3dV2FusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     void SetSocRaw(const std::string& socName, const std::map<std::string, std::vector<std::string>>& intrinsicDtypeMap)
     {

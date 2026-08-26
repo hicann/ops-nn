@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>Ascend 950PR/Ascend 950DT </term></td>
+<td><term>Ascend 950PR/Ascend 950DT</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -81,7 +81,7 @@
 </tr>
 <tr>
 <td>scale</td>
-<td>可选输入</td>
+<td>输入</td>
 <td>缩放因子张量scale。</td>
 <td>INT64、UINT64</td>
 <td>ND</td>
@@ -98,7 +98,7 @@
 <td>可选输入</td>
 <td>偏移张量offset（未使用）。</td>
 <td>FLOAT</td>
-<td>ND</td>
+<td>NCDHW</td>
 </tr>
 <tr>
 <td>y</td>
@@ -110,14 +110,14 @@
 <tr>
 <td>dtype</td>
 <td>属性</td>
-<td>表示输出y的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
-<td>INT8</td>
+<td>表示输出y的数据类型。支持的列表包括 [0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
+<td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。</td>
+<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。stride_n, stride_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -131,7 +131,7 @@
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。</td>
+<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。dilation_n, dilation_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -145,21 +145,21 @@
 <tr>
 <td>data_format</td>
 <td>可选属性</td>
-<td>输入数据格式，支持"NCDHW"与"NDHWC"。</td>
+<td>输入数据格式，支持"NCDHW"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>offset_x</td>
 <td>可选属性</td>
-<td>量化算法中的偏移，用于pad的填充值。</td>
+<td>量化算法中的偏移，用于pad的填充值。支持范围 [-128, 127]。当`x`类型为`HIFLOAT8`或`FLOAT8_E4M3FN`时，仅支持配置为0。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>round_mode</td>
 <td>可选属性</td>
-<td>舍入模式，如果输出的数据类型是hifloat8，round_mode可以设置为'round'。否则可以设置为'rint'。</td>
+<td>舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
@@ -175,11 +175,12 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT ：
-  - `x`的数据类型必须与`filter`一致。`N`维度大小应该大于等于0。`D`、`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`D`、`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内， `D`维度大小应该在[1, 100000]范围内。`N`维度大小应该大于等于0（等于0的场景仅在输入`bias`、输出`y`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度 / groups大小一致。
+- Ascend 950PR/Ascend 950DT：
+  - `x`的数据类型必须与`filter`一致。
+  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。
+  - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
-  - 支持的数据类型组合如下表：
+  - 支持的数据类型和Format组合如下表：
 
   <table>
   <tr>
@@ -222,14 +223,7 @@
   </tr>
   </table>
 
-- `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
-- 当format为NCDHW时，strides传入的值为[1, 1, stride_d, stride_h, stride_w]；当format为NDHWC时，strides传入的值为[1, stride_d, stride_h, stride_w, 1]；N C维度对应的stride必须是1
-
-- `groups` ∈ [1, 65535]。
-- `offset_x` ∈ [-128, 127]。
-
 - 如果任何参数超出上述范围，算子的正确性无法保证。
-
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明

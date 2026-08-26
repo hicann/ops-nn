@@ -36,26 +36,29 @@
 | :--- | :--- | :--- | :--- | :--- |
 | x | 输入 | 公式中的输入张量x。 | FLOAT8_E4M3FN、INT8、HIFLOAT8 | NCHW |
 | filter | 输入 | 公式中的卷积权重张量filter。 | FLOAT8_E4M3FN、INT8、HIFLOAT8 | NCHW |
-| scale | 可选输入 | 缩放因子张量scale。 | FLOAT、INT32 | ND |
-| bias | 可选输入 | 卷积偏置张量bias。 | FLOAT、FLOAT16、INT32 | ND |
-| offset | 可选输入 | 偏移张量offset（未使用）。 | FLOAT | ND |
-| dtype | 属性 | 表示输出y的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。 | INT8 | - |
-| strides | 属性 | 卷积扫描步长，stride_h, stride_w ∈ [1,63]。 | INT32 | - |
-| pads | 可选属性 | 对输入的填充，pad_top, pad_bottom, pad_left, pad_right ∈ [0,255]。 | INT32 | - |
-| dilations | 可选属性 | 卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]。 | INT32 | - |
+| scale | 输入 | 缩放因子张量scale。 | INT64、UINT64 | ND |
+| bias | 可选输入 | 卷积偏置张量bias。 | FLOAT、INT32 | ND |
+| offset | 可选输入 | 偏移张量offset（未使用）。 | FLOAT | NCHW |
+| y | 输出 | 公式中的输出张量y。 | FLOAT、FLOAT16、BFLOAT16、FLOAT8_E4M3FN、HIFLOAT8 | NCHW |
+| dtype | 属性 | 表示输出y的数据类型。支持的列表包括 [0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。 | INT32 | - |
+| strides | 属性 | 卷积扫描步长，包括stride_h, stride_w。stride_n, stride_c大小必须为1。 | INT32 | - |
+| pads | 可选属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
+| dilations | 可选属性 | 卷积核中元素的间隔，包括dilation_h, dilation_w。dilation_n, dilation_c大小必须为1。 | INT32 | - |
 | groups | 可选属性 | 从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。 | INT32 | - |
 | data_format | 可选属性 | 输入数据格式，仅支持"NCHW"。 | STRING | - |
-| offset_x | 可选属性 | 量化算法中的偏移，用于pad的填充值。支持范围 [-128, 127]。 | INT32 | - |
-| round_mode | 可选属性 | 舍入模式，如果输出的数据类型是hifloat8，round_mode可以设置为'round'。否则可以设置为'rint'。 | STRING | - |
+| offset_x | 可选属性 | 量化算法中的偏移，用于pad的填充值。支持范围 [-128, 127]。当`x`类型为`HIFLOAT8`或`FLOAT8_E4M3FN`时，仅支持配置为0。 | INT32 | - |
+| round_mode | 可选属性 | 舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。 | STRING | - |
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT ：
+- Ascend 950PR/Ascend 950DT：
 
-  - `x`的数据类型必须与`filter`一致。`N`维度大小应该大于等于0。`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。`N`维度大小应该大于等于0（等于0的场景仅在输入`bias`、输出`y`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度 / groups大小一致。
+  - `x`的数据类型必须与`filter`一致。
+  - `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
+  - `strides`、`dilations`的值应该在[1, 1000000]范围内。
+  - `pads`的值应该在[0, 1000000]范围内。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
-  - 支持的数据类型组合如下表：
+  - 支持的数据类型和Format组合如下表：
 
   | x | filter | scale | bias | y |
   | :---: | :---: | :---: | :---: | :---: |
@@ -64,8 +67,6 @@
   | FLOAT8_E4M3FN | FLOAT8_E4M3FN | INT64/UINT64 | FLOAT | FLOAT/FLOAT16/BFLOAT16/FLOAT8_E4M3FN |
   | NCHW | NCHW | ND | ND | NCHW |
 
-- `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
-- strides传入的值为[1, 1, stride_h, stride_w]；N C维度对应的stride必须是1。
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 

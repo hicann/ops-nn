@@ -1161,8 +1161,8 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape, 
 
 class ExtendConv2dTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "Conv2d ascendc ops tiling testParam setup" << std::endl; }
-    static void TearDownTestCase() { std::cout << "Conv2d ascendc ops tiling testParam tearDown" << std::endl; }
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 };
 
 TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_001)

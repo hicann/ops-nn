@@ -34,12 +34,12 @@
 | ------------------| ------------------ | ------------------------------------------------------------------------------------------- | ----------------- | --------------------- |
 | input | 输入 | <ul><li>公式中的input，表示卷积输入。</li><li>数据类型需要与weight满足数据类型推导规则（[互推导关系](../../docs/zh/context/deduction_relationship.md)和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN| NCL、NCHW、NCDHW |
 | weight | 输入 | <ul><li>公式中的weight，表示卷积权重。</li><li>数据类型需要与input满足数据类型推导规则（[互推导关系](../../docs/zh/context/deduction_relationship.md)和<a href="#约束说明">约束说明</a>）。</li><li>所有维度≥1。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
-| bias | 输入 | <ul><li>公式中的bias，表示卷积偏置。</li><li>当transposed=false时为一维且数值与weight第一维相等；当transposed=true时为一维且数值与weight.shape[1] * groups相等。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
-| stride | 输入 | <ul><li>卷积扫描步长。</li><li>数组长度需等于input的维度减2，值应该大于0。</li></ul> | INT32 | - |
-| padding | 输入 | <ul><li>对input的填充。</li><li>数组长度：conv1d非转置为1或2；conv2d为2或4；conv3d为3。值应该大于等于0。</li></ul> | INT32 | - |
-| dilation | 输入 | <ul><li>卷积核中元素的间隔。</li><li>数组长度需等于input的维度减2，值应该大于0。</li></ul> | INT32 | - |
+| bias | 输入 | <ul><li>公式中的bias，表示卷积偏置。</li><li>当transposed=false时为一维且数值与weight第一维相等；当transposed=true时为一维且数值与weight.shape[1] * groups相等。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND、NCL、NCHW、NCDHW |
+| stride | 输入 | <ul><li>卷积扫描步长。</li><li>数组长度需等于input的维度减2，值应该大于0。</li></ul> | INT64 | - |
+| padding | 输入 | <ul><li>对input的填充。</li><li>数组长度：conv1d非转置为1或2；conv2d为2或4；conv3d为3。值应该大于等于0。</li></ul> | INT64 | - |
+| dilation | 输入 | <ul><li>卷积核中元素的间隔。</li><li>数组长度需等于input的维度减2，值应该大于0。</li></ul> | INT64 | - |
 | transposed | 输入 | <ul><li>是否为转置卷积。</li></ul> | BOOL | - |
-| outputPadding | 输入 | <ul><li>转置卷积情况下，对输出所有边的填充。</li><li>非转置卷积情况下忽略该配置。值应大于等于0，且小于stride或dilation对应维度的值。</li></ul> | INT32 | - |
+| outputPadding | 输入 | <ul><li>转置卷积情况下，对输出所有边的填充。</li><li>非转置卷积情况下忽略该配置。值应大于等于0，且小于stride或dilation对应维度的值。</li></ul> | INT64 | - |
 | groups | 输入 | <ul><li>表示从输入通道到输出通道的块链接个数。</li><li>数值必须大于0，且满足groups*weight的C维度=input的C维度。</li></ul> | INT64 | - |
 | output | 输出 | <ul><li>公式中的out，表示卷积输出。</li><li>数据类型需要与input与weight推导之后的数据类型保持一致。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
 | cubeMathType | 输入 | <ul><li>用于判断Cube单元应该使用哪种计算逻辑进行运算。</li><li>0 (KEEP_DTYPE): 保持输入数据类型进行计算。</li><li> 1 (ALLOW_FP32_DOWN_PRECISION): 允许FLOAT32降低精度计算，提升性能。</li><li> 2 (USE_FP16): 使用FLOAT16精度进行计算。</li><li> 3 (USE_HF32): 使用HF32（混合精度）进行计算。</li></ul> | INT8 | - |

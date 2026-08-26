@@ -104,7 +104,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>其原shape的C维度需要与input的C维度保持一致。</li><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>其原shape的C维度需要与input的C维度保持一致。</li><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDHW。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
   <td>INT8</td>
   <td>Fractal_Z_3D</td>
   <td>4</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>输入</td>
   <td>卷积扫描步长。</td>
   <td><ul><li>数组长度=3。</li><li>strideH和strideW应在 [1,63] 范围内。</li><li>conv3d场景下strideD应在 [1,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>输入</td>
   <td>对input的填充。</td>
   <td><ul><li>值应≥0。</li><li>paddingH和paddingW应在 [0,255] 范围内。</li><li>conv3d场景下paddingD应在 [0,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
   <td><ul><li>值应>0。</li><li>dilationH和dilationW应在 [1,255] 范围内。</li><li>conv3d场景下dilationD应在 [1,1000000] 范围内。</li></ul></td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>输入</td>
   <td>预留参数。表示转置卷积情况下，对输出所有边的填充。</td>
   <td>非转置卷积情况下，忽略该属性配置。目前暂不支持，传入空指针nullptr即可。</td>
-  <td>INT32</td>
+  <td>INT64</td>
   <td>-</td>
   <td>-</td>
   <td style="text-align:center">-</td>

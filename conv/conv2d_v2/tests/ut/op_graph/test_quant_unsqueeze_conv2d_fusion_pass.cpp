@@ -87,9 +87,9 @@ void SetupSoc(bool supportUb2Ub, bool supportDn2Nz = false)
 
 class QuantUnsqueezeConv2DFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "QuantUnsqueezeConv2DFusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "QuantUnsqueezeConv2DFusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {

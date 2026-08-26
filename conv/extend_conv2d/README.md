@@ -24,7 +24,7 @@
   $$
     \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)\\
     \text{y0}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times \text{scale0}(C_{\text{out}_j})\\
-    \text{y1}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times \text{scale1}(C_{\text{out}_j})   
+    \text{y1}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times \text{scale1}(C_{\text{out}_j})
   $$
   如果启用relu，那么：
   $$
@@ -53,21 +53,21 @@
 <td>x</td>
 <td>输入</td>
 <td>公式中的输入张量x。</td>
-<td>HIFLOAT8、INT8、FLOAT8_E4M3FN</td>
+<td>HIFLOAT8、INT8、FLOAT8_E4M3FN、FLOAT16</td>
 <td>NCHW、NHWC</td>
 </tr>
 <tr>
 <td>filter</td>
 <td>输入</td>
 <td>公式中的卷积权重张量filter。</td>
-<td>HIFLOAT8、INT8、FLOAT8_E4M3FN</td>
+<td>HIFLOAT8、INT8、FLOAT8_E4M3FN、FLOAT16</td>
 <td>NCHW、HWCN</td>
 </tr>
 <tr>
 <td>bias</td>
 <td>可选输入</td>
 <td>卷积偏置张量bias。</td>
-<td>FLOAT、INT32</td>
+<td>FLOAT、INT32、FLOAT16</td>
 <td>ND</td>
 </tr>
 <tr>
@@ -136,21 +136,21 @@
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，stride_h, stride_w ∈ [1,63]。</td>
+<td>卷积扫描步长，包括stride_h, stride_w。stride_n, stride_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>pads</td>
 <td>可选属性</td>
-<td>对输入的填充，pad_h, pad_w ∈ [0,255]。</td>
+<td>对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]。</td>
+<td>卷积核中元素的间隔，包括dilation_h, dilation_w。dilation_n, dilation_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -171,14 +171,14 @@
 <tr>
 <td>offset_x</td>
 <td>可选属性</td>
-<td>量化算法中的偏移offset_x。</td>
+<td>量化算法中的偏移offset_x。支持范围 [-128, 127]。当`x`类型为`HIFLOAT8`或`FLOAT8_E4M3FN`时，仅支持配置为0。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>round_mode</td>
 <td>可选属性</td>
-<td>舍入模式，如果输出的数据类型是hifloat8，round_mode可以设置为'round'。否则可以设置为'rint'。</td>
+<td>舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
@@ -192,7 +192,7 @@
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>是否启用HF32计算，支持true、false（未使用）。</td>
+<td>是否启用HF32计算，支持true、false。该参数暂不支持。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -220,15 +220,15 @@
 <tr>
 <td>dtype0</td>
 <td>可选属性</td>
-<td>表示输出y0的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
-<td>BOOL</td>
+<td>表示输出y0的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
+<td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>dtype1</td>
 <td>可选属性</td>
-<td>表示输出y1的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
-<td>BOOL</td>
+<td>表示输出y1的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
+<td>INT32</td>
 <td>-</td>
 </tr>
 </table>
@@ -236,10 +236,12 @@
 ## 约束说明
 
 - Ascend 950PR/Ascend 950DT：
-  - `x`的数据类型必须与`filter`一致。`N`维度大小应该大于等于0。`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。`N`维度大小应该大于等于0（等于0的场景仅在`bias`、`output`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度一致。
+  - `x`的数据类型必须与`filter`一致。
   - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
-
+  - `x`、`filter`、`bias`、`scale0/1`、`relu_weight0/1`、`clip_value0/1`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
+  - `strides`、`dilations`的值应该在[1, 1000000]范围内。
+  - `pads`的值应该在[0, 1000000]范围内。
+  - 支持的数据类型和Format组合如下表：
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -251,7 +253,7 @@
   <th style="text-align:center; width:150px">y0/1</th>
   </tr>
   <tr>
-  <td rowspan="3" style="text-align:center">数据类型</td>
+  <td rowspan="4" style="text-align:center">数据类型</td>
   <td style="text-align:center">INT8</td>
   <td style="text-align:center">INT8</td>
   <td style="text-align:center">INT32</td>
@@ -266,6 +268,14 @@
   <td style="text-align:center">INT64/UINT64</td>
   <td style="text-align:center">HIFLOAT8</td>
   <td style="text-align:center">FLOAT/FLOAT16/BFLOAT16/HIFLOAT8</td>
+  </tr>
+  <tr>
+  <td style="text-align:center">FLOAT16</td>
+  <td style="text-align:center">FLOAT16</td>
+  <td style="text-align:center">FLOAT16</td>
+  <td style="text-align:center">INT64/UINT64</td>
+  <td style="text-align:center">FLOAT16/INT8</td>
+  <td style="text-align:center">FLOAT16/INT8</td>
   </tr>
   <tr>
   <td style="text-align:center">FLOAT8_E4M3FN</td>
@@ -294,13 +304,8 @@
   </tr>
   </table>
 
-- `x`、`filter`、`bias`、`scale0/1`、`relu_weight0/1`、`clip_value0/1`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
-
-- `groups` ∈ [1, 65535]。
-
 - 如果任何参数超出上述范围，算子的正确性无法保证。
-
-- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [on the website](https://www.hiascend.com/support)获取技术支持。
+- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明
 

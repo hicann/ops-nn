@@ -121,7 +121,7 @@ public:
     {
         auto tilingCases = ConvTilingRegistry::GetInstance().RegisterOp(op_type_, soc_version);
         OPS_ERR_IF(tilingCases == nullptr,
-                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "Register op tiling failed, please the op name."),
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "Register op tiling failed, please check the op name."),
                    return *this);
         tilingCases->AddTiling<T>(priority);
         return *this;

@@ -90,21 +90,21 @@
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，stride_h, stride_w ∈ [1,63]。</td>
+<td>卷积扫描步长，包括stride_h, stride_w。stride_n, stride_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>pads</td>
 <td>可选属性</td>
-<td>对输入的填充，pad_h, pad_w ∈ [0,255]。</td>
+<td>对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]。</td>
+<td>卷积核中元素的间隔，包括dilation_h, dilation_w。dilation_n, dilation_c大小必须为1。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -132,14 +132,14 @@
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER", "SAME_LOWER"。</td>
+<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>是否启用HF32计算，支持true、false。</td>
+<td>是否启用HF32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启HF32计算。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -148,10 +148,11 @@
 ## 约束说明
 
 - Ascend 950PR/Ascend 950DT：
-  - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致。`N`维度大小应该大于等于0。`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
-  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。`N`维度大小应该大于等于0（等于0的场景仅在`bias`、`output`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度一致。
-  - 当`x`和`filter`数据类型是`HIFLOAT8`时，`bias`数据类型会转成`FLOAT`参与计算。
-
+  - 当`x`数据类型为`HIFLOAT8`时，`filter`的数据类型必须与`x`一致，且`x`和`filter`的format都仅支持为`NCHW`。
+  - `x`、`filter`、`bias`、`y`中每一组`tensor`的每一维大小都应该在[1, 1000000]范围内。
+  - `strides`、`dilations`的值应该在[1, 1000000]范围内。
+  - `pads`的值应该在[0, 1000000]范围内。
+  - 支持的数据类型和Format组合如下表：
   <table>
   <tr>
   <th style="text-align:center; width:80px">张量</th>
@@ -200,12 +201,7 @@
   </tr>
   </table>
 
-- `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
-
-- `groups` ∈ [1, 65535]。
-
 - 如果任何参数超出上述范围，算子的正确性无法保证。
-
 - 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明

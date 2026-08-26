@@ -31,9 +31,9 @@ using namespace test_conv_fusion_framework;
 
 class Conv2DPostCubeToExtendConv2DFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "Conv2DPostCubeToExtendConv2DFusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "Conv2DPostCubeToExtendConv2DFusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     void InitPassConvNode(Conv2DPostCubeToExtendConv2DFusionPass& pass, TestGraph& testGraphBuilder,
                           const std::string& convNodeName = "Conv2D")

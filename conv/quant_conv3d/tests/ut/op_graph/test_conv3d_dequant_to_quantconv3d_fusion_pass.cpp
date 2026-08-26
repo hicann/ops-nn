@@ -31,9 +31,9 @@ using namespace test_conv_fusion_framework;
 
 class Conv3DDequantToQuantConv3DFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "Conv3DDequantToQuantConv3DFusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "Conv3DDequantToQuantConv3DFusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {

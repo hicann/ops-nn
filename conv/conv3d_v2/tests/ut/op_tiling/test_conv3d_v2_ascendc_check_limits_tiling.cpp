@@ -284,14 +284,6 @@ TEST_F(TestConv3dCheckLimits, check_normal_valid_success)
                          false});
 }
 
-// ============================================================================
-// CheckDataCopyLimits: NCDHW fmap di*hi*wi*dtypeSize > MAX_40_BIT_NUM → FAILED
-// dt=425, hi=25000, wi=1035, dtypeSize=4 → 425*25000*1035*4=43,987,500,000 > 1,099,511,627,775(MAX_40_BIT)
-// Actually needs to exceed MAX_40_BIT_NUM=1,099,511,627,775
-// Use hi=200000, wi=200000, di=1, dtypeSize=4 → 1*200000*200000*4=160,000,000,000 > 1.1e12 → FAILED (actually this is <
-// MAX 40bit) MAX_40_BIT_NUM = 2^40-1 = 1,099,511,627,775 hi=500000, wi=600000, di=1, dtypeSize=4 → 1*500000*600000*4 =
-// 1,200,000,000,000 > 1.1e12 → FAILED
-// ============================================================================
 TEST_F(TestConv3dCheckLimits, check_datacopy_ncdhw_overflow_fail)
 {
     RunConv3dLimitsTest({"datacopy_ncdhw",

@@ -443,7 +443,7 @@ static bool IsConv3DTransposeUseV2(const Conv3DTransPoseV2Prarams& params)
     }
 
     if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-        OP_LOGD("Conv3d transpose v2 not support format except FORMAT_NCDHW");
+        OP_LOGD("Conv3d transpose v2 only support format FORMAT_NCDHW");
         return false;
     }
 
@@ -792,7 +792,7 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor* input, const aclTensor* wei
     L0_DFX(Conv3dv2WithFlag, input, weight, bias, scale, offset, stride, padding, dilation, groups, useHf32);
 
     if (!IsSupportConv3DToConv3DV2()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3dv2 not support current soc version");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3dv2 does not support current soc version");
         output = nullptr;
         return ACLNN_ERR_PARAM_INVALID;
     }

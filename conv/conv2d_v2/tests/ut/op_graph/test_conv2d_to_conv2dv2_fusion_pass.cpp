@@ -52,9 +52,9 @@ public:
     }
 
 protected:
-    static void SetUpTestCase() { std::cout << "Conv2dToConv2dV2FusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "Conv2dToConv2dV2FusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {

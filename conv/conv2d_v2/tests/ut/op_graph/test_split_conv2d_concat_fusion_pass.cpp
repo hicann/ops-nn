@@ -49,9 +49,9 @@ struct SplitConvGraphOptions {
 
 class SplitConv2dConcatFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "SplitConv2dConcatFusionPassTest SetUp" << std::endl; }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase() { std::cout << "SplitConv2dConcatFusionPassTest TearDown" << std::endl; }
+    static void TearDownTestCase() {}
 
     GNode CreateFilterConst(Graph* graph, const std::string& name, DataType dtype, Format fmt,
                             const std::vector<int64_t>& shape)

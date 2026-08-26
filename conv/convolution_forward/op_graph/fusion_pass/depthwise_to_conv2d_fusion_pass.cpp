@@ -59,7 +59,7 @@ bool DepthwiseToConv2dFusionPass::GetFmapChannel()
     } else if (originFormat == Format::FORMAT_NHWC) {
         fmapChannel = inputShape[FMAP_CHANNEL_NHWC_INDEX];
     } else {
-        OP_LOGE(FUSION_NAME, "%s not support format [%s].", convDescInfo.nodeNameStr.c_str(),
+        OP_LOGE(FUSION_NAME, "%s does not support format [%s].", convDescInfo.nodeNameStr.c_str(),
                 TypeUtils::FormatToAscendString(originFormat).GetString());
         return false;
     }
