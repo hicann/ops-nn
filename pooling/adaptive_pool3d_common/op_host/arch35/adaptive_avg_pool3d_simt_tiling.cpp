@@ -105,5 +105,5 @@ void AdaptiveAvgPool3DTilingSimt::DumpTilingInfo()
     str += ", wOutDim:" + std::to_string(tilingData_->wOutDim);
     OP_LOGI(context_, "%s.", str.c_str());
 }
-REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3DTilingSimt, 2);
+REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3DTilingSimt, 3);
 } // namespace optiling

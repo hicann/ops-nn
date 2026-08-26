@@ -154,6 +154,6 @@ ge::graphStatus AdaptiveAvgPool3dBigKernelTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3dBigKernelTiling, 1);
+REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3dBigKernelTiling, 2);
 
 } // namespace optiling

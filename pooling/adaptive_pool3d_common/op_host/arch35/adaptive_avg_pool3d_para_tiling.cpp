@@ -69,6 +69,10 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
 
     auto wiDataLen = avgComptuteInfo_.woFactor * avgComptuteInfo_.kernelWMax;
     ubUseEnough = ubUseEnough && (wiDataLen % avgComptuteInfo_.alignNum) > (avgComptuteInfo_.alignNum / DOUBLE);
+    uint64_t kprod = avgComptuteInfo_.kernelDMax * avgComptuteInfo_.kernelHMax * avgComptuteInfo_.kernelWMax;
+    bool isWOutDegenerateVectorized = (input_.wOut == 1) && kprod >= avgComptuteInfo_.vfLen &&
+                                      input_.wIn >= avgComptuteInfo_.alignNum;
+    ubUseEnough = ubUseEnough || isWOutDegenerateVectorized;
 
     bool isCapable = isKernelSizeMeet && isNcLenEnough && isUbSizeEnough && ubUseEnough;
     OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling IsCapable check: %s",
@@ -273,7 +277,7 @@ void AdaptiveAvgPool3dParaPoolTiling::SetTilingData()
 {
     AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData*
         tilingData = context_->GetTilingData<AdaptivePool3dParaKernelTilingData>();
-    OP_CHECK_IF(tilingData == nullptr, OP_LOGE(context_->GetNodeName(), "tilingData is null"), return );
+    OP_CHECK_IF(tilingData == nullptr, OP_LOGE(context_->GetNodeName(), "tilingData is null"), return);
 
     tilingData->useCoreNum = avgComptuteInfo_.useCoreNum;
     tilingData->dIn = input_.dIn;

@@ -18,6 +18,7 @@
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_big_kernel.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_simt.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_parall_pool.h"
+#include "../adaptive_pool3d_common/arch35/adaptive_avg_pool3d_gather_trans.h"
 #include "../adaptive_pool3d_common/arch35/adaptive_pool3d_tiling_struct.h"
 
 template <uint64_t TEMPLATE_MODE, uint64_t DYTPE_MODE, uint64_t MULTI_MODE, uint64_t FORMAT_MODE>
@@ -48,6 +49,11 @@ __global__ __aicore__ void adaptive_avg_pool3d(GM_ADDR x, GM_ADDR y, GM_ADDR wor
                          MULTI_MODE == TPL_MULTI_MODE_0) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData, tilingData, tiling);
         AdaptivePool3d::AdaptiveAvgPool3dParaPool<DTYPE_X, int64_t> op(tilingData, pipeBase);
+        op.Init(x, y);
+        op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_0 && MULTI_MODE == TPL_MULTI_MODE_1 && DYTPE_MODE == TPL_DTYPE_0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptivePool3DTiling::AdaptivePool3dGatherTransTilingData, tilingData, tiling);
+        AdaptivePool3d::AdaptiveAvgPool3dGatherTrans<DTYPE_X> op(tilingData, pipeBase);
         op.Init(x, y);
         op.Process();
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_1 && DYTPE_MODE == TPL_DTYPE_0 && MULTI_MODE == TPL_MULTI_MODE_0) {
