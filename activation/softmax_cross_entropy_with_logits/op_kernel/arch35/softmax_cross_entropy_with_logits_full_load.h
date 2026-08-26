@@ -243,7 +243,6 @@ __aicore__ inline void SoftmaxCrossEntropyWithLogitsFullLoad<T, schId, featuresB
     lossQueue_.EnQue<T>(lossBuf);
 
     CopyOutPadLoss(lossGm_, lossQueue_, tileNum, aOffset);
-    featuresQueue_.FreeTensor(featuresBuf);
     labelsQueue_.FreeTensor(labelsBuf);
 }
 
