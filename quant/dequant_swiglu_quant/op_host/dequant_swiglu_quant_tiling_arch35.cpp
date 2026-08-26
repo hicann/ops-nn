@@ -219,7 +219,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttrActivateDim()
                     ("the split dim(" + std::to_string(activateDim_) + "dimension) must be even").c_str()),
                 return ge::GRAPH_FAILED);
 
-    //如果activateDim不是尾轴，则不允许输入group
+    // 如果activateDim不是尾轴，则不允许输入group
     if (activateDim_ != static_cast<int64_t>(xDimNum_ - 1)) {
         OP_CHECK_IF(hasGroupIndex_ == true,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -970,8 +970,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::DoOpTilingNotFull()
     }
     // 当实际输出尾轴长度小于搬运长度时的适配
     if (ubFactorDimy > outDimy_) {
-        //获取一个block内y的元素个数，当y为4bit类型时(0.5Byte)，一个block内元素个数等于BLOCK_SIZE * 2,
-        //否则y为8bit类型，一个block内元素个数等于BLOCK_SIZE
+        // 获取一个block内y的元素个数，当y为4bit类型时(0.5Byte)，一个block内元素个数等于BLOCK_SIZE * 2,
+        // 否则y为8bit类型，一个block内元素个数等于BLOCK_SIZE
         int64_t numPerBlock = (yDtype == ge::DT_FLOAT4_E2M1 or yDtype == ge::DT_FLOAT4_E1M2) ? BLOCK_SIZE * 2 :
                                                                                                BLOCK_SIZE;
         ubFactorDimy = Ops::Base::CeilDiv(outDimy_, numPerBlock) * numPerBlock;
@@ -1255,6 +1255,26 @@ ge::graphStatus DequantSwigluQuantV35NlastTiling::GetShapeAttrsInfo()
     auto* attrActivateDim = attrs->GetAttrPointer<int>(ATTR_ACTIVATE_DIM_INDEX);
     actDimIndex_ = (attrActivateDim != nullptr) ? *attrActivateDim : -1;
     actDimIndex_ = actDimIndex_ < 0 ? actDimIndex_ + static_cast<int32_t>(xShape_.GetDimNum()) : actDimIndex_;
+
+    // 非尾轴 activate_dim 场景仅有动态量化实现：静态量化无对应 kernel，若放行会被静默路由到动态量化 kernel
+    // (tilingKey=1xxxxx)，其 UB 布局/寻址按动态量化契约推导，与静态量化入参(quant_scale/quant_offset)不匹配，
+    // 运行时会触发 aicore "UB access address overflow"，故在 host tiling 阶段提前拦截该不支持组合。
+    // 仅在非尾轴场景拦截：尾轴场景由 DequantSwigluQuantV35DskTiling 处理，此模板 IsCapable 会返回 false，
+    // 此处放行以免干扰模板选择。
+    if (static_cast<size_t>(actDimIndex_) != xShape_.GetDimNum() - 1) {
+        const char* attrQuantMode = attrs->GetAttrPointer<char>(ATTR_QUANT_MODE_INDEX);
+        std::string quantMode = attrQuantMode == nullptr ? "static" : attrQuantMode;
+        auto quantModeIt = SUPPORT_QUANT_MODE.find(quantMode);
+        OP_CHECK_IF(quantModeIt == SUPPORT_QUANT_MODE.end(),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_mode", quantMode.c_str(),
+                                                          "quant_mode only support [dynamic] or [static]"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(quantModeIt->second != QUANT_MODE_DYNAMIC,
+                    OP_LOGE(context_->GetNodeName(),
+                            "DequantSwigluQuant does not support static quant_mode when activate_dim is not the last "
+                            "dim, please use dynamic quant_mode or set activate_dim to the last dim."),
+                    return ge::GRAPH_FAILED);
+    }
 
     FusedShape();
 
