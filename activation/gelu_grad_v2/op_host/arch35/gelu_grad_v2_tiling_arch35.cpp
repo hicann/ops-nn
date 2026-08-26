@@ -86,7 +86,6 @@ ge::graphStatus GeluGradV2Tiling::CheckValid()
 
 ge::graphStatus GeluGradV2Tiling::DoOpTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "GeluGradV2Tiling RunTiling enter.");
     OP_CHECK_IF(CheckValid() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "validity check failed"),
                 return ge::GRAPH_FAILED);
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
@@ -110,9 +109,11 @@ ge::graphStatus GeluGradV2Tiling::DoOpTiling()
                 "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
-        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradV2NoneDAG::OpDag> failed"),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            baseTilingResult == ge::GRAPH_FAILED,
+            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling failed, output dtype: %s.",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)).c_str()),
+            return ge::GRAPH_FAILED);
     } else if (approximate == TPL_TANH) {
         if (this->outputDtype == ge::DT_FLOAT16) {
             BroadcastBaseTiling<GeluGradV2TanhDAG<half>::OpDag> brcBaseTiling(context_);
@@ -133,9 +134,11 @@ ge::graphStatus GeluGradV2Tiling::DoOpTiling()
                 "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
-        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradV2TanhDAG::OpDag> failed"),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            baseTilingResult == ge::GRAPH_FAILED,
+            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling failed, output dtype: %s.",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)).c_str()),
+            return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "approximate", approximateStr,
                                               "The value of approximate must be none or tanh");
@@ -158,7 +161,6 @@ static ge::graphStatus Tiling4GeluGradV2(gert::TilingContext* tilingContextGen)
 {
     OP_CHECK_IF(tilingContextGen == nullptr, OP_LOGE("Tiling4GeluGradV2", "Tiling context is null"),
                 return ge::GRAPH_FAILED);
-    OP_LOGD(tilingContextGen->GetNodeName(), "Enter Tiling4GeluGradV2");
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4GeluGradV2 rt2.0 is running.");
     GeluGradV2Tiling tiling(tilingContextGen);
     return tiling.DoTiling();

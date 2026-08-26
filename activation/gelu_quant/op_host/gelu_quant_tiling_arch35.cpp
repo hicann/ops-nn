@@ -29,7 +29,6 @@ static const gert::Shape g_vec_1_shape = {1};
 // 获取baseInfoOp的vectorCoreNum、ubSize
 ge::graphStatus GeluQuantRegbaseTiling::GetPlatformInfo()
 {
-    OP_LOGD(nodeName_, "GetPlatformInfo start running.");
     auto compileInfo = context_->GetCompileInfo<GeluQuantCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     baseInfoOp.vectorCoreNum = compileInfo->vectorCoreNum;
@@ -86,7 +85,6 @@ const gert::Shape& GeluQuantRegbaseTiling::EnsureNotScalar(const gert::Shape& in
 // 获取baseInfoOp的approximate、quantMode。
 ge::graphStatus GeluQuantRegbaseTiling::ProcessAttrsInfo()
 {
-    OP_LOGD(nodeName_, "ProcessAttrsInfo start running.");
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
@@ -139,7 +137,6 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessAttrsInfo()
 // 获取baseInfoOp的xInputDtype、xDimNum、endAxisLen、endAxisLenAligned、fusedFrontAxis、fusedAllAxis、elementNumAlign
 ge::graphStatus GeluQuantRegbaseTiling::ProcessRequiredInfo()
 {
-    OP_LOGD(nodeName_, "ProcessRequiredInfo start running.");
     // x
     auto xInputDesc = context_->GetInputDesc(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
@@ -194,7 +191,6 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessRequiredInfo()
 // 获取baseInfoOp的inputOffsetType、offsetInputDtype，这个参数dynamic不用，static可选
 ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalOffsetInfo()
 {
-    OP_LOGD(nodeName_, "ProcessOptionalOffsetInfo start running.");
     // dynamic不需要offset这个参数
     if (baseInfoOp.quantMode == DYNAMIC_QUANT_MODE) {
         return ge::GRAPH_SUCCESS;
@@ -251,8 +247,6 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalOffsetInfo()
 // 获取baseInfoOp的inputScaleType、scaleInputDtype，静态该输入必选校验，校验输入精度高于x，其他校验与offset一致
 ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalScaleInfo()
 {
-    OP_LOGD(nodeName_, "ProcessOptionalScaleInfo start running.");
-
     auto scaleInputShapePtr = context_->GetOptionalInputShape(SCALE_INPUT_INDEX);
     if (scaleInputShapePtr == nullptr) {
         baseInfoOp.inputScaleType = EMPTY_TENSOR;
@@ -306,7 +300,6 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalScaleInfo()
 // 获取输入信息并校验
 ge::graphStatus GeluQuantRegbaseTiling::GetInputInfo()
 {
-    OP_LOGD(nodeName_, "GetInputInfo start running.");
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
     ret = ProcessAttrsInfo();
     if (ret != ge::GRAPH_SUCCESS) {
@@ -328,13 +321,11 @@ ge::graphStatus GeluQuantRegbaseTiling::GetInputInfo()
         return ret;
     }
 
-    OP_LOGD(nodeName_, "GetInputInfo run completed.");
     return ge::GRAPH_SUCCESS;
 }
 // perTensor模板下，设置usedCoreNum、normalCoreProcessNum、tailCoreProcessNum
 ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantPerTensorTiling()
 {
-    OP_LOGD(nodeName_, "DoStaticQuantPerTensorTiling start running.");
     // 这边的节点数为计算DB后的节点数
     splitCoreOp.coexistentNodeNum = QUANT_REGBASE_COEXISTING_QUANTITY;
     // 每个UB能容下的计算次数（通过计算节点得出）向下32对齐
@@ -362,7 +353,6 @@ ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantPerTensorTiling()
 
 ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantFullKernelSmallEndAxis()
 {
-    OP_LOGD(nodeName_, "DoStaticQuantFullKernelSmallEndAxis start running.");
     // mulRowsInUb，每个UB中处理尾轴row的数量
     int64_t mulRowsInUb = splitCoreOp.coexistentNodeElementNum / baseInfoOp.endAxisLenAligned;
     while (mulRowsInUb >= TWO_END_AXIS) {
@@ -398,7 +388,6 @@ ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantFullKernelSmallEndAxis()
 
 ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantNotFullKernelSplitEndAxis()
 {
-    OP_LOGD(nodeName_, "DoStaticQuantNotFullKernelSplitEndAxis start running.");
     splitCoreOp.rowInner = 1;
     splitCoreOp.rowOuter = baseInfoOp.fusedFrontAxis;
     splitCoreOp.rowTail = 1;
@@ -426,7 +415,6 @@ ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantNotFullKernelSplitEndAxis()
 
 ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantTiling()
 {
-    OP_LOGD(nodeName_, "DoStaticQuantTiling start running.");
     // 如果scale的输入shape为[1]，走per_tensor模板
     if (baseInfoOp.inputScaleType == SCALAR_TENSOR) {
         splitCoreOp.templateMode = STATIC_PER_TENSOR_TEMPLATE;
@@ -465,7 +453,6 @@ ge::graphStatus GeluQuantRegbaseTiling::DoStaticQuantTiling()
 
 ge::graphStatus GeluQuantRegbaseTiling::DoDynamicQuantTiling()
 {
-    OP_LOGD(nodeName_, "DoDynamicQuantTiling start running.");
     splitCoreOp.normalCoreProcessNum = CeilDivide(baseInfoOp.fusedFrontAxis, baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(baseInfoOp.fusedFrontAxis, splitCoreOp.normalCoreProcessNum);
     splitCoreOp.tailCoreProcessNum = baseInfoOp.fusedFrontAxis -
@@ -489,14 +476,12 @@ ge::graphStatus GeluQuantRegbaseTiling::DoDynamicQuantTiling()
 
 ge::graphStatus GeluQuantRegbaseTiling::DoTiling()
 {
-    OP_LOGD(nodeName_, "DoTiling start running.");
     if (baseInfoOp.quantMode == STATIC_QUANT_MODE) {
         DoStaticQuantTiling();
     } else {
         DoDynamicQuantTiling();
     }
 
-    OP_LOGD(nodeName_, "DoTiling run completed.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -527,7 +512,6 @@ void GeluQuantRegbaseTiling::SaveToTilingData()
 
 ge::graphStatus GeluQuantRegbaseTiling::PostTiling()
 {
-    OP_LOGD(nodeName_, "PostTiling start running.");
     size_t* userWorkspaceSize = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, userWorkspaceSize);
     size_t workspaceSize = WORKSPACE_BUFFER;
@@ -548,13 +532,11 @@ ge::graphStatus GeluQuantRegbaseTiling::PostTiling()
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context_->SetTilingKey(splitCoreOp.tilingKey);
-    OP_LOGD(nodeName_, "PostTiling run completed");
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t GeluQuantRegbaseTiling::GetTilingKey() const
 {
-    OP_LOGD(nodeName_, "GetTilingKey start running.");
     InputDataType inputDataType = InputDataType::FLOAT_FLOAT;
     if (baseInfoOp.scaleInputDtype == ge::DT_FLOAT16) {
         inputDataType = InputDataType::HALF_HALF;
@@ -574,8 +556,6 @@ uint64_t GeluQuantRegbaseTiling::GetTilingKey() const
 
 void GeluQuantRegbaseTiling::DumpTilingInfo() const
 {
-    OP_LOGD(nodeName_, "DumpTilingInfo start running");
-
     std::ostringstream info;
     info << "GeluQuantRegbaseTiling input info: " << std::endl;
     info << "baseInfoOp.vectorCoreNum: " << baseInfoOp.vectorCoreNum << std::endl;

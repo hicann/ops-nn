@@ -58,8 +58,6 @@ private:
 
 ge::graphStatus HardtanhGradTiling::SetTilingData()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "HardtanhGradTiling SetTilingData enter.");
-
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = static_cast<size_t>(ASCEND_WORKSPACE);
@@ -155,7 +153,6 @@ ge::graphStatus HardtanhGradTiling::CalcOutputDtype()
 
 ge::graphStatus HardtanhGradTiling::RunTiling()
 {
-    OP_LOGD("HardtanhGrad", "HardtanhGradTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
                 return ge::GRAPH_FAILED);
@@ -178,7 +175,9 @@ ge::graphStatus HardtanhGradTiling::RunTiling()
                                   "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
                 return ge::GRAPH_FAILED);
 
     auto runtimeAttrs = tilingContext->GetAttrs();
@@ -203,7 +202,6 @@ static ge::graphStatus Tiling4HardtanhGrad(gert::TilingContext* context)
 
     auto compileInfo = context->GetCompileInfo<ElewiseCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    OP_LOGD("HardtanhGrad", "Enter new HardtanhGrad.");
     HardtanhGradTiling baseOpTiling(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, baseOpTiling.tiling);
     return baseOpTiling.RunTiling();

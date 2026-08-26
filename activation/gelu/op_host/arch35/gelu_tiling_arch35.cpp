@@ -24,7 +24,6 @@ const gert::Shape g_vec_1_shape = {1};
 
 ge::graphStatus GeluTiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluTiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
@@ -48,7 +47,6 @@ static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 
 ge::graphStatus GeluTiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
@@ -68,7 +66,6 @@ ge::graphStatus GeluTiling::CheckShape()
 
 ge::graphStatus GeluTiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluTiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -86,7 +83,6 @@ ge::graphStatus GeluTiling::RunTiling()
 {
     auto tiling = tilingContext->GetTilingData<Ops::Base::EleBaseTilingData16B>();
 
-    OP_LOGD(tilingContext->GetNodeName(), "GeluTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
                 return ge::GRAPH_FAILED);
@@ -112,7 +108,9 @@ ge::graphStatus GeluTiling::RunTiling()
             "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)).c_str()),
                 return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);

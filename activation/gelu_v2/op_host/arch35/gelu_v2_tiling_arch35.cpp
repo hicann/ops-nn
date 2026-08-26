@@ -34,7 +34,6 @@ const int ATTR_APPROXIMATE_POS = 0;
 
 ge::graphStatus GeluV2Tiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
@@ -50,7 +49,6 @@ ge::graphStatus GeluV2Tiling::CalcInputDtype()
 
 ge::graphStatus GeluV2Tiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -79,7 +77,6 @@ ge::graphStatus GeluV2Tiling::CalcOutputDtype()
 
 ge::graphStatus GeluV2Tiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputXShape = Ops::Base::EnsureNotScalar(inputStorageShape->GetStorageShape());
@@ -126,7 +123,6 @@ ge::graphStatus GeluV2Tiling::CheckValid()
 ge::graphStatus GeluV2Tiling::RunTiling()
 {
     auto tiling = tilingContext->GetTilingData<Ops::Base::EleBaseTilingData16B>();
-    OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CheckValid() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "validity check failed"),
                 return ge::GRAPH_FAILED);
@@ -171,7 +167,9 @@ ge::graphStatus GeluV2Tiling::RunTiling()
                                               "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed, output dtype: %s.",
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)).c_str()),
                 return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);

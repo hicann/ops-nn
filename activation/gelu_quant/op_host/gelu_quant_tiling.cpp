@@ -29,7 +29,6 @@ using namespace Ops::NN::OpTiling;
 
 ge::graphStatus GeluQuantTiling::GetPlatformInfo()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] GetPlatformInfo start running.");
     auto compileInfo = reinterpret_cast<const GeluQuantCompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     baseInfoOp.vectorCoreNum = compileInfo->vectorCoreNum;
@@ -52,7 +51,6 @@ ge::graphStatus GeluQuantTiling::GetPlatformInfo()
 
 ge::graphStatus GeluQuantTiling::ProcessAttrsInfo()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] ProcessAttrsInfo start running.");
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
@@ -87,7 +85,6 @@ ge::graphStatus GeluQuantTiling::ProcessAttrsInfo()
 
 ge::graphStatus GeluQuantTiling::ProcessRequiredInfo()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] ProcessRequiredInfo start running.");
     // x
     auto xInputDesc = context_->GetInputDesc(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
@@ -135,8 +132,6 @@ ge::graphStatus GeluQuantTiling::ProcessRequiredInfo()
 
 ge::graphStatus GeluQuantTiling::ProcessOptionalOffsetInfo()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] ProcessOptionalOffsetInfo start running.");
-
     if (baseInfoOp.quantMode == DYNAMIC_QUANT_MODE) {
         return ge::GRAPH_SUCCESS;
     }
@@ -190,8 +185,6 @@ ge::graphStatus GeluQuantTiling::ProcessOptionalOffsetInfo()
 
 ge::graphStatus GeluQuantTiling::ProcessOptionalScaleInfo()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] ProcessOptionalScaleInfo start running.");
-
     auto scaleInputShapePtr = context_->GetOptionalInputShape(SCALE_INPUT_INDEX);
     if (scaleInputShapePtr == nullptr) {
         baseInfoOp.inputScaleType = EMPTY_TENSOR;
@@ -264,13 +257,11 @@ ge::graphStatus GeluQuantTiling::GetInputInfo()
         return ret;
     }
 
-    OP_LOGD(nodeName_, "[GeluQuant] GetInputInfo run completed.");
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GeluQuantTiling::DoStaticQuantPerTensorTiling()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] DoStaticQuantPerTensorTiling start running.");
     splitCoreOp.coexistentNodeNum = STATIC_QUANT_PER_TENSOR_COEXISTING_QUANTITY;
     splitCoreOp.coexistentNodeElementNum = AlignToFloor(
         (SafeDivide(static_cast<int64_t>(baseInfoOp.ubSize),
@@ -354,7 +345,6 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantNotFullKernelSplitEndAxis()
 
 ge::graphStatus GeluQuantTiling::DoStaticQuantTiling()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] DoStaticQuantTiling start running.");
     if (baseInfoOp.inputScaleType == SCALAR_TENSOR) {
         splitCoreOp.templateMode = STATIC_PER_TENSOR_TEMPLATE;
         return DoStaticQuantPerTensorTiling();
@@ -389,7 +379,6 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantTiling()
 
 ge::graphStatus GeluQuantTiling::DoDynamicQuantTiling()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] DoDynamicQuantTiling start running.");
     splitCoreOp.normalCoreProcessNum = CeilDivide(baseInfoOp.fusedFrontAxis, baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(baseInfoOp.fusedFrontAxis, splitCoreOp.normalCoreProcessNum);
     splitCoreOp.tailCoreProcessNum = baseInfoOp.fusedFrontAxis -
@@ -418,14 +407,12 @@ ge::graphStatus GeluQuantTiling::DoDynamicQuantTiling()
 
 ge::graphStatus GeluQuantTiling::DoTiling()
 {
-    OP_LOGD(nodeName_, "[GeluQuant] DoTiling start running.");
     if (baseInfoOp.quantMode == STATIC_QUANT_MODE) {
         DoStaticQuantTiling();
     } else {
         DoDynamicQuantTiling();
     }
 
-    OP_LOGD(nodeName_, "[GeluQuant] DoTiling run completed.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -474,7 +461,6 @@ ge::graphStatus GeluQuantTiling::PostTiling()
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context_->SetTilingKey(splitCoreOp.tilingKey);
-    OP_LOGD(nodeName_, "[GeluQuant] PostTiling run completed");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -512,8 +498,6 @@ uint64_t GeluQuantTiling::GetTilingKey() const
 
 void GeluQuantTiling::DumpTilingInfo() const
 {
-    OP_LOGD(nodeName_, "[GeluQuant] DumpTilingInfo start running");
-
     std::ostringstream info;
     info << "GeluQuantTiling input info: " << std::endl;
     info << "baseInfoOp.vectorCoreNum: " << baseInfoOp.vectorCoreNum << std::endl;

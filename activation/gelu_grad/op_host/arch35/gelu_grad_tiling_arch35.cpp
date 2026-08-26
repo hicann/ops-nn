@@ -37,7 +37,6 @@ bool GeluGradTiling::IsCapable() { return true; }
 
 ge::graphStatus GeluGradTiling::DoOpTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "GeluGradTiling RunTiling enter.");
     auto dyInputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyInputDesc);
     ge::DataType dyInputDtype = dyInputDesc->GetDataType();
@@ -82,21 +81,24 @@ ge::graphStatus GeluGradTiling::DoOpTiling()
         BroadcastBaseTiling<GeluGradDAG<half>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<half>::OpDag> failed"),
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling failed, dy dtype: %s.",
+                            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
                     return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (dyInputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<GeluGradDAG<bfloat16_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<bfloat16_t>::OpDag> failed"),
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling failed, dy dtype: %s.",
+                            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
                     return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (dyInputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<GeluGradDAG<float>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<float>::OpDag> failed"),
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling failed, dy dtype: %s.",
+                            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
                     return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
@@ -123,7 +125,6 @@ static ge::graphStatus Tiling4GeluGrad(gert::TilingContext* tilingContextGen)
 {
     OP_CHECK_IF(tilingContextGen == nullptr, OP_LOGE("Tiling4GeluGrad", "Tiling context is null"),
                 return ge::GRAPH_FAILED);
-    OP_LOGD(tilingContextGen->GetNodeName(), "Enter Tiling4GeluGrad");
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4GeluGrad rt2.0 is running.");
     GeluGradTiling tiling(tilingContextGen);
     return tiling.DoTiling();
