@@ -43,7 +43,7 @@ def max_pool3_d_golden(
     ksize,
     strides,
     padding,
-    pads=[0, 0, 0, 0, 0, 0],
+    pads=None,
     dilation=[1, 1, 1, 1, 1],
     ceil_mode=0,
     data_format="NDHWC",
@@ -69,6 +69,9 @@ def max_pool3_d_golden(
     if "float16" in str(input_dtype):
         inputx = inputx.astype(np.float32)
     padding_mode = padding
+    if pads is None:
+        pads = [0, 0, 0, 0, 0, 0]
+    pads = list(pads)
     if len(pads) == 1:
         pads = [pads[0], pads[0], pads[0], pads[0], pads[0], pads[0]]
     elif len(pads) == 3:
