@@ -235,7 +235,7 @@ aclnnStatus aclnnDequantSwigluQuant(
     - weightScaleOptional参数中，shape表示为[H]，且取值H和x最后一维保持一致。
     - activationScaleOptional参数中，shape为[N..., 1]，最后一维为1，其余和x保持一致。
     - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - quantOffsetOptional参数中，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
+    - quantOffsetOptional参数中，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
     - quantModeOptional参数中，支持“dynamic”和“static"。
   <!-- end id7 -->
   <!-- npu="950" id8 -->

@@ -53,7 +53,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   TopK采样
 
   1. 按分段长度v采用分段topk归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
-  2. topK[batch]对应当前batch采样的k值，有效范围为1≤topK[batch]≤min(voc_size[batch], ks_max)，如果top[k]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。
+  2. topK[batch]对应当前batch采样的k值，有效范围为1≤topK[batch]≤min(voc_size[batch], ks_max)，如果top[K]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会跳过当前batch的排序，将输入logits[batch]直接传入下一模块。
   * 根据输入`topK[b]`的数值，本模块的处理策略如下：
 
     | 参数类型 | ≤0 | 有效域 | 无效域 |

@@ -169,7 +169,7 @@ aclnnStatus aclnnDynamicQuantV3(
     <tr>
       <td>isSymmetrical（bool）</td>
       <td>输入</td>
-      <td>定是否对称量化。</td>
+      <td>指定是否对称量化。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

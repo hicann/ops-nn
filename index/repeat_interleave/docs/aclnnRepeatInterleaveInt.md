@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：将tensor self进行flatten后，每个元素重复repeats的相应次数。
+- 接口功能：将tensor self进行flatten后，每个元素复制repeats的相应次数。
 
 - 示例：
   假设input tensor是([[a, b], [c, d], [e, f]]), repeats为2。
@@ -93,7 +93,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>repeats（int64_t）</td>
         <td>输入</td>
-        <td>重复的次数。</td>
+        <td>复制的次数。</td>
         <td>repeats的值必须为非负数。</td>
         <td>-</td>
         <td>-</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>outputSize（int64_t）</td>
         <td>输入</td>
-        <td>进行重复后的tensor最终大小。</td>
+        <td>进行复制后的tensor最终大小。</td>
         <td>outputSize必须等于self的元素个数 * repeats的值。</td>
         <td>-</td>
         <td>-</td>
