@@ -8,9 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------------------------------------
 
-if(UT_TEST_ALL OR OP_HOST_UT)
-    if(NOT TARGET ${OPHOST_NAME}_tiling_obj)
-        add_tiling_sources("${CMAKE_CURRENT_SOURCE_DIR}/../../../../op_host" "arch35" FALSE)
-    endif()
+# The arch35 tiling tests require the Ascend 950 tiling implementation to be linked into the host UT.
+# Do not register them in the SoC-agnostic aggregate UT, where arch35 sources are intentionally excluded.
+if((UT_TEST_ALL OR OP_HOST_UT) AND ASCEND_COMPUTE_UNIT MATCHES "ascend950")
     add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
