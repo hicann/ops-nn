@@ -10,7 +10,7 @@
 
 #include "aclnn_elu.h"
 #include "elu.h"
-#include "level0/threshold.h"
+#include "activation/common/op_api/threshold.h"
 #include "level0/muls.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"

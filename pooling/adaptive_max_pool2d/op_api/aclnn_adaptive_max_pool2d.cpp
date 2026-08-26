@@ -18,7 +18,7 @@
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
 #include "adaptive_max_pool2d.h"
-#include "level0/max_pool3d_with_argmax_v2.h"
+#include "pooling/common/op_api/max_pool3d_with_argmax_v2.h"
 #include "../../adaptive_max_pool3d/op_api/adaptive_max_pool3d.h"
 #include "aclnn_adaptive_max_pool2d.h"
 #include "aclnn/aclnn_base.h"

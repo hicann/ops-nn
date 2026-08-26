@@ -16,7 +16,7 @@
 #include "aclnn_index_add_v2.h"
 #include "aclnn_index_add.h"
 #include "inplace_scatter_add.h"
-#include "level0/inplace_index_add.h"
+#include "index/common/op_api/inplace_index_add.h"
 #include "level0/unsqueeze.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

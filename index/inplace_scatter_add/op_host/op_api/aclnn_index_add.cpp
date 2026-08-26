@@ -8,10 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "aclnn_index_add.h"
-#include "level0/inplace_index_add.h"
+#include "index/common/op_api/inplace_index_add.h"
 #include "level0/sort.h"
 #include "level0/mul.h"
-#include "level0/index_put_with_sort_v2.h"
+#include "index/common/op_api/index_put_with_sort_v2.h"
 #include "index/common/op_api/index_put.h"
 #include "index/linear_index_v2/op_api/linear_index_v2.h"
 #include "inplace_scatter_add.h"

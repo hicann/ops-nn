@@ -13,7 +13,7 @@
  */
 #include "aclnn_unique2.h"
 #include "unique_common.h"
-#include "level0/unique_with_counts_and_sorting.h"
+#include "index/common/op_api/unique_with_counts_and_sorting.h"
 #include "index/unique_consecutive/op_api/unique_consecutive.h"
 
 #include "aclnn_kernels/cast.h"

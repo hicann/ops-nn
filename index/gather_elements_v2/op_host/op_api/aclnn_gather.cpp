@@ -14,7 +14,7 @@
  */
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/cast.h"
-#include "level0/gather_elements.h"
+#include "index/common/op_api/gather_elements.h"
 #include "gather_elements_v2.h"
 #include "op_api/gather_v2.h"
 #include "aclnn_kernels/transpose.h"

@@ -13,7 +13,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
-#include "level0/max_pool3d_grad_with_argmax.h"
+#include "pooling/common/op_api/max_pool3d_grad_with_argmax.h"
 #include "aclnn_kernels/transdata.h"
 #include "opdev/op_log.h"
 #include "opdev/op_dfx.h"

@@ -10,7 +10,7 @@
 
 #include "aclnn_adaptive_max_pool3d_backward.h"
 #include "adaptive_max_pool3d_backward.h"
-#include "level0/max_pool3d_grad_with_argmax.h"
+#include "pooling/common/op_api/max_pool3d_grad_with_argmax.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
 #include "aclnn_kernels/contiguous.h"

@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "adaptive_max_pool3d.h"
-#include "level0/max_pool3d_with_argmax_v2.h"
+#include "pooling/common/op_api/max_pool3d_with_argmax_v2.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
 #include "aclnn_kernels/transdata.h"
