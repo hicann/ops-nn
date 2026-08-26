@@ -43,8 +43,8 @@ public:
     __aicore__ inline void Compute(LocalTensor<T> tensorLocal, LocalTensor<T> outLocal, int64_t tensorIndex,
                                    int64_t dataCount)
     {
-        __local_mem__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
-        __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
+        __ubuf__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
+        __ubuf__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
         float scaleVal = float(inScalarGM_.GetValue(tensorIndex));
 

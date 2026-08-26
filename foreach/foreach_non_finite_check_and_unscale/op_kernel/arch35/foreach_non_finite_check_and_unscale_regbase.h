@@ -189,10 +189,10 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::Compute(uint
     LocalTensor<T> computeInLT = copyInQueue_.DeQue<T>();
     LocalTensor<T> computeOutLT = copyOutQueue_.AllocTensor<T>();
 
-    __local_mem__ T* inUbAddr = (__ubuf__ T*)computeInLT.GetPhyAddr();
-    __local_mem__ T* outUbAddr = (__ubuf__ T*)computeOutLT.GetPhyAddr();
-    __local_mem__ float* minUbAddr = (__ubuf__ float*)minLocal_.GetPhyAddr();
-    __local_mem__ float* maxUbAddr = (__ubuf__ float*)maxLocal_.GetPhyAddr();
+    __ubuf__ T* inUbAddr = (__ubuf__ T*)computeInLT.GetPhyAddr();
+    __ubuf__ T* outUbAddr = (__ubuf__ T*)computeOutLT.GetPhyAddr();
+    __ubuf__ float* minUbAddr = (__ubuf__ float*)minLocal_.GetPhyAddr();
+    __ubuf__ float* maxUbAddr = (__ubuf__ float*)maxLocal_.GetPhyAddr();
 
     uint32_t dataCountPerLoop = platform::GetVRegSize() / sizeof(float);
     uint16_t repeatTimes = CeilDivision(dataCount, dataCountPerLoop);
@@ -229,14 +229,14 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::Compute(uint
             Muls(y, x, invScaleVal, maskReg);
             ops::StoreOneTensorForDtypeT<T>(outUbAddr, y, maskReg, (repeatTimes - 1) * dataCountPerLoop);
         }
-        DataCopy(lastMin, (__local_mem__ float*)(minUbAddr));
-        DataCopy(lastMax, (__local_mem__ float*)(maxUbAddr));
-        ReduceMax(max, max, pregMain);
-        ReduceMin(min, min, pregMain);
+        LoadAlign(lastMin, (__ubuf__ float*)(minUbAddr));
+        LoadAlign(lastMax, (__ubuf__ float*)(maxUbAddr));
+        Reduce<ReduceType::MAX>(max, max, pregMain);
+        Reduce<ReduceType::MIN>(min, min, pregMain);
         Max(lastMax, lastMax, max, pregMain);
         Min(lastMin, lastMin, min, pregMain);
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)minUbAddr), lastMin, pregMerge);
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)maxUbAddr), lastMax, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)minUbAddr), lastMin, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)maxUbAddr), lastMax, pregMerge);
     }
     copyOutQueue_.EnQue(computeOutLT);
     copyInQueue_.FreeTensor(computeInLT);

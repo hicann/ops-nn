@@ -49,9 +49,9 @@ public:
     {
         // tensor1 + weight * (tensor2 - tensor1)
         // tensor2 + (tensor2 - tensor1) * (weight - 1)
-        __local_mem__ T* tensorOneUbAddr = (__ubuf__ T*)tensorOneLocal.GetPhyAddr();
-        __local_mem__ T* tensorTwoUbAddr = (__ubuf__ T*)tensorTwoLocal.GetPhyAddr();
-        __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
+        __ubuf__ T* tensorOneUbAddr = (__ubuf__ T*)tensorOneLocal.GetPhyAddr();
+        __ubuf__ T* tensorTwoUbAddr = (__ubuf__ T*)tensorTwoLocal.GetPhyAddr();
+        __ubuf__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
         uint32_t dataCountPerLoop = VL_SIZE / sizeof(float);
         uint16_t repeatTimes = CeilDivision(dataCount, dataCountPerLoop);

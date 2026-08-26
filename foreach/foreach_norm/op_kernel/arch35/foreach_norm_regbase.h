@@ -137,8 +137,8 @@ public:
     template <bool isMulitNum, uint8_t modelOrd>
     __aicore__ inline void ReduceComputeImpl(LocalTensor<float> inLocal, LocalTensor<T> outLocal, uint16_t dataCount)
     {
-        __local_mem__ float* inUbAddr = (__ubuf__ float*)inLocal.GetPhyAddr();
-        __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
+        __ubuf__ float* inUbAddr = (__ubuf__ float*)inLocal.GetPhyAddr();
+        __ubuf__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
         uint32_t dataCountPerLoop = VL_SIZE / sizeof(float);
         uint16_t repeatTimes = CeilDivision(dataCount, dataCountPerLoop);
@@ -168,9 +168,9 @@ public:
             }
             if constexpr (isMulitNum) {
                 if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
-                    ReduceMax<float>(inRegToFloat, reduceFloat, pregMain);
+                    Reduce<ReduceType::MAX>(inRegToFloat, reduceFloat, pregMain);
                 } else {
-                    ReduceSum<float>(inRegToFloat, reduceFloat, pregMain);
+                    Reduce<ReduceType::SUM>(inRegToFloat, reduceFloat, pregMain);
                 }
             }
             if constexpr (modelOrd == TWO_SCALAR_NORM_MODEL_CODE) {
@@ -196,8 +196,8 @@ public:
     __aicore__ inline void DoCompute(LocalTensor<T> inLocal, LocalTensor<float> outLocal, int64_t dataCount,
                                      uint16_t outOffset)
     {
-        __local_mem__ T* inUbAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
-        __local_mem__ float* outUbAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
+        __ubuf__ T* inUbAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
+        __ubuf__ float* outUbAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
 
         uint32_t dataCountPerLoop = VL_SIZE / sizeof(float);
         uint16_t repeatTimes = CeilDivision(dataCount, dataCountPerLoop);
@@ -226,24 +226,24 @@ public:
                 }
             }
             if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
-                ReduceMax(reduceFloat, reduceFloat, pregMain);
+                Reduce<ReduceType::MAX>(reduceFloat, reduceFloat, pregMain);
             } else {
-                ReduceSum(reduceFloat, reduceFloat, pregMain);
+                Reduce<ReduceType::SUM>(reduceFloat, reduceFloat, pregMain);
             }
             MicroAPI::MaskReg pregMarge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             if constexpr (isFirst) {
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float*)(outUbAddr + outOffset), reduceFloat, pregMarge);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    (__ubuf__ float*)(outUbAddr + outOffset), reduceFloat, pregMarge);
             } else {
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-                    outFloat, (__local_mem__ float*)(outUbAddr + outOffset));
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(outFloat,
+                                                                            (__ubuf__ float*)(outUbAddr + outOffset));
                 if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
                     Max(outFloat, outFloat, reduceFloat, pregMarge);
                 } else {
                     Add(outFloat, outFloat, reduceFloat, pregMarge);
                 }
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float*)(outUbAddr + outOffset), outFloat, pregMarge);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    (__ubuf__ float*)(outUbAddr + outOffset), outFloat, pregMarge);
             }
         }
     }

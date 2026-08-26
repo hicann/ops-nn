@@ -210,9 +210,9 @@ __simd_callee__ inline void FP16Convert(AscendC::Reg::RegTensor<half>& output, A
     AscendC::Reg::Duplicate(specialValueTensor, specialValue);
     AscendC::Reg::Duplicate(newMantissa, NEW_MANTISSA);
     AscendC::Reg::And(andResult, (AscendC::Reg::RegTensor<uint16_t>&)input, specialValueTensor, mask);
-    AscendC::Reg::CompareScalar<uint16_t, CMPMODE::GT>(nonzeroMask, andResult, 0, mask);
-    AscendC::Reg::CompareScalar<uint16_t, CMPMODE::LT>(specialMask, andResult, NEW_MANTISSA, mask);
-    AscendC::Reg::MaskAnd(specialMask, specialMask, nonzeroMask, mask);
+    AscendC::Reg::Compares<uint16_t, CMPMODE::GT>(nonzeroMask, andResult, 0, mask);
+    AscendC::Reg::Compares<uint16_t, CMPMODE::LT>(specialMask, andResult, NEW_MANTISSA, mask);
+    AscendC::Reg::And(specialMask, specialMask, nonzeroMask, mask);
     AscendC::Reg::Or(newValue, (AscendC::Reg::RegTensor<uint16_t>&)input, newMantissa, mask);
     AscendC::Reg::Select<uint16_t>((AscendC::Reg::RegTensor<uint16_t>&)output, newValue,
                                    (AscendC::Reg::RegTensor<uint16_t>&)input, specialMask);
@@ -318,7 +318,7 @@ __simd_vf__ inline void VFComputeMaxExpMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uin
         }
 
         AscendC::Reg::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, scaleMask1);
-        AscendC::Reg::ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, scaleMask1);
+        AscendC::Reg::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
 
         AscendC::Reg::StoreUnAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, vdMaxExp, u1,
                                                                                           scaleNum);
@@ -581,15 +581,15 @@ __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __u
             }
             Muls(xAbsLeft, xLeft, 0.0f, pregMain);
             Compare<float, CMPMODE::NE>(compareLeft, xAbsLeft, xAbsLeft, pregMain);
-            MaskNot(compareLeft, compareLeft, pregMain);
+            Not(compareLeft, compareLeft, pregMain);
             Abs(xAbsLeft, xLeft, compareLeft);
-            ReduceMax(scale0, xAbsLeft, pregMain);
+            Reduce<ReduceType::MAX>(scale0, xAbsLeft, pregMain);
 
             Muls(xAbsRight, xRight, 0.0f, pregMain);
             Compare<float, CMPMODE::NE>(compareRight, xAbsRight, xAbsRight, pregMain);
-            MaskNot(compareRight, compareRight, pregMain);
+            Not(compareRight, compareRight, pregMain);
             Abs(xAbsRight, xRight, compareRight);
-            ReduceMax(scale1, xAbsRight, pregMain);
+            Reduce<ReduceType::MAX>(scale1, xAbsRight, pregMain);
             Max(scale, scale0, scale1, pregMerge);
             Maxs(clampScale, scale, 0.0001f, pregMerge); // amax
 
@@ -753,7 +753,7 @@ __simd_vf__ inline void VFProcessGroupIndexSmallVf(__ubuf__ T* yLocalAddr, __ubu
         Adds(x, x, static_cast<T>(0), pregLoop);
         Add(sum, sum, x, pregMain);
     }
-    ReduceSum(sum, sum, pregMain);
+    Reduce<ReduceType::SUM>(sum, sum, pregMain);
     if (withUbReduce) {
         RegTensor<T> origin;
         LoadAlign(origin, yLocalAddr);
@@ -801,7 +801,7 @@ __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubu
     Add(sum0, sum0, sum1, pregMain);
     Add(sum2, sum2, sum3, pregMain);
     Add(sum0, sum0, sum2, pregMain);
-    ReduceSum(sum0, sum0, pregMain);
+    Reduce<ReduceType::SUM>(sum0, sum0, pregMain);
     if (withUbReduce) {
         RegTensor<T> origin;
         LoadAlign(origin, yLocalAddr);
@@ -942,7 +942,7 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
             // fp32场景，32个数对应4个Block；先做一次Max，接着ReduceMaxWithBlock
             // 然后DeInterLeave并且Max，得到每4个Block的最大值
             Max(yMax0, yLayout0, yLayout1, pregMain0); // 4 --> 2
-            ReduceMaxWithDataBlock(yMax1, yMax0, pregMain0);
+            ReduceDataBlock<ReduceType::MAX>(yMax1, yMax0, pregMain0);
             DeInterleave(yMax1Layout0, yMax1Layout1, yMax1, yMax1);
 
             Max(scale, yMax1Layout0, yMax1Layout1, pregMerge);

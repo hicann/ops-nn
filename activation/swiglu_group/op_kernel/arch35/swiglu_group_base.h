@@ -208,7 +208,7 @@ __simd_vf__ inline void VFProcessGroupIndexSmallVf(__ubuf__ T* yLocalAddr, __ubu
         Adds(x, x, static_cast<T>(0), pregLoop);
         Add(sum, sum, x, pregMain);
     }
-    ReduceSum(sum, sum, pregMain);
+    Reduce<ReduceType::SUM>(sum, sum, pregMain);
     if (withUbReduce) {
         RegTensor<T> origin;
         LoadAlign(origin, yLocalAddr);
@@ -256,7 +256,7 @@ __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubu
     Add(sum0, sum0, sum1, pregMain);
     Add(sum2, sum2, sum3, pregMain);
     Add(sum0, sum0, sum2, pregMain);
-    ReduceSum(sum0, sum0, pregMain);
+    Reduce<ReduceType::SUM>(sum0, sum0, pregMain);
     if (withUbReduce) {
         RegTensor<T> origin;
         LoadAlign(origin, yLocalAddr);

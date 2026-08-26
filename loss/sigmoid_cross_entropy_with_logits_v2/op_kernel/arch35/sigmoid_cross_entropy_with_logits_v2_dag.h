@@ -78,15 +78,15 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<T>(totalLen);
                 AscendC::MicroAPI::Duplicate(regOne, (T)1.0f, pregUp);
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
                 if constexpr (HAS_WEIGHT) {
-                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr,
-                                                                                   (int32_t)oneRepeat);
+                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr,
+                                                                                    (int32_t)oneRepeat);
                 }
                 if constexpr (HAS_POS_WEIGHT) {
-                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr,
-                                                                                   (int32_t)oneRepeat);
+                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr,
+                                                                                    (int32_t)oneRepeat);
                 }
 
                 MicroAPI::Mins(regMinVal, regX, (T)0.0f, pregUp);
@@ -113,8 +113,8 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
                     MicroAPI::Mul(regLoss, regLoss, regWeight, pregUp);
                 }
 
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat,
+                                                                                 pregUp);
             }
         }
 #endif

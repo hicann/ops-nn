@@ -43,8 +43,8 @@ public:
     __aicore__ inline void Compute(LocalTensor<T> tensorLocal, LocalTensor<T> outLocal, int64_t tensorIndex,
                                    int64_t dataCount)
     {
-        __local_mem__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
-        __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
+        __ubuf__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
+        __ubuf__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
         using scalarCalcType = typename Conditional<AscendC::IsSameType<ScalarT, int32_t>::value, int32_t, float>::type;
         scalarCalcType scaleVal = scalarCalcType(inScalarGM_.GetValue(tensorIndex));
@@ -69,9 +69,9 @@ public:
                 RegTensor<T> inReg;
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);
-                    DataCopy(inReg, inUbAddr + i * dataCountPerLoop);
+                    LoadAlign(inReg, inUbAddr + i * dataCountPerLoop);
                     Muls(inReg, inReg, scaleVal, maskReg);
-                    DataCopy(outUbAddr + i * dataCountPerLoop, inReg, maskReg);
+                    StoreAlign(outUbAddr + i * dataCountPerLoop, inReg, maskReg);
                 }
             }
         }
