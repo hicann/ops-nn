@@ -67,7 +67,8 @@ std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(const aclTensor* x
                                            OP_OUTPUT(yOut, scaleOut, offsetOut),
                                            OP_ATTR(dstType, isSymmetrical, quantMode, dstTypeMax));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DynamicQuantV2 launch kernel failed.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DynamicQuantV2 launch kernel failed, dstType: %d, quantMode: %s.", dstType,
+                quantMode);
         return std::tuple<aclTensor*, aclTensor*, aclTensor*>(nullptr, nullptr, nullptr);
     }
     return std::tuple<aclTensor*, aclTensor*, aclTensor*>(yOut, scaleOut, offsetOut);

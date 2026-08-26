@@ -451,8 +451,6 @@ std::set<int64_t> FindUniqueCut(int64_t usedCoreNum)
 
 static void AutoTiling(DynamicBlockQuantTilingParam& tilingParam)
 {
-    OP_LOGD("AutoTiling", "DynamicBlockQuant AutoTiling Enter.");
-
     // 计算可用核数
     tilingParam.usedCoreNum = std::min(tilingParam.totalCoreNum,
                                        tilingParam.rowBlockLoopNum * tilingParam.colBlockLoopNum);
@@ -632,12 +630,16 @@ ge::graphStatus Tiling4DynamicBlockQuant(gert::TilingContext* context)
     }
 
     tilingParam.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((tilingParam.totalCoreNum <= 0), OP_LOGE(context, "Failed to core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParam.totalCoreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get core num, coreNum: %ld.", tilingParam.totalCoreNum),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParam.ubSize = static_cast<int64_t>(ubSize);
 
-    OP_CHECK_IF((tilingParam.ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParam.ubSize <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParam.ubSize),
+                return ge::GRAPH_FAILED);
 
     DynamicBlockQuantTilingData tilingData;
 
@@ -668,11 +670,7 @@ ge::graphStatus Tiling4DynamicBlockQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4DynamicBlockQuant(gert::TilingParseContext* context)
-{
-    OP_LOGD(context, "TilingPrepare4DynamicBlockQuant entering.");
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4DynamicBlockQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 // register tiling interface of the DynamicBlockQuant op.
 IMPL_OP_OPTILING(DynamicBlockQuant)

@@ -77,7 +77,6 @@ static RoundModeList GetRoundMode(const std::string& roundMode)
 
 static ge::graphStatus GetAttr(const gert::TilingContext* context, GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context, "GetAttr begin.");
     auto* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
@@ -184,7 +183,6 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, GroupedDynami
 
 static ge::graphStatus CheckDtype(const gert::TilingContext* context, GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context, "CheckDtype begin.");
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     tilingParam.inDtype = inputXPtr->GetDataType();
@@ -226,7 +224,6 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context, GroupedDyn
 
 static ge::graphStatus CheckShape(const gert::TilingContext* context, GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context, "CheckShape begin.");
     auto xShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
@@ -290,7 +287,6 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, GroupedDyn
 
 static ge::graphStatus GetPlatInfo(const gert::TilingContext* context, GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context, "GetPlatInfo begin.");
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -324,8 +320,6 @@ static ge::graphStatus GetPlatInfo(const gert::TilingContext* context, GroupedDy
 
 static ge::graphStatus DoTiling(const gert::TilingContext* context, GroupedDynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context, "DoTiling begin.");
-
     tilingParam.blockRowSize = static_cast<int64_t>(tilingParam.vfLen / BYTES_OF_INPUT_TYPE);
     tilingParam.blockRowCount = Ops::Base::CeilDiv(tilingParam.rowSize, tilingParam.blockRowSize);
     tilingParam.blockRowTailSize = tilingParam.rowSize - (tilingParam.blockRowCount - 1) * tilingParam.blockRowSize;
@@ -430,11 +424,7 @@ ge::graphStatus Tiling4GroupedDynamicMxQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4GroupedDynamicMxQuant(gert::TilingParseContext* context)
-{
-    OP_LOGD(context, "TilingPrepare4GroupedDynamicMxQuant entering.");
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4GroupedDynamicMxQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 // register tiling interface of the GroupedDynamicMxQuant op.
 IMPL_OP_OPTILING(GroupedDynamicMxQuant)

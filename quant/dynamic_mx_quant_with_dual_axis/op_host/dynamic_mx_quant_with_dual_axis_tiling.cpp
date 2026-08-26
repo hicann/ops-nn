@@ -273,18 +273,18 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
 // totalCoreNum，ubSize，workspaceSize
 ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetPlatformInfo()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter DynamicMxQuantWithDualAxisTiling GetPlatformInfo.");
-
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
+    OP_CHECK_IF((tilingParams.totalCoreNum <= 0),
+                OP_LOGE(context_->GetNodeName(), "Failed to get core num, coreNum: %ld.", tilingParams.totalCoreNum),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParams.ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+    OP_CHECK_IF((tilingParams.ubSize <= 0),
+                OP_LOGE(context_->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParams.ubSize),
                 return ge::GRAPH_FAILED);
     tilingParams.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
@@ -332,8 +332,6 @@ void DynamicMxQuantWithDualAxisTiling::SplitCore(int64_t blockW, int64_t blockSi
 
 ge::graphStatus DynamicMxQuantWithDualAxisTiling::SetTilingParams()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter DynamicMxQuantWithDualAxisTiling SetTilingParams.");
-
     MergeAxis();
 
     tilingParams.blockSize = BLOCK_SIZE;
@@ -370,8 +368,6 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::SetTilingParams()
 
 ge::graphStatus DynamicMxQuantWithDualAxisTiling::DoTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter DynamicMxQuantWithDualAxisTiling DoTiling.");
-
     OP_CHECK_IF(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The platforminfo get failed"),
                 return ge::GRAPH_FAILED);
 
@@ -487,8 +483,6 @@ static ge::graphStatus TilingForDynamicMxQuantWithDualAxis(gert::TilingContext* 
 
 static ge::graphStatus TilingPrepareForDynamicMxQuantWithDualAxis(gert::TilingParseContext* context)
 {
-    OP_LOGD("DynamicMxQuantWithDualAxisTiling", "Enter TilingPrepareForDynamicMxQuantWithDualAxisTiling");
-
     OP_CHECK_IF(context == nullptr, OP_LOGE("DynamicMxQuantWithDualAxisTiling", "TilingParse context is null."),
                 return ge::GRAPH_FAILED);
 

@@ -58,7 +58,6 @@ const std::set<ge::DataType> OUTPUT_Y_SUPPORT_DTYPE_SET = {ge::DT_UINT8,    ge::
 
 ge::graphStatus Quantize::DoQuantizeTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "DoQuantizeTiling begin");
     OP_CHECK_IF((GetCompileInfo() != ge::GRAPH_SUCCESS),
                 OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling GetCompileInfo Failed."), return ge::GRAPH_FAILED);
 
@@ -88,7 +87,6 @@ ge::graphStatus Quantize::DoQuantizeTiling()
 
 ge::graphStatus Quantize::GetCompileInfo()
 {
-    OP_LOGD(context_->GetNodeName(), "GetCompileInfo begin");
     auto compileInfo = context_->GetCompileInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     coreNum_ = compileInfo->coreNum;
@@ -121,7 +119,6 @@ ge::DataType Quantize::GetDataType(const std::string& dtype) const
 
 ge::graphStatus Quantize::CheckDtype()
 {
-    OP_LOGD(context_->GetNodeName(), "CheckDtype begin");
     auto xInputDesc = context_->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     xDtype_ = xInputDesc->GetDataType();
@@ -184,7 +181,6 @@ ge::graphStatus Quantize::CheckDtype()
 
 ge::graphStatus Quantize::CheckAttrs()
 {
-    OP_LOGD(context_->GetNodeName(), "CheckAttrs begin");
     if (OUTPUT_Y_SUPPORT_DTYPE_SET.count(dtype_) == 0) {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dtype", ge::TypeUtils::DataTypeToSerialString(dtype_),
                                   "[DT_UINT8, DT_INT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]");
@@ -219,7 +215,6 @@ ge::graphStatus Quantize::CheckAttrs()
 
 ge::graphStatus Quantize::CheckShape()
 {
-    OP_LOGD(context_->GetNodeName(), "CheckShape begin");
     if (scalesDimNum_ == 0) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", "0",
                                                  "The shape dim of scales must not be 0");
@@ -281,7 +276,6 @@ ge::graphStatus Quantize::CheckShape()
 
 void Quantize::SelectMode()
 {
-    OP_LOGD(context_->GetNodeName(), "SelectMode begin");
     int64_t eleDim = 0;
     if (scalesDimNum_ == 1) {
         eleDim = scalesInputShape_.GetDim(0);
@@ -302,7 +296,6 @@ void Quantize::SelectMode()
 
 void Quantize::MergeInputShape()
 {
-    OP_LOGD(context_->GetNodeName(), "MergeInputShape begin");
     if (mode_ == TPL_PER_TENSOR) {
         // per tensor场景，0轴固定为1，1轴为shape的乘积
         int64_t shape0 = 1;
@@ -350,7 +343,6 @@ void Quantize::MergeInputShape()
 
 ge::graphStatus Quantize::GetOpParam()
 {
-    OP_LOGD(context_->GetNodeName(), "GetOpParam begin");
     // get input params
     auto xInput = context_->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInput);
@@ -607,7 +599,6 @@ uint32_t Quantize::GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int
 
 void Quantize::CalcTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "CalcTiling begin");
     if (mode_ == TPL_PER_TENSOR) {
         // per tensor模式，所有轴合一
         int64_t shape = xInputShape_.GetDim(1);
@@ -730,8 +721,6 @@ static ge::graphStatus Tiling4Quantize(gert::TilingContext* context)
 
     auto compileInfo = context->GetCompileInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    // 走新的模板tiling
-    OP_LOGD("QuantizeTiling", "Enter new QuantizeTiling");
     quantize::Quantize tiling(context);
     ge::graphStatus status = tiling.DoQuantizeTiling();
     return status;

@@ -639,9 +639,7 @@ static int64_t GetNotAxisGroupPerUb(const DynamicMxQuantTilingParam& tilingParam
 // capable to be optimized
 static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
 {
-    OP_LOGD(context->GetNodeName(), "Start to check input possible to be optimized.");
     if (tilingParam.isTailAxis) {
-        OP_LOGD(context->GetNodeName(), "Tail axis quantization is not supported in this optimization branch.");
         return false;
     }
     if (tilingParam.postAxisSize <= tilingParam.nAlignNum) { // 小尾轴
@@ -692,13 +690,15 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParam.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((tilingParam.totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."),
+    OP_CHECK_IF((tilingParam.totalCoreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get core num, coreNum: %ld.", tilingParam.totalCoreNum),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParam.ubSize = static_cast<int64_t>(ubSize);
 
-    OP_CHECK_IF((tilingParam.ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+    OP_CHECK_IF((tilingParam.ubSize <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParam.ubSize),
                 return ge::GRAPH_FAILED);
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
     tilingParam.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -754,11 +754,7 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4DynamicMxQuant(gert::TilingParseContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "TilingPrepare4DynamicMxQuant entering.");
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4DynamicMxQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 // register tiling interface of the DynamicMxQuant op.
 IMPL_OP_OPTILING(DynamicMxQuant)
