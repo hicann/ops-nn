@@ -3438,6 +3438,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/in_training_reduce_grad/README.md">in_training_reduce_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>InstanceNorm训练反向中reduce阶段的梯度计算。根据上游梯度dy、前向输入x及归约统计量（mean/variance）与res_gamma/res_beta，计算输入x的梯度pd_x。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/deep_norm/README.md">deep_norm</a></td>
     <td>✓</td>
     <td>✓</td>

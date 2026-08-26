@@ -3552,36 +3552,6 @@ REG_OP(ApplyAdamWithAmsgradV2)
     *@brief Performs the backpropagation of InstanceNorm. \n
 
     *@par Inputs:
-    * Seven inputs, including:
-    *@li dy: A 4D tensor of type float16 or float32, format [NCHW, NHWC].
-    *@li x: A 4D tensor of type float16 or float32, format [NCHW, NHWC].
-    *@li variance: A 4D tensor of type float32, for the variance of "x", format [NCHW, NHWC] and HW=1.
-    *@li mean: A 4D tensor of type float32, for the mean of "x", format [NCHW, NHWC] and HW=1.
-    *@li res_gamma: A 4D tensor of type float32, format [NCHW, NHWC] and HW=1.
-    *@li res_beta: A 4D tensor of type float32, format [NCHW, NHWC] and HW=1.
-    *@li gamma: A 4D tensor of type float32, format [NCHW, NHWC] and HW=1. \n
-
-    *@par Outputs:
-    *pd_x: A 4D tensor of type float16 or float32, for the offset of "x", format [NCHW, NHWC]. \n
-
-    *@attention Constraints:
-    * The preceding layer of this operator must be INTrainingUpdateGrad. \n
-    */
-    REG_OP(INTrainingReduceGrad)
-    .INPUT(dy, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(variance, TensorType({DT_FLOAT}))
-    .INPUT(mean, TensorType({DT_FLOAT}))
-    .INPUT(res_gamma, TensorType({DT_FLOAT}))
-    .INPUT(res_beta, TensorType({DT_FLOAT}))
-    .INPUT(gamma, TensorType({DT_FLOAT}))
-    .OUTPUT(pd_x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OP_END_FACTORY_REG(INTrainingReduceGrad)
-
-    /**
-    *@brief Performs the backpropagation of InstanceNorm. \n
-
-    *@par Inputs:
     * Four inputs, including:
     *@li dy: A 4D tensor of type float16 or float32, for the gradient, format [NCHW, NHWC].
     *@li x: A 4Dtensor of type float16 or float32, format [NCHW, NHWC].
