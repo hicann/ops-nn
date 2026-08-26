@@ -505,6 +505,13 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
+    if (!Ops::NN::AclnnUtil::IsRegbase() && source->IsEmpty()) {
+        // 根据实际支持情况补充
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
     // 固定写法，将输入selfRef转换成连续的tensor
     auto selfRefContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
     CHECK_RET(selfRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
