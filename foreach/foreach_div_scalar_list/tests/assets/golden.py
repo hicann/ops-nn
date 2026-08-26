@@ -13,14 +13,13 @@ import numpy as np
 
 
 __golden__ = {
-    "kernel": {
-        "foreach_div_scalar_list": "foreach_div_scalar_list_golden"
-    }
+    "kernel": {"foreach_div_scalar_list": "foreach_div_scalar_list_golden"},
+    "aclnn": {"aclnnForeachDivScalarList": "aclnn_foreach_div_scalar_list_golden"},
 }
 
 
 def foreach_div_scalar_list_golden(x, scalars, **kwargs):
-    '''
+    """
     Golden function for foreach_div_scalar_list.
     All the parameters (names and order) follow @foreach_div_scalar_list_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -31,7 +30,7 @@ def foreach_div_scalar_list_golden(x, scalars, **kwargs):
 
     Returns:
         Tuple of output tensors
-    '''
+    """
     import torch
 
     dtype = x[0].dtype
@@ -40,7 +39,7 @@ def foreach_div_scalar_list_golden(x, scalars, **kwargs):
     input_pts = []
     scalar_pts = []
     for idx, inp in enumerate(x):
-        if 'float16' in dtype_str:
+        if "float16" in dtype_str:
             inp = inp.astype(np.float32)
         inp_pt = torch.from_numpy(inp)
         input_pts.append(inp_pt)
@@ -51,3 +50,45 @@ def foreach_div_scalar_list_golden(x, scalars, **kwargs):
     result_pts = torch._foreach_div(input_tuple, scalar_pts)
 
     return tuple(result_pt.numpy().astype(dtype) for result_pt in result_pts)
+
+
+def _to_torch_float64(tensor):
+    """Convert numpy.ndarray or torch.Tensor to torch.float64 tensor."""
+    import torch
+
+    if isinstance(tensor, np.ndarray):
+        return torch.from_numpy(tensor.astype(np.float64))
+    return tensor.to(torch.float64)
+
+
+def _aclnn_foreach_div_scalar_list_core(x, scalars):
+    import torch
+
+    dtype = x[0].dtype
+    input_pts = [_to_torch_float64(inp) for inp in x]
+    scalar_pts = [torch.scalar_tensor(float(s), dtype=torch.float64) for s in scalars]
+
+    result_pts = torch._foreach_div(input_pts, scalar_pts)
+
+    if isinstance(dtype, torch.dtype):
+        return tuple(result_pt.to(dtype) for result_pt in result_pts)
+    return tuple(result_pt.numpy().astype(dtype) for result_pt in result_pts)
+
+
+def aclnn_foreach_div_scalar_list_golden(x, scalars, out, **kwargs):
+    """
+    Aclnn golden for aclnnForeachDivScalarList.
+    All the parameters (name & order) follow
+        function `aclnnForeachDivScalarListGetWorkspaceSize` in aclnn_foreach_div_scalar_list.h
+        without `workspaceSize` & `executor`.
+    When all dtypes are natively supported by torch,
+        the Tensors in the parameters are all torch.Tensor.
+        Conversely, when not, the Tensors in the parameters are all numpy.ndarray.
+
+    Args:
+        kwargs: tensor_{dtypes, formats}, scalar_dtypes, short_soc_version, testcase_name
+
+    Returns:
+        Output tensors.
+    """
+    return _aclnn_foreach_div_scalar_list_core(x, scalars)

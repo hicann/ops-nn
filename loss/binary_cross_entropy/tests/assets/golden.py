@@ -12,7 +12,33 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"binary_cross_entropy": "binary_cross_entropy_golden"}}
+__golden__ = {
+    "kernel": {"binary_cross_entropy": "binary_cross_entropy_golden"},
+    "aclnn": {"aclnnBinaryCrossEntropy": "aclnn_binary_cross_entropy_golden"},
+}
+
+_REDUCTION_INT_TO_STR = {0: "none", 1: "mean", 2: "sum"}
+
+
+def aclnn_binary_cross_entropy_golden(
+    self_t, target_t, weight_t, reduction, out_t=None, **kwargs
+):
+    import torch
+    import torch.nn.functional as F
+
+    red = _REDUCTION_INT_TO_STR.get(int(reduction), "mean")
+    self_f = self_t.to(torch.float32)
+    target_f = target_t.to(torch.float32)
+    weight_f = weight_t.to(torch.float32) if weight_t is not None else None
+    if weight_f is not None:
+        result = F.binary_cross_entropy(
+            self_f, target_f, weight=weight_f, reduction=red
+        )
+    else:
+        result = F.binary_cross_entropy(self_f, target_f, reduction=red)
+    if out_t is not None and hasattr(out_t, "dtype"):
+        result = result.to(out_t.dtype)
+    return result
 
 
 class Constant:
@@ -21,8 +47,10 @@ class Constant:
     CONST_NEG_ONE = -1
 
 
-def binary_cross_entropy_golden(input_data_x1, input_data_x2, input_data_weight=None, *, reduction='mean', **kwargs):
-    '''
+def binary_cross_entropy_golden(
+    input_data_x1, input_data_x2, input_data_weight=None, *, reduction="mean", **kwargs
+):
+    """
     Golden function for binary_cross_entropy.
     All the parameters (names and order) follow @binary_cross_entropy_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -33,7 +61,7 @@ def binary_cross_entropy_golden(input_data_x1, input_data_x2, input_data_weight=
 
     Returns:
         Output tensor
-    '''
+    """
     ori_dtype = input_data_x1.dtype
     shape = input_data_x1.shape
     if ori_dtype == "float16" or ori_dtype == "bfloat16":

@@ -12,11 +12,14 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"swi_glu": "swi_glu_golden"}}
+__golden__ = {
+    "kernel": {"swi_glu": "swi_glu_golden"},
+    "aclnn": {"aclnnSwiGlu": "aclnn_swi_glu_golden"},
+}
 
 
 def swi_glu_golden(x, *, dim=-1, **kwargs):
-    '''
+    """
     Golden function for swi_glu.
     All the parameters (names and order) follow @swi_glu_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,16 +30,45 @@ def swi_glu_golden(x, *, dim=-1, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
     import torch.nn.functional as F
-    
+
     x_dtype = x.dtype
     if "float16" in str(x_dtype):
         x = x.astype(np.float32)
-    
+
     x_torch = torch.from_numpy(x)
     x_chunks = torch.chunk(x_torch, 2, dim=dim)
     res = F.silu(x_chunks[0]) * x_chunks[1]
-    
+
     return res.numpy().astype(x_dtype, copy=False)
+
+
+def aclnn_swi_glu_golden(x, dim, out, **kwargs):
+    """
+    Aclnn golden for aclnnSwiGlu.
+    All the parameters (name & order) follow
+        function `aclnnSwiGluGetWorkspaceSize` in aclnn_swi_glu.h
+        without `workspaceSize` & `executor`.
+    When all dtypes are natively supported by torch,
+        the Tensors in the parameters are all torch.Tensor.
+        Conversely, when not, the Tensors in the parameters are all numpy.ndarray.
+
+    Args:
+        kwargs: tensor_{dtypes, formats}, scalar_dtypes, short_soc_version, testcase_name
+
+    Returns:
+        Output tensors.
+    """
+    import torch
+    import torch.nn.functional as F
+
+    x_dtype = x.dtype
+    if "float16" in str(x_dtype):
+        x = x.to(torch.float32)
+
+    x_chunks = torch.chunk(x, 2, dim=dim)
+    res = F.silu(x_chunks[0]) * x_chunks[1]
+
+    return res.to(x_dtype)
