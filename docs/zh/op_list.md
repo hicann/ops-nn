@@ -3409,6 +3409,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_training_update_grad/README.md">bn_training_update_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>批归一化训练反向的update阶段。给定反向梯度grads、前向输入x以及逐通道统计量batch_mean/batch_variance，计算缩放因子与偏置的梯度diff_scale/diff_offset（fp32）。与BNTrainingUpdate配套使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>
