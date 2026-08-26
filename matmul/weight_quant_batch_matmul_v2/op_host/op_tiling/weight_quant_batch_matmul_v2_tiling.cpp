@@ -205,6 +205,10 @@ void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext
     auto quantScaleShape = context->GetOptionalInputShape(idx++);
     auto biasShape = context->GetOptionalInputShape(BIAS_INDEX);
     matmulInfo.bFormat = GetInputStorageFormat(context, 1);
+    // NZ_C0_16（4-bit 紧凑 NZ）与 NZ_C0_2 统一归一到 FRACTAL_NZ 处理，与 eager 侧 TensorPreProcess 行为一致
+    if (matmulInfo.bFormat == ge::FORMAT_FRACTAL_NZ_C0_2 || matmulInfo.bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
+        matmulInfo.bFormat = ge::FORMAT_FRACTAL_NZ;
+    }
     GetXWeightInputShape(matmulInfo, xShape, weightShape, biasShape);
 
     if (CheckOptionalInputByShape(antiQuantOffsetShape)) {
@@ -698,7 +702,8 @@ bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputP
                         antiQuantScaleShape->GetStorageShape().GetShapeSize() == 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Not yet support empty tensor"), return false);
     inputParams->bFormat = GetInputStorageFormat(context, 1);
-    if (inputParams->bFormat == ge::FORMAT_FRACTAL_NZ_C0_2) {
+    // NZ_C0_16（4-bit 紧凑 NZ）与 NZ_C0_2 统一归一到 FRACTAL_NZ 处理，与 eager 侧 TensorPreProcess 行为一致
+    if (inputParams->bFormat == ge::FORMAT_FRACTAL_NZ_C0_2 || inputParams->bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
         inputParams->bFormat = ge::FORMAT_FRACTAL_NZ;
     }
     OP_TILING_CHECK(inputParams->bFormat == ge::FORMAT_NULL,

@@ -98,8 +98,12 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
                            "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"}
                             })";
     ge::Format bFormat = ge::FORMAT_ND;
-    if (stol(testParam[idx++]) == 1) {
+    int64_t weightFormat = stol(testParam[idx++]);
+    if (weightFormat == 1) {
         bFormat = ge::FORMAT_FRACTAL_NZ;
+    } else if (weightFormat == 2) {
+        // 2为NZ_C0_16（4-bit 紧凑 NZ），tiling 入口统一归一到 FRACTAL_NZ 处理
+        bFormat = ge::FORMAT_FRACTAL_NZ_C0_16;
     }
     ge::graphStatus expectedStatus = ge::GRAPH_SUCCESS;
     if (stol(testParam[idx++]) == 1) {
@@ -126,14 +130,14 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
         xShape.MutableOriginShape() = gert::Shape({m, k});
     }
     if (transB) {
-        if (bFormat == ge::FORMAT_FRACTAL_NZ) {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
             weigthShape.MutableStorageShape() = gert::Shape({(k + 16) / 16, (n + 16) / 16L, 16L, 16});
         } else {
             weigthShape.MutableStorageShape() = gert::Shape({n, k});
         }
         weigthShape.MutableOriginShape() = gert::Shape({n, k});
     } else {
-        if (bFormat == ge::FORMAT_FRACTAL_NZ) {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
             weigthShape.MutableStorageShape() = gert::Shape({(n + 16) / 16, (k + 16) / 16L, 16L, 16});
         } else {
             weigthShape.MutableStorageShape() = gert::Shape({k, n});
@@ -263,7 +267,7 @@ TEST_P(TestWeightQuantBatchMatmulV2RegBaseTiling, generalTest)
 }
 
 // format: m k n antiQuantOffsetExistFlag quantScaleExistFlag quantOffsetExistFlag biasFlag transA transB group Xdtype
-//         weigthDtype quantScaleDtype yDtype aicNum aivNum weightFormat(0:ND,1:NZ) ExceptionTest
+//         weigthDtype quantScaleDtype yDtype aicNum aivNum weightFormat(0:ND,1:NZ,2:NZ_C0_16) ExceptionTest
 // Note: group value
 //       -1: per channel, 1: per tensor, > 1: per group
 static WeightQuantBatchMatmulV2TilingRegBaseTestParam casesParams[] = {
@@ -285,6 +289,9 @@ static WeightQuantBatchMatmulV2TilingRegBaseTestParam casesParams[] = {
     {"davidCase_1_176_1040_0_0_0_0_0_0_32_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_32_64_1_0", 22, 34410090498UL},
     {"davidCase-error-core-ratio_1_8192_2560_0_0_0_0_0_0_32_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_32_32_1_1", 0, 0UL},
     {"errCase-antiQuantScaleDtype_8_8192_512_1_0_0_0_0_0_128_UINT64_INT4_UINT64_FLOAT16_32_64_0_1", 0, 0UL},
+    // NZ_C0_16 孪生用例：与同名 NZ（weightFormat=1）用例仅 weightFormat 不同，tiling 归一后预期 tilingKey/blocks 相同
+    {"davidCase_5124_704_2688_1_0_0_1_0_0_608_BF16_INT4_UINT64_BF16_32_64_2_0", 32, 55884926978UL},
+    {"davidCase_1_8192_2560_0_0_0_0_0_0_32_FLOAT16_FLOAT4E2M1_UINT64_FLOAT16_32_64_2_0", 32, 34410090498UL},
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2RegBaseTiling, testing::ValuesIn(casesParams));
@@ -339,14 +346,14 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_init_compile_info)
         xShape.MutableOriginShape() = gert::Shape({m, k});
     }
     if (transB) {
-        if (bFormat == ge::FORMAT_FRACTAL_NZ) {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
             weigthShape.MutableStorageShape() = gert::Shape({(k + 16) / 16, (n + 16) / 16L, 16L, 16});
         } else {
             weigthShape.MutableStorageShape() = gert::Shape({n, k});
         }
         weigthShape.MutableOriginShape() = gert::Shape({n, k});
     } else {
-        if (bFormat == ge::FORMAT_FRACTAL_NZ) {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
             weigthShape.MutableStorageShape() = gert::Shape({(n + 16) / 16, (k + 16) / 16L, 16L, 16});
         } else {
             weigthShape.MutableStorageShape() = gert::Shape({k, n});

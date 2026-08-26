@@ -832,10 +832,16 @@ static aclnnStatus CheckNzSocValid()
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus IsNzFormat(const aclTensor* weight)
+static bool IsNzFormat(const aclTensor* weight)
 {
     return weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
-           weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2;
+           weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2 ||
+           weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_16;
+}
+
+static bool Is4BitCompactWeightDtype(const aclTensor* weight)
+{
+    return weight->GetDataType() == DataType::DT_INT4 || weight->GetDataType() == DataType::DT_FLOAT4_E2M1;
 }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
@@ -851,6 +857,8 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* weight, const aclT
 static bool CheckWeightFormat(const aclTensor* weight)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        // 950 上 V2/V3 仅支持 ND weight；NZ（含 4-bit 紧凑 NZ_C0_16）统一走
+        // aclnnWeightQuantBatchMatmulNz 接口
         if (weight->GetStorageFormat() != op::Format::FORMAT_ND) {
             OP_LOGE_FOR_INVALID_FORMAT(kOpName, "weight", op::ToString(weight->GetStorageFormat()).GetString(),
                                        "FORMAT_ND");
@@ -1471,6 +1479,8 @@ static aclnnStatus ModifyTensorDtype(const aclTensor*& tensorRef, aclTensor* ten
 
 static aclnnStatus SetNZC0FormatToNZFormat(aclTensor* input)
 {
+    // 仅服务 INT32/FLOAT 载体的 legacy 打包路径；NZ_C0_16 为 4-bit 紧凑排布专用，
+    // 由 TensorPreProcess 的 4-bit 分支单独处理，不会进入此函数
     if (input->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2) {
         input->SetViewFormat(op::Format::FORMAT_ND);
         input->SetOriginalFormat(op::Format::FORMAT_ND);
@@ -1536,6 +1546,17 @@ static aclnnStatus TensorPreProcess(TupleTensor mandatoryTensors, TupleTensor op
         (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
          weight->GetDataType() == DataType::DT_FLOAT)) {
         CHECK_RET(PackedWeightPreProcess(weight, tensorWeight, executor) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    } else if (Is4BitCompactWeightDtype(weight) && weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_16 &&
+               op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        auto weightTemp = executor->CreateView(weight, weight->GetViewShape(), weight->GetViewOffset());
+        CHECK_RET(weightTemp != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // NZ_C0_16 由非转置 preprocess 路径产生，无需像存量 NZ 分支一样按转置交换 OriginalShape；
+        // kernel 按 storage shape 访问内存，view strides 保持原样透传
+        weightTemp->SetViewStrides(weight->GetViewStrides());
+        weightTemp->SetStorageShape(weight->GetStorageShape());
+        weightTemp->SetOriginalShape(weight->GetViewShape());
+        weightTemp->SetStorageFormat(Format::FORMAT_FRACTAL_NZ);
+        tensorWeight = weightTemp;
     } else if (weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
                (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                 GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
@@ -1597,7 +1618,7 @@ aclnnStatus CheckContiguous(const aclTensor*& x, const aclTensor*& weight, const
         CHECK_RET(CreateContiguous(antiquantScale, executor), ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(CreateContiguous(antiquantOffsetOptional, executor), ACLNN_ERR_INNER_NULLPTR);
     } else {
-        if (weight->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
+        if (!IsNzFormat(weight)) {
             CHECK_RET(TensorContiguousProcess(weight, transposeWeight, executor), ACLNN_ERR_INNER_NULLPTR);
         }
         CHECK_RET(TensorContiguousProcess(antiquantScale, transposeWeight, executor), ACLNN_ERR_INNER_NULLPTR);
