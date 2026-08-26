@@ -25,6 +25,7 @@
 #include "log/log.h"
 #include "graph/utils/type_utils.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "securec.h"
 #include "../../op_kernel/arch35/multilabel_margin_loss_tiling_data_arch35.h"
@@ -243,4 +244,19 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+struct MultilabelMarginLossCompileInfo {};
+
+static ge::graphStatus MultilabelMarginLossTilingFunc(gert::TilingContext* context)
+{
+    return DoMultilabelMarginLossTiling950(context);
+}
+
+static ge::graphStatus TilingParseForMultilabelMarginLoss([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(MultilabelMarginLoss)
+    .Tiling(MultilabelMarginLossTilingFunc)
+    .TilingParse<MultilabelMarginLossCompileInfo>(TilingParseForMultilabelMarginLoss);
 } // namespace optiling
