@@ -17,7 +17,7 @@
  * 核函数参数顺序契约：输入(7) → 输出(3) → workspace → tiling。
  * 模板参数 USE_NESTEROV 与 tiling_key.h 的 ASCENDC_TPL_ARGS_DECL 对应。
  * dtype 由 def 文件 DataType 列驱动，构建系统注入 DTYPE_* 编译宏
- *   （ComputeT=DTYPE_ACCUM，VarCopyT=DTYPE_VAR_COPY）。
+ *   （ComputeT=DTYPE_ACCUM，VarCopyT=DTYPE_VAR_COPY，VarCopyT 恒 half）。
  */
 
 #include "arch35/fused_mul_apply_momentum_extern.h"
@@ -36,6 +36,8 @@
 //   CPU UT 沿用同一 TilingKey 语义，两模板变体均实例化，运行期由 ICPU_SET_TILING_KEY 分派：
 //     TilingKey 0 → USE_NESTEROV=0（标准动量）
 //     TilingKey 1 → USE_NESTEROV=1（Nesterov）
+//   注：TILING_KEY_IS 仅在 __CCE_KT_TEST__ CPU UT 路径使用，NPU 生产路径使用
+//   ASCENDC_TPL 编译期特化（见 #else 分支），不含 TILING_KEY_IS。
 extern "C" __global__ __aicore__ void fused_mul_apply_momentum_extern(GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
                                                                       GM_ADDR x1, GM_ADDR momentum, GM_ADDR x2,
                                                                       GM_ADDR var_copy, GM_ADDR var_out,

@@ -19,10 +19,10 @@
  * 模板参数：
  *   - USE_NESTEROV: 0=标准动量, 1=Nesterov（两模式均编译特化）
  *     dtype 通路由 def 文件 DataType 列驱动（构建系统按每列注入 DTYPE_ACCUM /
- *     DTYPE_VAR_COPY 宏，3 列 = FP32/FP16/BF16）。dtype 通路(3) × USE_NESTEROV(2)
- *     = 6 TilingKey（K0~K5）编译期特化。
- *     · K0/K2/K4 = 标准模式（USE_NESTEROV=0），dtype = FP32/FP16/BF16
- *     · K1/K3/K5 = Nesterov 模式（USE_NESTEROV=1），dtype = FP32/FP16/BF16
+ *     DTYPE_VAR_COPY 宏，2 列 = FP32/FP16）。dtype 通路(2) × USE_NESTEROV(2)
+ *     = 4 TilingKey（K0~K3）编译期特化。
+ *     · K0/K2 = 标准模式（USE_NESTEROV=0），dtype = FP32/FP16
+ *     · K1/K3 = Nesterov 模式（USE_NESTEROV=1），dtype = FP32/FP16
  */
 
 #ifndef FUSED_MUL_APPLY_MOMENTUM_EXTERN_TILING_KEY_H

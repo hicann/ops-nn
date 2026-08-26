@@ -15,14 +15,14 @@
  * \brief Tiling UT（全 TilingKey）：EleWise 首维展平线性切分 + 512 元素 / 256B 对齐 + 动态分核。
  *
  * TilingKey 机制（DESIGN §3.2 / §3.4）：
- *   6 TilingKey（K0~K5）= dtype 通路(3: FP32/FP16/BF16) × use_nesterov(2: 标准/Nesterov)。
+ *   4 TilingKey（K0~K3）= dtype 通路(2: FP32/FP16) × use_nesterov(2: 标准/Nesterov)。
  *   - dtype 维度：由 def.cpp DataType 列在 kernel 编译期特化，Host Tiling 对 dtype 无感
- *     （ELEM_BYTES 保守取 FP32=4），故三 dtype 通路的 Tiling 切分字段与 Host TilingKey 一致。
- *   - use_nesterov 维度：由 Host TilingKey 编码（0=标准 → K0/K2/K4；1=Nesterov → K1/K3/K5）。
+ *     （ELEM_BYTES 保守取 FP32=4），故两 dtype 通路的 Tiling 切分字段与 Host TilingKey 一致。
+ *   - use_nesterov 维度：由 Host TilingKey 编码（0=标准 → K0/K2；1=Nesterov → K1/K3）。
  *
  * 覆盖点：
- *   - K0~K5 全 TilingKey：标准(key=0)/Nesterov(key=1) × FP32/FP16/BF16 三 dtype 输入组合
- *   - dtype 判定分支：FP32 直算 vs FP16/BF16 升精度输入组合下 Tiling 均成功且切分字段一致
+ *   - K0~K3 全 TilingKey：标准(key=0)/Nesterov(key=1) × FP32/FP16 两 dtype 输入组合
+ *   - dtype 判定分支：FP32 直算 vs FP16 升精度输入组合下 Tiling 均成功且切分字段一致
  *   - 标准/Nesterov 双模式 var_delta 计算图分别落到 TilingKey 0/1（编译期特化 USE_NESTEROV）
  *   - 首维展平线性切分字段正确（dim0 / coreNum / blockFormer / blockNum / ubFormer / ubLoop 与 ubTail）
  *   - workspace = 0（inplace 逐元素）
@@ -62,28 +62,26 @@ struct FusedMulApplyMomentumExternCompileInfo {
 static inline int64_t CeilDivI(int64_t a, int64_t b) { return (a + b - 1) / b; }
 static inline int64_t CeilAlignI(int64_t a, int64_t b) { return CeilDivI(a, b) * b; }
 
-// dtype 计算通路（accum dtype 决定；var 恒 FP32、var_copy 恒低精度）
-//   DESIGN §3.2：dtype 通路(3) × use_nesterov(2) = 6 TilingKey（K0~K5）。
+// dtype 计算通路（accum dtype 决定；var 恒 FP32、var_copy 恒 FP16）
+//   DESIGN §3.2：dtype 通路(2) × use_nesterov(2) = 4 TilingKey（K0~K3）。
 //   dtype 维度由 def.cpp DataType 列在 kernel 编译期特化，Host Tiling 对 dtype 无感
 //   （ELEM_BYTES 保守取 FP32=4）；use_nesterov 维度由 Host TilingKey（0/1）编码。
-enum class DtypePath { FP32, FP16, BF16 };
+enum class DtypePath { FP32, FP16 };
 
 static ge::DataType PathAccumDtype(DtypePath p)
 {
     switch (p) {
         case DtypePath::FP16:
             return ge::DT_FLOAT16;
-        case DtypePath::BF16:
-            return ge::DT_BF16;
         default:
             return ge::DT_FLOAT;
     }
 }
-// var_copy 恒低精度：FP32/FP16 通路 → FP16；BF16 通路 → BF16（DESIGN §1.1）
-static ge::DataType PathVarCopyDtype(DtypePath p) { return (p == DtypePath::BF16) ? ge::DT_BF16 : ge::DT_FLOAT16; }
+// var_copy 恒 FP16（DESIGN §1.1）
+static ge::DataType PathVarCopyDtype(DtypePath /*p*/) { return ge::DT_FLOAT16; }
 
 // 构造 7 输入张量描述（四张量同 tensorShape，lr/momentum/x2 标量）
-//   var 恒 FP32；accum/lr/x1/momentum/x2 = 通路 dtype；var_copy 恒低精度。
+//   var 恒 FP32；accum/lr/x1/momentum/x2 = 通路 dtype；var_copy 恒 FP16。
 static std::vector<TilingContextPara::TensorDescription> MakeInputs(const std::initializer_list<int64_t>& varShape,
                                                                     const std::initializer_list<int64_t>& accumShape,
                                                                     DtypePath path = DtypePath::FP32)
@@ -100,7 +98,7 @@ static std::vector<TilingContextPara::TensorDescription> MakeInputs(const std::i
         {v, d, ge::FORMAT_ND},            // x1        通路 dtype
         {scalar, d, ge::FORMAT_ND},       // momentum  通路 dtype
         {scalar, d, ge::FORMAT_ND},       // x2        通路 dtype
-        {v, vc, ge::FORMAT_ND},           // var_copy  低精度
+        {v, vc, ge::FORMAT_ND},           // var_copy  FP16
     };
 }
 
@@ -112,7 +110,7 @@ static std::vector<TilingContextPara::TensorDescription> MakeOutputs(const std::
     ge::DataType vc = PathVarCopyDtype(path);
     return {
         {s, ge::DT_FLOAT, ge::FORMAT_ND}, // var_out       恒 FP32
-        {s, vc, ge::FORMAT_ND},           // var_copy_out  低精度
+        {s, vc, ge::FORMAT_ND},           // var_copy_out  FP16
         {s, d, ge::FORMAT_ND},            // accum_out     通路 dtype
     };
 }
@@ -135,10 +133,12 @@ static FusedMulApplyMomentumExternTilingData ExpectTiling(int64_t dim0, uint64_t
     }
     int64_t minDtypeBits = ELEM_BYTES * 8;
     int64_t usedCore = (dim0 * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
-    if (usedCore > coreNum)
+    if (usedCore > coreNum) {
         usedCore = coreNum;
-    if (usedCore < 1)
+    }
+    if (usedCore < 1) {
         usedCore = 1;
+    }
 
     int64_t blockFormer = CeilAlignI(CeilDivI(dim0, usedCore), ELEM_ALIGN_FACTOR);
     int64_t blockNum = CeilDivI(dim0, blockFormer);
@@ -147,8 +147,9 @@ static FusedMulApplyMomentumExternTilingData ExpectTiling(int64_t dim0, uint64_t
     int64_t maxElemNum = (static_cast<int64_t>(ubSize - UB_RESERVE) * 8) / (bufferDivisor * 8);
     int64_t alignFactor = ALIGN_256 / ELEM_BYTES;
     int64_t ubFormer = (maxElemNum / alignFactor) * alignFactor;
-    if (ubFormer < alignFactor)
+    if (ubFormer < alignFactor) {
         ubFormer = alignFactor;
+    }
 
     int64_t ubLoopOfFormerBlock = CeilDivI(blockFormer, ubFormer);
     int64_t ubTailOfFormerBlock = blockFormer - (ubLoopOfFormerBlock - 1) * ubFormer;
@@ -242,8 +243,8 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_k0_large_shape_multicore)
 
 // ============================================================================
 // 双模式 var_delta 计算图 → TilingKey（use_nesterov 编译期特化）
-//   标准模式 Δv = accum'·lr           → USE_NESTEROV=0 → TilingKey 0（K0/K2/K4 共用）
-//   Nesterov 模式 Δv = grad·lr + accum'·μ·lr → USE_NESTEROV=1 → TilingKey 1（K1/K3/K5 共用）
+//   标准模式 Δv = accum'·lr           → USE_NESTEROV=0 → TilingKey 0（K0/K2 共用）
+//   Nesterov 模式 Δv = grad·lr + accum'·μ·lr → USE_NESTEROV=1 → TilingKey 1（K1/K3 共用）
 // ============================================================================
 
 // —— 标准模式（use_nesterov=false）→ TilingKey 0 ——
@@ -251,7 +252,7 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_standard_mode_key0)
 {
     TilingInfo info;
     ASSERT_TRUE(RunTiling({64}, /*useNesterov=*/false, false, info));
-    EXPECT_EQ(info.tilingKey, 0); // 标准模式 → K0/K2/K4 的 USE_NESTEROV=0
+    EXPECT_EQ(info.tilingKey, 0); // 标准模式 → K0/K2 的 USE_NESTEROV=0
     const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
     ExpectTilingEq(*got, ExpectTiling(64, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
 }
@@ -261,7 +262,7 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_nesterov_mode_key1)
 {
     TilingInfo info;
     ASSERT_TRUE(RunTiling({64}, /*useNesterov=*/true, false, info));
-    EXPECT_EQ(info.tilingKey, 1); // Nesterov 模式 → K1/K3/K5 的 USE_NESTEROV=1
+    EXPECT_EQ(info.tilingKey, 1); // Nesterov 模式 → K1/K3 的 USE_NESTEROV=1
     const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
     // 切分字段与标准模式一致（use_nesterov 只改计算图，不改切分）
     ExpectTilingEq(*got, ExpectTiling(64, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
@@ -280,9 +281,9 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_use_locking_no_effect)
 }
 
 // ============================================================================
-// 全 TilingKey（K0~K5）：dtype 通路(FP32/FP16/BF16) × use_nesterov(标准/Nesterov)
-//   Host Tiling 对 dtype 无感（ELEM_BYTES 保守 FP32=4），故三 dtype 通路切分字段一致；
-//   dtype 维度经 def.cpp DataType 列于 kernel 编译期特化。此处校验：三 dtype 输入组合下
+// 全 TilingKey（K0~K3）：dtype 通路(FP32/FP16) × use_nesterov(标准/Nesterov)
+//   Host Tiling 对 dtype 无感（ELEM_BYTES 保守 FP32=4），故两 dtype 通路切分字段一致；
+//   dtype 维度经 def.cpp DataType 列于 kernel 编译期特化。此处校验：两 dtype 输入组合下
 //   Tiling 均成功、切分字段一致、Host TilingKey 随 use_nesterov 正确落 0/1。
 // ============================================================================
 
@@ -326,38 +327,15 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_K3_fp16_nesterov)
     ExpectTilingEq(*got, ExpectTiling(64, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
 }
 
-// —— K4：BF16 + 标准 ——
-TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_K4_bf16_standard)
-{
-    TilingInfo info;
-    ASSERT_TRUE(RunTiling({64}, false, false, info, DtypePath::BF16));
-    EXPECT_EQ(info.tilingKey, 0);
-    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
-    ExpectTilingEq(*got, ExpectTiling(64, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
-}
-
-// —— K5：BF16 + Nesterov ——
-TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_K5_bf16_nesterov)
-{
-    TilingInfo info;
-    ASSERT_TRUE(RunTiling({64}, true, false, info, DtypePath::BF16));
-    EXPECT_EQ(info.tilingKey, 1);
-    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
-    ExpectTilingEq(*got, ExpectTiling(64, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
-}
-
-// —— dtype 判定分支：三 dtype 通路切分字段互相一致（Host Tiling 对 dtype 无感的证明） ——
+// —— dtype 判定分支：两 dtype 通路切分字段互相一致（Host Tiling 对 dtype 无感的证明） ——
 TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_dtype_paths_split_identical)
 {
-    TilingInfo fp32, fp16, bf16;
+    TilingInfo fp32, fp16;
     ASSERT_TRUE(RunTiling({1024}, false, false, fp32, DtypePath::FP32));
     ASSERT_TRUE(RunTiling({1024}, false, false, fp16, DtypePath::FP16));
-    ASSERT_TRUE(RunTiling({1024}, false, false, bf16, DtypePath::BF16));
     const auto* a = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(fp32.tilingData.get());
     const auto* b = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(fp16.tilingData.get());
-    const auto* c = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(bf16.tilingData.get());
     ExpectTilingEq(*b, *a);
-    ExpectTilingEq(*c, *a);
 }
 
 // —— 空 Tensor（dim0=0）早退，标准模式仍选定合法 TilingKey 0，dim0=0 ——
@@ -406,7 +384,7 @@ static std::vector<TilingContextPara::TensorDescription> MakeInputsFull(
         {x, ge::DT_FLOAT, ge::FORMAT_ND},      // x1
         {scalar, ge::DT_FLOAT, ge::FORMAT_ND}, // momentum
         {scalar, ge::DT_FLOAT, ge::FORMAT_ND}, // x2
-        {vc, ge::DT_FLOAT16, ge::FORMAT_ND},   // var_copy  低精度
+        {vc, ge::DT_FLOAT16, ge::FORMAT_ND},   // var_copy  FP16
     };
 }
 

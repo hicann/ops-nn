@@ -14,6 +14,8 @@
  * \file fused_mul_apply_momentum_extern_proto.h
  * \brief GE IR 图模式原型（REG_OP，7 输入 / 3 输出 + use_nesterov/use_locking 属性）
  *
+ * dtype 约束：var 恒 DT_FLOAT；var_copy 恒 DT_FLOAT16；accum/lr/x1/momentum/x2 为 NumberType。
+ *
  * CANN 独有图模式融合训练算子，由 momentum_lossscale_fusion_pass 融合 PASS 产生。
  * 三输出 inplace 复用对应输入名（var↔var、var_copy↔var_copy、accum↔accum，GM 地址复用）。
  */
@@ -37,7 +39,7 @@ namespace ge {
  * @li x1: gradient component g1.
  * @li momentum: momentum coefficient scalar.
  * @li x2: LossScale reciprocal g2 scalar.
- * @li var_copy: low-precision weight copy (FP16/BF16), in-place updated.
+ * @li var_copy: low-precision weight copy (FP16), in-place updated.
  *@par Outputs:
  * @li var: updated master weight var' (in-place, reuses input var).
  * @li var_copy: updated low-precision copy var_copy' (in-place, reuses input var_copy).

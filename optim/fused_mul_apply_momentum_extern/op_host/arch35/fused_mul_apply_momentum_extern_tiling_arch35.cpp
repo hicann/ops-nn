@@ -49,6 +49,7 @@ constexpr int64_t UB_RESERVE = 1024;       // UB 预留裕量（字节）
 // 保守按 FP32(4B) 估算 per-element 字节（var_copy 为 FP16 2B，偏保守使 ubFormer 更小、无溢出风险）
 constexpr int64_t BUF_TENSOR_COUNT = 7;
 constexpr int64_t ELEM_BYTES = 4;
+constexpr int64_t BITS_PER_BYTE = 8;
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
 {
@@ -73,6 +74,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto varCopyShape = context->GetInputShape(IDX_VAR_COPY);
     OP_CHECK_NULL_WITH_CONTEXT(context, varCopyShape);
 
+    OP_CHECK_IF(varShape->GetStorageShape().GetDimNum() == 0 || accumShape->GetStorageShape().GetDimNum() == 0 ||
+                    x1Shape->GetStorageShape().GetDimNum() == 0 || varCopyShape->GetStorageShape().GetDimNum() == 0,
+                OP_LOGE(context, "FusedMulApplyMomentumExtern: 0D scalar not supported, use [1] instead"),
+                return ge::GRAPH_FAILED);
+
     int64_t varSize = varShape->GetStorageShape().GetShapeSize();
     int64_t accumSize = accumShape->GetStorageShape().GetShapeSize();
     int64_t x1Size = x1Shape->GetStorageShape().GetShapeSize();
@@ -87,16 +93,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     *dim0 = varSize;
 
     OP_CHECK_IF(varShape->GetStorageShape().GetDimNum() > 8,
-                OP_LOGE(context, "FusedMulApplyMomentumExtern: rank %ld exceeds max 8",
+                OP_LOGE(context, "FusedMulApplyMomentumExtern: rank %zu exceeds max 8",
                         varShape->GetStorageShape().GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    // dtype 校验：var 恒 FP32；accum/lr/x1/momentum/x2 须同 dtype（FP32/FP16/BF16）；
-    // var_copy 须为 FP16（当 accum 为 FP32/FP16）或 BF16（当 accum 为 BF16）。
+    // dtype 校验：var 恒 FP32；accum/lr/x1/momentum/x2 须同 dtype（FP32/FP16）；
+    // var_copy 须为 FP16。
     auto varDesc = context->GetInputDesc(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
     ge::DataType varDtype = varDesc->GetDataType();
-    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16};
     OP_CHECK_IF(supportedDtype.count(varDtype) == 0,
                 OP_LOGE(context, "FusedMulApplyMomentumExtern: var dtype %d not supported", static_cast<int>(varDtype)),
                 return ge::GRAPH_FAILED);
@@ -132,11 +138,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto varCopyDesc = context->GetInputDesc(IDX_VAR_COPY);
     OP_CHECK_NULL_WITH_CONTEXT(context, varCopyDesc);
     ge::DataType varCopyDtype = varCopyDesc->GetDataType();
-    ge::DataType expectedVarCopyDtype = (accumDtype == ge::DT_BF16) ? ge::DT_BF16 : ge::DT_FLOAT16;
     OP_CHECK_IF(
-        varCopyDtype != expectedVarCopyDtype,
-        OP_LOGE(context, "FusedMulApplyMomentumExtern: var_copy dtype %d mismatch, expected %d (accum dtype %d)",
-                static_cast<int>(varCopyDtype), static_cast<int>(expectedVarCopyDtype), static_cast<int>(accumDtype)),
+        varCopyDtype != ge::DT_FLOAT16,
+        OP_LOGE(context, "FusedMulApplyMomentumExtern: var_copy dtype %d must be FP16", static_cast<int>(varCopyDtype)),
         return ge::GRAPH_FAILED);
 
     // 属性：use_nesterov（0=标准, 1=Nesterov，编译期特化 USE_NESTEROV 模板参数）；
@@ -162,7 +166,7 @@ static ge::graphStatus FillEleWiseTilingData(gert::TilingContext* context,
                                              uint64_t ubSize, int64_t coreNum)
 {
     // 多核切分（每核 ≥4KB，512 元素对齐）
-    int64_t minDtypeBits = ELEM_BYTES * 8;
+    int64_t minDtypeBits = ELEM_BYTES * BITS_PER_BYTE;
     int64_t usedCore = (dim0 * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
     usedCore = (usedCore > coreNum) ? coreNum : usedCore;
     usedCore = (usedCore < 1) ? 1 : usedCore;

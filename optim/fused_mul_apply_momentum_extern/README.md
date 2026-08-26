@@ -46,7 +46,7 @@
     \end{aligned}
     $$
 
-  其中`x2`为LossScale倒数缩放标量。主权重`var`恒为FLOAT（FP32）全程高精度更新；低精度副本`var_copy`独立同步更新（减去`Cast(Δv)`而非`Cast(var_t)`，避免二次精度损失）。低精度通路（FP16/BF16）内部升FP32计算，输出Cast回原低精度。
+  其中`x2`为LossScale倒数缩放标量。主权重`var`恒为FLOAT（FP32）全程高精度更新；低精度副本`var_copy`独立同步更新（减去`Cast(Δv)`而非`Cast(var_t)`，避免二次精度损失）。低精度通路（FP16）内部升FP32计算，输出Cast回FP16。
 
 ## 参数说明
 
@@ -77,42 +77,42 @@
     <td>accum</td>
     <td>输入 / 输出(inplace)</td>
     <td>动量缓冲，对应公式中的accum。跨调用持久，shape必须与var一致；Kernel内显式写回输入GM地址。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>lr</td>
     <td>输入</td>
     <td>学习率，对应公式中的lr。shape={1}的1元素scalar Tensor，dtype必须与accum一致。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>x1</td>
     <td>输入</td>
     <td>梯度分量，对应公式中的x1。shape/dtype必须与accum一致，与x2相乘得到梯度grad。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>输入</td>
     <td>动量系数，对应公式中的momentum。shape={1}的1元素scalar Tensor，dtype必须与accum一致。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>x2</td>
     <td>输入</td>
     <td>梯度缩放标量（LossScale倒数），对应公式中的x2。shape={1}的1元素scalar Tensor，dtype必须与accum一致。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>var_copy</td>
     <td>输入 / 输出(inplace)</td>
     <td>低精度权重副本（compute copy），对应公式中的var_copy。shape必须与var一致；Kernel内独立同步更新并写回输入GM地址。</td>
-    <td>FLOAT16、BFLOAT16</td>
+    <td>FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
@@ -140,19 +140,19 @@
     <td>var_copy (output)</td>
     <td>输出</td>
     <td>更新后的低精度权重副本，与输入var_copy共享Device内存（inplace）。</td>
-    <td>FLOAT16、BFLOAT16</td>
+    <td>FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>accum (output)</td>
     <td>输出</td>
     <td>更新后的动量缓冲，与输入accum共享Device内存（inplace）。</td>
-    <td>FLOAT、FLOAT16、BFLOAT16</td>
+    <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
 </tbody></table>
 
-- **dtype通路约束**：`var`恒为FLOAT；`accum`/`lr`/`x1`/`momentum`/`x2`五者dtype必须一致，取值{FLOAT, FLOAT16, BFLOAT16}；`var_copy`恒为低精度（FP16/BF16），由accum通路推导（FP32通路→FP16，FP16通路→FP16，BF16通路→BF16）。
+- **dtype通路约束**：`var`恒为FLOAT；`accum`/`lr`/`x1`/`momentum`/`x2`五者dtype必须一致，取值{FLOAT, FLOAT16}；`var_copy`恒为FLOAT16。
 
 ## 约束说明
 

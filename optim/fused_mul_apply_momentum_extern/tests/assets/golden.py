@@ -56,8 +56,8 @@ def fused_mul_apply_momentum_extern_golden(
         (var_out, var_copy_out, accum_out)，各自 Cast 回对应输入 dtype。
     """
     var_dtype = var.dtype  # 恒 float32
-    accum_dtype = accum.dtype  # float16 / bfloat16 / float32（计算通路驱动）
-    var_copy_dtype = var_copy.dtype  # float16 / bfloat16
+    accum_dtype = accum.dtype  # float16 / float32（计算通路驱动）
+    var_copy_dtype = var_copy.dtype  # 恒 float16
 
     # 升 float64 高精度计算
     var_f64 = var.astype(np.float64)

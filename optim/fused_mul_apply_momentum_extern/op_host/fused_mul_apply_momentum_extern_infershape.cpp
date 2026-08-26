@@ -49,6 +49,11 @@ static ge::graphStatus InferShape4FusedMulApplyMomentumExtern(gert::InferShapeCo
     const gert::Shape* varCopyShape = context->GetInputShape(IDX_VAR_COPY);
     OP_CHECK_NULL_WITH_CONTEXT(context, varCopyShape);
 
+    OP_CHECK_IF(varShape->GetDimNum() == 0 || accumShape->GetDimNum() == 0 || x1Shape->GetDimNum() == 0 ||
+                    varCopyShape->GetDimNum() == 0,
+                OP_LOGE(context, "FusedMulApplyMomentumExtern: 0D scalar not supported, use [1] instead"),
+                return ge::GRAPH_FAILED);
+
     // var/accum/x1/var_copy 四张量必须同 shape（逐元素运算，张量间无 broadcast）
     int64_t varSize = varShape->GetShapeSize();
     OP_CHECK_IF(accumShape->GetShapeSize() != varSize || x1Shape->GetShapeSize() != varSize ||

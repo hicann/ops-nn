@@ -14,12 +14,11 @@
  * \file fused_mul_apply_momentum_extern_def.cpp
  * \brief FusedMulApplyMomentumExtern 算子定义（7 输入 / 3 输出 + use_nesterov/use_locking 属性）
  *
- * dtype scope：3 dtype 通路（FP32/FP16/BF16）× 标准|Nesterov 双模式。
- *   dtype 组合按各输入 DataType 列表逐列对应（第 i 列组成一个 dtype 组合），3 列：
+ * dtype scope：2 dtype 通路（FP32/FP16）× 标准|Nesterov 双模式。
+ *   dtype 组合按各输入 DataType 列表逐列对应（第 i 列组成一个 dtype 组合），2 列：
  *     列0 FP32 通路：var=FP32, accum/lr/x1/momentum/x2=FP32, var_copy=FP16
  *     列1 FP16 通路：var=FP32, accum/lr/x1/momentum/x2=FP16, var_copy=FP16
- *     列2 BF16 通路：var=FP32, accum/lr/x1/momentum/x2=BF16, var_copy=BF16
- *   - var 恒 FP32（master weight）；var_copy 恒低精度（FP16 或 BF16）。
+ *   - var 恒 FP32（master weight）；var_copy 恒 FP16。
  *   - 输出：var 恒 FP32；var_copy 同 var_copy；accum 同 accum（inplace 复用输入名）。
  *   - 标准/Nesterov 双模式由 USE_NESTEROV 模板参数编译期特化，非 dtype 维度。
  * inplace：var_out↔var、accum_out↔accum、var_copy_out↔var_copy（GM 地址复用）。
@@ -31,76 +30,76 @@ class FusedMulApplyMomentumExtern : public OpDef {
 public:
     explicit FusedMulApplyMomentumExtern(const char* name) : OpDef(name)
     {
-        // 输入 var：主权重 master weight，恒 FP32（三列均 FP32）
+        // 输入 var：主权重 master weight，恒 FP32（两列均 FP32）
         this->Input("var")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        // 输入 accum：动量缓冲（FP32/FP16/BF16 三通路）
+        // 输入 accum：动量缓冲（FP32/FP16 两通路）
         this->Input("accum")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         // 输入 lr：学习率标量，dtype 与 accum 一致
         this->Input("lr")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         // 输入 x1：梯度分量 g1，dtype 与 accum 一致，shape 同 var
         this->Input("x1")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         // 输入 momentum：动量系数标量，dtype 与 accum 一致
         this->Input("momentum")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         // 输入 x2：LossScale reciprocal g2 标量，dtype 与 accum 一致
         this->Input("x2")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        // 输入 var_copy：低精度副本，恒 FP16|BF16（FP32/FP16 通路为 FP16，BF16 通路为 BF16）
+        // 输入 var_copy：低精度副本，恒 FP16（两列均 FP16）
         this->Input("var_copy")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
         // 输出 var：更新后主权重，恒 FP32（inplace 复用输入 var）
         this->Output("var")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        // 输出 var_copy：更新后低精度副本（inplace 复用输入 var_copy，同 var_copy dtype）
+        // 输出 var_copy：更新后低精度副本（inplace 复用输入 var_copy，恒 FP16）
         this->Output("var_copy")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         // 输出 accum：更新后动量缓冲（inplace 复用输入 accum，同 accum dtype）
         this->Output("accum")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
         // 属性 use_nesterov：false=标准动量, true=Nesterov（双模式均支持）

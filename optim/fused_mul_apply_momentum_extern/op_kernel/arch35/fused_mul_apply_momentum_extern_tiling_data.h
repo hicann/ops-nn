@@ -22,13 +22,13 @@
 
 struct FusedMulApplyMomentumExternTilingData {
     int64_t dim0 = 0;                // 元素总数（四张量同 shape，所有维度相乘）
-    int64_t coreNum = 0;             // 实际使用核数
+    int64_t coreNum = 0;             // 实际使用核数（retained for Host debug logging / SetBlockDim 校验）
     int64_t blockFormer = 0;         // 每核基础元素数（512 元素对齐）
-    int64_t blockNum = 0;            // 虚拟 block 数量
+    int64_t blockNum = 0;            // 虚拟 block 数量（retained for Host debug logging）
     int64_t ubFormer = 0;            // 每个 UB 块基础元素数（256B 对齐）
-    int64_t ubLoopOfFormerBlock = 0; // 首 block 的 UB 循环次数
-    int64_t ubTailOfFormerBlock = 0; // 首 block 的尾部元素数
-    int64_t ubLoopOfTailBlock = 0;   // 尾 block 的 UB 循环次数
-    int64_t ubTailOfTailBlock = 0;   // 尾 block 的尾部元素数
+    int64_t ubLoopOfFormerBlock = 0; // 首 block 的 UB 循环次数（retained for TilingParse debugging）
+    int64_t ubTailOfFormerBlock = 0; // 首 block 的尾部元素数（retained for TilingParse debugging）
+    int64_t ubLoopOfTailBlock = 0;   // 尾 block 的 UB 循环次数（retained for TilingParse debugging）
+    int64_t ubTailOfTailBlock = 0;   // 尾 block 的尾部元素数（retained for TilingParse debugging）
 };
 #endif

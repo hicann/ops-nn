@@ -14,14 +14,14 @@
  * \file fused_mul_apply_momentum_extern.h
  * \brief FusedMulApplyMomentumExtern kernel 类（arch35 / RegBase）
  *
- * scope：3 dtype 通路（FP32 直算 / FP16 升精度 / BF16 升精度）× 标准|Nesterov
- *   双模式共 6 TilingKey（K0~K5）编译期特化。
+ * scope：2 dtype 通路（FP32 直算 / FP16 升精度）× 标准|Nesterov
+ *   双模式共 4 TilingKey（K0~K3）编译期特化。
  *
  * dtype 契约（DESIGN §1.1 / spec.yaml dtype_policy）：
  *   - var       恒 FP32（master weight，主权重全程 FP32）。
- *   - accum/lr/x1/momentum/x2  同 dtype = InT ∈ {float, half, bfloat16_t}。
- *   - var_copy  恒低精度 VarCopyT ∈ {half, bfloat16_t}（compute copy）。
- *   - 低精度通路（InT=half/bfloat16_t）输入升 FP32 计算，输出 accum/var_copy Cast 回原低精度。
+ *   - accum/lr/x1/momentum/x2  同 dtype = InT ∈ {float, half}。
+ *   - var_copy  恒 FP16 VarCopyT = half（compute copy）。
+ *   - 低精度通路（InT=half）输入升 FP32 计算，输出 accum Cast 回 half。
  *   - 计算域恒 FP32（accumulator_dtype=float32）。
  *
  * 计算序列（锁定，逐元素；DESIGN §3.5 / spec.yaml formula）：
@@ -33,10 +33,10 @@
  *   var_copy_out = Sub(var_copy, Cast(Δv))                   # 独立同步更新（非 Cast(var_out)）
  *   accum_out    = Cast(accum')                              # FP32 通路为恒等
  *
- * ⚠️ 阻塞级约束：dav-3510 RegBase 计算必须走
+ * ⚠️ 阻塞级约束 [RegBase-native]：dav-3510 RegBase 计算必须走
  *   asc_vf_call + AscendC::Reg::*（VF 寄存器级）；禁止高层 LocalTensor Muls/Add/Sub
  *   （编译过但 NPU 静默失效）。低精度升精度 idiom 真值参考生产算子 fused_mul_add_n_half.h。
- *   VF API 签名均已对照 CANN 9.0.0 SDK reg_compute/ 头文件核实。
+ *   VF API 签名均已对照 CANN 9.0.0 SDK reg_compute/ 头文件核实 [RegBase-native]。
  */
 #ifndef FUSED_MUL_APPLY_MOMENTUM_EXTERN_H
 #define FUSED_MUL_APPLY_MOMENTUM_EXTERN_H
@@ -95,8 +95,11 @@ __simd_callee__ inline void UpdateVarCopy(__ubuf__ VarCopyT* vcAddr, __ubuf__ Va
                                           AscendC::Reg::RegTensor<float>& deltaReg, uint32_t off,
                                           AscendC::Reg::MaskReg mask)
 {
-    AscendC::Reg::RegTensor<VarCopyT> vcReg, dB16;
-    AscendC::Reg::RegTensor<float> vcF32, dB16F32, vcOutF32;
+    AscendC::Reg::RegTensor<VarCopyT> vcReg;
+    AscendC::Reg::RegTensor<VarCopyT> dB16;
+    AscendC::Reg::RegTensor<float> vcF32;
+    AscendC::Reg::RegTensor<float> dB16F32;
+    AscendC::Reg::RegTensor<float> vcOutF32;
     AscendC::Reg::LoadAlign<VarCopyT, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vcReg, vcAddr + off);
     AscendC::Reg::Cast<float, VarCopyT, g_castTraitB16ToB32>(vcF32, vcReg, mask);
     AscendC::Reg::Cast<VarCopyT, float, g_castTraitB32ToB16>(dB16, deltaReg, mask);
@@ -118,7 +121,14 @@ __simd_vf__ inline void FusedMulApplyMomentumExternVF(__ubuf__ float* varAddr, _
                                                       uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     using AscendC::Reg::Add, AscendC::Reg::Muls, AscendC::Reg::Sub;
-    AscendC::Reg::RegTensor<float> varReg, accumF32, x1F32, gradReg, accumTReg, deltaReg, varOutReg, tmpReg;
+    AscendC::Reg::RegTensor<float> varReg;
+    AscendC::Reg::RegTensor<float> accumF32;
+    AscendC::Reg::RegTensor<float> x1F32;
+    AscendC::Reg::RegTensor<float> gradReg;
+    AscendC::Reg::RegTensor<float> accumTReg;
+    AscendC::Reg::RegTensor<float> deltaReg;
+    AscendC::Reg::RegTensor<float> varOutReg;
+    AscendC::Reg::RegTensor<float> tmpReg;
     AscendC::Reg::MaskReg mask;
     uint32_t sreg = count;
     for (uint16_t i = 0; i < repeatTimes; ++i) {
@@ -176,10 +186,16 @@ private:
     // 标量搬入 Buffer
     TBuf<TPosition::VECCALC> scalarBuf_;
 
-    GlobalTensor<float> varGm_, varOutGm_; // var 恒 FP32
-    GlobalTensor<InT> accumGm_, x1Gm_, accumOutGm_;
-    GlobalTensor<InT> lrGm_, momentumGm_, x2Gm_;
-    GlobalTensor<VarCopyT> varCopyGm_, varCopyOutGm_;
+    GlobalTensor<float> varGm_;
+    GlobalTensor<float> varOutGm_; // var 恒 FP32
+    GlobalTensor<InT> accumGm_;
+    GlobalTensor<InT> x1Gm_;
+    GlobalTensor<InT> accumOutGm_;
+    GlobalTensor<InT> lrGm_;
+    GlobalTensor<InT> momentumGm_;
+    GlobalTensor<InT> x2Gm_;
+    GlobalTensor<VarCopyT> varCopyGm_;
+    GlobalTensor<VarCopyT> varCopyOutGm_;
 
     // 标量计算域恒 FP32（低精度通路读入后升精度）
     float lr_ = 0;
@@ -230,36 +246,30 @@ __aicore__ inline void FusedMulApplyMomentumExtern<InT, VarCopyT, USE_NESTEROV>:
 }
 
 // 标量 lr/momentum/x2 经 DataCopyPad 搬入 UB 后 GetValue 读取（禁用 GlobalTensor::GetValue）。
-// 低精度通路读入 InT 后升 FP32（计算域恒 FP32）。
+// 低精度通路读入 half 后升 FP32（计算域恒 FP32）。
 template <typename InT, typename VarCopyT, int USE_NESTEROV>
 __aicore__ inline void FusedMulApplyMomentumExtern<InT, VarCopyT, USE_NESTEROV>::LoadScalars()
 {
     LocalTensor<InT> scalarLocal = scalarBuf_.Get<InT>();
-    constexpr int32_t SLOT_ELEMS = SCALAR_SLOT_BYTES / sizeof(InT); // 每槽位元素数
-    constexpr int32_t OFF_LR = 0;
-    constexpr int32_t OFF_MOM = SLOT_ELEMS;
-    constexpr int32_t OFF_X2 = 2 * SLOT_ELEMS;
+    constexpr int32_t slotElems = SCALAR_SLOT_BYTES / sizeof(InT); // 每槽位元素数
+    constexpr int32_t offLr = 0;
+    constexpr int32_t offMom = slotElems;
+    constexpr int32_t offX2 = 2 * slotElems;
 
     AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(InT)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<InT> padParams{false, 0, 0, static_cast<InT>(0)};
-    AscendC::DataCopyPad(scalarLocal[OFF_LR], lrGm_, copyParams, padParams);
-    AscendC::DataCopyPad(scalarLocal[OFF_MOM], momentumGm_, copyParams, padParams);
-    AscendC::DataCopyPad(scalarLocal[OFF_X2], x2Gm_, copyParams, padParams);
+    AscendC::DataCopyPad(scalarLocal[offLr], lrGm_, copyParams, padParams);
+    AscendC::DataCopyPad(scalarLocal[offMom], momentumGm_, copyParams, padParams);
+    AscendC::DataCopyPad(scalarLocal[offX2], x2Gm_, copyParams, padParams);
 
     // MTE2 -> S 同步：等待标量搬入完成后再 GetValue
     event_t evt = static_cast<event_t>(pipe_.FetchEventID(AscendC::HardEvent::MTE2_S));
     AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(evt);
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(evt);
 
-    if constexpr (std::is_same_v<InT, bfloat16_t>) {
-        lr_ = AscendC::ToFloat(scalarLocal.GetValue(OFF_LR));
-        momentum_ = AscendC::ToFloat(scalarLocal.GetValue(OFF_MOM));
-        x2_ = AscendC::ToFloat(scalarLocal.GetValue(OFF_X2));
-    } else {
-        lr_ = static_cast<float>(scalarLocal.GetValue(OFF_LR));
-        momentum_ = static_cast<float>(scalarLocal.GetValue(OFF_MOM));
-        x2_ = static_cast<float>(scalarLocal.GetValue(OFF_X2));
-    }
+    lr_ = static_cast<float>(scalarLocal.GetValue(offLr));
+    momentum_ = static_cast<float>(scalarLocal.GetValue(offMom));
+    x2_ = static_cast<float>(scalarLocal.GetValue(offX2));
 }
 
 template <typename InT, typename VarCopyT, int USE_NESTEROV>
