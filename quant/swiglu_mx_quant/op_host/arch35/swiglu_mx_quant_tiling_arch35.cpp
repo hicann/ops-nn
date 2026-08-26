@@ -145,14 +145,18 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     // Get swiglu_mode (int64 type)
     auto* attrSwigluMode = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SWIGLU_MODE);
     attrParam_.swigluMode = (attrSwigluMode != nullptr) ? static_cast<int64_t>(*attrSwigluMode) : 0;
+    OP_CHECK_IF(attrParam_.swigluMode < 0 || attrParam_.swigluMode > 3,
+                OP_LOGE(context_->GetNodeName(), "swigluMode must be in [0, 3], but is %ld", attrParam_.swigluMode),
+                return ge::GRAPH_FAILED);
 
     // Get clamp_limit (float type)
     auto* attrClampLimit = attrs->GetAttrPointer<float>(INDEX_ATTR_CLAMP_LIMIT);
     attrParam_.clampLimit = (attrClampLimit != nullptr) ? *attrClampLimit : 7.0f;
-    OP_CHECK_IF(
-        (attrParam_.swigluMode == 1) && (attrParam_.clampLimit <= 0.0f),
-        OP_LOGE(context_->GetNodeName(), "swigluMode == 1, clampLimit must > 0, but is %f", attrParam_.clampLimit),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((attrParam_.swigluMode == 1 || attrParam_.swigluMode == 2 || attrParam_.swigluMode == 3) &&
+                    (attrParam_.clampLimit <= 0.0f),
+                OP_LOGE(context_->GetNodeName(), "swigluMode == %ld, clampLimit must > 0, but is %f",
+                        attrParam_.swigluMode, attrParam_.clampLimit),
+                return ge::GRAPH_FAILED);
     // Get glu_alpha (float type)
     auto* attrGluAlpha = attrs->GetAttrPointer<float>(INDEX_ATTR_GLU_ALPHA);
     attrParam_.gluAlpha = (attrGluAlpha != nullptr) ? *attrGluAlpha : 1.702f;
@@ -164,6 +168,9 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     // Get axis (int64 type)
     auto* attrAxis = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_AXIS);
     attrParam_.axis = (attrAxis != nullptr) ? static_cast<int64_t>(*attrAxis) : -1;
+    OP_CHECK_IF((attrParam_.axis != -1) && (attrParam_.swigluMode == 2 || attrParam_.swigluMode == 3),
+                OP_LOGE(context_->GetNodeName(), "swigluMode 2/3 requires axis=-1, but axis=%ld", attrParam_.axis),
+                return ge::GRAPH_FAILED);
 
     // Get dst_type (int type)
     auto* attrDstType = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DST_TYPE);

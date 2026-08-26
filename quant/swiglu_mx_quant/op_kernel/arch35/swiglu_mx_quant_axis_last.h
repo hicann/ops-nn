@@ -45,6 +45,10 @@ private:
                                      __ubuf__ uint16_t* halfScaleLocalAddr, int64_t dim0Size, int64_t dim1AlignSize);
     __aicore__ inline void ComputeVfSwigluV2(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
                                              int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize);
+    __aicore__ inline void ComputeVfSwigluV3(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
+                                             int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize);
+    __aicore__ inline void ComputeVfSwigluV4(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
+                                             int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize);
 
     __aicore__ inline void CopyIn(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize);
     __aicore__ inline void CopyOut(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize,
@@ -339,7 +343,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     LocalTensor<T> swigluUb = swigluBuffer_.Get<T>();
     auto swigluUbAddr = (__ubuf__ T*)swigluUb.GetPhyAddr();
     if constexpr (isLast) {
-        if (swigluMode_ == 0 && activateLeft_ == 0) {
+        if ((swigluMode_ == 0 || swigluMode_ == 2 || swigluMode_ == 3) && activateLeft_ == 0) {
             x1UbAddr = (__ubuf__ T*)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
             x2UbAddr = (__ubuf__ T*)xlocal.GetPhyAddr();
         }
@@ -356,8 +360,12 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     if constexpr (isLast) {
         if (swigluMode_ == 0) {
             ComputeVfSwigluV1<T>(x1UbAddr, x2UbAddr, swigluUbAddr, dim0OnceSize, dim1OnceSize, dim1AlignSize);
-        } else {
+        } else if (swigluMode_ == 1) {
             ComputeVfSwigluV2(x1UbAddr, x2UbAddr, swigluUbAddr, dim0OnceSize, dim1OnceSize, dim1AlignSize);
+        } else if (swigluMode_ == 2) {
+            ComputeVfSwigluV3(x1UbAddr, x2UbAddr, swigluUbAddr, dim0OnceSize, dim1OnceSize, dim1AlignSize);
+        } else if (swigluMode_ == 3) {
+            ComputeVfSwigluV4(x1UbAddr, x2UbAddr, swigluUbAddr, dim0OnceSize, dim1OnceSize, dim1AlignSize);
         }
     } else {
         ComputeVfSwigluV1<T>(x1UbAddr, x2UbAddr, swigluUbAddr, dim0OnceSize, dim1OnceSize, dim1AlignSize);
@@ -524,6 +532,250 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     }
 }
 
+// ComputeVfSwigluV3: swiglu_mode=2, split layout (same as V1) + clamp/sigmoid(alpha)/bias computation (same as V2)
+// x_glu = clamp(x_glu, max=clamp_limit)
+// x_linear = clamp(x_linear, min=-clamp_limit, max=clamp_limit)
+// y = x_glu * sigmoid(glu_alpha * x_glu) * (x_linear + glu_bias)
+template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
+__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeVfSwigluV3(
+    __ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
+    int64_t dim1AlignSize)
+{
+    uint16_t dim0VfTimes = dim0OnceSize;
+    uint16_t dim1VfTimes = dim1OnceSize / VF_LEN_FP32;
+    uint32_t dim1Tail = dim1OnceSize % VF_LEN_FP32;
+    uint16_t dim1TailTimes = 0;
+    uint16_t dim1Tail2 = 0;
+    uint32_t mask1Num = 0;
+    uint32_t mask2Num = 0;
+    uint32_t mask3Num = 0;
+    uint32_t alignDim1In = ((dim1OnceSize + ONE_BLOCK_NUM - 1) / ONE_BLOCK_NUM) * ONE_BLOCK_NUM;
+    uint32_t alignDim1Out = dim1AlignSize;
+    auto x1UbAddr1 = x1UbAddr;
+    auto x2UbAddr1 = x2UbAddr;
+    auto swigluUbAddr1 = swigluUbAddr;
+    auto swigluUbAddr2 = swigluUbAddr;
+    T numZero = 0;
+    if (dim1Tail > 0) {
+        mask1Num = dim1Tail;
+        dim1TailTimes = 1;
+        uint32_t padNum = alignDim1Out - dim1VfTimes * VF_LEN_FP32;
+        if (padNum <= VF_LEN_FP32) {
+            mask2Num = padNum;
+        } else {
+            dim1Tail2 = 1;
+            mask2Num = VF_LEN_FP32;
+            mask3Num = padNum - VF_LEN_FP32;
+        }
+        int32_t offsetAlgin = dim1VfTimes * VF_LEN_FP32;
+        x1UbAddr1 = x1UbAddr + offsetAlgin;
+        x2UbAddr1 = x2UbAddr + offsetAlgin;
+        swigluUbAddr1 = swigluUbAddr + offsetAlgin;
+        swigluUbAddr2 = swigluUbAddr + offsetAlgin + dim1TailTimes * VF_LEN_FP32;
+    }
+    float scalarOne = 1.0f;
+    float clampLimit = clampLimit_;
+    float negClampLimit = -clampLimit_;
+    float negAlpha = -gluAlpha_;
+    float gluBias = gluBias_;
+    __VEC_SCOPE__
+    {
+        AscendC::MicroAPI::RegTensor<T> vregX1;
+        AscendC::MicroAPI::RegTensor<T> vregX2;
+        AscendC::MicroAPI::RegTensor<float> vregX1F;
+        AscendC::MicroAPI::RegTensor<float> vregX2F;
+        AscendC::MicroAPI::RegTensor<float> minsReg;
+        AscendC::MicroAPI::RegTensor<float> mulsReg;
+        AscendC::MicroAPI::RegTensor<float> expReg;
+        AscendC::MicroAPI::RegTensor<float> addsReg;
+        AscendC::MicroAPI::RegTensor<float> sigmoidReg;
+        AscendC::MicroAPI::RegTensor<float> outFReg;
+        AscendC::MicroAPI::RegTensor<T> outTReg;
+        AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg mask1 = AscendC::MicroAPI::UpdateMask<float>(mask1Num);
+        AscendC::MicroAPI::MaskReg mask2 = AscendC::MicroAPI::UpdateMask<float>(mask2Num);
+        AscendC::MicroAPI::MaskReg mask3 = AscendC::MicroAPI::UpdateMask<T>(mask3Num);
+        for (uint16_t dim0vfLoopIdx = 0; dim0vfLoopIdx < dim0VfTimes; dim0vfLoopIdx++) {
+            for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
+                AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
+                    dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 64);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
+
+                AscendC::MicroAPI::Mins(minsReg, vregX1F, clampLimit, mask);
+                AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, mask);
+                AscendC::MicroAPI::Exp(expReg, mulsReg, mask);
+                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
+                AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, mask);
+
+                AscendC::MicroAPI::Mins(vregX2F, vregX2F, clampLimit, mask);
+                AscendC::MicroAPI::Maxs(vregX2F, vregX2F, negClampLimit, mask);
+                AscendC::MicroAPI::Adds(vregX2F, vregX2F, gluBias, mask);
+
+                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask);
+
+                AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
+                AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
+                                                                                           dim1vfLoopIdx, 64);
+                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+            }
+            AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
+            AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
+            for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
+                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
+                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask1);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask1);
+
+                AscendC::MicroAPI::Mins(minsReg, vregX1F, clampLimit, mask1);
+                AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, mask1);
+                AscendC::MicroAPI::Exp(expReg, mulsReg, mask1);
+                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask1);
+                AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, mask1);
+
+                AscendC::MicroAPI::Mins(vregX2F, vregX2F, clampLimit, mask1);
+                AscendC::MicroAPI::Maxs(vregX2F, vregX2F, negClampLimit, mask1);
+                AscendC::MicroAPI::Adds(vregX2F, vregX2F, gluBias, mask1);
+
+                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask1);
+                AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
+                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg, outOffset1, mask2);
+            }
+            for (uint16_t cc = 0; cc < dim1Tail2; cc++) {
+                Duplicate<T>(vregX1, numZero);
+                DataCopy<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
+            }
+        }
+    }
+}
+
+// ComputeVfSwigluV4: swiglu_mode=3, split layout + sigmoid-then-clamp computation
+// glu_alpha and glu_bias are ignored for mode 3
+// x_glu = x_glu * sigmoid(x_glu)              (activate first, alpha=1)
+// x_glu = clamp(x_glu, max=clamp_limit)       (clamp after activation)
+// x_linear = clamp(x_linear, min=-clamp_limit, max=clamp_limit)
+// y = x_glu * x_linear                        (no glu_bias)
+template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
+__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeVfSwigluV4(
+    __ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
+    int64_t dim1AlignSize)
+{
+    uint16_t dim0VfTimes = dim0OnceSize;
+    uint16_t dim1VfTimes = dim1OnceSize / VF_LEN_FP32;
+    uint32_t dim1Tail = dim1OnceSize % VF_LEN_FP32;
+    uint16_t dim1TailTimes = 0;
+    uint16_t dim1Tail2 = 0;
+    uint32_t mask1Num = 0;
+    uint32_t mask2Num = 0;
+    uint32_t mask3Num = 0;
+    uint32_t alignDim1In = ((dim1OnceSize + ONE_BLOCK_NUM - 1) / ONE_BLOCK_NUM) * ONE_BLOCK_NUM;
+    uint32_t alignDim1Out = dim1AlignSize;
+    auto x1UbAddr1 = x1UbAddr;
+    auto x2UbAddr1 = x2UbAddr;
+    auto swigluUbAddr1 = swigluUbAddr;
+    auto swigluUbAddr2 = swigluUbAddr;
+    T numZero = 0;
+    if (dim1Tail > 0) {
+        mask1Num = dim1Tail;
+        dim1TailTimes = 1;
+        uint32_t padNum = alignDim1Out - dim1VfTimes * VF_LEN_FP32;
+        if (padNum <= VF_LEN_FP32) {
+            mask2Num = padNum;
+        } else {
+            dim1Tail2 = 1;
+            mask2Num = VF_LEN_FP32;
+            mask3Num = padNum - VF_LEN_FP32;
+        }
+        int32_t offsetAlgin = dim1VfTimes * VF_LEN_FP32;
+        x1UbAddr1 = x1UbAddr + offsetAlgin;
+        x2UbAddr1 = x2UbAddr + offsetAlgin;
+        swigluUbAddr1 = swigluUbAddr + offsetAlgin;
+        swigluUbAddr2 = swigluUbAddr + offsetAlgin + dim1TailTimes * VF_LEN_FP32;
+    }
+    float scalarOne = 1.0f;
+    float clampLimit = clampLimit_;
+    float negClampLimit = -clampLimit_;
+    float negScalarOne = -1.0f;
+    __VEC_SCOPE__
+    {
+        AscendC::MicroAPI::RegTensor<T> vregX1;
+        AscendC::MicroAPI::RegTensor<T> vregX2;
+        AscendC::MicroAPI::RegTensor<float> vregX1F;
+        AscendC::MicroAPI::RegTensor<float> vregX2F;
+        AscendC::MicroAPI::RegTensor<float> mulsReg;
+        AscendC::MicroAPI::RegTensor<float> expReg;
+        AscendC::MicroAPI::RegTensor<float> addsReg;
+        AscendC::MicroAPI::RegTensor<float> sigmoidReg;
+        AscendC::MicroAPI::RegTensor<float> outFReg;
+        AscendC::MicroAPI::RegTensor<T> outTReg;
+        AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg mask1 = AscendC::MicroAPI::UpdateMask<float>(mask1Num);
+        AscendC::MicroAPI::MaskReg mask2 = AscendC::MicroAPI::UpdateMask<float>(mask2Num);
+        AscendC::MicroAPI::MaskReg mask3 = AscendC::MicroAPI::UpdateMask<T>(mask3Num);
+        for (uint16_t dim0vfLoopIdx = 0; dim0vfLoopIdx < dim0VfTimes; dim0vfLoopIdx++) {
+            for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
+                AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
+                    dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 64);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
+
+                AscendC::MicroAPI::Muls(mulsReg, vregX1F, negScalarOne, mask);
+                AscendC::MicroAPI::Exp(expReg, mulsReg, mask);
+                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
+                AscendC::MicroAPI::Div(sigmoidReg, vregX1F, addsReg, mask);
+                AscendC::MicroAPI::Mins(sigmoidReg, sigmoidReg, clampLimit, mask);
+
+                AscendC::MicroAPI::Mins(vregX2F, vregX2F, clampLimit, mask);
+                AscendC::MicroAPI::Maxs(vregX2F, vregX2F, negClampLimit, mask);
+
+                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask);
+
+                AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
+                AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
+                                                                                           dim1vfLoopIdx, 64);
+                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+            }
+            AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
+            AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
+            for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
+                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
+                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask1);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask1);
+
+                AscendC::MicroAPI::Muls(mulsReg, vregX1F, negScalarOne, mask1);
+                AscendC::MicroAPI::Exp(expReg, mulsReg, mask1);
+                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask1);
+                AscendC::MicroAPI::Div(sigmoidReg, vregX1F, addsReg, mask1);
+                AscendC::MicroAPI::Mins(sigmoidReg, sigmoidReg, clampLimit, mask1);
+
+                AscendC::MicroAPI::Mins(vregX2F, vregX2F, clampLimit, mask1);
+                AscendC::MicroAPI::Maxs(vregX2F, vregX2F, negClampLimit, mask1);
+
+                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask1);
+                AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
+                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg, outOffset1, mask2);
+            }
+            for (uint16_t cc = 0; cc < dim1Tail2; cc++) {
+                Duplicate<T>(vregX1, numZero);
+                DataCopy<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
+            }
+        }
+    }
+}
+
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::CopyIn(
     int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize)
@@ -534,7 +786,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     if constexpr (isLast) {
         copyInParam.blockCount = dim0OnceSize;
         copyInParam.blockLen = dim1OnceSize * sizeof(T);
-        if (swigluMode_ == 0) {
+        if (swigluMode_ == 0 || swigluMode_ == 2 || swigluMode_ == 3) {
             int64_t offset = rowOffset * dim2N_ + colBlockStart * QUANT_ONCE_NUM;
             copyInParam.srcStride = (dim2N_ - dim1OnceSize) * sizeof(T);
             DataCopyPad(xlocal, xGm_[offset], copyInParam, copyPadParams);
