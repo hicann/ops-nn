@@ -82,8 +82,9 @@ public:
 
     __aicore__ inline void InitBuffers(TPipe& pipe)
     {
-        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
-                                                             (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
+        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ?
+                             (INT64_TO_INT_SIZE_RATIO * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
+                             (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
         uint64_t slotBytes = rowsPerBatch_ * rowBytesAligned_;
         pipe.InitBuffer(allUbBuf_, coeff * indexTileLength_ * sizeof(int));
         pipe.InitBuffer(slotBufA_, slotBytes);

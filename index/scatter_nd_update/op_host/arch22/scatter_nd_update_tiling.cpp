@@ -36,6 +36,7 @@ constexpr uint64_t HP_ROWS_PER_BATCH_MAX = 256;
 constexpr uint64_t INDEX_TYPE_INT32 = 1;
 constexpr uint64_t INDEX_TYPE_INT64 = 2;
 constexpr uint64_t INDEX_TYPE_INT64_LARGE = 3;
+constexpr uint64_t INT64_TO_INT_SIZE_RATIO = 2;
 constexpr uint64_t TILING_KEY_BASE = 10;
 constexpr uint64_t LINEAR_INDEX_COEFF_OFFSET = 3;
 constexpr uint64_t DTYPE_SIZE_BF16 = 2;
@@ -84,7 +85,7 @@ inline void ScatterNdUpdateArch22Tiling::Tiling4LinearIndex(uint64_t indexRow, u
     }
     uint64_t coeff;
     if (isInt64Indices_) {
-        coeff = 2 * indexDim + LINEAR_INDEX_COEFF_OFFSET;
+        coeff = INT64_TO_INT_SIZE_RATIO * indexDim + LINEAR_INDEX_COEFF_OFFSET;
     } else {
         coeff = indexDim + LINEAR_INDEX_COEFF_OFFSET;
     }
@@ -192,7 +193,7 @@ inline void ScatterNdUpdateArch22Tiling::Tiling4HpIndexTile(uint64_t updateUbByt
     uint64_t ubForIndex = (ubSize_ > updateUbBytes) ? (ubSize_ - updateUbBytes) : 0;
     uint64_t coeff;
     if (isInt64Indices_) {
-        coeff = 2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET;
+        coeff = INT64_TO_INT_SIZE_RATIO * indexDim_ + LINEAR_INDEX_COEFF_OFFSET;
     } else {
         coeff = indexDim_ + LINEAR_INDEX_COEFF_OFFSET;
     }
