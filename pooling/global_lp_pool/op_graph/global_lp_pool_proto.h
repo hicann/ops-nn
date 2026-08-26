@@ -40,11 +40,14 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with the ONNX operator GlobalLpPool.
  */
+#ifndef OPS_PROTO_DEF_GLOBALLPPOOL
+#define OPS_PROTO_DEF_GLOBALLPPOOL
 REG_OP(GlobalLpPool)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(p, Float, 2.0)
     .OP_END_FACTORY_REG(GlobalLpPool)
+#endif
 
 } // namespace ge
 

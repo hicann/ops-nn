@@ -135,86 +135,94 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .OP_END_FACTORY_REG(ApplyAddSign)
 #endif
 
-    /**
-     * @brief Dequantizes the input of int16 . \n
-     * @par Inputs:
-     * @li x0: A tensor of type int32, specifying the input.
-     * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
-     * @li deq_scale: A tensor of type uint64, specifying the scaling ratio.
-     * The format support NC1HWC0. Shape support 5D, must be 1 in n, h, w.
-     * @li x1: A tensor of type int16, specifying the input.
-     * The format support NC1HWC0, ND. Shape support 1D or 5D.
-     * When the format of x1 is ND, the shape length of x1 must be 1. \n
-     * @par Attributes:
-     * relu_flag: An optional bool, specifying whether to perform ReLU,
-     * either "True" or "False". Defaults to "False" . \n
-     * @par Outputs:
-     * y: The dequantized output tensor of type int16.
-     * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
-     * The shape and format are the same as input "x0". \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendDequantS16)
+/**
+ * @brief Dequantizes the input of int16 . \n
+ * @par Inputs:
+ * @li x0: A tensor of type int32, specifying the input.
+ * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
+ * @li deq_scale: A tensor of type uint64, specifying the scaling ratio.
+ * The format support NC1HWC0. Shape support 5D, must be 1 in n, h, w.
+ * @li x1: A tensor of type int16, specifying the input.
+ * The format support NC1HWC0, ND. Shape support 1D or 5D.
+ * When the format of x1 is ND, the shape length of x1 must be 1. \n
+ * @par Attributes:
+ * relu_flag: An optional bool, specifying whether to perform ReLU,
+ * either "True" or "False". Defaults to "False" . \n
+ * @par Outputs:
+ * y: The dequantized output tensor of type int16.
+ * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
+ * The shape and format are the same as input "x0". \n
+ * @par Third-party framework compatibility
+ * It is a custom operator. It has no corresponding operator in Caffe.
+ */
+#ifndef OPS_PROTO_DEF_ASCENDDEQUANTS16
+#define OPS_PROTO_DEF_ASCENDDEQUANTS16
+        REG_OP(AscendDequantS16)
     .INPUT(x0, TensorType({DT_INT32}))
     .INPUT(deq_scale, TensorType({DT_UINT64}))
     .OPTIONAL_INPUT(x1, TensorType({DT_INT16}))
     .OUTPUT(y, TensorType({DT_INT16}))
     .ATTR(relu_flag, Bool, false)
     .OP_END_FACTORY_REG(AscendDequantS16)
+#endif
 
-    /**
-     * @brief Requantizes the input.
-     * @par Inputs:
-     * @li x: A tensor of type int32, specifying the input. The format must be
-     * FRACTAL_NZ, NC1HWC0 or DNC1HWC0. Shape support 4D ~ 6D.
-     * @li req_scale:A required Tensor. The type only support uint64. The format
-     * must be NC1HWC0 or NDC1HWC0. If req_scale is 1D tensor, shape must be same as
-     * the last dimension of x. Otherwise the number of dimensions should be equal to
-     * x, the last dimension of shape should be same as x, others must be 1.
-     * Shape support 5D ~ 6D. Shape must be 1 in n,d,h,w. \n
-     * @par Attributes:
-     * relu_flag: An optional bool, specifying whether to perform ReLU,
-     * either "True" or "False". Defaults to "False" . \n
-     * @par Outputs:
-     * y: The dequantized output tensor of type int8. The format must be FRACTAL_NZ,
-     * NC1HWC0 or NDC1HWC0. The shape is same as x. \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendRequant)
+/**
+ * @brief Requantizes the input.
+ * @par Inputs:
+ * @li x: A tensor of type int32, specifying the input. The format must be
+ * FRACTAL_NZ, NC1HWC0 or DNC1HWC0. Shape support 4D ~ 6D.
+ * @li req_scale:A required Tensor. The type only support uint64. The format
+ * must be NC1HWC0 or NDC1HWC0. If req_scale is 1D tensor, shape must be same as
+ * the last dimension of x. Otherwise the number of dimensions should be equal to
+ * x, the last dimension of shape should be same as x, others must be 1.
+ * Shape support 5D ~ 6D. Shape must be 1 in n,d,h,w. \n
+ * @par Attributes:
+ * relu_flag: An optional bool, specifying whether to perform ReLU,
+ * either "True" or "False". Defaults to "False" . \n
+ * @par Outputs:
+ * y: The dequantized output tensor of type int8. The format must be FRACTAL_NZ,
+ * NC1HWC0 or NDC1HWC0. The shape is same as x. \n
+ * @par Third-party framework compatibility
+ * It is a custom operator. It has no corresponding operator in Caffe.
+ */
+#ifndef OPS_PROTO_DEF_ASCENDREQUANT
+#define OPS_PROTO_DEF_ASCENDREQUANT
+        REG_OP(AscendRequant)
     .INPUT(x, TensorType({DT_INT32}))
     .INPUT(req_scale, TensorType({DT_UINT64}))
     .OUTPUT(y, TensorType({DT_INT8}))
     .ATTR(relu_flag, Bool, false)
     .OP_END_FACTORY_REG(AscendRequant)
+#endif
 
-    /**
-     * @brief Requantizes the input of int16 . \n
-     * @par Inputs:
-     * @li x0: A tensor of type int16, specifying the input. The format must be
-     * FRACTAL_NZ or NC1HWC0. Shape support 4D ~ 8D.
-     * @li req_scale: A tensor of type uint64, specifying the scaling ratio.
-     * The format support NC1HWC0. Shape support 5D, must be 1 in n, h, w.
-     * @li x1: A tensor of type int16, specifying the input.
-     * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
-     * Has the same format as x. \n
-     * @par Attributes:
-     * @li dual_output: An optional bool, specifying whether to perform dual ouput,
-     * either "True" or "False". Defaults to "False".
-     * @li relu_flag: An optional bool, specifying whether to perform ReLU,
-     * either "True" or "False". Defaults to "False" . \n
-     * @par Outputs:
-     * @li y0: The dequantized output tensor of type int8.
-     * The format support FRACTAL_NZ and NC1HWC0. Shape support 4D ~ 8D.
-     * Has the same format and shape as input "x0".
-     * @li y1: The dequantized output tensor of type int16.
-     * The format support FRACTAL_NZ and NC1HWC0. Shape support 4D ~ 8D.
-     * Has the same format and shape as input "x0". \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendRequantS16)
+/**
+ * @brief Requantizes the input of int16 . \n
+ * @par Inputs:
+ * @li x0: A tensor of type int16, specifying the input. The format must be
+ * FRACTAL_NZ or NC1HWC0. Shape support 4D ~ 8D.
+ * @li req_scale: A tensor of type uint64, specifying the scaling ratio.
+ * The format support NC1HWC0. Shape support 5D, must be 1 in n, h, w.
+ * @li x1: A tensor of type int16, specifying the input.
+ * The format support NC1HWC0, FRACTAL_NZ. Shape support 4D ~ 8D.
+ * Has the same format as x. \n
+ * @par Attributes:
+ * @li dual_output: An optional bool, specifying whether to perform dual ouput,
+ * either "True" or "False". Defaults to "False".
+ * @li relu_flag: An optional bool, specifying whether to perform ReLU,
+ * either "True" or "False". Defaults to "False" . \n
+ * @par Outputs:
+ * @li y0: The dequantized output tensor of type int8.
+ * The format support FRACTAL_NZ and NC1HWC0. Shape support 4D ~ 8D.
+ * Has the same format and shape as input "x0".
+ * @li y1: The dequantized output tensor of type int16.
+ * The format support FRACTAL_NZ and NC1HWC0. Shape support 4D ~ 8D.
+ * Has the same format and shape as input "x0". \n
+ * @par Third-party framework compatibility
+ * It is a custom operator. It has no corresponding operator in Caffe.
+ */
+#ifndef OPS_PROTO_DEF_ASCENDREQUANTS16
+#define OPS_PROTO_DEF_ASCENDREQUANTS16
+        REG_OP(AscendRequantS16)
     .INPUT(x0, TensorType({DT_INT16}))
     .INPUT(req_scale, TensorType({DT_UINT64}))
     .OPTIONAL_INPUT(x1, TensorType({DT_INT16}))
@@ -223,6 +231,7 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(dual_output, Bool, false)
     .ATTR(relu_flag, Bool, false)
     .OP_END_FACTORY_REG(AscendRequantS16)
+#endif
 
     /**
      * @brief Multiplies matrix "a" by matrix "b", producing "a @ b".
@@ -356,29 +365,32 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(modulated, Bool, true)
     .OP_END_FACTORY_REG(DeformableConv2D)
 
-    /**
-     * @brief Computes GlobalLpPool, GlobalLpPool consumes an input tensor X and applies lp pool pooling across the
-     * values in the same channel.
-     * @par Inputs:
-     * x: A 4D or 5D Tensor of type float16 or float32, with format ND. \n
-     * @par Attributes:
-     * @li p: p value of the Lp norm used to pool over the input data. Must be one of the following types: float32.
-     * Defaults to 2.0. \n
-     * @par Outputs:
-     * y: A 4D or 5D Tensor. Has the same type and format as "x".
-     * When x is a 4D Tensor, the shape of y is [x.shape[0],x.shape[1],1,1].
-     * When x is a 5D Tensor, the shape of y is [x.shape[0],x.shape[1],1,1,1].
-     * @par Third-party framework compatibility
-     * Compatible with the onnx operator GlobalLpPool.
-     * @par Restrictions:
-     * Warning: THIS FUNCTION IS DEPRECATED.
-     * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-     */
-    REG_OP(GlobalLpPool)
+/**
+ * @brief Computes GlobalLpPool, GlobalLpPool consumes an input tensor X and applies lp pool pooling across the
+ * values in the same channel.
+ * @par Inputs:
+ * x: A 4D or 5D Tensor of type float16 or float32, with format ND. \n
+ * @par Attributes:
+ * @li p: p value of the Lp norm used to pool over the input data. Must be one of the following types: float32.
+ * Defaults to 2.0. \n
+ * @par Outputs:
+ * y: A 4D or 5D Tensor. Has the same type and format as "x".
+ * When x is a 4D Tensor, the shape of y is [x.shape[0],x.shape[1],1,1].
+ * When x is a 5D Tensor, the shape of y is [x.shape[0],x.shape[1],1,1,1].
+ * @par Third-party framework compatibility
+ * Compatible with the onnx operator GlobalLpPool.
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS DEPRECATED.
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+ */
+#ifndef OPS_PROTO_DEF_GLOBALLPPOOL
+#define OPS_PROTO_DEF_GLOBALLPPOOL
+        REG_OP(GlobalLpPool)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(p, Float, 2.0)
     .OP_END_FACTORY_REG(GlobalLpPool)
+#endif
 
     /**
      *@brief GroupNorm and Reul operator \n
