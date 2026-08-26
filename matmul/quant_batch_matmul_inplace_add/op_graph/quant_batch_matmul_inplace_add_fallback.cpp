@@ -61,7 +61,7 @@ static graphStatus QuantBatchMatmulInplaceAddExecuteFunc(OpExecuteContext* host_
     auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantBatchMatmulInplaceAdd, x1, x2, x1Scale, x2Scale,
                                               yRef, transposeX1, transposeX2, groupSize);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS,
-                OP_LOGE("Execute aclnnfallback quant_batch_matmul_inplace_add", "api_ret faild:%d", apiRet),
+                OP_LOGE("Execute aclnnfallback quant_batch_matmul_inplace_add", "api_ret failed:%d", apiRet),
                 return GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }

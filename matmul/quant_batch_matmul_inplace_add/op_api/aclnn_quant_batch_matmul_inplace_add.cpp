@@ -660,7 +660,7 @@ static inline bool InferGroupSize(QBMMInplaceAdd::QuantBatchMatmulInplaceAddPara
                                x2Scale->GetViewShape().GetDim(x2ScaleDimNum - 1);
     }
     CHECK_RET(ReCalcGroupSize(inputSizeN, scaleSizeN, groupSizeN, "n"), false);
-    OP_LOGD("Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+    OP_LOGD("Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
             groupSizeK);
     params.groupSize = static_cast<int64_t>((groupSizeM << GROUP_M_OFFSET) | (groupSizeN << GROUP_N_OFFSET) |
                                             groupSizeK);

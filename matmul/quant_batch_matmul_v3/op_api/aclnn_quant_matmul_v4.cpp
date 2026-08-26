@@ -476,14 +476,15 @@ static inline bool CheckBiasShape(const aclTensor* bias, int64_t x2NDim, const s
     auto biasThirdDim = bias->GetViewShape().GetDim(2);
     // output batch need to be only 1 dim when bias dim is 3
     if (batchRecord.size() != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When bias dim-num is 3, infered out batch dim-num should be 1, but infered out batch dim-num is %zu.",
-                batchRecord.size());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When bias dim-num is 3, inferred out batch dim-num should be 1, but inferred out batch dim-num is %zu.",
+            batchRecord.size());
         return false;
     }
     OP_CHECK(biasFirstDim == inferedOutbatchValue,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Bias 1st dim should be equal to out batch dim, but it is %ld and infered out batch dim is %ld.",
+                     "Bias 1st dim should be equal to out batch dim, but it is %ld and inferred out batch dim is %ld.",
                      biasFirstDim, inferedOutbatchValue),
              return false);
     OP_CHECK(biasSecondDim == 1,
@@ -509,7 +510,7 @@ static inline bool CheckOutShape(const aclTensor* out, bool twoDimMatmulCaseFlag
         outMDim = out->GetViewShape().GetDim(0);
     }
     if (inferedOutDimNum != outDimNum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Infered output dim-num %zu is not equal to actual out dim-num %zu.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Inferred output dim-num %zu is not equal to actual out dim-num %zu.",
                 inferedOutDimNum, outDimNum);
         return false;
     }
@@ -526,7 +527,7 @@ static inline bool CheckOutShape(const aclTensor* out, bool twoDimMatmulCaseFlag
     for (size_t i = 0; i < outDimNum - PENULTIMATE_DIM; i++) {
         OP_CHECK(out->GetViewShape().GetDim(i) == batchRecord[i],
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "Output dim %ld is not equal to infered output dim %ld at shape index %zu.",
+                         "Output dim %ld is not equal to inferred output dim %ld at shape index %zu.",
                          out->GetViewShape().GetDim(i), batchRecord[i], i),
                  return false);
     }
@@ -1727,7 +1728,7 @@ static inline bool A8W4InferGroupSize(int64_t& groupSize)
         return false;
     }
 
-    OP_LOGD("A8W4 after Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+    OP_LOGD("A8W4 after Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
             groupSizeK);
     groupSize = groupSizeK;
     return true;
