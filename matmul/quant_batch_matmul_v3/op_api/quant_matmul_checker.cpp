@@ -1785,6 +1785,17 @@ bool QuantMatmulChecker::CheckL0C2outOrL0C2ubPertokenPergroup() const
 
 bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
 {
+    const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
+    const bool isGbOrBb = (groupSizeMnk.m == 1UL || groupSizeMnk.m == PERBLOCK_BLOCK_SIZE) &&
+                          groupSizeMnk.n == PERBLOCK_BLOCK_SIZE && groupSizeMnk.k == PERBLOCK_BLOCK_SIZE;
+    if ((IsFp8Input(x1_, x2_) || IsHif8Input(x1_, x2_)) && IsPerblock(x1_, x2_, x1Scale_, x2Scale_) &&
+        ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ && isGbOrBb && transposeX1_) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, "transposeX1", "true",
+            "in FP8/HIFLOAT8 G-B/B-B quantization with x2 in FRACTAL_NZ format, transposeX1 must be false");
+        return false;
+    }
+
     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT, apiName_), false);
     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_), false);
     CHECK_RET(
