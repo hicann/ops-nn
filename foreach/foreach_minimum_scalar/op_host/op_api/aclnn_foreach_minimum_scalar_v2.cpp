@@ -61,7 +61,7 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
     for (uint64_t m = 0; m < self->Size(); m++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[m]->GetStorageFormat()) || IsPrivateFormat((*out)[m]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
             return false;
         }
     }

@@ -35,7 +35,7 @@ constexpr int64_t DOUBLE_BUFFER = 2;
 class ForeachNonFiniteCheckAndUnscaleRegbaseTiling : public ForeachNonFiniteCheckAndUnscaleBaseClass {
 public:
     explicit ForeachNonFiniteCheckAndUnscaleRegbaseTiling(gert::TilingContext* context)
-        : ForeachNonFiniteCheckAndUnscaleBaseClass(context){};
+        : ForeachNonFiniteCheckAndUnscaleBaseClass(context) {};
     ~ForeachNonFiniteCheckAndUnscaleRegbaseTiling() override = default;
     void Reset(gert::TilingContext* context) override { ForeachNonFiniteCheckAndUnscaleBaseClass::Reset(context); }
 
@@ -128,7 +128,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 nodeName_.c_str(), "scaled_grads", ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
                 ("The dtypes of all tensors in the tensor list must be the same, expected " +
-                 ge::TypeUtils::DataTypeToSerialString(dataType_) + ".Currently, the dtype of scaled_grads[" +
+                 ge::TypeUtils::DataTypeToSerialString(dataType_) + ". Currently, the dtype of scaled_grads[" +
                  std::to_string(i) + "] is inconsistent with that of other tensors")
                     .c_str());
             return ge::GRAPH_FAILED;

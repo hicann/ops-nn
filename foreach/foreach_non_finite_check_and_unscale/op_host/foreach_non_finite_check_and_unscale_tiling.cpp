@@ -39,7 +39,7 @@ constexpr uint32_t COEFFICIENT_OF_NON_FLOAT = COEFFICIENT_OF_FLOAT * 3;
 class ForeachNonFiniteCheckAndUnscaleTiling {
 public:
     explicit ForeachNonFiniteCheckAndUnscaleTiling(gert::TilingContext* context)
-        : tilingContext(context), nodeName(context->GetNodeName()){};
+        : tilingContext(context), nodeName(context->GetNodeName()) {};
 
     ge::graphStatus Init();
     ge::graphStatus RunBigKernelTiling();
@@ -108,7 +108,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleTiling::Init()
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 nodeName.c_str(), "scaled_grads", ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
                 ("The dtypes of all tensors in tensor list scaled_grads must be the same, expected " +
-                 ge::TypeUtils::DataTypeToSerialString(dataType) + ".Currently, the dtype of scaled_grads[" +
+                 ge::TypeUtils::DataTypeToSerialString(dataType) + ". Currently, the dtype of scaled_grads[" +
                  std::to_string(i) + "] is inconsistent with that of other tensors")
                     .c_str());
             return ge::GRAPH_FAILED;

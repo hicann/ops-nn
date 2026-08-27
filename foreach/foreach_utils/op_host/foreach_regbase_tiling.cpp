@@ -390,12 +390,13 @@ ge::graphStatus ForeachRegbaseTiling::CheckOutput()
         auto dstShape = context_->GetOutputShape(j);
         OP_CHECK_IF(dstShape == nullptr, OP_LOGE(context_, "The output %u shape is null.", j), return ge::GRAPH_FAILED);
         // check max dim
-        OP_CHECK_IF(
-            dstShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                context_->GetNodeName(), "y", std::to_string(dstShape->GetStorageShape().GetDimNum()).c_str(),
-                ("The " + std::to_string(j) + "th tensor in tensor list y must be less than or equal to 8").c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(dstShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context_->GetNodeName(), "y", std::to_string(dstShape->GetStorageShape().GetDimNum()).c_str(),
+                        ("The shape dim of the " + std::to_string(j) +
+                         "th tensor in tensor list y must be less than or equal to 8")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
 
         if (srcShape->GetStorageShape() != dstShape->GetStorageShape() &&
             srcShape->GetStorageShape().GetShapeSize() > dstShape->GetStorageShape().GetShapeSize()) {

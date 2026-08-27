@@ -125,7 +125,8 @@ static ge::graphStatus ForeachPowScalarAndTensorTilingFunc(gert::TilingContext* 
     OP_CHECK_IF(memset_s(tiling, sizeof(ForeachPowScalarAndTensorTilingData), 0,
                          sizeof(ForeachPowScalarAndTensorTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM), OP_LOGE(context, "tensorNum exceeds MAX_TENSOR_NUM"),
+    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM),
+                OP_LOGE(context, "tensorNum[%lu] exceeds MAX_TENSOR_NUM[%u]", tensorNum, MAX_TENSOR_NUM),
                 return ge::GRAPH_FAILED);
 
     int64_t totalElements = 0;

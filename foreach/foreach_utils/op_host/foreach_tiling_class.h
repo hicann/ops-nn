@@ -363,7 +363,7 @@ private:
     /**
      ** function: Check scalar tensor shape  invalid
      */
-    ge::graphStatus CheckScalarTenorShapeInfo(size_t inputTensorsNum)
+    ge::graphStatus CheckScalarTensorShapeInfo(size_t inputTensorsNum)
     {
         size_t irIndex = inputTensorsNum;
         if (opCode == FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE) {
@@ -389,7 +389,7 @@ private:
     /**
      ** function: Check scalars tensor shape  invalid
      */
-    ge::graphStatus CheckScalarsTenorShapeInfo(size_t inputTensorsNum)
+    ge::graphStatus CheckScalarsTensorShapeInfo(size_t inputTensorsNum)
     {
         size_t irIndex = inputTensorsNum;
         auto scalarsShape = tilingContext->GetRequiredInputShape(irIndex);
@@ -514,13 +514,13 @@ private:
                     OP_LOGE(tilingContext->GetNodeName(), "CheckInputTensorlistShape failed."),
                     return ge::GRAPH_FAILED);
         if (opInputType == ForeachInputType::TYPE_SCALAR) {
-            OP_CHECK_IF(CheckScalarTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarTenorShapeInfo failed."),
+            OP_CHECK_IF(CheckScalarTensorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarTensorShapeInfo failed."),
                         return ge::GRAPH_FAILED);
         }
         if (opInputType == ForeachInputType::TYPE_SCALARS_TENSOR) {
-            OP_CHECK_IF(CheckScalarsTenorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarsTenorShapeInfo failed."),
+            OP_CHECK_IF(CheckScalarsTensorShapeInfo(static_cast<size_t>(inputTensorsNum)) != ge::GRAPH_SUCCESS,
+                        OP_LOGE(tilingContext->GetNodeName(), "CheckScalarsTensorShapeInfo failed."),
                         return ge::GRAPH_FAILED);
         }
         OP_CHECK_IF(CheckOutputShapeAndDtype() != ge::GRAPH_SUCCESS,

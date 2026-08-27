@@ -69,7 +69,8 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMinimumListTilingData), 0, sizeof(ForeachMinimumListTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM,
+                OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
                 return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);

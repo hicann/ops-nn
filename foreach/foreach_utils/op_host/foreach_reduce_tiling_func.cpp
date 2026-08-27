@@ -38,7 +38,7 @@ constexpr int32_t MAX_SUPPORT_DIMS_NUMS = 8;
 
 class ForeachReduceTiling {
 public:
-    explicit ForeachReduceTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ForeachReduceTiling(gert::TilingContext* context) : tilingContext(context) {};
     /**
      ** function: Init
      */
@@ -403,7 +403,7 @@ static ge::graphStatus TilingPrepare4ForeachTiling(gert::TilingParseContext* con
     OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context, "platformInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<ForeachCompileInfo>();
-    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context, "compileInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context, "compileInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNum();

@@ -52,7 +52,7 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
     for (uint64_t j = 0; j < self->Size(); j++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[j]->GetStorageFormat()) || IsPrivateFormat((*out)[j]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
             return false;
         }
     }
@@ -64,7 +64,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for arch %u is not implemented",
                 static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
         return EMPTY_LIST;
     }
@@ -74,7 +74,7 @@ static inline bool CheckDtype(const aclTensorList* self, const aclScalar* scalar
 {
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for arch %u is not implemented",
                 static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
         return false;
     }

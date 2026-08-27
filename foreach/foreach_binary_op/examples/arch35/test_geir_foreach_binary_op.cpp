@@ -1,3 +1,13 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
 // test_geir for ForeachBinaryOp (GEIR graph-mode verify; 2 dynamic input lists + dynamic output + op_code attr).
 // ForeachBinaryOp is a fused graph-internal op (no aclnn entry); it is exercised through the GE IR graph path.
 // y[i] = x1[i] <op> x2[i], where <op> is selected by attr op_code: 0=add, 1=sub, 2=mul, 3=div.
@@ -84,13 +94,11 @@ int main(int argc, char* argv[])
     vector<ge::Tensor> input;
     map<AscendString, AscendString> go = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     if (ge::GEInitialize(go) != SUCCESS) {
-        printf("GEInit failed\n");
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Initialize ge success\n", GetTime().c_str());
     vector<Operator> inputs{}, outputs{};
     if (CreateOppInGraph(input, inputs, outputs, graph) != SUCCESS) {
-        printf("create failed\n");
         return FAILED;
     }
     if (!inputs.empty() && !outputs.empty())
@@ -98,15 +106,12 @@ int main(int argc, char* argv[])
     map<AscendString, AscendString> opts = {};
     Session* session = new Session(opts);
     if (session == nullptr) {
-        printf("session null\n");
         return FAILED;
     }
     uint32_t gid = 0;
     session->AddGraph(gid, graph, opts);
-    printf("%s - INFO - [XIR]: Session add graph success\n", GetTime().c_str());
     vector<ge::Tensor> output;
     if (session->RunGraph(gid, input, output) != SUCCESS) {
-        printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
         delete session;
         GEFinalize();
         return FAILED;
