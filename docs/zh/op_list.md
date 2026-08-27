@@ -4109,6 +4109,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_came_part4/README.md">apply_came_part4</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>CAME优化器第4段（参数更新段）：按CAME更新规则，利用置信因子r、c对参数param进行更新，回写更新后的param、r、c；sum_r与global_shape为可选输入，缺省时kernel内归约并取本地形状。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/inplace_apply_ada_max/README.md">inplace_apply_ada_max</a></td>
     <td>✓</td>
     <td>✓</td>
