@@ -3370,6 +3370,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_inference/README.md">bn_inference</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行Batch Normalization推理，根据均值、方差和动量计算折叠系数，并对输入进行归一化及可选仿射变换。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
     <td>✓</td>
     <td>✓</td>

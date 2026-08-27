@@ -275,8 +275,7 @@ int32_t CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector
                          const TestScenario& scenario)
 {
     auto inplaceAdd = op::InplaceAdd("inplaceAdd1");
-    // Every scenario is supported by the legacy TensorMove + ScatterAdd fusion. Run this matrix together with fusion
-    // statistics or profiling to verify that Ascend 950 keeps the native InplaceAdd route for every dtype.
+    // Run every scenario through the public GE graph and verify the result on supported products.
     DataType xDtype = scenario.dtype;
     vector<int64_t> xShape = {4, 6};
     vector<int64_t> indicesShape = {2};

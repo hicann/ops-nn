@@ -85,31 +85,24 @@ int CountNodeByType(const std::shared_ptr<Graph>& graph, const char* opType)
     }
     return count;
 }
+
+void SetPlatform(const std::string& socVersion, const std::string& shortSocVersion = "")
+{
+    fe::PlatformInfo platformInfo{};
+    fe::OptionalInfo optiCompilationInfo{};
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = shortSocVersion.empty() ? socVersion : shortSocVersion;
+    optiCompilationInfo.soc_version = socVersion;
+    fe::PlatformInfoManager::Instance().platform_info_map_[socVersion] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+}
 } // namespace
 
 class InplaceAddFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        fe::PlatformInfo platformInfo;
-        fe::OptionalInfo optiCompilationInfo;
-        platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
-        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-    }
+    static void SetUpTestCase() { SetPlatform("Ascend910_93"); }
 
-    void SetUp() override
-    {
-        fe::PlatformInfo platformInfo;
-        fe::OptionalInfo optiCompilationInfo;
-        platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
-        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-    }
+    void SetUp() override { SetPlatform("Ascend910_93"); }
 };
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusionPatternTest)
 {
@@ -158,7 +151,7 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionFloat16Success)
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
 }
 
-TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt8AndUint8Success)
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt8AndUint8UnsupportedOnAscend910_93)
 {
     const std::vector<DataType> dataDtypes = {DT_INT8, DT_UINT8};
     for (const auto dtype : dataDtypes) {
@@ -168,22 +161,23 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt8AndUint8Success)
         ops::AInplaceAddFusionPass pass;
         Status status = pass.Run(graph, passContext);
 
-        EXPECT_EQ(status, SUCCESS);
-        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 0);
-        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), 1);
-        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
+        EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 1);
+        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), 0);
+        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
     }
 }
 
-TEST_F(InplaceAddFusionPassTest, inplaceAddFusionBf16Success)
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusionBf16UnsupportedOnAscend910_93)
 {
     auto graph = BuildInplaceAddGraph({4, 8}, DT_BF16, {2}, DT_INT64, {2, 8}, DT_BF16);
     CustomPassContext passContext;
     ops::AInplaceAddFusionPass pass;
     Status status = pass.Run(graph, passContext);
 
-    EXPECT_EQ(status, SUCCESS);
-    EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 1);
+    EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
 }
 
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt32Success)
@@ -195,6 +189,31 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt32Success)
 
     EXPECT_EQ(status, SUCCESS);
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
+}
+
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusionAscend910DtypeMatrix)
+{
+    SetPlatform("Ascend910A", "Ascend910");
+    struct DtypeScenario {
+        DataType dtype;
+        bool shouldFuse;
+    };
+    const std::vector<DtypeScenario> scenarios = {
+        {DT_FLOAT, true}, {DT_INT32, true}, {DT_FLOAT16, false}, {DT_INT8, false}, {DT_UINT8, false}, {DT_BF16, false},
+    };
+
+    for (const auto& scenario : scenarios) {
+        SCOPED_TRACE(static_cast<int32_t>(scenario.dtype));
+        auto graph = BuildInplaceAddGraph({4, 8}, scenario.dtype, {2}, DT_INT32, {2, 8}, scenario.dtype);
+        CustomPassContext passContext;
+        ops::AInplaceAddFusionPass pass;
+        Status status = pass.Run(graph, passContext);
+
+        EXPECT_EQ(status, scenario.shouldFuse ? SUCCESS : GRAPH_NOT_CHANGED);
+        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), scenario.shouldFuse ? 0 : 1);
+        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), scenario.shouldFuse ? 1 : 0);
+        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), scenario.shouldFuse ? 1 : 0);
+    }
 }
 
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt64IndicesSuccess)
@@ -246,16 +265,10 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionUnsupportedIndicesDtypeFail)
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
 }
 
-// Negative: Ascend310 is the only excluded platform in the original pass.
+// Negative: Ascend310 does not use the legacy lowering.
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusionUnsupportedPlatformFail)
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optiCompilationInfo;
-    platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend310";
-    optiCompilationInfo.soc_version = "Ascend310";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend310"] = platformInfo;
-    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    SetPlatform("Ascend310");
 
     auto graph = BuildInplaceAddGraph({4, 8}, DT_FLOAT, {2}, DT_INT32, {2, 8}, DT_FLOAT);
     CustomPassContext passContext;
@@ -267,21 +280,16 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionUnsupportedPlatformFail)
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
 }
 
-// Ascend950 has a native InplaceAdd implementation and must keep the original graph node for every data dtype that
-// the legacy TensorMove + ScatterAdd lowering could otherwise consume. The native InplaceAdd contract requires
-// int32 indices, so the routing matrix uses int32 here; int64 indices are rejected by the native host implementation.
-TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsAllLegacyDataDtypes)
+// Ascend950 keeps the original graph node for every dtype supported by the native InplaceAdd implementation.
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsAllNativeDataDtypes)
 {
-    fe::PlatformInfo platformInfo{};
-    fe::OptionalInfo optiCompilationInfo{};
-    platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    SetPlatform("Ascend950");
 
-    const std::vector<DataType> legacyDataDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16};
-    for (const auto dtype : legacyDataDtypes) {
+    const std::vector<DataType> nativeDataDtypes = {
+        DT_FLOAT16, DT_FLOAT,  DT_BF16,   DT_INT8,   DT_INT16,     DT_INT32,     DT_INT64,
+        DT_UINT8,   DT_UINT16, DT_UINT32, DT_UINT64, DT_COMPLEX32, DT_COMPLEX64,
+    };
+    for (const auto dtype : nativeDataDtypes) {
         SCOPED_TRACE(static_cast<int32_t>(dtype));
         auto graph = BuildInplaceAddGraph({4, 8}, dtype, {2}, DT_INT32, {2, 8}, dtype);
         CustomPassContext passContext;
@@ -297,13 +305,7 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsAllLegacyDataDtypes)
 
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsNativeShapeBoundaries)
 {
-    fe::PlatformInfo platformInfo{};
-    fe::OptionalInfo optiCompilationInfo{};
-    platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    SetPlatform("Ascend950");
 
     struct ShapeScenario {
         std::vector<int64_t> x;

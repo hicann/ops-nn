@@ -38,6 +38,7 @@ const std::string kPassName = "AInplaceAddFusionPass";
 const char* kInplaceAddType = "InplaceAdd";
 const char* kNotSupportSoc = "Ascend310";
 const char* kNativeInplaceAddSoc = "Ascend950";
+const char* kAscend910Soc = "Ascend910";
 const int64_t kCaptureInplaceAdd = 0L;
 const int32_t kInplaceAddInputNum = 3;
 // Version compat (D1): kCompatibleInherited is a GE 9.0.0 (90000000) Stage enum.
@@ -68,12 +69,15 @@ CustomPassStage GetInplaceAddPassStage()
 #endif
 }
 
-// ScatterAdd var/updates supported dtypes, aligned with ScatterAdd IR definition.
-bool IsSupportedDataDtype(const DataType dtype)
+// The legacy ScatterAdd implementation supports float/int32 on Ascend910 and
+// additionally supports float16 on the other products served by this pass.
+bool IsSupportedDataDtype(const DataType dtype, const std::string& soc)
 {
-    static const std::initializer_list<DataType> kSupportedDataDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32,
-                                                                         DT_INT8,    DT_UINT8, DT_BF16};
-    return std::find(kSupportedDataDtypes.begin(), kSupportedDataDtypes.end(), dtype) != kSupportedDataDtypes.end();
+    static const std::initializer_list<DataType> kCommonDataDtypes = {DT_FLOAT, DT_INT32};
+    if (std::find(kCommonDataDtypes.begin(), kCommonDataDtypes.end(), dtype) != kCommonDataDtypes.end()) {
+        return true;
+    }
+    return soc != kAscend910Soc && dtype == DT_FLOAT16;
 }
 
 // ScatterAdd indices supported dtypes (IndexNumberType: int32/int64).
@@ -86,7 +90,7 @@ bool IsSupportedIndicesDtype(const DataType dtype)
 
 // Ascend310 does not support the legacy lowering. Ascend950 provides a native InplaceAdd implementation,
 // so its graph must keep the original node and dispatch to the native binary.
-bool IsSupportSoc()
+bool IsSupportSoc(std::string& curSoc)
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
@@ -94,7 +98,7 @@ bool IsSupportSoc()
         OP_LOGW(kPassName.c_str(), "Get platform info failed, not fusion.");
         return false;
     }
-    const std::string curSoc = platformInfo.str_info.short_soc_version;
+    curSoc = platformInfo.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
     if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc) {
         OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
@@ -199,7 +203,8 @@ bool AInplaceAddFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     }
 
     // Keep the legacy lowering for older supported products; Ascend950 uses the native InplaceAdd binary.
-    if (!IsSupportSoc()) {
+    std::string curSoc;
+    if (!IsSupportSoc(curSoc)) {
         return false;
     }
 
@@ -230,10 +235,11 @@ bool AInplaceAddFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     TensorDesc vDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(2, vDesc) != SUCCESS, false, kPassName.c_str(), "Get input v desc failed.");
 
-    if (!IsSupportedDataDtype(xDesc.GetDataType()) || !IsSupportedDataDtype(vDesc.GetDataType()) ||
+    if (!IsSupportedDataDtype(xDesc.GetDataType(), curSoc) || !IsSupportedDataDtype(vDesc.GetDataType(), curSoc) ||
         !IsSupportedIndicesDtype(indicesDesc.GetDataType())) {
-        OPS_LOG_D(kPassName.c_str(), "ScatterAdd does not support input dtype (x:%d, indices:%d, v:%d), skip.",
-                  xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType());
+        OPS_LOG_D(kPassName.c_str(),
+                  "ScatterAdd does not support input dtype (x:%d, indices:%d, v:%d) on soc %s, skip.",
+                  xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType(), curSoc.c_str());
         return false;
     }
 

@@ -15,13 +15,15 @@
 
 - 算子功能：根据`indices`指定的第0维位置，将`v`中的切片加到`x`的对应切片，并将更新结果输出到`y`。接口不声明`x`与`y`共享存储。
 - 使用场景：兼容TensorFlow的`InplaceAdd`图算子，用于按行执行索引更新；本算子不是普通的逐元素或Broadcast Add。
-- 计算公式：设`x`的shape为$[N, d_1, \dots, d_{D-1}]$，`indices`的shape为$[K]$，`v`的shape为$[K, d_1, \dots, d_{D-1}]$。先把索引按第0维大小`N`做数学模归一：
+- 计算公式：设`x`的shape为$[N, d_1, \dots, d_{D-1}]$，`indices`的shape为$[K]$，`v`的shape为$[K, d_1, \dots, d_{D-1}]$。<term>Ascend 950PR/Ascend 950DT</term>先把索引按第0维大小`N`做数学模归一：
 
   $$
   row_j = ((indices_j \bmod N) + N) \bmod N , \quad j = 0, 1, \dots, K-1
   $$
 
-  再在归一化后的行上累加，未被索引命中的行原样透传：
+  其他产品要求输入索引位于$[0, N)$范围内，此时$row_j = indices_j$。
+
+  再在$row_j$对应的行上累加，未被索引命中的行原样透传：
 
   $$
   y_{i} =
@@ -72,7 +74,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>作为更新基值的输入张量。支持空Tensor：第0维为0，或任一尾维为0；第0维为0时要求indices与v的第0维同时为0。</td>
+      <td>作为更新基值的输入张量。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：第0维为0，或任一尾维为0；第0维为0时要求indices与v的第0维同时为0。</td>
       <td>[N, d1, ..., d(D-1)]，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -80,7 +82,7 @@
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>指定x第0维上需要更新位置的索引张量。支持空Tensor：长度为0时不执行更新，y与x一致。</td>
+      <td>指定x第0维上需要更新位置的索引张量。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：长度为0时不执行更新，y与x一致。</td>
       <td>[K]，仅支持1维。</td>
       <td>INT32</td>
       <td>ND</td>
@@ -88,7 +90,7 @@
     <tr>
       <td>v</td>
       <td>输入</td>
-      <td>更新值张量，数据类型必须与x相同。支持空Tensor：第0维随indices长度，尾维随x。</td>
+      <td>更新值张量，数据类型必须与x相同。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：第0维随indices长度，尾维随x。</td>
       <td>[K, d1, ..., d(D-1)]，支持1～8维，维度数必须与x相同。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -96,7 +98,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>更新后的张量，数据类型与x相同；接口不声明与x共享存储。支持空Tensor：x为空Tensor时y为空Tensor，不执行计算。</td>
+      <td>更新后的张量，数据类型与x相同；接口不声明与x共享存储。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：x为空Tensor时y为空Tensor，不执行计算。</td>
       <td>与x相同，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -115,12 +117,12 @@
 - `x`、`v`、`y`支持1～8维，`indices`仅支持一维；`v`的维度数必须与`x`相同。
 - `v.shape[0]`必须等于`indices.shape[0]`；`v.shape[1:]`必须等于`x.shape[1:]`。
 - `x`、`v`、`y`的数据类型必须一致，`indices`的数据类型必须为INT32。
-- 当`x.shape[0] > 0`时，索引先扩展为INT64，再按`x`的第0维大小进行数学模归一，因此支持负索引和超范围正索引。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`x.shape[0] > 0`时，索引先扩展为INT64，再按`x`的第0维大小进行数学模归一，因此支持负索引和超范围正索引。其他产品要求索引满足$0 \leq indices_j < x.shape[0]$。
 - 当归一化后的索引存在重复值时，输出内容未定义，不保证累加顺序、确定性或具体数值。
-- 当`indices`为空时，不执行更新，输出保持与`x`一致。
-- 当`x.shape[0] == 0`时，`indices`和`v`的第0维必须同时为0。
-- 当`x`的任一尾维为0时，输出为空，不执行索引取模或数据读写。
-- `x.shape[0]`与`indices`长度不超过INT32最大值（2147483647）；尾维大小与总元素数不受该限制，按INT64校验，仅在乘积溢出INT64时报错。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`indices`为空时，不执行更新，输出保持与`x`一致。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`x.shape[0] == 0`时，`indices`和`v`的第0维必须同时为0。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`x`的任一尾维为0时，输出为空，不执行索引取模或数据读写。
+- <term>Ascend 950PR/Ascend 950DT</term>：`x.shape[0]`与`indices`长度不超过INT32最大值（2147483647）；尾维大小、各张量元素数、合计处理规模及字节大小必须在INT64可表示范围内，任一相关乘加溢出时返回错误。
 - 整数加法不提供饱和运算保证，调用方不应依赖整数溢出后的结果。
 - 支持静态Shape、动态Shape和动态Rank；实际shape必须满足上述约束。
 - 本算子不提供aclnn单算子接口，仅支持GE图模式调用。现有同名`aclnnInplaceAdd`执行的是逐元素或Broadcast计算`self += alpha * other`，与本算子的按索引行更新语义不同，不能混用。
@@ -129,4 +131,4 @@
 
 | 调用方式 | 样例代码 | 说明 |
 | :------- | :------- | :--- |
-| GE图模式 | [test_geir_inplace_add](examples/test_geir_inplace_add.cpp) | 通过[算子IR](op_graph/inplace_add_proto.h)构建InplaceAdd算子图并执行RunGraph与数值校验；样例覆盖FLOAT、FLOAT16、BFLOAT16、INT8、UINT8、INT32，可结合融合统计和profiling验证Ascend 950调用原生binary。 |
+| GE图模式 | [test_geir_inplace_add](examples/test_geir_inplace_add.cpp) | 通过[算子IR](op_graph/inplace_add_proto.h)构建InplaceAdd算子图并执行RunGraph与数值校验；样例覆盖FLOAT、FLOAT16、BFLOAT16、INT8、UINT8、INT32。 |

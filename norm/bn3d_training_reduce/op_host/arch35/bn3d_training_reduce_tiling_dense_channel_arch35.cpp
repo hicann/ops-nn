@@ -356,9 +356,8 @@ ge::graphStatus BN3DTrainingReduceDenseChannelTiling::ValidateAndNormalizeShape(
     // C0 的整数倍；又有 C0 | VL_FP32（本函数上方已校验），故 lane L ↔ c0 = L % C0 的
     // 映射在跨分块推进时保持不变。
     //
-    // 残留：A > 1 且 R0 < VL_FP32 且 R1 极大时通道数据在 GM 上不连续，无法折叠，
-    // 累加链仍为 R1。该形态（多通道 + 空间维退化为 1 + N 达百万）不在 BN3D 的真实
-    // 语义范围内，此处不额外处理，已在交付件中如实记录为已知数值边界。
+    // A > 1 时通道数据在 GM 上不连续，不能做该布局折叠；普通多通道路径由 Kernel 的
+    // 补偿累加策略保证精度，不因此缩小支持范围。
     if (a_ == 1 && r1_ > 1) {
         OP_CHECK_IF(!CheckedMul(r1_, r0_, r0_),
                     OP_LOGE(context_->GetNodeName(), "Failed to fold R1 into R0 without int64 overflow"),

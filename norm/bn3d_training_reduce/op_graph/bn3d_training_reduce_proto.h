@@ -22,22 +22,20 @@ namespace ge {
 * @brief Performs reduced batch normalization .
 
 * @par Inputs:
-* x: A 5D tensor of type float16 or float32 or bfloat16, with format NDHWC or NCDHW.
-* Represents the input tensor in batch normalization training.
+* x: A tensor of type float16, float32, or bfloat16. NCDHW supports rank 2 to 5, NDHWC supports rank 5,
+* and NDC1HWC0 supports rank 6 on applicable products.
 * When the C axis is 0, other dimensions support empty tensors; when the C axis is not 0, other dimensions do not
 * support empty tensors.
 
 * @par Outputs:
-* @li sum: A 1D tensor of type float32 for SUM reduced "x". It represents the sum of the input tensor "x" on the C axis.
-* The shape of sum is consistent with the C axis of "x". Has the same format as "x".
-* @li square_sum: A 1D tensor of type float32 for SUMSQ reduced "x". It represents the sum of squares of the input
-* tensor "x" on the C axis.
-* The shape of sum is consistent with the C axis of "x". Has the same format as "x". \n
+* @li sum: A tensor of type float32 for SUM reduced "x". Its shape is [C] for NCDHW and NDHWC, and
+* [1, 1, C1, 1, 1, C0] for NDC1HWC0.
+* @li square_sum: A tensor of type float32 for SUMSQ reduced "x". It has the same shape and format as "sum". \n
 
 * @attention Constraints:
 * This operator is a BatchNorm fusion operator for updating the moving
 * averages for training.
-* This operator is used in conjunction with BN3DTrainingReduce.
+* This operator is used in conjunction with BN3DTrainingUpdate.
 */
 #ifndef OPS_PROTO_DEF_BN3DTRAININGREDUCE
 #define OPS_PROTO_DEF_BN3DTRAININGREDUCE

@@ -142,8 +142,8 @@ __aicore__ inline void InplaceAddCopy(int64_t total, int64_t coreIdx, int64_t co
 //
 // No atomics: the operator's contract normalizes indices into [0, n) and
 // requires them to be unique there, so two elements of v never target the same
-// element of y. Duplicate indices are explicitly undefined behaviour (see
-// 03_spec.yaml) and are only required to stay memory-safe, which plain stores
+// element of y. Duplicate indices are explicitly undefined by the operator
+// contract and are only required to stay memory-safe, which plain stores
 // are. Sibling operators that do allow duplicates pay for asc_atomic_add, which
 // on GM covers only int32/uint32/int64/uint64/float and forces int8/int16 through
 // a widened workspace; staying non-atomic keeps all 13 dtypes on one path.
