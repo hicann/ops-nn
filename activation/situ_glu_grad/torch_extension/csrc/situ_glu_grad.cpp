@@ -22,7 +22,7 @@ void CheckNpuTensor(const at::Tensor& tensor, const char* name)
     TORCH_CHECK(torch_npu::utils::is_npu(tensor), name, " must be on NPU device");
 }
 
-void ValidateDim(const at::Tensor& x, int64_t dim)
+void ValidateDim(const at::Tensor& x, const int64_t dim)
 {
     TORCH_CHECK(x.dim() > 0, "x rank should be greater than 0");
     int64_t actualDim = dim;
@@ -36,8 +36,8 @@ void ValidateDim(const at::Tensor& x, int64_t dim)
 }
 } // namespace
 
-at::Tensor situ_glu_grad(const at::Tensor& grad_y, const at::Tensor& x, int64_t dim, double beta, double linear_beta,
-                         bool activate_left)
+at::Tensor situ_glu_grad(const at::Tensor& grad_y, const at::Tensor& x, const int64_t dim, const double beta,
+                         const double linear_beta, const bool activate_left)
 {
     CheckNpuTensor(grad_y, "grad_y");
     CheckNpuTensor(x, "x");

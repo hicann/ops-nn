@@ -22,7 +22,7 @@ void CheckNpuTensor(const at::Tensor& tensor, const char* name)
     TORCH_CHECK(torch_npu::utils::is_npu(tensor), name, " must be on NPU device");
 }
 
-c10::SmallVector<int64_t, op_infer::SIZE> GetSituGluOutputShape(const at::Tensor& x, int64_t dim)
+c10::SmallVector<int64_t, op_infer::SIZE> GetSituGluOutputShape(const at::Tensor& x, const int64_t dim)
 {
     TORCH_CHECK(x.dim() > 0, "x rank should be greater than 0");
     int64_t actualDim = dim;
@@ -40,7 +40,8 @@ c10::SmallVector<int64_t, op_infer::SIZE> GetSituGluOutputShape(const at::Tensor
 }
 } // namespace
 
-at::Tensor situ_glu(const at::Tensor& x, int64_t dim, double beta, double linear_beta, bool activate_left)
+at::Tensor situ_glu(const at::Tensor& x, const int64_t dim, const double beta, const double linear_beta,
+                    const bool activate_left)
 {
     CheckNpuTensor(x, "x");
 

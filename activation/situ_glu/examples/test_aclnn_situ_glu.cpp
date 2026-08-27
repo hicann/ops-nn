@@ -34,7 +34,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream)
+int Init(const int32_t deviceId, aclrtStream* stream)
 {
     // 固定写法，acl初始化
     auto ret = aclInit(nullptr);
@@ -48,7 +48,7 @@ int Init(int32_t deviceId, aclrtStream* stream)
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor)
+                    const aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存

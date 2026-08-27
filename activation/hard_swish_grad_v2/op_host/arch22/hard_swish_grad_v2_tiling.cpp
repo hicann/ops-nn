@@ -26,7 +26,7 @@ constexpr int64_t UB_MEMORY_ALIGN = 256;
 
 class HardSwishGradV2Tiling {
 public:
-    explicit HardSwishGradV2Tiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit HardSwishGradV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -38,7 +38,7 @@ private:
     int64_t inputShapeSize = 0;
     int64_t elementNumEachCore = 0;
 
-    inline uint32_t CeilA2B(const int64_t a, const int64_t b)
+    inline uint32_t CeilA2B(const int64_t a, const int64_t b) const
     {
         if (b != 0) {
             return (a + b - 1) / b;
@@ -47,7 +47,7 @@ private:
         }
     }
 
-    int32_t GetNeedCoreNum(const int32_t coreNumPlatform)
+    int32_t GetNeedCoreNum(const int32_t coreNumPlatform) const
     {
         int32_t needCoreNum = CeilA2B(inputShapeSize, elementNumEachCore);
         if (needCoreNum == 0) {

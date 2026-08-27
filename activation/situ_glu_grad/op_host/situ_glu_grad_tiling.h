@@ -66,7 +66,7 @@ protected:
     void DumpTilingInfo() override;
     ge::graphStatus GetShapeAttrsInfoInner();
     ge::graphStatus CheckAndGetXAndAttrs();
-    ge::graphStatus CheckGradY();
+    ge::graphStatus CheckGradY() const;
     ge::graphStatus CountMaxPair();
 
 private:

@@ -188,7 +188,7 @@ ge::graphStatus SituGluTiling::CheckAndGetXAndAttrs()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SituGluTiling::CheckY()
+ge::graphStatus SituGluTiling::CheckY() const
 {
     auto shapeY = context_->GetOutputShape(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeY);

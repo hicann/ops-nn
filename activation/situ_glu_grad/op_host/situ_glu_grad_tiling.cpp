@@ -186,7 +186,7 @@ ge::graphStatus SituGluGradTiling::CheckAndGetXAndAttrs()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SituGluGradTiling::CheckGradY()
+ge::graphStatus SituGluGradTiling::CheckGradY() const
 {
     auto shapeGradY = context_->GetInputShape(GRADY_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeGradY);
