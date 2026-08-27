@@ -306,6 +306,7 @@ function(gen_cust_proto_symbol)
     cust_proto
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+           $<$<TARGET_EXISTS:${CUBE_UTILS_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${CUBE_UTILS_PLUGIN_NAME}_obj>>
            $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
            $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
     PRIVATE
