@@ -339,7 +339,6 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
     uint64_t maxStreamKDim = mmInfo_.kValue / blockTiling_.blockBaseK;
     uint64_t batchDoutDim = !context_->GetDeterministic() ? 1 : static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
     maxStreamKDim = std::max(maxStreamKDim, batchDoutDim);
-
     if (maxStreamKDim <= STREAM_K_DIM_MIN || tailCnt + STREAM_K_TAIL_TOLERANCE >= targetCoreNum) {
         return;
     }

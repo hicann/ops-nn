@@ -3438,23 +3438,19 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
     Ops::NN::Conv::ConvolutionBackwardChecker convolutionBackwardChecker(inputTensor, outputTensor, params, npuArch);
     auto ret = convolutionBackwardChecker.CheckParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_RET(input != nullptr && weight != nullptr && gradOutput != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
-    if (gradOutput != nullptr) {
-        auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
-        CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.gradOutput = gradOutputContiguous;
-    }
+    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
+    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.gradOutput = gradOutputContiguous;
 
-    if (input != nullptr) {
-        auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.input = inputContiguous;
-    }
-    if (weight != nullptr) {
-        auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-        CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.weight = weightContiguous;
-    }
+    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
+    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.input = inputContiguous;
+
+    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
+    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.weight = weightContiguous;
 
     // 检查conv3ddw确定性计算
     if ((*outputMask)[1] && (input->GetViewShape().GetDimNum() == CONV3DINPUTDIM ||
@@ -3622,27 +3618,23 @@ aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor* self, const ac
     Ops::NN::Conv::ConvTbcBackwardChecker convTbcBackwardChecker(inputTensor, outputTensor, tbcparams, npuArch);
     auto ret = convTbcBackwardChecker.CheckTbcParams();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_RET(self != nullptr && input != nullptr && weight != nullptr && bias != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
-    if (self != nullptr) {
-        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.self = selfContiguous;
-    }
-    if (weight != nullptr) {
-        auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-        CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.weight = weightContiguous;
-    }
-    if (input != nullptr) {
-        auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.input = inputContiguous;
-    }
-    if (bias != nullptr) {
-        auto biasContiguous = l0op::Contiguous(bias, uniqueExecutor.get());
-        CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputTensor.bias = biasContiguous;
-    }
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.self = selfContiguous;
+
+    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
+    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.weight = weightContiguous;
+
+    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
+    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.input = inputContiguous;
+
+    auto biasContiguous = l0op::Contiguous(bias, uniqueExecutor.get());
+    CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    inputTensor.bias = biasContiguous;
 
     // 设置param
     FVector<int64_t> newStride = {1};
