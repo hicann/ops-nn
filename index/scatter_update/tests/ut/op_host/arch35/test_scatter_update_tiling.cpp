@@ -691,7 +691,7 @@ TEST_F(ScatterUpdateTilingTest, tiling_empty_shape)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterUpdateTilingTest, tiling_uint32_int32_2d)

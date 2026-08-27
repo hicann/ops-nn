@@ -174,11 +174,12 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
         varShape_[1] = varShape_[0] == 0 ? varShape_[1] : varSize_ / varShape_[0];
     } else {
         varShape = var->GetStorageShape();
-        if (varShape.IsScalar()) {
+        if (varShape.GetShapeSize() == 0) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "var", ShapeToString(varShape),
-                                                  "the parameter var cannot be scalar");
+                                                  "the parameter var cannot be zero");
             return ge::GRAPH_FAILED;
         }
+        varShape = Ops::Base::EnsureNotScalar(varShape);
         varSize_ = varShape.GetShapeSize();
         varShape_[0] = varShape.GetDim(0);
         if (varShape_[0] != 0) {
@@ -190,14 +191,26 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
     auto indices = context_->GetInputShape(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
     auto indiceShape = indices->GetStorageShape();
+    if (indiceShape.GetShapeSize() == 0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "indices", ShapeToString(indiceShape),
+                                              "the parameter indices cannot be zero");
+        return ge::GRAPH_FAILED;
+    }
+    indiceShape = Ops::Base::EnsureNotScalar(indiceShape);
     indicesSize_ = indiceShape.GetShapeSize();
 
     auto updates = context_->GetInputShape(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updates);
     auto updateShape = updates->GetStorageShape();
+    if (updateShape.GetShapeSize() == 0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "updates", ShapeToString(updateShape),
+                                              "the parameter updates cannot be zero");
+        return ge::GRAPH_FAILED;
+    }
+    updateShape = Ops::Base::EnsureNotScalar(updateShape);
     updatesSize_ = updateShape.GetShapeSize();
     uint64_t updateDims = updateShape.GetDimNum();
-    if ((updateDims == 1 && updatesSize_ == 1) || updateDims == 0) {
+    if (updateDims == 1 && updatesSize_ == 1) {
         isUpdateScalar_ = 1;
     } else {
         if (CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS) {

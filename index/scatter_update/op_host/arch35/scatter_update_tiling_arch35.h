@@ -27,6 +27,7 @@
 #include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
+#include "op_common/op_host/tiling_base_util.h"
 #include "index/scatter_update/op_kernel/arch35/scatter_update_struct.h"
 
 namespace optiling {
