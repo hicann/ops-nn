@@ -1138,15 +1138,22 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1Process()
     int64_t aChunkIdx = blockIdx / rGroupCnt_; // 0 .. aOuter-1
     int64_t rChunkIdx = blockIdx % rGroupCnt_; // 0 .. rGroupCnt_-1
 
-    // ── 本核 R 区间 = rGroupCnt_ 等分 rOuter ──
-    int64_t rPerCore = (rOuter + rGroupCnt_ - 1) / rGroupCnt_; // CeilDiv
-    int64_t rStart = rChunkIdx * rPerCore;
-    int64_t rEnd = rStart + rPerCore;
-    if (rEnd > rOuter) {
-        rEnd = rOuter; // 末核兜底
+    // ── 本核 R 区间：R 方向大小核式均匀分配（rGroupCnt_ ≤ rOuter 恒成立，tiling 保证），每组 ≥1 chunk，无空组 ──
+    int64_t rSmallGroupLoopCnt = rOuter / rGroupCnt_;
+    int64_t rBigGroupCnt = rOuter % rGroupCnt_;
+    int64_t rBigGroupLoopCnt = rSmallGroupLoopCnt + (rBigGroupCnt > 0 ? 1 : 0);
+    int64_t rStart = 0;
+    int64_t rCount = 0;
+    if (rChunkIdx < rBigGroupCnt) {
+        rStart = rChunkIdx * rBigGroupLoopCnt;
+        rCount = rBigGroupLoopCnt;
+    } else {
+        rStart = rBigGroupCnt * rBigGroupLoopCnt + (rChunkIdx - rBigGroupCnt) * rSmallGroupLoopCnt;
+        rCount = rSmallGroupLoopCnt;
     }
+    int64_t rEnd = rStart + rCount;
     if (rStart >= rOuter) {
-        return; // rGroupCnt_ > rOuter 时空闲核
+        return; // 防御性早退（理论上不可达）
     }
 
     int64_t aLoopIdx = aChunkIdx; // aPerCore=1，直接映射
@@ -1168,8 +1175,6 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1Process()
 
     chunkGmOff += aChunkStart * aSplitStride;  // xGm_ 中 aSplit chunk 的起始偏移
     chunkOutOff += aChunkStart * aSplitOutStr; // workspace 中 aSplit chunk 的列偏移
-
-    int64_t rCount = rEnd - rStart; // 本核实际处理的 R chunk 数
 
     // ── Phase 1: CopyIn → CastSquare → 局部 R 段 cache-tree reduce → 写 workspace ──
     DoOneAChunkGroup(chunkGmOff, aLen, rStart, rEnd);

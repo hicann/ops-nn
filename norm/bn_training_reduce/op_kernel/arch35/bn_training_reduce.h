@@ -827,13 +827,24 @@ private:
         }
         const int64_t aLoopIdx = blockIdx / rGroupCnt_;
         const int64_t rGroupIdx = blockIdx % rGroupCnt_;
-        const int64_t rPerGroup = (rLoopCntTotal_ + rGroupCnt_ - 1) / rGroupCnt_;
-        const int64_t rStart = rGroupIdx * rPerGroup;
-        int64_t rEnd = rStart + rPerGroup;
-        if (rEnd > rLoopCntTotal_) {
-            rEnd = rLoopCntTotal_;
+        // R 方向大小核式均匀分配：rGroupCnt_ ≤ rLoopCntTotal_ 恒成立（tiling 保证），每组 ≥1 chunk，无空组
+        const int64_t rSmallGroupLoopCnt = rLoopCntTotal_ / rGroupCnt_;
+        const int64_t rBigGroupCnt = rLoopCntTotal_ % rGroupCnt_;
+        const int64_t rBigGroupLoopCnt = rSmallGroupLoopCnt + (rBigGroupCnt > 0 ? 1 : 0);
+        int64_t rStart = 0;
+        int64_t rCount = 0;
+        if (rGroupIdx < rBigGroupCnt) {
+            rStart = rGroupIdx * rBigGroupLoopCnt;
+            rCount = rBigGroupLoopCnt;
+        } else {
+            rStart = rBigGroupCnt * rBigGroupLoopCnt + (rGroupIdx - rBigGroupCnt) * rSmallGroupLoopCnt;
+            rCount = rSmallGroupLoopCnt;
         }
-        if (aLoopIdx >= aLoopCntTotal_ || rStart >= rEnd) {
+        const int64_t rEnd = rStart + rCount;
+        if (rStart >= rLoopCntTotal_) {
+            return; // 防御性早退（理论上不可达）
+        }
+        if (aLoopIdx >= aLoopCntTotal_) {
             return;
         }
 
@@ -841,7 +852,6 @@ private:
         int64_t inputBaseOff = 0;
         int64_t outputOff = 0;
         UnravelALoop(aLoopIdx, aLen, inputBaseOff, outputOff);
-        const int64_t rCount = rEnd - rStart;
         DoOneAChunkGroup(inputBaseOff, aLen, rStart, rEnd, outputIdx);
         if constexpr (isDeterministic) {
             Phase1OutputToWorkspace(outputOff, aLen, rGroupIdx, rCount);

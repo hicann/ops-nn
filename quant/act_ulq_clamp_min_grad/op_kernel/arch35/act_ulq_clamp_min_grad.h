@@ -1059,14 +1059,22 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase1Process(
     int64_t aChunkIdx = blockIdx / rGroupCnt_;
     int64_t rChunkIdx = blockIdx % rGroupCnt_;
 
-    int64_t rPerCore = (rOuter + rGroupCnt_ - 1) / rGroupCnt_;
-    int64_t rStart = rChunkIdx * rPerCore;
-    int64_t rEnd = rStart + rPerCore;
-    if (rEnd > rOuter) {
-        rEnd = rOuter;
+    // R 方向大小核式均匀分配：rGroupCnt_ ≤ rOuter 恒成立（tiling 保证），每组 ≥1 chunk，无空组
+    int64_t rSmallGroupLoopCnt = rOuter / rGroupCnt_;
+    int64_t rBigGroupCnt = rOuter % rGroupCnt_;
+    int64_t rBigGroupLoopCnt = rSmallGroupLoopCnt + (rBigGroupCnt > 0 ? 1 : 0);
+    int64_t rStart = 0;
+    int64_t rCount = 0;
+    if (rChunkIdx < rBigGroupCnt) {
+        rStart = rChunkIdx * rBigGroupLoopCnt;
+        rCount = rBigGroupLoopCnt;
+    } else {
+        rStart = rBigGroupCnt * rBigGroupLoopCnt + (rChunkIdx - rBigGroupCnt) * rSmallGroupLoopCnt;
+        rCount = rSmallGroupLoopCnt;
     }
+    int64_t rEnd = rStart + rCount;
     if (rStart >= rOuter) {
-        return;
+        return; // 防御性早退（理论上不可达）
     }
 
     int64_t aLoopIdx = aChunkIdx;
@@ -1087,8 +1095,6 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase1Process(
 
     chunkGmOff += aChunkStart * aSplitStride;
     chunkOutOff += aChunkStart * aSplitOutStr;
-
-    int64_t rCount = rEnd - rStart;
 
     DoOneAChunkGroup(chunkGmOff, aLen, rStart, rEnd);
     Phase1OutputToWorkspace(chunkOutOff, aLen, rChunkIdx, rCount);
