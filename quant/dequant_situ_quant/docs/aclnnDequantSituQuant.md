@@ -29,59 +29,59 @@
 
 1. 根据输入数据类型x的不同，反量化路径不同：
 
-- INT8路径
+   - INT8路径
 
- $$
- dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i + bias_i
- $$
+   $$
+   dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i + bias_i
+   $$
 
-- INT32路径
+   - INT32路径
 
- $$
- dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i \times activation\_scale_i + bias_i
- $$
+   $$
+   dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i \times activation\_scale_i + bias_i
+   $$
 
-- BF16/FLOAT16路径（预反量化）
+   - BF16/FLOAT16路径（预反量化）
 
- $$
- dequantOut_i = cast\_to\_float(x_i)
- $$
+   $$
+   dequantOut_i = cast\_to\_float(x_i)
+   $$
 
-1. Situ激活
+2. Situ激活
 
-$$
-situ_a = \beta \times \tanh(gate / \beta) \times sigmoid(gate)
-$$
+   $$
+   situ_a = \beta \times \tanh(gate / \beta) \times sigmoid(gate)
+   $$
 
-当linear_beta > 0时：
+   当linear_beta > 0时：
 
-$$
-up = linear\_beta \times \tanh(up / linear\_beta)
-$$
+   $$
+   up = linear\_beta \times \tanh(up / linear\_beta)
+   $$
 
-$$
-situOut = situ_a \times up
-$$
+   $$
+   situOut = situ_a \times up
+   $$
 
     其中，当activate_left为true时，gate取dequantOut的前半部分，up取后半部分；当activate_left为false时，gate取dequantOut的后半部分，up取前半部分。
 
-2. 量化
+3. 量化
 
-- quant_type = static
+   - quant_type = static
 
- $$
- y_i = trunc(situOut_i / quant\_scale_i + quant\_offset_i)
- $$
+    $$
+    y_i = trunc(situOut_i / quant\_scale_i + quant\_offset_i)
+    $$
 
-- quant_type = dynamic
+   - quant_type = dynamic
 
- $$
- scale_i = absmax(situOut_i) / 127
- $$
+    $$
+    scale_i = absmax(situOut_i) / 127
+    $$
 
- $$
- y_i = trunc(situOut_i / scale_i)
- $$
+    $$
+    y_i = trunc(situOut_i / scale_i)
+    $$
 
 ## 函数原型
 
@@ -184,7 +184,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>quantScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的scale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>quant_type为static时必选，shape为(H,)或(1,)。</li><li>quant_type为dynamic时可选，作为smoothScale使用。</li><li>仅INT8使用。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>`quantTypeOptional`为static时必选，shape为(H,)或(1,)。</li><li>`quantTypeOptional`为dynamic时可选，作为smoothScale使用。</li><li>仅INT8使用。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset。</td>
-      <td><ul><li>不支持空Tensor。</li><li>仅当quant_type为static时有效。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当`quantTypeOptional`为static时必选，shape同`quantScaleOptional`。</li><li>当`quantTypeOptional`为dynamic时可选。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -264,7 +264,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>yScaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>动态量化的scale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>INT8: shape为x.shape[:-1]；其他: shape为[M]。</li><li>quant_type为static时输出无意义值。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>INT8: shape为x.shape[:-1]；其他: shape为[M]。</li><li>`quantTypeOptional`为static时输出无意义值。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
@@ -324,7 +324,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>INT32时weightScaleOptional或activationScaleOptional为空指针。</td>
   </tr>
   <tr>
-    <td>quant_type为static时quantScaleOptional为空指针。</td>
+    <td>`quantTypeOptional`为static时，`quantScaleOptional`为空指针。</td>
   </tr>
   <tr>
     <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
@@ -403,11 +403,11 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - x的最后一维需要是2的倍数。
 - 当x的数据类型为INT8时，x维度≥2维；当x的数据类型为INT32/BF16/FLOAT16时，x维度为2维。
 - beta参数不能为0。
-- INT8：必须提供weight_scale，禁止activation_scale和group_index。
-- INT32：必须提供weight_scale和activation_scale，禁止quant_scale和quant_offset。
+- INT8：必须提供`weightScaleOptional`，禁止`activationScaleOptional`和`groupIndexOptional`。
+- INT32：必须提供`weightScaleOptional`和`activationScaleOptional`，禁止`quantScaleOptional`和`quantOffsetOptional`。
 - BF16/FLOAT16：所有可选输入均不使用（预反量化模式）。
-- 当quant_type为static时，quant_scale必须提供。
-- 当quant_type为dynamic时，quant_scale可选（作为smoothScale使用）。
+- 当`quantTypeOptional`为static时，`quantScaleOptional`必须提供。
+- 当`quantTypeOptional`为dynamic时，`quantScaleOptional`可选（作为smoothScale使用）。
 
 ## 调用示例
 
