@@ -73,7 +73,8 @@ int64_t AlignUpForUt(int64_t value, int64_t align) { return ((value + align - 1)
 static void RunBatchNormExt2InferTilingForTest(
     gert::StorageShape& xShape, ge::Format format, int64_t channel, uint64_t expectedTilingKey,
     BatchNormExt2InferTilingDataForUt* inferTilingData = nullptr,
-    BatchNormExt2InferLastChannelTilingDataForUt* lastChannelTilingData = nullptr)
+    BatchNormExt2InferLastChannelTilingDataForUt* lastChannelTilingData = nullptr,
+    const std::string& dataFormatStr = "NCHW", bool expectTilingFailure = false)
 {
     gert::StorageShape scaleShape = {{channel}, {channel}};
 
@@ -143,7 +144,7 @@ static void RunBatchNormExt2InferTilingForTest(
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5f)},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>(dataFormatStr)},
                                   {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
@@ -156,6 +157,10 @@ static void RunBatchNormExt2InferTilingForTest(
     tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
+    if (expectTilingFailure) {
+        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
+        return;
+    }
     ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), expectedTilingKey);
     if (inferTilingData != nullptr) {
@@ -177,7 +182,8 @@ static void RunBatchNormExt2InferTilingForTest(
 // ubSize 可配，便于构造 UB 不足的降级场景；expectTilingFailure 为 true 时只断言 tiling 失败。
 static void RunBatchNormExt2TrainingTilingForTest(gert::StorageShape& xShape, ge::Format format, int64_t channel,
                                                   uint64_t expectedTilingKey, std::string* tilingDataOut = nullptr,
-                                                  int64_t ubSize = 245760, bool expectTilingFailure = false)
+                                                  int64_t ubSize = 245760, bool expectTilingFailure = false,
+                                                  const std::string& dataFormatStr = "NCHW")
 {
     gert::StorageShape scaleShape = {{channel}, {channel}};
 
@@ -248,7 +254,7 @@ static void RunBatchNormExt2TrainingTilingForTest(gert::StorageShape& xShape, ge
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-4f)},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>(dataFormatStr)},
                                   {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
@@ -482,7 +488,6 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_infer_nchw_float32_core8_
 }
 
 // NCHW 4D：(B0, A, B1) = (N, C, H*W)。B0 在 small-ab1 阈值(blockDim*2)两侧的边界行为。
-// 原 batch_norm 用例为 NCDHW 5D，本算子仅支持 NCHW/NHWC 4D，故折算为同 (B0, A, B1) 的 NCHW。
 TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_infer_nchw_small_ab1_b0_boundary)
 {
     BatchNormExt2InferTilingDataForUt tilingData{};
@@ -630,20 +635,20 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_infer_last_channel_small_
 TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_infer_nhwc_continuous_a)
 {
     gert::StorageShape aOuterOneShape = {{8192, 1, 8, 33}, {8192, 1, 8, 33}};
-    RunBatchNormExt2InferTilingForTest(aOuterOneShape, ge::FORMAT_NHWC, 33, 900000);
+    RunBatchNormExt2InferTilingForTest(aOuterOneShape, ge::FORMAT_NHWC, 33, 900000, nullptr, nullptr, "NHWC");
 
     gert::StorageShape targetShapeA84 = {{256, 42, 42, 84}, {256, 42, 42, 84}};
-    RunBatchNormExt2InferTilingForTest(targetShapeA84, ge::FORMAT_NHWC, 84, 901000);
+    RunBatchNormExt2InferTilingForTest(targetShapeA84, ge::FORMAT_NHWC, 84, 901000, nullptr, nullptr, "NHWC");
 
     gert::StorageShape targetShapeA168 = {{256, 42, 42, 168}, {256, 42, 42, 168}};
-    RunBatchNormExt2InferTilingForTest(targetShapeA168, ge::FORMAT_NHWC, 168, 901000);
+    RunBatchNormExt2InferTilingForTest(targetShapeA168, ge::FORMAT_NHWC, 168, 901000, nullptr, nullptr, "NHWC");
 
     gert::StorageShape targetShapeA336 = {{256, 42, 42, 336}, {256, 42, 42, 336}};
-    RunBatchNormExt2InferTilingForTest(targetShapeA336, ge::FORMAT_NHWC, 336, 901000);
+    RunBatchNormExt2InferTilingForTest(targetShapeA336, ge::FORMAT_NHWC, 336, 901000, nullptr, nullptr, "NHWC");
 
     BatchNormExt2InferLastChannelTilingDataForUt tilingData{};
     gert::StorageShape unalignedAShape = {{8193, 1, 8, 65}, {8193, 1, 8, 65}};
-    RunBatchNormExt2InferTilingForTest(unalignedAShape, ge::FORMAT_NHWC, 65, 901000, nullptr, &tilingData);
+    RunBatchNormExt2InferTilingForTest(unalignedAShape, ge::FORMAT_NHWC, 65, 901000, nullptr, &tilingData, "NHWC");
     constexpr int64_t ubSize = 245760;
     constexpr int64_t vlFp32 = 64;
     constexpr int64_t paramNum = 6;
@@ -655,20 +660,19 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_infer_nhwc_continuous_a)
     EXPECT_LE(paramBytes + paramCacheBytes + xYBytes, ubSize);
 
     gert::StorageShape smallAShape = {{8192, 1, 8, 8}, {8192, 1, 8, 8}};
-    RunBatchNormExt2InferTilingForTest(smallAShape, ge::FORMAT_NHWC, 8, 900000);
+    RunBatchNormExt2InferTilingForTest(smallAShape, ge::FORMAT_NHWC, 8, 900000, nullptr, nullptr, "NHWC");
 
     gert::StorageShape aOuterExceedShape = {{256, 16, 16, 512}, {256, 16, 16, 512}};
-    RunBatchNormExt2InferTilingForTest(aOuterExceedShape, ge::FORMAT_NHWC, 512, 900000);
+    RunBatchNormExt2InferTilingForTest(aOuterExceedShape, ge::FORMAT_NHWC, 512, 900000, nullptr, nullptr, "NHWC");
 
     gert::StorageShape beyondContinuousAShape = {{256, 16, 16, 513}, {256, 16, 16, 513}};
-    RunBatchNormExt2InferTilingForTest(beyondContinuousAShape, ge::FORMAT_NHWC, 513, 900000);
+    RunBatchNormExt2InferTilingForTest(beyondContinuousAShape, ge::FORMAT_NHWC, 513, 900000, nullptr, nullptr, "NHWC");
 }
 
 // ND 且 r0 > 1（x 折算成 r1=dim0, a=dim1, r0=其余）时应由 FullReduce(200000) 承接。
 // 历史上 FullReduce / RARBlockSplitR 的 IsCapable 只收 NCHW/NCDHW，这类 shape 会落到
 // 兜底的 Welford(300000)，而 Welford 不支持 r1*r0 <= vlFp32 的归约长度。
 // 训练 NCHW：(r1, a, r0) = (N, C, H*W)。r0 > 1 时走 FullReduce(200000)。
-// 原 batch_norm 用例为 ND 3D，本算子仅支持 NCHW/NHWC 4D，故折算为同 (r1, a, r0) 的 NCHW。
 TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_nchw_r0_gt_one_full_reduce_arch35)
 {
     // r1*r0 = 32 < vlFp32(64)
@@ -713,7 +717,6 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_nchw_spatial_split_equiva
 
 // r1*r0 足够大、FullReduce 的 UB 判据过不去时，仍应落到 Welford(300000)，
 // 确认 Welford 的 IsCapable 守卫没有把它本该承接的场景一起挡掉。
-// 原 batch_norm 用例为 ND 3D，本算子仅支持 NCHW/NHWC 4D，故折算为 NCHW。
 TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_large_reduce_still_welford_arch35)
 {
     gert::StorageShape nchwShape = {{2048, 32, 16, 1}, {2048, 32, 16, 1}};
@@ -767,4 +770,40 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_welford_parallel_n_below_
 {
     gert::StorageShape ndShape = {{256, 512, 8}, {256, 512, 8}};
     RunBatchNormExt2TrainingTilingForTest(ndShape, ge::FORMAT_ND, 512, 0, nullptr, 2752, true);
+}
+
+// ND 输入按 data_format 属性解释 C 轴：ND + NCHW 与同 shape NCHW 折算成相同 (B0, A, B1) → 911000。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_nd_input_nchw_infer)
+{
+    gert::StorageShape ndShape = {{65536, 1, 16, 1}, {65536, 1, 16, 1}};
+    RunBatchNormExt2InferTilingForTest(ndShape, ge::FORMAT_ND, 1, 911000, nullptr, nullptr, "NCHW");
+}
+
+// ND + NHWC 与同 shape NHWC 折算成相同 (B0, A, B1) → 901000。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_nd_input_nhwc_infer)
+{
+    gert::StorageShape ndShape = {{256, 42, 42, 84}, {256, 42, 42, 84}};
+    RunBatchNormExt2InferTilingForTest(ndShape, ge::FORMAT_ND, 84, 901000, nullptr, nullptr, "NHWC");
+}
+
+// ND + NCHW 训练：(r1, a, r0) = (8, 512, 4) → FullReduce 200000。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_nd_input_nchw_train)
+{
+    gert::StorageShape ndShape = {{8, 512, 4, 1}, {8, 512, 4, 1}};
+    RunBatchNormExt2TrainingTilingForTest(ndShape, ge::FORMAT_ND, 512, 200000, nullptr, 245760, false, "NCHW");
+}
+
+// 具体输入格式(NCHW)与 data_format(NHWC)不一致：tiling 必须失败。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_format_dataformat_mismatch_fail)
+{
+    gert::StorageShape xShape = {{1, 2048, 7, 7}, {1, 2048, 7, 7}};
+    RunBatchNormExt2InferTilingForTest(xShape, ge::FORMAT_NCHW, 2048, 0, nullptr, nullptr, "NHWC", true);
+}
+
+// x 的 C 轴(按 data_format=NCHW 取 dim1=3)与 scale 唯一轴(长度 5)不一致：
+// CheckSmallShapesValid 必须失败。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_scale_c_axis_mismatch_fail)
+{
+    gert::StorageShape xShape = {{2, 3, 4, 5}, {2, 3, 4, 5}};
+    RunBatchNormExt2InferTilingForTest(xShape, ge::FORMAT_NCHW, 5, 0, nullptr, nullptr, "NCHW", true);
 }

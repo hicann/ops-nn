@@ -74,11 +74,25 @@ ge::graphStatus BatchNormExt2TilingBase::GetAttrsAndCheckValid()
     const float* epsilonPtr = attrs->GetFloat(0);
     epsilon_ = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
 
+    // data_format:OPTIONAL 但带默认值,GE 构图时总会填充,仍防御性判空后按默认 NHWC。
+    const char* dataFormatPtr = attrs->GetStr(INDEX_DATA_FORMAT);
+    std::string dataFormatStr = (dataFormatPtr == nullptr) ? std::string("NHWC") : std::string(dataFormatPtr);
+    if (dataFormatStr == "NCHW") {
+        dataFormat_ = FORMAT_NCHW;
+    } else if (dataFormatStr == "NHWC") {
+        dataFormat_ = FORMAT_NHWC;
+    } else {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "data_format", dataFormatStr.c_str(),
+                                              "only NCHW/NHWC supported");
+        return ge::GRAPH_FAILED;
+    }
+
     // BatchNormExt2 无 exponential_avg_factor 属性（兼容 TF FusedBatchNormV2），
     // 训练时直接输出 batch mean/variance，不做 running stats 动量更新。
     exponentialAvgFactor_ = DEFAULT_EXPONENTIAL_AVG_FACTOR;
 
-    OP_LOGD(context_->GetNodeName(), "GetAttrsAndCheckValid success, isTraining: %d, eps: %f.", isTraining_, epsilon_);
+    OP_LOGD(context_->GetNodeName(), "GetAttrsAndCheckValid success, isTraining: %d, eps: %f, data_format: %s.",
+            isTraining_, epsilon_, dataFormatStr.c_str());
 
     return ge::GRAPH_SUCCESS;
 }
@@ -99,9 +113,17 @@ ge::graphStatus BatchNormExt2TilingBase::GetXYShapesAndCheckValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xFormat_ = xDesc->GetFormat().GetStorageFormat();
 
-    if (xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NHWC) {
+    // ND 输入:按 data_format 属性解释 C 轴;具体格式(NCHW/NHWC)必须与 data_format 一致。
+    if (xFormat_ != FORMAT_ND && xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NHWC) {
         std::string formatStr = Ops::Base::ToString(xFormat_);
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", formatStr.c_str(), "NCHW or NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", formatStr.c_str(), "NCHW, NHWC or ND");
+        return ge::GRAPH_FAILED;
+    }
+    if (xFormat_ != FORMAT_ND && xFormat_ != dataFormat_) {
+        std::string formatStr = Ops::Base::ToString(xFormat_);
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+            context_->GetNodeName(), "x", formatStr.c_str(),
+            "input format is inconsistent with attr data_format; only ND input is free of the constraint");
         return ge::GRAPH_FAILED;
     }
 
@@ -296,12 +318,12 @@ ge::graphStatus BatchNormExt2TilingInferBase::GetShapeAttrsInfo()
     auto xShape = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = Ops::NN::OpTiling::EnsureNotScalar(xShape->GetStorageShape());
-    // 获取输入shape
-    if (xFormat_ == FORMAT_NHWC) {
+    // 获取输入shape:C 轴位置按 data_format 判断(ND 输入由该属性解释;具体格式经 GetXYShapes 校验==data_format)
+    if (dataFormat_ == FORMAT_NHWC) {
         fusedB0Len_ = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
         fusedALen_ = xStorageShape.GetDim(DIM_3);
         fusedB1Len_ = CONST_ONE;
-    } else if (xFormat_ == FORMAT_NCHW) {
+    } else if (dataFormat_ == FORMAT_NCHW) {
         fusedB0Len_ = xStorageShape.GetDim(DIM_0);
         fusedALen_ = xStorageShape.GetDim(DIM_1);
         fusedB1Len_ = xStorageShape.GetShapeSize() / fusedB0Len_ / fusedALen_;
@@ -330,11 +352,12 @@ ge::graphStatus BatchNormExt2RegbaseTilingBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = Ops::NN::OpTiling::EnsureNotScalar(xShape->GetStorageShape());
 
-    if (xFormat_ == FORMAT_NCHW) {
+    // C 轴位置按 data_format 判断(ND 输入由该属性解释;具体格式经 GetXYShapes 校验==data_format)
+    if (dataFormat_ == FORMAT_NCHW) {
         r1_ = xStorageShape.GetDim(DIM_0);
         a_ = xStorageShape.GetDim(DIM_1);
         r0_ = xStorageShape.GetShapeSize() / r1_ / a_;
-    } else if (xFormat_ == FORMAT_NHWC) {
+    } else if (dataFormat_ == FORMAT_NHWC) {
         r1_ = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
         a_ = xStorageShape.GetDim(DIM_3);
         r0_ = CONST_ONE;

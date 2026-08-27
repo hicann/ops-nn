@@ -3428,6 +3428,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn3_d_training_reduce_grad/README.md">bn3_d_training_reduce_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算3D Batch Normalization训练反传的收尾梯度：将损失对BN输出的梯度与逐通道统计量合成损失对输入x的梯度，支持NCDHW/NDHWC布局。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -247,6 +247,7 @@ constexpr int64_t DIM_3 = 3;
 constexpr int64_t DIM_4 = 4;
 
 static const int32_t INDEX_EPSILON = 0;
+static const int32_t INDEX_DATA_FORMAT = 1;
 static const int32_t INDEX_IS_TRAINING = 2;
 static const int32_t INDEX_EXPONENTIAL_AVG_FACTOR = 3;
 constexpr float DEFAULT_EPSILON = 1e-4;
@@ -313,6 +314,7 @@ protected:
 
     ge::DataType xDtype_{ge::DT_UNDEFINED};
     ge::Format xFormat_{ge::FORMAT_RESERVED};
+    ge::Format dataFormat_{ge::FORMAT_RESERVED};
 };
 
 class BatchNormExt2TilingInferBase : public BatchNormExt2TilingBase {

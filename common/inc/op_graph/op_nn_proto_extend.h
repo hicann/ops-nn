@@ -3315,47 +3315,6 @@ round_prefer_ceil, floor, ceil. Only used by nearest interpolation.
     .OP_END_FACTORY_REG(BN3DTrainingReduce)
 
     /**
-    * @brief Performs the backpropagation of BatchNorm .
-
-    * @par Inputs:
-    * Seven inputs, including:
-    * @li grads: A 5Dtensor of type float16 or float32 or bfloat16, for the gradient, with format NDHWC or NCDHW.
-    * @li x: A 5D tensor of type float16 or float32 or bfloat16, with format NDHWC or NCDHW.
-    * @li diff_scale: A 1D tensor of type float32,
-    * for the mean of "x". shape must be C channel.
-    * @li diff_offset: A 1D tensor of type float32,
-    * for the variance of "x". shape must be C channel.
-    * @li scale: A 1D tensor of type float32.
-    * @li batch_mean: A 1D tensor of type float32,
-    * for the mean of "x". shape must be C channel.
-    * @li batch_variance: A 1D tensor of type float32,
-    * for the variance of "x" . shape must be C channel. \n
-
-    * @par Attributes:
-    * epsilon: An optional float32. Defaults to "0.0001". A small float number
-    * added to the variance of "x" . \n
-
-    * @par Outputs:
-    * y: A 5D Tensor of type float16 or float32 or bfloat16, with format NDHWC or NCDHW. \n
-
-    * @attention Constraints:
-    * The preceding layer of this operator must be BN3DTrainingReduceGrad . \n
-
-    * @see BN3DTrainingReduceGrad
-    */
-    REG_OP(BN3DTrainingReduceGrad)
-    .INPUT(grads, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .INPUT(diff_scale, TensorType({DT_FLOAT}))
-    .INPUT(diff_offset, TensorType({DT_FLOAT}))
-    .INPUT(scale, TensorType({DT_FLOAT}))
-    .INPUT(batch_mean, TensorType({DT_FLOAT}))
-    .INPUT(batch_variance, TensorType({DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .ATTR(epsilon, Float, 0.0001)
-    .OP_END_FACTORY_REG(BN3DTrainingReduceGrad)
-
-    /**
     * @brief Performs reduced batch normalization .
 
     * @par Inputs:

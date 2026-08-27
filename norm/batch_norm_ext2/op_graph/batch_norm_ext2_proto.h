@@ -20,53 +20,41 @@
 namespace ge {
 
 /**
- * @brief Performs batch normalization on a 4D tensor, compatible with the TensorFlow operator fused_batch_norm_v2.
- *
- * @par Inputs
- * Five inputs, with format constraints as follows:
- * @li input_x: A 4D tensor of type float16 or float32, with format NHWC (batch, height, width, channels) or
- *        NCHW (batch, channels, height, width). The data to be normalized.
- * @li input_scale: A 1D tensor of type float32, with length equal to the number of channels in "input_x".
- *        Specifies the scaling factor (gamma) applied after normalization.
- * @li input_offset: A 1D tensor of type float32, with length equal to the number of channels in "input_x".
- *        Specifies the offset (beta) applied after scaling.
- * @li input_mean: An optional 1D tensor of type float32, with length equal to the number of channels in "input_x".
- *        - Inference mode (is_training=false): Must be provided, representing the population mean.
- *        - Training mode (is_training=true): Must be empty.
- * @li input_variance: An optional 1D tensor of type float32, with length equal to the number of channels in "input_x".
- *        - Inference mode (is_training=false): Must be provided, representing the population variance.
- *        - Training mode (is_training=true): Must be empty.
- *
- * @par Attributes
- * @li epsilon: Optional float32. Small value added to variance to avoid division by zero.
- *        Defaults to 0.0001f.
- * @li data_format: Optional string. Specifies the data format of "input_x".
- *        Allowed values: "NHWC" (default), "NCHW".
- * @li is_training: Optional bool. Specifies operation mode:
- *        - true: Training mode (computes batch mean/variance from the input).
- *        - false: Inference mode (uses provided mean/variance for normalization).
- *        Defaults to true.
- *
- * @par Outputs
- * Five outputs:
- * @li output_y: A tensor with the same shape, type, and format as "input_x", containing normalized values.
- *        (Required output)
- * @li output_mean: A 1D tensor of type float32 (channel dimension).
- *        - Training mode: Mean of the current batch (computed over the spatial dimensions).
- *        - Inference mode: Equal to input "input_mean" (for compatibility).
- *        (Required output)
- * @li output_variance: A 1D tensor of type float32 (channel dimension).
- *        - Training mode: Variance of the current batch computed over the spatial dimensions
- *          with Bessel's correction (unbiased).
- *        - Inference mode: Equal to input "input_variance" (for compatibility).
- *        (Required output)
- * @li output_reserve_space_1: A 1D tensor of type float32 (channel dimension). Reserved for gradient computation.
- *        - Training mode: Same as the batch mean (saved mean).
- *        - Inference mode: Same as input "input_mean".
- * @li output_reserve_space_2: A 1D tensor of type float32 (channel dimension). Reserved for gradient computation.
- *        - Training mode: The saved inverse std (1/sqrt(epsilon + variance)).
- *        - Inference mode: Same as input "input_variance".
- */
+*@brief Performs batch normalization .
+
+*@par Inputs:
+* Five inputs, including: (NHWC or NCHW supported)
+*@li input_x: A 4D Tensor of type float16 or float32.
+*@li input_scale: A 1D Tensor of type float32, for the scaling factor.
+*@li input_offset: A 1D Tensor of type float32, for the scaling offset.
+*@li input_mean: A 1D Tensor of type float32, for the mean used for inference.
+* This cannot be used if the operation is used for training.
+*@li input_variance: A 1D Tensor of type float32, for the variance used for inference.
+* This cannot be used if the operation is used for training . \n
+
+*@par Attributes:
+*@li epsilon: An optional float32, specifying the small value
+added to variance to avoid dividing by zero. Defaults to "0.0001".
+*@li data_format: An optional string, specifying the format of "x". Defaults to "NHWC".
+*@li is_training: An optional bool, specifying if the operation
+is used for training or inference. Defaults to "True" . \n
+
+*@par Outputs:
+* Five outputs, including: (NHWC or NCHW supported)
+*@li output_y: A 4D Tensor of type float16 or float32, for the normalized "x".
+*@li output_mean: A 1D Tensor of type float32, for the mean of "x".
+*@li output_variance: A 1D Tensor of type float32, for the variance of "x".
+*@li output_reserve_space_1: A 1D Tensor of type float32, for the mean of "x" for gradient computation.
+*@li output_reserve_space_2: A 1D Tensor of type float32, for the variance of "x" for gradient computation . \n
+
+*@attention Constraints:
+*@li If the operation is used for inference, then output "reserve_space_1"
+has the same value as "mean" and output "reserve_space_2" has the same value as "variance".
+*@li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1‰ due to the square root instruction .
+
+*@par Third-party framework compatibility
+* Compatible with the TensorFlow operator fused_batch_norm_v2.
+*/
 #ifndef OPS_PROTO_DEF_BATCHNORMEXT2
 #define OPS_PROTO_DEF_BATCHNORMEXT2
 REG_OP(BatchNormExt2)

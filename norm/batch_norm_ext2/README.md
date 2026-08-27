@@ -45,10 +45,10 @@
       <td>input_x</td>
       <td>输入</td>
       <td>
-      <ul><li>进行批量归一化的输入张量，对应公式中的`x`。</li><li>一个4D张量，shape为(N, C, H, W)或(N, H, W, C)。</li></ul>
+      <ul><li>进行批量归一化的输入张量，对应公式中的`x`。</li><li>一个4D张量，shape为(N, C, H, W)或(N, H, W, C)；ND 格式时按 data_format 属性解释 C 轴位置（NCHW→dim1、NHWC→dim3）。</li></ul>
       </td>
       <td>FLOAT16、FLOAT32</td>
-      <td>NCHW/NHWC</td>
+      <td>NCHW/NHWC/ND</td>
     </tr>
     <tr>
       <td>input_scale</td>
@@ -90,7 +90,7 @@
     <tr>
       <td>data_format</td>
       <td>可选属性</td>
-      <td><ul><li>指定输入input_x的数据格式，支持"NHWC"、"NCHW"。</li><li>默认值为"NHWC"。</li></ul></td>
+      <td><ul><li>指定输入input_x的数据格式，支持"NHWC"、"NCHW"</li><li>默认值为"NHWC"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>
@@ -106,7 +106,7 @@
       <td>输出</td>
       <td><ul><li>表示批量归一化后的输出结果，对应公式中的`y`。</li><li>数据类型、数据格式、shape与输入input_x保持一致。</li></ul></td>
       <td>FLOAT16、FLOAT32</td>
-      <td>NCHW/NHWC</td>
+      <td>NCHW/NHWC/ND</td>
     </tr>
     <tr>
       <td>output_mean</td>
@@ -140,7 +140,8 @@
 
 ## 约束说明
 
-- 输入input_x仅支持4D张量，数据格式仅支持NCHW和NHWC。
+- 输入input_x仅支持4D张量，数据格式支持NCHW、NHWC 和 ND（ND 输入按 data_format 属性解释 C 轴位置）。
+- 输入input_x为具体格式（NCHW/NHWC）时必须与 data_format 属性一致；ND 输入不受此限制。
 - 训练模式下，输入input_mean、input_variance必须为空；推理模式下，输入input_mean、input_variance必须提供。
 - 不支持空张量。
 
