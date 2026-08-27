@@ -153,14 +153,13 @@ static ge::graphStatus InferShape4SparseTensorDenseMatMul(gert::InferShapeContex
     const int64_t innerLeft = (*adjointPointA) ? x1ShapeValue[0] : x1ShapeValue[1];
     const int64_t innerRight = (*adjointPointB) ? x2ShapeDims[1] : x2ShapeDims[0];
     const int64_t outerRight = (*adjointPointB) ? x2ShapeDims[0] : x2ShapeDims[1];
-    OP_CHECK_IF(
-        innerRight != innerLeft,
-        OP_LOGE(
-            context->GetNodeName(),
-            "Cannot multiply x1 and x2 because inner dimension does not match: %ld vs %ld. Did you forget a transpose?"
-            "Dimension of x1:(%ld, %ld), Dimensions of x2: (%ld, %ld).",
-            innerLeft, innerRight, x1ShapeValue[0], x1ShapeValue[1], x2ShapeDims[0], x2ShapeDims[1]),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(innerRight != innerLeft,
+                OP_LOGE(context->GetNodeName(),
+                        "Cannot multiply x1 and x2 because contraction dimension does not match: %ld vs %ld. Did you "
+                        "forget a transpose? "
+                        "Dimension of x1:(%ld, %ld), Dimensions of x2: (%ld, %ld).",
+                        innerLeft, innerRight, x1ShapeValue[0], x1ShapeValue[1], x2ShapeDims[0], x2ShapeDims[1]),
+                return ge::GRAPH_FAILED);
     SetOutputShape(context, yShape, outerLeft, outerRight);
     return ge::GRAPH_SUCCESS;
 }

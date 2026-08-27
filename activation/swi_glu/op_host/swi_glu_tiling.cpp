@@ -267,7 +267,7 @@ inline void GluSingleTilingCalculator::SaveOptBaseShape(uint32_t baseRowLen_, ui
                             DivCeil<uint64_t>(tilingData->get_colLen(), (baseColLen_));
     uint64_t baseSize = static_cast<uint64_t>(baseRowLen_) * baseColLen_;
     if (baseRowLen_ == static_cast<uint32_t>(0) || baseColLen_ == static_cast<uint32_t>(0)) {
-        OP_LOGE(opName_, "SaveOptBaseShape devide by 0 baseRowLen_:%u baseColLen_:%u", baseRowLen_, baseColLen_);
+        OP_LOGE(opName_, "SaveOptBaseShape divide by 0 baseRowLen_:%u baseColLen_:%u", baseRowLen_, baseColLen_);
         return;
     }
     uint64_t baseTileNum = (tilingData->get_rowLen() / baseRowLen_) * (tilingData->get_colLen() / baseColLen_);
@@ -369,7 +369,9 @@ inline bool GluSingleTilingCalculator::CalcOptBaseShape(GluSingleTilingOptParam&
         uint32_t baseRowlen_ = std::min(optTiling.maxTileLen / AlignUp<uint32_t>(baseColLen_, ubMinBlockLen),
                                         getBaseRowLenUpBound());
         if (isInvalidBaseShape(baseRowlen_, baseColLen_)) {
-            OP_LOGI(opName_, "CalcOptBaseShape baseRowln:%u or baseColLen:%u is invalid. optTotalTileNum:%lu end",
+            OP_LOGI(opName_,
+                    "CalcOptBaseShape baseRowln:%u or baseColLen:%u falls back to previous optimal solution. "
+                    "optTotalTileNum:%lu end",
                     baseRowlen_, baseColLen_, optTiling.optTotalTileNum);
             // optTotalTileNum有效，则前面有最优解，返回true;否则返回false
             return (optTiling.optTotalTileNum > static_cast<uint64_t>(0));
@@ -414,7 +416,7 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
 {
     totalAvailableCore = totalCore;
     if (!GetLengthByType(dtype, inputDTypeLen)) {
-        OP_LOGI(opName_, "CalcTiling Unsupported input data type %d", dtype);
+        OP_LOGE(opName_, "CalcTiling Unsupported input data type %d", dtype);
         return false;
     }
     ubMinBlockLen = UB_MIN_BLOCK_SIZE / inputDTypeLen; // min block size

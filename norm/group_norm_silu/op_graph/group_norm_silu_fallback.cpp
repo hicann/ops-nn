@@ -58,7 +58,7 @@ static graphStatus GroupNormSiluExecuteFunc(OpExecuteContext* hostApiCtx)
     // execute opapi
     auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(hostApiCtx, aclnnGroupNormSiluV2, self, gamma, beta, *group, eps,
                                               activateSilu, out, meanOut, rstdOut);
-    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet failed: %d", apiRet),
                 return GRAPH_FAILED);
 
     OP_LOGD(hostApiCtx->GetNodeName(), "End GroupNormSilu fallback.");

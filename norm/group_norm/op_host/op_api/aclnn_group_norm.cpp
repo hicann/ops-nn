@@ -184,7 +184,7 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(selfFormat) || selfFormat == Format::FORMAT_NHWC || selfFormat == Format::FORMAT_HWCN ||
         selfFormat == Format::FORMAT_NDHWC) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCL、NCHW、NCDHW.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCL, NCHW, NCDHW.");
         return false;
     }
 

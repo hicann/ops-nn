@@ -174,7 +174,8 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo() const
         return ge::GRAPH_SUCCESS;
     }
     auto scaleDesc = context_->GetOptionalInputDesc(INPUT_INDEX_SCALE);
-    OP_CHECK_IF((scaleDesc == nullptr), OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
+    OP_CHECK_IF((scaleDesc == nullptr),
+                OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2 (dynamic hifp8 quant)."),
                 return ge::GRAPH_FAILED);
     auto scaleDtype = scaleDesc->GetDataType();
     OP_CHECK_IF(
