@@ -71,11 +71,10 @@ inline uint32_t CeilDivU32(uint32_t dividend, uint32_t divisor)
     return (dividend + divisor - 1) / divisor;
 }
 
-// ============================================================
-// Compute k0 and compressOverlapN
-// Ported from PpTilingData310P::End
-// ============================================================
-
+// // ============================================================
+// // Compute k0 and compressOverlapN
+// // Ported from PpTilingData310P::End
+// // ============================================================
 uint32_t ComputeK0(uint32_t n0, uint32_t n, bool isCompress, uint32_t tilingNVal, uint32_t& compressOverlapN)
 {
     compressOverlapN = 0;
@@ -100,7 +99,7 @@ ge::graphStatus ExtractMatmulDims(const gert::TilingContext* context, uint32_t& 
 {
     const auto* x1ShapePtr = context->GetInputShape(INPUT_IDX_X1);
     if (x1ShapePtr == nullptr) {
-        OP_LOGE("MatMulV2CompressDequant", "x1 shape is null.");
+        OP_LOGE("MatMulV2CompressDequant", "x1 shape is nullptr.");
         return ge::GRAPH_FAILED;
     }
     const auto& x1Shape = x1ShapePtr->GetOriginShape();
@@ -186,7 +185,7 @@ static ge::graphStatus TbmmEinsumTilingFunc(gert::TilingContext* context, uint32
     tiling.set_kLoop(tbmmEinsumTiling.ppMatmulDefaultTilingData_.kLoop);
     tiling.set_nLoop(tbmmEinsumTiling.ppMatmulDefaultTilingData_.nLoop);
     tiling.set_coreLoop(tbmmEinsumTiling.ppMatmulDefaultTilingData_.coreLoop);
-    tiling.set_swizzleCount(tbmmEinsumTiling.ppMatmulDefaultTilingData_.swizzleCount);
+    tiling.set_swizzlCount(tbmmEinsumTiling.ppMatmulDefaultTilingData_.swizzlCount);
     tiling.set_tilingK(tilingK);
     tiling.set_tilingN(tilingN);
     tiling.set_compressOverlapN(compressOverlapN);
@@ -242,14 +241,14 @@ ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext* context)
 ge::graphStatus TilingPrepareForMatmulV2CompressDequant(gert::TilingParseContext* context)
 {
     if (context == nullptr) {
-        OP_LOGE("MatMulV2CompressDequant", "TilingParse context is null.");
+        OP_LOGE("MatMulV2CompressDequant", "TilingParse context is nullptr.");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context, "TilingPrepareForMatmulV2CompressDequant start.");
 
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        OP_LOGE("MatMulV2CompressDequant", "platformInfo is null");
+        OP_LOGE("MatMulV2CompressDequant", "platformInfoPtr is null");
         return ge::GRAPH_FAILED;
     }
 

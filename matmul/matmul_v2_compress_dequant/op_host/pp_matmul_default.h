@@ -174,7 +174,7 @@ void PpMatMulDefault::PrintTiling()
     OP_LOGD(context_->GetNodeName(), "PpMatMul kLoop: %ld.", ppMatmulDefaultTilingData_.kLoop);
     OP_LOGD(context_->GetNodeName(), "PpMatMul nLoop: %ld.", ppMatmulDefaultTilingData_.nLoop);
     OP_LOGD(context_->GetNodeName(), "PpMatMul coreLoop: %ld.", ppMatmulDefaultTilingData_.coreLoop);
-    OP_LOGD(context_->GetNodeName(), "PpMatMul swizzleCount: %ld.", ppMatmulDefaultTilingData_.swizzleCount);
+    OP_LOGD(context_->GetNodeName(), "PpMatMul swizzlCount: %ld.", ppMatmulDefaultTilingData_.swizzlCount);
     OP_LOGD(context_->GetNodeName(), "PpMatMul tilingKey: %d.", ppMatmulDefaultTilingData_.tilingKey);
     OP_LOGD(context_->GetNodeName(), "PpMatMul blockDim: %ld.", ppMatmulDefaultTilingData_.blockDim);
     OP_LOGD(context_->GetNodeName(), "PpMatMul swizzlDirect: %ld.", ppMatmulDefaultTilingData_.swizzlDirect);

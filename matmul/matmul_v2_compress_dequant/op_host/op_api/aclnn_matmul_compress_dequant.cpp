@@ -51,7 +51,7 @@ static op::FVector<int64_t> GetShape(const aclTensor* tensor)
     op::FVector<int64_t> shape;
     if (tensor == nullptr) {
         shape.push_back(1);
-        OP_LOGW("The input tensor of GetShape is nullptr.");
+        OP_LOGW("The input tensor of Func GetShape is nullptr");
         return shape;
     }
     if (tensor->GetViewShape().GetDimNum() == 0U) {
@@ -118,8 +118,8 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclI
     int64_t x1KDim = 0;
     int64_t x2KDim = 0;
 
-    if (dimTensor1 != 2 || dimTensor2 != 1) { // x1 must be 2D in ND format
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MatmulUnzip does not support x1 shape %s, x2 shape %s",
+    if (dimTensor1 != 2 || dimTensor2 != 1) { // ND format dims > 2 for x1
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MatmulUnzip not support x1 shape %s, x2 shape %s",
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     } else {
@@ -231,7 +231,7 @@ static const aclTensor* BuildMatMulUnzipGraph(MatmulUnzipInput matmulUnzipInput,
     if (matmulUnzipInput.deqScale->Numel() % DEQUANT_SCALE_ALIGN_SIZE == 0) {
         deqScale5HD = TensorReformat(matmulUnzipInput.deqScale, op::Format::FORMAT_NC1HWC0, executor);
     } else {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dequant scale data is invalid.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dequant Scale is invalid Data.");
         return ProcessEmptyTensor(matmulUnzipInput.x1, out, executor);
     }
     const aclTensor* x2ReFormatFractalZ = TensorReformat(matmulUnzipInput.x2, op::Format::FORMAT_FRACTAL_Z, executor);

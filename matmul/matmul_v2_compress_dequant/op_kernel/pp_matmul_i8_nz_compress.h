@@ -56,7 +56,7 @@ public:
     __aicore__ explicit PpMatmulI8NzCompress()
     {
         SetPadding<uint64_t>((uint64_t)0x0);
-        AscendC::SetAtomicNone();
+        SetAtomicnone();
         set_ctrl(sbitset1(get_ctrl(), kSparseCtrlBitPos));
         SetMasknorm();
     }

@@ -21,7 +21,7 @@ using namespace op;
 namespace l0op {
 
 OP_TYPE_REGISTER(MatMulV2CompressDequant);
-// 用大小写区分两个不同的 kernel
+// 用大小写区分是否可以区分两个不同的kernel
 const aclTensor* MatMulCompressDequant(const aclTensor* x1, const aclTensor* x2, const aclTensor* compressIndex,
                                        const aclTensor* deqScale, const aclTensor* bias, const aclTensor* offsetW,
                                        const bool transposeX1, const bool transposeX2, const aclIntArray* compressInfo,
@@ -31,7 +31,7 @@ const aclTensor* MatMulCompressDequant(const aclTensor* x1, const aclTensor* x2,
            compressInfo, offsetX, algStr);
     auto mmCompressDequantOut = executor->AllocTensor(DataType::DT_FLOAT16, Format::FORMAT_FRACTAL_NZ,
                                                       Format::FORMAT_ND);
-    // 复用 tbe 的 infershape
+    // 是否可以复用tbe的infershape
     auto ret = INFER_SHAPE(MatMulV2CompressDequant, OP_INPUT(x1, x2, compressIndex, deqScale, bias, offsetW),
                            OP_OUTPUT(mmCompressDequantOut),
                            OP_ATTR(transposeX1, transposeX2, compressInfo, offsetX, algStr));

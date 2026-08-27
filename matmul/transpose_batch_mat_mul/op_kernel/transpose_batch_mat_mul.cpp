@@ -53,7 +53,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     do {                                                                                        \
         PpMatMulNS::SetPadding<uint64_t>((uint64_t)0);                                          \
         PpMatMulNS::SetNdpara(1, 0, 0);                                                         \
-        PpMatMulNS::SetAtomicNone();                                                            \
+        PpMatMulNS::SetAtomicnone();                                                            \
         if (tilingData.swizzleDirect == 0) {                                                    \
             templateClass<0, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op; \
             op.Init(aGM, bGM, cGM, &tilingData);                                                \
