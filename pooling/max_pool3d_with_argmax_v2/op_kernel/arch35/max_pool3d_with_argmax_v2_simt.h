@@ -229,8 +229,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint32_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(outputDi));
-        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(
-            Simt::Dim3(threadDim), totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
+        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(
+            dim3(threadDim), totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
             outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, dilationH, dilationW, outputData,
             indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0], m_[DIM_1], shift_[DIM_1], m_[DIM_2],
             shift_[DIM_2]);
@@ -241,8 +241,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint32_t>(outputDi));
-        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(
-            Simt::Dim3(threadDim), totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi,
+        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(
+            dim3(threadDim), totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi,
             outputHeight, outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, dilationH, dilationW,
             outputData, indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0], m_[DIM_1], shift_[DIM_1],
             m_[DIM_2], shift_[DIM_2], m_[DIM_3], shift_[DIM_3]);
@@ -252,8 +252,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint64_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(outputDi));
-        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(
-            Simt::Dim3(threadDim), totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
+        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(
+            dim3(threadDim), totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
             outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, dilationH, dilationW, outputData,
             indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0], m_[DIM_1], shift_[DIM_1], m_[DIM_2],
             shift_[DIM_2]);
@@ -264,8 +264,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint64_t>(outputDi));
-        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(
-            Simt::Dim3(threadDim), totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi,
+        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(
+            dim3(threadDim), totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi,
             outputHeight, outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, dilationH, dilationW,
             outputData, indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0], m_[DIM_1], shift_[DIM_1],
             m_[DIM_2], shift_[DIM_2], m_[DIM_3], shift_[DIM_3]);
