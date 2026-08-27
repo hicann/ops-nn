@@ -4050,6 +4050,16 @@
    </tr>
    <tr>
     <td>optim</td>
+    <td><a href="../../optim/inplace_apply_ftrl/README.md">inplace_apply_ftrl</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现FTRL-Proximal优化器单步参数更新，就地更新var、accum、linear三个状态量。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/inplace_apply_proximal_adagrad/README.md">inplace_apply_proximal_adagrad</a></td>
     <td>✓</td>
     <td>✓</td>
