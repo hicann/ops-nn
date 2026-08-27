@@ -23,10 +23,10 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3InferLastChannelContinuousA {
@@ -36,13 +36,13 @@ class BatchNormV3InferLastChannelContinuousA {
     static constexpr uint16_t VECTOR_LENGTH = GetVRegSize();
     static constexpr uint16_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {AscendC::Reg::RegLayout::ZERO,
+                                                                 AscendC::Reg::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
+                                                                 AscendC::RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {AscendC::Reg::RegLayout::ZERO,
+                                                                 AscendC::Reg::SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                                                 AscendC::RoundMode::CAST_RINT};
 
 public:
     __aicore__ inline BatchNormV3InferLastChannelContinuousA(){};
@@ -195,7 +195,7 @@ private:
             for (uint16_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
                 uint32_t aOffset = static_cast<uint32_t>(aLoop) * VL_FP32;
                 uint32_t activeLen = totalALen - aOffset > VL_FP32 ? VL_FP32 : totalALen - aOffset;
-                MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(activeLen);
+                MaskReg preg = AscendC::Reg::UpdateMask<float>(activeLen);
 
                 LoadParamForDtypeT(gammaLocal, gamma, preg, aOffset);
                 LoadParamForDtypeT(betaLocal, beta, preg, aOffset);
@@ -231,7 +231,7 @@ private:
                 uint32_t aOffset = static_cast<uint32_t>(aLoop) * VL_FP32;
                 uint32_t activeLen = totalALen - aOffset > VL_FP32 ? VL_FP32 : totalALen - aOffset;
                 uint32_t maskLen = activeLen;
-                MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+                MaskReg preg = AscendC::Reg::UpdateMask<float>(maskLen);
 
                 LoadAlign<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local + aOffset);
                 LoadAlign<float, LoadDist::DIST_NORM>(beta, betaFp32Local + aOffset);

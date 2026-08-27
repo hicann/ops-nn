@@ -277,45 +277,44 @@ private:
         __VEC_SCOPE__
         {
             // x: fp32, fp16, bf16
-            AscendC::MicroAPI::RegTensor<T> vregX;
-            AscendC::MicroAPI::RegTensor<float> vregFloatX;
+            AscendC::Reg::RegTensor<T> vregX;
+            AscendC::Reg::RegTensor<float> vregFloatX;
             // scales: fp32, fp16, bf16
-            AscendC::MicroAPI::RegTensor<T1> vregS;
-            AscendC::MicroAPI::RegTensor<float> vregFloatS;
+            AscendC::Reg::RegTensor<T1> vregS;
+            AscendC::Reg::RegTensor<float> vregFloatS;
             // y: int8, uint8, int32, hifp8
-            AscendC::MicroAPI::RegTensor<float> vregFloatY;
-            AscendC::MicroAPI::RegTensor<half> vregHalfY;
-            AscendC::MicroAPI::RegTensor<yCopyDtype> vregY;
+            AscendC::Reg::RegTensor<float> vregFloatY;
+            AscendC::Reg::RegTensor<half> vregHalfY;
+            AscendC::Reg::RegTensor<yCopyDtype> vregY;
 
-            AscendC::MicroAPI::RegTensor<float> vregTmp1;
-            AscendC::MicroAPI::MaskReg mask;
-            AscendC::MicroAPI::MaskReg
-                mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+            AscendC::Reg::RegTensor<float> vregTmp1;
+            AscendC::Reg::MaskReg mask;
+            AscendC::Reg::MaskReg mask4Int4 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::H>();
 
-            mask = AscendC::MicroAPI::CreateMask<float>();
+            mask = AscendC::Reg::CreateMask<float>();
             for (uint16_t j = 0; j < static_cast<uint16_t>(nRow); ++j) {
                 uint32_t count = dataCount;
                 uint16_t vfLoopNum = (dataCount + VL - 1) / VL;
                 for (uint16_t i = 0; i < vfLoopNum; i++) {
-                    mask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    mask = AscendC::Reg::UpdateMask<float>(count);
                     // ld and cast for x
                     if constexpr (IsSameType<T, float>::value) {
                         // fp32
-                        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                             vregFloatX, xLocalAddr + i * VL + j * tilingData_.baseLen);
                     } else if constexpr (IsSameType<T, half>::value) {
                         // fp16
-                        AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                             vregX, xLocalAddr + i * VL + j * tilingData_.baseLen);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             float, half,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                             vregFloatX, vregX, mask);
                     } else {
                         // bf16
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                             vregX, xLocalAddr + i * VL + j * tilingData_.baseLen);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             float, T,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                             vregFloatX, vregX, mask);
@@ -324,126 +323,126 @@ private:
                     // ld and cast for scale
                     if constexpr (IsSameType<T1, float>::value) {
                         // fp32
-                        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                             vregFloatS, scaleLocalAddr + i * VL + j * tilingData_.baseLen);
                     } else if constexpr (IsSameType<T1, half>::value) {
                         // fp16
-                        AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                             vregS, scaleLocalAddr + i * VL + j * tilingData_.baseLen);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             float, half,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                             vregFloatS, vregS, mask);
                     } else {
                         // bf16
-                        AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                             vregS, scaleLocalAddr + i * VL + j * tilingData_.baseLen);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             float, T1,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                             vregFloatS, vregS, mask);
                     }
 
                     if constexpr (DivMode == TPL_DIV_MODE_DIV) {
-                        static constexpr AscendC::MicroAPI::DivSpecificMode divMode = {
-                            AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
-                        AscendC::MicroAPI::Div<float, &divMode>(vregFloatY, vregFloatX, vregFloatS, mask);
+                        static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                                                  false};
+                        AscendC::Reg::Div<float, &divMode>(vregFloatY, vregFloatX, vregFloatS, mask);
                     } else {
-                        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregFloatY, vregFloatX,
-                                                                                                 vregFloatS, mask);
+                        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregFloatY, vregFloatX,
+                                                                                       vregFloatS, mask);
                         if constexpr (SqrtMode == TPL_SQRT_MODE) {
-                            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                                vregFloatY, vregFloatY, vregFloatS, mask);
+                            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregFloatY, vregFloatY,
+                                                                                           vregFloatS, mask);
                         }
                     }
 
                     // cast and sd for y
                     if constexpr (IsSameType<U, hifloat8_t>::value) {
                         // hifp8 支持
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             U, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_HIFP8>(
                             vregY, vregFloatY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
                         // fp8_e5m2 支持
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             U, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_FP8E5M2>(
                             vregY, vregFloatY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
                         // fp8_e4m3 支持
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             U, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_FP8E4M3>(
                             vregY, vregFloatY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, int8_t>::value) {
                         // int8 支持
-                        AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::RegTensor<int16_t> vregInt16Y;
+                        AscendC::Reg::Cast<
                             int16_t, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_INT16>(
                             vregInt16Y, vregFloatY, mask);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             half, int16_t,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT16_TO_HALF>(
                             vregHalfY, vregInt16Y, mask);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             int8_t, half,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_INT8>(
                             vregY, vregHalfY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, uint8_t>::value) {
                         // uint8
-                        AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::RegTensor<int16_t> vregInt16Y;
+                        AscendC::Reg::Cast<
                             int16_t, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_INT16>(
                             vregInt16Y, vregFloatY, mask);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             half, int16_t,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT16_TO_HALF>(
                             vregHalfY, vregInt16Y, mask);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             uint8_t, half,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_HALF_TO_UINT8>(
                             vregY, vregHalfY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, int32_t>::value) {
                         // int32
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             U, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_INT32>(
                             vregY, vregFloatY, mask);
-                        AscendC::MicroAPI::StoreAlign<U, AscendC::MicroAPI::StoreDist::DIST_NORM>(
+                        AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_NORM>(
                             outLocalAddr + i * VL + j * tilingData_.baseLen, vregY, mask);
                     } else if constexpr (IsSameType<U, int4b_t>::value) {
-                        AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
-                        AscendC::MicroAPI::RegTensor<uint16_t> vregTmp1Y;
-                        AscendC::MicroAPI::RegTensor<yCopyDtype> vregTmp2Y;
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::RegTensor<int16_t> vregInt16Y;
+                        AscendC::Reg::RegTensor<uint16_t> vregTmp1Y;
+                        AscendC::Reg::RegTensor<yCopyDtype> vregTmp2Y;
+                        AscendC::Reg::Cast<
                             int16_t, float,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_FP32_TO_INT16>(
                             vregInt16Y, vregFloatY, mask);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Cast<
                             half, int16_t,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_INT16_TO_HALF>(
                             vregHalfY, vregInt16Y, mask);
 
-                        AscendC::MicroAPI::Pack(vregTmp1Y, (AscendC::MicroAPI::RegTensor<uint32_t>&)vregHalfY);
-                        AscendC::MicroAPI::Cast<
+                        AscendC::Reg::Pack(vregTmp1Y, (AscendC::Reg::RegTensor<uint32_t>&)vregHalfY);
+                        AscendC::Reg::Cast<
                             int4x2_t, half,
                             QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CAST_TRAIT_F16_TO_I8>(
-                            (AscendC::MicroAPI::RegTensor<int4x2_t>&)vregTmp2Y,
-                            (AscendC::MicroAPI::RegTensor<half>&)vregTmp1Y, mask);
-                        AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                            (AscendC::Reg::RegTensor<int4x2_t>&)vregTmp2Y, (AscendC::Reg::RegTensor<half>&)vregTmp1Y,
+                            mask);
+                        AscendC::Reg::StoreAlign<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                             outLocalAddr + (i * VL / 2 + j * tilingData_.baseLen), vregTmp2Y, mask4Int4);
                     }
                 }

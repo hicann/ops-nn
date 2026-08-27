@@ -108,13 +108,13 @@ private:
     int64_t tailBlockSizeRow_ = 0;
     // 目标数据类型的最大值
     float dstTypeMax_ = 0;
-    static constexpr AscendC::MicroAPI::CastTrait castTrait32toh8 = []() {
+    static constexpr AscendC::Reg::CastTrait castTrait32toh8 = []() {
         if constexpr (RMode == 1 || RMode == 4) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         } else if constexpr (RMode == 7) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         }
     }();
 };
@@ -333,148 +333,140 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
     uint32_t inputNum = xTotalNum;
     uint32_t outputNum = xTotalNum;
     uint32_t scaleNum = 1;
-    static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
+    static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING, false};
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> vreg1;
-        AscendC::MicroAPI::RegTensor<T> vreg2;
-        AscendC::MicroAPI::RegTensor<T> vreg3;
-        AscendC::MicroAPI::RegTensor<T> yReg1;
-        AscendC::MicroAPI::RegTensor<float> scaleRegTensor;
-        AscendC::MicroAPI::RegTensor<float> fp8MaxReg;
-        AscendC::MicroAPI::RegTensor<float> reciprocalScale;
-        AscendC::MicroAPI::RegTensor<float> minScaleReg;
-        AscendC::MicroAPI::RegTensor<float> yReg2;
-        AscendC::MicroAPI::RegTensor<float> yReg3;
-        AscendC::MicroAPI::RegTensor<float> yReg4;
-        AscendC::MicroAPI::RegTensor<float> yReg5;
-        AscendC::MicroAPI::RegTensor<int16_t> int16Reg;
-        AscendC::MicroAPI::RegTensor<half> halfReg;
-        AscendC::MicroAPI::RegTensor<U> outReg;
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg scaleMaskReg;
-        AscendC::MicroAPI::MaskReg yMaskReg0;
-        AscendC::MicroAPI::MaskReg yMaskReg1;
+        AscendC::Reg::RegTensor<T> vreg1;
+        AscendC::Reg::RegTensor<T> vreg2;
+        AscendC::Reg::RegTensor<T> vreg3;
+        AscendC::Reg::RegTensor<T> yReg1;
+        AscendC::Reg::RegTensor<float> scaleRegTensor;
+        AscendC::Reg::RegTensor<float> fp8MaxReg;
+        AscendC::Reg::RegTensor<float> reciprocalScale;
+        AscendC::Reg::RegTensor<float> minScaleReg;
+        AscendC::Reg::RegTensor<float> yReg2;
+        AscendC::Reg::RegTensor<float> yReg3;
+        AscendC::Reg::RegTensor<float> yReg4;
+        AscendC::Reg::RegTensor<float> yReg5;
+        AscendC::Reg::RegTensor<int16_t> int16Reg;
+        AscendC::Reg::RegTensor<half> halfReg;
+        AscendC::Reg::RegTensor<U> outReg;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg scaleMaskReg;
+        AscendC::Reg::MaskReg yMaskReg0;
+        AscendC::Reg::MaskReg yMaskReg1;
 
         if constexpr (IsSameType<T, float>::value) {
             // ===== float32 类型处理 =====
-            AscendC::MicroAPI::RegTensor<uint32_t> expMaxRegTensor;
-            AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<uint32_t>&)vreg2, maxValue32_);
-            AscendC::MicroAPI::Duplicate(expMaxRegTensor, 0);
+            AscendC::Reg::RegTensor<uint32_t> expMaxRegTensor;
+            AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<uint32_t>&)vreg2, maxValue32_);
+            AscendC::Reg::Duplicate(expMaxRegTensor, 0);
 
-            AscendC::MicroAPI::MaskReg
-                maskAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg
-                ymaskAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskAll = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg ymaskAll = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
 
             // comput Max(x) - float32 使用 uint32_t 位运算
             for (uint16_t i = 0; i < inputVfLoop; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<T>(inputNum);
-                AscendC::MicroAPI::LoadAlign(vreg1, xAddr + i * vfLen);
-                AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint32_t>&)vreg3,
-                                       (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg1,
-                                       (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg2, preg0);
-                AscendC::MicroAPI::Max<uint32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(
-                    expMaxRegTensor, expMaxRegTensor, (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg3, preg0);
+                preg0 = AscendC::Reg::UpdateMask<T>(inputNum);
+                AscendC::Reg::LoadAlign(vreg1, xAddr + i * vfLen);
+                AscendC::Reg::And((AscendC::Reg::RegTensor<uint32_t>&)vreg3, (AscendC::Reg::RegTensor<uint32_t>&)vreg1,
+                                  (AscendC::Reg::RegTensor<uint32_t>&)vreg2, preg0);
+                AscendC::Reg::Max<uint32_t, AscendC::Reg::MaskMergeMode::MERGING>(
+                    expMaxRegTensor, expMaxRegTensor, (AscendC::Reg::RegTensor<uint32_t>&)vreg3, preg0);
             }
 
             // comput scale - float32 直接用位模式参与计算
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint32_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
-            AscendC::MicroAPI::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
-            AscendC::MicroAPI::Duplicate(fp8MaxReg, fp8MaxValue_);
-            AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
-            AscendC::MicroAPI::Duplicate(minScaleReg, minScale_);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX, uint32_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::Reg::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::Reg::Duplicate(fp8MaxReg, fp8MaxValue_);
+            AscendC::Reg::Duplicate(reciprocalScale, 1.0f);
+            AscendC::Reg::Duplicate(minScaleReg, minScale_);
 
-            AscendC::MicroAPI::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, maskAll);
+            AscendC::Reg::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, maskAll);
 
             // 位模式本身就是 float32 格式，直接参与计算
-            AscendC::MicroAPI::Div<float, &mode>(scaleRegTensor, (AscendC::MicroAPI::RegTensor<float>&)expMaxRegTensor,
-                                                 fp8MaxReg, ymaskAll);
+            AscendC::Reg::Div<float, &mode>(scaleRegTensor, (AscendC::Reg::RegTensor<float>&)expMaxRegTensor, fp8MaxReg,
+                                            ymaskAll);
 
-            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
-                scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
-            AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
-                                                                                     reciprocalScale, scaleMaskReg);
-            AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                scaleOutAddr, scaleRegTensor, ymaskAll);
+            AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(
+                scaleMaskReg, (AscendC::Reg::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
+            AscendC::Reg::Min<float, AscendC::Reg::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
+                                                                           reciprocalScale, scaleMaskReg);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleOutAddr,
+                                                                                             scaleRegTensor, ymaskAll);
 
             // compute y - float32 直接加载，不需要 UNPACK
             for (uint16_t i = 0; i < vfLoop; i++) {
-                yMaskReg0 = AscendC::MicroAPI::UpdateMask<float>(outputNum);
-                AscendC::MicroAPI::LoadAlign(yReg1, xAddr + i * vfNum);
-                AscendC::MicroAPI::Div<float, &mode>(yReg3, yReg1, scaleRegTensor, yMaskReg0);
+                yMaskReg0 = AscendC::Reg::UpdateMask<float>(outputNum);
+                AscendC::Reg::LoadAlign(yReg1, xAddr + i * vfNum);
+                AscendC::Reg::Div<float, &mode>(yReg3, yReg1, scaleRegTensor, yMaskReg0);
 
                 if constexpr (IsSameType<U, hifloat8_t>::value) {
-                    AscendC::MicroAPI::Cast<U, float, castTrait32toh8>(outReg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<U, float, castTrait32toh8>(outReg, yReg3, yMaskReg0);
                 } else if constexpr (IsSameType<U, int8_t>::value) {
-                    AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(int16Reg, yReg3, yMaskReg0);
-                    AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(halfReg, int16Reg, yMaskReg0);
-                    AscendC::MicroAPI::Cast<U, half, castTraitF16ToI8>(outReg, halfReg, yMaskReg0);
+                    AscendC::Reg::Cast<int16_t, float, castTraitF32ToI16>(int16Reg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<half, int16_t, castTraitI16ToF16>(halfReg, int16Reg, yMaskReg0);
+                    AscendC::Reg::Cast<U, half, castTraitF16ToI8>(outReg, halfReg, yMaskReg0);
                 } else {
-                    AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
                 }
-                AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
-                                                                                      yMaskReg0);
+                AscendC::Reg::StoreAlign<U, Reg::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg, yMaskReg0);
             }
         } else {
             // ===== FP16/BF16 类型处理 =====
-            AscendC::MicroAPI::RegTensor<uint16_t> expMaxRegTensor;
-            AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, maxValue_);
-            AscendC::MicroAPI::Duplicate(expMaxRegTensor, 0);
+            AscendC::Reg::RegTensor<uint16_t> expMaxRegTensor;
+            AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<uint16_t>&)vreg2, maxValue_);
+            AscendC::Reg::Duplicate(expMaxRegTensor, 0);
 
-            AscendC::MicroAPI::MaskReg
-                maskAll = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg
-                ymaskAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskAll = AscendC::Reg::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg ymaskAll = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
 
             // comput Max(x) - FP16/BF16 使用 uint16_t 位运算
             for (uint16_t i = 0; i < inputVfLoop; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<T>(inputNum);
-                AscendC::MicroAPI::LoadAlign(vreg1, xAddr + i * vfLen);
-                AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3,
-                                       (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg1,
-                                       (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, preg0);
-                AscendC::MicroAPI::Max<uint16_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(
-                    expMaxRegTensor, expMaxRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3, preg0);
+                preg0 = AscendC::Reg::UpdateMask<T>(inputNum);
+                AscendC::Reg::LoadAlign(vreg1, xAddr + i * vfLen);
+                AscendC::Reg::And((AscendC::Reg::RegTensor<uint16_t>&)vreg3, (AscendC::Reg::RegTensor<uint16_t>&)vreg1,
+                                  (AscendC::Reg::RegTensor<uint16_t>&)vreg2, preg0);
+                AscendC::Reg::Max<uint16_t, AscendC::Reg::MaskMergeMode::MERGING>(
+                    expMaxRegTensor, expMaxRegTensor, (AscendC::Reg::RegTensor<uint16_t>&)vreg3, preg0);
             }
 
             // comput scale
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint16_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
-            AscendC::MicroAPI::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
-            AscendC::MicroAPI::Duplicate(fp8MaxReg, fp8MaxValue_);
-            AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
-            AscendC::MicroAPI::Duplicate(minScaleReg, minScale_);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX, uint16_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::Reg::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::Reg::Duplicate(fp8MaxReg, fp8MaxValue_);
+            AscendC::Reg::Duplicate(reciprocalScale, 1.0f);
+            AscendC::Reg::Duplicate(minScaleReg, minScale_);
 
-            AscendC::MicroAPI::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, maskAll);
-            AscendC::MicroAPI::Cast<float, T, castTrait0>(scaleRegTensor,
-                                                          (AscendC::MicroAPI::RegTensor<T>&)expMaxRegTensor, maskAll);
+            AscendC::Reg::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, maskAll);
+            AscendC::Reg::Cast<float, T, castTrait0>(scaleRegTensor, (AscendC::Reg::RegTensor<T>&)expMaxRegTensor,
+                                                     maskAll);
 
-            AscendC::MicroAPI::Div<float, &mode>(scaleRegTensor, scaleRegTensor, fp8MaxReg, ymaskAll);
-            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
-                scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
-            AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
-                                                                                     reciprocalScale, scaleMaskReg);
-            AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                scaleOutAddr, scaleRegTensor, ymaskAll);
+            AscendC::Reg::Div<float, &mode>(scaleRegTensor, scaleRegTensor, fp8MaxReg, ymaskAll);
+            AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(
+                scaleMaskReg, (AscendC::Reg::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
+            AscendC::Reg::Min<float, AscendC::Reg::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
+                                                                           reciprocalScale, scaleMaskReg);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleOutAddr,
+                                                                                             scaleRegTensor, ymaskAll);
 
             // compute y
             for (uint16_t i = 0; i < vfLoop; i++) {
-                yMaskReg0 = AscendC::MicroAPI::UpdateMask<float>(outputNum);
-                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(yReg1, xAddr + i * vfNum);
-                AscendC::MicroAPI::Cast<float, T, castTrait0>(yReg2, yReg1, yMaskReg0);
-                AscendC::MicroAPI::Div<float, &mode>(yReg3, yReg2, scaleRegTensor, yMaskReg0);
+                yMaskReg0 = AscendC::Reg::UpdateMask<float>(outputNum);
+                AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(yReg1, xAddr + i * vfNum);
+                AscendC::Reg::Cast<float, T, castTrait0>(yReg2, yReg1, yMaskReg0);
+                AscendC::Reg::Div<float, &mode>(yReg3, yReg2, scaleRegTensor, yMaskReg0);
 
                 if constexpr (IsSameType<U, hifloat8_t>::value) {
-                    AscendC::MicroAPI::Cast<U, float, castTrait32toh8>(outReg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<U, float, castTrait32toh8>(outReg, yReg3, yMaskReg0);
                 } else if constexpr (IsSameType<U, int8_t>::value) {
-                    AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(int16Reg, yReg3, yMaskReg0);
-                    AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(halfReg, int16Reg, yMaskReg0);
-                    AscendC::MicroAPI::Cast<U, half, castTraitF16ToI8>(outReg, halfReg, yMaskReg0);
+                    AscendC::Reg::Cast<int16_t, float, castTraitF32ToI16>(int16Reg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<half, int16_t, castTraitI16ToF16>(halfReg, int16Reg, yMaskReg0);
+                    AscendC::Reg::Cast<U, half, castTraitF16ToI8>(outReg, halfReg, yMaskReg0);
                 } else {
-                    AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
+                    AscendC::Reg::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
                 }
-                AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
-                                                                                      yMaskReg0);
+                AscendC::Reg::StoreAlign<U, Reg::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg, yMaskReg0);
             }
         }
     }

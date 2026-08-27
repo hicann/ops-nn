@@ -471,15 +471,15 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
         if (tl_->swiGluMode == 0) {
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::RegTensor<TXtype> vreg0, vreg10;
-                AscendC::MicroAPI::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
-                AscendC::MicroAPI::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
-                AscendC::MicroAPI::RegTensor<float> vreg13, vreg14, vreg15;
-                AscendC::MicroAPI::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
-                AscendC::MicroAPI::RegTensor<float> vreg20, vreg21;
-                AscendC::MicroAPI::RegTensor<half> vreg24, vreg25;
-                AscendC::MicroAPI::RegTensor<bfloat16_t> vreg26, vreg27;
-                AscendC::MicroAPI::MaskReg mask;
+                AscendC::Reg::RegTensor<TXtype> vreg0, vreg10;
+                AscendC::Reg::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
+                AscendC::Reg::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
+                AscendC::Reg::RegTensor<float> vreg13, vreg14, vreg15;
+                AscendC::Reg::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
+                AscendC::Reg::RegTensor<float> vreg20, vreg21;
+                AscendC::Reg::RegTensor<half> vreg24, vreg25;
+                AscendC::Reg::RegTensor<bfloat16_t> vreg26, vreg27;
+                AscendC::Reg::MaskReg mask;
 
                 // int32： 256B / 4B = 64次 ，bf16 or float16：256B / 2B = 128次
                 constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
@@ -490,15 +490,15 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                 // 每次可以处理256B的数据，256B / 4B = 64
                 // 可以处理多少个float元素，repeatTimes：处理H个float元素需要的循环次数
                 for (uint16_t j = 0; j < repeatTimes; j++) {
-                    mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
+                    mask = AscendC::Reg::UpdateMask<uint32_t>(width);
 
                     // 计算，当x=int32时，weight_scale才参与计算
                     if constexpr (ifXIntIndex_) {
                         wScale1Addr = wScale1Ptr + j * sizePerRepeat;
                         wScale2Addr = wScale2Ptr + j * sizePerRepeat;
 
-                        AscendC::MicroAPI::LoadAlign(vreg2, wScale1Addr);
-                        AscendC::MicroAPI::LoadAlign(vreg12, wScale2Addr);
+                        AscendC::Reg::LoadAlign(vreg2, wScale1Addr);
+                        AscendC::Reg::LoadAlign(vreg12, wScale2Addr);
                     }
 
                     // ub的循环次数，也即ub每次可以处理多少行数据
@@ -510,20 +510,17 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
                         // vreg0 -> x1, vreg10 -> x2
                         if constexpr (ifXFloat16Index_) {
-                            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
-                                                                                                             x1Addr);
-                            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10,
-                                                                                                             x2Addr);
+                            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
                         }
                         if constexpr (ifXBf16Index_) {
-                            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                vreg0, x1Addr);
-                            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                vreg10, x2Addr);
+                            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10,
+                                                                                                         x2Addr);
                         }
                         if constexpr (ifXIntIndex_) {
-                            AscendC::MicroAPI::LoadAlign(vreg0, x1Addr);
-                            AscendC::MicroAPI::LoadAlign(vreg10, x2Addr);
+                            AscendC::Reg::LoadAlign(vreg0, x1Addr);
+                            AscendC::Reg::LoadAlign(vreg10, x2Addr);
                         }
 
                         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
@@ -531,35 +528,34 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                             if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
                                 auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                                 auto bias2Addr = bias2Ptr + j * sizePerRepeat;
-                                AscendC::MicroAPI::LoadAlign(vreg16, bias1Addr);
-                                AscendC::MicroAPI::LoadAlign(vreg17, bias2Addr);
+                                AscendC::Reg::LoadAlign(vreg16, bias1Addr);
+                                AscendC::Reg::LoadAlign(vreg17, bias2Addr);
                                 // x + bias
-                                AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
-                                AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
+                                AscendC::Reg::Add(vreg0, vreg0, vreg16, mask);
+                                AscendC::Reg::Add(vreg10, vreg10, vreg17, mask);
                             }
                         }
 
                         // x:int32->float32
                         if constexpr (ifXIntIndex_) {
-                            AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
-                            AscendC::MicroAPI::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
+                            AscendC::Reg::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
+                            AscendC::Reg::Cast<float, TXtype, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
                             // x * weight
-                            AscendC::MicroAPI::Mul(vreg3, vreg1, vreg2, mask);
-                            AscendC::MicroAPI::Mul(vreg13, vreg11, vreg12, mask);
+                            AscendC::Reg::Mul(vreg3, vreg1, vreg2, mask);
+                            AscendC::Reg::Mul(vreg13, vreg11, vreg12, mask);
                         }
                         // x:float16, bfloat16 -> float32, 不进行x * weight
                         if constexpr (ifXBf16Index_ || ifXFloat16Index_) {
-                            AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
-                            AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
+                            AscendC::Reg::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
+                            AscendC::Reg::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
                         }
 
                         // x * activation_scale
                         if constexpr (hasActScale_) {
                             auto aScaleAddr = aScalePtr + i * aScaleUbAlignB32_;
-                            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4,
-                                                                                                           aScaleAddr);
-                            AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
-                            AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
+                            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+                            AscendC::Reg::Mul(vreg3, vreg3, vreg4, mask);
+                            AscendC::Reg::Mul(vreg13, vreg13, vreg4, mask);
                         }
 
                         // 如果bias有值，且x!=int32 && bias!=int32，则先将dequant后的结果加上bias
@@ -568,43 +564,41 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                             auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                             auto bias2Addr = bias2Ptr + j * sizePerRepeat;
                             if constexpr (ifBiasFloatIndex_) {
-                                AscendC::MicroAPI::LoadAlign(vreg20, bias1Addr);
-                                AscendC::MicroAPI::LoadAlign(vreg21, bias2Addr);
+                                AscendC::Reg::LoadAlign(vreg20, bias1Addr);
+                                AscendC::Reg::LoadAlign(vreg21, bias2Addr);
                             }
                             if constexpr (ifBiasFloat16Index_) {
-                                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                    vreg24, bias1Addr);
-                                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                    vreg25, bias2Addr);
-                                AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
-                                AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
+                                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg24,
+                                                                                                       bias1Addr);
+                                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg25,
+                                                                                                       bias2Addr);
+                                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
+                                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
                             }
                             if constexpr (ifBiasBfloat16Index_) {
-                                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                    vreg26, bias1Addr);
-                                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                                    vreg27, bias2Addr);
-                                AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26,
-                                                                                                   mask);
-                                AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27,
-                                                                                                   mask);
+                                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                             bias1Addr);
+                                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg27,
+                                                                                                             bias2Addr);
+                                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
+                                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
                             }
                             // 将dequant后的结果加上bias
-                            AscendC::MicroAPI::Add(vreg3, vreg3, vreg20, mask);
-                            AscendC::MicroAPI::Add(vreg13, vreg13, vreg21, mask);
+                            AscendC::Reg::Add(vreg3, vreg3, vreg20, mask);
+                            AscendC::Reg::Add(vreg13, vreg13, vreg21, mask);
                         }
 
                         // Swish
-                        AscendC::MicroAPI::Muls(vreg6, vreg3, -(scalarOne), mask);
-                        AscendC::MicroAPI::Exp(vreg7, vreg6, mask);
-                        AscendC::MicroAPI::Adds(vreg8, vreg7, scalarOne, mask);
-                        AscendC::MicroAPI::Div<float, &DIV_MODE>(vreg9, vreg3, vreg8, mask);
+                        AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
+                        AscendC::Reg::Exp(vreg7, vreg6, mask);
+                        AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+                        AscendC::Reg::Div<float, &DIV_MODE>(vreg9, vreg3, vreg8, mask);
 
                         // glu
-                        AscendC::MicroAPI::Mul(vreg15, vreg9, vreg13, mask);
+                        AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
 
                         // store: reg->ub
-                        AscendC::MicroAPI::StoreAlign(dstAddr, vreg15, mask);
+                        AscendC::Reg::StoreAlign(dstAddr, vreg15, mask);
                     }
                 }
             } // __VEC_SCOPE__
@@ -633,13 +627,13 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<float> vreg0, vreg1, vreg2, vreg3, vreg4, vreg5, vreg6, vreg7, vreg8, vregDiv;
-            AscendC::MicroAPI::RegTensor<float> vregTmpX;
-            AscendC::MicroAPI::RegTensor<float> vreg16;
-            AscendC::MicroAPI::RegTensor<int16_t> vreg17;
-            AscendC::MicroAPI::RegTensor<half> vreg18;
-            AscendC::MicroAPI::RegTensor<int8_t> vreg19;
-            AscendC::MicroAPI::MaskReg mask, maskTail, maskOne;
+            AscendC::Reg::RegTensor<float> vreg0, vreg1, vreg2, vreg3, vreg4, vreg5, vreg6, vreg7, vreg8, vregDiv;
+            AscendC::Reg::RegTensor<float> vregTmpX;
+            AscendC::Reg::RegTensor<float> vreg16;
+            AscendC::Reg::RegTensor<int16_t> vreg17;
+            AscendC::Reg::RegTensor<half> vreg18;
+            AscendC::Reg::RegTensor<int8_t> vreg19;
+            AscendC::Reg::MaskReg mask, maskTail, maskOne;
 
             constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
             uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy, sizePerRepeat);
@@ -647,61 +641,61 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
             uint32_t block = static_cast<uint32_t>(sizePerRepeat);
             uint32_t tailBlock = tl_->UbFactorDimy - sizePerRepeat * (repeatTimes - 1);
             uint32_t numOne = 1;
-            mask = AscendC::MicroAPI::UpdateMask<uint32_t>(block);
-            maskTail = AscendC::MicroAPI::UpdateMask<uint32_t>(tailBlock);
-            maskOne = AscendC::MicroAPI::UpdateMask<uint32_t>(numOne); // 用于读写1个元素
+            mask = AscendC::Reg::UpdateMask<uint32_t>(block);
+            maskTail = AscendC::Reg::UpdateMask<uint32_t>(tailBlock);
+            maskOne = AscendC::Reg::UpdateMask<uint32_t>(numOne); // 用于读写1个元素
 
             float scalarOne = 1.0;
             float scalarZero = 0;
             // 不同的输出数据类型对应的最大值不同
             float scalarMaxNum = scalarMaxNum_;
 
-            AscendC::MicroAPI::Duplicate(vregDiv, scalarMaxNum);
+            AscendC::Reg::Duplicate(vregDiv, scalarMaxNum);
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(xDimPerLoop); i++) {
                 auto scaleAddr = scalePtr + i * aScaleUbAlignB32_;
-                AscendC::MicroAPI::Duplicate(vregTmpX, scalarZero);
+                AscendC::Reg::Duplicate(vregTmpX, scalarZero);
 
                 // 先处理尾块
                 uint16_t j = repeatTimes - 1;
                 auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
-                AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
+                AscendC::Reg::LoadAlign(vreg0, tmpXAddr);
 
                 // x * quant_scale
                 if constexpr (hasQuantScale_) {
                     auto qScaleAddr = qScalePtr + j * sizePerRepeat;
-                    AscendC::MicroAPI::LoadAlign(vreg1, qScaleAddr);
-                    AscendC::MicroAPI::Mul(vreg0, vreg0, vreg1, maskTail);
-                    AscendC::MicroAPI::StoreAlign(tmpXAddr, vreg0, maskTail);
+                    AscendC::Reg::LoadAlign(vreg1, qScaleAddr);
+                    AscendC::Reg::Mul(vreg0, vreg0, vreg1, maskTail);
+                    AscendC::Reg::StoreAlign(tmpXAddr, vreg0, maskTail);
                 }
 
                 // 循环求行内最大值
-                AscendC::MicroAPI::Abs(vreg3, vreg0, maskTail);
-                AscendC::MicroAPI::Max(vregTmpX, vregTmpX, vreg3, maskTail);
+                AscendC::Reg::Abs(vreg3, vreg0, maskTail);
+                AscendC::Reg::Max(vregTmpX, vregTmpX, vreg3, maskTail);
 
                 // 整块处理
                 for (uint16_t j = 0; j < static_cast<uint16_t>(repeatTimes - 1); j++) {
                     auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
-                    AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
+                    AscendC::Reg::LoadAlign(vreg0, tmpXAddr);
 
                     // x * quant_scale
                     if constexpr (hasQuantScale_) {
                         auto qScaleAddr = qScalePtr + j * sizePerRepeat;
-                        AscendC::MicroAPI::LoadAlign(vreg1, qScaleAddr);
-                        AscendC::MicroAPI::Mul(vreg0, vreg0, vreg1, mask);
-                        AscendC::MicroAPI::StoreAlign(tmpXAddr, vreg0, mask);
+                        AscendC::Reg::LoadAlign(vreg1, qScaleAddr);
+                        AscendC::Reg::Mul(vreg0, vreg0, vreg1, mask);
+                        AscendC::Reg::StoreAlign(tmpXAddr, vreg0, mask);
                     }
 
                     // 循环求行内最大值
-                    AscendC::MicroAPI::Abs(vreg3, vreg0, mask);
-                    AscendC::MicroAPI::Max(vregTmpX, vregTmpX, vreg3, mask);
+                    AscendC::Reg::Abs(vreg3, vreg0, mask);
+                    AscendC::Reg::Max(vregTmpX, vregTmpX, vreg3, mask);
                 }
 
                 // vreg[0]为最大值，vreg[1]为最大值对应索引
-                AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(vreg4, vregTmpX, mask);
-                AscendC::MicroAPI::Div(vreg5, vreg4, vregDiv, mask);
+                AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MAX>(vreg4, vregTmpX, mask);
+                AscendC::Reg::Div(vreg5, vreg4, vregDiv, mask);
                 // 拷贝第一个数到UB
-                AscendC::MicroAPI::StoreAlign(scaleAddr, vreg5, maskOne);
+                AscendC::Reg::StoreAlign(scaleAddr, vreg5, maskOne);
             }
         } // __VEC_SCOPE__
 
@@ -721,113 +715,102 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
             constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
             uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy, sizePerRepeat);
 
-            AscendC::MicroAPI::RegTensor<float> vreg6, vreg7, vreg8;
-            AscendC::MicroAPI::RegTensor<int16_t> vreg9;
-            AscendC::MicroAPI::RegTensor<half> vreg10;
-            AscendC::MicroAPI::RegTensor<int8_t> vreg11;
-            AscendC::MicroAPI::RegTensor<fp8_e4m3fn_t> vreg12;
-            AscendC::MicroAPI::RegTensor<fp8_e5m2_t> vreg13;
-            AscendC::MicroAPI::RegTensor<bfloat16_t> vreg14, vreg15;
-            AscendC::MicroAPI::RegTensor<fp4x2_e2m1_t> vreg16;
-            AscendC::MicroAPI::RegTensor<fp4x2_e1m2_t> vreg17;
-            AscendC::MicroAPI::RegTensor<hifloat8_t> vreg18;
-            AscendC::MicroAPI::RegTensor<uint16_t> yRegTensor;
-            AscendC::MicroAPI::RegTensor<uint8_t> out;
+            AscendC::Reg::RegTensor<float> vreg6, vreg7, vreg8;
+            AscendC::Reg::RegTensor<int16_t> vreg9;
+            AscendC::Reg::RegTensor<half> vreg10;
+            AscendC::Reg::RegTensor<int8_t> vreg11;
+            AscendC::Reg::RegTensor<fp8_e4m3fn_t> vreg12;
+            AscendC::Reg::RegTensor<fp8_e5m2_t> vreg13;
+            AscendC::Reg::RegTensor<bfloat16_t> vreg14, vreg15;
+            AscendC::Reg::RegTensor<fp4x2_e2m1_t> vreg16;
+            AscendC::Reg::RegTensor<fp4x2_e1m2_t> vreg17;
+            AscendC::Reg::RegTensor<hifloat8_t> vreg18;
+            AscendC::Reg::RegTensor<uint16_t> yRegTensor;
+            AscendC::Reg::RegTensor<uint8_t> out;
 
-            AscendC::MicroAPI::MaskReg maskFull8;
-            AscendC::MicroAPI::MaskReg mask;
+            AscendC::Reg::MaskReg maskFull8;
+            AscendC::Reg::MaskReg mask;
             uint32_t fp4Width = 32;
 
-            maskFull8 = AscendC::MicroAPI::UpdateMask<uint32_t>(fp4Width);
+            maskFull8 = AscendC::Reg::UpdateMask<uint32_t>(fp4Width);
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(xDimPerLoop); i++) {
                 auto scaleAddr = scalePtr + i * aScaleUbAlignB32_;
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg6, scaleAddr);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg6, scaleAddr);
 
                 uint32_t width = static_cast<uint32_t>(tl_->UbFactorDimy);
                 for (uint16_t j = 0; j < repeatTimes; j++) {
-                    mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
+                    mask = AscendC::Reg::UpdateMask<uint32_t>(width);
 
                     auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
                     auto yAddr = yPtr + i * yUbAlignB8_ + j * sizePerRepeat;
                     auto yFp4Addr = yFp4Ptr + i * yUbAlignB4_ + (j * sizePerRepeat / 2);
 
-                    AscendC::MicroAPI::LoadAlign(vreg7, tmpXAddr);
-                    AscendC::MicroAPI::Div(vreg8, vreg7, vreg6, mask);
+                    AscendC::Reg::LoadAlign(vreg7, tmpXAddr);
+                    AscendC::Reg::Div(vreg8, vreg7, vreg6, mask);
 
                     // 根据输出类型进行不同的cast操作
                     if constexpr (ifYFloat8e4m3Index_) {
                         // float32 -> float8_e4m3
-                        AscendC::MicroAPI::Cast<fp8_e4m3fn_t, float, CAST_FP32_TO_FP8>(vreg12, vreg8, mask);
-                        AscendC::MicroAPI::StoreAlign<fp8_e4m3fn_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yAddr, vreg12, mask);
+                        AscendC::Reg::Cast<fp8_e4m3fn_t, float, CAST_FP32_TO_FP8>(vreg12, vreg8, mask);
+                        AscendC::Reg::StoreAlign<fp8_e4m3fn_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yAddr, vreg12,
+                                                                                                        mask);
                     } else if constexpr (ifYFloat8e5m2Index_) {
                         // float32 -> float8_e5m2
-                        AscendC::MicroAPI::Cast<fp8_e5m2_t, float, CAST_FP32_TO_FP8>(vreg13, vreg8, mask);
-                        AscendC::MicroAPI::StoreAlign<fp8_e5m2_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yAddr, vreg13, mask);
+                        AscendC::Reg::Cast<fp8_e5m2_t, float, CAST_FP32_TO_FP8>(vreg13, vreg8, mask);
+                        AscendC::Reg::StoreAlign<fp8_e5m2_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yAddr, vreg13,
+                                                                                                      mask);
                     } else if constexpr (ifYFloat4e2m1Index_) {
                         // float32 -> bfloat16 -> float4_e2m1
-                        AscendC::MicroAPI::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg14, vreg8, mask);
-                        AscendC::MicroAPI::Pack((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg14,
-                                                (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg14);
+                        AscendC::Reg::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg14, vreg8, mask);
+                        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint16_t>&)vreg14,
+                                           (AscendC::Reg::RegTensor<uint32_t>&)vreg14);
                         // 获取对应的CastTrait
                         if (roundMode_ == 1) {
-                            AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_ROUND>(vreg16, vreg14,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_ROUND>(vreg16, vreg14, mask);
                         } else if (roundMode_ == 2) {
-                            AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_FLOOR>(vreg16, vreg14,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_FLOOR>(vreg16, vreg14, mask);
                         } else if (roundMode_ == 3) {
-                            AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_CEIL>(vreg16, vreg14,
-                                                                                                     mask);
+                            AscendC::Reg::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_CEIL>(vreg16, vreg14, mask);
                         } else if (roundMode_ == 4) {
-                            AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_TRUNC>(vreg16, vreg14,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_TRUNC>(vreg16, vreg14, mask);
                         } else {
-                            AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg16, vreg14,
-                                                                                                     mask);
+                            AscendC::Reg::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg16, vreg14, mask);
                         }
                         // 搬出
-                        AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg16, maskFull8);
+                        AscendC::Reg::StoreAlign<uint8_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
+                            yFp4Addr, (AscendC::Reg::RegTensor<uint8_t>&)vreg16, maskFull8);
                     } else if constexpr (ifYFloat4e1m2Index_) {
                         // float32 -> bfloat16 -> float4_e1m2
-                        AscendC::MicroAPI::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg15, vreg8, mask);
-                        AscendC::MicroAPI::Pack((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg15,
-                                                (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg15);
+                        AscendC::Reg::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg15, vreg8, mask);
+                        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint16_t>&)vreg15,
+                                           (AscendC::Reg::RegTensor<uint32_t>&)vreg15);
                         // 获取对应的CastTrait
                         if (roundMode_ == 1) {
-                            AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_ROUND>(vreg17, vreg15,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_ROUND>(vreg17, vreg15, mask);
                         } else if (roundMode_ == 2) {
-                            AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_FLOOR>(vreg17, vreg15,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_FLOOR>(vreg17, vreg15, mask);
                         } else if (roundMode_ == 3) {
-                            AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_CEIL>(vreg17, vreg15,
-                                                                                                     mask);
+                            AscendC::Reg::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_CEIL>(vreg17, vreg15, mask);
                         } else if (roundMode_ == 4) {
-                            AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_TRUNC>(vreg17, vreg15,
-                                                                                                      mask);
+                            AscendC::Reg::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_TRUNC>(vreg17, vreg15, mask);
                         } else {
-                            AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg17, vreg15,
-                                                                                                     mask);
+                            AscendC::Reg::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg17, vreg15, mask);
                         }
                         // 搬出
-                        AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg17, maskFull8);
+                        AscendC::Reg::StoreAlign<uint8_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
+                            yFp4Addr, (AscendC::Reg::RegTensor<uint8_t>&)vreg17, maskFull8);
                     } else if constexpr (ifYHiFloat8Index_) {
-                        AscendC::MicroAPI::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
-                        AscendC::MicroAPI::StoreAlign<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yAddr, vreg18, mask);
+                        AscendC::Reg::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
+                        AscendC::Reg::StoreAlign<hifloat8_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yAddr, vreg18,
+                                                                                                      mask);
                     } else {
                         // float32 -> int8
-                        AscendC::MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(vreg9, vreg8, mask);
-                        AscendC::MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(vreg10, vreg9, mask);
-                        AscendC::MicroAPI::Cast<int8_t, half, CAST_FP16_TO_INT8>(vreg11, vreg10, mask);
+                        AscendC::Reg::Cast<int16_t, float, CAST_FP32_TO_INT16>(vreg9, vreg8, mask);
+                        AscendC::Reg::Cast<half, int16_t, CAST_INT16_TO_FP16>(vreg10, vreg9, mask);
+                        AscendC::Reg::Cast<int8_t, half, CAST_FP16_TO_INT8>(vreg11, vreg10, mask);
 
-                        AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
-                            yAddr, vreg11, mask);
+                        AscendC::Reg::StoreAlign<int8_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yAddr, vreg11, mask);
                     }
                 }
             }

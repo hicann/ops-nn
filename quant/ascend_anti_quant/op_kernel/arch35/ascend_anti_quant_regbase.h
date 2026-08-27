@@ -10,7 +10,7 @@
 
 /*!
  * \file ascend_anti_quant_regbase.h
- * \brief Pure regbase (MicroAPI / __VEC_SCOPE__) AscendAntiQuant kernel.
+ * \brief Pure regbase (Reg / __VEC_SCOPE__) AscendAntiQuant kernel.
  *
  *   y = TOut((cast<float>(x) + offset) * effective_scale)
  *
@@ -32,7 +32,7 @@
  *     - Supported (TIn, TOut):
  *         TIn  in {int8_t, hifloat8_t, fp8_e5m2_t, fp8_e4m3fn_t}
  *         TOut in {half,   float}
- *       fp8 / hifloat8 cast to float goes through the MicroAPI pointer path
+ *       fp8 / hifloat8 cast to float goes through the Reg pointer path
  *       (Reg::DataCopy + Reg::Cast inside __VEC_SCOPE__), avoiding the bisheng
  *       backend "fp8 type only supports pointer operations" rejection.
  */
@@ -201,7 +201,7 @@ template <typename T, typename U, bool SqrtMode>
 __aicore__ inline void AscendAntiQuantRegbase<T, U, SqrtMode>::Compute(LocalTensor<uint8_t>& xLocal,
                                                                        LocalTensor<U>& outLocal, int64_t count)
 {
-    // Reinterpret the uint8_t UB buffer as T-typed pointer for the MicroAPI
+    // Reinterpret the uint8_t UB buffer as T-typed pointer for the Reg
     // load.  All ops on the fp8/hifloat8 values stay strictly pointer-based
     // inside __VEC_SCOPE__.
     __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();

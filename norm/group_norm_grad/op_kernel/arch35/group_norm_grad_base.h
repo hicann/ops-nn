@@ -759,8 +759,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             Mul(vregDgammaQ, vregGammaQ, vregDgammaQ, pregMain);
             MulDstAdd(vregDbetaR, vregGammaR, vregDbetaQ, pregLoop);
             MulDstAdd(vregDgammaR, vregGammaR, vregDgammaQ, pregLoop);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbetaQ, vregDbetaR, pregLoop);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgammaQ, vregDgammaR, pregLoop);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDbetaQ, vregDbetaR, pregLoop);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDgammaQ, vregDgammaR, pregLoop);
             Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregSumDgamma,
                                                                  pregMerge);
@@ -862,8 +862,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(const LocalTen
             LoadAlign(vregDs, ubDs + i * sregvl);
             MulDstAdd(vregDbeta, vregGamma, vregSumDbeta, preg);
             MulDstAdd(vregDs, vregGamma, vregSumDs, preg);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDbeta, vregDbeta, preg);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDs, vregDs, preg);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregSumDbeta, vregDbeta, preg);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregSumDs, vregDs, preg);
         }
         Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDbeta, vregSumDbeta, pregAll);
         Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDs, vregSumDs, pregAll);
@@ -1528,8 +1528,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 Mul(vregXQ, vregXQ, vregDyQ, pregMain);
                 MulDstAdd(vregXR, vregDyR, vregXQ, pregLoop);
                 Add(tempDy, vregDyQ, vregDyR, pregLoop);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, vregXR, pregLoop);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregXQ, vregXR, pregLoop);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
                 Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXQ, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregDgamma,
                                                                      pregMerge);

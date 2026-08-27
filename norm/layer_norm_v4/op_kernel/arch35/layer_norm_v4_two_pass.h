@@ -20,15 +20,15 @@
 
 namespace LayerNormV4 {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr static LayerNormConfig hasGammaBetaConfig = {
     false,

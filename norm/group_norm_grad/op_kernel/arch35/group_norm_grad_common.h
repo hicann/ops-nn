@@ -21,19 +21,19 @@
 
 namespace GroupNormGrad {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LoadUnAlignPre;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::StoreUnAlignPost;
-using AscendC::MicroAPI::UnalignRegForLoad;
-using AscendC::MicroAPI::UnalignRegForStore;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LoadUnAlignPre;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::StoreUnAlignPost;
+using AscendC::Reg::UnalignRegForLoad;
+using AscendC::Reg::UnalignRegForStore;
+using AscendC::Reg::UpdateMask;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 
@@ -51,17 +51,17 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 
 __aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -274,8 +274,8 @@ __aicore__ inline void VFComputeDbetaDs(const LocalTensor<T>& x, const LocalTens
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
                 MulDstAdd(vregX, vregDy, vregDgamma, preg);
                 Add(tempDbeta, vregDbeta, vregDy, preg);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
             }
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
@@ -308,7 +308,7 @@ __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, c
             LoadAlign(aReg, (__ubuf__ U*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                 LoadAlign(bReg, (__ubuf__ U*)dst + i * outerLoopStride + j * innerLoopStride);
-                Add<U, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<U, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
             StoreAlign((__ubuf__ U*)cache + i * outerLoopStride, aReg, pMask);
         }

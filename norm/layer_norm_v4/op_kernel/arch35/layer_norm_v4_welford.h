@@ -247,11 +247,11 @@ private:
             __ubuf__ float* meamPtr = (__ubuf__ float*)mean.GetPhyAddr();
             __ubuf__ float* variancePtr = (__ubuf__ float*)variance.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(elemCnt);
-            AscendC::MicroAPI::RegTensor<float> xReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> xReg;
+            AscendC::Reg::MaskReg pMask;
             Duplicate(xReg, 0.0f);
             for (uint16_t i = 0; i < loopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 StoreAlign((__ubuf__ float*)meamPtr + i * VL_B32, xReg, pMask);
                 StoreAlign((__ubuf__ float*)variancePtr + i * VL_B32, xReg, pMask);
             }

@@ -20,16 +20,16 @@
 
 namespace LayerNormV3 {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr static LayerNormConfig hasGammaBetaConfig = {
     false,
@@ -310,12 +310,11 @@ private:
             RegTensor<float> input_lastout;
             RegTensor<M> output_mean;
             RegTensor<M> output_lastout;
-            MicroAPI::MaskReg pregLoop;
+            Reg::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout,
-                                                                          batchLastoutInAddr + VL_F32 * i);
+                pregLoop = Reg::UpdateMask<float>(castCount);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_lastout, batchLastoutInAddr + VL_F32 * i);
                 Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<M, float, castTraitB322B16>(output_lastout, input_lastout, pregLoop);
                 StoreAlign<M, StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean,

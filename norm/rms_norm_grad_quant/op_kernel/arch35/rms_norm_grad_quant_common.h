@@ -22,16 +22,16 @@
 
 namespace RmsNormGradQuant {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using namespace AscendC::Reg;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 namespace RmsNormGradRegbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
@@ -59,52 +59,52 @@ constexpr uint32_t UB_FACTOR_DX_SPLIT_D = 4096;
 constexpr uint32_t BLOCKSIZE = platform::GetUbBlockSize();
 constexpr uint32_t BLOCKSIZEB32 = platform::GetUbBlockSize() / sizeof(float);
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Hifp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Hifp8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     RoundMode::CAST_ROUND,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Int32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Int32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Fp16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp162Int8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitInt322Fp32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitInt322Fp32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 

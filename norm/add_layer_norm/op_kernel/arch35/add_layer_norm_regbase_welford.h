@@ -256,8 +256,8 @@ public:
             RegTensor<float> one;
             RegTensor<float> rstd;
             MaskReg pregLoop;
-            MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+            MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
             uint32_t sreg0 = dichotomyAddReminder;
             // 计算mean
             // PART1: 整尾块合并
@@ -269,8 +269,8 @@ public:
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
                 Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
-                                                                                        pregMerge);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
+                                                                                   pregMerge);
             }
 
             // PART2: 整块剩余部分vcadd回刷UB
@@ -279,13 +279,12 @@ public:
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
                 Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
 
             NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean,
-                                                                                    pregMerge);
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
             Duplicate(one, float(1.0), pregMain);
             Duplicate(mean, mean, pregMain);
@@ -311,8 +310,8 @@ public:
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
                 Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
-                                                                                        pregMerge);
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
+                                                                                   pregMerge);
             }
 
             // PART2: 整块剩余部分vcadd回刷UB
@@ -326,14 +325,13 @@ public:
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
                 Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }
 
             NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd,
-                                                                                    pregMerge);
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
     }
 

@@ -21,13 +21,13 @@
 namespace BatchNormOps {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
 
 template <typename T1, typename T2>
 class BatchNormInfer {
@@ -259,14 +259,13 @@ private:
 
             RegTensor<float> rstd;
 
-            MaskReg pregMask = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
             uint16_t loopNum = (curTileB1Len + VL_FP32 - 1) / VL_FP32;
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads var  1->64
                 LoadTwoTensorForDtypeTBrc<T2>(var, mean, varLocal, meanLocal, pregMask, pregMask, i, i);
-                AscendC::MicroAPI::MaskReg
-                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load gamma、beta  1->64

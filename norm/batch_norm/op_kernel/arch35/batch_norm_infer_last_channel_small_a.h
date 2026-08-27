@@ -22,11 +22,11 @@
 namespace BatchNormOps {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
@@ -39,13 +39,13 @@ class BatchNormInferLastChannelSmallA {
     static constexpr int64_t BLOCK_SIZE = BatchNormOps::BLOCK_SIZE;
     static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2; // mean, var
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {AscendC::Reg::RegLayout::ZERO,
+                                                                 AscendC::Reg::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
+                                                                 AscendC::RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {AscendC::Reg::RegLayout::ZERO,
+                                                                 AscendC::Reg::SatMode::NO_SAT, MaskMergeMode::ZEROING,
+                                                                 AscendC::RoundMode::CAST_RINT};
 
 public:
     __aicore__ inline BatchNormInferLastChannelSmallA(){};
@@ -289,9 +289,9 @@ private:
             RegTensor<uint32_t> paramOffset;
             uint32_t paramCacheElemLen = GetSmallLastChannelParamCacheElemLen();
             uint32_t maskLen = paramCacheElemLen;
-            MaskReg pregMaskFp32 = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+            MaskReg pregMaskFp32 = AscendC::Reg::UpdateMask<float>(maskLen);
 
-            AscendC::MicroAPI::LoadAlign<uint32_t, LoadDist::DIST_NORM>(paramOffset, offsetLocal);
+            AscendC::Reg::LoadAlign<uint32_t, LoadDist::DIST_NORM>(paramOffset, offsetLocal);
             GatherParamForDtypeT(gammaLocal, gamma, paramOffset, pregMaskFp32, paramCacheElemLen);
             GatherParamForDtypeT(betaLocal, beta, paramOffset, pregMaskFp32, paramCacheElemLen);
             GatherRunningParamForDtypeT(varLocal, var, paramOffset, pregMaskFp32, paramCacheElemLen);
@@ -322,9 +322,9 @@ private:
             uint16_t loopNum = ops::CeilDiv(curElemLen, paramCacheElemLen);
             __ubuf__ T* xLocalTmp = xLocal;
             __ubuf__ T* yLocalTmp = yLocal;
-            AscendC::MicroAPI::UnalignRegForLoad uX;
-            AscendC::MicroAPI::UnalignRegForStore uY;
-            AscendC::MicroAPI::LoadUnAlignPre(uX, xLocalTmp);
+            AscendC::Reg::UnalignRegForLoad uX;
+            AscendC::Reg::UnalignRegForStore uY;
+            AscendC::Reg::LoadUnAlignPre(uX, xLocalTmp);
             LoadAlign<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local);
             LoadAlign<float, LoadDist::DIST_NORM>(beta, betaFp32Local);
             LoadAlign<float, LoadDist::DIST_NORM>(mean, meanFp32Local);
@@ -334,13 +334,13 @@ private:
                 uint32_t activeLen = curElemLen - elemOffset > paramCacheElemLen ? paramCacheElemLen :
                                                                                    curElemLen - elemOffset;
                 uint32_t maskLen = activeLen;
-                MaskReg pregMaskFp32 = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+                MaskReg pregMaskFp32 = AscendC::Reg::UpdateMask<float>(maskLen);
 
                 NormCommon::LoadTensorUnAlignForDtypeT(xLocalTmp, x, uX, pregMaskFp32, activeLen);
                 NormCommon::NormalizeWithScaleBiasReg(x, gamma, beta, mean, rstd, y, pregMaskFp32);
                 NormCommon::StoreTensorUnAlignForDtypeT(yLocalTmp, y, uY, pregMaskFp32, activeLen);
             }
-            AscendC::MicroAPI::StoreUnAlignPost(yLocalTmp, uY, 0);
+            AscendC::Reg::StoreUnAlignPost(yLocalTmp, uY, 0);
         }
     }
 
@@ -349,16 +349,16 @@ private:
                                                 RegTensor<uint32_t>& paramOffset, MaskReg& preg, uint32_t calcLen)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
-            AscendC::MicroAPI::Gather(dst, (__ubuf__ float*)src, paramOffset, preg);
+            AscendC::Reg::Gather(dst, (__ubuf__ float*)src, paramOffset, preg);
         } else {
-            MaskReg pregSrc = AscendC::MicroAPI::UpdateMask<T_SRC>(calcLen);
+            MaskReg pregSrc = AscendC::Reg::UpdateMask<T_SRC>(calcLen);
             RegTensor<uint16_t> paramOffsetB16;
             RegTensor<T_SRC> srcB16;
             RegTensor<T_SRC> srcB16Unpack;
-            AscendC::MicroAPI::Pack(paramOffsetB16, paramOffset);
-            AscendC::MicroAPI::Gather(srcB16, ((__ubuf__ T_SRC*)src), paramOffsetB16, pregSrc);
-            AscendC::MicroAPI::UnPack((RegTensor<uint32_t>&)srcB16Unpack, (RegTensor<uint16_t>&)srcB16);
-            AscendC::MicroAPI::Cast<float, T_SRC, castTraitB162B32>(dst, srcB16Unpack, preg);
+            AscendC::Reg::Pack(paramOffsetB16, paramOffset);
+            AscendC::Reg::Gather(srcB16, ((__ubuf__ T_SRC*)src), paramOffsetB16, pregSrc);
+            AscendC::Reg::UnPack((RegTensor<uint32_t>&)srcB16Unpack, (RegTensor<uint16_t>&)srcB16);
+            AscendC::Reg::Cast<float, T_SRC, castTraitB162B32>(dst, srcB16Unpack, preg);
         }
     }
 
@@ -367,16 +367,16 @@ private:
                                                        uint32_t calcLen)
     {
         if constexpr (IsSameType<T_RUNNING_MEAN, float>::value) {
-            AscendC::MicroAPI::Gather(dst, (__ubuf__ float*)src, paramOffset, preg);
+            AscendC::Reg::Gather(dst, (__ubuf__ float*)src, paramOffset, preg);
         } else {
-            MaskReg pregSrc = AscendC::MicroAPI::UpdateMask<T_RUNNING_MEAN>(calcLen);
+            MaskReg pregSrc = AscendC::Reg::UpdateMask<T_RUNNING_MEAN>(calcLen);
             RegTensor<uint16_t> paramOffsetB16;
             RegTensor<T_RUNNING_MEAN> srcB16;
             RegTensor<T_RUNNING_MEAN> srcB16Unpack;
-            AscendC::MicroAPI::Pack(paramOffsetB16, paramOffset);
-            AscendC::MicroAPI::Gather(srcB16, ((__ubuf__ T_RUNNING_MEAN*)src), paramOffsetB16, pregSrc);
-            AscendC::MicroAPI::UnPack((RegTensor<uint32_t>&)srcB16Unpack, (RegTensor<uint16_t>&)srcB16);
-            AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(dst, srcB16Unpack, preg);
+            AscendC::Reg::Pack(paramOffsetB16, paramOffset);
+            AscendC::Reg::Gather(srcB16, ((__ubuf__ T_RUNNING_MEAN*)src), paramOffsetB16, pregSrc);
+            AscendC::Reg::UnPack((RegTensor<uint32_t>&)srcB16Unpack, (RegTensor<uint16_t>&)srcB16);
+            AscendC::Reg::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(dst, srcB16Unpack, preg);
         }
     }
 

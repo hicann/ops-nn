@@ -21,7 +21,7 @@
 namespace RmsNormDynamicMxQuantNs {
 
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 template <typename T_X, typename T_GAMMA, typename T_Y, bool isOptimizeMode>
 class RmsNormDynamicMxQuantFullLoad {
@@ -248,8 +248,7 @@ public:
 
                 uint32_t sreg = nNum;
                 MaskReg pregMask = UpdateMask<float>(sreg);
-                AscendC::MicroAPI::MaskReg
-                    pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     uint32_t xElemOffset = i * xInputStride;
@@ -276,8 +275,7 @@ public:
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
                 MaskReg pregMask;
-                AscendC::MicroAPI::MaskReg
-                    pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
                     uint32_t sreg = nNum;
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);

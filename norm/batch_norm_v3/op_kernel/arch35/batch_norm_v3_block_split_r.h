@@ -22,15 +22,15 @@
 
 namespace BatchNormV3Ops {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3BlockSplitR {
@@ -315,20 +315,19 @@ private:
             MaskReg mask0;
             uint32_t sreg0 = len;
             for (uint16_t i = 0; i < loopCount; i++) {
-                mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                 // x 读 / mean 读写 / M2 读写 五处访存共用同一个偏移 i*VL_F32(单层循环 → 一维地址寄存器)。
                 // stride 单位是各自元素数,x 是 T、mean/M2 是 float,故按元素宽度分别建。
-                AscendC::MicroAPI::AddrReg fAddr = AscendC::MicroAPI::CreateAddrReg<float>(i, VL_F32);
+                AscendC::Reg::AddrReg fAddr = AscendC::Reg::CreateAddrReg<float>(i, VL_F32);
                 if constexpr (IsSameType<T, half>::value) {
                     RegTensor<half> xFp16;
                     AscendC::Reg::LoadAlign<half, LoadDist::DIST_UNPACK_B16>(
-                        xFp16, (__ubuf__ half*)xTensorAddr, AscendC::MicroAPI::CreateAddrReg<half>(i, VL_F32));
+                        xFp16, (__ubuf__ half*)xTensorAddr, AscendC::Reg::CreateAddrReg<half>(i, VL_F32));
                     Cast<float, half, NormCommon::castTraitB162B32>(x1, xFp16, mask0);
                 } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                     RegTensor<bfloat16_t> xBf16;
                     AscendC::Reg::LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(
-                        xBf16, (__ubuf__ bfloat16_t*)xTensorAddr,
-                        AscendC::MicroAPI::CreateAddrReg<bfloat16_t>(i, VL_F32));
+                        xBf16, (__ubuf__ bfloat16_t*)xTensorAddr, AscendC::Reg::CreateAddrReg<bfloat16_t>(i, VL_F32));
                     Cast<float, bfloat16_t, NormCommon::castTraitB162B32>(x1, xBf16, mask0);
                 } else {
                     AscendC::Reg::LoadAlign(x1, (__ubuf__ float*)xTensorAddr, fAddr);
@@ -486,7 +485,7 @@ private:
             MaskReg pregLoop;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 if constexpr (CALC_VAR) {
                     LoadAlign(saveMean, ((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset));
                 }
@@ -512,8 +511,7 @@ private:
                     Add(r2, r2, t2, pregLoop);
                     Add(r3, r3, t3, pregLoop);
                     Radix4Add(r0, r1, r2, r3, pregLoop);
-                    AscendC::MicroAPI::AddrReg binAddr = AscendC::MicroAPI::CreateAddrReg<float>(aIndex, VL_F32, i,
-                                                                                                 rLoopStride);
+                    AscendC::Reg::AddrReg binAddr = AscendC::Reg::CreateAddrReg<float>(aIndex, VL_F32, i, rLoopStride);
                     AscendC::Reg::StoreAlign((__ubuf__ float*)binaryAddTmpAddr, r0, binAddr, pregLoop);
                 }
                 // 纯主行组:4 主行 → 1
@@ -525,8 +523,7 @@ private:
                         LoadWeightMean4(quotPtr, quotCntPtr, rLoopStride, numScale, pregLoop, r0, r1, r2, r3);
                     }
                     Radix4Add(r0, r1, r2, r3, pregLoop);
-                    AscendC::MicroAPI::AddrReg binAddr = AscendC::MicroAPI::CreateAddrReg<float>(aIndex, VL_F32, i,
-                                                                                                 rLoopStride);
+                    AscendC::Reg::AddrReg binAddr = AscendC::Reg::CreateAddrReg<float>(aIndex, VL_F32, i, rLoopStride);
                     AscendC::Reg::StoreAlign((__ubuf__ float*)(binaryAddTmpAddr + quotBinOffset), r0, binAddr,
                                              pregLoop);
                 }
@@ -579,7 +576,7 @@ private:
             MaskReg mask0;
             uint32_t sreg0 = currentA;
             for (uint16_t i = 0; i < numLoop; i++) {
-                mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(mean, batchMeanTensorAddr + i * VL_F32);
                 LoadAlign(rstd, batchRstdTensorAddr + i * VL_F32);
                 LoadOneTensorForDtypeT(gammaTensorAddr, gamma, mask0, i * VL_F32);
@@ -591,8 +588,8 @@ private:
                     //      少给会编译报 "arguments of VAG intrinsic exceeds the loop nesting depth";
                     //   2) stride 单位是 T 的元素数,不是字节;
                     //   3) index 参数按位置与由外到内的循环计数器绑定,顺序不能与实际嵌套顺序对调。
-                    AscendC::MicroAPI::AddrReg xyAddr = AscendC::MicroAPI::CreateAddrReg<T>(
-                        i, VL_F32, j, static_cast<uint32_t>(currentAAlign));
+                    AscendC::Reg::AddrReg xyAddr = AscendC::Reg::CreateAddrReg<T>(i, VL_F32, j,
+                                                                                  static_cast<uint32_t>(currentAAlign));
                     if constexpr (IsSameType<T, half>::value) {
                         RegTensor<half> xFp16;
                         AscendC::Reg::LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)xTensorAddr,

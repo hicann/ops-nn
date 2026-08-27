@@ -25,9 +25,9 @@
 namespace BatchNormGradV3 {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T1, typename T2, typename T3>
 class BatchNormGradV3Infer {
@@ -168,7 +168,7 @@ private:
             RegTensor<float> dx;
             RegTensor<float> invstd;
 
-            MaskReg pregMask = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
             uint16_t loopNum = ops::CeilDiv(curTileB1Len, VL_FP32);
             uint32_t tileBlockALenTmp = static_cast<uint32_t>(tilingData_->tileBlockALen);
@@ -177,8 +177,7 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads runningVar  1->64
                 LoadsTensorForDtypeT<T3>(varLocal, runningVar, pregMask, i);
-                AscendC::MicroAPI::MaskReg
-                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 // load gamma 1->64

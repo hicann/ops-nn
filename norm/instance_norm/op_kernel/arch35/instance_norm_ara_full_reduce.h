@@ -21,13 +21,13 @@
 #include "instance_norm_common.h"
 namespace InstanceNormOps {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
 
 constexpr int64_t SCALE_COEF_TWO = 2;
 constexpr int64_t SCALE_COEF_FOUR = 4;
@@ -1076,11 +1076,11 @@ public:
             RegTensor<float> input_rstd;
             RegTensor<T_M> output_mean;
             RegTensor<T_M> output_rstd;
-            MicroAPI::MaskReg pregLoop;
+            Reg::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, meanInAddr + VL_FP32 * i);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_rstd, varianceInAddr + VL_FP32 * i);
+                pregLoop = Reg::UpdateMask<float>(castCount);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, meanInAddr + VL_FP32 * i);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_rstd, varianceInAddr + VL_FP32 * i);
                 Cast<T_M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
                 StoreAlign<T_M, StoreDist::DIST_PACK_B32>(((__ubuf__ T_M*)meanOutAddr + i * VL_MEAN), output_mean,

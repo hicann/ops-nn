@@ -21,16 +21,16 @@
 
 namespace LayerNormV3 {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
@@ -206,8 +206,7 @@ private:
                 if constexpr (!IsOutRstd) {
                     StoreRegForDtype(rstdOutUb, varReg, pregLoop, (a * VL_B32));
                 }
-                AscendC::MicroAPI::MaskReg
-                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilon);
                 if constexpr (IsOutRstd) {
                     StoreRegForDtype(rstdOutUb, rstdReg, pregLoop, (a * VL_B32));
@@ -230,7 +229,7 @@ private:
             RegTensor<float> gammaReg;
             RegTensor<float> betaReg;
             RegTensor<float> subReg;
-            MaskReg pregMask = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMask = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             if constexpr (hasGammaFlag) {
                 LoadsTensorForDtypeT<U>(gammaInUb, gammaReg, pregMask, 1);
             }
@@ -270,8 +269,8 @@ private:
     }
 
     template <typename H>
-    __aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, MicroAPI::RegTensor<float>& dst,
-                                                MicroAPI::MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, Reg::RegTensor<float>& dst,
+                                                Reg::MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<H, float>::value) {
             LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, (__ubuf__ float*)src + offset);

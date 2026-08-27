@@ -22,7 +22,7 @@
 
 namespace AddRmsNormQuant {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 using RmsNorm::castTraitFp322Fp8;
@@ -49,34 +49,34 @@ constexpr uint64_t B8_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(int8_t);
 // reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
 constexpr uint64_t REDUCE_VREG_PER_REPEAT = 2;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitF162F32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitF162F32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Int32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Int32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-constexpr AscendC::MicroAPI::CastTrait castTraitInt322Fp32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitInt322Fp32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Fp16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp162Int8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
 

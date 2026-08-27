@@ -20,8 +20,8 @@
 
 namespace NsDeepNorm {
 
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MemType;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MemType;
 
 constexpr uint32_t DEEP_NORM_REDUCE_TMP_ELEMS = 2 * DEEP_NORM_VL_FP32;
 

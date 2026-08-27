@@ -18,78 +18,66 @@
 
 namespace MxQuantCastTraits {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+constexpr AscendC::Reg::CastTrait castTraitHalf2Bf16 = {AscendC::Reg::RegLayout::UNKNOWN,
+                                                        AscendC::Reg::SatMode::UNKNOWN,
+                                                        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Float = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait castTraitHalf2Float = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                         AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitZero = {AscendC::MicroAPI::RegLayout::ZERO,
-                                                        AscendC::MicroAPI::SatMode::UNKNOWN,
-                                                        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait castTraitZero = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitOne = {AscendC::MicroAPI::RegLayout::ONE,
-                                                       AscendC::MicroAPI::SatMode::UNKNOWN,
-                                                       AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait castTraitOne = {AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN,
+                                                  AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait castTrait32to80 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTrait32to80 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTrait32to81 = {
-    AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTrait32to81 = {AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTrait32to82 = {
-    AscendC::MicroAPI::RegLayout::TWO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTrait32to82 = {AscendC::Reg::RegLayout::TWO, AscendC::Reg::SatMode::SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTrait32to83 = {
-    AscendC::MicroAPI::RegLayout::THREE, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTrait32to83 = {AscendC::Reg::RegLayout::THREE, AscendC::Reg::SatMode::SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitF16toFp32Zero = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait castTraitF16toFp32Zero = {AscendC::Reg::RegLayout::ZERO,
+                                                            AscendC::Reg::SatMode::UNKNOWN,
+                                                            AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitF16toFp32One = {
-    AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait castTraitF16toFp32One = {AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN,
+                                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <AscendC::RoundMode RM>
-constexpr AscendC::MicroAPI::CastTrait castTraitRM = {AscendC::MicroAPI::RegLayout::ZERO,
-                                                      AscendC::MicroAPI::SatMode::UNKNOWN,
-                                                      AscendC::MicroAPI::MaskMergeMode::ZEROING, RM};
+constexpr AscendC::Reg::CastTrait castTraitRM = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                 AscendC::Reg::MaskMergeMode::ZEROING, RM};
 
 template <AscendC::RoundMode RM>
-constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16RM = {AscendC::MicroAPI::RegLayout::UNKNOWN,
-                                                               AscendC::MicroAPI::SatMode::UNKNOWN,
-                                                               AscendC::MicroAPI::MaskMergeMode::ZEROING, RM};
+constexpr AscendC::Reg::CastTrait castTraitHalf2Bf16RM = {
+    AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING, RM};
 
 template <AscendC::RoundMode RM>
-constexpr AscendC::MicroAPI::CastTrait castTraitFp32toBF16RM = {AscendC::MicroAPI::RegLayout::ZERO,
-                                                                AscendC::MicroAPI::SatMode::NO_SAT,
-                                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RM};
+constexpr AscendC::Reg::CastTrait castTraitFp32toBF16RM = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                           AscendC::Reg::MaskMergeMode::ZEROING, RM};
 
-constexpr AscendC::MicroAPI::CastTrait castTrait32to8 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait castTrait32to8 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                                    AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 

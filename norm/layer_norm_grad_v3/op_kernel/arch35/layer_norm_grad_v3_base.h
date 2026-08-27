@@ -36,17 +36,17 @@ using AscendC::Reg::Move;
 using AscendC::Reg::Reduce;
 using AscendC::Reg::StoreAlign;
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -166,8 +166,8 @@ public:
         const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
         const int64_t colSize, const int64_t stride, const int64_t fullColSize);
     template <typename T>
-    __aicore__ inline static void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
-                                                       AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline static void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
+                                                       AscendC::Reg::MaskReg& preg, uint32_t offset);
 
 protected:
     TPipe* pipe_;
@@ -221,17 +221,16 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<flo
                 __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
                 __ubuf__ T* src = (__ubuf__ T*)srcTensor.GetPhyAddr();
                 uint32_t count;
-                AscendC::MicroAPI::RegTensor<float> fp32Reg;
-                AscendC::MicroAPI::RegTensor<T> b16Reg;
-                AscendC::MicroAPI::MaskReg pMask;
+                AscendC::Reg::RegTensor<float> fp32Reg;
+                AscendC::Reg::RegTensor<T> b16Reg;
+                AscendC::Reg::MaskReg pMask;
                 count = static_cast<uint32_t>(colSize);
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                    AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(i, outerLoopSrcStride);
-                    LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
+                    AscendC::Reg::AddrReg srcAddrReg = AscendC::Reg::CreateAddrReg<T>(i, outerLoopSrcStride);
+                    LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
                     Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                    AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(i,
-                                                                                                    outerLoopDstStride);
+                    AscendC::Reg::AddrReg dstAddrReg = AscendC::Reg::CreateAddrReg<float>(i, outerLoopDstStride);
                     StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
                 }
             }
@@ -241,20 +240,19 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<flo
                 __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
                 __ubuf__ T* src = (__ubuf__ T*)srcTensor.GetPhyAddr();
                 uint32_t count;
-                AscendC::MicroAPI::RegTensor<float> fp32Reg;
-                AscendC::MicroAPI::RegTensor<T> b16Reg;
-                AscendC::MicroAPI::MaskReg pMask;
+                AscendC::Reg::RegTensor<float> fp32Reg;
+                AscendC::Reg::RegTensor<T> b16Reg;
+                AscendC::Reg::MaskReg pMask;
                 for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                     count = static_cast<uint32_t>(colSize);
                     for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                        pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                        AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(
-                            i, outerLoopSrcStride, j, innerLoopStride);
-                        LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src,
-                                                                                   srcAddrReg);
+                        pMask = AscendC::Reg::UpdateMask<float>(count);
+                        AscendC::Reg::AddrReg srcAddrReg = AscendC::Reg::CreateAddrReg<T>(i, outerLoopSrcStride, j,
+                                                                                          innerLoopStride);
+                        LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
                         Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                        AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(
-                            i, outerLoopDstStride, j, innerLoopStride);
+                        AscendC::Reg::AddrReg dstAddrReg = AscendC::Reg::CreateAddrReg<float>(i, outerLoopDstStride, j,
+                                                                                              innerLoopStride);
                         StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
                     }
                 }
@@ -374,14 +372,14 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& 
         __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
         __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+        AscendC::Reg::MaskReg pMask;
         for (uint16_t i = 0; i < loopTimes; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+            pMask = AscendC::Reg::UpdateMask<float>(sreg);
             LoadAlign(aReg, (__ubuf__ float*)src0 + i * VL_FP32);
             LoadAlign(bReg, (__ubuf__ float*)src1 + i * VL_FP32);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
             StoreAlign((__ubuf__ float*)dst + i * VL_FP32, aReg, pMask);
         }
     }
@@ -404,14 +402,14 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& 
             __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
             uint32_t count = nSize;
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadAlign(aReg, (__ubuf__ float*)src0 + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * outerLoopStride + 0 * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                 StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, aReg, pMask);
             }
         }
@@ -422,15 +420,15 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& 
             __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
             uint32_t count = nSize;
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     LoadAlign(aReg, (__ubuf__ float*)src0 + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(bReg, (__ubuf__ float*)src1 + i * outerLoopStride + j * innerLoopStride);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                    Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                    Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                    Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, aReg, pMask);
                 }
             }
@@ -453,14 +451,14 @@ __aicore__ inline void LayerNormGradV3Base::VectorMul(const LocalTensor<float>& 
         __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
         __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, mulReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<float> aReg, bReg, mulReg;
+        AscendC::Reg::MaskReg pMask;
 
         for (uint16_t i = 0; i < loopTimes; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+            pMask = AscendC::Reg::UpdateMask<float>(sreg);
             LoadAlign(aReg, (__ubuf__ float*)src0 + i * VL_FP32);
             LoadAlign(bReg, (__ubuf__ float*)src1 + i * VL_FP32);
-            Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(mulReg, aReg, bReg, pMask);
+            Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(mulReg, aReg, bReg, pMask);
             StoreAlign((__ubuf__ float*)dst + i * VL_FP32, mulReg, pMask);
         }
     }
@@ -489,13 +487,13 @@ __aicore__ inline void LayerNormGradV3Base::NlastBroadcastMul(const LocalTensor<
             __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(aSize);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * outerLoopStride);
                 LoadAlign(aReg, (__ubuf__ float*)src0 + i * outerLoopStride + 0 * innerLoopStride);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, cReg, pMask);
             }
         }
@@ -506,14 +504,14 @@ __aicore__ inline void LayerNormGradV3Base::NlastBroadcastMul(const LocalTensor<
             __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(aSize);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     LoadAlign(aReg, (__ubuf__ float*)src0 + i * outerLoopStride + j * innerLoopStride);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
                 }
             }
@@ -544,15 +542,15 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(const LocalTenso
             __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
             __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(rSize);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::UnalignRegForStore UReg;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::UnalignRegForStore UReg;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src + i * stride);
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pMask);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     } else {
         __VEC_SCOPE__
@@ -561,20 +559,19 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(const LocalTenso
             __ubuf__ float* src0 = (__ubuf__ float*)srcTensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)srcTensor.GetPhyAddr() + VL_FP32;
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::UnalignRegForStore UReg;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::UnalignRegForStore UReg;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src0 + i * stride);
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * stride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     }
 }
@@ -624,37 +621,37 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSum(const LocalTensor<floa
         __ubuf__ float* tailSrcA = (__ubuf__ float*)srcTensor.GetPhyAddr() + tailSrcAOffset;
         __ubuf__ float* tailSrcB = (__ubuf__ float*)srcTensor.GetPhyAddr() + tailSrcBOffset;
         __ubuf__ float* unFoldSrc = (__ubuf__ float*)srcTensor.GetPhyAddr() + unFoldSrcOffset;
-        AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::UnalignRegForStore UReg;
+        AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::UnalignRegForStore UReg;
 
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             dst = (__ubuf__ float*)reduceSumTempTensor.GetPhyAddr() + i * outerLoopDstStride;
             for (uint16_t j = 0; j < mainFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg, dReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg, dReg;
                 LoadAlign(aReg, (__ubuf__ float*)foldSrcA + i * outerLoopStride + j * innerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)foldSrcB + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
                 Reduce<AscendC::Reg::ReduceType::SUM>(dReg, cReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
                 uint32_t count = static_cast<uint32_t>(tailFoldElemCount);
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-                AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+                AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadAlign(aReg, (__ubuf__ float*)tailSrcA + i * outerLoopStride + j * innerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)tailSrcB + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 LoadAlign(aReg, (__ubuf__ float*)unFoldSrc + i * outerLoopStride + j * innerLoopStride);
                 Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     }
     LastReduceSumSmallR(dstTensor, reduceSumTempTensor, aSize, foldPoint, outerLoopDstStride);
@@ -662,11 +659,11 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSum(const LocalTensor<floa
 
 template <uint32_t RSize, int32_t TailCount = -1, int32_t Index = 0, int32_t Depth = 1>
 struct NlastDichotomyAdd {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         __ubuf__ float* srcAOffset = srcA + stride * CONST_TWO;
         __ubuf__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
@@ -674,13 +671,13 @@ struct NlastDichotomyAdd {
                                                                           stride * CONST_TWO);
             NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO);
         }
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         __ubuf__ float* srcAOffset = srcA + stride * CONST_TWO;
         __ubuf__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
@@ -694,56 +691,56 @@ struct NlastDichotomyAdd {
             NlastDichotomyAdd<RSize / CONST_TWO, TailCount, Index + Depth, Depth * CONST_TWO>::LoadAndAccumulate(
                 bReg, srcB, srcBOffset, pMask, stride * CONST_TWO, offset);
         }
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
 };
 
 template <int32_t TailCount, int32_t Index, int32_t Depth>
 struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         LoadAlign(aReg, (__ubuf__ float*)srcA);
         LoadAlign(bReg, (__ubuf__ float*)srcB);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
         if constexpr (TailCount <= 0) {
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
             LoadAlign(aReg, (__ubuf__ float*)srcA);
             LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             LoadAlign(bReg, (__ubuf__ float*)srcB);
             LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
         } else {
             if constexpr (Index + Depth < TailCount) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
                 LoadAlign(aReg, (__ubuf__ float*)srcA);
                 LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 LoadAlign(bReg, (__ubuf__ float*)srcB);
                 LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             } else if constexpr (Index < TailCount) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 LoadAlign(aReg, (__ubuf__ float*)srcA);
                 LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 LoadAlign(bReg, (__ubuf__ float*)srcB);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             } else {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 LoadAlign(aReg, (__ubuf__ float*)srcA);
                 LoadAlign(bReg, (__ubuf__ float*)srcB);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             }
         }
     }
@@ -751,34 +748,34 @@ struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
 
 template <>
 struct NlastDichotomyAdd<CONST_TWO> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         LoadAlign(aReg, (__ubuf__ float*)srcA);
         LoadAlign(bReg, (__ubuf__ float*)srcB);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
         LoadAlign(aReg, (__ubuf__ float*)srcA);
         LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         LoadAlign(bReg, (__ubuf__ float*)srcB);
         LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
 };
 
 template <>
 struct NlastDichotomyAdd<1> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
         LoadAlign(acc, (__ubuf__ float*)srcA);
@@ -813,13 +810,13 @@ __aicore__ inline void LayerNormGradV3Base::UpdateCache(const LocalTensor<float>
             __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
             __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
             uint32_t sreg = static_cast<uint32_t>(count);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+                pMask = AscendC::Reg::UpdateMask<float>(sreg);
                 LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
             }
         }
@@ -830,15 +827,15 @@ __aicore__ inline void LayerNormGradV3Base::UpdateCache(const LocalTensor<float>
             __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
             __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
             uint32_t sreg = static_cast<uint32_t>(count);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+                pMask = AscendC::Reg::UpdateMask<float>(sreg);
                 LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + 1 * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
             }
         }
@@ -849,14 +846,14 @@ __aicore__ inline void LayerNormGradV3Base::UpdateCache(const LocalTensor<float>
             __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
             __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
             uint32_t sreg = static_cast<uint32_t>(count);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+                pMask = AscendC::Reg::UpdateMask<float>(sreg);
                 LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                    Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
                 StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
             }
@@ -884,17 +881,17 @@ __aicore__ inline void LayerNormGradV3Base::Normalize(const LocalTensor<float>& 
             __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::RegTensor<float> meanReg, rstdReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+            AscendC::Reg::MaskReg pMask;
             count = static_cast<uint32_t>(colSize);
-            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+            pMask = AscendC::Reg::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + 0 * innerLoopStride);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
                 StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, cReg, pMask);
             }
         }
@@ -906,18 +903,18 @@ __aicore__ inline void LayerNormGradV3Base::Normalize(const LocalTensor<float>& 
             __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::RegTensor<float> meanReg, rstdReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 count = static_cast<uint32_t>(colSize);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    pMask = AscendC::Reg::UpdateMask<float>(count);
                     LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + j * innerLoopStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
                 }
             }
@@ -944,21 +941,21 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
             __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(colSize);
-            AscendC::MicroAPI::MaskReg pMask;
-            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pMask;
+            pMask = AscendC::Reg::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                AscendC::MicroAPI::RegTensor<float> meanReg;
-                AscendC::MicroAPI::RegTensor<float> rstdReg;
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                AscendC::Reg::RegTensor<float> meanReg;
+                AscendC::Reg::RegTensor<float> rstdReg;
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
 
-                AscendC::MicroAPI::RegTensor<float> xReg;
-                AscendC::MicroAPI::RegTensor<float> dyReg;
+                AscendC::Reg::RegTensor<float> xReg;
+                AscendC::Reg::RegTensor<float> dyReg;
                 LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerStride);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                 LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerStride);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
                 StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerStride, xReg, pMask);
             }
         }
@@ -972,21 +969,21 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 uint32_t count = static_cast<uint32_t>(colSize);
-                AscendC::MicroAPI::RegTensor<float> meanReg;
-                AscendC::MicroAPI::RegTensor<float> rstdReg;
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                AscendC::Reg::RegTensor<float> meanReg;
+                AscendC::Reg::RegTensor<float> rstdReg;
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
 
-                AscendC::MicroAPI::RegTensor<float> xReg;
-                AscendC::MicroAPI::RegTensor<float> dyReg;
-                AscendC::MicroAPI::MaskReg pMask;
+                AscendC::Reg::RegTensor<float> xReg;
+                AscendC::Reg::RegTensor<float> dyReg;
+                AscendC::Reg::MaskReg pMask;
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    pMask = AscendC::Reg::UpdateMask<float>(count);
                     LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                     LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerStride);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerStride, xReg, pMask);
                 }
             }
@@ -1203,27 +1200,27 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
 
-            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
-            AscendC::MicroAPI::RegTensor<float> gammaReg;
-            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
+            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
+            AscendC::Reg::RegTensor<float> gammaReg;
+            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::Reg::MaskReg pMask;
             count = static_cast<uint32_t>(colSize);
-            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+            pMask = AscendC::Reg::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(gammaReg, (__ubuf__ float*)gamma + 0 * innerLoopStride);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
-                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
+                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
                 StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
             }
         }
@@ -1239,28 +1236,28 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
             __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
 
-            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
-            AscendC::MicroAPI::RegTensor<float> gammaReg;
-            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
+            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
+            AscendC::Reg::RegTensor<float> gammaReg;
+            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 count = static_cast<uint32_t>(colSize);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    pMask = AscendC::Reg::UpdateMask<float>(count);
                     LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerLoopStride);
                     LoadAlign(gammaReg, (__ubuf__ float*)gamma + j * innerLoopStride);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
+                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                    Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
                     StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
                 }
             }
@@ -1269,16 +1266,15 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__ubuf__ T* dst,
-                                                                 AscendC::MicroAPI::RegTensor<float>& src,
-                                                                 AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
+                                                                 AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_NORM>(dst + offset, src, preg);
     } else {
-        AscendC::MicroAPI::RegTensor<T> xFp16;
+        AscendC::Reg::RegTensor<T> xFp16;
         Cast<T, float, castTraitB322B16>(xFp16, src, preg);
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 } // namespace LayerNormGradV3

@@ -22,7 +22,7 @@
 
 namespace RmsNorm {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 
@@ -30,17 +30,17 @@ using namespace NormCommon::NormCommonRegbase;
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 #endif
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Fp8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Hifp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Hifp8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     RoundMode::CAST_ROUND,
 };
 

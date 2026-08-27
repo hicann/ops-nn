@@ -18,10 +18,10 @@
 #include "../../norm_common/reduce_common_regbase.h"
 namespace GroupNorm {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UnalignReg;
+using namespace AscendC::Reg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UnalignReg;
 static constexpr int32_t BLOCK_SIZE = 32;
 static constexpr int32_t FOUR_BUF = 4;
 static constexpr int32_t FP32_ONE_REPEAT = 64;
@@ -37,31 +37,31 @@ static constexpr int32_t GROUP_NUM = 8;
 static constexpr int32_t MAX_ONCE_NUM_PER_CORE = 2048;
 static constexpr int32_t VL_FP32 = VECTOR_REG_WIDTH / sizeof(float);
 static constexpr float ZERO = 0.0f;
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32Even = {
-    AscendC::MicroAPI::RegLayout::ZERO, // even
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32Even = {
+    AscendC::Reg::RegLayout::ZERO, // even
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32Odd = {
-    AscendC::MicroAPI::RegLayout::ONE, // odd
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32Odd = {
+    AscendC::Reg::RegLayout::ONE, // odd
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16Even = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16Even = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16Odd = {
-    AscendC::MicroAPI::RegLayout::ONE,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16Odd = {
+    AscendC::Reg::RegLayout::ONE,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -100,7 +100,7 @@ __aicore__ inline void LoadInputData(RegTensor<float>& dst, __local_mem__ T* src
         DataCopy(dst, src + srcOffset);
     } else {
         RegTensor<T> tmp;
-        DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(tmp, src + srcOffset);
+        DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(tmp, src + srcOffset);
         Cast<float, T, castTraitB162B32Even>(dst, tmp, pregLoop);
     }
 }
@@ -111,14 +111,14 @@ __aicore__ inline void LoadGammaAndBetaData(RegTensor<float>& gamma, RegTensor<f
                                             uint32_t srcOffset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(gamma, gammaLocal + srcOffset);
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(beta, betaLocal + srcOffset);
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(gamma, gammaLocal + srcOffset);
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(beta, betaLocal + srcOffset);
     } else {
         RegTensor<T> gammaB16;
-        DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(gammaB16, gammaLocal + srcOffset);
+        DataCopy<T, AscendC::Reg::LoadDist::DIST_BRC_B16>(gammaB16, gammaLocal + srcOffset);
         Cast<float, T, castTraitB162B32Even>(gamma, gammaB16, pregLoop);
         RegTensor<T> betaB16;
-        DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(betaB16, betaLocal + srcOffset);
+        DataCopy<T, AscendC::Reg::LoadDist::DIST_BRC_B16>(betaB16, betaLocal + srcOffset);
         Cast<float, T, castTraitB162B32Even>(beta, betaB16, pregLoop);
     }
 }
@@ -132,7 +132,7 @@ __aicore__ inline void StoreOutputData(__local_mem__ T* dst, RegTensor<float>& s
     } else {
         RegTensor<T> tmpB16;
         Cast<T, float, castTraitB322B16Even>(tmpB16, src, pregLoop);
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + dstOffset, tmpB16, pregLoop);
+        DataCopy<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + dstOffset, tmpB16, pregLoop);
     }
 }
 
@@ -141,11 +141,11 @@ __aicore__ inline void StoreStatisticData(__local_mem__ T* dst, RegTensor<float>
                                           uint32_t dstOffset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dst + dstOffset, src, pregLoop);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dst + dstOffset, src, pregLoop);
     } else {
         RegTensor<T> tmpB16;
         Cast<T, float, castTraitB322B16Even>(tmpB16, src, pregLoop);
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(dst + dstOffset, tmpB16, pregLoop);
+        DataCopy<T, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B16>(dst + dstOffset, tmpB16, pregLoop);
     }
 }
 
@@ -277,8 +277,8 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(
         RegTensor<float> one;
         RegTensor<float> rstd;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0 = dichotomyAddReminder;
         // 计算mean
         // PART1: 整尾块合并
@@ -290,8 +290,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
@@ -300,12 +299,12 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
 
         NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
         Duplicate(one, float(1.0), pregMain);
         Duplicate(mean, mean, pregMain);
@@ -331,8 +330,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
@@ -346,14 +344,14 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
 
         NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         StoreStatisticData<T>(varianceOutLocal, var, pregMerge, offset);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
 }
 
@@ -425,8 +423,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
         MaskReg pregLoop;
         MaskReg pregLoop1;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0;
 
         // 整块使用tailCountScale,尾块使用tailCountScale
@@ -437,8 +435,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, tailCountScale, pregMain);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
         }
 
         // 处理welford第一次非对齐点, 整块使用tailCountScale,尾块部分使用tailCountScale, 部分使用countScale
@@ -452,10 +449,10 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Muls(tmp, dichotomyAddMeanR, coeff, pregLoop1);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanR, tmp, pregLoop1);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dichotomyAddMeanR, tmp, pregLoop1);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, mean, pregMerge);
         }
 
@@ -469,7 +466,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
         }
         // PART2: 整块剩余部分vcadd回刷UB,使用tailCountScale
@@ -478,11 +475,11 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
         }
         NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
         // 计算rstd
         Duplicate(one, float(1.0), pregMain);
@@ -506,8 +503,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
         }
         sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
         sreg1 = welfordDiffReminder;
@@ -523,7 +519,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Mul(deltaR, deltaR, deltaR, pregLoop);
             Muls(deltaR, deltaR, cnt, pregLoop);
             Muls(tmp, deltaR, coeff, pregLoop1);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(deltaR, tmp, pregLoop1);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(deltaR, tmp, pregLoop1);
 
             DataCopy(dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
@@ -534,7 +530,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, var, pregMerge);
         }
 
@@ -559,7 +555,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
         }
         for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount);
@@ -572,13 +568,13 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
         }
         NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         StoreStatisticData<T>(varianceOutLocal, var, pregMerge, offset);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
 }
 
@@ -627,8 +623,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
         MaskReg pregLoop;
         MaskReg pregLoop1;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0;
         uint32_t sreg1;
 
@@ -640,8 +636,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregMain);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
         }
 
         // 处理welford第一次非对齐点, 尾块使用countScale,整块部分使用tailCountScale, 部分使用countScale
@@ -655,10 +650,10 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Muls(tmp, dichotomyAddMeanL, coeff, pregLoop1);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop1);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop1);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, mean, pregMerge);
         }
 
@@ -672,7 +667,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
         }
         // PART2: 整块剩余部分vcadd回刷UB,使用countScale
@@ -681,11 +676,11 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
         }
         NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
         // 计算rstd
         Duplicate(one, float(1.0), pregMain);
@@ -709,8 +704,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
         }
         sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
         sreg1 = welfordDiffReminder;
@@ -726,7 +720,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Mul(deltaR, deltaR, deltaR, pregLoop);
             Muls(deltaR, deltaR, cnt, pregLoop);
             Muls(tmp, deltaL, coeff, pregLoop1);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(deltaL, tmp, pregLoop1);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(deltaL, tmp, pregLoop1);
 
             DataCopy(dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
@@ -737,7 +731,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, var, pregMerge);
         }
 
@@ -762,7 +756,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
         }
 
@@ -776,13 +770,13 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
         }
         NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         StoreStatisticData<T>(varianceOutLocal, var, pregMerge, offset);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
 }
 
@@ -834,8 +828,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         RegTensor<float> tmp;
 
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0 = dichotomyAddReminder;
         // 整块使用tailCountScale, 尾块使用CountScale
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
@@ -846,8 +840,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
         }
 
         // 剩余整块需要拆分成多部分
@@ -856,7 +849,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
 
@@ -867,9 +860,9 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
                      tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(tmp, dichotomyAddMeanL, coeff, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, mean, pregMerge);
         }
 
@@ -877,13 +870,13 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddPowerOffset);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 mean, pregMerge);
         }
 
         NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
         // 计算rstd
         Duplicate(one, float(1.0), pregMain);
@@ -910,8 +903,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
-                                                                                  pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
         }
 
         // 整块剩余部分回刷UB，整块使用tailCountScale
@@ -924,7 +916,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
 
@@ -937,13 +929,13 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, cnt, pregMain);
             Muls(tmp, deltaL, coeff, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(deltaL, tmp, pregLoop);
+            Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(deltaL, tmp, pregLoop);
             DataCopy(dichotomyAddVarL,
                      tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, var, pregMerge);
         }
 
@@ -956,7 +948,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 var, pregMerge);
         }
@@ -964,7 +956,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         StoreStatisticData<T>(varianceOutLocal, var, pregMerge, offset);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
+        DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
 }
 
@@ -1039,8 +1031,8 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__local_mem__ T* xLocal, __l
         RegTensor<float> one;
         RegTensor<float> rstd;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0;
         for (uint16_t i = 0; i < numPerCoreProcess; i++) {
             // 计算mean
@@ -1053,8 +1045,8 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__local_mem__ T* xLocal, __l
                 Muls(dichotomyAddR, dichotomyAddR, scale, pregLoop);
                 Add(sumMean, dichotomyAddL, dichotomyAddR, pregMain);
                 ReduceSum(mean, sumMean, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, mean,
-                                                                                      pregMerge);
+                DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, mean,
+                                                                                 pregMerge);
             }
 
             // 整块剩余部分vcadd回刷UB
@@ -1064,12 +1056,12 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__local_mem__ T* xLocal, __l
                                  i * elemNumAlign + (j + dichotomyAddReminderLoopCount) * VL_FP32);
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
                 ReduceSum(mean, dichotomyAddL, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + j, mean, pregMerge);
             }
 
             NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + i, mean, pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + i, mean, pregMerge);
             // 计算rstd
             Duplicate(one, float(1.0), pregMain);
             Duplicate(mean, mean, pregMain);
@@ -1086,8 +1078,7 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__local_mem__ T* xLocal, __l
                 Muls(dichotomyAddR, dichotomyAddR, scale, pregLoop);
                 Add(sumVar, dichotomyAddL, dichotomyAddR, pregMain);
                 ReduceSum(var, sumVar, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, var,
-                                                                                      pregMerge);
+                DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, var, pregMerge);
             }
 
             // 整块剩余部分vcadd回刷UB
@@ -1099,13 +1090,13 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__local_mem__ T* xLocal, __l
                 Mul(dichotomyAddL, dichotomyAddL, dichotomyAddL, pregMain);
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
                 ReduceSum(var, dichotomyAddL, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + j, var, pregMerge);
             }
             NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             StoreStatisticData<T>(varianceOutLocal, var, pregMerge, i);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + i, rstd, pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + i, rstd, pregMerge);
         }
     }
 }
@@ -1126,8 +1117,8 @@ __aicore__ inline void CalMeanAndRstdSpecial(__local_mem__ T* xLocal, __local_me
         RegTensor<float> rstd;
         RegTensor<float> one;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         Duplicate(one, float(1.0), pregMain);
         for (uint16_t i = 0; i < numPerCoreProcess; i++) {
             uint32_t sreg0 = reduceCount;
@@ -1135,7 +1126,7 @@ __aicore__ inline void CalMeanAndRstdSpecial(__local_mem__ T* xLocal, __local_me
             LoadInputData<T>(x, xLocal, pregLoop, i * elemNumAlign);
             Muls(xScale, x, scale, pregLoop);
             ReduceSum(mean, xScale, pregLoop);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + i, mean, pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + i, mean, pregMerge);
 
             Duplicate(mean, mean, pregMain);
             Sub(x, x, mean, pregLoop);
@@ -1144,7 +1135,7 @@ __aicore__ inline void CalMeanAndRstdSpecial(__local_mem__ T* xLocal, __local_me
             ReduceSum(var, xScale, pregLoop);
             StoreStatisticData<T>(varianceOutLocal, var, pregMerge, i);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + i, rstd, pregMerge);
+            DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + i, rstd, pregMerge);
         }
     }
 }
@@ -1198,12 +1189,12 @@ __aicore__ inline void VFNormalizeUnAlign(__local_mem__ T1* xLocal, __local_mem_
         RegTensor<float> yOdd;
         RegTensor<float> yEven;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
+        MaskReg pregMain = CreateMask<T1, AscendC::Reg::MaskPattern::ALL>();
 
         UnalignReg uSrc;
         UnalignReg uDst;
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstd, rstdLocal);
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(mean, meanLocal);
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstd, rstdLocal);
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(mean, meanLocal);
         DataCopyUnAlignPre<T1>(uSrc, xLocal);
         for (uint16_t i = 0; i < static_cast<uint16_t>(rowsCount); i++) {
             LoadGammaAndBetaData<T2>(gamma, beta, gammaLocal, betaLocal, pregMain, i);
@@ -1275,9 +1266,9 @@ __aicore__ inline void VFNormalizeAlign(__local_mem__ T1* xLocal, __local_mem__ 
         RegTensor<float> rstd;
         RegTensor<float> y;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstd, rstdLocal);
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(mean, meanLocal);
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstd, rstdLocal);
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(mean, meanLocal);
         for (uint16_t i = 0; i < rowsCount; i++) {
             uint32_t sreg0 = reduceCount;
             LoadGammaAndBetaData<T2>(gamma, beta, gammaLocal, betaLocal, pregMain, i);
@@ -1369,8 +1360,7 @@ __aicore__ inline void ProcessMeanAndVariance(LocalTensor<float>& meanTensor, Lo
                 RegTensor<T1> meanOut;
                 DataCopy(mean, meanLocal + i * VL_FP32);
                 Cast<T1, float, castTraitB322B16Even>(meanOut, mean, pregLoop);
-                DataCopy<T1, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(meanOutLocal + i * VL_FP32, meanOut,
-                                                                          pregLoop);
+                DataCopy<T1, AscendC::Reg::StoreDist::DIST_PACK_B32>(meanOutLocal + i * VL_FP32, meanOut, pregLoop);
             }
         }
     }

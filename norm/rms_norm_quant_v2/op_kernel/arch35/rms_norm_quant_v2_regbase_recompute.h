@@ -709,17 +709,16 @@ private:
         __VEC_SCOPE__
         {
             uint32_t sreg = static_cast<uint32_t>(count);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-                AscendC::MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
+                pMask = AscendC::Reg::UpdateMask<float>(sreg);
+                AscendC::Reg::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    AscendC::MicroAPI::LoadAlign(bReg,
-                                                 (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                    AscendC::Reg::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                AscendC::MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
+                AscendC::Reg::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
             }
         }
     }

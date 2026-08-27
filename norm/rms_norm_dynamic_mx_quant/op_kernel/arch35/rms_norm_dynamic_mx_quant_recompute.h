@@ -21,7 +21,7 @@
 namespace RmsNormDynamicMxQuantNs {
 
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 template <typename T_X, typename T_GAMMA, typename T_Y, bool isOptimizeMode = false>
 class RmsNormDynamicMxQuantRecompute {

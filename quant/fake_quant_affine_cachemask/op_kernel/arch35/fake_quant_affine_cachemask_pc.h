@@ -271,8 +271,7 @@ __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::Compute(int64
             Reg::DataCopy<float, Reg::LoadDist::DIST_NORM>(vregSc, sPtr + i * VL_FP32);
             // VF 内现算 1/scale：用 vreg 替代独立 invScale UB buf
             Reg::Duplicate<float>(vregOne, 1.0f);
-            static constexpr AscendC::MicroAPI::DivSpecificMode divMode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
-                                                                           true};
+            static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
             Reg::Div<float, &divMode>(vregInvSc, vregOne, vregSc, mask);
             // 两步 inv_scale：x * (1/s)，对齐 torch CUDA _fake_quant_per_channel_cachemask_cuda_helper
             // Reg::Mul<float>(vregTmp, vregTmp, vregInvSc, mask);

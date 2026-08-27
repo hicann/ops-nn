@@ -23,15 +23,15 @@
 
 namespace BatchNormV3Ops {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3RARBlockSplitR {
@@ -517,7 +517,7 @@ private:
                 MaskReg mask0;
                 uint32_t sreg0 = processR0Num * processR1Num;
                 for (uint16_t i = 0; i < loopCount; i++) {
-                    mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                     LoadOneTensorForDtypeT(xTensorAddr, x1, mask0, a_idx * processRAlignNum + i * VL_F32);
                     LoadAlign(tmpMean, meanTensorAddr + a_idx * formerRAlignNum + i * VL_F32);
                     LoadAlign(tmpM2, m2TensorAddr + a_idx * formerRAlignNum + i * VL_F32);
@@ -958,7 +958,7 @@ private:
                 MaskReg mask0;
                 uint32_t sreg0 = processRNum;
                 for (uint16_t i = 0; i < numLoop; i++) {
-                    mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                     LoadOneNumberTensorForDtypeT(gamma, gammaTensorAddr, mask0, aStartIdx + j);
                     LoadOneNumberTensorForDtypeT(beta, betaTensorAddr, mask0, aStartIdx + j);
 

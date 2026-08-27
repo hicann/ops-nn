@@ -265,63 +265,63 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
     uint16_t baBlockSize = static_cast<uint16_t>(bBlockSize);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<xDtype> vregIn;
-        MicroAPI::RegTensor<float> vregInFp32;
-        MicroAPI::RegTensor<xDtype> vregSmooth;
-        MicroAPI::RegTensor<float> vregSmoothFp32;
-        MicroAPI::RegTensor<float> vregAbs;
-        MicroAPI::RegTensor<float> vregOutScale;
-        MicroAPI::RegTensor<float> vregColMax;
-        MicroAPI::RegTensor<int16_t> vregCastI16;
-        MicroAPI::RegTensor<half> vregCastF16;
-        MicroAPI::RegTensor<yCopyDtype> vregOut;
-        MicroAPI::RegTensor<float> vregOutFp32;
-        MicroAPI::RegTensor<float> vregMaxFactor;
-        MicroAPI::MaskReg preg0;
-        MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregH = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
-        MicroAPI::Duplicate<float>(vregMaxFactor, maxValueDiv, pregAll);
+        Reg::RegTensor<xDtype> vregIn;
+        Reg::RegTensor<float> vregInFp32;
+        Reg::RegTensor<xDtype> vregSmooth;
+        Reg::RegTensor<float> vregSmoothFp32;
+        Reg::RegTensor<float> vregAbs;
+        Reg::RegTensor<float> vregOutScale;
+        Reg::RegTensor<float> vregColMax;
+        Reg::RegTensor<int16_t> vregCastI16;
+        Reg::RegTensor<half> vregCastF16;
+        Reg::RegTensor<yCopyDtype> vregOut;
+        Reg::RegTensor<float> vregOutFp32;
+        Reg::RegTensor<float> vregMaxFactor;
+        Reg::MaskReg preg0;
+        Reg::MaskReg pregAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+        Reg::MaskReg pregH = Reg::CreateMask<float, Reg::MaskPattern::H>();
+        Reg::Duplicate<float>(vregMaxFactor, maxValueDiv, pregAll);
         for (uint16_t bIdx = 0; bIdx < baBlockSize; bIdx++) {
             uint32_t sregN = nSize;
             for (uint16_t i = 0; i < nLoopNum; i++) {
-                preg0 = MicroAPI::UpdateMask<float>(sregN);
-                MicroAPI::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
+                preg0 = Reg::UpdateMask<float>(sregN);
+                Reg::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
-                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + j * nSize + bIdx * mLen_ * nSize));
-                    MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
+                    Reg::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
-                        MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
-                        MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
+                        Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                            (__ubuf__ xDtype*)(smoothAddr + j));
+                        Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
+                        Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
-                    MicroAPI::Abs<float>(vregAbs, vregInFp32, preg0);
-                    MicroAPI::Max<float>(vregColMax, vregAbs, vregColMax, preg0);
+                    Reg::Abs<float>(vregAbs, vregInFp32, preg0);
+                    Reg::Max<float>(vregColMax, vregAbs, vregColMax, preg0);
                 }
-                MicroAPI::Mul(vregOutScale, vregColMax, vregMaxFactor, preg0);
+                Reg::Mul(vregOutScale, vregColMax, vregMaxFactor, preg0);
                 for (uint16_t k = 0; k < mLoopNum; k++) {
                     auto addr = yAddr + i * REG_LEN + (bIdx * mLoopNum + k) * nSizeOut;
-                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + k * nSize + bIdx * mLen_ * nSize));
-                    MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
+                    Reg::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + k));
-                        MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
-                        MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
+                        Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                            (__ubuf__ xDtype*)(smoothAddr + k));
+                        Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
+                        Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
-                    MicroAPI::Div<float>(vregOutFp32, vregInFp32, vregOutScale, preg0);
+                    Reg::Div<float>(vregOutFp32, vregInFp32, vregOutScale, preg0);
                     CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                     if constexpr (IsSameType<yDtype, int4b_t>::value) {
                         addr = yAddr + (i * REG_LEN + (bIdx * mLen_ + k) * nSizeOut) / 2;
-                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                        Reg::StoreAlign<yCopyDtype, Reg::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                     } else {
-                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
+                        Reg::StoreAlign<yCopyDtype, Reg::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
                     }
                 }
-                MicroAPI::StoreAlign<float>((__ubuf__ float*)(scaleAddr + i * REG_LEN + bIdx * nSizeScale),
-                                            vregOutScale, preg0);
+                Reg::StoreAlign<float>((__ubuf__ float*)(scaleAddr + i * REG_LEN + bIdx * nSizeScale), vregOutScale,
+                                       preg0);
             }
         }
     }
@@ -345,80 +345,80 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<xDtype> vregIn;
-        MicroAPI::RegTensor<float> vregInFp32;
-        MicroAPI::RegTensor<xDtype> vregSmooth;
-        MicroAPI::RegTensor<float> vregSmoothFp32;
-        MicroAPI::RegTensor<float> vregResult;
-        MicroAPI::RegTensor<float> vregOutScale;
-        MicroAPI::RegTensor<float> vregColMax;
-        MicroAPI::RegTensor<float> vregColMin;
-        MicroAPI::RegTensor<float> vregDivScale;
-        MicroAPI::RegTensor<float> vregOffset;
-        MicroAPI::RegTensor<float> vregMaxFactor;
-        MicroAPI::RegTensor<int16_t> vregCastI16;
-        MicroAPI::RegTensor<half> vregCastF16;
-        MicroAPI::RegTensor<yCopyDtype> vregOut;
-        MicroAPI::RegTensor<float> vregOutFp32;
-        MicroAPI::RegTensor<float> vregDiv;
-        MicroAPI::RegTensor<float> vregOffsetDivVal;
-        MicroAPI::MaskReg preg0;
-        MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregH = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
-        MicroAPI::Duplicate<float>(vregMaxFactor, maxValue, pregAll);
+        Reg::RegTensor<xDtype> vregIn;
+        Reg::RegTensor<float> vregInFp32;
+        Reg::RegTensor<xDtype> vregSmooth;
+        Reg::RegTensor<float> vregSmoothFp32;
+        Reg::RegTensor<float> vregResult;
+        Reg::RegTensor<float> vregOutScale;
+        Reg::RegTensor<float> vregColMax;
+        Reg::RegTensor<float> vregColMin;
+        Reg::RegTensor<float> vregDivScale;
+        Reg::RegTensor<float> vregOffset;
+        Reg::RegTensor<float> vregMaxFactor;
+        Reg::RegTensor<int16_t> vregCastI16;
+        Reg::RegTensor<half> vregCastF16;
+        Reg::RegTensor<yCopyDtype> vregOut;
+        Reg::RegTensor<float> vregOutFp32;
+        Reg::RegTensor<float> vregDiv;
+        Reg::RegTensor<float> vregOffsetDivVal;
+        Reg::MaskReg preg0;
+        Reg::MaskReg pregAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+        Reg::MaskReg pregH = Reg::CreateMask<float, Reg::MaskPattern::H>();
+        Reg::Duplicate<float>(vregMaxFactor, maxValue, pregAll);
 
-        MicroAPI::Duplicate<float>(vregOffsetDivVal, offsetDivValue, pregAll);
+        Reg::Duplicate<float>(vregOffsetDivVal, offsetDivValue, pregAll);
 
         for (uint16_t bIdx = 0; bIdx < baBlockSize; bIdx++) {
             uint32_t sregN = nSize;
             for (uint16_t i = 0; i < nLoopNum; i++) {
-                preg0 = MicroAPI::UpdateMask<float>(sregN);
-                MicroAPI::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
-                MicroAPI::Duplicate<float>(vregColMin, POS_INFINITY, preg0);
+                preg0 = Reg::UpdateMask<float>(sregN);
+                Reg::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
+                Reg::Duplicate<float>(vregColMin, POS_INFINITY, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
-                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + (j + bIdx * mLen_) * nSize));
-                    MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
+                    Reg::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
-                        MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
-                        MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
+                        Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                            (__ubuf__ xDtype*)(smoothAddr + j));
+                        Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
+                        Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
-                    MicroAPI::Max<float>(vregColMax, vregInFp32, vregColMax, preg0);
-                    MicroAPI::Min<float>(vregColMin, vregInFp32, vregColMin, preg0);
+                    Reg::Max<float>(vregColMax, vregInFp32, vregColMax, preg0);
+                    Reg::Min<float>(vregColMin, vregInFp32, vregColMin, preg0);
                 }
-                MicroAPI::Sub(vregResult, vregColMax, vregColMin, preg0);
-                MicroAPI::Mul(vregOutScale, vregResult, vregOffsetDivVal, preg0);
-                MicroAPI::Div<float, &divHighPrecisionMode>(vregDivScale, vregColMax, vregOutScale, preg0);
-                MicroAPI::Sub<float>(vregOffset, vregMaxFactor, vregDivScale, preg0);
+                Reg::Sub(vregResult, vregColMax, vregColMin, preg0);
+                Reg::Mul(vregOutScale, vregResult, vregOffsetDivVal, preg0);
+                Reg::Div<float, &divHighPrecisionMode>(vregDivScale, vregColMax, vregOutScale, preg0);
+                Reg::Sub<float>(vregOffset, vregMaxFactor, vregDivScale, preg0);
 
                 for (uint16_t k = 0; k < mLoopNum; k++) {
                     auto addr = yAddr + i * REG_LEN + (k + bIdx * mLen_) * nSizeOut;
-                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + (k + bIdx * mLen_) * nSize));
-                    MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
+                    Reg::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + k));
-                        MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
-                        MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
+                        Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                            (__ubuf__ xDtype*)(smoothAddr + k));
+                        Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
+                        Reg::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
-                    MicroAPI::Div<float>(vregDiv, vregInFp32, vregOutScale, preg0);
-                    MicroAPI::Add<float>(vregOutFp32, vregDiv, vregOffset, preg0);
+                    Reg::Div<float>(vregDiv, vregInFp32, vregOutScale, preg0);
+                    Reg::Add<float>(vregOutFp32, vregDiv, vregOffset, preg0);
 
                     CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                     if constexpr (IsSameType<yDtype, int4b_t>::value) {
                         addr = yAddr + (i * REG_LEN + (k + bIdx * mLen_) * nSizeOut) / 2;
-                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                        Reg::StoreAlign<yCopyDtype, Reg::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                     } else {
-                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
+                        Reg::StoreAlign<yCopyDtype, Reg::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
                     }
                 }
-                MicroAPI::StoreAlign<float>((__ubuf__ float*)scaleAddr + i * REG_LEN + bIdx * nSizeScale, vregOutScale,
-                                            preg0);
-                MicroAPI::StoreAlign<float>((__ubuf__ float*)offsetAddr + i * REG_LEN + bIdx * nSizeScale, vregOffset,
-                                            preg0);
+                Reg::StoreAlign<float>((__ubuf__ float*)scaleAddr + i * REG_LEN + bIdx * nSizeScale, vregOutScale,
+                                       preg0);
+                Reg::StoreAlign<float>((__ubuf__ float*)offsetAddr + i * REG_LEN + bIdx * nSizeScale, vregOffset,
+                                       preg0);
             }
         }
     }

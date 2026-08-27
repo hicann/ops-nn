@@ -22,9 +22,9 @@
 
 namespace BatchNormGradV3 {
 using namespace AscendC;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 static constexpr uint32_t ONE = 1;
 static constexpr uint32_t TWO = 2;
@@ -51,23 +51,23 @@ __aicore__ inline uint32_t RoundUpOneBlock(uint32_t x) { return (x + ONE_BLK_SIZ
 
 __aicore__ inline uint32_t RoundUpTwoBlock(uint32_t x) { return (x + TWO_BLK_SIZE - 1) / TWO_BLK_SIZE * TWO_BLK_SIZE; }
 
-static constexpr MicroAPI::CastTrait castTraitB162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait castTraitB162B32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-static constexpr MicroAPI::CastTrait castTraitB322B16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitB322B16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
-__aicore__ inline void LoadOneTensor(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
-                                     MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadOneTensor(const __ubuf__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                     uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input) + offset);
+        Reg::RegTensor<half> xFp16;
+        LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
         LoadAlign(dst, (__ubuf__ float*)(input) + offset);
@@ -75,8 +75,8 @@ __aicore__ inline void LoadOneTensor(const __ubuf__ void* input, MicroAPI::RegTe
 }
 
 template <typename T>
-__aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, MicroAPI::RegTensor<float>& dst,
-                                            MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                            uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, (__ubuf__ float*)src + offset);
@@ -88,65 +88,64 @@ __aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, MicroAPI::
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensor(const __ubuf__ void* output, MicroAPI::RegTensor<float>& src,
-                                      MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneTensor(const __ubuf__ void* output, Reg::RegTensor<float>& src, Reg::MaskReg& preg,
+                                      uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
+        Reg::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        StoreAlign<half, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ half*)(output) + offset, xFp16, preg);
+        StoreAlign<half, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
+        Reg::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ bfloat16_t*)(output) + offset, xBf16,
-                                                                   preg);
+        StoreAlign<bfloat16_t, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ bfloat16_t*)(output) + offset, xBf16, preg);
     } else {
         StoreAlign((__ubuf__ float*)(output) + offset, src, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadOneElement(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
-                                      MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadOneElement(const __ubuf__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                      uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        LoadAlign<half, MicroAPI::LoadDist::DIST_BRC_B16>(xFp16, (__ubuf__ half*)(input) + offset);
+        Reg::RegTensor<half> xFp16;
+        LoadAlign<half, Reg::LoadDist::DIST_BRC_B16>(xFp16, (__ubuf__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_BRC_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        LoadAlign<bfloat16_t, Reg::LoadDist::DIST_BRC_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
-        LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ float*)(input)) + offset);
+        LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ float*)(input)) + offset);
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreOneElement(const __ubuf__ void* output, MicroAPI::RegTensor<float>& src,
-                                       MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneElement(const __ubuf__ void* output, Reg::RegTensor<float>& src, Reg::MaskReg& preg,
+                                       uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
+        Reg::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        StoreAlign<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ half*)(output) + offset, xFp16, preg);
+        StoreAlign<half, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
+        Reg::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ bfloat16_t*)(output) + offset,
-                                                                            xBf16, preg);
+        StoreAlign<bfloat16_t, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ bfloat16_t*)(output) + offset, xBf16,
+                                                                       preg);
     } else {
-        StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)output) + offset, src, preg);
+        StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)output) + offset, src, preg);
     }
 }
 
-__aicore__ inline void LoadTwoTensorSum(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
-                                        MicroAPI::MaskReg& preg, uint32_t offset0, uint32_t offset1)
+__aicore__ inline void LoadTwoTensorSum(const __ubuf__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                        uint32_t offset0, uint32_t offset1)
 {
-    MicroAPI::RegTensor<float> a, b;
+    Reg::RegTensor<float> a, b;
     LoadAlign(a, (__ubuf__ float*)(input) + offset0);
     LoadAlign(b, (__ubuf__ float*)(input) + offset1);
-    Add<float, MicroAPI::MaskMergeMode::ZEROING>(dst, a, b, preg);
+    Add<float, Reg::MaskMergeMode::ZEROING>(dst, a, b, preg);
 }
 
 template <typename T>

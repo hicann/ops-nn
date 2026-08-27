@@ -15,7 +15,7 @@
 
 namespace AddLayerNormGrad {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 constexpr uint16_t V_LENGTH = VECTOR_REG_WIDTH / sizeof(float);
 

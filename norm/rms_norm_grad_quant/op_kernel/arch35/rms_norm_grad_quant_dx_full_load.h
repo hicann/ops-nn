@@ -177,7 +177,7 @@ public:
                 uint32_t sreg = cols_;
                 int64_t cols = colsAlignBlock_;
                 int64_t colsAlignHiFP8 = colsAlignHiFP8_;
-                MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                MaskReg maskReg = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
@@ -337,7 +337,7 @@ public:
                 RegTensor<float> xTailRegshiftLeft;
                 RegTensor<float> srcReg;
                 MaskReg pregTail = UpdateMask<float>(colsValidLastTwoVL);
-                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                MaskReg maskRegAll = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 Duplicate(srcReg, 0.0f, maskRegAll);
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
                     LoadAlign(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL));
@@ -356,7 +356,7 @@ public:
             __VEC_SCOPE__
             {
                 RegTensor<float> srcReg;
-                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                MaskReg maskRegAll = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 Duplicate(srcReg, 0.0f, maskRegAll);
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
                     StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
@@ -372,7 +372,7 @@ public:
                 RegTensor<float> xTailReg;
                 RegTensor<float> xTailRegshiftLeft;
                 MaskReg pregTail = UpdateMask<float>(colsValidLastOneVL);
-                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                MaskReg maskRegAll = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
                     LoadAlign(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL));
                     // 利用shiftleft将非对齐位置补0

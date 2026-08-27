@@ -209,7 +209,7 @@ __aicore__ inline void ComputeMxScaleCuBLAS(const int64_t dataLen, const uint16_
     }
     Reg::Adds(manMax0Reg, expMax0Reg, 1, maskAll);
     Reg::Select(expMax0Reg, manMax0Reg, expMax0Reg, p0);
-    Reg::Pack<uint16_t, uint32_t, AscendC::MicroAPI::HighLowPart::LOWEST>(expMax0Reg16, expMax0Reg);
+    Reg::Pack<uint16_t, uint32_t, AscendC::Reg::HighLowPart::LOWEST>(expMax0Reg16, expMax0Reg);
 
     Reg::ShiftRights(expMax1Reg, (Reg::RegTensor<uint32_t>&)xMax1Reg, SHR_NUM_FOR_FP32, maskAll);
     Reg::And(manMax1Reg, (Reg::RegTensor<uint32_t>&)xMax1Reg, manMaskReg, maskAll);
@@ -223,17 +223,17 @@ __aicore__ inline void ComputeMxScaleCuBLAS(const int64_t dataLen, const uint16_
     }
     Reg::Adds(manMax1Reg, expMax1Reg, 1, maskAll);
     Reg::Select(expMax1Reg, manMax1Reg, expMax1Reg, p2);
-    Reg::Pack<uint16_t, uint32_t, AscendC::MicroAPI::HighLowPart::LOWEST>(expMax1Reg16, expMax1Reg);
+    Reg::Pack<uint16_t, uint32_t, AscendC::Reg::HighLowPart::LOWEST>(expMax1Reg16, expMax1Reg);
 
     Reg::Interleave(expMax0Reg16, expMax1Reg16, expMax0Reg16, expMax1Reg16);
     Reg::ShiftLefts(expMaxReg16, expMax0Reg16, SHR_NUM_FOR_BF16, maskAll);
-    Reg::Pack<uint8_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(scaleReg, expMax0Reg16);
+    Reg::Pack<uint8_t, uint16_t, AscendC::Reg::HighLowPart::LOWEST>(scaleReg, expMax0Reg16);
 
-    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(p0, expMaxReg16, infReg, maskAll);
-    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(p1, expMaxReg16, biasReg, maskAll);
-    AscendC::MicroAPI::Sub(reversedScaleReg, biasReg, expMaxReg16, maskAll);
-    AscendC::MicroAPI::Select<uint16_t>(reversedScaleReg, reversedScaleReg, nanReg, p0);
-    AscendC::MicroAPI::Select<uint16_t>(reversedScaleReg, specialExpReg, reversedScaleReg, p1);
+    AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(p0, expMaxReg16, infReg, maskAll);
+    AscendC::Reg::Compare<uint16_t, CMPMODE::EQ>(p1, expMaxReg16, biasReg, maskAll);
+    AscendC::Reg::Sub(reversedScaleReg, biasReg, expMaxReg16, maskAll);
+    AscendC::Reg::Select<uint16_t>(reversedScaleReg, reversedScaleReg, nanReg, p0);
+    AscendC::Reg::Select<uint16_t>(reversedScaleReg, specialExpReg, reversedScaleReg, p1);
 }
 
 template <typename T, typename U, const uint64_t dstTypeMax>
@@ -313,7 +313,7 @@ __aicore__ inline void ComputeMxScaleDynamicDtypeRange(const int64_t dataLen, co
     Reg::Select<uint16_t>(scaleValue, sharedExp, expMaskBF16, infMask);
     Reg::Select<uint16_t>(scaleValue, scaleValue, zeroReg, zeroMask);
     Reg::ShiftRights(scaleValue, scaleValue, SHR_NUM_FOR_BF16, mask);
-    Reg::Pack<uint8_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(scaleReg, scaleValue);
+    Reg::Pack<uint8_t, uint16_t, AscendC::Reg::HighLowPart::LOWEST>(scaleReg, scaleValue);
 
     Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, mask);
     Reg::Sub(reversedScaleReg, scaleBias, sharedExp, mask);

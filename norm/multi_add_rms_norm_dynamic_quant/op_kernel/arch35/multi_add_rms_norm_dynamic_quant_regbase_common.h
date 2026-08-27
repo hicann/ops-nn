@@ -27,7 +27,7 @@
 
 namespace MultiAddRmsNormDynamicQuant {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 using RmsNorm::castTraitFp322Fp8;
@@ -68,16 +68,16 @@ constexpr float DIV_FACTOR_FP8E4M3FN = (static_cast<float>(1.0) / 448);
 constexpr float DIV_FACTOR_FP8E5M2 = (static_cast<float>(1.0) / 57344);
 constexpr float DIV_FACTOR_HIFP8 = (static_cast<float>(1.0) / 32768);
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp322Fp16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp162Int8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
 

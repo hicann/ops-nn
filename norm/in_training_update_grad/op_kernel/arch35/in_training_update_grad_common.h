@@ -21,14 +21,14 @@
 
 namespace InTrainingUpdateGrad {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using namespace AscendC::Reg;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr uint32_t VECTOR_REG_WIDTH = 256U;                    // DAV_3510 vector register width in bytes
 constexpr uint32_t VL_FP32 = VECTOR_REG_WIDTH / sizeof(float); // 64
@@ -39,10 +39,10 @@ constexpr float IN_EPSILON = 1e-6f;
 constexpr float RSTD_POS_INF = 3.40282366920938E+38f;
 constexpr float RSTD_ZERO = 0.0f;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 

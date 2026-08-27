@@ -576,32 +576,30 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::MulsAddsVf(__ubu
                                                                            __ubuf__ float* meanRstdPtr,
                                                                            uint32_t calCount)
 {
-    AscendC::MicroAPI::MaskReg maskFull0;
-    AscendC::MicroAPI::MaskReg maskFull1;
-    AscendC::MicroAPI::RegTensor<float> vMean, vRstd;
-    AscendC::MicroAPI::RegTensor<float> vSrc0, vSrc1;
-    AscendC::MicroAPI::RegTensor<float> vTmp0, vTmp1;
-    AscendC::MicroAPI::RegTensor<float> vOut0, vOut1;
+    AscendC::Reg::MaskReg maskFull0;
+    AscendC::Reg::MaskReg maskFull1;
+    AscendC::Reg::RegTensor<float> vMean, vRstd;
+    AscendC::Reg::RegTensor<float> vSrc0, vSrc1;
+    AscendC::Reg::RegTensor<float> vTmp0, vTmp1;
+    AscendC::Reg::RegTensor<float> vOut0, vOut1;
 
     uint32_t fullRepeatTimes = (calCount + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
     uint16_t pairRepeatTimes = static_cast<uint16_t>((fullRepeatTimes + 1) / 2);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vMean,
-                                                                                   meanRstdPtr + meanValueOffset);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vRstd,
-                                                                                   meanRstdPtr + rstdValueOffset);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vMean, meanRstdPtr + meanValueOffset);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vRstd, meanRstdPtr + rstdValueOffset);
     for (uint16_t i = 0; i < pairRepeatTimes; i++) {
-        maskFull0 = AscendC::MicroAPI::UpdateMask<float>(calCount);
-        maskFull1 = AscendC::MicroAPI::UpdateMask<float>(calCount);
+        maskFull0 = AscendC::Reg::UpdateMask<float>(calCount);
+        maskFull1 = AscendC::Reg::UpdateMask<float>(calCount);
         uint32_t offsetA = i * 2 * oneRepeatSizeB32;
         uint32_t offsetB = offsetA + oneRepeatSizeB32;
-        AscendC::MicroAPI::LoadAlign(vSrc0, src0Ptr + offsetA);
-        AscendC::MicroAPI::LoadAlign(vSrc1, src0Ptr + offsetB);
-        AscendC::MicroAPI::Sub(vTmp0, vSrc0, vMean, maskFull0);
-        AscendC::MicroAPI::Sub(vTmp1, vSrc1, vMean, maskFull1);
-        AscendC::MicroAPI::Mul(vOut0, vTmp0, vRstd, maskFull0);
-        AscendC::MicroAPI::Mul(vOut1, vTmp1, vRstd, maskFull1);
-        AscendC::MicroAPI::StoreAlign(src0Ptr + offsetA, vOut0, maskFull0);
-        AscendC::MicroAPI::StoreAlign(src0Ptr + offsetB, vOut1, maskFull1);
+        AscendC::Reg::LoadAlign(vSrc0, src0Ptr + offsetA);
+        AscendC::Reg::LoadAlign(vSrc1, src0Ptr + offsetB);
+        AscendC::Reg::Sub(vTmp0, vSrc0, vMean, maskFull0);
+        AscendC::Reg::Sub(vTmp1, vSrc1, vMean, maskFull1);
+        AscendC::Reg::Mul(vOut0, vTmp0, vRstd, maskFull0);
+        AscendC::Reg::Mul(vOut1, vTmp1, vRstd, maskFull1);
+        AscendC::Reg::StoreAlign(src0Ptr + offsetA, vOut0, maskFull0);
+        AscendC::Reg::StoreAlign(src0Ptr + offsetB, vOut1, maskFull1);
     }
 }
 
@@ -611,66 +609,65 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxVf(
     __ubuf__ float* betaPtr, __ubuf__ float* c1Ptr, __ubuf__ float* c2Ptr, __ubuf__ float* meanRstdPtr, uint32_t cGIdx,
     float swishScaleValue, uint32_t calCount)
 {
-    AscendC::MicroAPI::MaskReg maskFull0;
-    AscendC::MicroAPI::MaskReg maskFull1;
-    AscendC::MicroAPI::RegTensor<float> vGamma, vBeta, vC1, vC2, vRstd;
-    AscendC::MicroAPI::RegTensor<float> vX0, vDy0, vYMul0, vY0, vDenScaled0, vDenExp0, vDen0;
-    AscendC::MicroAPI::RegTensor<float> vDswish0, vDyNew0, vCorrectionMul0, vCorrection0, vDx0;
-    AscendC::MicroAPI::RegTensor<float> vX1, vDy1, vYMul1, vY1, vDenScaled1, vDenExp1, vDen1;
-    AscendC::MicroAPI::RegTensor<float> vDswish1, vDyNew1, vCorrectionMul1, vCorrection1, vDx1;
+    AscendC::Reg::MaskReg maskFull0;
+    AscendC::Reg::MaskReg maskFull1;
+    AscendC::Reg::RegTensor<float> vGamma, vBeta, vC1, vC2, vRstd;
+    AscendC::Reg::RegTensor<float> vX0, vDy0, vYMul0, vY0, vDenScaled0, vDenExp0, vDen0;
+    AscendC::Reg::RegTensor<float> vDswish0, vDyNew0, vCorrectionMul0, vCorrection0, vDx0;
+    AscendC::Reg::RegTensor<float> vX1, vDy1, vYMul1, vY1, vDenScaled1, vDenExp1, vDen1;
+    AscendC::Reg::RegTensor<float> vDswish1, vDyNew1, vCorrectionMul1, vCorrection1, vDx1;
     uint32_t fullRepeatTimes = (calCount + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
     uint16_t pairRepeatTimes = static_cast<uint16_t>((fullRepeatTimes + 1) / 2);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vGamma, gammaPtr + cGIdx);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vBeta, betaPtr + cGIdx);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vC1, c1Ptr);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vC2, c2Ptr);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vRstd,
-                                                                                   meanRstdPtr + rstdValueOffset);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vGamma, gammaPtr + cGIdx);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vBeta, betaPtr + cGIdx);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vC1, c1Ptr);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vC2, c2Ptr);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vRstd, meanRstdPtr + rstdValueOffset);
     for (uint16_t i = 0; i < pairRepeatTimes; i++) {
         uint32_t offset0 = i * 2 * oneRepeatSizeB32;
         uint32_t offset1 = offset0 + oneRepeatSizeB32;
-        maskFull0 = AscendC::MicroAPI::UpdateMask<float>(calCount);
-        maskFull1 = AscendC::MicroAPI::UpdateMask<float>(calCount);
-        AscendC::MicroAPI::LoadAlign(vX0, xPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vDy0, dyPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vX1, xPtr + offset1);
-        AscendC::MicroAPI::LoadAlign(vDy1, dyPtr + offset1);
-        AscendC::MicroAPI::Mul(vYMul0, vX0, vGamma, maskFull0);
-        AscendC::MicroAPI::Mul(vYMul1, vX1, vGamma, maskFull1);
-        AscendC::MicroAPI::Add(vY0, vYMul0, vBeta, maskFull0);
-        AscendC::MicroAPI::Add(vY1, vYMul1, vBeta, maskFull1);
-        AscendC::MicroAPI::Muls(vYMul0, vY0, swishScaleValue, maskFull0);
-        AscendC::MicroAPI::Muls(vYMul1, vY1, swishScaleValue, maskFull1);
-        AscendC::MicroAPI::Muls(vDenScaled0, vYMul0, float(-1.0), maskFull0);
-        AscendC::MicroAPI::Muls(vDenScaled1, vYMul1, float(-1.0), maskFull1);
-        AscendC::MicroAPI::Exp(vDenExp0, vDenScaled0, maskFull0);
-        AscendC::MicroAPI::Exp(vDenExp1, vDenScaled1, maskFull1);
-        AscendC::MicroAPI::Adds(vDen0, vDenExp0, float(1.0), maskFull0);
-        AscendC::MicroAPI::Adds(vDen1, vDenExp1, float(1.0), maskFull1);
-        AscendC::MicroAPI::Div(vDenScaled0, vYMul0, vDen0, maskFull0);
-        AscendC::MicroAPI::Div(vDenScaled1, vYMul1, vDen1, maskFull1);
-        AscendC::MicroAPI::Sub(vDenExp0, vYMul0, vDenScaled0, maskFull0);
-        AscendC::MicroAPI::Sub(vDenExp1, vYMul1, vDenScaled1, maskFull1);
-        AscendC::MicroAPI::Adds(vYMul0, vDenExp0, float(1.0), maskFull0);
-        AscendC::MicroAPI::Adds(vYMul1, vDenExp1, float(1.0), maskFull1);
-        AscendC::MicroAPI::Div(vDswish0, vYMul0, vDen0, maskFull0);
-        AscendC::MicroAPI::Div(vDswish1, vYMul1, vDen1, maskFull1);
-        AscendC::MicroAPI::Mul(vDyNew0, vDswish0, vDy0, maskFull0);
-        AscendC::MicroAPI::Mul(vDyNew1, vDswish1, vDy1, maskFull1);
-        AscendC::MicroAPI::Mul(vDswish0, vDyNew0, vGamma, maskFull0);
-        AscendC::MicroAPI::Mul(vDswish1, vDyNew1, vGamma, maskFull1);
-        AscendC::MicroAPI::Mul(vDyNew0, vDswish0, vRstd, maskFull0);
-        AscendC::MicroAPI::Mul(vDyNew1, vDswish1, vRstd, maskFull1);
-        AscendC::MicroAPI::Mul(vCorrectionMul0, vX0, vC2, maskFull0);
-        AscendC::MicroAPI::Mul(vCorrectionMul1, vX1, vC2, maskFull1);
-        AscendC::MicroAPI::Add(vCorrection0, vCorrectionMul0, vC1, maskFull0);
-        AscendC::MicroAPI::Add(vCorrection1, vCorrectionMul1, vC1, maskFull1);
-        AscendC::MicroAPI::Mul(vCorrectionMul0, vCorrection0, vRstd, maskFull0);
-        AscendC::MicroAPI::Mul(vCorrectionMul1, vCorrection1, vRstd, maskFull1);
-        AscendC::MicroAPI::Sub(vDx0, vDyNew0, vCorrectionMul0, maskFull0);
-        AscendC::MicroAPI::Sub(vDx1, vDyNew1, vCorrectionMul1, maskFull1);
-        AscendC::MicroAPI::StoreAlign(dxPtr + offset0, vDx0, maskFull0);
-        AscendC::MicroAPI::StoreAlign(dxPtr + offset1, vDx1, maskFull1);
+        maskFull0 = AscendC::Reg::UpdateMask<float>(calCount);
+        maskFull1 = AscendC::Reg::UpdateMask<float>(calCount);
+        AscendC::Reg::LoadAlign(vX0, xPtr + offset0);
+        AscendC::Reg::LoadAlign(vDy0, dyPtr + offset0);
+        AscendC::Reg::LoadAlign(vX1, xPtr + offset1);
+        AscendC::Reg::LoadAlign(vDy1, dyPtr + offset1);
+        AscendC::Reg::Mul(vYMul0, vX0, vGamma, maskFull0);
+        AscendC::Reg::Mul(vYMul1, vX1, vGamma, maskFull1);
+        AscendC::Reg::Add(vY0, vYMul0, vBeta, maskFull0);
+        AscendC::Reg::Add(vY1, vYMul1, vBeta, maskFull1);
+        AscendC::Reg::Muls(vYMul0, vY0, swishScaleValue, maskFull0);
+        AscendC::Reg::Muls(vYMul1, vY1, swishScaleValue, maskFull1);
+        AscendC::Reg::Muls(vDenScaled0, vYMul0, float(-1.0), maskFull0);
+        AscendC::Reg::Muls(vDenScaled1, vYMul1, float(-1.0), maskFull1);
+        AscendC::Reg::Exp(vDenExp0, vDenScaled0, maskFull0);
+        AscendC::Reg::Exp(vDenExp1, vDenScaled1, maskFull1);
+        AscendC::Reg::Adds(vDen0, vDenExp0, float(1.0), maskFull0);
+        AscendC::Reg::Adds(vDen1, vDenExp1, float(1.0), maskFull1);
+        AscendC::Reg::Div(vDenScaled0, vYMul0, vDen0, maskFull0);
+        AscendC::Reg::Div(vDenScaled1, vYMul1, vDen1, maskFull1);
+        AscendC::Reg::Sub(vDenExp0, vYMul0, vDenScaled0, maskFull0);
+        AscendC::Reg::Sub(vDenExp1, vYMul1, vDenScaled1, maskFull1);
+        AscendC::Reg::Adds(vYMul0, vDenExp0, float(1.0), maskFull0);
+        AscendC::Reg::Adds(vYMul1, vDenExp1, float(1.0), maskFull1);
+        AscendC::Reg::Div(vDswish0, vYMul0, vDen0, maskFull0);
+        AscendC::Reg::Div(vDswish1, vYMul1, vDen1, maskFull1);
+        AscendC::Reg::Mul(vDyNew0, vDswish0, vDy0, maskFull0);
+        AscendC::Reg::Mul(vDyNew1, vDswish1, vDy1, maskFull1);
+        AscendC::Reg::Mul(vDswish0, vDyNew0, vGamma, maskFull0);
+        AscendC::Reg::Mul(vDswish1, vDyNew1, vGamma, maskFull1);
+        AscendC::Reg::Mul(vDyNew0, vDswish0, vRstd, maskFull0);
+        AscendC::Reg::Mul(vDyNew1, vDswish1, vRstd, maskFull1);
+        AscendC::Reg::Mul(vCorrectionMul0, vX0, vC2, maskFull0);
+        AscendC::Reg::Mul(vCorrectionMul1, vX1, vC2, maskFull1);
+        AscendC::Reg::Add(vCorrection0, vCorrectionMul0, vC1, maskFull0);
+        AscendC::Reg::Add(vCorrection1, vCorrectionMul1, vC1, maskFull1);
+        AscendC::Reg::Mul(vCorrectionMul0, vCorrection0, vRstd, maskFull0);
+        AscendC::Reg::Mul(vCorrectionMul1, vCorrection1, vRstd, maskFull1);
+        AscendC::Reg::Sub(vDx0, vDyNew0, vCorrectionMul0, maskFull0);
+        AscendC::Reg::Sub(vDx1, vDyNew1, vCorrectionMul1, maskFull1);
+        AscendC::Reg::StoreAlign(dxPtr + offset0, vDx0, maskFull0);
+        AscendC::Reg::StoreAlign(dxPtr + offset1, vDx1, maskFull1);
     }
 }
 
@@ -682,22 +679,22 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRed
     __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr, __ubuf__ float* betaPtr, uint32_t cGIdx,
     float swishScaleValue, uint32_t calCount)
 {
-    AscendC::MicroAPI::MaskReg maskFull0;
-    AscendC::MicroAPI::MaskReg maskFull1;
-    AscendC::MicroAPI::MaskReg maskScalar;
-    AscendC::MicroAPI::UnalignRegForStore uStoreDyNewSum;
-    AscendC::MicroAPI::UnalignRegForStore uStoreXMulDySum;
-    AscendC::MicroAPI::UnalignRegForStore uStoreTemp1;
-    AscendC::MicroAPI::UnalignRegForStore uStoreTemp2;
-    AscendC::MicroAPI::RegTensor<float> vGamma, vBeta;
-    AscendC::MicroAPI::RegTensor<float> vX0, vDy0, vYMul0, vY0, vDenScaled0, vDenExp0, vDen0;
-    AscendC::MicroAPI::RegTensor<float> vDswish0, vDyNew0, vXMulDy0, vTemp1Acc;
-    AscendC::MicroAPI::RegTensor<float> vX1, vDy1, vYMul1, vY1, vDenScaled1, vDenExp1, vDen1;
-    AscendC::MicroAPI::RegTensor<float> vDswish1, vDyNew1, vXMulDy1, vTemp2Acc;
+    AscendC::Reg::MaskReg maskFull0;
+    AscendC::Reg::MaskReg maskFull1;
+    AscendC::Reg::MaskReg maskScalar;
+    AscendC::Reg::UnalignRegForStore uStoreDyNewSum;
+    AscendC::Reg::UnalignRegForStore uStoreXMulDySum;
+    AscendC::Reg::UnalignRegForStore uStoreTemp1;
+    AscendC::Reg::UnalignRegForStore uStoreTemp2;
+    AscendC::Reg::RegTensor<float> vGamma, vBeta;
+    AscendC::Reg::RegTensor<float> vX0, vDy0, vYMul0, vY0, vDenScaled0, vDenExp0, vDen0;
+    AscendC::Reg::RegTensor<float> vDswish0, vDyNew0, vXMulDy0, vTemp1Acc;
+    AscendC::Reg::RegTensor<float> vX1, vDy1, vYMul1, vY1, vDenScaled1, vDenExp1, vDen1;
+    AscendC::Reg::RegTensor<float> vDswish1, vDyNew1, vXMulDy1, vTemp2Acc;
     uint32_t storeCount = 1;
-    maskScalar = AscendC::MicroAPI::UpdateMask<float>(storeCount);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vGamma, gammaPtr + cGIdx);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vBeta, betaPtr + cGIdx);
+    maskScalar = AscendC::Reg::UpdateMask<float>(storeCount);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vGamma, gammaPtr + cGIdx);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vBeta, betaPtr + cGIdx);
 
     uint32_t fullRepeatTimes = (calCount + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
     uint16_t pairRepeatTimes = static_cast<uint16_t>((fullRepeatTimes + 1) / 2);
@@ -706,49 +703,49 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRed
     // First pass: compute two VLs per iteration and store one scalar sum per VL.
     // The loop stays branch-free for the VF compiler; masks carry the tail.
     for (uint16_t i = 0; i < pairRepeatTimes; i++) {
-        maskFull0 = AscendC::MicroAPI::UpdateMask<float>(calCount);
-        maskFull1 = AscendC::MicroAPI::UpdateMask<float>(calCount);
+        maskFull0 = AscendC::Reg::UpdateMask<float>(calCount);
+        maskFull1 = AscendC::Reg::UpdateMask<float>(calCount);
         uint32_t offset0 = i * 2 * oneRepeatSizeB32;
         uint32_t offset1 = offset0 + oneRepeatSizeB32;
-        AscendC::MicroAPI::LoadAlign(vX0, xPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vDy0, dyPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vX1, xPtr + offset1);
-        AscendC::MicroAPI::LoadAlign(vDy1, dyPtr + offset1);
-        AscendC::MicroAPI::Mul(vYMul0, vX0, vGamma, maskFull0);
-        AscendC::MicroAPI::Mul(vYMul1, vX1, vGamma, maskFull1);
-        AscendC::MicroAPI::Add(vY0, vYMul0, vBeta, maskFull0);
-        AscendC::MicroAPI::Add(vY1, vYMul1, vBeta, maskFull1);
-        AscendC::MicroAPI::Muls(vYMul0, vY0, swishScaleValue, maskFull0);
-        AscendC::MicroAPI::Muls(vYMul1, vY1, swishScaleValue, maskFull1);
-        AscendC::MicroAPI::Muls(vDenScaled0, vYMul0, float(-1.0), maskFull0);
-        AscendC::MicroAPI::Muls(vDenScaled1, vYMul1, float(-1.0), maskFull1);
-        AscendC::MicroAPI::Exp(vDenExp0, vDenScaled0, maskFull0);
-        AscendC::MicroAPI::Exp(vDenExp1, vDenScaled1, maskFull1);
-        AscendC::MicroAPI::Adds(vDen0, vDenExp0, float(1.0), maskFull0);
-        AscendC::MicroAPI::Adds(vDen1, vDenExp1, float(1.0), maskFull1);
-        AscendC::MicroAPI::Div(vDenScaled0, vYMul0, vDen0, maskFull0);
-        AscendC::MicroAPI::Div(vDenScaled1, vYMul1, vDen1, maskFull1);
-        AscendC::MicroAPI::Sub(vDenExp0, vYMul0, vDenScaled0, maskFull0);
-        AscendC::MicroAPI::Sub(vDenExp1, vYMul1, vDenScaled1, maskFull1);
-        AscendC::MicroAPI::Adds(vYMul0, vDenExp0, float(1.0), maskFull0);
-        AscendC::MicroAPI::Adds(vYMul1, vDenExp1, float(1.0), maskFull1);
-        AscendC::MicroAPI::Div(vDswish0, vYMul0, vDen0, maskFull0);
-        AscendC::MicroAPI::Div(vDswish1, vYMul1, vDen1, maskFull1);
-        AscendC::MicroAPI::Mul(vDyNew0, vDswish0, vDy0, maskFull0);
-        AscendC::MicroAPI::Mul(vDyNew1, vDswish1, vDy1, maskFull1);
-        AscendC::MicroAPI::Mul(vXMulDy0, vX0, vDyNew0, maskFull0);
-        AscendC::MicroAPI::Mul(vXMulDy1, vX1, vDyNew1, maskFull1);
-        AscendC::MicroAPI::ReduceSum(vYMul0, vDyNew0, maskFull0);
-        AscendC::MicroAPI::ReduceSum(vYMul1, vDyNew1, maskFull1);
-        AscendC::MicroAPI::ReduceSum(vDenScaled0, vXMulDy0, maskFull0);
-        AscendC::MicroAPI::ReduceSum(vDenScaled1, vXMulDy1, maskFull1);
-        AscendC::MicroAPI::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(dyNewSumStorePtr, vYMul1, uStoreDyNewSum, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(xMulDySumStorePtr, vDenScaled1, uStoreXMulDySum, static_cast<uint32_t>(1));
+        AscendC::Reg::LoadAlign(vX0, xPtr + offset0);
+        AscendC::Reg::LoadAlign(vDy0, dyPtr + offset0);
+        AscendC::Reg::LoadAlign(vX1, xPtr + offset1);
+        AscendC::Reg::LoadAlign(vDy1, dyPtr + offset1);
+        AscendC::Reg::Mul(vYMul0, vX0, vGamma, maskFull0);
+        AscendC::Reg::Mul(vYMul1, vX1, vGamma, maskFull1);
+        AscendC::Reg::Add(vY0, vYMul0, vBeta, maskFull0);
+        AscendC::Reg::Add(vY1, vYMul1, vBeta, maskFull1);
+        AscendC::Reg::Muls(vYMul0, vY0, swishScaleValue, maskFull0);
+        AscendC::Reg::Muls(vYMul1, vY1, swishScaleValue, maskFull1);
+        AscendC::Reg::Muls(vDenScaled0, vYMul0, float(-1.0), maskFull0);
+        AscendC::Reg::Muls(vDenScaled1, vYMul1, float(-1.0), maskFull1);
+        AscendC::Reg::Exp(vDenExp0, vDenScaled0, maskFull0);
+        AscendC::Reg::Exp(vDenExp1, vDenScaled1, maskFull1);
+        AscendC::Reg::Adds(vDen0, vDenExp0, float(1.0), maskFull0);
+        AscendC::Reg::Adds(vDen1, vDenExp1, float(1.0), maskFull1);
+        AscendC::Reg::Div(vDenScaled0, vYMul0, vDen0, maskFull0);
+        AscendC::Reg::Div(vDenScaled1, vYMul1, vDen1, maskFull1);
+        AscendC::Reg::Sub(vDenExp0, vYMul0, vDenScaled0, maskFull0);
+        AscendC::Reg::Sub(vDenExp1, vYMul1, vDenScaled1, maskFull1);
+        AscendC::Reg::Adds(vYMul0, vDenExp0, float(1.0), maskFull0);
+        AscendC::Reg::Adds(vYMul1, vDenExp1, float(1.0), maskFull1);
+        AscendC::Reg::Div(vDswish0, vYMul0, vDen0, maskFull0);
+        AscendC::Reg::Div(vDswish1, vYMul1, vDen1, maskFull1);
+        AscendC::Reg::Mul(vDyNew0, vDswish0, vDy0, maskFull0);
+        AscendC::Reg::Mul(vDyNew1, vDswish1, vDy1, maskFull1);
+        AscendC::Reg::Mul(vXMulDy0, vX0, vDyNew0, maskFull0);
+        AscendC::Reg::Mul(vXMulDy1, vX1, vDyNew1, maskFull1);
+        AscendC::Reg::ReduceSum(vYMul0, vDyNew0, maskFull0);
+        AscendC::Reg::ReduceSum(vYMul1, vDyNew1, maskFull1);
+        AscendC::Reg::ReduceSum(vDenScaled0, vXMulDy0, maskFull0);
+        AscendC::Reg::ReduceSum(vDenScaled1, vXMulDy1, maskFull1);
+        AscendC::Reg::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(dyNewSumStorePtr, vYMul1, uStoreDyNewSum, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(xMulDySumStorePtr, vDenScaled1, uStoreXMulDySum, static_cast<uint32_t>(1));
     }
-    AscendC::MicroAPI::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
     uint32_t sumReduceCount = fullRepeatTimes;
     uint32_t sumRepeatTimes = (fullRepeatTimes + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
     dyNewSumStorePtr = dyNewSumPtr;
@@ -757,17 +754,17 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRed
     // VEC_LOAD before each reduction pass over the scratch scalars.
     for (uint16_t i = 0; i < sumRepeatTimes; i++) {
         AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
-        maskFull0 = AscendC::MicroAPI::UpdateMask<float>(sumReduceCount);
+        maskFull0 = AscendC::Reg::UpdateMask<float>(sumReduceCount);
         uint32_t offset = i * oneRepeatSizeB32;
-        AscendC::MicroAPI::LoadAlign(vDyNew0, dyNewSumPtr + offset);
-        AscendC::MicroAPI::LoadAlign(vXMulDy0, xMulDySumPtr + offset);
-        AscendC::MicroAPI::ReduceSum(vYMul0, vDyNew0, maskFull0);
-        AscendC::MicroAPI::ReduceSum(vDenScaled0, vXMulDy0, maskFull0);
-        AscendC::MicroAPI::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
+        AscendC::Reg::LoadAlign(vDyNew0, dyNewSumPtr + offset);
+        AscendC::Reg::LoadAlign(vXMulDy0, xMulDySumPtr + offset);
+        AscendC::Reg::ReduceSum(vYMul0, vDyNew0, maskFull0);
+        AscendC::Reg::ReduceSum(vDenScaled0, vXMulDy0, maskFull0);
+        AscendC::Reg::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
     }
-    AscendC::MicroAPI::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
 
     uint32_t finalReduceCount0 = sumRepeatTimes;
     uint32_t finalReduceCount1 = sumRepeatTimes;
@@ -776,40 +773,40 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRed
     xMulDySumStorePtr = xMulDySumPtr;
     for (uint16_t i = 0; i < finalRepeatTimes; i++) {
         AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
-        maskFull0 = AscendC::MicroAPI::UpdateMask<float>(finalReduceCount0);
-        maskFull1 = AscendC::MicroAPI::UpdateMask<float>(finalReduceCount1);
+        maskFull0 = AscendC::Reg::UpdateMask<float>(finalReduceCount0);
+        maskFull1 = AscendC::Reg::UpdateMask<float>(finalReduceCount1);
         uint32_t offset = i * oneRepeatSizeB32;
-        AscendC::MicroAPI::LoadAlign(vDyNew0, dyNewSumPtr + offset);
-        AscendC::MicroAPI::LoadAlign(vXMulDy0, xMulDySumPtr + offset);
-        AscendC::MicroAPI::ReduceSum(vYMul0, vDyNew0, maskFull0);
-        AscendC::MicroAPI::ReduceSum(vDenScaled0, vXMulDy0, maskFull1);
-        AscendC::MicroAPI::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
+        AscendC::Reg::LoadAlign(vDyNew0, dyNewSumPtr + offset);
+        AscendC::Reg::LoadAlign(vXMulDy0, xMulDySumPtr + offset);
+        AscendC::Reg::ReduceSum(vYMul0, vDyNew0, maskFull0);
+        AscendC::Reg::ReduceSum(vDenScaled0, vXMulDy0, maskFull1);
+        AscendC::Reg::StoreUnAlign(dyNewSumStorePtr, vYMul0, uStoreDyNewSum, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(xMulDySumStorePtr, vDenScaled0, uStoreXMulDySum, static_cast<uint32_t>(1));
     }
-    AscendC::MicroAPI::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(dyNewSumStorePtr, uStoreDyNewSum, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(xMulDySumStorePtr, uStoreXMulDySum, static_cast<int32_t>(0));
 
     uint32_t lastReduceCount0 = finalRepeatTimes;
     uint32_t lastReduceCount1 = finalRepeatTimes;
     AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
-    maskFull0 = AscendC::MicroAPI::UpdateMask<float>(lastReduceCount0);
-    maskFull1 = AscendC::MicroAPI::UpdateMask<float>(lastReduceCount1);
-    AscendC::MicroAPI::LoadAlign(vDyNew0, dyNewSumPtr);
-    AscendC::MicroAPI::LoadAlign(vXMulDy0, xMulDySumPtr);
-    AscendC::MicroAPI::ReduceSum(vYMul0, vDyNew0, maskFull0);
-    AscendC::MicroAPI::ReduceSum(vDenScaled0, vXMulDy0, maskFull1);
+    maskFull0 = AscendC::Reg::UpdateMask<float>(lastReduceCount0);
+    maskFull1 = AscendC::Reg::UpdateMask<float>(lastReduceCount1);
+    AscendC::Reg::LoadAlign(vDyNew0, dyNewSumPtr);
+    AscendC::Reg::LoadAlign(vXMulDy0, xMulDySumPtr);
+    AscendC::Reg::ReduceSum(vYMul0, vDyNew0, maskFull0);
+    AscendC::Reg::ReduceSum(vDenScaled0, vXMulDy0, maskFull1);
     __ubuf__ float* temp1LoadPtr = temp1Ptr + cGIdx;
     __ubuf__ float* temp2LoadPtr = temp2Ptr + cGIdx;
     __ubuf__ float* temp1StorePtr = temp1Ptr + cGIdx;
     __ubuf__ float* temp2StorePtr = temp2Ptr + cGIdx;
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vTemp1Acc, temp1LoadPtr);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vTemp2Acc, temp2LoadPtr);
-    AscendC::MicroAPI::Add(vYMul1, vYMul0, vTemp1Acc, maskScalar);
-    AscendC::MicroAPI::Add(vDenScaled1, vDenScaled0, vTemp2Acc, maskScalar);
-    AscendC::MicroAPI::StoreUnAlign(temp1StorePtr, vYMul1, uStoreTemp1, static_cast<uint32_t>(1));
-    AscendC::MicroAPI::StoreUnAlignPost(temp1StorePtr, uStoreTemp1, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlign(temp2StorePtr, vDenScaled1, uStoreTemp2, static_cast<uint32_t>(1));
-    AscendC::MicroAPI::StoreUnAlignPost(temp2StorePtr, uStoreTemp2, static_cast<int32_t>(0));
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vTemp1Acc, temp1LoadPtr);
+    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vTemp2Acc, temp2LoadPtr);
+    AscendC::Reg::Add(vYMul1, vYMul0, vTemp1Acc, maskScalar);
+    AscendC::Reg::Add(vDenScaled1, vDenScaled0, vTemp2Acc, maskScalar);
+    AscendC::Reg::StoreUnAlign(temp1StorePtr, vYMul1, uStoreTemp1, static_cast<uint32_t>(1));
+    AscendC::Reg::StoreUnAlignPost(temp1StorePtr, uStoreTemp1, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlign(temp2StorePtr, vDenScaled1, uStoreTemp2, static_cast<uint32_t>(1));
+    AscendC::Reg::StoreUnAlignPost(temp2StorePtr, uStoreTemp2, static_cast<int32_t>(0));
 }
 
 template <typename T, bool isDeterministic>
@@ -818,49 +815,49 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::DualMulReduceSum
                                                                                    __ubuf__ float* dstLocal2,
                                                                                    float normFactor, uint32_t calCount)
 {
-    AscendC::MicroAPI::MaskReg maskTail;
-    AscendC::MicroAPI::MaskReg maskScalar;
-    AscendC::MicroAPI::MaskReg reduceMask;
-    AscendC::MicroAPI::UnalignRegForStore uStoreDst0;
-    AscendC::MicroAPI::UnalignRegForStore uStoreDst1;
-    AscendC::MicroAPI::RegTensor<float> vDst0, vDst1, vDst2;
-    AscendC::MicroAPI::RegTensor<float> vTmp1, vTmp2;
-    AscendC::MicroAPI::RegTensor<float> vSum1, vSum2;
+    AscendC::Reg::MaskReg maskTail;
+    AscendC::Reg::MaskReg maskScalar;
+    AscendC::Reg::MaskReg reduceMask;
+    AscendC::Reg::UnalignRegForStore uStoreDst0;
+    AscendC::Reg::UnalignRegForStore uStoreDst1;
+    AscendC::Reg::RegTensor<float> vDst0, vDst1, vDst2;
+    AscendC::Reg::RegTensor<float> vTmp1, vTmp2;
+    AscendC::Reg::RegTensor<float> vSum1, vSum2;
     uint32_t storeCount = 1;
     __ubuf__ float* oriDstLocal0 = dstLocal0;
     __ubuf__ float* oriDstLocal1 = dstLocal1;
     __ubuf__ float* oriDstLocal2 = dstLocal2;
-    maskScalar = AscendC::MicroAPI::UpdateMask<float>(storeCount);
+    maskScalar = AscendC::Reg::UpdateMask<float>(storeCount);
     uint32_t repeatTimes = (calCount + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
     AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
     // Produce per-VL partial sums for both reduction streams in one pass.
     for (uint16_t i = 0; i < repeatTimes; i++) {
         uint32_t offset = i * oneRepeatSizeB32;
-        maskTail = AscendC::MicroAPI::UpdateMask<float>(calCount);
-        AscendC::MicroAPI::LoadAlign(vDst0, oriDstLocal0 + offset);
-        AscendC::MicroAPI::LoadAlign(vDst1, oriDstLocal1 + offset);
-        AscendC::MicroAPI::LoadAlign(vDst2, oriDstLocal2 + offset);
-        AscendC::MicroAPI::Mul(vTmp1, vDst0, vDst2, maskTail);
-        AscendC::MicroAPI::Mul(vTmp2, vDst1, vDst2, maskTail);
-        AscendC::MicroAPI::ReduceSum(vSum1, vTmp1, maskTail);
-        AscendC::MicroAPI::ReduceSum(vSum2, vTmp2, maskTail);
-        AscendC::MicroAPI::StoreUnAlign(dstLocal0, vSum1, uStoreDst0, static_cast<uint32_t>(1));
-        AscendC::MicroAPI::StoreUnAlign(dstLocal1, vSum2, uStoreDst1, static_cast<uint32_t>(1));
+        maskTail = AscendC::Reg::UpdateMask<float>(calCount);
+        AscendC::Reg::LoadAlign(vDst0, oriDstLocal0 + offset);
+        AscendC::Reg::LoadAlign(vDst1, oriDstLocal1 + offset);
+        AscendC::Reg::LoadAlign(vDst2, oriDstLocal2 + offset);
+        AscendC::Reg::Mul(vTmp1, vDst0, vDst2, maskTail);
+        AscendC::Reg::Mul(vTmp2, vDst1, vDst2, maskTail);
+        AscendC::Reg::ReduceSum(vSum1, vTmp1, maskTail);
+        AscendC::Reg::ReduceSum(vSum2, vTmp2, maskTail);
+        AscendC::Reg::StoreUnAlign(dstLocal0, vSum1, uStoreDst0, static_cast<uint32_t>(1));
+        AscendC::Reg::StoreUnAlign(dstLocal1, vSum2, uStoreDst1, static_cast<uint32_t>(1));
     }
-    AscendC::MicroAPI::StoreUnAlignPost(dstLocal0, uStoreDst0, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlignPost(dstLocal1, uStoreDst1, static_cast<int32_t>(0));
-    reduceMask = AscendC::MicroAPI::UpdateMask<float>(repeatTimes);
+    AscendC::Reg::StoreUnAlignPost(dstLocal0, uStoreDst0, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(dstLocal1, uStoreDst1, static_cast<int32_t>(0));
+    reduceMask = AscendC::Reg::UpdateMask<float>(repeatTimes);
     AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
-    AscendC::MicroAPI::LoadAlign(vDst1, oriDstLocal0);
-    AscendC::MicroAPI::LoadAlign(vDst2, oriDstLocal1);
-    AscendC::MicroAPI::ReduceSum(vSum1, vDst1, reduceMask);
-    AscendC::MicroAPI::ReduceSum(vSum2, vDst2, reduceMask);
-    AscendC::MicroAPI::Muls(vTmp1, vSum1, normFactor, maskScalar);
-    AscendC::MicroAPI::Muls(vTmp2, vSum2, normFactor, maskScalar);
-    AscendC::MicroAPI::StoreUnAlign(oriDstLocal0, vTmp1, uStoreDst0, static_cast<uint32_t>(1));
-    AscendC::MicroAPI::StoreUnAlign(oriDstLocal1, vTmp2, uStoreDst1, static_cast<uint32_t>(1));
-    AscendC::MicroAPI::StoreUnAlignPost(oriDstLocal0, uStoreDst0, static_cast<int32_t>(0));
-    AscendC::MicroAPI::StoreUnAlignPost(oriDstLocal1, uStoreDst1, static_cast<int32_t>(0));
+    AscendC::Reg::LoadAlign(vDst1, oriDstLocal0);
+    AscendC::Reg::LoadAlign(vDst2, oriDstLocal1);
+    AscendC::Reg::ReduceSum(vSum1, vDst1, reduceMask);
+    AscendC::Reg::ReduceSum(vSum2, vDst2, reduceMask);
+    AscendC::Reg::Muls(vTmp1, vSum1, normFactor, maskScalar);
+    AscendC::Reg::Muls(vTmp2, vSum2, normFactor, maskScalar);
+    AscendC::Reg::StoreUnAlign(oriDstLocal0, vTmp1, uStoreDst0, static_cast<uint32_t>(1));
+    AscendC::Reg::StoreUnAlign(oriDstLocal1, vTmp2, uStoreDst1, static_cast<uint32_t>(1));
+    AscendC::Reg::StoreUnAlignPost(oriDstLocal0, uStoreDst0, static_cast<int32_t>(0));
+    AscendC::Reg::StoreUnAlignPost(oriDstLocal1, uStoreDst1, static_cast<int32_t>(0));
     AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
 }
 
@@ -870,12 +867,12 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::KahanAccumulateV
                                                                                   __ubuf__ float* chunkPtr,
                                                                                   uint32_t calCount)
 {
-    AscendC::MicroAPI::MaskReg maskTail0;
-    AscendC::MicroAPI::MaskReg maskTail1;
-    AscendC::MicroAPI::RegTensor<float> vChunk0, vSum0, vCompensation0;
-    AscendC::MicroAPI::RegTensor<float> vY0, vTemp0, vCompensationDelta0, vNewCompensation0;
-    AscendC::MicroAPI::RegTensor<float> vChunk1, vSum1, vCompensation1;
-    AscendC::MicroAPI::RegTensor<float> vY1, vTemp1, vCompensationDelta1, vNewCompensation1;
+    AscendC::Reg::MaskReg maskTail0;
+    AscendC::Reg::MaskReg maskTail1;
+    AscendC::Reg::RegTensor<float> vChunk0, vSum0, vCompensation0;
+    AscendC::Reg::RegTensor<float> vY0, vTemp0, vCompensationDelta0, vNewCompensation0;
+    AscendC::Reg::RegTensor<float> vChunk1, vSum1, vCompensation1;
+    AscendC::Reg::RegTensor<float> vY1, vTemp1, vCompensationDelta1, vNewCompensation1;
 
     uint32_t updateCount = calCount;
     uint32_t fullRepeatTimes = (calCount + oneRepeatSizeB32 - 1) / oneRepeatSizeB32;
@@ -885,26 +882,26 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::KahanAccumulateV
     for (uint16_t i = 0; i < pairRepeatTimes; i++) {
         uint32_t offset0 = (static_cast<uint32_t>(i) << 1) * oneRepeatSizeB32;
         uint32_t offset1 = offset0 + oneRepeatSizeB32;
-        maskTail0 = AscendC::MicroAPI::UpdateMask<float>(updateCount);
-        maskTail1 = AscendC::MicroAPI::UpdateMask<float>(updateCount);
-        AscendC::MicroAPI::LoadAlign(vChunk0, chunkPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vSum0, sumPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vCompensation0, compensationPtr + offset0);
-        AscendC::MicroAPI::LoadAlign(vChunk1, chunkPtr + offset1);
-        AscendC::MicroAPI::LoadAlign(vSum1, sumPtr + offset1);
-        AscendC::MicroAPI::LoadAlign(vCompensation1, compensationPtr + offset1);
-        AscendC::MicroAPI::Sub(vY0, vChunk0, vCompensation0, maskTail0);
-        AscendC::MicroAPI::Sub(vY1, vChunk1, vCompensation1, maskTail1);
-        AscendC::MicroAPI::Add(vTemp0, vSum0, vY0, maskTail0);
-        AscendC::MicroAPI::Add(vTemp1, vSum1, vY1, maskTail1);
-        AscendC::MicroAPI::Sub(vCompensationDelta0, vTemp0, vSum0, maskTail0);
-        AscendC::MicroAPI::Sub(vCompensationDelta1, vTemp1, vSum1, maskTail1);
-        AscendC::MicroAPI::Sub(vNewCompensation0, vCompensationDelta0, vY0, maskTail0);
-        AscendC::MicroAPI::Sub(vNewCompensation1, vCompensationDelta1, vY1, maskTail1);
-        AscendC::MicroAPI::StoreAlign(compensationPtr + offset0, vNewCompensation0, maskTail0);
-        AscendC::MicroAPI::StoreAlign(compensationPtr + offset1, vNewCompensation1, maskTail1);
-        AscendC::MicroAPI::StoreAlign(sumPtr + offset0, vTemp0, maskTail0);
-        AscendC::MicroAPI::StoreAlign(sumPtr + offset1, vTemp1, maskTail1);
+        maskTail0 = AscendC::Reg::UpdateMask<float>(updateCount);
+        maskTail1 = AscendC::Reg::UpdateMask<float>(updateCount);
+        AscendC::Reg::LoadAlign(vChunk0, chunkPtr + offset0);
+        AscendC::Reg::LoadAlign(vSum0, sumPtr + offset0);
+        AscendC::Reg::LoadAlign(vCompensation0, compensationPtr + offset0);
+        AscendC::Reg::LoadAlign(vChunk1, chunkPtr + offset1);
+        AscendC::Reg::LoadAlign(vSum1, sumPtr + offset1);
+        AscendC::Reg::LoadAlign(vCompensation1, compensationPtr + offset1);
+        AscendC::Reg::Sub(vY0, vChunk0, vCompensation0, maskTail0);
+        AscendC::Reg::Sub(vY1, vChunk1, vCompensation1, maskTail1);
+        AscendC::Reg::Add(vTemp0, vSum0, vY0, maskTail0);
+        AscendC::Reg::Add(vTemp1, vSum1, vY1, maskTail1);
+        AscendC::Reg::Sub(vCompensationDelta0, vTemp0, vSum0, maskTail0);
+        AscendC::Reg::Sub(vCompensationDelta1, vTemp1, vSum1, maskTail1);
+        AscendC::Reg::Sub(vNewCompensation0, vCompensationDelta0, vY0, maskTail0);
+        AscendC::Reg::Sub(vNewCompensation1, vCompensationDelta1, vY1, maskTail1);
+        AscendC::Reg::StoreAlign(compensationPtr + offset0, vNewCompensation0, maskTail0);
+        AscendC::Reg::StoreAlign(compensationPtr + offset1, vNewCompensation1, maskTail1);
+        AscendC::Reg::StoreAlign(sumPtr + offset0, vTemp0, maskTail0);
+        AscendC::Reg::StoreAlign(sumPtr + offset1, vTemp1, maskTail1);
     }
 }
 

@@ -16,7 +16,7 @@
 
 namespace AddLayerNormGrad {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 template <typename T, int TILING_KEY>
 class KernelAddLayerNormGradA35 {

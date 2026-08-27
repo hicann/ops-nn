@@ -21,18 +21,18 @@
 
 namespace BatchNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
 using AscendC::Reg::Reduce;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T1, typename T2>
 class BatchNormRARBlockSplitR {
@@ -462,25 +462,25 @@ private:
             uint32_t sreg1 = baseNum;
             Duplicate(tmpCount, baseAddCount, pregMain);
             for (uint16_t i = 0; i < baseLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg1);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal1 + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg2 = tailNum;
             Duplicate(tmpCount, tailAddCount, pregMain);
             for (uint16_t i = 0; i < tailLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg2);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg2);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal1 + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg3 = firstNum;
             Duplicate(tmpCount, tailCoreAddCount, pregMain);
             for (uint16_t i = 0; i < fisrstLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg3);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg3);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal2 + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg4 = secondNum;
             Duplicate(tmpCount, formerCoreAddCount, pregMain);
             for (uint16_t i = 0; i < secondLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg4);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg4);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal2 + i * VL_F32), tmpCount, pregLoop);
             }
         }
@@ -495,13 +495,13 @@ private:
         {
             RegTensor<float> tmpMean;
             RegTensor<float> tmpM2;
-            MaskReg mask0 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg mask0 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             Duplicate(tmpMean, 0.0, mask0);
             Duplicate(tmpM2, 0.0, mask0);
             MaskReg mask1;
             uint32_t sreg0 = len;
             for (uint16_t i = 0; i < loopCount; i++) {
-                mask1 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                mask1 = AscendC::Reg::UpdateMask<float>(sreg0);
                 StoreAlign(meanTensorAddr + i * VL_F32, tmpMean, mask1);
                 StoreAlign(m2TensorAddr + i * VL_F32, tmpM2, mask1);
             }
@@ -623,7 +623,7 @@ private:
                 MaskReg mask0;
                 uint32_t sreg0 = processR0Num * processR1Num;
                 for (uint16_t i = 0; i < loopCount; i++) {
-                    mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                     LoadTensorForDtypeT(x1, xTensorAddr, mask0, a_idx * processRAlignNum + i * VL_F32);
                     LoadAlign(tmpMean, meanTensorAddr + a_idx * formerRAlignNum + i * VL_F32);
                     LoadAlign(tmpM2, m2TensorAddr + a_idx * formerRAlignNum + i * VL_F32);
@@ -987,7 +987,7 @@ private:
             MaskReg pregLoop;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 // 尾块部分按行加至前面
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
@@ -1343,7 +1343,7 @@ private:
                 MaskReg mask0;
                 uint32_t sreg0 = processRNum;
                 for (uint16_t i = 0; i < numLoop; i++) {
-                    mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                     LoadOneNumberTensorForDtypeT(gamma, gammaTensorAddr, mask0, aStartIdx + j);
                     LoadOneNumberTensorForDtypeT(beta, betaTensorAddr, mask0, aStartIdx + j);
 
@@ -1468,17 +1468,17 @@ private:
     static constexpr int32_t NUM_TWO = 2;
     static constexpr uint32_t FIRST_VCADD_RESULT_MAX_NUM = 128;
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::NO_SAT,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT,
     };
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::UNKNOWN,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::UNKNOWN,
     };
 

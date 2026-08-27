@@ -22,17 +22,17 @@
 
 namespace InstanceNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T, typename T_BETA, typename T_MEAN>
 class InstanceNormARAWelford {
@@ -143,13 +143,13 @@ private:
             uint32_t sreg1 = quotientNum;
             Duplicate(tmpCount, quotientAddCount, pregMain);
             for (uint16_t i = 0; i < quotientLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg1);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg2 = remainderNum;
             Duplicate(tmpCount, remaninderAddCount, pregMain);
             for (uint16_t i = 0; i < remainderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg2);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg2);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
         }
@@ -299,11 +299,11 @@ private:
             RegTensor<float> delta2;
             RegTensor<float> delta3;
             RegTensor<float> delat4;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             MaskReg pregLoop;
             uint32_t sreg0 = calLen;
             for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_F32);
 
                 LoadAlign(tmpMean, tmpMeanLocal + i * VL_F32);
@@ -419,7 +419,7 @@ private:
             uint32_t sreg0 = currentANum; // 当前A长度，一般为tileA0Len 存在尾块场景
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
@@ -518,7 +518,7 @@ private:
             uint32_t sreg0 = currentANum;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(saveMean, ((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset));
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
@@ -872,11 +872,11 @@ private:
             RegTensor<float> input_var;
             RegTensor<T_MEAN> output_mean;
             RegTensor<T_MEAN> output_var;
-            MicroAPI::MaskReg pregLoop;
+            Reg::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_var, batchVarInAddr + VL_F32 * i);
+                pregLoop = Reg::UpdateMask<float>(castCount);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_var, batchVarInAddr + VL_F32 * i);
                 Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_MEAN, float, castTraitB322B16>(output_var, input_var, pregLoop);
                 StoreAlign<T_MEAN, StoreDist::DIST_PACK_B32>(((__ubuf__ T_MEAN*)batchMeanOutAddr + i * VL_MEAN),

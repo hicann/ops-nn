@@ -224,8 +224,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             Mul(vregXM, vregXM, vregDyM, pregMain);
             MulDstAdd(vregXF, vregDyF, vregXM, pregLoop);
             Add(tempDy, vregDyM, vregDyF, pregLoop);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
             Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXM, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + overLapLoopTimes, vregDgamma,
                                                                  pregMerge);

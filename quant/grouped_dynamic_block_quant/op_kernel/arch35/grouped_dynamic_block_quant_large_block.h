@@ -105,27 +105,27 @@ private:
     GlobalTensor<U> yOutGm_;
     GlobalTensor<float> scaleOutGm_;
 
-    static constexpr AscendC::MicroAPI::CastTrait castTrait32to8 = []() {
+    static constexpr AscendC::Reg::CastTrait castTrait32to8 = []() {
         if constexpr (RMode == 1) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         } else if constexpr (RMode == 4) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         } else if constexpr (RMode == 7) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         }
     }();
-    static constexpr AscendC::MicroAPI::CastTrait castTraitT2Float = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr AscendC::MicroAPI::CastTrait castTraitZero = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr AscendC::MicroAPI::CastTrait castTraitOne = {
-        AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr AscendC::Reg::CastTrait castTraitT2Float = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
+    static constexpr AscendC::Reg::CastTrait castTraitZero = {AscendC::Reg::RegLayout::ZERO,
+                                                              AscendC::Reg::SatMode::UNKNOWN,
+                                                              AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr AscendC::Reg::CastTrait castTraitOne = {AscendC::Reg::RegLayout::ONE,
+                                                             AscendC::Reg::SatMode::UNKNOWN,
+                                                             AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 };
 
 template <typename T, typename U, int64_t RMode>
@@ -322,28 +322,25 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeX
     uint16_t vfLoop = Ceil(xTotalNum, VL);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> vreg1;
-        AscendC::MicroAPI::RegTensor<T> vreg2;
-        AscendC::MicroAPI::RegTensor<T> vreg3;
-        AscendC::MicroAPI::RegTensor<T> vLocalTmpMaxReg;
+        AscendC::Reg::RegTensor<T> vreg1;
+        AscendC::Reg::RegTensor<T> vreg2;
+        AscendC::Reg::RegTensor<T> vreg3;
+        AscendC::Reg::RegTensor<T> vLocalTmpMaxReg;
 
-        AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, MAX_EXP_FOR_BF16);
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg
-            maskAll = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::Duplicate((AscendC::Reg::RegTensor<uint16_t>&)vreg2, MAX_EXP_FOR_BF16);
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg maskAll = AscendC::Reg::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::LoadAlign(vLocalTmpMaxReg, xLocalMaxTmp);
+        AscendC::Reg::LoadAlign(vLocalTmpMaxReg, xLocalMaxTmp);
 
         for (uint16_t i = 0; i < vfLoop; i++) {
-            preg0 = AscendC::MicroAPI::UpdateMask<T>(xTotalNum);
-            AscendC::MicroAPI::LoadAlign(vreg1, xLocalAddr + i * VL);
-            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg1,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, preg0);
-            AscendC::MicroAPI::Max<T, AscendC::MicroAPI::MaskMergeMode::MERGING>(vLocalTmpMaxReg, vLocalTmpMaxReg,
-                                                                                 vreg3, preg0);
+            preg0 = AscendC::Reg::UpdateMask<T>(xTotalNum);
+            AscendC::Reg::LoadAlign(vreg1, xLocalAddr + i * VL);
+            AscendC::Reg::And((AscendC::Reg::RegTensor<uint16_t>&)vreg3, (AscendC::Reg::RegTensor<uint16_t>&)vreg1,
+                              (AscendC::Reg::RegTensor<uint16_t>&)vreg2, preg0);
+            AscendC::Reg::Max<T, AscendC::Reg::MaskMergeMode::MERGING>(vLocalTmpMaxReg, vLocalTmpMaxReg, vreg3, preg0);
         }
-        AscendC::MicroAPI::StoreAlign(xLocalMaxTmp, vLocalTmpMaxReg, maskAll);
+        AscendC::Reg::StoreAlign(xLocalMaxTmp, vLocalTmpMaxReg, maskAll);
     }
 }
 
@@ -351,40 +348,38 @@ template <typename T, typename U, int64_t RMode>
 __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeScaleVF(__ubuf__ float* scaleLocalTmp,
                                                                                        __ubuf__ T* xLocalMaxTmp)
 {
-    static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
+    static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING, false};
     uint32_t scaleNum = 1;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> vreg1;
-        AscendC::MicroAPI::RegTensor<float> vreg2;
-        AscendC::MicroAPI::RegTensor<float> vreg3;
-        AscendC::MicroAPI::RegTensor<float> reciprocalScale;
-        AscendC::MicroAPI::RegTensor<float> minScaleReg;
-        AscendC::MicroAPI::RegTensor<float> vreg5;
-        AscendC::MicroAPI::RegTensor<float> vreg6;
+        AscendC::Reg::RegTensor<T> vreg1;
+        AscendC::Reg::RegTensor<float> vreg2;
+        AscendC::Reg::RegTensor<float> vreg3;
+        AscendC::Reg::RegTensor<float> reciprocalScale;
+        AscendC::Reg::RegTensor<float> minScaleReg;
+        AscendC::Reg::RegTensor<float> vreg5;
+        AscendC::Reg::RegTensor<float> vreg6;
 
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg scaleMaskReg;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg scaleMaskReg;
 
-        preg0 = AscendC::MicroAPI::UpdateMask<T>(scaleNum);
+        preg0 = AscendC::Reg::UpdateMask<T>(scaleNum);
 
-        AscendC::MicroAPI::Duplicate(vreg3, fp8MaxExpValue_);
-        AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
-        AscendC::MicroAPI::Duplicate(minScaleReg, minScale_);
-        AscendC::MicroAPI::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, preg0);
+        AscendC::Reg::Duplicate(vreg3, fp8MaxExpValue_);
+        AscendC::Reg::Duplicate(reciprocalScale, 1.0f);
+        AscendC::Reg::Duplicate(minScaleReg, minScale_);
+        AscendC::Reg::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, preg0);
 
-        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalMaxTmp);
-        AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg2, vreg1, preg0);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalMaxTmp);
+        AscendC::Reg::Cast<float, T, castTraitT2Float>(vreg2, vreg1, preg0);
 
-        AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg2, vreg3, preg0);
-        AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg5,
-                                                           infValue_, preg0);
+        AscendC::Reg::Div<float, &mode>(vreg5, vreg2, vreg3, preg0);
+        AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::Reg::RegTensor<uint32_t>&)vreg5,
+                                                      infValue_, preg0);
         // Min(input_max / FP_MAX, 1 / minScale)
-        AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vreg5, vreg5, reciprocalScale,
-                                                                                 scaleMaskReg);
+        AscendC::Reg::Min<float, AscendC::Reg::MaskMergeMode::MERGING>(vreg5, vreg5, reciprocalScale, scaleMaskReg);
 
-        AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalTmp, vreg5,
-                                                                                                   preg0);
+        AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalTmp, vreg5, preg0);
     }
 }
 
@@ -398,32 +393,32 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeO
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
     uint16_t vfLoop = (xTotalNum + VL - 1) / VL;
     uint32_t dataNum = xTotalNum;
-    static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
+    static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING, false};
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> vreg1;
-        AscendC::MicroAPI::RegTensor<float> vreg2;
-        AscendC::MicroAPI::RegTensor<float> vreg3;
-        AscendC::MicroAPI::RegTensor<float> vreg4;
-        AscendC::MicroAPI::RegTensor<float> vreg5;
-        AscendC::MicroAPI::RegTensor<float> vreg7;
-        AscendC::MicroAPI::RegTensor<U> outReg;
+        AscendC::Reg::RegTensor<T> vreg1;
+        AscendC::Reg::RegTensor<float> vreg2;
+        AscendC::Reg::RegTensor<float> vreg3;
+        AscendC::Reg::RegTensor<float> vreg4;
+        AscendC::Reg::RegTensor<float> vreg5;
+        AscendC::Reg::RegTensor<float> vreg7;
+        AscendC::Reg::RegTensor<U> outReg;
 
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg preg1;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg preg1;
 
-        preg0 = AscendC::MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        preg0 = AscendC::Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg2, scaleLocal);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg2, scaleLocal);
         for (uint16_t i = 0; i < static_cast<uint16_t>(vfLoop); i++) {
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(dataNum);
-            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalAddr + i * VL);
-            AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg4, vreg1, preg0);
-            AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg4, vreg2, preg0);
+            preg0 = AscendC::Reg::UpdateMask<float>(dataNum);
+            AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalAddr + i * VL);
+            AscendC::Reg::Cast<float, T, castTraitT2Float>(vreg4, vreg1, preg0);
+            AscendC::Reg::Div<float, &mode>(vreg5, vreg4, vreg2, preg0);
 
-            AscendC::MicroAPI::Cast<U, float, castTrait32to8>(outReg, vreg5, preg0);
+            AscendC::Reg::Cast<U, float, castTrait32to8>(outReg, vreg5, preg0);
 
-            MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(outLocal + i * VL, outReg, preg0);
+            Reg::StoreAlign<U, Reg::StoreDist::DIST_PACK4_B32>(outLocal + i * VL, outReg, preg0);
         }
     }
 }

@@ -160,14 +160,14 @@ __aicore__ inline void VectorAdd(const LocalTensor<float>& dstTensor, const Loca
         __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
         __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+        AscendC::Reg::MaskReg pMask;
         for (uint16_t i = 0; i < loopTimes; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+            pMask = AscendC::Reg::UpdateMask<float>(sreg);
             LoadAlign(aReg, (__ubuf__ float*)src0 + i * VL_FP32);
             LoadAlign(bReg, (__ubuf__ float*)src1 + i * VL_FP32);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
             StoreAlign((__ubuf__ float*)dst + i * VL_FP32, aReg, pMask);
         }
     }
@@ -214,14 +214,14 @@ __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const Lo
         __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
         __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
+        AscendC::Reg::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+            pMask = AscendC::Reg::UpdateMask<float>(sreg);
             LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                 LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
             StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
         }

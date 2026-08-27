@@ -23,7 +23,7 @@
 
 namespace BatchNormGrad {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 template <typename DY_DTYPE, typename WEIGHT_DTYPE>
 class BatchNormGradRARSplitCoreR0 {
@@ -342,7 +342,7 @@ public:
         __VEC_SCOPE__
         {
             MaskReg pregMask;
-            MaskReg pregMaskAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMaskAll = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             RegTensor<float> regMean, regRstd, regDy, regX;
 
             for (uint16_t i = 0; i < curAInnerLen; i++) {
@@ -408,14 +408,14 @@ public:
         __VEC_SCOPE__
         {
             uint32_t sreg = static_cast<uint32_t>(count);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+                pMask = AscendC::Reg::UpdateMask<float>(sreg);
                 LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                    Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
                 StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
             }
@@ -598,8 +598,7 @@ public:
 
                     __VEC_SCOPE__
                     {
-                        MaskReg
-                            pregMaskAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                        MaskReg pregMaskAll = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
                         MaskReg pregMask;
 

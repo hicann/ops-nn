@@ -10,7 +10,7 @@
 
 /*!
  * \file fake_quant_with_min_max_vars_per_channel_gradient_regbase.h
- * \brief regbase / MicroAPI implementation for FakeQuantWithMinMaxVarsPerChannelGradient (FP32).
+ * \brief regbase / Reg implementation for FakeQuantWithMinMaxVarsPerChannelGradient (FP32).
  *
  * D-chunked design: every UB-resident buffer is sized by dTileLen (not by D), so the
  * kernel scales to arbitrarily large channel count. Outer loop iterates d-chunks;
@@ -30,10 +30,10 @@ constexpr uint32_t FP32_VL = 64; // 256B / 4B per FP32 vector reg
 constexpr uint32_t SPLIT_MODE_ROWS = 0;
 constexpr uint32_t SPLIT_MODE_DCHUNKS = 1;
 
-static constexpr MicroAPI::CastTrait castTraitFp32ToInt32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitInt32ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFp32ToInt32 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitInt32ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
 class Kernel {
@@ -201,73 +201,73 @@ __aicore__ inline void Kernel<T>::PrepareNudgedChunk(uint32_t dOffset, uint32_t 
         // when min ~= -max, causing zp to land on the wrong int (off by 1). The
         // 0 ULP IEEE 754 Div (PRECISION_0ULP_FTZ_FALSE) gives bit-equal results
         // with CPU/TF for fp32 division. See zp-precision-trap.md.
-        static constexpr AscendC::MicroAPI::DivSpecificMode DIV_HP_ZP_MODE = {
-            .mrgMode = AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        static constexpr AscendC::Reg::DivSpecificMode DIV_HP_ZP_MODE = {
+            .mrgMode = AscendC::Reg::MaskMergeMode::ZEROING,
             .precisionMode = false,
             .algo = AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
-        AscendC::MicroAPI::RegTensor<float> vMin;
-        AscendC::MicroAPI::RegTensor<float> vMax;
-        AscendC::MicroAPI::RegTensor<float> vScale;
-        AscendC::MicroAPI::RegTensor<float> vZpf;
-        AscendC::MicroAPI::RegTensor<float> vNzpRound;
-        AscendC::MicroAPI::RegTensor<int32_t> vNzpInt;
-        AscendC::MicroAPI::RegTensor<float> vNzp;
-        AscendC::MicroAPI::RegTensor<float> vNudgedMin;
-        AscendC::MicroAPI::RegTensor<float> vNudgedMax;
-        AscendC::MicroAPI::RegTensor<float> vQminVec;
-        AscendC::MicroAPI::RegTensor<float> vQmaxVec;
-        AscendC::MicroAPI::RegTensor<float> vQRange;
-        AscendC::MicroAPI::RegTensor<float> vZero;
-        AscendC::MicroAPI::RegTensor<float> vNegInf;
-        AscendC::MicroAPI::RegTensor<float> vPosInf;
-        AscendC::MicroAPI::MaskReg pMask;
-        AscendC::MicroAPI::MaskReg cmpLo;
-        AscendC::MicroAPI::MaskReg cmpHi;
-        AscendC::MicroAPI::MaskReg cmpDegenerate;
+        AscendC::Reg::RegTensor<float> vMin;
+        AscendC::Reg::RegTensor<float> vMax;
+        AscendC::Reg::RegTensor<float> vScale;
+        AscendC::Reg::RegTensor<float> vZpf;
+        AscendC::Reg::RegTensor<float> vNzpRound;
+        AscendC::Reg::RegTensor<int32_t> vNzpInt;
+        AscendC::Reg::RegTensor<float> vNzp;
+        AscendC::Reg::RegTensor<float> vNudgedMin;
+        AscendC::Reg::RegTensor<float> vNudgedMax;
+        AscendC::Reg::RegTensor<float> vQminVec;
+        AscendC::Reg::RegTensor<float> vQmaxVec;
+        AscendC::Reg::RegTensor<float> vQRange;
+        AscendC::Reg::RegTensor<float> vZero;
+        AscendC::Reg::RegTensor<float> vNegInf;
+        AscendC::Reg::RegTensor<float> vPosInf;
+        AscendC::Reg::MaskReg pMask;
+        AscendC::Reg::MaskReg cmpLo;
+        AscendC::Reg::MaskReg cmpHi;
+        AscendC::Reg::MaskReg cmpDegenerate;
 
-        AscendC::MicroAPI::Duplicate(vQminVec, qminF);
-        AscendC::MicroAPI::Duplicate(vQmaxVec, qmaxF);
-        AscendC::MicroAPI::Duplicate(vQRange, qRange);
-        AscendC::MicroAPI::Duplicate(vZero, 0.0f);
-        AscendC::MicroAPI::Duplicate(vNegInf, -3.4e38f);
-        AscendC::MicroAPI::Duplicate(vPosInf, 3.4e38f);
+        AscendC::Reg::Duplicate(vQminVec, qminF);
+        AscendC::Reg::Duplicate(vQmaxVec, qmaxF);
+        AscendC::Reg::Duplicate(vQRange, qRange);
+        AscendC::Reg::Duplicate(vZero, 0.0f);
+        AscendC::Reg::Duplicate(vNegInf, -3.4e38f);
+        AscendC::Reg::Duplicate(vPosInf, 3.4e38f);
 
         uint32_t remain = dCount;
         for (uint16_t i = 0; i < loopNum; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(remain);
-            AscendC::MicroAPI::DataCopy(vMin, minPtr + i * FP32_VL);
-            AscendC::MicroAPI::DataCopy(vMax, maxPtr + i * FP32_VL);
+            pMask = AscendC::Reg::UpdateMask<float>(remain);
+            AscendC::Reg::DataCopy(vMin, minPtr + i * FP32_VL);
+            AscendC::Reg::DataCopy(vMax, maxPtr + i * FP32_VL);
 
-            AscendC::MicroAPI::Sub(vScale, vMax, vMin, pMask);
-            AscendC::MicroAPI::Compare<float, CMPMODE::LE>(cmpDegenerate, vScale, vZero, pMask);
-            AscendC::MicroAPI::Div<float, &DIV_HP_ZP_MODE>(vScale, vScale, vQRange, pMask);
+            AscendC::Reg::Sub(vScale, vMax, vMin, pMask);
+            AscendC::Reg::Compare<float, CMPMODE::LE>(cmpDegenerate, vScale, vZero, pMask);
+            AscendC::Reg::Div<float, &DIV_HP_ZP_MODE>(vScale, vScale, vQRange, pMask);
 
             // zp = qmin - min/scale (TF original formula). High-precision 0 ULP Div
             // is required because min ~= -max would otherwise round wrong (see DIV_HP_ZP_MODE above).
             // degenerate (scale==0) may produce inf/NaN here, but is overwritten via cmpDegenerate
             // Select on vNudgedMin/vNudgedMax below (zp itself is not stored).
-            AscendC::MicroAPI::Div<float, &DIV_HP_ZP_MODE>(vZpf, vMin, vScale, pMask);
-            AscendC::MicroAPI::Sub(vZpf, vQminVec, vZpf, pMask);
+            AscendC::Reg::Div<float, &DIV_HP_ZP_MODE>(vZpf, vMin, vScale, pMask);
+            AscendC::Reg::Sub(vZpf, vQminVec, vZpf, pMask);
 
-            AscendC::MicroAPI::Cast<int32_t, float, castTraitFp32ToInt32>(vNzpInt, vZpf, pMask);
-            AscendC::MicroAPI::Cast<float, int32_t, castTraitInt32ToFp32>(vNzpRound, vNzpInt, pMask);
+            AscendC::Reg::Cast<int32_t, float, castTraitFp32ToInt32>(vNzpInt, vZpf, pMask);
+            AscendC::Reg::Cast<float, int32_t, castTraitInt32ToFp32>(vNzpRound, vNzpInt, pMask);
 
-            AscendC::MicroAPI::Compare<float, CMPMODE::LT>(cmpLo, vZpf, vQminVec, pMask);
-            AscendC::MicroAPI::Compare<float, CMPMODE::GT>(cmpHi, vZpf, vQmaxVec, pMask);
+            AscendC::Reg::Compare<float, CMPMODE::LT>(cmpLo, vZpf, vQminVec, pMask);
+            AscendC::Reg::Compare<float, CMPMODE::GT>(cmpHi, vZpf, vQmaxVec, pMask);
 
-            AscendC::MicroAPI::Select(vNzp, vQminVec, vNzpRound, cmpLo);
-            AscendC::MicroAPI::Select(vNzp, vQmaxVec, vNzp, cmpHi);
+            AscendC::Reg::Select(vNzp, vQminVec, vNzpRound, cmpLo);
+            AscendC::Reg::Select(vNzp, vQmaxVec, vNzp, cmpHi);
 
-            AscendC::MicroAPI::Sub(vNudgedMin, vQminVec, vNzp, pMask);
-            AscendC::MicroAPI::Mul(vNudgedMin, vNudgedMin, vScale, pMask);
-            AscendC::MicroAPI::Sub(vNudgedMax, vQmaxVec, vNzp, pMask);
-            AscendC::MicroAPI::Mul(vNudgedMax, vNudgedMax, vScale, pMask);
+            AscendC::Reg::Sub(vNudgedMin, vQminVec, vNzp, pMask);
+            AscendC::Reg::Mul(vNudgedMin, vNudgedMin, vScale, pMask);
+            AscendC::Reg::Sub(vNudgedMax, vQmaxVec, vNzp, pMask);
+            AscendC::Reg::Mul(vNudgedMax, vNudgedMax, vScale, pMask);
 
-            AscendC::MicroAPI::Select(vNudgedMin, vNegInf, vNudgedMin, cmpDegenerate);
-            AscendC::MicroAPI::Select(vNudgedMax, vPosInf, vNudgedMax, cmpDegenerate);
+            AscendC::Reg::Select(vNudgedMin, vNegInf, vNudgedMin, cmpDegenerate);
+            AscendC::Reg::Select(vNudgedMax, vPosInf, vNudgedMax, cmpDegenerate);
 
-            AscendC::MicroAPI::DataCopy(minPtr + i * FP32_VL, vNudgedMin, pMask);
-            AscendC::MicroAPI::DataCopy(maxPtr + i * FP32_VL, vNudgedMax, pMask);
+            AscendC::Reg::DataCopy(minPtr + i * FP32_VL, vNudgedMin, pMask);
+            AscendC::Reg::DataCopy(maxPtr + i * FP32_VL, vNudgedMax, pMask);
         }
     }
 #endif
@@ -289,16 +289,16 @@ __aicore__ inline void Kernel<T>::ZeroAccChunk(uint32_t dCount)
     uint16_t loopNum = static_cast<uint16_t>((dCount + FP32_VL - 1) / FP32_VL);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vZero;
-        AscendC::MicroAPI::MaskReg pMask;
-        AscendC::MicroAPI::Duplicate(vZero, 0.0f);
+        AscendC::Reg::RegTensor<float> vZero;
+        AscendC::Reg::MaskReg pMask;
+        AscendC::Reg::Duplicate(vZero, 0.0f);
         uint32_t remain = dCount;
         for (uint16_t i = 0; i < loopNum; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(remain);
-            AscendC::MicroAPI::DataCopy(accMinPtr + i * FP32_VL, vZero, pMask);
-            AscendC::MicroAPI::DataCopy(accMaxPtr + i * FP32_VL, vZero, pMask);
-            AscendC::MicroAPI::DataCopy(compMinPtr + i * FP32_VL, vZero, pMask);
-            AscendC::MicroAPI::DataCopy(compMaxPtr + i * FP32_VL, vZero, pMask);
+            pMask = AscendC::Reg::UpdateMask<float>(remain);
+            AscendC::Reg::DataCopy(accMinPtr + i * FP32_VL, vZero, pMask);
+            AscendC::Reg::DataCopy(accMaxPtr + i * FP32_VL, vZero, pMask);
+            AscendC::Reg::DataCopy(compMinPtr + i * FP32_VL, vZero, pMask);
+            AscendC::Reg::DataCopy(compMaxPtr + i * FP32_VL, vZero, pMask);
         }
     }
 #endif
@@ -316,73 +316,73 @@ __aicore__ inline void Kernel<T>::ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vG;
-        AscendC::MicroAPI::RegTensor<float> vX;
-        AscendC::MicroAPI::RegTensor<float> vLo;
-        AscendC::MicroAPI::RegTensor<float> vHi;
-        AscendC::MicroAPI::RegTensor<float> vBpx;
-        AscendC::MicroAPI::RegTensor<float> vBpMinAcc;
-        AscendC::MicroAPI::RegTensor<float> vBpMaxAcc;
-        AscendC::MicroAPI::RegTensor<float> vAddMin;
-        AscendC::MicroAPI::RegTensor<float> vAddMax;
-        AscendC::MicroAPI::RegTensor<float> vCMin;
-        AscendC::MicroAPI::RegTensor<float> vCMax;
-        AscendC::MicroAPI::RegTensor<float> vY;
-        AscendC::MicroAPI::RegTensor<float> vT;
-        AscendC::MicroAPI::RegTensor<float> vZero;
-        AscendC::MicroAPI::MaskReg pMask;
-        AscendC::MicroAPI::MaskReg cmpLo;
-        AscendC::MicroAPI::MaskReg cmpHi;
+        AscendC::Reg::RegTensor<float> vG;
+        AscendC::Reg::RegTensor<float> vX;
+        AscendC::Reg::RegTensor<float> vLo;
+        AscendC::Reg::RegTensor<float> vHi;
+        AscendC::Reg::RegTensor<float> vBpx;
+        AscendC::Reg::RegTensor<float> vBpMinAcc;
+        AscendC::Reg::RegTensor<float> vBpMaxAcc;
+        AscendC::Reg::RegTensor<float> vAddMin;
+        AscendC::Reg::RegTensor<float> vAddMax;
+        AscendC::Reg::RegTensor<float> vCMin;
+        AscendC::Reg::RegTensor<float> vCMax;
+        AscendC::Reg::RegTensor<float> vY;
+        AscendC::Reg::RegTensor<float> vT;
+        AscendC::Reg::RegTensor<float> vZero;
+        AscendC::Reg::MaskReg pMask;
+        AscendC::Reg::MaskReg cmpLo;
+        AscendC::Reg::MaskReg cmpHi;
 
-        AscendC::MicroAPI::Duplicate(vZero, 0.0f);
+        AscendC::Reg::Duplicate(vZero, 0.0f);
 
         uint32_t remain = calCount;
         for (uint16_t i = 0; i < loopNum; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(remain);
+            pMask = AscendC::Reg::UpdateMask<float>(remain);
 
-            AscendC::MicroAPI::DataCopy(vG, gPtr + i * FP32_VL);
-            AscendC::MicroAPI::DataCopy(vX, xPtr + i * FP32_VL);
-            AscendC::MicroAPI::DataCopy(vLo, loPtr + i * FP32_VL);
-            AscendC::MicroAPI::DataCopy(vHi, hiPtr + i * FP32_VL);
+            AscendC::Reg::DataCopy(vG, gPtr + i * FP32_VL);
+            AscendC::Reg::DataCopy(vX, xPtr + i * FP32_VL);
+            AscendC::Reg::DataCopy(vLo, loPtr + i * FP32_VL);
+            AscendC::Reg::DataCopy(vHi, hiPtr + i * FP32_VL);
             if (accumulate) {
-                AscendC::MicroAPI::DataCopy(vBpMinAcc, bpMinAccPtr + i * FP32_VL);
-                AscendC::MicroAPI::DataCopy(vBpMaxAcc, bpMaxAccPtr + i * FP32_VL);
-                AscendC::MicroAPI::DataCopy(vCMin, bpMinCompPtr + i * FP32_VL);
-                AscendC::MicroAPI::DataCopy(vCMax, bpMaxCompPtr + i * FP32_VL);
+                AscendC::Reg::DataCopy(vBpMinAcc, bpMinAccPtr + i * FP32_VL);
+                AscendC::Reg::DataCopy(vBpMaxAcc, bpMaxAccPtr + i * FP32_VL);
+                AscendC::Reg::DataCopy(vCMin, bpMinCompPtr + i * FP32_VL);
+                AscendC::Reg::DataCopy(vCMax, bpMaxCompPtr + i * FP32_VL);
             }
 
-            AscendC::MicroAPI::Compare<float, CMPMODE::LT>(cmpLo, vX, vLo, pMask);
-            AscendC::MicroAPI::Compare<float, CMPMODE::GT>(cmpHi, vX, vHi, pMask);
+            AscendC::Reg::Compare<float, CMPMODE::LT>(cmpLo, vX, vLo, pMask);
+            AscendC::Reg::Compare<float, CMPMODE::GT>(cmpHi, vX, vHi, pMask);
 
-            AscendC::MicroAPI::RegTensor<float> vOne;
-            AscendC::MicroAPI::RegTensor<float> vMask;
-            AscendC::MicroAPI::Duplicate(vOne, 1.0f);
-            AscendC::MicroAPI::Select(vMask, vZero, vOne, cmpLo);  // 0 if x<lo else 1
-            AscendC::MicroAPI::Select(vMask, vZero, vMask, cmpHi); // 0 if x>hi else keep
-            AscendC::MicroAPI::Mul(vBpx, vG, vMask, pMask);
-            AscendC::MicroAPI::DataCopy(bpxPtr + i * FP32_VL, vBpx, pMask);
+            AscendC::Reg::RegTensor<float> vOne;
+            AscendC::Reg::RegTensor<float> vMask;
+            AscendC::Reg::Duplicate(vOne, 1.0f);
+            AscendC::Reg::Select(vMask, vZero, vOne, cmpLo);  // 0 if x<lo else 1
+            AscendC::Reg::Select(vMask, vZero, vMask, cmpHi); // 0 if x>hi else keep
+            AscendC::Reg::Mul(vBpx, vG, vMask, pMask);
+            AscendC::Reg::DataCopy(bpxPtr + i * FP32_VL, vBpx, pMask);
 
             if (accumulate) {
                 // Kahan compensated summation for bp_min:
                 //   y = input - c;  t = acc + y;  c = (t - acc) - y;  acc = t
-                AscendC::MicroAPI::Select(vMask, vOne, vZero, cmpLo);
-                AscendC::MicroAPI::Mul(vAddMin, vG, vMask, pMask);
-                AscendC::MicroAPI::Sub(vY, vAddMin, vCMin, pMask);
-                AscendC::MicroAPI::Add(vT, vBpMinAcc, vY, pMask);
-                AscendC::MicroAPI::Sub(vCMin, vT, vBpMinAcc, pMask);
-                AscendC::MicroAPI::Sub(vCMin, vCMin, vY, pMask);
-                AscendC::MicroAPI::DataCopy(bpMinCompPtr + i * FP32_VL, vCMin, pMask);
-                AscendC::MicroAPI::DataCopy(bpMinAccPtr + i * FP32_VL, vT, pMask);
+                AscendC::Reg::Select(vMask, vOne, vZero, cmpLo);
+                AscendC::Reg::Mul(vAddMin, vG, vMask, pMask);
+                AscendC::Reg::Sub(vY, vAddMin, vCMin, pMask);
+                AscendC::Reg::Add(vT, vBpMinAcc, vY, pMask);
+                AscendC::Reg::Sub(vCMin, vT, vBpMinAcc, pMask);
+                AscendC::Reg::Sub(vCMin, vCMin, vY, pMask);
+                AscendC::Reg::DataCopy(bpMinCompPtr + i * FP32_VL, vCMin, pMask);
+                AscendC::Reg::DataCopy(bpMinAccPtr + i * FP32_VL, vT, pMask);
 
                 // Kahan compensated summation for bp_max
-                AscendC::MicroAPI::Select(vMask, vOne, vZero, cmpHi);
-                AscendC::MicroAPI::Mul(vAddMax, vG, vMask, pMask);
-                AscendC::MicroAPI::Sub(vY, vAddMax, vCMax, pMask);
-                AscendC::MicroAPI::Add(vT, vBpMaxAcc, vY, pMask);
-                AscendC::MicroAPI::Sub(vCMax, vT, vBpMaxAcc, pMask);
-                AscendC::MicroAPI::Sub(vCMax, vCMax, vY, pMask);
-                AscendC::MicroAPI::DataCopy(bpMaxCompPtr + i * FP32_VL, vCMax, pMask);
-                AscendC::MicroAPI::DataCopy(bpMaxAccPtr + i * FP32_VL, vT, pMask);
+                AscendC::Reg::Select(vMask, vOne, vZero, cmpHi);
+                AscendC::Reg::Mul(vAddMax, vG, vMask, pMask);
+                AscendC::Reg::Sub(vY, vAddMax, vCMax, pMask);
+                AscendC::Reg::Add(vT, vBpMaxAcc, vY, pMask);
+                AscendC::Reg::Sub(vCMax, vT, vBpMaxAcc, pMask);
+                AscendC::Reg::Sub(vCMax, vCMax, vY, pMask);
+                AscendC::Reg::DataCopy(bpMaxCompPtr + i * FP32_VL, vCMax, pMask);
+                AscendC::Reg::DataCopy(bpMaxAccPtr + i * FP32_VL, vT, pMask);
             }
         }
     }
@@ -488,14 +488,14 @@ __aicore__ inline void Kernel<T>::ZeroWorkspaceSlot()
     uint16_t loopNum = static_cast<uint16_t>((channelNum_ + FP32_VL - 1) / FP32_VL);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vZero;
-        AscendC::MicroAPI::MaskReg pMask;
-        AscendC::MicroAPI::Duplicate(vZero, 0.0f);
+        AscendC::Reg::RegTensor<float> vZero;
+        AscendC::Reg::MaskReg pMask;
+        AscendC::Reg::Duplicate(vZero, 0.0f);
         uint32_t remain = channelNum_;
         for (uint16_t i = 0; i < loopNum; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(remain);
-            AscendC::MicroAPI::DataCopy(minPtr + i * FP32_VL, vZero, pMask);
-            AscendC::MicroAPI::DataCopy(maxPtr + i * FP32_VL, vZero, pMask);
+            pMask = AscendC::Reg::UpdateMask<float>(remain);
+            AscendC::Reg::DataCopy(minPtr + i * FP32_VL, vZero, pMask);
+            AscendC::Reg::DataCopy(maxPtr + i * FP32_VL, vZero, pMask);
         }
     }
 #endif
@@ -582,21 +582,21 @@ __aicore__ inline void Kernel<T>::MergePhase()
             uint16_t loopNum = static_cast<uint16_t>((dCount + FP32_VL - 1) / FP32_VL);
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::RegTensor<float> vAcc;
-                AscendC::MicroAPI::RegTensor<float> vSrc;
-                AscendC::MicroAPI::MaskReg pMask;
+                AscendC::Reg::RegTensor<float> vAcc;
+                AscendC::Reg::RegTensor<float> vSrc;
+                AscendC::Reg::MaskReg pMask;
                 uint32_t remain = dCount;
                 for (uint16_t i = 0; i < loopNum; ++i) {
-                    pMask = AscendC::MicroAPI::UpdateMask<float>(remain);
-                    AscendC::MicroAPI::DataCopy(vAcc, accMinPtr + i * FP32_VL);
-                    AscendC::MicroAPI::DataCopy(vSrc, srcMinPtr + i * FP32_VL);
-                    AscendC::MicroAPI::Add(vAcc, vAcc, vSrc, pMask);
-                    AscendC::MicroAPI::DataCopy(accMinPtr + i * FP32_VL, vAcc, pMask);
+                    pMask = AscendC::Reg::UpdateMask<float>(remain);
+                    AscendC::Reg::DataCopy(vAcc, accMinPtr + i * FP32_VL);
+                    AscendC::Reg::DataCopy(vSrc, srcMinPtr + i * FP32_VL);
+                    AscendC::Reg::Add(vAcc, vAcc, vSrc, pMask);
+                    AscendC::Reg::DataCopy(accMinPtr + i * FP32_VL, vAcc, pMask);
 
-                    AscendC::MicroAPI::DataCopy(vAcc, accMaxPtr + i * FP32_VL);
-                    AscendC::MicroAPI::DataCopy(vSrc, srcMaxPtr + i * FP32_VL);
-                    AscendC::MicroAPI::Add(vAcc, vAcc, vSrc, pMask);
-                    AscendC::MicroAPI::DataCopy(accMaxPtr + i * FP32_VL, vAcc, pMask);
+                    AscendC::Reg::DataCopy(vAcc, accMaxPtr + i * FP32_VL);
+                    AscendC::Reg::DataCopy(vSrc, srcMaxPtr + i * FP32_VL);
+                    AscendC::Reg::Add(vAcc, vAcc, vSrc, pMask);
+                    AscendC::Reg::DataCopy(accMaxPtr + i * FP32_VL, vAcc, pMask);
                 }
             }
 #endif

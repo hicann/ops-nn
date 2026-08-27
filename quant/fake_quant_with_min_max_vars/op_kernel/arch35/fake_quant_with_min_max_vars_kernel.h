@@ -82,13 +82,13 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY;
     TBuf<QuePosition::VECOUT> bufTempI32; // temp for int32 round intermediate
 
-    // VF MicroAPI CastTraits
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_INT32_FLOOR = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_INT32_TO_FP32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+    // VF Reg CastTraits
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_INT32_FLOOR = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_FLOOR};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_INT32_TO_FP32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_ROUND};
 
     GlobalTensor<float> gmX;
     GlobalTensor<float> gmY;
@@ -216,40 +216,39 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Compute(int64_t cur
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<float> vregX, vregY;
-            AscendC::MicroAPI::RegTensor<float> vregNmin, vregNmax, vregScale, vregInvScale, vregHalf;
-            AscendC::MicroAPI::RegTensor<int32_t> vregI32;
+            AscendC::Reg::RegTensor<float> vregX, vregY;
+            AscendC::Reg::RegTensor<float> vregNmin, vregNmax, vregScale, vregInvScale, vregHalf;
+            AscendC::Reg::RegTensor<int32_t> vregI32;
             AscendC::Reg::MaskReg vmaskCmp;
-            AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float>();
+            AscendC::Reg::MaskReg mask = AscendC::Reg::CreateMask<float>();
 
-            AscendC::MicroAPI::Duplicate<float>(vregNmin, nmin_);
-            AscendC::MicroAPI::Duplicate<float>(vregNmax, nmax_);
-            AscendC::MicroAPI::Duplicate<float>(vregScale, scale_);
-            AscendC::MicroAPI::Duplicate<float>(vregInvScale, invScale_);
-            AscendC::MicroAPI::Duplicate<float>(vregHalf, 0.5f);
+            AscendC::Reg::Duplicate<float>(vregNmin, nmin_);
+            AscendC::Reg::Duplicate<float>(vregNmax, nmax_);
+            AscendC::Reg::Duplicate<float>(vregScale, scale_);
+            AscendC::Reg::Duplicate<float>(vregInvScale, invScale_);
+            AscendC::Reg::Duplicate<float>(vregHalf, 0.5f);
 
             uint32_t count = static_cast<uint32_t>(currentNum);
             uint16_t vfLoopNum = (count + VL - 1) / VL;
 
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                mask = AscendC::MicroAPI::UpdateMask<float>(count);
+                mask = AscendC::Reg::UpdateMask<float>(count);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregX, xLocalAddr + i * VL);
+                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregX, xLocalAddr + i * VL);
 
-                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::GE>(vmaskCmp, vregX, vregNmin, mask);
-                AscendC::MicroAPI::Select<float>(vregX, vregX, vregNmin, vmaskCmp);
-                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::LE>(vmaskCmp, vregX, vregNmax, mask);
-                AscendC::MicroAPI::Select<float>(vregX, vregX, vregNmax, vmaskCmp);
+                AscendC::Reg::Compare<float, AscendC::CMPMODE::GE>(vmaskCmp, vregX, vregNmin, mask);
+                AscendC::Reg::Select<float>(vregX, vregX, vregNmin, vmaskCmp);
+                AscendC::Reg::Compare<float, AscendC::CMPMODE::LE>(vmaskCmp, vregX, vregNmax, mask);
+                AscendC::Reg::Select<float>(vregX, vregX, vregNmax, vmaskCmp);
 
                 // y = floor(clamp(x, nmin, nmax) * invScale + 0.5) * scale
-                AscendC::MicroAPI::Mul(vregX, vregX, vregInvScale, mask);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregX, vregX, vregHalf, mask);
-                AscendC::MicroAPI::Cast<int32_t, float, CAST_TRAIT_FP32_TO_INT32_FLOOR>(vregI32, vregX, mask);
-                AscendC::MicroAPI::Cast<float, int32_t, CAST_TRAIT_INT32_TO_FP32>(vregY, vregI32, mask);
-                AscendC::MicroAPI::Mul(vregY, vregY, vregScale, mask);
+                AscendC::Reg::Mul(vregX, vregX, vregInvScale, mask);
+                AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregX, vregX, vregHalf, mask);
+                AscendC::Reg::Cast<int32_t, float, CAST_TRAIT_FP32_TO_INT32_FLOOR>(vregI32, vregX, mask);
+                AscendC::Reg::Cast<float, int32_t, CAST_TRAIT_INT32_TO_FP32>(vregY, vregI32, mask);
+                AscendC::Reg::Mul(vregY, vregY, vregScale, mask);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM>(yLocalAddr + i * VL, vregY,
-                                                                                            mask);
+                AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM>(yLocalAddr + i * VL, vregY, mask);
             }
         }
     } else {

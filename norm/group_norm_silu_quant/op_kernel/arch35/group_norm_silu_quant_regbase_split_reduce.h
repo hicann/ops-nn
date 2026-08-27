@@ -113,7 +113,7 @@ public:
         pipe.InitBuffer(bRawBuf, hasBeta ? chanAlign * sizeof(T2) : BLOCK_SIZE);
         pipe.InitBuffer(gFBuf, hasGamma ? chanAlign * sizeof(float) : BLOCK_SIZE);
         pipe.InitBuffer(bFBuf, hasBeta ? chanAlign * sizeof(float) : BLOCK_SIZE);
-        // WriteMeanRstd 专用(ProcessMeanAndRstd idiom):MicroAPI 读满 VL_FP32,故 mean/rstd 各留 VL_FP32
+        // WriteMeanRstd 专用(ProcessMeanAndRstd idiom):Reg 读满 VL_FP32,故 mean/rstd 各留 VL_FP32
         pipe.InitBuffer(mrFBuf, 2 * VL_FP32 * sizeof(float));
         pipe.InitBuffer(mrOBuf, 2 * VL_FP32 * sizeof(T1));
     }
@@ -330,7 +330,7 @@ private:
     // mean/rstd 各用完全独立的对齐缓冲(mean->gRawBuf, rstd->bRawBuf, 此刻均空闲),各自从对齐 [0] 写,
     // 杜绝 buffer 复用 race 与 DataCopyPad 源非对齐(UB 源须 32B 对齐)。
     // 复用现有 kernel 的 ProcessMeanAndRstd idiom(稳定):mean/rstd 各占 VL_FP32,SetValue 后 S->V,由 ProcessMeanAndRstd
-    // 内部 MicroAPI 窄化 + DIST_PACK_B32 掩码存,再 CopyMeanAndRstd2Gm(blockCount=1,copyLen=1)写 GM。
+    // 内部 Reg 窄化 + DIST_PACK_B32 掩码存,再 CopyMeanAndRstd2Gm(blockCount=1,copyLen=1)写 GM。
     __aicore__ inline void WriteMeanRstd(float mean, float rstd, event_t evS2V)
     {
         LocalTensor<float> meanT = mrFBuf.Get<float>();
@@ -344,7 +344,7 @@ private:
             WaitFlag<HardEvent::S_MTE3>(evS2M3o);
             CopyMeanAndRstd2Gm<float>(meanT2Gm[groupGlobalIdx], rstdT2Gm[groupGlobalIdx], meanT, rstdT, 1, 1);
         } else {
-            // T1(half/bf16)输出:ProcessMeanAndRstd 内部 MicroAPI 读 UB(V), 需 S->V
+            // T1(half/bf16)输出:ProcessMeanAndRstd 内部 Reg 读 UB(V), 需 S->V
             LocalTensor<T1> meanO = mrOBuf.Get<T1>();
             LocalTensor<T1> rstdO = mrOBuf.Get<T1>()[VL_FP32];
             SetFlag<HardEvent::S_V>(evS2V);

@@ -327,8 +327,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
             LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
             MulDstAdd(vregX, vregDy, vregDs, preg);
             Add(tempDbeta, vregDbeta, vregDy, preg);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, vregX, preg);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
+            Move<float, AscendC::Reg::MaskMergeMode::MERGING>(vregDs, vregX, preg);
 
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);

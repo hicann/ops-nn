@@ -17,15 +17,15 @@
 
 namespace NormCommon {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 namespace NormCommonRegbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
@@ -71,17 +71,17 @@ constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));
 constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr uint16_t DICHOTOMY_ADD_COEFF = 2;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -523,17 +523,17 @@ __aicore__ inline void ComputeRstdNewtonRaphsonReg(RegTensor<float>& var, RegTen
 
 template <typename T>
 __aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T*& src, RegTensor<float>& dst,
-                                                  AscendC::MicroAPI::UnalignReg& uSrc, MaskReg& preg,
+                                                  AscendC::Reg::UnalignReg& uSrc, MaskReg& preg,
                                                   uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, uSrc, src,
-                                                                                                    postUpdateStride);
+        AscendC::Reg::DataCopyUnAlign<float, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(dst, uSrc, src,
+                                                                                          postUpdateStride);
     } else {
         RegTensor<T> xB16;
         RegTensor<T> xB16Unpack;
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xB16, uSrc, src,
-                                                                                                postUpdateStride);
+        AscendC::Reg::DataCopyUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xB16, uSrc, src,
+                                                                                      postUpdateStride);
         UnPack((RegTensor<uint32_t>&)xB16Unpack, (RegTensor<uint16_t>&)xB16);
         Cast<float, T, castTraitB162B32>(dst, xB16Unpack, preg);
     }
@@ -541,19 +541,19 @@ __aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T*& src, RegTens
 
 template <typename T>
 __aicore__ inline void StoreTensorUnAlignForDtypeT(__local_mem__ T*& dst, RegTensor<float>& src,
-                                                   AscendC::MicroAPI::UnalignReg& uDst, MaskReg& preg,
+                                                   AscendC::Reg::UnalignReg& uDst, MaskReg& preg,
                                                    uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, src, uDst,
-                                                                                                    postUpdateStride);
+        AscendC::Reg::DataCopyUnAlign<float, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(dst, src, uDst,
+                                                                                          postUpdateStride);
     } else {
         RegTensor<T> xB16;
         RegTensor<T> xB16Pack;
         Cast<T, float, castTraitB322B16>(xB16, src, preg);
         Pack((RegTensor<uint16_t>&)xB16Pack, (RegTensor<uint32_t>&)xB16);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, xB16Pack, uDst,
-                                                                                                postUpdateStride);
+        AscendC::Reg::DataCopyUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(dst, xB16Pack, uDst,
+                                                                                      postUpdateStride);
     }
 }
 
@@ -561,9 +561,9 @@ template <typename T>
 __aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
                                                   uint32_t postUpdateStride)
 {
-    AscendC::MicroAPI::UnalignReg uSrc;
+    AscendC::Reg::UnalignReg uSrc;
     __local_mem__ T* srcTmp = src;
-    AscendC::MicroAPI::DataCopyUnAlignPre(uSrc, srcTmp);
+    AscendC::Reg::DataCopyUnAlignPre(uSrc, srcTmp);
     LoadTensorUnAlignForDtypeT(srcTmp, dst, uSrc, preg, postUpdateStride);
 }
 
@@ -571,10 +571,10 @@ template <typename T>
 __aicore__ inline void StoreTensorUnAlignForDtypeT(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg,
                                                    uint32_t postUpdateStride)
 {
-    AscendC::MicroAPI::UnalignReg uDst;
+    AscendC::Reg::UnalignReg uDst;
     __local_mem__ T* dstTmp = dst;
     StoreTensorUnAlignForDtypeT(dstTmp, src, uDst, preg, postUpdateStride);
-    AscendC::MicroAPI::DataCopyUnAlignPost(dstTmp, uDst, 0);
+    AscendC::Reg::DataCopyUnAlignPost(dstTmp, uDst, 0);
 }
 
 // NOTE: x is overwritten in place (x = (x - mean) * scale * rstd); only y is the

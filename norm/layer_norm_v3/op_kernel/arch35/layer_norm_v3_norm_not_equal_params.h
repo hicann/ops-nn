@@ -21,18 +21,18 @@
 
 namespace LayerNormV3 {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
 using AscendC::Reg::Reduce;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
@@ -1007,12 +1007,10 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(a, numColAlignTwo, r,
-                                                                                                  VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(
-                        a, numColAlignTwoGamma, r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(a, numColAlignTwo, r,
-                                                                                              VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(a, numColAlignTwo, r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(a, numColAlignTwoGamma, r,
+                                                                                        VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(a, numColAlignTwo, r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUb, x1, pregLoop, xRegAddr);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbNext, x2, pregLoop, xRegAddr);
                     Mul(y1, x1, rsqrt1, pregLoop);
@@ -1047,9 +1045,9 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(r, VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(r, VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbFirstRem, xRemainder, pregLoop, xRegAddr);
                     Mul(yRemainder, xRemainder, rsqrtRemainder, pregLoop);
                     if constexpr (hasGammaFlag) {
@@ -1101,12 +1099,12 @@ private:
                     uint32_t sreg0 = reduceNum;
                     for (uint16_t r = 0; r < loopCount; r++) {
                         pregLoop = UpdateMask<float>(sreg0);
-                        AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(
+                        AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(
                             loop, numColAlignTwoSecond, a, numColAlignTwo, r, VL_B32);
-                        AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(
-                            a, numColAlignTwoGamma, r, VL_B32);
-                        AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(
-                            loop, numColAlignTwoSecond, a, numColAlignTwo, r, VL_B32);
+                        AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(a, numColAlignTwoGamma, r,
+                                                                                            VL_B32);
+                        AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(loop, numColAlignTwoSecond, a,
+                                                                                        numColAlignTwo, r, VL_B32);
                         LoadTensorForDtypeTIn<float>(xSubMeanUbFirstEnd, x1, pregLoop, xRegAddr);
                         LoadTensorForDtypeTIn<float>(xSubMeanUbFirstEndNext, x2, pregLoop, xRegAddr);
                         Mul(y1, x1, rsqrt1, pregLoop);
@@ -1142,11 +1140,11 @@ private:
                     uint32_t sreg0 = reduceNum;
                     for (uint16_t r = 0; r < loopCount; r++) {
                         pregLoop = UpdateMask<float>(sreg0);
-                        AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(
-                            loop, numColAlignTwoSecond, 0, 0, r, VL_B32);
-                        AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(r, VL_B32);
-                        AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(
-                            loop, numColAlignTwoSecond, 0, 0, r, VL_B32);
+                        AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(loop, numColAlignTwoSecond,
+                                                                                            0, 0, r, VL_B32);
+                        AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(r, VL_B32);
+                        AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(loop, numColAlignTwoSecond, 0,
+                                                                                        0, r, VL_B32);
                         LoadTensorForDtypeTIn<float>(xSubMeanUbSecondRem, xRemainder, pregLoop, xRegAddr);
                         Mul(yRemainder, xRemainder, rsqrtRemainder, pregLoop);
                         if constexpr (hasGammaFlag) {
@@ -1200,12 +1198,10 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(a, numColAlignTwo, r,
-                                                                                                  VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(
-                        a, numColAlignTwoGamma, r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(a, numColAlignTwo, r,
-                                                                                              VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(a, numColAlignTwo, r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(a, numColAlignTwoGamma, r,
+                                                                                        VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(a, numColAlignTwo, r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbThird, x1, pregLoop, xRegAddr);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbThirdNext, x2, pregLoop, xRegAddr);
                     Mul(y1, x1, rsqrt1, pregLoop);
@@ -1240,9 +1236,9 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(r, VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(r, VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbThirdRem, xRemainder, pregLoop, xRegAddr);
                     Mul(yRemainder, xRemainder, rsqrtRemainder, pregLoop);
                     if constexpr (hasGammaFlag) {
@@ -1324,12 +1320,10 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(a, numColAlignTwo, r,
-                                                                                                  VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(
-                        a, numColAlignTwoGamma, r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(a, numColAlignTwo, r,
-                                                                                              VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(a, numColAlignTwo, r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(a, numColAlignTwoGamma, r,
+                                                                                        VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(a, numColAlignTwo, r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUb, x1, pregLoop, xRegAddr);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbNext, x2, pregLoop, xRegAddr);
                     Mul(y1, x1, rsqrt1, pregLoop);
@@ -1364,9 +1358,9 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::AddrReg xRegAddr = AscendC::MicroAPI::CreateAddrReg<float>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg gammaRegAddr = AscendC::MicroAPI::CreateAddrReg<U>(r, VL_B32);
-                    AscendC::MicroAPI::AddrReg yRegAddr = AscendC::MicroAPI::CreateAddrReg<T>(r, VL_B32);
+                    AscendC::Reg::AddrReg xRegAddr = AscendC::Reg::CreateAddrReg<float>(r, VL_B32);
+                    AscendC::Reg::AddrReg gammaRegAddr = AscendC::Reg::CreateAddrReg<U>(r, VL_B32);
+                    AscendC::Reg::AddrReg yRegAddr = AscendC::Reg::CreateAddrReg<T>(r, VL_B32);
                     LoadTensorForDtypeTIn<float>(xSubMeanUbRem, xRemainder, pregLoop, xRegAddr);
                     Mul(yRemainder, xRemainder, rsqrtRemainder, pregLoop);
                     if constexpr (hasGammaFlag) {
@@ -1406,11 +1400,11 @@ private:
             RegTensor<float> input_rstd;
             RegTensor<M> output_mean;
             RegTensor<M> output_rstd;
-            MicroAPI::MaskReg pregLoop;
+            Reg::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, meanInAddr + VL_B32 * i);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_rstd, rstdInAddr + VL_B32 * i);
+                pregLoop = Reg::UpdateMask<float>(castCount);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, meanInAddr + VL_B32 * i);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_rstd, rstdInAddr + VL_B32 * i);
                 Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
                 StoreAlign<M, StoreDist::DIST_PACK_B32>(((__ubuf__ M*)meanOutAddr + i * VL_B16), output_mean, pregLoop);

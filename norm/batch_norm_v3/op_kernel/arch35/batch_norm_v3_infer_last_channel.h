@@ -22,11 +22,11 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3InferLastChannel {
@@ -168,7 +168,7 @@ private:
 
             RegTensor<float> rstd;
 
-            MaskReg pregMaskFp32 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMaskFp32 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
             uint16_t loopNum = CeilDiv(curTileALen, VL_FP32);
             for (uint16_t i = 0; i < loopNum; i++) {
@@ -177,29 +177,28 @@ private:
                 // load var
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
-                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> runningVarTmp;
+                    AscendC::Reg::LoadAlign<T_RUNNING_MEAN, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                         runningVarTmp, ((__ubuf__ T_RUNNING_MEAN*)varLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp,
-                                                                                                 pregMaskFp32);
+                    AscendC::Reg::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp,
+                                                                                            pregMaskFp32);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_NORM>(var, varLocal + offset);
+                    AscendC::Reg::LoadAlign<float, LoadDist::DIST_NORM>(var, varLocal + offset);
                 }
 
-                AscendC::MicroAPI::MaskReg
-                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load mean
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
-                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
+                    AscendC::Reg::LoadAlign<T_RUNNING_MEAN, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                         runningMeanTmp, ((__ubuf__ T_RUNNING_MEAN*)meanLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp,
-                                                                                                 pregMaskFp32);
+                    AscendC::Reg::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp,
+                                                                                            pregMaskFp32);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
+                    AscendC::Reg::LoadAlign<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
                 }
                 // load gamma、beta
                 LoadTensorForDtypeT(gammaLocal, gamma, pregMaskFp32, offset);

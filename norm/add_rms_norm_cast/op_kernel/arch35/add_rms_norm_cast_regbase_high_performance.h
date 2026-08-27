@@ -27,9 +27,9 @@ constexpr int32_t NUM_TWO = 2;
 using RmsNorm::DataCopyCustom;
 using RmsNorm::DataCopyImpl;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);

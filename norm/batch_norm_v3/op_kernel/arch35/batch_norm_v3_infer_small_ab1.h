@@ -23,9 +23,9 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3InferSmallAB1 {
@@ -173,9 +173,9 @@ private:
             uint16_t loopNum = CeilDiv(elemLen, paramCacheElemLen);
             __ubuf__ T* xLocalTmp = xLocal;
             __ubuf__ T* yLocalTmp = yLocal;
-            AscendC::MicroAPI::UnalignRegForLoad uX;
-            AscendC::MicroAPI::UnalignRegForStore uY;
-            AscendC::MicroAPI::LoadUnAlignPre(uX, xLocalTmp);
+            AscendC::Reg::UnalignRegForLoad uX;
+            AscendC::Reg::UnalignRegForStore uY;
+            AscendC::Reg::LoadUnAlignPre(uX, xLocalTmp);
             LoadAlign<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local);
             LoadAlign<float, LoadDist::DIST_NORM>(beta, betaFp32Local);
             LoadAlign<float, LoadDist::DIST_NORM>(mean, meanFp32Local);
@@ -185,13 +185,13 @@ private:
                 uint32_t activeLen = elemLen - elemOffset > paramCacheElemLen ? paramCacheElemLen :
                                                                                 elemLen - elemOffset;
                 uint32_t maskLen = activeLen;
-                MaskReg pregMask = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+                MaskReg pregMask = AscendC::Reg::UpdateMask<float>(maskLen);
 
                 NormCommon::LoadTensorUnAlignForDtypeT(xLocalTmp, x, uX, pregMask, activeLen);
                 NormCommon::NormalizeWithScaleBiasReg(x, gamma, beta, mean, rstd, y, pregMask);
                 NormCommon::StoreTensorUnAlignForDtypeT(yLocalTmp, y, uY, pregMask, activeLen);
             }
-            AscendC::MicroAPI::StoreUnAlignPost(yLocalTmp, uY, 0);
+            AscendC::Reg::StoreUnAlignPost(yLocalTmp, uY, 0);
         }
     }
 

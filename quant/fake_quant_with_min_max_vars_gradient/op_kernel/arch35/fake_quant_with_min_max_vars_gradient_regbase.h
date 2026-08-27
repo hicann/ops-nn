@@ -305,7 +305,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeN
         AscendC::Reg::Duplicate(vAccMin, 0.0f);
         AscendC::Reg::Duplicate(vAccMax, 0.0f);
 
-        AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg preg1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
         uint32_t count = static_cast<uint32_t>(dataCount);
         for (uint16_t i = 0; i < vfLoopNum; ++i) {

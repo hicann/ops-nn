@@ -22,8 +22,8 @@
 
 namespace BatchNormGradV3 {
 using namespace AscendC;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MemType;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MemType;
 
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARecompute {
@@ -141,23 +141,21 @@ public:
             __ubuf__ float* dyFoldAddr = (__ubuf__ float*)dyFold.GetPhyAddr();
             __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor.GetPhyAddr();
             __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor.GetPhyAddr();
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::MaskReg pMask;
             uint32_t count = factor;
-            AscendC::MicroAPI::RegTensor<float> xMainReg, dyMainReg, meanReg, rstdReg;
+            AscendC::Reg::RegTensor<float> xMainReg, dyMainReg, meanReg, rstdReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadOneTensor<float>(meanAddr, meanReg, pMask, i * outerLoopStride);
                 LoadOneTensor<float>(rstdAddr, rstdReg, pMask, i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     uint32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<DY_TYPE>(xFoldAddr, xMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(dyFoldAddr, dyMainReg, pMask, offset);
-                    AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg,
-                                                                                             meanReg, pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg,
-                                                                                             dyMainReg, pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg,
-                                                                                             rstdReg, pMask);
+                    AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, meanReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, dyMainReg,
+                                                                                   pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, rstdReg, pMask);
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                     StoreOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
                 }
@@ -195,30 +193,27 @@ public:
             __ubuf__ float* xFoldAddr = (__ubuf__ float*)xFold.GetPhyAddr();
             __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor.GetPhyAddr();
             __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor.GetPhyAddr();
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::MaskReg pMask;
             uint32_t count = factor;
-            AscendC::MicroAPI::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg, rstdReg;
+            AscendC::Reg::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg, rstdReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadOneTensor<float>(meanAddr, meanReg, pMask, i * outerLoopStride);
                 LoadOneTensor<float>(rstdAddr, rstdReg, pMask, i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     uint32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(dyFoldAddr, dyFoldReg, pMask, offset);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyMainReg, dyMainReg,
-                                                                                             dyFoldReg, pMask);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(dyMainReg, dyMainReg, dyFoldReg,
+                                                                                   pMask);
                     StoreOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
                     LoadOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(xFoldAddr, xFoldReg, pMask, offset);
-                    AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg,
-                                                                                             meanReg, pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg,
-                                                                                             dyFoldReg, pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg,
-                                                                                             rstdReg, pMask);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg,
-                                                                                             xFoldReg, pMask);
+                    AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, meanReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, dyFoldReg,
+                                                                                   pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, rstdReg, pMask);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, xFoldReg, pMask);
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                 }
             }
@@ -243,14 +238,14 @@ public:
             __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTensor.GetPhyAddr();
             __ubuf__ float* dyMainAddr = (__ubuf__ float*)dyMain.GetPhyAddr();
             __ubuf__ float* xMainAddr = (__ubuf__ float*)xMain.GetPhyAddr();
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::MaskReg pMask;
             uint32_t count = factor;
-            AscendC::MicroAPI::RegTensor<float> dbetaReg, dgammaReg;
-            AscendC::MicroAPI::RegTensor<float> dbetaCacheReg, dgammaCacheReg;
-            AscendC::MicroAPI::RegTensor<float> dyMainReg, xMainReg;
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg, dReg;
+            AscendC::Reg::RegTensor<float> dbetaReg, dgammaReg;
+            AscendC::Reg::RegTensor<float> dbetaCacheReg, dgammaCacheReg;
+            AscendC::Reg::RegTensor<float> dyMainReg, xMainReg;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg, dReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 uint16_t recursionTimes = 5;
                 uint16_t loopTimes = 64;
                 for (uint16_t k = 0; k < recursionTimes; ++k) {
@@ -277,10 +272,10 @@ public:
                     uint32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<float>(dbetaAddr, dbetaCacheReg, pMask, offset);
                     LoadOneTensor<float>(dgammaAddr, dgammaCacheReg, pMask, offset);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dbetaReg, dbetaReg,
-                                                                                             dbetaCacheReg, pMask);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dgammaReg, dgammaReg,
-                                                                                             dgammaCacheReg, pMask);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(dbetaReg, dbetaReg, dbetaCacheReg,
+                                                                                   pMask);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(dgammaReg, dgammaReg, dgammaCacheReg,
+                                                                                   pMask);
                 }
                 StoreOneTensor<float>(dbetaAddr, dbetaReg, pMask, i * outerLoopStride + cacheIdLoop * innerLoopStride);
                 StoreOneTensor<float>(dgammaAddr, dgammaReg, pMask,
@@ -321,11 +316,11 @@ public:
             __ubuf__ float* dxAddr = (__ubuf__ float*)dxTensor.GetPhyAddr();
             __ubuf__ float* dbetaAddr = (__ubuf__ float*)dbetaTensor.GetPhyAddr() + gammaBetaOffset;
             __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTensor.GetPhyAddr() + gammaBetaOffset;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::MaskReg pMask;
             uint32_t count = factor;
-            AscendC::MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
+            AscendC::Reg::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 LoadOneTensor<float>(meanAddr, meanReg, pMask, i * outerLoopStride);
                 LoadOneTensor<float>(rstdAddr, rstdReg, pMask, i * outerLoopStride);
                 LoadOneTensor<WEIGHT_TYPE>(gammaAddr, gammaReg, pMask, i * outerLoopStride);
@@ -335,21 +330,15 @@ public:
                     uint32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, offset);
-                    AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg,
-                                                                                             pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg,
-                                                                                             pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg,
-                                                                                             pMask);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg,
-                                                                                             pMask);
-                    AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg,
-                                                                                                     reciprocal, pMask);
-                    AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, rstdReg, gammaReg,
-                                                                                             pMask);
-                    AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, dxReg, dyReg,
-                                                                                             pMask);
+                    AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal,
+                                                                                           pMask);
+                    AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, rstdReg, gammaReg, pMask);
+                    AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, dxReg, dyReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dxReg, pMask, offset);
                 }
             }
@@ -419,9 +408,8 @@ public:
             __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTensor.GetPhyAddr() + resultOffset;
             __ubuf__ WEIGHT_TYPE* dbetaTypeAddr = (__ubuf__ WEIGHT_TYPE*)dbetaTensor.GetPhyAddr();
             __ubuf__ WEIGHT_TYPE* dgammaTypeAddr = (__ubuf__ WEIGHT_TYPE*)dgammaTensor.GetPhyAddr();
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::RegTensor<float> dbetaReg, dgammaReg;
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::RegTensor<float> dbetaReg, dgammaReg;
             LoadOneTensor<float>(dbetaAddr, dbetaReg, pFull, 0);
             LoadOneTensor<float>(dgammaAddr, dgammaReg, pFull, 0);
             StoreOneTensor<WEIGHT_TYPE>(dbetaTypeAddr, dbetaReg, pFull, 0);

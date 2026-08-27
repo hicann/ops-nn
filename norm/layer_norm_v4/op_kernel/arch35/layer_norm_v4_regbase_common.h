@@ -35,17 +35,17 @@ constexpr static float zero = 0.0f;
 constexpr static uint32_t VL_B32 = GetVecLen() / sizeof(float);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -60,23 +60,21 @@ __aicore__ inline void CastBatchMeanRstdToDtype(__ubuf__ float* batchMeanInAddr,
     uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> input_mean;
-        AscendC::MicroAPI::RegTensor<float> input_rstd;
-        AscendC::MicroAPI::RegTensor<M> output_mean;
-        AscendC::MicroAPI::RegTensor<M> output_rstd;
-        AscendC::MicroAPI::MaskReg pregLoop;
+        AscendC::Reg::RegTensor<float> input_mean;
+        AscendC::Reg::RegTensor<float> input_rstd;
+        AscendC::Reg::RegTensor<M> output_mean;
+        AscendC::Reg::RegTensor<M> output_rstd;
+        AscendC::Reg::MaskReg pregLoop;
         for (uint16_t i = 0; i < castLoops; i++) {
-            pregLoop = AscendC::MicroAPI::UpdateMask<float>(castCount);
-            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(input_mean,
-                                                                                        batchMeanInAddr + VL_F32 * i);
-            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(input_rstd,
-                                                                                        batchRstdInAddr + VL_F32 * i);
+            pregLoop = AscendC::Reg::UpdateMask<float>(castCount);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(input_rstd, batchRstdInAddr + VL_F32 * i);
             Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
             Cast<M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
-            StoreAlign<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(batchMeanOutAddr + i * VL_MEAN, output_mean,
-                                                                       pregLoop);
-            StoreAlign<M, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(batchRstdOutAddr + i * VL_MEAN, output_rstd,
-                                                                       pregLoop);
+            StoreAlign<M, AscendC::Reg::StoreDist::DIST_PACK_B32>(batchMeanOutAddr + i * VL_MEAN, output_mean,
+                                                                  pregLoop);
+            StoreAlign<M, AscendC::Reg::StoreDist::DIST_PACK_B32>(batchRstdOutAddr + i * VL_MEAN, output_rstd,
+                                                                  pregLoop);
         }
     }
 }

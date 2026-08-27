@@ -151,48 +151,47 @@ private:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<XType> inputB16;
-            MicroAPI::RegTensor<float> inputFp32;
-            MicroAPI::RegTensor<float> maxValue;
-            MicroAPI::RegTensor<float> minValue;
-            MicroAPI::RegTensor<float> reducedMax;
-            MicroAPI::RegTensor<float> reducedMin;
-            MicroAPI::RegTensor<float> tailMax;
-            MicroAPI::RegTensor<float> tailMin;
-            MicroAPI::RegTensor<float> finalMax;
-            MicroAPI::RegTensor<float> finalMin;
-            MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg first = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::UnalignReg maxUnalign;
-            MicroAPI::UnalignReg minUnalign;
+            Reg::RegTensor<XType> inputB16;
+            Reg::RegTensor<float> inputFp32;
+            Reg::RegTensor<float> maxValue;
+            Reg::RegTensor<float> minValue;
+            Reg::RegTensor<float> reducedMax;
+            Reg::RegTensor<float> reducedMin;
+            Reg::RegTensor<float> tailMax;
+            Reg::RegTensor<float> tailMin;
+            Reg::RegTensor<float> finalMax;
+            Reg::RegTensor<float> finalMin;
+            Reg::MaskReg all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::MaskReg first = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
+            Reg::UnalignReg maxUnalign;
+            Reg::UnalignReg minUnalign;
 
-            MicroAPI::Duplicate(maxValue, MIN_FLOAT_VALUE, all);
-            MicroAPI::Duplicate(minValue, MAX_FLOAT_VALUE, all);
+            Reg::Duplicate(maxValue, MIN_FLOAT_VALUE, all);
+            Reg::Duplicate(minValue, MAX_FLOAT_VALUE, all);
             const uint16_t fullLoops = static_cast<uint16_t>((count - 1) / VL);
             for (uint16_t loop = 0; loop < fullLoops; ++loop) {
-                MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
-                MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, all);
-                MicroAPI::Max(maxValue, inputFp32, maxValue, all);
-                MicroAPI::Min(minValue, inputFp32, minValue, all);
+                Reg::DataCopy<XType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
+                Reg::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, all);
+                Reg::Max(maxValue, inputFp32, maxValue, all);
+                Reg::Min(minValue, inputFp32, minValue, all);
             }
-            MicroAPI::ReduceMax(reducedMax, maxValue, all);
-            MicroAPI::ReduceMin(reducedMin, minValue, all);
+            Reg::ReduceMax(reducedMax, maxValue, all);
+            Reg::ReduceMin(reducedMin, minValue, all);
 
             uint32_t tailCount = count - fullLoops * VL;
-            MicroAPI::MaskReg tailMask = MicroAPI::UpdateMask<float>(tailCount);
-            MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + fullLoops * VL);
-            MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, tailMask);
-            MicroAPI::ReduceMax(tailMax, inputFp32, tailMask);
-            MicroAPI::ReduceMin(tailMin, inputFp32, tailMask);
-            MicroAPI::Max(finalMax, reducedMax, tailMax, first);
-            MicroAPI::Min(finalMin, reducedMin, tailMin, first);
+            Reg::MaskReg tailMask = Reg::UpdateMask<float>(tailCount);
+            Reg::DataCopy<XType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + fullLoops * VL);
+            Reg::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, tailMask);
+            Reg::ReduceMax(tailMax, inputFp32, tailMask);
+            Reg::ReduceMin(tailMin, inputFp32, tailMask);
+            Reg::Max(finalMax, reducedMax, tailMax, first);
+            Reg::Min(finalMin, reducedMin, tailMin, first);
 
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(paramsAddr, finalMax, maxUnalign,
-                                                                                      1);
-            MicroAPI::DataCopyUnAlignPost(paramsAddr, maxUnalign, 0);
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(minAddr, finalMin, minUnalign, 1);
-            MicroAPI::DataCopyUnAlignPost(minAddr, minUnalign, 0);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(paramsAddr, finalMax, maxUnalign, 1);
+            Reg::DataCopyUnAlignPost(paramsAddr, maxUnalign, 0);
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(minAddr, finalMin, minUnalign, 1);
+            Reg::DataCopyUnAlignPost(minAddr, minUnalign, 0);
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         }
     }
 
@@ -204,32 +203,32 @@ private:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<XType> inputB16;
-            MicroAPI::RegTensor<float> inputFp32;
-            MicroAPI::RegTensor<float> scaledInput;
-            MicroAPI::RegTensor<float> quantizedFp32;
-            MicroAPI::RegTensor<int16_t> quantizedInt16;
-            MicroAPI::RegTensor<half> quantizedFp16;
-            MicroAPI::RegTensor<uint16_t> packedFp16;
-            MicroAPI::RegTensor<uint8_t> quantizedInt4;
-            MicroAPI::MaskReg packMask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
-            MicroAPI::MaskReg mask;
+            Reg::RegTensor<XType> inputB16;
+            Reg::RegTensor<float> inputFp32;
+            Reg::RegTensor<float> scaledInput;
+            Reg::RegTensor<float> quantizedFp32;
+            Reg::RegTensor<int16_t> quantizedInt16;
+            Reg::RegTensor<half> quantizedFp16;
+            Reg::RegTensor<uint16_t> packedFp16;
+            Reg::RegTensor<uint8_t> quantizedInt4;
+            Reg::MaskReg packMask = Reg::CreateMask<float, Reg::MaskPattern::H>();
+            Reg::MaskReg mask;
 
             uint32_t remaining = count;
             const uint16_t loops = static_cast<uint16_t>((count - 1) / VL + 1);
             for (uint16_t loop = 0; loop < loops; ++loop) {
-                mask = MicroAPI::UpdateMask<float>(remaining);
-                MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
-                MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
-                MicroAPI::Muls(scaledInput, inputFp32, backScale, mask);
-                MicroAPI::Adds(quantizedFp32, scaledInput, offset, mask);
-                MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
-                MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
-                MicroAPI::Pack(packedFp16, (MicroAPI::RegTensor<uint32_t>&)quantizedFp16);
-                MicroAPI::Cast<int4x2_t, half, CAST_FP16_TO_INT8>((MicroAPI::RegTensor<int4x2_t>&)quantizedInt4,
-                                                                  (MicroAPI::RegTensor<half>&)packedFp16, mask);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr + loop * VL / 2, quantizedInt4,
-                                                                                 packMask);
+                mask = Reg::UpdateMask<float>(remaining);
+                Reg::DataCopy<XType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
+                Reg::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
+                Reg::Muls(scaledInput, inputFp32, backScale, mask);
+                Reg::Adds(quantizedFp32, scaledInput, offset, mask);
+                Reg::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
+                Reg::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
+                Reg::Pack(packedFp16, (Reg::RegTensor<uint32_t>&)quantizedFp16);
+                Reg::Cast<int4x2_t, half, CAST_FP16_TO_INT8>((Reg::RegTensor<int4x2_t>&)quantizedInt4,
+                                                             (Reg::RegTensor<half>&)packedFp16, mask);
+                Reg::DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(outAddr + loop * VL / 2, quantizedInt4,
+                                                                       packMask);
             }
         }
     }
@@ -255,14 +254,14 @@ private:
     }
 
 private:
-    static constexpr MicroAPI::CastTrait CAST_B16_TO_FP32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr MicroAPI::CastTrait CAST_FP32_TO_INT16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-    static constexpr MicroAPI::CastTrait CAST_INT16_TO_FP16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
-    static constexpr MicroAPI::CastTrait CAST_FP16_TO_INT8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                              MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+    static constexpr Reg::CastTrait CAST_B16_TO_FP32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait CAST_FP32_TO_INT16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr Reg::CastTrait CAST_INT16_TO_FP16 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+    static constexpr Reg::CastTrait CAST_FP16_TO_INT8 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> xQueue_;

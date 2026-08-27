@@ -134,7 +134,7 @@ public:
             for (uint16_t r = 0; r < loopRow; r++) {
                 uint32_t sreg = cols_;
                 int64_t cols = colsAlignBlock_;
-                MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                MaskReg maskReg = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
@@ -224,7 +224,7 @@ public:
             {
                 RegTensor<float> srcReg;
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
-                    MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                    MaskReg maskReg = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                     Duplicate(srcReg, 0.0f, maskReg);
                     uint32_t sreg = colsTail;
                     for (uint16_t i = 0; i < repeatCount; i++) {

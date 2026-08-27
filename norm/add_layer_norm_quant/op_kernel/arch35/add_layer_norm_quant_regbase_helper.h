@@ -25,7 +25,7 @@
 namespace AddLayerNormQuantRegbase {
 using namespace AddLayerNorm;
 using namespace AscendC;
-using AscendC::MicroAPI::Truncate;
+using AscendC::Reg::Truncate;
 
 #define SCALE1_CODE 0x8
 #define SCALE2_CODE 0x4
@@ -53,36 +53,36 @@ using AscendC::MicroAPI::Truncate;
 constexpr uint32_t vlFp32_ = GetVecLen() / sizeof(float);
 constexpr uint32_t blockSize_ = GetDataBlockSizeInBytes();
 
-constexpr AscendC::MicroAPI::CastTrait quantCastTraitF32ToS32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait quantCastTraitF32ToS32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait quantCastTraitS32ToF32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait quantCastTraitS32ToF32 = {
+    AscendC::Reg::RegLayout::UNKNOWN,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
 
-constexpr AscendC::MicroAPI::CastTrait quantCastTraitF32ToF16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait quantCastTraitF32ToF16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
-constexpr AscendC::MicroAPI::CastTrait quantCastTraitF16ToS8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait quantCastTraitF16ToS8 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
 
-constexpr AscendC::MicroAPI::DivSpecificMode divHighPrecMode = {
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::DivSpecificMode divHighPrecMode = {
+    AscendC::Reg::MaskMergeMode::ZEROING,
     true,
 };
 
@@ -610,8 +610,8 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
         RegTensor<float> one;
         RegTensor<float> rstd;
         MaskReg pregLoop;
-        MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        MaskReg pregMain = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        MaskReg pregMerge = CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
         uint32_t sreg0 = dichotomyAddReminder;
         // 计算mean
         // PART1: 整尾块合并
@@ -623,8 +623,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, mean,
-                                                                                    pregMerge);
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, mean, pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
@@ -633,12 +632,12 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             LoadAlign(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
             Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
 
         NormCommon::DichotomyAdd(mean, dichotomyAddAddr, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanAddr + offset, mean, pregMerge);
+        StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanAddr + offset, mean, pregMerge);
 
         Duplicate(one, float(1.0), pregMain);
         Duplicate(mean, mean, pregMain);
@@ -664,8 +663,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, var,
-                                                                                    pregMerge);
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, var, pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
@@ -679,13 +677,13 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
-            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
 
         NormCommon::DichotomyAdd(var, dichotomyAddAddr, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstd, pregMerge);
+        StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstd, pregMerge);
     }
 }
 

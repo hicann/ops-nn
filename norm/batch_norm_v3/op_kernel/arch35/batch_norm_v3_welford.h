@@ -22,11 +22,11 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
 
 template <typename T, typename T_BETA, typename T_RUNNING_MEAN>
 class BatchNormV3Welford {
@@ -470,16 +470,15 @@ private:
             uint32_t sreg0 = calLen;
             MaskReg pregLoop;
             for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> meanTmp;
-                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> meanTmp;
+                    AscendC::Reg::LoadAlign<T_RUNNING_MEAN, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                         meanTmp, ((__ubuf__ T_RUNNING_MEAN*)meanLocal + i * VL_FP32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, meanTmp,
-                                                                                                 pregLoop);
+                    AscendC::Reg::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, meanTmp, pregLoop);
                 } else {
-                    AscendC::MicroAPI::LoadAlign(mean, ((__ubuf__ float*)meanLocal + i * VL_FP32));
+                    AscendC::Reg::LoadAlign(mean, ((__ubuf__ float*)meanLocal + i * VL_FP32));
                 }
                 LoadAlign(batchMean, ((__ubuf__ float*)batchMeanLocal + i * VL_FP32));
                 Muls(batchMean, batchMean, this->momentum, pregLoop);
@@ -487,23 +486,22 @@ private:
                 Add(mean, mean, batchMean, pregLoop);
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把float的结果cast回T_RUNNING_MEAN
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> outMeanTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outMeanTmp, mean,
-                                                                                                 pregLoop);
-                    AscendC::MicroAPI::StoreAlign<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> outMeanTmp;
+                    AscendC::Reg::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outMeanTmp, mean, pregLoop);
+                    AscendC::Reg::StoreAlign<T_RUNNING_MEAN, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         ((__ubuf__ T_RUNNING_MEAN*)outMeanLocal + i * VL_FP32), outMeanTmp, pregLoop);
                 } else {
-                    AscendC::MicroAPI::StoreAlign(((__ubuf__ float*)outMeanLocal + i * VL_FP32), mean, pregLoop);
+                    AscendC::Reg::StoreAlign(((__ubuf__ float*)outMeanLocal + i * VL_FP32), mean, pregLoop);
                 }
 
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> varTmp;
-                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> varTmp;
+                    AscendC::Reg::LoadAlign<T_RUNNING_MEAN, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                         varTmp, ((__ubuf__ T_RUNNING_MEAN*)varLocal + i * VL_FP32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, varTmp, pregLoop);
+                    AscendC::Reg::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, varTmp, pregLoop);
                 } else {
-                    AscendC::MicroAPI::LoadAlign(var, ((__ubuf__ float*)varLocal + i * VL_FP32));
+                    AscendC::Reg::LoadAlign(var, ((__ubuf__ float*)varLocal + i * VL_FP32));
                 }
                 LoadAlign(batchVar, batchVarLocal + i * VL_FP32);
                 Muls(batchVar, batchVar, this->momentumForVar, pregLoop);
@@ -511,13 +509,12 @@ private:
                 Add(var, var, batchVar, pregLoop);
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把float的结果cast回T_RUNNING_MEAN
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> outVarTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outVarTmp, var,
-                                                                                                 pregLoop);
-                    AscendC::MicroAPI::StoreAlign<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                    AscendC::Reg::RegTensor<T_RUNNING_MEAN> outVarTmp;
+                    AscendC::Reg::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outVarTmp, var, pregLoop);
+                    AscendC::Reg::StoreAlign<T_RUNNING_MEAN, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         ((__ubuf__ T_RUNNING_MEAN*)outVarLocal + i * VL_FP32), outVarTmp, pregLoop);
                 } else {
-                    AscendC::MicroAPI::StoreAlign(((__ubuf__ float*)outVarLocal + i * VL_FP32), var, pregLoop);
+                    AscendC::Reg::StoreAlign(((__ubuf__ float*)outVarLocal + i * VL_FP32), var, pregLoop);
                 }
             }
         }
@@ -556,13 +553,13 @@ private:
             RegTensor<float> one;
             RegTensor<float> rstd;
             MaskReg pregLoop;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            MaskReg pregMerge = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
             uint32_t sreg0 = dichotomyAddReminder;
             // 计算mean
             // PART1: 整尾块合并
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + i * VL_FP32 + dichotomyAddPower);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale0, pregMain);
@@ -587,11 +584,11 @@ private:
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
             Duplicate(one, float(1.0), pregMain);
-            Duplicate<float, AscendC::MicroAPI::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
+            Duplicate<float, AscendC::Reg::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
             sreg0 = dichotomyAddReminder;
             // PART1: 整尾块合并
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
                 Mul(deltaL, deltaL, deltaL, pregMain);
@@ -702,8 +699,8 @@ private:
 
             MaskReg pregLoop;
             MaskReg pregLoop1;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            MaskReg pregMerge = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
             uint32_t sreg0;
 
             // 整块使用tailCountScale,尾块使用tailCountScale
@@ -721,8 +718,8 @@ private:
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
             uint32_t sreg1 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                pregLoop1 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
+                pregLoop1 = AscendC::Reg::UpdateMask<float>(sreg1);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddPower);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
@@ -737,7 +734,7 @@ private:
 
             // 整块使用tailCountScale,尾块使用countScale
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 +
@@ -764,7 +761,7 @@ private:
 
             // 计算rstd
             Duplicate(one, float(1.0), pregMain);
-            Duplicate<float, AscendC::MicroAPI::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
+            Duplicate<float, AscendC::Reg::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
             for (uint16_t i = 0; i < welfordDiffLoopCount; i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
@@ -789,8 +786,8 @@ private:
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
             sreg1 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                pregLoop1 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
+                pregLoop1 = AscendC::Reg::UpdateMask<float>(sreg1);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
                 Mul(deltaL, deltaL, deltaL, pregMain);
@@ -816,7 +813,7 @@ private:
             }
 
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
@@ -905,8 +902,8 @@ private:
 
             MaskReg pregLoop;
             MaskReg pregLoop1;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            MaskReg pregMerge = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
             uint32_t sreg0;
             uint32_t sreg1;
 
@@ -925,8 +922,8 @@ private:
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
             sreg1 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                pregLoop1 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
+                pregLoop1 = AscendC::Reg::UpdateMask<float>(sreg1);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddPower);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
@@ -941,7 +938,7 @@ private:
 
             // 整块使用countScale,尾块使用countScale
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 +
@@ -968,7 +965,7 @@ private:
 
             // 计算rstd
             Duplicate(one, float(1.0), pregMain);
-            Duplicate<float, AscendC::MicroAPI::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
+            Duplicate<float, AscendC::Reg::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
             for (uint16_t i = 0; i < welfordDiffLoopCount; i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
@@ -993,8 +990,8 @@ private:
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
             sreg1 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                pregLoop1 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
+                pregLoop1 = AscendC::Reg::UpdateMask<float>(sreg1);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
                 Mul(deltaL, deltaL, deltaL, pregMain);
@@ -1020,7 +1017,7 @@ private:
             }
 
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                MaskReg pregMask = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                MaskReg pregMask = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
@@ -1113,12 +1110,12 @@ private:
             RegTensor<float> tmp;
 
             MaskReg pregLoop;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            MaskReg pregMerge = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
             uint32_t sreg0 = dichotomyAddReminder;
             // 整块使用tailCountScale, 尾块使用CountScale
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 LoadAlign(dichotomyAddMeanR, tmpMeanLocal + i * VL_FP32 + dichotomyAddPower);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
@@ -1140,7 +1137,7 @@ private:
 
             sreg0 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
@@ -1167,11 +1164,11 @@ private:
 
             // 计算rstd
             Duplicate(one, float(1.0), pregMain);
-            Duplicate<float, AscendC::MicroAPI::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
+            Duplicate<float, AscendC::Reg::HighLowPart::LOWEST, MaskMergeMode::ZEROING>(mean, mean, pregMain);
             // 整块使用tailCountScale, 尾块使用CountScale
             sreg0 = dichotomyAddReminder;
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
                 Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
                 Mul(deltaLReg, deltaLReg, deltaLReg, pregMain);
@@ -1209,7 +1206,7 @@ private:
 
             sreg0 = welfordDiffReminder;
             for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(dichotomyAddMeanL,
                           tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
                 Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
@@ -1349,11 +1346,11 @@ private:
             MaskReg pregLoop;
             LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd, rstdLocal + i);
             LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, meanLocal + i);
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMain = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             LoadTwoTensorForDtypeTBrc(gammaLocal, betaLocal, gamma, beta, pregMain, pregMain, i, i);
             uint32_t sreg0 = reduceCount;
             for (uint16_t j = 0; j < loopCount; j++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 // norm
                 LoadOneTensorForDtypeT(xLocal, x, pregLoop, j * VL_FP32);
                 Sub(x, x, mean, pregLoop);

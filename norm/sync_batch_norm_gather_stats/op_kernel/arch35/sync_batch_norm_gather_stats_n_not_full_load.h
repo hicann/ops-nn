@@ -24,17 +24,17 @@
 
 namespace SyncBatchNormGatherStats {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadAlign;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreAlign;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T>
 class SyncBatchNormGatherStatsNNotFullLoad {
@@ -253,7 +253,7 @@ private:
                 LoadAlign(aReg, (__ubuf__ U*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     LoadAlign(bReg, (__ubuf__ U*)dst + i * outerLoopStride + j * innerLoopStride);
-                    Add<U, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                    Add<U, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
                 StoreAlign((__ubuf__ U*)cache + i * outerLoopStride, aReg, pMask);
             }
@@ -478,11 +478,11 @@ private:
     __aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, RegTensor<float>& src, MaskReg& preg)
     {
         if constexpr (IsSameType<T, float>::value) {
-            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst, src, preg);
+            StoreAlign<T, AscendC::Reg::StoreDist::DIST_NORM>(dst, src, preg);
         } else {
-            AscendC::MicroAPI::RegTensor<T> xFp16;
+            AscendC::Reg::RegTensor<T> xFp16;
             Cast<T, float, castTraitB32B16>(xFp16, src, preg);
-            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
+            StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
         }
     }
 

@@ -20,14 +20,14 @@
 #include "rms_norm_grad_quant_common.h"
 namespace RmsNormGradQuant {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr int32_t REDUCEBY8ELENUM = 16;
 constexpr int32_t REDUCEBY4ELENUM = 8;
@@ -84,46 +84,46 @@ __aicore__ inline void reduceSumCompressedBy8(__ubuf__ float* dyAddr, MaskReg& p
     //
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(currentAddr));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(currentAddr + offset));
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(currentAddr + 2 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(currentAddr + 3 * offset));
-    AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
+    AscendC::Reg::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_0, (__ubuf__ float*)(currentAddr + 4 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_1, (__ubuf__ float*)(currentAddr + 5 * offset));
-    AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
+    AscendC::Reg::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_0, (__ubuf__ float*)(currentAddr + 6 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_1, (__ubuf__ float*)(currentAddr + 7 * offset));
-    AscendC::MicroAPI::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
+    AscendC::Reg::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg4_0, (__ubuf__ float*)(currentAddr + 8 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg4_1, (__ubuf__ float*)(currentAddr + 9 * offset));
-    AscendC::MicroAPI::Add(temp_reg4_0, temp_reg4_0, temp_reg4_1, preg);
+    AscendC::Reg::Add(temp_reg4_0, temp_reg4_0, temp_reg4_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg5_0, (__ubuf__ float*)(currentAddr + 10 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg5_1, (__ubuf__ float*)(currentAddr + 11 * offset));
-    AscendC::MicroAPI::Add(temp_reg5_0, temp_reg5_0, temp_reg5_1, preg);
+    AscendC::Reg::Add(temp_reg5_0, temp_reg5_0, temp_reg5_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg6_0, (__ubuf__ float*)(currentAddr + 12 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg6_1, (__ubuf__ float*)(currentAddr + 13 * offset));
-    AscendC::MicroAPI::Add(temp_reg6_0, temp_reg6_0, temp_reg6_1, preg);
+    AscendC::Reg::Add(temp_reg6_0, temp_reg6_0, temp_reg6_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg7_0, (__ubuf__ float*)(currentAddr + 14 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg7_1, (__ubuf__ float*)(currentAddr + 15 * offset));
-    AscendC::MicroAPI::Add(temp_reg7_0, temp_reg7_0, temp_reg7_1, preg);
+    AscendC::Reg::Add(temp_reg7_0, temp_reg7_0, temp_reg7_1, preg);
 
     //
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
-    AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg3_0, preg);
-    AscendC::MicroAPI::Add(temp_reg4_0, temp_reg4_0, temp_reg5_0, preg);
-    AscendC::MicroAPI::Add(temp_reg6_0, temp_reg6_0, temp_reg7_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
+    AscendC::Reg::Add(temp_reg2_0, temp_reg2_0, temp_reg3_0, preg);
+    AscendC::Reg::Add(temp_reg4_0, temp_reg4_0, temp_reg5_0, preg);
+    AscendC::Reg::Add(temp_reg6_0, temp_reg6_0, temp_reg7_0, preg);
 
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg2_0, preg);
-    AscendC::MicroAPI::Add(temp_reg4_0, temp_reg4_0, temp_reg6_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg2_0, preg);
+    AscendC::Reg::Add(temp_reg4_0, temp_reg4_0, temp_reg6_0, preg);
 
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg4_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg4_0, preg);
 
     StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
@@ -136,24 +136,24 @@ __aicore__ inline void reduceSumCompressedBy4(__ubuf__ float* dyAddr, MaskReg& p
     __ubuf__ float* currentAddr = dyAddr + COMPRESSBY8ELENUM * ub_offset;
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(currentAddr));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(currentAddr + offset));
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(currentAddr + 2 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(currentAddr + 3 * offset));
-    AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
+    AscendC::Reg::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_0, (__ubuf__ float*)(currentAddr + 4 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_1, (__ubuf__ float*)(currentAddr + 5 * offset));
-    AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
+    AscendC::Reg::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_0, (__ubuf__ float*)(currentAddr + 6 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_1, (__ubuf__ float*)(currentAddr + 7 * offset));
-    AscendC::MicroAPI::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
+    AscendC::Reg::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
 
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
-    AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg3_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
+    AscendC::Reg::Add(temp_reg2_0, temp_reg2_0, temp_reg3_0, preg);
 
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg2_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg2_0, preg);
 
     StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
@@ -165,13 +165,13 @@ __aicore__ inline void reduceSumCompressedBy2(__ubuf__ float* dyAddr, MaskReg& p
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(dyAddr));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(dyAddr + offset));
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(dyAddr + 2 * offset));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(dyAddr + 3 * offset));
-    AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
+    AscendC::Reg::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
     StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
@@ -181,7 +181,7 @@ __aicore__ inline void reduceSumCompressedBy1(__ubuf__ float* dyAddr, MaskReg& p
 
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(dyAddr));
     LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(dyAddr + offset));
-    AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+    AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
     StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr), temp_reg0_0, preg);
 }
@@ -194,7 +194,7 @@ __aicore__ inline void reduceSumCompressedBy8WithOutPad(__ubuf__ float* src1Addr
         uint32_t tempOffset = i * vlFp32;
         LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(src1Addr + ub_offset + tempOffset));
         LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(src2Addr + ub_offset + tempOffset));
-        AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+        AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
         StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(src1Addr + ub_offset + tempOffset), temp_reg0_0,
                                                     preg);
     }
@@ -212,7 +212,7 @@ __aicore__ inline void reduceSumCompressedBy8WithPad(__ubuf__ float* src1Addr, _
         LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(src1Addr + temp_off_set_0));
         LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(src2Addr + temp_off_set_1));
 
-        AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
+        AscendC::Reg::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
         StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(src1Addr + temp_off_set_0), temp_reg0_0, preg);
     }
 }
@@ -228,13 +228,13 @@ __aicore__ inline void UpdateCache(const AscendC::LocalTensor<float>& dstTensor,
         __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
         __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * count;
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-        AscendC::MicroAPI::MaskReg pMask;
-        pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+        AscendC::Reg::RegTensor<float> aReg, bReg;
+        AscendC::Reg::MaskReg pMask;
+        pMask = AscendC::Reg::UpdateMask<float>(sreg);
         LoadAlign(aReg, (__ubuf__ float*)srcAddr);
         for (uint16_t j = 0; j < innerLoopTimes; ++j) {
             LoadAlign(bReg, (__ubuf__ float*)dst + static_cast<uint32_t>(j * innerLoopStride));
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         }
         StoreAlign((__ubuf__ float*)cah, aReg, pMask);
     }

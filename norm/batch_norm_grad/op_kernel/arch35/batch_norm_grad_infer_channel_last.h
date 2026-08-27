@@ -26,16 +26,16 @@
 namespace BatchNormGrad {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MemType;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MemType;
 
-using namespace AscendC::MicroAPI;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::StoreDist;
+using namespace AscendC::Reg;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::StoreDist;
 
 template <typename T1, typename T2>
 class BatchNormGradInferChannelLastDx {
@@ -192,7 +192,7 @@ private:
             RegTensor<float> dx;
             RegTensor<float> invstd;
 
-            MaskReg pregMaskFp32 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            MaskReg pregMaskFp32 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             uint32_t tileBlockALenTmp = static_cast<uint32_t>(tilingData_->tileBlockALen);
             float epsilonTmp = tilingData_->epsilon;
             uint16_t loopNum = ops::CeilDiv(curTileALen, VL_FP32);
@@ -201,8 +201,7 @@ private:
 
                 // load runningVar, gamma
                 LoadOneTensor<T2>(varLocal, runningVar, pregMaskFp32, offset);
-                AscendC::MicroAPI::MaskReg
-                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 LoadOneTensor<T2>(gammaLocal, gamma, pregMaskFp32, offset);
@@ -565,16 +564,16 @@ public:
         __VEC_SCOPE__
         {
             uint32_t sreg = static_cast<uint32_t>(count);
-            MicroAPI::RegTensor<float> aReg, bReg;
-            MicroAPI::MaskReg pMask;
+            Reg::RegTensor<float> aReg, bReg;
+            Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                pMask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
+                pMask = Reg::UpdateMask<float>(sreg);
+                Reg::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    MicroAPI::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                    MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                    Reg::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
+                Reg::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
             }
         }
     }

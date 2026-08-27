@@ -131,8 +131,8 @@ public:
             uint32_t sreg0 = padRowsLen;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             // 填充数据
-            AscendC::MicroAPI::Duplicate(tempReg, 0);
-            AscendC::MicroAPI::StoreAlign(srcAddr + static_cast<uint32_t>(rowsBoundLine), tempReg, pregLoop);
+            AscendC::Reg::Duplicate(tempReg, 0);
+            AscendC::Reg::StoreAlign(srcAddr + static_cast<uint32_t>(rowsBoundLine), tempReg, pregLoop);
         }
     }
 
@@ -151,7 +151,7 @@ public:
             for (uint16_t i = 0; i < static_cast<uint16_t>(BinaryAddNumLevel2); i++) {
                 reduceSumCompressedBy8(dgammaOutAddr, pregMain, vlFp32_, i * vlFp32_);
             }
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
             // 计算二分累加level1
             if (BinaryAddNumLevel1 == 1) {
                 if (BinaryAddNumLevel2 == REDUCEBY8ELENUM) {

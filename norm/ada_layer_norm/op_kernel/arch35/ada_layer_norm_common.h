@@ -19,7 +19,7 @@
 
 namespace AdaLayerNormNS {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 constexpr int32_t DOUBLE_BUFFER = 2;
 constexpr int32_t WELFORD_COUNT = 5120;

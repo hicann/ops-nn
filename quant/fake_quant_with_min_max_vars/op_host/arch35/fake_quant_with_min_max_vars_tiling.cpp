@@ -48,7 +48,7 @@ constexpr int64_t UB_RESERVED = 2048;                           // reserved byte
 constexpr int64_t QUEUE_SCALE_FIXED = 160; // inQueueScale(32×2 DB) + inQueueOffset(32×2 DB) + bufNudge(32)
 constexpr size_t WORKSPACE_NUM = 1;
 
-// UB budget for PT fake-quant with double buffer + VF MicroAPI:
+// UB budget for PT fake-quant with double buffer + VF Reg:
 //   inQueueX:        baseLen * 4 * BUFF_NUM(2) = 8*baseLen
 //   outQueueY:       baseLen * 4 * BUFF_NUM(2) = 8*baseLen
 //   inQueueScale:    32 * 2 = 64

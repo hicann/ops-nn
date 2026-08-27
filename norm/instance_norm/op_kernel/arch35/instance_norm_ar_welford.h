@@ -21,17 +21,17 @@
 
 namespace InstanceNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T>
 __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize)
@@ -227,13 +227,13 @@ private:
             uint32_t sreg3 = firstNum;
             Duplicate(tmpCount, tailCoreAddCount, pregMain);
             for (uint16_t i = 0; i < fisrstLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<int32_t>(sreg3);
+                pregLoop = AscendC::Reg::UpdateMask<int32_t>(sreg3);
                 StoreAlign(((__ubuf__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg4 = secondNum;
             Duplicate(tmpCount, formerCoreAddCount, pregMain);
             for (uint16_t i = 0; i < secondLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<int32_t>(sreg4);
+                pregLoop = AscendC::Reg::UpdateMask<int32_t>(sreg4);
                 StoreAlign(((__ubuf__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
         }
@@ -261,12 +261,11 @@ private:
             RegTensor<float> input_variance;
             RegTensor<T_MEAN> output_mean;
             RegTensor<T_MEAN> output_variance;
-            MicroAPI::MaskReg pregLoop;
+            Reg::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_variance,
-                                                                          batchVarianceInAddr + VL_F32 * i);
+                pregLoop = Reg::UpdateMask<float>(castCount);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_variance, batchVarianceInAddr + VL_F32 * i);
                 Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_MEAN, float, castTraitB322B16>(output_variance, input_variance, pregLoop);
                 StoreAlign<T_MEAN, StoreDist::DIST_PACK_B32>(((__ubuf__ T_MEAN*)batchMeanOutAddr + i * VL_MEAN),
@@ -341,11 +340,11 @@ private:
             __ubuf__ float* meamPtr = (__ubuf__ float*)mean.GetPhyAddr();
             __ubuf__ float* variancePtr = (__ubuf__ float*)variance.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(elemCnt);
-            AscendC::MicroAPI::RegTensor<float> xReg;
-            AscendC::MicroAPI::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> xReg;
+            AscendC::Reg::MaskReg pMask;
             Duplicate(xReg, 0.0f);
             for (uint16_t i = 0; i < loopTimes; ++i) {
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                pMask = AscendC::Reg::UpdateMask<float>(count);
                 StoreAlign((__ubuf__ float*)meamPtr + i * VL_B32, xReg, pMask);
                 StoreAlign((__ubuf__ float*)variancePtr + i * VL_B32, xReg, pMask);
             }
@@ -496,7 +495,7 @@ private:
             MaskReg mask0;
             uint32_t sreg0 = elemCnt;
             for (uint16_t i = 0; i < numLoop; i++) {
-                mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                mask0 = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadOneNumberTensorForDtypeT<T_BETA>(gamma, gammaTensorAddr, mask0, gammaUbOffset);
                 LoadOneNumberTensorForDtypeT<T_BETA>(beta, betaTensorAddr, mask0, gammaUbOffset);
 

@@ -10,7 +10,7 @@
 
 /*!
  * \file ascend_anti_quant.cpp
- * \brief AscendAntiQuant kernel entry (pure regbase / MicroAPI mode).
+ * \brief AscendAntiQuant kernel entry (pure regbase / Reg mode).
  *
  *   y = TOut((cast<float>(x) + offset) * effective_scale)
  *

@@ -351,8 +351,7 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
                 uint32_t fullSreg = static_cast<uint32_t>(VL_FP32);
                 Reg::MaskReg fullMask = Reg::UpdateMask<uint32_t>(fullSreg);
                 Reg::Duplicate<float>(vregOne, 1.0f);
-                static constexpr AscendC::MicroAPI::DivSpecificMode divMode = {
-                    AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
+                static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
                 Reg::Div<float, &divMode>(vregInvSc, vregOne, vregSc, fullMask);
             }
             if constexpr (HAS_ZP == 1) {
@@ -415,7 +414,7 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
                 }
             }
         } // __VEC_SCOPE__
-    }     // for j
+    } // for j
 
     int64_t totalElem = nRow * segLen;
     AscendC::Cast<half, float>(hBuf, m1Buf, AscendC::RoundMode::CAST_NONE, static_cast<int32_t>(totalElem));

@@ -38,17 +38,17 @@ constexpr static float zero = 0.0f;
 constexpr static uint32_t VL_B16 = GetVecLen() / sizeof(int16_t);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -84,11 +84,11 @@ __aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const L
         __ubuf__ float* meanPtr = (__ubuf__ float*)mean.GetPhyAddr();
         __ubuf__ float* variancePtr = (__ubuf__ float*)variance.GetPhyAddr();
         uint32_t count = static_cast<uint32_t>(elemCnt);
-        MicroAPI::RegTensor<float> xReg;
-        MicroAPI::MaskReg pMask;
+        Reg::RegTensor<float> xReg;
+        Reg::MaskReg pMask;
         Duplicate(xReg, 0.0f);
         for (uint16_t i = 0; i < loopTimes; ++i) {
-            pMask = MicroAPI::UpdateMask<float>(count);
+            pMask = Reg::UpdateMask<float>(count);
             StoreAlign(meanPtr + i * VL_B32, xReg, pMask);
             StoreAlign(variancePtr + i * VL_B32, xReg, pMask);
         }
@@ -97,7 +97,7 @@ __aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const L
 
 template <typename T_IN>
 __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, AscendC::Reg::RegTensor<float>& dst,
-                                             AscendC::Reg::MaskReg& preg, AscendC::MicroAPI::AddrReg& addrReg)
+                                             AscendC::Reg::MaskReg& preg, AscendC::Reg::AddrReg& addrReg)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(dst, src, addrReg);
@@ -110,7 +110,7 @@ __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, AscendC::Reg::R
 
 template <typename T_OUT>
 __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T_OUT* dst, AscendC::Reg::RegTensor<float>& src,
-                                               AscendC::Reg::MaskReg& preg, AscendC::MicroAPI::AddrReg& addrReg)
+                                               AscendC::Reg::MaskReg& preg, AscendC::Reg::AddrReg& addrReg)
 {
     if constexpr (IsSameType<T_OUT, float>::value) {
         StoreAlign<T_OUT, AscendC::Reg::StoreDist::DIST_NORM>(dst, src, addrReg, preg);
@@ -159,21 +159,21 @@ __aicore__ inline void CastBatchMeanLastout(LocalTensor<float>& meanTensor, Loca
     uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> input_mean;
-        MicroAPI::RegTensor<float> input_lastout;
-        MicroAPI::RegTensor<M> output_mean;
-        MicroAPI::RegTensor<M> output_lastout;
-        MicroAPI::MaskReg pregLoop;
+        Reg::RegTensor<float> input_mean;
+        Reg::RegTensor<float> input_lastout;
+        Reg::RegTensor<M> output_mean;
+        Reg::RegTensor<M> output_lastout;
+        Reg::MaskReg pregLoop;
         for (uint16_t i = 0; i < castLoops; i++) {
-            pregLoop = MicroAPI::UpdateMask<float>(castCount);
-            MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-            MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout, batchLastoutInAddr + VL_F32 * i);
+            pregLoop = Reg::UpdateMask<float>(castCount);
+            Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+            Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(input_lastout, batchLastoutInAddr + VL_F32 * i);
             Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
             Cast<M, float, castTraitB322B16>(output_lastout, input_lastout, pregLoop);
-            MicroAPI::StoreAlign<M, MicroAPI::StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchMeanOutAddr + i * VL_MEAN),
-                                                                        output_mean, pregLoop);
-            MicroAPI::StoreAlign<M, MicroAPI::StoreDist::DIST_PACK_B32>(
-                ((__ubuf__ M*)batchLastoutOutAddr + i * VL_MEAN), output_lastout, pregLoop);
+            Reg::StoreAlign<M, Reg::StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchMeanOutAddr + i * VL_MEAN),
+                                                              output_mean, pregLoop);
+            Reg::StoreAlign<M, Reg::StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchLastoutOutAddr + i * VL_MEAN),
+                                                              output_lastout, pregLoop);
         }
     }
 }

@@ -21,10 +21,8 @@
 
 namespace INTrainingReduceV2Ops {
 using namespace AscendC;
-// 直接使用 AscendC::Reg（低阶 VF API 的规范命名空间；AscendC::MicroAPI 只是其别名 `namespace MicroAPI = Reg`）。
-// 采用 Reg 而非 MicroAPI 别名：Reg 在 __NPU_ARCH__==3510 恒被填充（reg_compute struct_intf.h），
-// 包构建（device-only pass）与 Kernel 直调单文件 .asc（host+device 双遍）均稳定解析；
-// MicroAPI 别名受内部头 include 顺序影响，在单文件 .asc host 遍偶发不可见。二者类型完全等价。
+// 使用 AscendC::Reg（低阶 VF API 的规范命名空间），在 __NPU_ARCH__==3510 恒被填充（reg_compute struct_intf.h），
+// 包构建（device-only pass）与 Kernel 直调单文件 .asc（host+device 双遍）均稳定解析。
 using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadDist;
 using AscendC::Reg::LocalMemBar;

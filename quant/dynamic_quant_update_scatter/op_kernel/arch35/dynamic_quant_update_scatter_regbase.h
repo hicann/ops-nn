@@ -200,13 +200,13 @@ private:
         __local_mem__ float* scaleAddr = reinterpret_cast<__local_mem__ float*>(scaleLocal.GetPhyAddr());
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<float> zero;
-            MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::UnalignReg unalign;
-            MicroAPI::Duplicate(zero, 0.0f, all);
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(scaleAddr, zero, unalign, 1);
-            MicroAPI::DataCopyUnAlignPost(scaleAddr, unalign, 0);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+            Reg::RegTensor<float> zero;
+            Reg::MaskReg all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::UnalignReg unalign;
+            Reg::Duplicate(zero, 0.0f, all);
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(scaleAddr, zero, unalign, 1);
+            Reg::DataCopyUnAlignPost(scaleAddr, unalign, 0);
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         }
     }
 
@@ -239,38 +239,37 @@ private:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<UpdatesType> inputB16;
-            MicroAPI::RegTensor<UpdatesType> smoothB16;
-            MicroAPI::RegTensor<float> inputFp32;
-            MicroAPI::RegTensor<float> smoothFp32;
-            MicroAPI::RegTensor<float> absValue;
-            MicroAPI::RegTensor<float> maxValue;
-            MicroAPI::RegTensor<float> reducedMax;
-            MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg mask;
-            MicroAPI::UnalignReg unalign;
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(maxValue, scaleAddr);
+            Reg::RegTensor<UpdatesType> inputB16;
+            Reg::RegTensor<UpdatesType> smoothB16;
+            Reg::RegTensor<float> inputFp32;
+            Reg::RegTensor<float> smoothFp32;
+            Reg::RegTensor<float> absValue;
+            Reg::RegTensor<float> maxValue;
+            Reg::RegTensor<float> reducedMax;
+            Reg::MaskReg all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::MaskReg mask;
+            Reg::UnalignReg unalign;
+            Reg::DataCopy<float, Reg::LoadDist::DIST_BRC_B32>(maxValue, scaleAddr);
             uint32_t remaining = count;
             const uint16_t loops = static_cast<uint16_t>((count + VECTOR_LENGTH_FP32 - 1) / VECTOR_LENGTH_FP32);
             for (uint16_t loop = 0; loop < loops; ++loop) {
-                mask = MicroAPI::UpdateMask<float>(remaining);
-                MicroAPI::DataCopy<UpdatesType, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    inputB16, updatesAddr + loop * VECTOR_LENGTH_FP32);
-                MicroAPI::Cast<float, UpdatesType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
+                mask = Reg::UpdateMask<float>(remaining);
+                Reg::DataCopy<UpdatesType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16,
+                                                                           updatesAddr + loop * VECTOR_LENGTH_FP32);
+                Reg::Cast<float, UpdatesType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
                 if constexpr (HasSmoothScales) {
-                    MicroAPI::DataCopy<UpdatesType, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        smoothB16, smoothAddr + loop * VECTOR_LENGTH_FP32);
-                    MicroAPI::Cast<float, UpdatesType, CAST_B16_TO_FP32>(smoothFp32, smoothB16, mask);
-                    MicroAPI::Mul(inputFp32, inputFp32, smoothFp32, mask);
+                    Reg::DataCopy<UpdatesType, Reg::LoadDist::DIST_UNPACK_B16>(smoothB16,
+                                                                               smoothAddr + loop * VECTOR_LENGTH_FP32);
+                    Reg::Cast<float, UpdatesType, CAST_B16_TO_FP32>(smoothFp32, smoothB16, mask);
+                    Reg::Mul(inputFp32, inputFp32, smoothFp32, mask);
                 }
-                MicroAPI::Abs(absValue, inputFp32, mask);
-                MicroAPI::Max(maxValue, absValue, maxValue, all);
+                Reg::Abs(absValue, inputFp32, mask);
+                Reg::Max(maxValue, absValue, maxValue, all);
             }
-            MicroAPI::ReduceMax(reducedMax, maxValue, all);
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(scaleAddr, reducedMax, unalign,
-                                                                                      1);
-            MicroAPI::DataCopyUnAlignPost(scaleAddr, unalign, 0);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+            Reg::ReduceMax(reducedMax, maxValue, all);
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(scaleAddr, reducedMax, unalign, 1);
+            Reg::DataCopyUnAlignPost(scaleAddr, unalign, 0);
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         }
     }
 
@@ -281,34 +280,33 @@ private:
         __local_mem__ float* multiplierAddr = scaleAddr + 1;
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<float> maxValue;
-            MicroAPI::RegTensor<float> zero;
-            MicroAPI::RegTensor<float> one;
-            MicroAPI::RegTensor<float> safeMax;
-            MicroAPI::RegTensor<float> outputScale;
-            MicroAPI::RegTensor<float> quantMax;
-            MicroAPI::RegTensor<float> multiplier;
-            MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg zeroMask;
-            MicroAPI::UnalignReg scaleUnalign;
-            MicroAPI::UnalignReg multiplierUnalign;
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(maxValue, scaleAddr);
-            MicroAPI::Duplicate(zero, 0.0f, all);
-            MicroAPI::Duplicate(one, 1.0f, all);
-            MicroAPI::Duplicate(quantMax, QUANT_MAX, all);
-            MicroAPI::Compares<float, CMPMODE::EQ>(zeroMask, maxValue, 0.0f, all);
-            MicroAPI::Select(safeMax, one, maxValue, zeroMask);
-            MicroAPI::Div<float, &DIV_MODE>(multiplier, quantMax, safeMax, all);
-            MicroAPI::Div<float, &DIV_MODE>(outputScale, one, multiplier, all);
-            MicroAPI::Select(multiplier, zero, multiplier, zeroMask);
-            MicroAPI::Select(outputScale, zero, outputScale, zeroMask);
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(scaleAddr, outputScale,
-                                                                                      scaleUnalign, 1);
-            MicroAPI::DataCopyUnAlignPost(scaleAddr, scaleUnalign, 0);
-            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(multiplierAddr, multiplier,
-                                                                                      multiplierUnalign, 1);
-            MicroAPI::DataCopyUnAlignPost(multiplierAddr, multiplierUnalign, 0);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+            Reg::RegTensor<float> maxValue;
+            Reg::RegTensor<float> zero;
+            Reg::RegTensor<float> one;
+            Reg::RegTensor<float> safeMax;
+            Reg::RegTensor<float> outputScale;
+            Reg::RegTensor<float> quantMax;
+            Reg::RegTensor<float> multiplier;
+            Reg::MaskReg all = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+            Reg::MaskReg zeroMask;
+            Reg::UnalignReg scaleUnalign;
+            Reg::UnalignReg multiplierUnalign;
+            Reg::DataCopy<float, Reg::LoadDist::DIST_BRC_B32>(maxValue, scaleAddr);
+            Reg::Duplicate(zero, 0.0f, all);
+            Reg::Duplicate(one, 1.0f, all);
+            Reg::Duplicate(quantMax, QUANT_MAX, all);
+            Reg::Compares<float, CMPMODE::EQ>(zeroMask, maxValue, 0.0f, all);
+            Reg::Select(safeMax, one, maxValue, zeroMask);
+            Reg::Div<float, &DIV_MODE>(multiplier, quantMax, safeMax, all);
+            Reg::Div<float, &DIV_MODE>(outputScale, one, multiplier, all);
+            Reg::Select(multiplier, zero, multiplier, zeroMask);
+            Reg::Select(outputScale, zero, outputScale, zeroMask);
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(scaleAddr, outputScale, scaleUnalign, 1);
+            Reg::DataCopyUnAlignPost(scaleAddr, scaleUnalign, 0);
+            Reg::DataCopyUnAlign<float, Reg::PostLiteral::POST_MODE_UPDATE>(multiplierAddr, multiplier,
+                                                                            multiplierUnalign, 1);
+            Reg::DataCopyUnAlignPost(multiplierAddr, multiplierUnalign, 0);
+            Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         }
     }
 
@@ -356,36 +354,36 @@ private:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<UpdatesType> inputB16;
-            MicroAPI::RegTensor<UpdatesType> smoothB16;
-            MicroAPI::RegTensor<float> inputFp32;
-            MicroAPI::RegTensor<float> smoothFp32;
-            MicroAPI::RegTensor<float> multiplier;
-            MicroAPI::RegTensor<float> quantizedFp32;
-            MicroAPI::RegTensor<int16_t> quantizedInt16;
-            MicroAPI::RegTensor<half> quantizedFp16;
-            MicroAPI::RegTensor<int8_t> quantizedInt8;
-            MicroAPI::MaskReg mask;
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(multiplier, scaleAddr + 1);
+            Reg::RegTensor<UpdatesType> inputB16;
+            Reg::RegTensor<UpdatesType> smoothB16;
+            Reg::RegTensor<float> inputFp32;
+            Reg::RegTensor<float> smoothFp32;
+            Reg::RegTensor<float> multiplier;
+            Reg::RegTensor<float> quantizedFp32;
+            Reg::RegTensor<int16_t> quantizedInt16;
+            Reg::RegTensor<half> quantizedFp16;
+            Reg::RegTensor<int8_t> quantizedInt8;
+            Reg::MaskReg mask;
+            Reg::DataCopy<float, Reg::LoadDist::DIST_BRC_B32>(multiplier, scaleAddr + 1);
             uint32_t remaining = count;
             const uint16_t loops = static_cast<uint16_t>((count + VECTOR_LENGTH_FP32 - 1) / VECTOR_LENGTH_FP32);
             for (uint16_t loop = 0; loop < loops; ++loop) {
-                mask = MicroAPI::UpdateMask<float>(remaining);
-                MicroAPI::DataCopy<UpdatesType, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    inputB16, updatesAddr + loop * VECTOR_LENGTH_FP32);
-                MicroAPI::Cast<float, UpdatesType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
+                mask = Reg::UpdateMask<float>(remaining);
+                Reg::DataCopy<UpdatesType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16,
+                                                                           updatesAddr + loop * VECTOR_LENGTH_FP32);
+                Reg::Cast<float, UpdatesType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
                 if constexpr (HasSmoothScales) {
-                    MicroAPI::DataCopy<UpdatesType, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        smoothB16, smoothAddr + loop * VECTOR_LENGTH_FP32);
-                    MicroAPI::Cast<float, UpdatesType, CAST_B16_TO_FP32>(smoothFp32, smoothB16, mask);
-                    MicroAPI::Mul(inputFp32, inputFp32, smoothFp32, mask);
+                    Reg::DataCopy<UpdatesType, Reg::LoadDist::DIST_UNPACK_B16>(smoothB16,
+                                                                               smoothAddr + loop * VECTOR_LENGTH_FP32);
+                    Reg::Cast<float, UpdatesType, CAST_B16_TO_FP32>(smoothFp32, smoothB16, mask);
+                    Reg::Mul(inputFp32, inputFp32, smoothFp32, mask);
                 }
-                MicroAPI::Mul(quantizedFp32, inputFp32, multiplier, mask);
-                MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
-                MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
-                MicroAPI::Cast<int8_t, half, CAST_FP16_TO_INT8>(quantizedInt8, quantizedFp16, mask);
-                MicroAPI::DataCopy<int8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(outputAddr + loop * VECTOR_LENGTH_FP32,
-                                                                                quantizedInt8, mask);
+                Reg::Mul(quantizedFp32, inputFp32, multiplier, mask);
+                Reg::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
+                Reg::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
+                Reg::Cast<int8_t, half, CAST_FP16_TO_INT8>(quantizedInt8, quantizedFp16, mask);
+                Reg::DataCopy<int8_t, Reg::StoreDist::DIST_PACK4_B32>(outputAddr + loop * VECTOR_LENGTH_FP32,
+                                                                      quantizedInt8, mask);
             }
         }
 
@@ -403,15 +401,15 @@ private:
     __aicore__ inline int64_t Min(int64_t lhs, int64_t rhs) const { return lhs < rhs ? lhs : rhs; }
 
 private:
-    static constexpr MicroAPI::DivSpecificMode DIV_MODE = {MicroAPI::MaskMergeMode::ZEROING, true};
-    static constexpr MicroAPI::CastTrait CAST_B16_TO_FP32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr MicroAPI::CastTrait CAST_FP32_TO_INT16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-    static constexpr MicroAPI::CastTrait CAST_INT16_TO_FP16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
-    static constexpr MicroAPI::CastTrait CAST_FP16_TO_INT8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                              MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+    static constexpr Reg::DivSpecificMode DIV_MODE = {Reg::MaskMergeMode::ZEROING, true};
+    static constexpr Reg::CastTrait CAST_B16_TO_FP32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait CAST_FP32_TO_INT16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr Reg::CastTrait CAST_INT16_TO_FP16 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+    static constexpr Reg::CastTrait CAST_FP16_TO_INT8 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> updatesQueue_;

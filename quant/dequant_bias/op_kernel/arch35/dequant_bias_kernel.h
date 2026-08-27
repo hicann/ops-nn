@@ -25,21 +25,17 @@ constexpr int32_t BUFFER_NUM = 1;
 constexpr uint8_t MULTI_COPY_DIM = 2;
 constexpr int32_t BLOCK_SIZE = 32;
 
-constexpr AscendC::MicroAPI::CastTrait CT_I32_TO_F32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait CT_I32_TO_F32 = {AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait CT_BF16_TO_F32 = {AscendC::MicroAPI::RegLayout::ZERO,
-                                                         AscendC::MicroAPI::SatMode::UNKNOWN,
-                                                         AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait CT_BF16_TO_F32 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                    AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait CT_F32_TO_BF16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait CT_F32_TO_BF16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                    AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait CT_F32_TO_F16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait CT_F32_TO_F16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
           uint64_t HAS_ACTIVATE>
@@ -275,69 +271,61 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int32_t> vregX;
-        AscendC::MicroAPI::RegTensor<float> vregXF32;
-        AscendC::MicroAPI::RegTensor<DTYPE_WS> vregWS;
-        AscendC::MicroAPI::RegTensor<float> vregWSF32;
-        AscendC::MicroAPI::RegTensor<float> vregCalc;
-        AscendC::MicroAPI::RegTensor<float> vregAS;
-        AscendC::MicroAPI::RegTensor<DTYPE_B> vregBias;
-        AscendC::MicroAPI::RegTensor<int32_t> vregBiasI32;
-        AscendC::MicroAPI::RegTensor<float> vregBiasF32;
-        AscendC::MicroAPI::RegTensor<DTYPE_Y> vregY;
-        AscendC::MicroAPI::MaskReg mask;
+        AscendC::Reg::RegTensor<int32_t> vregX;
+        AscendC::Reg::RegTensor<float> vregXF32;
+        AscendC::Reg::RegTensor<DTYPE_WS> vregWS;
+        AscendC::Reg::RegTensor<float> vregWSF32;
+        AscendC::Reg::RegTensor<float> vregCalc;
+        AscendC::Reg::RegTensor<float> vregAS;
+        AscendC::Reg::RegTensor<DTYPE_B> vregBias;
+        AscendC::Reg::RegTensor<int32_t> vregBiasI32;
+        AscendC::Reg::RegTensor<float> vregBiasF32;
+        AscendC::Reg::RegTensor<DTYPE_Y> vregY;
+        AscendC::Reg::MaskReg mask;
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
-            mask = AscendC::MicroAPI::UpdateMask<float>(totalCount);
+            mask = AscendC::Reg::UpdateMask<float>(totalCount);
 
-            AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregX, xAddr + i * VL);
+            AscendC::Reg::DataCopy<int32_t, AscendC::Reg::LoadDist::DIST_NORM>(vregX, xAddr + i * VL);
 
             if constexpr (HAS_BIAS && std::is_same_v<DTYPE_B, int32_t>) {
-                AscendC::MicroAPI::DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregBiasI32,
-                                                                                             biasAddr + i * VL);
-                AscendC::MicroAPI::Add<int32_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregX, vregX, vregBiasI32,
-                                                                                           mask);
+                AscendC::Reg::DataCopy<int32_t, AscendC::Reg::LoadDist::DIST_NORM>(vregBiasI32, biasAddr + i * VL);
+                AscendC::Reg::Add<int32_t, AscendC::Reg::MaskMergeMode::ZEROING>(vregX, vregX, vregBiasI32, mask);
             }
 
-            AscendC::MicroAPI::Cast<float, int32_t, CT_I32_TO_F32>(vregXF32, vregX, mask);
+            AscendC::Reg::Cast<float, int32_t, CT_I32_TO_F32>(vregXF32, vregX, mask);
 
             if constexpr (std::is_same_v<DTYPE_WS, float>) {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregWSF32, wsAddr + i * VL);
+                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregWSF32, wsAddr + i * VL);
             } else {
-                AscendC::MicroAPI::DataCopy<DTYPE_WS, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregWS,
-                                                                                                    wsAddr + i * VL);
-                AscendC::MicroAPI::Cast<float, DTYPE_WS, CT_BF16_TO_F32>(vregWSF32, vregWS, mask);
+                AscendC::Reg::DataCopy<DTYPE_WS, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregWS, wsAddr + i * VL);
+                AscendC::Reg::Cast<float, DTYPE_WS, CT_BF16_TO_F32>(vregWSF32, vregWS, mask);
             }
-            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregXF32, vregWSF32,
-                                                                                     mask);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregCalc, vregXF32, vregWSF32, mask);
 
             if constexpr (HAS_ACTIVATE) {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregAS, asAddr + i * VL);
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregCalc, vregAS,
-                                                                                         mask);
+                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregAS, asAddr + i * VL);
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregCalc, vregCalc, vregAS, mask);
             }
 
             if constexpr (HAS_BIAS && !std::is_same_v<DTYPE_B, int32_t>) {
                 if constexpr (std::is_same_v<DTYPE_B, float>) {
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregBiasF32,
-                                                                                               biasAddr + i * VL);
+                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregBiasF32, biasAddr + i * VL);
                 } else {
-                    AscendC::MicroAPI::DataCopy<DTYPE_B, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregBias, biasAddr + i * VL);
-                    AscendC::MicroAPI::Cast<float, DTYPE_B, CT_BF16_TO_F32>(vregBiasF32, vregBias, mask);
+                    AscendC::Reg::DataCopy<DTYPE_B, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregBias,
+                                                                                             biasAddr + i * VL);
+                    AscendC::Reg::Cast<float, DTYPE_B, CT_BF16_TO_F32>(vregBiasF32, vregBias, mask);
                 }
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregCalc, vregCalc,
-                                                                                         vregBiasF32, mask);
+                AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregCalc, vregCalc, vregBiasF32, mask);
             }
 
             if constexpr (std::is_same_v<DTYPE_Y, bfloat16_t>) {
-                AscendC::MicroAPI::Cast<bfloat16_t, float, CT_F32_TO_BF16>(vregY, vregCalc, mask);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * VL,
-                                                                                                     vregY, mask);
+                AscendC::Reg::Cast<bfloat16_t, float, CT_F32_TO_BF16>(vregY, vregCalc, mask);
+                AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(outAddr + i * VL, vregY,
+                                                                                           mask);
             } else {
-                AscendC::MicroAPI::Cast<half, float, CT_F32_TO_F16>(vregY, vregCalc, mask);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * VL, vregY,
-                                                                                               mask);
+                AscendC::Reg::Cast<half, float, CT_F32_TO_F16>(vregY, vregCalc, mask);
+                AscendC::Reg::DataCopy<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(outAddr + i * VL, vregY, mask);
             }
         }
     }

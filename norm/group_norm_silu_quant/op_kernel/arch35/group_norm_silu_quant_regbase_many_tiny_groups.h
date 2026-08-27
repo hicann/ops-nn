@@ -421,7 +421,7 @@ private:
             SetFlag<HardEvent::MTE3_V>(evM3V);
             WaitFlag<HardEvent::MTE3_V>(evM3V);
         } else {
-            // T1(half/bf16)输出: ProcessMeanAndRstd 内部 MicroAPI 读 UB(V) 再窄化 + V->MTE3, 前置 V 屏障即可
+            // T1(half/bf16)输出: ProcessMeanAndRstd 内部 Reg 读 UB(V) 再窄化 + V->MTE3, 前置 V 屏障即可
             PipeBarrier<PIPE_V>();
             // ProcessMeanAndRstd 形参为非 const 引用, 用具名 LocalTensor(不可传 Get<>() 临时量)
             LocalTensor<float> meanLocal = meanBuf.Get<float>();

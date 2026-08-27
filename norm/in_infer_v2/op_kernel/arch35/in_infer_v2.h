@@ -10,7 +10,7 @@
 
 /*!
  * \file in_infer_v2.h
- * \brief INInferV2 arch35(regbase/MicroAPI) kernel
+ * \brief INInferV2 arch35(regbase/Reg) kernel
  *        y              = (x - mean) * (gamma / sqrt(variance + epsilon)) + beta   （gamma/beta 可选）
  *                         无 gamma/beta 时 y = (x - mean) / sqrt(variance + epsilon)
  *        batch_mean     = mean / batch_variance = variance                    （透传拷贝）
@@ -40,27 +40,27 @@
 
 namespace INInferV2Ops {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB16ToFp32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB16ToFp32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr AscendC::MicroAPI::CastTrait castTraitFp32ToB16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitFp32ToB16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 

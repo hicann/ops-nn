@@ -23,18 +23,18 @@
 
 namespace BatchNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
 using AscendC::Reg::Reduce;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr static int64_t DOUBLE_BUFFER = 2;
 constexpr static int32_t BUFFER_DEPTH = 1;
@@ -48,23 +48,23 @@ constexpr static int64_t NDDMA_THRESHOLD = 32;
 constexpr static int64_t NDDMA_SECOND_DIM = 1;
 constexpr static int64_t NDDMA_THIRD_DIM = 2;
 constexpr static int64_t NDDMA_DIM_NUM = 3;
-constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
 template <typename T>
-__aicore__ inline void LoadTensorForDtypeT(AscendC::MicroAPI::RegTensor<float>& dst, __ubuf__ T* src,
-                                           AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeT(AscendC::Reg::RegTensor<float>& dst, __ubuf__ T* src,
+                                           AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
@@ -138,15 +138,15 @@ __aicore__ inline void LoadTwoTensorForDtypeTBrc(RegTensor<float>& dst1, RegTens
 }
 
 template <typename T>
-__aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
-                                            AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
+                                            AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_NORM>(dst + offset, src, preg);
     } else {
-        AscendC::MicroAPI::RegTensor<T> xFp16;
+        AscendC::Reg::RegTensor<T> xFp16;
         Cast<T, float, castTraitB322B16>(xFp16, src, preg);
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 

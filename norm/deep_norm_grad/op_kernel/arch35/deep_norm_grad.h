@@ -19,30 +19,30 @@
 namespace DeepNormGradArch35 {
 
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t VL_FP32 = 256 / sizeof(float);
 constexpr uint32_t SCALAR_BLOCK_ELEMS = BLOCK_SIZE / sizeof(float);
 constexpr uint32_t REDUCE_TMP_ELEMS = 2 * VL_FP32;
-constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_B32_TO_F16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait CAST_TRAIT_B32_TO_F16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_B32_TO_BF16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait CAST_TRAIT_B32_TO_BF16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -742,13 +742,13 @@ __aicore__ inline void DeepNormGrad<T>::ComputeTinyDBatch(LocalTensor<T>& dy, Lo
             Add(newSumReg, dgammaSumReg, adjustedReg, mask);
             Sub(deltaReg, newSumReg, dgammaSumReg, mask);
             Sub(dgammaCompReg, deltaReg, adjustedReg, mask);
-            AscendC::MicroAPI::Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dgammaSumReg, newSumReg, mask);
+            AscendC::Reg::Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dgammaSumReg, newSumReg, mask);
 
             Sub(adjustedReg, dyReg, dbetaCompReg, mask);
             Add(newSumReg, dbetaSumReg, adjustedReg, mask);
             Sub(deltaReg, newSumReg, dbetaSumReg, mask);
             Sub(dbetaCompReg, deltaReg, adjustedReg, mask);
-            AscendC::MicroAPI::Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dbetaSumReg, newSumReg, mask);
+            AscendC::Reg::Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dbetaSumReg, newSumReg, mask);
 
             Mul(dyGammaReg, dyReg, gammaReg, mask);
             Mul(tmpNormReg, dyGammaReg, rstdReg, mask);

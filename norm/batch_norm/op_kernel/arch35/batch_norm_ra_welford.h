@@ -19,17 +19,17 @@
 
 namespace BatchNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::CreateMask;
 using AscendC::Reg::LoadAlign;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::LocalMemBar;
+using AscendC::Reg::MaskPattern;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::MemType;
+using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreAlign;
+using AscendC::Reg::StoreDist;
+using AscendC::Reg::UpdateMask;
 
 template <typename T1, typename T2>
 class BatchNormRAWelford {
@@ -148,13 +148,13 @@ private:
             uint32_t sreg1 = quotientNum;
             Duplicate(tmpCount, quotientAddCount, pregMain);
             for (uint16_t i = 0; i < quotientLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg1);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_FP32), tmpCount, pregLoop);
             }
             uint32_t sreg2 = remainderNum;
             Duplicate(tmpCount, remaninderAddCount, pregMain);
             for (uint16_t i = 0; i < remainderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg2);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg2);
                 StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_FP32), tmpCount, pregLoop);
             }
         }
@@ -309,7 +309,7 @@ private:
             MaskReg pregLoop;
             uint32_t sreg0 = calLen;
             for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadTensorForDtypeT<T1>(x1, x1Local, pregLoop, i * VL_FP32);
 
                 LoadAlign(tmpMean, tmpMeanLocal + i * VL_FP32);
@@ -427,7 +427,7 @@ private:
             uint32_t sreg0 = currentANum;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_FP32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
@@ -525,7 +525,7 @@ private:
             uint32_t sreg0 = currentANum;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_FP32;
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                pregLoop = AscendC::Reg::UpdateMask<float>(sreg0);
                 LoadAlign(saveMean, ((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset));
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;

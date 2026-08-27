@@ -18,7 +18,7 @@
 
 namespace SwigluGroupGradOps {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 constexpr int64_t FP32_BLOCK_ELEMENTS = 8;
 constexpr int64_t FP32_ELEMENT_BYTES = sizeof(float);
 constexpr uint32_t FP32_VECTOR_LENGTH = Ops::Base::GetVRegSize() / sizeof(float);

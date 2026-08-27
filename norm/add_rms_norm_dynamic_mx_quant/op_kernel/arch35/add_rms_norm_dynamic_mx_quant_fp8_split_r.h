@@ -294,18 +294,18 @@ private:
             RegTensor<float> xRegFp32, gammaRegFp32, rstdReg, betaRegFp32;
             MaskReg maskReg;
 
-            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdInUb + rowIdx);
+            AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdInUb + rowIdx);
             uint32_t sregCount = curN;
             for (uint16_t r = 0; r < loopCols; ++r) {
                 uint32_t offset = r * VL_F32;
                 maskReg = UpdateMask<float>(sregCount);
                 LoadTensorForDtypeTIn<float>(xFp32Tmp, xRegFp32, maskReg, offset);
                 LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaRegFp32, maskReg, offset);
-                AscendC::MicroAPI::Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-                AscendC::MicroAPI::Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                AscendC::Reg::Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
+                AscendC::Reg::Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                 if constexpr (hasBeta) {
                     LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaRegFp32, maskReg, offset);
-                    AscendC::MicroAPI::Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+                    AscendC::Reg::Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
                 }
                 StoreTensorForDtypeTOut<T_X>(yInUb, xRegFp32, maskReg, offset);
             }

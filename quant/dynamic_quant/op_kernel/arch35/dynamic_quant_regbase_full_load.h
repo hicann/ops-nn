@@ -219,160 +219,157 @@ private:
     }
 
     __aicore__ inline void DataCopyInputVF(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr,
-                                           AscendC::MicroAPI::RegTensor<float>& vregRes,
-                                           AscendC::MicroAPI::MaskReg pregMask)
+                                           AscendC::Reg::RegTensor<float>& vregRes, AscendC::Reg::MaskReg pregMask)
     {
-        AscendC::MicroAPI::RegTensor<xDtype> vregX;
-        AscendC::MicroAPI::RegTensor<xDtype> vregSmooth;
-        AscendC::MicroAPI::RegTensor<float> vregSmoothFp32;
+        AscendC::Reg::RegTensor<xDtype> vregX;
+        AscendC::Reg::RegTensor<xDtype> vregSmooth;
+        AscendC::Reg::RegTensor<float> vregSmoothFp32;
 
-        AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX, xAddr);
-        AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregRes, vregX, pregMask);
+        AscendC::Reg::LoadAlign<xDtype, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xAddr);
+        AscendC::Reg::Cast<float, xDtype, castTraitB16ToB32>(vregRes, vregX, pregMask);
         if constexpr (hasSmooth) {
-            AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregSmooth, smoothAddr);
-            AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, pregMask);
-            AscendC::MicroAPI::Mul(vregRes, vregRes, vregSmoothFp32, pregMask);
+            AscendC::Reg::LoadAlign<xDtype, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregSmooth, smoothAddr);
+            AscendC::Reg::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, pregMask);
+            AscendC::Reg::Mul(vregRes, vregRes, vregSmoothFp32, pregMask);
         }
     }
 
     __aicore__ inline void ComputeYVF(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ yCopyDtype* yAddr,
-                                      AscendC::MicroAPI::RegTensor<float>& vregDupScale,
-                                      AscendC::MicroAPI::RegTensor<float>& vregDupOffset, int32_t indexRow)
+                                      AscendC::Reg::RegTensor<float>& vregDupScale,
+                                      AscendC::Reg::RegTensor<float>& vregDupOffset, int32_t indexRow)
     {
-        AscendC::MicroAPI::RegTensor<float> vregInput;
-        AscendC::MicroAPI::RegTensor<float> vregXDivScale;
-        AscendC::MicroAPI::RegTensor<float> vregYFp32;
-        AscendC::MicroAPI::RegTensor<int16_t> vregYInt16; // cast成最终y之前的int16类型
-        AscendC::MicroAPI::RegTensor<half> vregYFp16;     // cast成最终y之前的half类型
-        AscendC::MicroAPI::RegTensor<yCopyDtype> vregY;   // 最终y
+        AscendC::Reg::RegTensor<float> vregInput;
+        AscendC::Reg::RegTensor<float> vregXDivScale;
+        AscendC::Reg::RegTensor<float> vregYFp32;
+        AscendC::Reg::RegTensor<int16_t> vregYInt16; // cast成最终y之前的int16类型
+        AscendC::Reg::RegTensor<half> vregYFp16;     // cast成最终y之前的half类型
+        AscendC::Reg::RegTensor<yCopyDtype> vregY;   // 最终y
 
-        AscendC::MicroAPI::MaskReg preg2;
-        AscendC::MicroAPI::MaskReg pregHalf = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+        AscendC::Reg::MaskReg preg2;
+        AscendC::Reg::MaskReg pregHalf = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::H>();
 
         uint32_t sreg1 = sizeHalfLen;
         uint16_t vfLoop = (sizeHalfLen + VL - 1) / VL;
         for (uint16_t j = 0; j < vfLoop; j++) {
             auto addr = yAddr + indexRow * outAlignLen + j * VL;
-            preg2 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+            preg2 = AscendC::Reg::UpdateMask<float>(sreg1);
             DataCopyInputVF(xAddr + indexRow * sizeHalfLen + j * VL, smoothAddr + j * VL, vregInput, preg2);
 
             if constexpr (isSymmetrical == true) {
-                AscendC::MicroAPI::Div(vregYFp32, vregInput, vregDupScale, preg2);
+                AscendC::Reg::Div(vregYFp32, vregInput, vregDupScale, preg2);
             } else if constexpr (isSymmetrical == false) {
-                AscendC::MicroAPI::Div(vregXDivScale, vregInput, vregDupScale, preg2);
-                AscendC::MicroAPI::Add(vregYFp32, vregXDivScale, vregDupOffset, preg2);
+                AscendC::Reg::Div(vregXDivScale, vregInput, vregDupScale, preg2);
+                AscendC::Reg::Add(vregYFp32, vregXDivScale, vregDupOffset, preg2);
             }
             if constexpr (IsSameType<yDtype, int8_t>::value) {
-                AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vregYInt16, vregYFp32, preg2);
-                AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vregYFp16, vregYInt16, preg2);
-                AscendC::MicroAPI::Cast<yDtype, half, castTraitF16ToI8>(vregY, vregYFp16, preg2);
+                AscendC::Reg::Cast<int16_t, float, castTraitF32ToI16>(vregYInt16, vregYFp32, preg2);
+                AscendC::Reg::Cast<half, int16_t, castTraitI16ToF16>(vregYFp16, vregYInt16, preg2);
+                AscendC::Reg::Cast<yDtype, half, castTraitF16ToI8>(vregY, vregYFp16, preg2);
             } else if constexpr (IsSameType<yDtype, hifloat8_t>::value) {
-                AscendC::MicroAPI::Cast<yDtype, float, castTraitF32toh8>(vregY, vregYFp32, preg2);
+                AscendC::Reg::Cast<yDtype, float, castTraitF32toh8>(vregY, vregYFp32, preg2);
             } else if constexpr (IsSameType<yDtype, fp8_e4m3fn_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value) {
-                AscendC::MicroAPI::Cast<yDtype, float, castTraitF32tofp8>(vregY, vregYFp32, preg2);
+                AscendC::Reg::Cast<yDtype, float, castTraitF32tofp8>(vregY, vregYFp32, preg2);
             } else if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                AscendC::MicroAPI::RegTensor<uint16_t> vreg20;
-                AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vregYInt16, vregYFp32, preg2);
-                AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vregYFp16, vregYInt16, preg2);
-                AscendC::MicroAPI::Pack(vreg20, (AscendC::MicroAPI::RegTensor<uint32_t>&)vregYFp16);
-                AscendC::MicroAPI::Cast<int4x2_t, half, castTraitF16ToI8>(
-                    (AscendC::MicroAPI::RegTensor<int4x2_t>&)vregY, (AscendC::MicroAPI::RegTensor<half>&)vreg20, preg2);
+                AscendC::Reg::RegTensor<uint16_t> vreg20;
+                AscendC::Reg::Cast<int16_t, float, castTraitF32ToI16>(vregYInt16, vregYFp32, preg2);
+                AscendC::Reg::Cast<half, int16_t, castTraitI16ToF16>(vregYFp16, vregYInt16, preg2);
+                AscendC::Reg::Pack(vreg20, (AscendC::Reg::RegTensor<uint32_t>&)vregYFp16);
+                AscendC::Reg::Cast<int4x2_t, half, castTraitF16ToI8>((AscendC::Reg::RegTensor<int4x2_t>&)vregY,
+                                                                     (AscendC::Reg::RegTensor<half>&)vreg20, preg2);
                 addr = yAddr + (indexRow * outAlignLen + j * VL) / 2;
             }
             if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregY,
-                                                                                                        pregHalf);
+                AscendC::Reg::StoreAlign<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vregY, pregHalf);
             } else {
-                AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregY,
-                                                                                                        preg2);
+                AscendC::Reg::StoreAlign<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vregY, preg2);
             }
         }
     }
 
     __aicore__ inline void ComputeScaleVF(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr,
                                           __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr,
-                                          AscendC::MicroAPI::RegTensor<float>& vregDupScale,
-                                          AscendC::MicroAPI::RegTensor<float>& vregDupOffset, int32_t indexRow)
+                                          AscendC::Reg::RegTensor<float>& vregDupScale,
+                                          AscendC::Reg::RegTensor<float>& vregDupOffset, int32_t indexRow)
     {
-        AscendC::MicroAPI::RegTensor<float> vregInput;
-        AscendC::MicroAPI::RegTensor<float> vregAbs;
-        AscendC::MicroAPI::RegTensor<float> vregScale;
-        AscendC::MicroAPI::RegTensor<float> vregMinX;
-        AscendC::MicroAPI::RegTensor<float> vregMaxX;
-        AscendC::MicroAPI::RegTensor<float> vregReduceMaxX;
-        AscendC::MicroAPI::RegTensor<float> vregReduceMinX;
-        AscendC::MicroAPI::RegTensor<float> vregMaxSubMin;
-        AscendC::MicroAPI::RegTensor<float> vregMaxDivScale;
-        AscendC::MicroAPI::RegTensor<float> vregNegMaxDivScale;
-        AscendC::MicroAPI::RegTensor<float> vregOffset;
-        AscendC::MicroAPI::RegTensor<float> vregReduceMaxXTail;
-        AscendC::MicroAPI::RegTensor<float> vregReduceMinXTail;
-        AscendC::MicroAPI::RegTensor<float> vregFinalMax;
-        AscendC::MicroAPI::RegTensor<float> vregFinalMin;
+        AscendC::Reg::RegTensor<float> vregInput;
+        AscendC::Reg::RegTensor<float> vregAbs;
+        AscendC::Reg::RegTensor<float> vregScale;
+        AscendC::Reg::RegTensor<float> vregMinX;
+        AscendC::Reg::RegTensor<float> vregMaxX;
+        AscendC::Reg::RegTensor<float> vregReduceMaxX;
+        AscendC::Reg::RegTensor<float> vregReduceMinX;
+        AscendC::Reg::RegTensor<float> vregMaxSubMin;
+        AscendC::Reg::RegTensor<float> vregMaxDivScale;
+        AscendC::Reg::RegTensor<float> vregNegMaxDivScale;
+        AscendC::Reg::RegTensor<float> vregOffset;
+        AscendC::Reg::RegTensor<float> vregReduceMaxXTail;
+        AscendC::Reg::RegTensor<float> vregReduceMinXTail;
+        AscendC::Reg::RegTensor<float> vregFinalMax;
+        AscendC::Reg::RegTensor<float> vregFinalMin;
 
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg4;
-        AscendC::MicroAPI::MaskReg preg5 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg preg1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg preg4;
+        AscendC::Reg::MaskReg preg5 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
 
-        AscendC::MicroAPI::UnalignRegForStore ureg0;
-        AscendC::MicroAPI::UnalignRegForStore ureg1;
+        AscendC::Reg::UnalignRegForStore ureg0;
+        AscendC::Reg::UnalignRegForStore ureg1;
 
         uint32_t rowCount = sizeHalfLen;
         uint16_t vfLoop = (rowCount + VL - 1) / VL;
         uint32_t sreg0 = rowCount;
         uint32_t sregTail = tailNum;
-        AscendC::MicroAPI::Duplicate(vregMaxX, NEG_INFINITY, preg1);
+        AscendC::Reg::Duplicate(vregMaxX, NEG_INFINITY, preg1);
         if constexpr (isSymmetrical == true) {
             // 1. compute max value for every vf loop  2.do reducemax in the end
             for (uint16_t j = 0; j < vfLoop; j++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
                 DataCopyInputVF(xAddr + indexRow * rowCount + j * VL, smoothAddr + j * VL, vregInput, preg0);
-                AscendC::MicroAPI::Abs(vregAbs, vregInput, preg0);
-                AscendC::MicroAPI::Max(vregMaxX, vregAbs, vregMaxX, preg1);
+                AscendC::Reg::Abs(vregAbs, vregInput, preg0);
+                AscendC::Reg::Max(vregMaxX, vregAbs, vregMaxX, preg1);
             }
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vregReduceMaxX, vregMaxX, preg1);
-            AscendC::MicroAPI::Muls(vregScale, vregReduceMaxX, maxValue, preg1);
-            AscendC::MicroAPI::Duplicate(vregDupScale, vregScale, preg1);
-            AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                scaleAddr, vregScale, ureg0, 1);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vregReduceMaxX, vregMaxX, preg1);
+            AscendC::Reg::Muls(vregScale, vregReduceMaxX, maxValue, preg1);
+            AscendC::Reg::Duplicate(vregDupScale, vregScale, preg1);
+            AscendC::Reg::StoreUnAlign<float, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(scaleAddr, vregScale, ureg0,
+                                                                                           1);
         } else if constexpr (isSymmetrical == false) {
-            AscendC::MicroAPI::Duplicate(vregMinX, POS_INFINITY, preg1);
+            AscendC::Reg::Duplicate(vregMinX, POS_INFINITY, preg1);
             // mask can't conver all loop, because 0(no mask value) is not min or max, compute until last second loop
             for (uint16_t j = 0; j < vfLoop - 1; j++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
                 DataCopyInputVF(xAddr + indexRow * rowCount + j * VL, smoothAddr + j * VL, vregInput, preg0);
-                AscendC::MicroAPI::Max(vregMaxX, vregInput, vregMaxX, preg1);
-                AscendC::MicroAPI::Min(vregMinX, vregInput, vregMinX, preg1);
+                AscendC::Reg::Max(vregMaxX, vregInput, vregMaxX, preg1);
+                AscendC::Reg::Min(vregMinX, vregInput, vregMinX, preg1);
             }
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vregReduceMaxX, vregMaxX, preg1);
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN>(vregReduceMinX, vregMinX, preg1);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vregReduceMaxX, vregMaxX, preg1);
+            AscendC::Reg::Reduce<Reg::ReduceType::MIN>(vregReduceMinX, vregMinX, preg1);
 
             // finnal compute max and min
-            preg4 = AscendC::MicroAPI::UpdateMask<float>(sregTail);
+            preg4 = AscendC::Reg::UpdateMask<float>(sregTail);
             DataCopyInputVF(xAddr + indexRow * rowCount + (vfLoop - 1) * VL, smoothAddr + (vfLoop - 1) * VL, vregInput,
                             preg4);
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vregReduceMaxXTail, vregInput, preg4);
-            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN>(vregReduceMinXTail, vregInput, preg4);
-            AscendC::MicroAPI::Max(vregFinalMax, vregReduceMaxX, vregReduceMaxXTail, preg5);
-            AscendC::MicroAPI::Min(vregFinalMin, vregReduceMinX, vregReduceMinXTail, preg5);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vregReduceMaxXTail, vregInput, preg4);
+            AscendC::Reg::Reduce<Reg::ReduceType::MIN>(vregReduceMinXTail, vregInput, preg4);
+            AscendC::Reg::Max(vregFinalMax, vregReduceMaxX, vregReduceMaxXTail, preg5);
+            AscendC::Reg::Min(vregFinalMin, vregReduceMinX, vregReduceMinXTail, preg5);
 
             // compute scale and offset
-            AscendC::MicroAPI::Sub(vregMaxSubMin, vregFinalMax, vregFinalMin, preg5);
-            AscendC::MicroAPI::Muls(vregScale, vregMaxSubMin, offsetDivValue, preg5);
-            AscendC::MicroAPI::Duplicate(vregDupScale, vregScale, preg1);
-            AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                scaleAddr, vregScale, ureg0, 1);
-            AscendC::MicroAPI::Div<float, &mode>(vregMaxDivScale, vregFinalMax, vregScale, preg5);
-            AscendC::MicroAPI::Muls(vregNegMaxDivScale, vregMaxDivScale, NEGATIVE_ONE, preg5);
-            AscendC::MicroAPI::Adds(vregOffset, vregNegMaxDivScale, offsetValue, preg5); //
-            AscendC::MicroAPI::Duplicate(vregDupOffset, vregOffset, preg1);
-            AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                offsetAddr, vregOffset, ureg1, 1);
+            AscendC::Reg::Sub(vregMaxSubMin, vregFinalMax, vregFinalMin, preg5);
+            AscendC::Reg::Muls(vregScale, vregMaxSubMin, offsetDivValue, preg5);
+            AscendC::Reg::Duplicate(vregDupScale, vregScale, preg1);
+            AscendC::Reg::StoreUnAlign<float, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(scaleAddr, vregScale, ureg0,
+                                                                                           1);
+            AscendC::Reg::Div<float, &mode>(vregMaxDivScale, vregFinalMax, vregScale, preg5);
+            AscendC::Reg::Muls(vregNegMaxDivScale, vregMaxDivScale, NEGATIVE_ONE, preg5);
+            AscendC::Reg::Adds(vregOffset, vregNegMaxDivScale, offsetValue, preg5); //
+            AscendC::Reg::Duplicate(vregDupOffset, vregOffset, preg1);
+            AscendC::Reg::StoreUnAlign<float, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(offsetAddr, vregOffset,
+                                                                                           ureg1, 1);
         }
-        AscendC::MicroAPI::StoreUnAlignPost(scaleAddr, ureg0, 0);
+        AscendC::Reg::StoreUnAlignPost(scaleAddr, ureg0, 0);
         if constexpr (isSymmetrical == false) {
-            AscendC::MicroAPI::StoreUnAlignPost(offsetAddr, ureg1, 0);
+            AscendC::Reg::StoreUnAlignPost(offsetAddr, ureg1, 0);
         }
     }
 
@@ -381,8 +378,8 @@ private:
     {
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<float> vregDupScale;
-            AscendC::MicroAPI::RegTensor<float> vregDupOffset;
+            AscendC::Reg::RegTensor<float> vregDupScale;
+            AscendC::Reg::RegTensor<float> vregDupOffset;
 
             for (uint16_t indexRow = 0; indexRow < (uint16_t)multiRow; indexRow++) {
                 ComputeScaleVF(xAddr, smoothAddr, scaleAddr + indexRow, offsetAddr + indexRow, vregDupScale,
@@ -438,24 +435,24 @@ private:
     uint32_t tailNum = 0;
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
 
-    static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB16ToB32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToI16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitI16ToF16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ROUND};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32tofp8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
+    constexpr static AscendC::Reg::CastTrait castTraitB16ToB32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castTraitF32ToI16 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTraitI16ToF16 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_ROUND};
+    constexpr static AscendC::Reg::CastTrait castTraitF16ToI8 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_TRUNC};
+    constexpr static AscendC::Reg::CastTrait castTraitF32tofp8 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32toh8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitF32toh8 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         RoundMode::CAST_ROUND};
 };
 } // namespace DynamicQuantNDOpt

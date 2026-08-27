@@ -323,8 +323,8 @@ __aicore__ inline void FakeQuantPerChannelNativePC<T>::Compute(int64_t curLen, L
     const float qMin = quantMin_;
     const float qMax = quantMax_;
     const float qRange = quantMax_ - quantMin_; // 0-ULP Div 用：scale = (max-min)/qRange
-    static constexpr AscendC::MicroAPI::DivSpecificMode kDivMode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
-                                                                    true}; // true = 0-ULP fp32 Div
+    static constexpr AscendC::Reg::DivSpecificMode kDivMode = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                               true}; // true = 0-ULP fp32 Div
 
     __VEC_SCOPE__
     {
