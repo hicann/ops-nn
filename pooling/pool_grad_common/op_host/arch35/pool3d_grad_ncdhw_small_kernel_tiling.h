@@ -34,6 +34,9 @@ struct Pool3DGradNCDHWInputInfo {
     int64_t dPad{0};
     int64_t hPad{0};
     int64_t wPad{0};
+    int64_t dPadBack{0};
+    int64_t hPadBack{0};
+    int64_t wPadBack{0};
     int64_t dStride{1};
     int64_t hStride{1};
     int64_t wStride{1};

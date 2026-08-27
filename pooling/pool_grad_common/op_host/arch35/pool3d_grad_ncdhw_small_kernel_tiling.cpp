@@ -29,6 +29,7 @@ static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t THRESHOLD = 2;
 static constexpr int64_t KERNEL_OFFSET = 1;
 static constexpr int64_t DOUBLE = 2;
+static constexpr int64_t MAX_INPUT_ELEMENTS = std::numeric_limits<uint16_t>::max();
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingContext* context_, int64_t ubSize_,
                                                                 int64_t coreNum_)
@@ -50,7 +51,8 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingCont
     baseData.inputNCSize = inputData->nX * inputData->cX;
 
     baseData.isPad = 0;
-    if (inputData->hPad != 0 || inputData->wPad != 0 || inputData->dPad != 0) {
+    if (inputData->hPad != 0 || inputData->wPad != 0 || inputData->dPad != 0 || inputData->hPadBack != 0 ||
+        inputData->wPadBack != 0 || inputData->dPadBack != 0) {
         baseData.isPad = 1;
     }
     baseData.dProBatchSize = 1;
@@ -122,6 +124,10 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetTargetCoreNum() const
 bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
+    if (baseData.inputBytes == FLOAT16_SIZE) {
+        return splitData.totalBufferSize <= baseData.availableUb &&
+               splitData.gradBufferSize <= MAX_INPUT_ELEMENTS * baseData.inputBytes;
+    }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
 
@@ -434,6 +440,9 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::SetTilingData(gert::TilingContext* 
     tilingData->padD = inputData->dPad;
     tilingData->padH = inputData->hPad;
     tilingData->padW = inputData->wPad;
+    tilingData->padDBack = inputData->dPadBack;
+    tilingData->padHBack = inputData->hPadBack;
+    tilingData->padWBack = inputData->wPadBack;
     tilingData->dilationD = inputData->dDilation;
     tilingData->dilationH = inputData->hDilation;
     tilingData->dilationW = inputData->wDilation;

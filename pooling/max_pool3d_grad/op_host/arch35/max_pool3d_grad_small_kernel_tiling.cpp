@@ -32,10 +32,16 @@ bool MaxPool3DGradNCDHWSmallKernelTiling::IsCapable()
                 inputData.wDilation);
         return false;
     }
+    int64_t inputDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
+    if (inputDataCount > MAX_INT32) {
+        OP_LOGI("IsCapable", "inputDataCount:%ld exceeds int32, fast div not supported", inputDataCount);
+        return false;
+    }
+    int64_t kv = inputData.dKernel * inputData.hKernel * inputData.wKernel;
     bool ksizeCheck = true;
     if (base->GetBaseData().dProBatchSize == 1 && base->GetBaseData().hProBatchSize == 1 &&
         base->GetBaseData().wProBatchSize == 1) {
-        ksizeCheck = inputData.dKernel * inputData.hKernel * inputData.wKernel < KSIZE_THRESHOLD;
+        ksizeCheck = kv < KSIZE_THRESHOLD;
     }
     // ub is not enough
     base->GetSplitData().highAxisInner = 1;
@@ -43,7 +49,7 @@ bool MaxPool3DGradNCDHWSmallKernelTiling::IsCapable()
     base->GetSplitData().hOutputInner = 1;
     base->GetSplitData().wOutputInner = std::min(inputData.wX, base->GetBaseData().proDataNumInOneBeatT2);
     base->DoBufferCalculate();
-    OP_LOGI("IsCapable", "ksizeCheck:%d,  totalBufferSize:%ld,  availableUb:%ld", ksizeCheck,
+    OP_LOGI("IsCapable", "kv=%ld, ksizeCheck:%ld,  totalBufferSize:%ld,  availableUb:%ld", kv, ksizeCheck,
             base->GetSplitData().totalBufferSize, base->GetBaseData().availableUb);
     return ksizeCheck && base->GetSplitData().totalBufferSize <= base->GetBaseData().availableUb;
 }

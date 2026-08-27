@@ -80,11 +80,11 @@ public:
     __aicore__ inline void singleLineProcessVF(__local_mem__ computeType* yAddr, __local_mem__ TYPE_ORIG_X* gradAddr,
                                                __local_mem__ TYPE_ARGMAX* argmaxAddr);
     __aicore__ inline void multipleLineProcessVF2(__local_mem__ computeType* yAddr, __local_mem__ TYPE_ORIG_X* gradAddr,
-                                                  __local_mem__ TYPE_ARGMAX* argmaxAddr,
-                                                  __local_mem__ uint32_t* helpAddr);
+                                                  __local_mem__ TYPE_ARGMAX* argmaxAddr);
     __aicore__ inline void multipleLineHwProcessVF(__local_mem__ computeType* yAddr,
                                                    __local_mem__ TYPE_ORIG_X* gradAddr,
-                                                   __local_mem__ TYPE_ARGMAX* argmaxAddr);
+                                                   __local_mem__ TYPE_ARGMAX* argmaxAddr,
+                                                   __local_mem__ uint32_t* helpAddr);
     __aicore__ inline void multipleLineDhwProcessVF(__local_mem__ computeType* yAddr,
                                                     __local_mem__ TYPE_ORIG_X* gradAddr,
                                                     __local_mem__ TYPE_ARGMAX* argmaxAddr);
@@ -94,7 +94,7 @@ public:
     const Pool3DGradNCDHWTilingData& tilingData_;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQue_;
-    TBuf<QuePosition::VECCALC> helpBuf_;
+    TBuf<TPosition::VECCALC> helpBuf_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
     TBuf<TPosition::VECCALC> inputCalcBuff_;
     TBuf<TPosition::VECCALC> argmaxBuff_;
@@ -301,13 +301,13 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     if (wConcurrentCount * DOUBLE * sizeof(TYPE_ARGMAX) > V_REG_SIZE) {
         singleLineProcessVF(yAddr, gradAddr, argmaxAddr);
     } else if (wConcurrentCount * hConcurrentCount * DOUBLE * sizeof(TYPE_ARGMAX) > V_REG_SIZE) {
-        multipleLineHwProcessVF(yAddr, gradAddr, argmaxAddr);
+        LocalTensor<uint32_t> helpTensor = helpBuf_.Get<uint32_t>();
+        __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
+        multipleLineHwProcessVF(yAddr, gradAddr, argmaxAddr, helpAddr);
     } else if (wConcurrentCount * hConcurrentCount * dConcurrentCount * DOUBLE * sizeof(TYPE_ARGMAX) > V_REG_SIZE) {
         multipleLineDhwProcessVF(yAddr, gradAddr, argmaxAddr);
     } else {
-        LocalTensor<uint32_t> helpTensor = helpBuf_.Get<uint32_t>();
-        __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
-        multipleLineProcessVF2(yAddr, gradAddr, argmaxAddr, helpAddr);
+        multipleLineProcessVF2(yAddr, gradAddr, argmaxAddr);
     }
 
     inputQue_.FreeTensor(inputLocal);
@@ -373,7 +373,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     dProBatchSize_ = tilingData.dProBatchSize;
     hProBatchSize_ = tilingData.hProBatchSize;
     wProBatchSize_ = tilingData.wProBatchSize;
-    IS_PAD = tilingData_.padD != 0 || tilingData_.padH != 0 || tilingData_.padW != 0;
+    IS_PAD = tilingData_.padD != 0 || tilingData_.padH != 0 || tilingData_.padW != 0 || tilingData_.padDBack != 0 ||
+             tilingData_.padHBack != 0 || tilingData_.padWBack != 0;
 }
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>

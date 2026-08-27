@@ -331,21 +331,30 @@ ge::graphStatus MaxPool3DGradTilingBase::SetAttrParams()
         inputData.dPad = 0;
         inputData.hPad = 0;
         inputData.wPad = 0;
+        inputData.dPadBack = 0;
+        inputData.hPadBack = 0;
+        inputData.wPadBack = 0;
     } else if (padModeStr == "SAME") {
         int64_t dPadNeed = std::max(int64_t{0},
                                     (inputData.dGrad - 1) * inputData.dStride + inputData.dKernel - inputData.dX);
         inputData.dPad = dPadNeed / DIGIT_TWO;
+        inputData.dPadBack = dPadNeed - inputData.dPad;
         int64_t hPadNeed = std::max(int64_t{0},
                                     (inputData.hGrad - 1) * inputData.hStride + inputData.hKernel - inputData.hX);
         inputData.hPad = hPadNeed / DIGIT_TWO;
+        inputData.hPadBack = hPadNeed - inputData.hPad;
         int64_t wPadNeed = std::max(int64_t{0},
                                     (inputData.wGrad - 1) * inputData.wStride + inputData.wKernel - inputData.wX);
         inputData.wPad = wPadNeed / DIGIT_TWO;
+        inputData.wPadBack = wPadNeed - inputData.wPad;
     } else if (padModeStr == "CALCULATED") {
         auto padsVector = attrs->GetListInt(PADS_ATTR_INDEX)->GetData();
         inputData.dPad = padsVector[0];
+        inputData.dPadBack = padsVector[1];
         inputData.hPad = padsVector[2];
+        inputData.hPadBack = padsVector[3];
         inputData.wPad = padsVector[4];
+        inputData.wPadBack = padsVector[5];
     }
 
     return ge::GRAPH_SUCCESS;

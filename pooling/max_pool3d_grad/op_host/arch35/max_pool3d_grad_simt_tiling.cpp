@@ -218,11 +218,13 @@ ge::graphStatus MaxPool3DGradSimtTiling::DoLibApiTiling()
     tilingData_->dilationH = inputData.dilation[H_IDX_];
     tilingData_->dilationW = inputData.dilation[W_IDX_];
     tilingData_->ceilMode = inputData.ceilMode;
+    int64_t inputDataCount = tilingData_->nDim * tilingData_->cDim * tilingData_->dInDim * tilingData_->hInDim *
+                             tilingData_->wInDim;
     int64_t outputDataCount = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim *
                               tilingData_->wOutDim;
-    int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
-    int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
-    blockNum = std::min(blockNum, static_cast<int64_t>(coreNum));
+    int64_t maxDataCount = std::max(inputDataCount, outputDataCount);
+    int64_t threads = std::min(maxDataCount, MAX_THREAD_NUM);
+    int64_t blockNum = std::min(Ops::Base::CeilDiv(maxDataCount, threads), static_cast<int64_t>(coreNum));
     context_->SetBlockDim(blockNum);
     tilingData_->threadNums = threads;
     tilingData_->blockNums = blockNum;

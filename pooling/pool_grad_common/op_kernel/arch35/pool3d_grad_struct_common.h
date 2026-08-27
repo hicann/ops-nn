@@ -79,6 +79,9 @@ struct Pool3DGradNCDHWTilingData {
     int64_t dProBatchSize = 0;
     int64_t hProBatchSize = 0;
     int64_t wProBatchSize = 0;
+    int64_t padDBack = 0;
+    int64_t padHBack = 0;
+    int64_t padWBack = 0;
 };
 
 struct MaxPool3DGradSimtTilingData {
