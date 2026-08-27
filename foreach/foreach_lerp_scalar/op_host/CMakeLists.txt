@@ -10,7 +10,8 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_lerp_scalar.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_lerp_scalar ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
+get_filename_component(OP_ROOT ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${OP_ROOT} OPTYPE foreach_lerp_scalar ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
 
 # Add foreach_utils include directory for contiguous helper
 get_filename_component(FOREACH_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../foreach_utils ABSOLUTE)
