@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file add_rms_norm_dynamic_quant.h
+ * \file add_rms_norm_dynamic_quant_kernel.h
  * \brief arch35 kernel implementation header for AddRmsNormDynamicQuant.
  */
 #include "add_rms_norm_dynamic_quant_regbase.h"

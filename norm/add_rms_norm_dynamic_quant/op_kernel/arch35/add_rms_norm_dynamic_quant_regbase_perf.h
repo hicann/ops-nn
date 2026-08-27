@@ -297,7 +297,7 @@ private:
         if constexpr (IsSameType<T_Y, int4b_t>::value) {
             gmOffset = gmOffset >> 1;
             copyParams.blockLen = yBlockLen >> 1;
-            copyParams.srcStride = (baseNB8Align_ - (baseN_ / 2)) * sizeof(yCopyDtype) / BLOCK_SIZE;
+            copyParams.srcStride = (baseNB8Align_ - (baseN_ / NUM_TWO)) * sizeof(yCopyDtype) / BLOCK_SIZE;
         }
         if (outQuant1Flag_) {
             LocalTensor<yCopyDtype> y1Local = outQueueY1_.DeQue<yCopyDtype>();

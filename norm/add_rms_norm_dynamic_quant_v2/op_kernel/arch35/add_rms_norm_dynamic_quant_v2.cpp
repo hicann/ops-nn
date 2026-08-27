@@ -12,7 +12,7 @@
  * \file add_rms_norm_dynamic_quant_v2.cpp
  * \brief arch35 kernel entry for AddRmsNormDynamicQuantV2.
  */
-#include "../../add_rms_norm_dynamic_quant/arch35/add_rms_norm_dynamic_quant.h"
+#include "../../add_rms_norm_dynamic_quant/arch35/add_rms_norm_dynamic_quant_kernel.h"
 
 template <int8_t COMPUTE_MODE, bool Y3_MODE, bool Y4_MODE>
 __global__ __aicore__ void add_rms_norm_dynamic_quant_v2(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1,
