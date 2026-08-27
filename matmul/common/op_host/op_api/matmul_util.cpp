@@ -867,16 +867,16 @@ bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
     // 判断是否不走stream-k
     bool isSkTiling = CheckStreamKSKTiling(mmOpInfo) || CheckStreamKDPSKTiling(mmOpInfo);
     if (isSkTiling) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support this shape in sk or dp-sk tiling.");
+        OP_LOGI("Non-contiguous slice is not supported with SK or DP-SK tiling; fallback to contiguous.");
         return false;
     }
     // 非FP32大K
     if (mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT && !mmOpInfo.enableHf32 &&
         mmOpInfo.shapeInfo.kDim > FP32_SPLIT_K_THRESHOLD) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fp32 big k is not supported.");
+        OP_LOGI("Non-contiguous slice is not supported for FP32 with large K; fallback to contiguous.");
         return false;
     }
-    OP_LOGI("Check tensor shape success.");
+    OP_LOGD("Check tensor shape success.");
     return true;
 }
 

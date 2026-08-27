@@ -91,11 +91,11 @@ ge::graphStatus BatchMatMulV3Tiling::ValidateMatrixBatchInfo()
     bool isBatchZero = (batchInfo_.batchA == 0UL || batchInfo_.batchB == 0UL);
     if (isBatchZero) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            args_.opName, "self, mat2",
+            args_.opName, "x1, x2",
             Ops::NN::FormatString("%s, %s", Ops::Base::ToString(context_->GetInputShape(0)->GetOriginShape()).c_str(),
                                   Ops::Base::ToString(context_->GetInputShape(1)->GetOriginShape()).c_str())
                 .c_str(),
-            Ops::NN::FormatString("%s of %s must be a positive number", "Batch-axis", "self, mat2").c_str());
+            Ops::NN::FormatString("%s of %s must be a positive number", "Batch-axis", "x1, x2").c_str());
         return ge::GRAPH_FAILED;
     }
 
