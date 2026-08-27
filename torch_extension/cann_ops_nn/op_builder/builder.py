@@ -8,6 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
+import fcntl
 import os
 import shutil
 from abc import ABC, abstractmethod
@@ -177,24 +178,36 @@ class OpBuilder(ABC):
                 f"please install it via 'pip install ninja'"
             )
 
-        try:
-            op_module = load(
-                name=self.name,
-                sources=self.get_absolute_paths(self.sources()),
-                extra_include_paths=self.get_absolute_paths(self.include_paths()),
-                extra_cflags=self.cxx_args(),
-                extra_ldflags=self.extra_ldflags(),
-                verbose=verbose,
+        ext_dir = os.path.expanduser(
+            os.environ.get(
+                "TORCH_EXTENSIONS_DIR", os.path.join("~", ".cache", "torch_extensions")
             )
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to JIT compile operator '{self.name}': {e}\n"
-                f"Common causes:\n"
-                f"  1. CANN toolkit not sourced: source <cann_path>/set_env.sh\n"
-                f"  2. Missing compiler: ensure gcc/g++ in PATH\n"
-                f"  3. Missing ninja: pip install ninja"
-            ) from e
+        )
+        os.makedirs(ext_dir, exist_ok=True)
+        lock_path = os.path.join(ext_dir, f"{self.name}.compile.lock")
 
-        OpBuilder._loaded_ops[self.name] = op_module
+        with open(lock_path, "w") as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            if self.name in OpBuilder._loaded_ops:
+                return OpBuilder._loaded_ops[self.name]
 
-        return op_module
+            try:
+                op_module = load(
+                    name=self.name,
+                    sources=self.get_absolute_paths(self.sources()),
+                    extra_include_paths=self.get_absolute_paths(self.include_paths()),
+                    extra_cflags=self.cxx_args(),
+                    extra_ldflags=self.extra_ldflags(),
+                    verbose=verbose,
+                )
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to JIT compile operator '{self.name}': {e}\n"
+                    f"Common causes:\n"
+                    f"  1. CANN toolkit not sourced: source <cann_path>/set_env.sh\n"
+                    f"  2. Missing compiler: ensure gcc/g++ in PATH\n"
+                    f"  3. Missing ninja: pip install ninja"
+                ) from e
+
+            OpBuilder._loaded_ops[self.name] = op_module
+            return op_module
