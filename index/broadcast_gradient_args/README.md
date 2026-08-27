@@ -27,7 +27,7 @@
     原始张量b的shape为[2, 3, 1, 5, 1]
     x1_data: [2, 1, 4, 1, 6]   # x1_shape=[5]
     x2_data: [2, 3, 1, 5, 1]   # x2_shape=[5]
-    
+
     y1_data: [1, 3]            # y1_shape=[2]
     y2_data: [2, 4]            # y2_shape=[2]
 
@@ -36,7 +36,7 @@
     原始张量b的shape为[2, 3, 1, 5, 1]
     x1_data: [4, 1, 6]         # x1_shape=[3]
     x2_data: [2, 3, 1, 5, 1]   # x2_shape=[5]
-    
+
     y1_data: [0, 1, 3]         # y1_shape=[3]
     y2_data: [2, 4]            # y2_shape=[2]
 
@@ -45,7 +45,7 @@
     原始张量b的shape为[2, 1, 4, 1, 6]
     x1_data: [2, 1, 4, 1, 6]   # x1_shape=[5]
     x2_data: [2, 1, 4, 1, 6]   # x2_shape=[5]
-    
+
     y1_data: []            # y1_shape=[0]
     y2_data: []            # y2_shape=[0]
   ```
@@ -100,10 +100,14 @@
 
 ## 约束说明
 
-无
+- 仅支持Ascend 950PR/Ascend 950DT，不支持其他架构。
+- 输入x1和x2需满足广播规则：对应维度要么相等，要么至少一个为1，不满足时算子会报错。
+- y1和y2为动态shape输出，输出内存需按max(x1长度, x2长度)预分配，实际输出元素数可能小于此值。
+- x1和x2的数据类型需一致，y1和y2的数据类型需与x1一致，仅支持INT32、INT64。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | 图模式调用 | [test_geir_broadcast_gradient_args](./examples/test_geir_broadcast_gradient_args.cpp)   | 通过[算子IR](./op_graph/broadcast_gradient_args_proto.h)构图方式调用BroadcastGradientArgs算子。 |
+| aclnn调用 | [test_aclnn_broadcast_gradient_args](./examples/test_aclnn_broadcast_gradient_args.cpp)   | 通过[aclnnBroadcastGradientArgs](./docs/aclnnBroadcastGradientArgs.md)接口方式调用BroadcastGradientArgs算子。 |

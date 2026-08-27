@@ -31,7 +31,7 @@ constexpr int64_t IN_OUT_NODE_NUM = 4;
 constexpr int64_t FLAG_NODE_NUM = 4;
 class BroadcastGradientArgsTilingImpl {
 public:
-    explicit BroadcastGradientArgsTilingImpl(gert::TilingContext* context) : context_(context){};
+    explicit BroadcastGradientArgsTilingImpl(gert::TilingContext* context) : context_(context) {};
 
     ge::graphStatus Init()
     {
@@ -104,6 +104,12 @@ public:
                 tiling_data_.get_ubMaxRank());
         int64_t tilingKey = maxRank <= ubMaxRank ? 0 : 1;
         context_->SetTilingKey(tilingKey);
+
+        // 本算子无额外 workspace 需求，但 OutputShapeDependOnCompute 的 outShapeTensor 占用 workspace 槽位，
+        // 需调用 GetWorkspaceSizes(1) 保持 args 对齐，workspace 实际大小设为 0
+        size_t* workspaces = context_->GetWorkspaceSizes(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+        workspaces[0] = 0;
 
         return ge::GRAPH_SUCCESS;
     }

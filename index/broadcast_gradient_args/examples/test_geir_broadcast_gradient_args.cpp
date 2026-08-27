@@ -28,8 +28,13 @@
 #include "ge_error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
-#include "array_ops.h"
 #include "ge_ir_build.h"
+
+#include "graph/operator.h"
+#include "graph/operator_reg.h"
+namespace ge {
+REG_OP(Data).INPUT(x, TensorType::ALL()).OUTPUT(y, TensorType::ALL()).ATTR(index, Int, 0).OP_END_FACTORY_REG(Data)
+}
 
 #include "experiment_ops.h"
 #include "nn_other.h"
@@ -190,11 +195,23 @@ void SaveInputOutput(std::vector<ge::Tensor>& input, std::vector<ge::Tensor>& ou
         uint8_t* output_data_i = output[i].GetData();
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
-        uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
-        float* resultData = (float*)output_data_i;
-        for (int64_t j = 0; j < output_shape; j++) {
-            LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
+        if (output_shape > 0) {
+            uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
+            WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+            DataType output_dtype = output[i].GetTensorDesc().GetDataType();
+            if (output_dtype == ge::DT_INT64) {
+                int64_t* resultData = (int64_t*)output_data_i;
+                for (int64_t j = 0; j < output_shape; j++) {
+                    LOG_PRINT("result[%ld] is: %ld\n", j, resultData[j]);
+                }
+            } else {
+                int32_t* resultData = (int32_t*)output_data_i;
+                for (int64_t j = 0; j < output_shape; j++) {
+                    LOG_PRINT("result[%ld] is: %d\n", j, resultData[j]);
+                }
+            }
+        } else {
+            LOG_PRINT("output[%d] is empty (no broadcast axis)\n", i);
         }
     }
 }

@@ -63,6 +63,7 @@
 - [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)
 - [aclnnBinaryCrossEntropyWithLogitsBackward](../../loss/sigmoid_cross_entropy_with_logits_grad_v2/docs/aclnnBinaryCrossEntropyWithLogitsBackward.md)
 - [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md)
+- [aclnnBroadcastGradientArgs](../../index/broadcast_gradient_args/docs/aclnnBroadcastGradientArgs.md)
 - [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md)
 - [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md)
 - [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md)

@@ -97,10 +97,16 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/add_rms_norm/op_host/add_rms_norm_tiling_arch35.h
                 - ops/ops-nn/norm/add_rms_norm/op_kernel/arch35/
                 - ops/ops-nn/common/src/framework/unique_onnx_plugin.cpp
+                - ops/ops-nn/index/broadcast_gradient_args/op_api/
+                - ops/ops-nn/index/broadcast_gradient_args/op_host/arch35/
+                - ops/ops-nn/index/broadcast_gradient_args/op_kernel/arch35/
+                - ops/ops-nn/index/broadcast_gradient_args/docs/
             opensource_style: null
             kernel_style: null
         unrelease:
-            test_code: null
+            test_code:
+                - ops/ops-nn/index/broadcast_gradient_args/examples/
+                - ops/ops-nn/index/broadcast_gradient_args/tests/
             non_delivery: null
             open_source: null
 
