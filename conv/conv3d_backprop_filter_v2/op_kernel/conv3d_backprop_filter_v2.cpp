@@ -21,6 +21,8 @@
 #include "./arch22/conv3d_backprop_filter_v2.h"
 #include "./arch22/conv3d_backprop_filter_v2_init_output.h"
 #include "./arch22/conv3d_dw_v2_basic_block.h"
+#include "./arch22/conv3d_dw_v2_basic_block_split_mn.h"
+#include "./arch22/conv3d_dw_v2_basic_block_split_mn_streamk.h"
 #include "./arch22/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv3d_backprop_filter_v2_tiling_key.h"
 #endif
