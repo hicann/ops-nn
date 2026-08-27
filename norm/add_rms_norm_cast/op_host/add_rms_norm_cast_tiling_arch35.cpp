@@ -180,6 +180,7 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetInputParams()
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, epsilon);
     tilingParams.epsilon = *epsilon;
     tilingParams.needRun = true;
     if ((0 == numN) || (0 == numM)) {
