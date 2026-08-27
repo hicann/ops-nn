@@ -32,12 +32,15 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator UnsortedSegmentProd.
 */
+#ifndef OPS_PROTO_DEF_UNSORTEDSEGMENTPROD
+#define OPS_PROTO_DEF_UNSORTEDSEGMENTPROD
 REG_OP(UnsortedSegmentProd)
     .INPUT(x, TensorType::NumberType())
     .INPUT(segment_ids, TensorType::IndexNumberType())
     .INPUT(num_segments, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType::NumberType())
     .OP_END_FACTORY_REG(UnsortedSegmentProd)
+#endif
 } // namespace ge
 
 #endif // UNSORTED_SEGMENT_PROD_PROTO_H_

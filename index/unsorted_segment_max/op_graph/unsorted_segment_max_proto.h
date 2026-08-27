@@ -38,11 +38,14 @@ format is ND.
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator UnsortedSegmentMax.
 */
+#ifndef OPS_PROTO_DEF_UNSORTEDSEGMENTMAX
+#define OPS_PROTO_DEF_UNSORTEDSEGMENTMAX
 REG_OP(UnsortedSegmentMax)
     .INPUT(x, TensorType::RealNumberType())
     .INPUT(segment_ids, TensorType::IndexNumberType())
     .INPUT(num_segments, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType::RealNumberType())
     .OP_END_FACTORY_REG(UnsortedSegmentMax)
+#endif
 } // namespace ge
 #endif // UNSORTED_SEGMENT_MAX_PROTO_H
