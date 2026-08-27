@@ -39,14 +39,12 @@ namespace ge {
  */
 #ifndef OPS_PROTO_DEF_ACTULQCLAMPMINGRAD
 #define OPS_PROTO_DEF_ACTULQCLAMPMINGRAD
-
 REG_OP(ActULQClampMinGrad)
     .INPUT(y_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
     .INPUT(x_clamped_loss, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(clamp_min_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(ActULQClampMinGrad)
-
 #endif
 
 } // namespace ge

@@ -43,6 +43,8 @@ namespace ge {
  * @li use_nesterov: bool, default false. Standard/Nesterov var_delta.
  * @li use_locking: bool, default false. Reserved (no numerical effect).
  */
+#ifndef OPS_PROTO_DEF_FUSEDMULAPPLYMOMENTUM
+#define OPS_PROTO_DEF_FUSEDMULAPPLYMOMENTUM
 REG_OP(FusedMulApplyMomentum)
     .INPUT(var, TensorType::NumberType())
     .INPUT(accum, TensorType::NumberType())
@@ -55,6 +57,6 @@ REG_OP(FusedMulApplyMomentum)
     .ATTR(use_nesterov, Bool, false)
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(FusedMulApplyMomentum)
-
+#endif
 } // namespace ge
 #endif // FUSED_MUL_APPLY_MOMENTUM_PROTO_H_

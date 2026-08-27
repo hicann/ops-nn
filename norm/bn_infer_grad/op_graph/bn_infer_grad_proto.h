@@ -47,6 +47,8 @@ namespace ge {
  * @attention Constraints:
  * The preceding layer of this operator must be operator BatchNorm.
  */
+#ifndef OPS_PROTO_DEF_BNINFERGRAD
+#define OPS_PROTO_DEF_BNINFERGRAD
 REG_OP(BNInferGrad)
     .INPUT(grads, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(scale, TensorType({DT_FLOAT}))
@@ -54,7 +56,7 @@ REG_OP(BNInferGrad)
     .OUTPUT(x_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(epsilon, Float, 0.0001)
     .OP_END_FACTORY_REG(BNInferGrad)
-
+#endif
 } // namespace ge
 
 #endif // OPS_BN_INFER_GRAD_PROTO_H_

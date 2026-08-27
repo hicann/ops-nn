@@ -42,14 +42,12 @@ namespace ge {
 */
 #ifndef OPS_PROTO_DEF_ACTSULQINPUTGRAD
 #define OPS_PROTO_DEF_ACTSULQINPUTGRAD
-
 REG_OP(ActsULQInputGrad)
     .INPUT(y_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_max_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(x_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(ActsULQInputGrad)
-
 #endif
 } // namespace ge
 
