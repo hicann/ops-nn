@@ -58,6 +58,7 @@ def __golden_clipped_swiglu(*input_arrays, **kwargs):
     limit = float(kwargs.get("limit", 7.0))
     bias = float(kwargs.get("bias", 1.0))
     interleaved = bool(kwargs.get("interleaved", True))
+    clamp_mode = int(kwargs.get("clamp_mode", 0))
 
     output_dtypes = kwargs.get("output_dtypes")
     if output_dtypes is not None and len(output_dtypes) > 0:
@@ -88,13 +89,21 @@ def __golden_clipped_swiglu(*input_arrays, **kwargs):
         a = xt[:, :h]
         b = xt[:, h:]
 
-    a = np.clip(a, None, limit)
-    b = np.clip(b, -limit, limit)
-    with np.errstate(over="ignore", invalid="ignore"):
-        sig = 1.0 / (1.0 + np.exp(-alpha * a))
-        res = a * sig * (b + bias)
+    if clamp_mode == 0:
+        a = np.clip(a, None, limit)
+        b = np.clip(b, -limit, limit)
+        with np.errstate(over="ignore", invalid="ignore"):
+            sig = 1.0 / (1.0 + np.exp(-alpha * a))
+            res = a * sig * (b + bias)
+    elif clamp_mode == 1:
+        b = np.clip(b, -limit, limit)
+        with np.errstate(over="ignore", invalid="ignore"):
+            sig = 1.0 / (1.0 + np.exp(-a))
+            a = a * sig
+            a = np.clip(a, None, limit)
+            res = a * b
 
-    y = np.zeros((pre, cut // 2), dtype=np.float32)
+    y = np.ones((pre, cut // 2), dtype=np.float32)
     y[:group] = res.astype(np.float32)
 
     out_shape = list(orig_shape)
