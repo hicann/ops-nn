@@ -4929,7 +4929,7 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/flat_quant/README.md">flat_quant</a></td>
+    <td><a href="../../matmul/flat_quant/README.md">flat_quant</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>

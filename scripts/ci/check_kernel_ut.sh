@@ -101,7 +101,7 @@ do
                 break
             fi
         done
-    else 
+    else
         for dir in "${experimental_valid_dirs[@]}"
         do
             if [[ "$file_path" == *"/$dir/"* ]]; then
@@ -116,7 +116,7 @@ do
         done
     fi
 
-    if [[ "$file_path" == "scripts/ci/mirror_update_time.txt" ]]; then 
+    if [[ "$file_path" == "scripts/ci/mirror_update_time.txt" ]]; then
         found_mirror_update=true;
     fi
 
@@ -164,8 +164,8 @@ if [[ "$found_mirror_update" == "true" ]]; then
     loss_ops_910b=("logit" "logit_grad")
     optim_ops_910b=("apply_adam_w_v2" "apply_fused_ema_adam")
     norm_ops_910b=("rms_norm" "add_layer_norm" "add_layer_norm_grad")
-    quant_ops_910b=("flat_quant")
-    matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2")
+    quant_ops_910b=()
+    matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2" "flat_quant")
     conv_ops_910b=("conv2d_v2" "conv3d_v2")
     operator_list_910b=("${foreach_ops_910b[@]}" "${control_ops_910b[@]}" "${index_ops_910b[@]}" "${vfusion_ops_910b[@]}" "${rnn_ops_910b[@]}" "${pooling_ops_910b[@]}" "${activation_ops_910b[@]}" "${loss_ops_910b[@]}" "${optim_ops_910b[@]}" "${norm_ops_910b[@]}" "${quant_ops_910b[@]}" "${matmul_ops_910b[@]}" "${conv_ops_910b[@]}")
 

@@ -21,7 +21,7 @@ valid_dirs=()
 pr_file=$(realpath "${1:-pr_filelist.txt}")
 
 for category in "${op_categories[@]}"
-do  
+do
     first_level="$current_dir/$category"
     if [ -d "$first_level" ]; then
         for second_level in "$first_level"/*/
@@ -81,8 +81,8 @@ do
         loss_ops_910b=("logit" "logit_grad")
         optim_ops_910b=("apply_adam_w_v2" "apply_fused_ema_adam")
         norm_ops_910b=("rms_norm" "add_layer_norm" "add_layer_norm_grad")
-        quant_ops_910b=("flat_quant" "dynamic_quant")
-        matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2")
+        quant_ops_910b=("dynamic_quant")
+        matmul_ops_910b=("addmv" "batch_mat_mul_v3" "fused_linear_cross_entropy_loss_grad" "fused_linear_online_max_sum" "fused_quant_mat_mul" "gemm" "mat_mul_v3" "mv" "quant_batch_matmul_v3" "weight_quant_batch_matmul_v2" "flat_quant")
         conv_ops_910b=("conv2d_v2" "conv3d_v2")
         operator_list_910b=("${foreach_ops_910b[@]}" "${index_ops_910b[@]}" "${vfusion_ops_910b[@]}" "${rnn_ops_910b[@]}" "${pooling_ops_910b[@]}" "${activation_ops_910b[@]}" "${loss_ops_910b[@]}" "${optim_ops_910b[@]}" "${norm_ops_910b[@]}" "${quant_ops_910b[@]}" "${matmul_ops_910b[@]}" "${conv_ops_910b[@]}")
 
@@ -100,7 +100,7 @@ do
         matmul_ops_950=("mat_mul_v3" "quant_batch_matmul_v4" "weight_quant_batch_matmul_v2")
         conv_ops_950=("conv2d_v2" "conv3d_v2" "conv3d_backprop_filter_v2" "conv3d_backprop_input_v2" "conv3d_transpose_v2")
         operator_list_950=("${foreach_ops_950[@]}" "${control_ops_950[@]}" "${index_ops_950[@]}" "${vfusion_ops_950[@]}" "${rnn_ops_950[@]}" "${pooling_ops_950[@]}" "${activation_ops_950[@]}" "${loss_ops_950[@]}" "${optim_ops_950[@]}" "${norm_ops_950[@]}" "${quant_ops_950[@]}" "${matmul_ops_950[@]}" "${conv_ops_950[@]}")
-        
+
         for op in "${operator_list_910b[@]}"; do
             op_exists=0
             for existing_op in "${ops_name[@]}"; do

@@ -797,7 +797,7 @@ tests/ut/op_kernel/
 **已迁移示例参考：**
 
 - [activation/glu/tests/ut/op_kernel/test_glu.cpp](../../../activation/glu/tests/ut/op_kernel/test_glu.cpp)
-- [quant/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp](../../../quant/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp)
+- [matmul/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp](../../../matmul/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp)
 
 ### aclnn调用验证
 
