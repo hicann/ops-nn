@@ -4709,6 +4709,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/ascend_requant/README.md">ascend_requant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>INT8静态量化推理链路中的反量化再量化算子，将上游Conv/MatMul在INT8权重下产生的INT32累加结果，按反量化缩放因子重新量化回INT8，作为下一层INT8计算的输入。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dequant_bias/README.md">dequant_bias</a></td>
     <td>✓</td>
     <td>✓</td>
