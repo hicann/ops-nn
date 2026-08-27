@@ -57,27 +57,18 @@ __spec__ = {"bn3_d_training_update": "Bn3dKernelSpec"}
 
 
 # ---------------------------------------------------------------------------
-# 工具:channel 轴解析(与输入生成器同源,以 format 为准——shape 启发式在
-# NHWC/NDHWC 且空间维等于 C 时会误判)。
+# 工具:channel 轴解析 —— 纯 format 驱动
+# format 在 TTK 场景恒有(input_formats 经 X-Input-Schema 内嵌传给 golden/compose),
+# NCHW/NHWC 且空间维等于 C 的歧义 shape 由 format 唯一确定;拿不到 format 直接报错。
 # ---------------------------------------------------------------------------
-def _channel_axis(x_shape, C):
-    hits = [d for d, s in enumerate(x_shape) if s == C]
-    if not hits:
-        raise ValueError("no channel axis: x.shape=%s C=%s" % (tuple(x_shape), C))
-    if len(hits) == 1 or C == 1:
-        return hits[0]
-    if len(x_shape) in (4, 5):
-        return 1
-    raise ValueError(
-        "ambiguous channel axis: x.shape=%s C=%s hits=%s" % (tuple(x_shape), C, hits)
-    )
-
-
 def _resolve_ch_axis(x_shape, C, kwargs):
     fmt = kwargs.get("input_formats", None)
     if fmt is not None and len(fmt) > 0 and fmt[0] in _FORMAT_CH_AXIS:
         return _FORMAT_CH_AXIS[fmt[0]]
-    return _channel_axis(x_shape, C)
+    raise ValueError(
+        "no input format for channel axis (need input_formats in kwargs): "
+        "x.shape=%s C=%s" % (tuple(x_shape), C)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +99,7 @@ def _compute(
 ):
     """BN3DTrainingUpdate 语义;x 可为 fp16/fp32/bf16,统计量 fp32。"""
     x_dt = x.dtype
-    x_f32 = x.to(torch.float32)
+    x_w = x.to(torch.float32) if x.dtype in (torch.float16, torch.bfloat16) else x
     C = sum_t.shape[0]
     numel = x.numel()
     # 空 tensor 守卫:C=0 时 num 无定义(python 整除零直接抛 ZeroDivisionError)。
@@ -128,7 +119,7 @@ def _compute(
 
     stat_shape = [1] * x.dim()
     stat_shape[ch_axis] = C
-    y = x_f32 * multiplier.reshape(stat_shape) + addend.reshape(stat_shape)
+    y = x_w * multiplier.reshape(stat_shape) + addend.reshape(stat_shape)
     y = y.to(x_dt)
 
     # Bessel 修正:num==1 时分母为 0 → 无偏 batch variance 置 0(running variance 不更新)。
@@ -144,6 +135,57 @@ def _compute(
 # ---------------------------------------------------------------------------
 # kernel/geir Spec:numpy 进出,golden 只做容器转换后调 _compute。
 # ---------------------------------------------------------------------------
+
+
+class _Bn3dThirdPartyCompose:
+    def __init__(self, **kwargs):
+        self.factor = float(kwargs.get("factor", 0.1))
+        self.epsilon = float(kwargs.get("epsilon", 1.0e-5))
+        # 输入 format(内嵌在 X-Input-Schema 传入):有则 format-aware 定通道轴
+        self.input_formats = kwargs.get("input_formats") or None
+
+    def _update_eager(self, x, sum_t, square_sum, scale, offset, mean, variance):
+        x_dt = x.dtype
+        x_f32 = x.float()
+        C = sum_t.shape[0]
+        numel = x.numel()
+        num = numel // C
+
+        num_rec = (1.0 / num) if num > 0 else 0.0  # 空 batch 契约,与 _compute 同款
+        batch_mean = sum_t * num_rec
+        save_variance = square_sum * num_rec - batch_mean * batch_mean
+        inv_std = 1.0 / torch.sqrt(save_variance + self.epsilon)
+        multiplier = scale * inv_std
+        addend = offset - multiplier * batch_mean
+
+        # 通道轴:纯 format 驱动(与 _resolve_ch_axis 同源);无 format 直接报错,不猜轴。
+        ch = None
+        if self.input_formats:
+            fmt = str(self.input_formats[0]).upper()
+            ch = _FORMAT_CH_AXIS.get(fmt)
+        if ch is None:
+            raise ValueError(
+                "compose: no input format for channel axis (need input_formats): "
+                "x.shape=%s C=%s" % (tuple(x.shape), C)
+            )
+        view = [1] * x.dim()
+        view[ch] = C
+        y = x_f32 * multiplier.view(view) + addend.view(view)
+
+        scaler = 0.0 if num == 1 else float(num) / float(num - 1)
+        unbiased_batch_var = save_variance * scaler
+        mean_out = mean * (1.0 - self.factor) + batch_mean * self.factor
+        variance_out = variance * (1.0 - self.factor) + unbiased_batch_var * self.factor
+        return [y.to(x_dt), mean_out, variance_out, batch_mean, save_variance]
+
+    def __call__(self, x, sum, square_sum, scale, offset, mean, variance):
+        try:
+            fn = torch.compile(self._update_eager, mode="reduce-overhead")
+            return fn(x, sum, square_sum, scale, offset, mean, variance)
+        except Exception:
+            return self._update_eager(x, sum, square_sum, scale, offset, mean, variance)
+
+
 class Bn3dKernelSpec:
     @staticmethod
     def _attr(kwargs, name, default):
@@ -161,12 +203,12 @@ class Bn3dKernelSpec:
         ch = _resolve_ch_axis(np.asarray(x).shape, np.asarray(sum).shape[0], kwargs)
         outs = _compute(
             _to_torch(x),
-            torch.from_numpy(np.asarray(sum, dtype=np.float32)),
-            torch.from_numpy(np.asarray(square_sum, dtype=np.float32)),
-            torch.from_numpy(np.asarray(scale, dtype=np.float32)),
-            torch.from_numpy(np.asarray(offset, dtype=np.float32)),
-            torch.from_numpy(np.asarray(mean, dtype=np.float32)),
-            torch.from_numpy(np.asarray(variance, dtype=np.float32)),
+            _to_torch(np.asarray(sum)),
+            _to_torch(np.asarray(square_sum)),
+            _to_torch(np.asarray(scale)),
+            _to_torch(np.asarray(offset)),
+            _to_torch(np.asarray(mean)),
+            _to_torch(np.asarray(variance)),
             factor,
             epsilon,
             ch,
@@ -175,7 +217,7 @@ class Bn3dKernelSpec:
 
     # 三方标杆(远端 GPU 执行):与算子实现同算法(FMA 形式),torch.compile 融合为最优形态,
     # 编译失败回落 eager。
-    third_party = {"torch": "_Bn3dThirdPartyCompose"}
+    third_party = {"torch": _Bn3dThirdPartyCompose}
 
     tolerance = {
         "float32": {"standard": "cross_check", "level": "L1"},
@@ -219,41 +261,6 @@ def bn3d_training_update_golden(
 # mean, variance, factor, epsilon)。torch.compile 包一层拿最优形态,失败回落 eager。
 # 输出必须 cast 到 NPU 输出 dtype(y 回 x dtype;统计量 fp32),保证 cross_check 同精度对等。
 # ---------------------------------------------------------------------------
-class _Bn3dThirdPartyCompose:
-    def __init__(self, **kwargs):
-        self.factor = float(kwargs.get("factor", 0.1))
-        self.epsilon = float(kwargs.get("epsilon", 1.0e-5))
-
-    def _update_eager(self, x, sum_t, square_sum, scale, offset, mean, variance):
-        x_dt = x.dtype
-        x_f32 = x.float()
-        C = sum_t.shape[0]
-        numel = x.numel()
-        num = numel // C
-
-        num_rec = (1.0 / num) if num > 0 else 0.0  # 空 batch 契约,与 _compute 同款
-        batch_mean = sum_t * num_rec
-        save_variance = square_sum * num_rec - batch_mean * batch_mean
-        inv_std = 1.0 / torch.sqrt(save_variance + self.epsilon)
-        multiplier = scale * inv_std
-        addend = offset - multiplier * batch_mean
-
-        view = (1, C) + (1,) * (x.dim() - 2)
-        y = x_f32 * multiplier.view(view) + addend.view(view)
-
-        scaler = 0.0 if num == 1 else float(num) / float(num - 1)
-        unbiased_batch_var = save_variance * scaler
-        mean_out = mean * (1.0 - self.factor) + batch_mean * self.factor
-        variance_out = variance * (1.0 - self.factor) + unbiased_batch_var * self.factor
-        return [y.to(x_dt), mean_out, variance_out, batch_mean, save_variance]
-
-    def __call__(self, x, sum, square_sum, scale, offset, mean, variance):
-        try:
-            fn = torch.compile(self._update_eager, mode="reduce-overhead")
-            return fn(x, sum, square_sum, scale, offset, mean, variance)
-        except Exception:
-            return self._update_eager(x, sum, square_sum, scale, offset, mean, variance)
-
 
 # ---------------------------------------------------------------------------
 # 通路支持面(照 01_requirement.md §3.3):
