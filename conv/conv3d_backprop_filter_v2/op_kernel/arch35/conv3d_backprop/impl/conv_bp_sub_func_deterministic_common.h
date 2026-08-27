@@ -313,7 +313,7 @@ template <class Intf>
 static __aicore__ inline void GatherDepthwise(Intf* self, uint32_t hwkLength, uint32_t srcSize, uint32_t strideHwk)
 {
     uint16_t vLoop = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
-    uint16_t loopSize = DivCeil(hwkLength, vLoop);
+    uint16_t loopSize = CeilDivision(hwkLength, vLoop);
     uint16_t indexLength = vLoop > hwkLength ? hwkLength : vLoop;
 
     uint32_t coutCin0 = self->ctx.baseUseM_ * BLOCK_CUBE;
@@ -486,7 +486,7 @@ static __aicore__ inline void Rearrange2GmNormalGroup(Intf* self, const GlobalTe
                                                       bool isCoutNumAligned)
 {
     uint16_t vLoop = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::DstT);
-    uint16_t loopSize = DivCeil(vLoop, BLOCK_CUBE);
+    uint16_t loopSize = CeilDivision(vLoop, BLOCK_CUBE);
     uint16_t indexLength = vLoop > BLOCK_CUBE ? BLOCK_CUBE : vLoop;
 
     uint32_t cinPerGroup = self->ctx.tiling_->cin / self->ctx.tiling_->group;

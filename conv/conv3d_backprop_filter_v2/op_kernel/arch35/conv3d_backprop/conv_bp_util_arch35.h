@@ -93,7 +93,7 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
     uint32_t rows = 1;
     // 按照命中率高低进行场景判断，先处理多行搬运的场景
     if (copySize > width) {
-        rows = AscendC::Ceil(copySize, width);
+        rows = AscendC::CeilDivision(copySize, width);
         if (copySize == rows * width) {
             return rows; // 整除直接返回，不整除时默认Ceil多搬一行
         } else if ((2 * copySize) % width != 0) {

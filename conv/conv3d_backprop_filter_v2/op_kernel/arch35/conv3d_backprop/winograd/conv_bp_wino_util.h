@@ -154,14 +154,14 @@ static constexpr __aicore__ inline T Min(const T src0, const T src1)
 
 static constexpr __aicore__ inline uint32_t AlignUp(const uint32_t a, const uint32_t b)
 {
-    return AscendC::AlignUp(a, b);
+    return ((b == 0) ? 0 : ((a + b - 1) / b)) * b;
 }
 
 static constexpr __aicore__ inline uint32_t AlignDown(const uint32_t a, const uint32_t b) { return a / b * b; }
 
 static constexpr __aicore__ inline uint32_t CeilDiv(const uint32_t a, const uint32_t b)
 {
-    return AscendC::ConstCeil(a, b);
+    return (b == 0) ? 0 : ((a + b - 1) / b);
 }
 } // namespace ConstexprMaths
 

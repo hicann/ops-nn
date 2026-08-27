@@ -119,9 +119,9 @@ __aicore__ inline void InitTque(Intf* self)
     if ASCEND_IS_AIC {
         // 解L1 bank冲突，当前算子al1、bl1同时开db，此处简化处理
         uint32_t al1BoundByteSize = self->ctx.tiling_->al1Bound * sizeof(typename Intf::SrcT);
-        uint32_t al1BoundByteSizeAligned = AlignUp(al1BoundByteSize, L1_ALIGN_32);
+        uint32_t al1BoundByteSizeAligned = CeilDivision(al1BoundByteSize, L1_ALIGN_32) * L1_ALIGN_32;
         uint32_t bl1BoundByteSize = self->ctx.tiling_->bl1Bound * sizeof(typename Intf::SrcT);
-        uint32_t bl1BoundByteSizeAligned = AlignUp(bl1BoundByteSize, L1_ALIGN_32);
+        uint32_t bl1BoundByteSizeAligned = CeilDivision(bl1BoundByteSize, L1_ALIGN_32) * L1_ALIGN_32;
 
         // 默认布局：A在offset 0，B紧接A；双缓冲pong在halfL1Size偏移处
         constexpr uint32_t halfL1Size = TOTAL_L1_SIZE / 2;

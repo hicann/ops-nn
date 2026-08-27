@@ -147,7 +147,7 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
     // 0,1,2,3 sub kernel index,
     // kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
     // stride>kernel且不可拆分时（如1x1 stride=2），尾子kernel为0，回退为DivCeil值
-    uint32_t wkLeft = DivCeil(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
+    uint32_t wkLeft = CeilDivision(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
     uint32_t wkRight = self->ctx.tiling_->wk - wkLeft;
     wkRight = wkRight == 0 ? wkLeft : wkRight;
     self->ctx.splitWkList_[0] = wkLeft;
@@ -155,7 +155,7 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
     self->ctx.splitWkList_[2] = wkLeft;
     self->ctx.splitWkList_[3] = wkRight;
 
-    uint32_t hkUp = DivCeil(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
+    uint32_t hkUp = CeilDivision(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
     uint32_t hkDown = self->ctx.tiling_->hk - hkUp;
     hkDown = hkDown == 0 ? hkUp : hkDown;
     self->ctx.splitHkList_[0] = hkUp;
@@ -168,7 +168,7 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
         self->ctx.splitHkWkC0List_[i] = self->ctx.splitHkWkList_[i] * self->ctx.tiling_->c0;
     }
 
-    self->ctx.splitWi_ = DivCeil(self->ctx.tiling_->wi, self->ctx.tiling_->strideW);
+    self->ctx.splitWi_ = CeilDivision(self->ctx.tiling_->wi, self->ctx.tiling_->strideW);
 
     uint32_t alignedCout = AlignUpC0<Intf>(self, self->ctx.tiling_->singleCoreCout);
     if (self->ctx.kSCoutFullLoad_) {
@@ -189,7 +189,7 @@ static __aicore__ inline void InitParamsForKernelSplitH(Intf* self)
     self->ctx.splitIndex_ = 0;
     self->ctx.splitWi_ = self->ctx.tiling_->wi;
     self->ctx.splitWkList_[0] = self->ctx.tiling_->wk;
-    self->ctx.splitHkList_[0] = DivCeil(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
+    self->ctx.splitHkList_[0] = CeilDivision(self->ctx.tiling_->hk, self->ctx.tiling_->strideH);
     self->ctx.splitHkWkList_[0] = self->ctx.splitHkList_[0] * self->ctx.tiling_->wk;
     uint32_t curChannelSize = self->ctx.curStepKa_ * self->ctx.tiling_->baseK / self->ctx.splitHkWkList_[0];
     uint32_t alignedCout = AlignUpC0<Intf>(self, self->ctx.tiling_->singleCoreCout);
@@ -204,7 +204,7 @@ template <class Intf>
 static __aicore__ inline void UpdateHoSizeForKernelSplit(Intf* self)
 {
     // hoidx和 baseUseM或子kernel发生变化，需要重新计算 curHoSize
-    uint32_t hiCal = DivCeil(self->ctx.baseUseM_ + self->ctx.load3d_.mStartPt, self->ctx.splitWi_);
+    uint32_t hiCal = CeilDivision(self->ctx.baseUseM_ + self->ctx.load3d_.mStartPt, self->ctx.splitWi_);
     uint32_t endHoIdx = self->ctx.curHoIdx_ +
                         (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->dilationH);
     UpdateCurHoSizeCore<Intf>(self, endHoIdx);
@@ -272,10 +272,10 @@ static __aicore__ inline bool IterateForKernelSplit(Intf* self)
     uint32_t tmpSingleCoreK = self->ctx.tiling_->group == 1 ?
                                   self->ctx.tiling_->cout1 * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_] :
                                   self->ctx.tiling_->cout1G * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
-    self->ctx.kIter_ = DivCeil(tmpSingleCoreK, self->ctx.tiling_->baseK);
+    self->ctx.kIter_ = CeilDivision(tmpSingleCoreK, self->ctx.tiling_->baseK);
     self->ctx.tailK_ = tmpSingleCoreK - (self->ctx.kIter_ - 1) * self->ctx.tiling_->baseK;
-    self->ctx.kIterStepKaTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
-    self->ctx.kIterStepKbTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKb_) - 1) * self->ctx.curStepKb_;
+    self->ctx.kIterStepKaTail = (CeilDivision(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
+    self->ctx.kIterStepKbTail = (CeilDivision(self->ctx.kIter_, self->ctx.curStepKb_) - 1) * self->ctx.curStepKb_;
     self->ctx.stepKaTail = self->ctx.kIter_ - self->ctx.kIterStepKaTail;
     self->ctx.stepKbTail = self->ctx.kIter_ - self->ctx.kIterStepKbTail;
     self->ctx.load3d_.filterW = self->ctx.splitWkList_[self->ctx.splitIndex_];
