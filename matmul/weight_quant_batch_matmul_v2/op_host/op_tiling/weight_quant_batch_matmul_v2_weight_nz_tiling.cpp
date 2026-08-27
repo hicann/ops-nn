@@ -472,7 +472,7 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeBiasShape(const gert::StorageShape
                 biasDims != outDims,
                 VECTOR_INNER_ERR_REPORT_TILIING(
                     inputParams_.opName,
-                    "when bias with batch, bias shape dim number [%lu] should equal out shape dim numder [%lu]",
+                    "when bias with batch, bias shape dim number [%lu] should equal out shape dim number [%lu]",
                     biasDims, outDims),
                 return false);
             OP_TILING_CHECK(
@@ -811,7 +811,7 @@ void WeightQuantBatchMatmulV2WeightNz::InitCompileInfo()
                                                                                WeightQuantBatchMatmulV2CompileInfo());
     OP_TILING_CHECK(compileInfoPtr_ == nullptr,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to instantiate compile info"),
-                    return );
+                    return);
 
     compileInfoPtr_->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfoPtr_->aicNum = ascendcPlatform.GetCoreNumAic();

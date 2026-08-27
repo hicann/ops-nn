@@ -232,7 +232,7 @@ int aclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     // 打印输出结果
-    LOG_PRINT("输出结果为：\n");
+    LOG_PRINT("output result：\n");
     PrintMat(resultData, outShape);
     return ACL_SUCCESS;
 }

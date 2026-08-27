@@ -108,7 +108,7 @@ bool WeightQuantBatchMatmulV2Msd::IsCapable()
                         matmulInfoPtr_->cDtype == ge::DT_INT8 || matmulInfoPtr_->antiQuantScaleDtype == ge::DT_INT64 ||
                         (matmulInfoPtr_->antiQuantType != QuantType::PER_CHANNEL &&
                          matmulInfoPtr_->antiQuantType != QuantType::PER_GROUP),
-                    OP_LOGI(opName_, "MSD not support trans_a, quant, int64 antiquant or pertsor"), return false);
+                    OP_LOGI(opName_, "MSD not support trans_a, quant, int64 antiquant or pertensor"), return false);
     if (matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL) {
         OP_TILING_CHECK(
             matmulInfoPtr_->mSize > MSD_M_LIMIT || matmulInfoPtr_->kSize % 32 != 0 || matmulInfoPtr_->nSize % 32 != 0,

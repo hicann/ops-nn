@@ -63,7 +63,7 @@ bool WeightQuantBatchMatmulV2TilingSplitK::IsCapable()
     }
     OP_TILING_CHECK(
         matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64 || matmulInfoPtr_->antiQuantScaleDtype == ge::DT_INT64,
-        OP_LOGI(opName_, "SplitK done not support antiquant scale dtype is uint64 or int64"), return false);
+        OP_LOGI(opName_, "SplitK does not support antiquant scale dtype is uint64 or int64"), return false);
     // only support jyxc case
     if (matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP && matmulInfoPtr_->bFormat != ge::FORMAT_FRACTAL_NZ) {
         WhiteListShape shape({matmulInfoPtr_->mSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize,
