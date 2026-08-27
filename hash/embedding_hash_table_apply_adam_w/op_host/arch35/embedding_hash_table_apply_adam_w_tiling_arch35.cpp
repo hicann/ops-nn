@@ -51,7 +51,7 @@ ge::graphStatus EmbeddingHashTableApplyAdamWTiling::GetShapeAttrsInfo()
     OP_CHECK_IF((keyShapeSize < 0) || (keyShapeSize > MAX_UINT32),
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                     opName, "keys", std::to_string(keyShapeSize).c_str(),
-                    "The shape size of keys must in the representable range of the uint32_t type"),
+                    "The shape size of keys must be in the representable range of the uint32_t type"),
                 return ge::GRAPH_FAILED);
     keyNum_ = static_cast<uint32_t>(keyShapeSize);
 

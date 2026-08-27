@@ -122,7 +122,7 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
         auto keysDtype = context->GetDynamicInputDataType(KEYS_IDX, i);
         OP_CHECK_IF(keysDtype != DT_INT64,
                     OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "keys",
-                                              ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
+                                              ge::TypeUtils::DataTypeToSerialString(keysDtype).c_str(), "int64"),
                     return ge::GRAPH_FAILED);
     }
 

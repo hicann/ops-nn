@@ -46,7 +46,7 @@ constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16 * 1024 * 1024;
 
 ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable is begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable begins");
     const InitEmbeddingHashTableCompileInfo* compileInfo = reinterpret_cast<const InitEmbeddingHashTableCompileInfo*>(
         context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -134,7 +134,7 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     size_t* workspace = context->GetWorkspaceSizes(1);
     workspace[0] = ASCENDC_TOOLS_WORKSPACE;
-    OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable is end");
+    OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable ends");
     return ge::GRAPH_SUCCESS;
 }
 

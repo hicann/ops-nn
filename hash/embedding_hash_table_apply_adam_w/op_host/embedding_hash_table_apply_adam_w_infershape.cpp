@@ -75,7 +75,7 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(bucketSize < 0,
-                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size", std::to_string(embeddingDim),
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size", std::to_string(bucketSize),
                                           "greater than or equal to 0"),
                 return ge::GRAPH_FAILED);
 
