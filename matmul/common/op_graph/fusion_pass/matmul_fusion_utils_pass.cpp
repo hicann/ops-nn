@@ -104,49 +104,6 @@ ge::fusion::PatternUniqPtr BuildPatternWithInputCount(const std::string& pattern
 
 } // namespace
 
-template <typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type FloorDiv(T x, T y)
-{
-    return y == 0 ? x : x / y;
-}
-
-template <typename T>
-typename std::enable_if<std::is_signed<T>::value, T>::type CeilDiv(T x, T y)
-{
-    if (y != 0 && x != 0) {
-        const T quotient = x / y;
-        return (x % y != 0 && ((x ^ y) >= 0)) ? (quotient + 1) : quotient;
-    }
-    return x;
-}
-
-template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, T>::type CeilDiv(T x, T y)
-{
-    if (y != 0 && x != 0) {
-        const T quotient = x / y;
-        return (x % y != 0) ? (quotient + 1) : quotient;
-    }
-    return x;
-}
-
-template <typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type CeilAlign(T x, T align)
-{
-    if (align == 0) {
-        return 0;
-    }
-    T div = CeilDiv(x, align);
-    if (div > std::numeric_limits<T>::max() / align) {
-        return std::numeric_limits<T>::max();
-    }
-    return div * align;
-}
-
-template uint64_t FloorDiv<uint64_t>(uint64_t x, uint64_t y);
-template uint64_t CeilDiv<uint64_t>(uint64_t x, uint64_t y);
-template uint64_t CeilAlign<uint64_t>(uint64_t x, uint64_t align);
-
 bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
 {
     auto iter = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_l12bt");
