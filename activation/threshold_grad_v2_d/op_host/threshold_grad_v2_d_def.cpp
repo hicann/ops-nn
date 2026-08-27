@@ -12,8 +12,8 @@
 
 /*!
  * \file threshold_grad_v2_d_def.cpp
- * \brief ThresholdGradV2D 算子定义：gradOutput/self -> out，fp16/fp32/bf16/int32/int8/uint8
- *        属性 threshold(Float, 默认 1.0)。out = self>threshold ? gradOutput : 0
+ * \brief ThresholdGradV2D 算子定义：gradients/features -> backprops，fp16/fp32/bf16/int32/int8/uint8
+ *        属性 threshold(Float)。backprops = features>threshold ? gradients : 0
  */
 #include "register/op_def_registry.h"
 
@@ -22,21 +22,21 @@ class ThresholdGradV2D : public OpDef {
 public:
     explicit ThresholdGradV2D(const char* name) : OpDef(name)
     {
-        this->Input("gradOutput")
+        this->Input("gradients")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8, ge::DT_UINT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat(
                 {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("self")
+        this->Input("features")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8, ge::DT_UINT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat(
                 {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("out")
+        this->Output("backprops")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8, ge::DT_UINT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
@@ -44,7 +44,7 @@ public:
                 {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("threshold").AttrType(OPTIONAL).Float(1.0);
+        this->Attr("threshold").AttrType(REQUIRED).Float();
 
         // 目标芯片为 Ascend950PR/DT（arch35）。6 dtype（含 int8/uint8）依赖 arch35 矢量 ISA，arch22 不支持。
         OpAICoreConfig aiCoreConfig;
