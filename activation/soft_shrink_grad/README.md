@@ -1,4 +1,4 @@
-# SoftshrinkGrad
+# SoftShrinkGrad
 
 ## 产品支持情况
 
@@ -18,10 +18,10 @@
 - 计算公式：
 
   $$
-  SoftshrinkBackward(x, grad) =
+  output\_y =
   \begin{cases}
-  &grad, &if \ |x| > \lambda \\
-  &0, &otherwise
+  input\_grad, & \lvert input\_x \rvert > lambd \text{ 或 } input\_x \text{ 为NaN} \\
+  0, & \text{其他情况}
   \end{cases}
   $$
 
@@ -46,30 +46,30 @@
     <tr>
       <td>input_grad</td>
       <td>输入</td>
-      <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入，公式中的grad。</td>
-      <td>fp16、fp32、bf16</td>
+      <td>反向传播过程中上一步输出的梯度，公式中的input_grad。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_x</td>
       <td>输入</td>
-      <td>前向Softshrink的输入张量，公式中的x。</td>
-      <td>fp16、fp32、bf16</td>
+      <td>前向Softshrink的输入张量，公式中的input_x。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
-    </tr>
-    <tr>
-      <td>lambd</td>
-      <td>输入</td>
-      <td>Softshrink的阈值参数，默认值为0.5，需满足lambd ≥ 0。公式中的λ，aclScalar类型。</td>
-      <td>fp32</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>output_y</td>
       <td>输出</td>
-      <td>反向传播梯度输出，公式中的SoftshrinkBackward(x, grad)。</td>
-      <td>fp16、fp32、bf16</td>
+      <td>反向传播梯度输出，公式中的output_y。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
+    </tr>
+    <tr>
+      <td>lambd</td>
+      <td>可选属性</td>
+      <td>Softshrink的阈值参数，默认值为0.5，需满足lambd≥0。</td>
+      <td>FLOAT</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
@@ -85,4 +85,5 @@
 
 | 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn API | [test_aclnn_soft_shrink_grad.cpp](./examples/test_aclnn_soft_shrink_grad.cpp) | 通过[aclnnSoftshrinkBackward](./docs/aclnnSoftshrinkBackward.md)接口方式调用SoftshrinkGrad算子。 |
+| aclnn API | [test_aclnn_soft_shrink_grad.cpp](./examples/test_aclnn_soft_shrink_grad.cpp) | 通过[aclnnSoftshrinkBackward](./docs/aclnnSoftshrinkBackward.md)接口方式调用SoftShrinkGrad算子。 |
+| GE图模式 | - | 通过[SoftShrinkGrad算子原型](./op_graph/soft_shrink_grad_proto.h)构建并执行计算图。 |

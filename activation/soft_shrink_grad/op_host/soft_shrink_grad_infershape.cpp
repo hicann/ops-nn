@@ -37,6 +37,12 @@ static ge::graphStatus InferShape4SoftShrinkGrad(gert::InferShapeContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SoftShrinkGrad).InferShape(InferShape4SoftShrinkGrad);
+static ge::graphStatus InferDataType4SoftShrinkGrad(gert::InferDataTypeContext* context)
+{
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(SoftShrinkGrad).InferShape(InferShape4SoftShrinkGrad).InferDataType(InferDataType4SoftShrinkGrad);
 
 } // namespace ops

@@ -14,7 +14,7 @@
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
-- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+- <term>Atlas 200I/500 A2 推理产品</term>：支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
 - <term>Atlas 推理系列产品</term>：支持
@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：完成[Softshrink](../../softshrink/docs/aclnnSoftshrink.md)函数的反向接口。
+- 接口功能：计算[Softshrink](../../softshrink/docs/aclnnSoftshrink.md)的反向传播梯度。`gradOutput`表示上游梯度，`self`表示Softshrink正向计算的输入。
 - 计算公式：
   - Softshrink正向计算公式：
 
@@ -33,7 +33,8 @@
     Softshrink(x)=
     \begin{cases}
     x - {\lambda}, \ if \ x > {\lambda}\\
-    x + {\lambda}, \ if \ x < -{\lambda}
+    x + {\lambda}, \ if \ x < -{\lambda}\\
+    0, \ otherwise
     \end{cases}
     $$
 
@@ -42,8 +43,7 @@
     $$
     gradInput=
     \begin{cases}
-    gradOutput, \ if \ x > \lambda \\
-    gradOutput, \ if \ x <-\lambda \\
+    gradOutput, \ if \ \lvert self \rvert > \lambda \ or \ self \ is \ NaN \\
     0, \ otherwise
     \end{cases}
     $$
@@ -74,15 +74,15 @@ aclnnStatus aclnnSoftshrinkBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1410px"><colgroup>
-  <col style="width: 271px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 260px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 138px">
-  <col style="width: 145px">
+  <table style="table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
+  <col style="width: 140px">
   </colgroup>
   <thead>
     <tr>
@@ -99,8 +99,8 @@ aclnnStatus aclnnSoftshrinkBackward(
     <tr>
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
-      <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入，公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>gradOutput、self和gradInput的数据类型一致。</li></ul></td>
+      <td>反向传播的上游梯度，公式中的gradOutput。</td>
+      <td><ul><li>不能传入空指针，支持空Tensor。</li><li>shape与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>数据类型可以与self不同；不同时内部转换为FLOAT计算。</li></ul></td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -109,8 +109,8 @@ aclnnStatus aclnnSoftshrinkBackward(
     <tr>
       <td>self（aclTensor*）</td>
       <td>输入</td>
-      <td>正向输入值。公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与gradOutput满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要与gradOutput一致。</li></ul></td>
+      <td>Softshrink正向计算的输入，公式中的self。</td>
+      <td><ul><li>不能传入空指针，支持空Tensor。</li><li>shape与gradOutput满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>数据类型可以与gradOutput不同；不同时内部转换为FLOAT计算。</li></ul></td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -119,9 +119,9 @@ aclnnStatus aclnnSoftshrinkBackward(
       <tr>
       <td>lambda（aclScalar*）</td>
       <td>输入</td>
-      <td>公式中的输入λ。</td>
-      <td>数据类型支持常见的数值类型，如FLOAT类型，取值范围应大于等于0。</td>
-      <td>-</td>
+      <td>Softshrink计算的阈值，公式中的λ。</td>
+      <td>不能传入空指针，取值必须大于或等于0。</td>
+      <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -129,8 +129,8 @@ aclnnStatus aclnnSoftshrinkBackward(
       <tr>
       <td>gradInput（aclTensor*）</td>
       <td>输出</td>
-      <td>输出参数，公式中的gradInput。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与self和gradOutput的broadcast结果一致。</li><li>gradInput的shape与self的相同。</li><li>gradInput的数据类型与self的相同。</li></ul></td>
+      <td>Softshrink反向传播的输出梯度，公式中的gradInput。</td>
+      <td><ul><li>不能传入空指针，支持空Tensor。</li><li>shape必须与self和gradOutput的broadcast结果一致。</li></ul></td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -156,27 +156,30 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>-</td>
       <td>-</td>
     </tr>
-   </tbody>
+  </tbody>
   </table>
 
-   <!-- npu="910,310p" id7 -->
-   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
-   <!-- end id7 -->
+  <!-- npu="950,A3,910b" id7 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：gradOutput、self和gradInput的数据类型支持FLOAT16、FLOAT、BFLOAT16。
+  <!-- end id7 -->
+  <!-- npu="310b,310p,910" id8 -->
+  - <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：gradOutput、self和gradInput的数据类型支持FLOAT16、FLOAT。
+  <!-- end id8 -->
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
-  <col style="width: 103px">
-  <col style="width: 604px">
+  <table style="table-layout: fixed; width: 1000px"><colgroup>
+  <col style="width: 300px">
+  <col style="width: 150px">
+  <col style="width: 550px">
   </colgroup>
   <thead>
     <tr>
-      <th>返回码</th>
+      <th>返回值</th>
       <th>错误码</th>
       <th>描述</th>
     </tr>
@@ -185,24 +188,24 @@ aclnnStatus aclnnSoftshrinkBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的gradOutput、self 、lambda、gradInput是空指针时。</td>
+      <td>gradOutput、self、lambda、gradInput、workspaceSize或executor存在空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
-      <td>gradOutput、self和gradInput的数据类型不在支持的范围之内。</td>
+      <td>gradOutput、self或gradInput的数据类型不在当前产品支持范围内。</td>
     </tr>
     <tr>
       <td>self和gradOutput的shape不满足broadcast规则。</td>
     </tr>
     <tr>
-      <td>lambda小于0。</td>
+      <td>lambda为NaN或小于0。</td>
     </tr>
     <tr>
       <td>gradInput的shape与self和gradOutput的broadcast结果不一致。</td>
     </tr>
     <tr>
-      <td>gradOutput、self和gradInput的维度大于8。</td>
+      <td>gradOutput或self的维度大于8。</td>
     </tr>
   </tbody></table>
 
@@ -210,10 +213,10 @@ aclnnStatus aclnnSoftshrinkBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
+  <table style="table-layout: fixed; width: 1000px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 700px">
   </colgroup>
   <thead>
     <tr>
@@ -245,20 +248,20 @@ aclnnStatus aclnnSoftshrinkBackward(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnSoftshrinkBackward默认确定性实现。
+- 确定性计算：aclnnSoftshrinkBackward默认确定性实现。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+以下代码演示基本调用流程，编译和执行方法请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -285,7 +288,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，资源初始化
+  // 初始化运行时资源
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -320,14 +323,12 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
-  // 根据自己的实际device填写deviceId
+  // 1. 初始化device和stream
   int32_t deviceId = 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
-  // check根据自己的需要处理
   CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
+  // 2. 构造输入与输出
   std::vector<int64_t> gradOutputShape = {4, 2};
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> gradInputShape = {4, 2};
@@ -350,14 +351,14 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // lambda aclScalar
   lambda = aclCreateScalar(&lambdaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(lambda != nullptr, return ret);
-  // 创建 aclTensor
+  CHECK_RET(lambda != nullptr, LOG_PRINT("aclCreateScalar failed.\n"); return -1);
+  // 创建gradInput aclTensor
   ret = CreateAclTensor(gradInputHostData, gradInputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT, &gradInput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的API
+  // 3. 调用CANN算子库API
   uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
+  aclOpExecutor* executor = nullptr;
   // 调用aclnnSoftshrinkBackward第一段接口
   ret = aclnnSoftshrinkBackwardGetWorkspaceSize(gradOutput, self, lambda, gradInput, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftshrinkBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
@@ -370,10 +371,10 @@ int main() {
   // 调用aclnnSoftshrinkBackward第二段接口
   ret = aclnnSoftshrinkBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftshrinkBackward failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4. 同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+  // 5. 获取输出，将device侧结果拷贝至host侧
   auto size = GetShapeSize(gradInputShape);
   std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), gradInputDeviceAddr, size * sizeof(float),
@@ -383,13 +384,13 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+  // 6. 释放aclTensor和aclScalar
   aclDestroyTensor(gradOutput);
   aclDestroyTensor(self);
   aclDestroyScalar(lambda);
   aclDestroyTensor(gradInput);
 
-  // 7. 释放device资源，需要根据具体API的接口定义修改
+  // 7. 释放device资源
   aclrtFree(gradOutputDeviceAddr);
   aclrtFree(selfDeviceAddr);
   aclrtFree(gradInputDeviceAddr);

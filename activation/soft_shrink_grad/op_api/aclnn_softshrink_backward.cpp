@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <cmath>
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -39,7 +40,8 @@ static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {Da
 static inline const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310B) {
         return ASCEND910_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
@@ -101,10 +103,11 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
     // 3. 检查是否shape一致
     CHECK_RET(CheckShapeValid(gradOutput, self, gradInput), ACLNN_ERR_PARAM_INVALID);
 
-    // 4. 检查输入的lambd的值是否大于等于0
-    if (lambd->ToFloat() < 0.0f) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd should be greater or equal to 0, but found to be [%f].",
-                lambd->ToFloat());
+    // 4. 检查输入的lambd不是NaN且大于等于0
+    float lambdValue = lambd->ToFloat();
+    if (std::isnan(lambdValue) || lambdValue < 0.0f) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd must not be NaN and should be greater or equal to 0, but found [%f].",
+                lambdValue);
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -193,6 +196,12 @@ aclnnStatus aclnnSoftshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput,
     auto softShrinkBackwardOpOut = l0op::SoftShrinkGrad(gradOutputContiguous, selfContiguous, lambdValue,
                                                         uniqueExecutor.get());
     CHECK_RET(softShrinkBackwardOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 混合dtype输入会统一提升为FLOAT计算，输出需转换回gradInput声明的dtype
+    if (softShrinkBackwardOpOut->GetDataType() != gradInput->GetDataType()) {
+        softShrinkBackwardOpOut = l0op::Cast(softShrinkBackwardOpOut, gradInput->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(softShrinkBackwardOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     // 固定写法，将计算结果拷贝到输出gradInput上，gradInput可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(softShrinkBackwardOpOut, gradInput, uniqueExecutor.get());

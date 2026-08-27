@@ -26,6 +26,7 @@
  *   - 3 TilingKeys: FP32 direct, FP16 promote, BF16 promote
  */
 
+#include <cmath>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -156,7 +157,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         *lambd = 0.5f; // default
     }
 
-    OP_CHECK_IF(*lambd < 0.0f, OP_LOGE(context, "SoftShrinkGrad: lambd must be >= 0, got %f", *lambd),
+    OP_CHECK_IF(std::isnan(*lambd) || *lambd < 0.0f,
+                OP_LOGE(context, "SoftShrinkGrad: lambd must not be NaN and must be >= 0, got %f", *lambd),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
