@@ -64,89 +64,89 @@ __simd_callee__ inline void CopyMaskToPrefixSumVf(__ubuf__ uint8_t* maskAddr, __
                                                   uint32_t vfLen, uint32_t rows, uint16_t size0)
 {
     uint32_t main = rows;
-    AscendC::MicroAPI::MaskReg p0 = AscendC::MicroAPI::UpdateMask<int32_t>(main);
-    AscendC::MicroAPI::RegTensor<uint8_t> mask;
+    AscendC::Reg::MaskReg p0 = AscendC::Reg::UpdateMask<int32_t>(main);
+    AscendC::Reg::RegTensor<uint8_t> mask;
     auto prefixSumTmpAddr = prefixSumAddr;
     for (uint16_t i = 0; i < size0; ++i) {
-        AscendC::MicroAPI::LoadAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                     MicroAPI::LoadDist::DIST_UNPACK4_B8>(mask, maskAddr, vfLen);
-        AscendC::MicroAPI::StoreAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            prefixSumTmpAddr, (AscendC::MicroAPI::RegTensor<int32_t>&)mask, vfLen, p0);
+        AscendC::Reg::LoadAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_UNPACK4_B8>(
+            mask, maskAddr, vfLen);
+        AscendC::Reg::StoreAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(
+            prefixSumTmpAddr, (AscendC::Reg::RegTensor<int32_t>&)mask, vfLen, p0);
     }
-    AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+    AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
 }
 
 __simd_callee__ inline void ComputeColPrefixSumVf(__ubuf__ int32_t* prefixSumAddr, __ubuf__ int32_t* tmpAddr,
                                                   uint32_t rows, uint32_t cols, uint16_t size0)
 {
     uint32_t stride = rows;
-    AscendC::MicroAPI::RegTensor<int32_t> tmp;
-    AscendC::MicroAPI::RegTensor<uint32_t> sequence;
-    AscendC::MicroAPI::RegTensor<uint32_t> index;
-    AscendC::MicroAPI::Arange(tmp, 0);
-    sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp;
-    AscendC::MicroAPI::RegTensor<int32_t> v0;
-    AscendC::MicroAPI::RegTensor<int32_t> v1;
-    AscendC::MicroAPI::RegTensor<int32_t> v2;
+    AscendC::Reg::RegTensor<int32_t> tmp;
+    AscendC::Reg::RegTensor<uint32_t> sequence;
+    AscendC::Reg::RegTensor<uint32_t> index;
+    AscendC::Reg::Arange(tmp, 0);
+    sequence = (AscendC::Reg::RegTensor<uint32_t>&)tmp;
+    AscendC::Reg::RegTensor<int32_t> v0;
+    AscendC::Reg::RegTensor<int32_t> v1;
+    AscendC::Reg::RegTensor<int32_t> v2;
     uint32_t main = rows;
-    AscendC::MicroAPI::MaskReg p0 = AscendC::MicroAPI::UpdateMask<int32_t>(main);
-    AscendC::MicroAPI::Duplicate(v1, 0, p0);
-    AscendC::MicroAPI::Muls(sequence, sequence, cols, p0);
+    AscendC::Reg::MaskReg p0 = AscendC::Reg::UpdateMask<int32_t>(main);
+    AscendC::Reg::Duplicate(v1, 0, p0);
+    AscendC::Reg::Muls(sequence, sequence, cols, p0);
     auto prefixSumTmpAddr = prefixSumAddr;
     auto tempAddr = tmpAddr;
     for (uint16_t i = 0; i < size0; ++i) {
-        AscendC::MicroAPI::Adds(index, sequence, (uint32_t)i, p0);
-        AscendC::MicroAPI::Gather(v0, prefixSumTmpAddr, index, p0);
-        AscendC::MicroAPI::Add(v2, v0, v1, p0);
-        AscendC::MicroAPI::Move(v1, v2, p0);
-        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int32_t>(i, stride);
-        AscendC::MicroAPI::StoreAlign(tempAddr, v2, offset, p0);
+        AscendC::Reg::Adds(index, sequence, (uint32_t)i, p0);
+        AscendC::Reg::Gather(v0, prefixSumTmpAddr, index, p0);
+        AscendC::Reg::Add(v2, v0, v1, p0);
+        AscendC::Reg::Move(v1, v2, p0);
+        AscendC::Reg::AddrReg offset = AscendC::Reg::CreateAddrReg<int32_t>(i, stride);
+        AscendC::Reg::StoreAlign(tempAddr, v2, offset, p0);
     }
-    AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+    AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
 }
 
 __simd_callee__ inline void ComputeRowPrefixSumVf(__ubuf__ int32_t* prefixSumAddr, __ubuf__ int32_t* tmpAddr,
                                                   uint32_t rows, uint32_t cols, uint16_t size1, uint16_t tailSize1,
                                                   uint32_t vfLen)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> tmp;
-    AscendC::MicroAPI::RegTensor<uint32_t> sequence;
-    AscendC::MicroAPI::RegTensor<uint32_t> index;
-    AscendC::MicroAPI::Arange(tmp, 0);
-    sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp;
-    AscendC::MicroAPI::MaskReg pregFull = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Muls(sequence, sequence, rows, pregFull);
+    AscendC::Reg::RegTensor<int32_t> tmp;
+    AscendC::Reg::RegTensor<uint32_t> sequence;
+    AscendC::Reg::RegTensor<uint32_t> index;
+    AscendC::Reg::Arange(tmp, 0);
+    sequence = (AscendC::Reg::RegTensor<uint32_t>&)tmp;
+    AscendC::Reg::MaskReg pregFull = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Muls(sequence, sequence, rows, pregFull);
     uint32_t spReg1 = tailSize1 - 1;
-    AscendC::MicroAPI::MaskReg sp1 = AscendC::MicroAPI::UpdateMask<int32_t>(spReg1);
-    AscendC::MicroAPI::RegTensor<int32_t> v0;
-    AscendC::MicroAPI::RegTensor<int32_t> v1;
-    AscendC::MicroAPI::RegTensor<int32_t> v2;
-    AscendC::MicroAPI::RegTensor<int32_t> v3;
-    AscendC::MicroAPI::RegTensor<int32_t> v4;
-    AscendC::MicroAPI::RegTensor<uint32_t> vdSque;
-    AscendC::MicroAPI::UnalignRegForStore u1;
-    AscendC::MicroAPI::Duplicate(v1, 0, pregFull);
+    AscendC::Reg::MaskReg sp1 = AscendC::Reg::UpdateMask<int32_t>(spReg1);
+    AscendC::Reg::RegTensor<int32_t> v0;
+    AscendC::Reg::RegTensor<int32_t> v1;
+    AscendC::Reg::RegTensor<int32_t> v2;
+    AscendC::Reg::RegTensor<int32_t> v3;
+    AscendC::Reg::RegTensor<int32_t> v4;
+    AscendC::Reg::RegTensor<uint32_t> vdSque;
+    AscendC::Reg::UnalignRegForStore u1;
+    AscendC::Reg::Duplicate(v1, 0, pregFull);
     for (uint16_t i = 0; i < static_cast<uint16_t>(rows); i++) {
         uint32_t mainCols = cols;
-        AscendC::MicroAPI::Adds(vdSque, sequence, (uint32_t)i, pregFull);
+        AscendC::Reg::Adds(vdSque, sequence, (uint32_t)i, pregFull);
         for (uint16_t j = 0; j < size1; j++) {
-            AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
-            AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(j * vfLen * vfLen), p1);
-            AscendC::MicroAPI::Gather(v0, tmpAddr, index, p1);
-            AscendC::MicroAPI::Add(v2, v0, v1, p1);
-            AscendC::MicroAPI::StoreUnAlign(prefixSumAddr, v2, u1, rows);
+            AscendC::Reg::MaskReg p1 = AscendC::Reg::UpdateMask<int32_t>(mainCols);
+            AscendC::Reg::Adds(index, vdSque, (uint32_t)(j * vfLen * vfLen), p1);
+            AscendC::Reg::Gather(v0, tmpAddr, index, p1);
+            AscendC::Reg::Add(v2, v0, v1, p1);
+            AscendC::Reg::StoreUnAlign(prefixSumAddr, v2, u1, rows);
         }
-        AscendC::MicroAPI::StoreUnAlignPost(prefixSumAddr, u1, 0);
-        AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
-        AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(size1 * vfLen * vfLen), p1);
-        AscendC::MicroAPI::Gather(v0, tmpAddr, index, p1);
-        AscendC::MicroAPI::Add(v2, v0, v1, p1);
-        AscendC::MicroAPI::StoreUnAlign(prefixSumAddr, v2, u1, tailSize1);
-        AscendC::MicroAPI::Duplicate(v4, 0, sp1);
-        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(v2, v4, sp1);
-        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(v3, v2, p1);
-        AscendC::MicroAPI::Duplicate(v1, v3, pregFull);
-        AscendC::MicroAPI::StoreUnAlignPost(prefixSumAddr, u1, 0);
+        AscendC::Reg::StoreUnAlignPost(prefixSumAddr, u1, 0);
+        AscendC::Reg::MaskReg p1 = AscendC::Reg::UpdateMask<int32_t>(mainCols);
+        AscendC::Reg::Adds(index, vdSque, (uint32_t)(size1 * vfLen * vfLen), p1);
+        AscendC::Reg::Gather(v0, tmpAddr, index, p1);
+        AscendC::Reg::Add(v2, v0, v1, p1);
+        AscendC::Reg::StoreUnAlign(prefixSumAddr, v2, u1, tailSize1);
+        AscendC::Reg::Duplicate(v4, 0, sp1);
+        AscendC::Reg::Move<int32_t, AscendC::Reg::MaskMergeMode::MERGING>(v2, v4, sp1);
+        AscendC::Reg::Reduce<Reg::ReduceType::SUM>(v3, v2, p1);
+        AscendC::Reg::Duplicate(v1, v3, pregFull);
+        AscendC::Reg::StoreUnAlignPost(prefixSumAddr, u1, 0);
     }
 }
 
@@ -163,20 +163,20 @@ template <typename U>
 __simd_vf__ inline void CustomReduceSumVf(__ubuf__ U* srcAddr, __ubuf__ U* dstAddr, uint16_t dataLen, uint16_t vfLen,
                                           uint16_t loopSize)
 {
-    AscendC::MicroAPI::RegTensor<U> src;
-    AscendC::MicroAPI::RegTensor<U> dst;
-    AscendC::MicroAPI::RegTensor<U> tmpSum;
+    AscendC::Reg::RegTensor<U> src;
+    AscendC::Reg::RegTensor<U> dst;
+    AscendC::Reg::RegTensor<U> tmpSum;
     uint32_t pnum = static_cast<uint32_t>(dataLen);
     uint32_t sumMask = 1;
-    AscendC::MicroAPI::MaskReg oneMask = AscendC::MicroAPI::UpdateMask<U>(sumMask);
-    AscendC::MicroAPI::Duplicate(dst, 0, oneMask);
+    AscendC::Reg::MaskReg oneMask = AscendC::Reg::UpdateMask<U>(sumMask);
+    AscendC::Reg::Duplicate(dst, 0, oneMask);
     for (uint16_t i = 0; i < loopSize; i++) {
-        AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<U>(pnum);
-        AscendC::MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(src, srcAddr, vfLen);
-        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(tmpSum, src, pMask);
-        AscendC::MicroAPI::Add(dst, dst, tmpSum, oneMask);
+        AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<U>(pnum);
+        AscendC::Reg::LoadAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(src, srcAddr, vfLen);
+        AscendC::Reg::Reduce<Reg::ReduceType::SUM>(tmpSum, src, pMask);
+        AscendC::Reg::Add(dst, dst, tmpSum, oneMask);
     }
-    AscendC::MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
+    AscendC::Reg::StoreAlign<U, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
 }
 
 template <typename T, typename U>

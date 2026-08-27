@@ -419,16 +419,16 @@ __aicore__ inline void RepeatInterleaveGradDavidMN<DataT, PromoteDataT, IndexT>:
         __ubuf__ PromoteDataT* cah = (__ubuf__ PromoteDataT*)dstTensor.GetPhyAddr() + cacheID * stride;
         __ubuf__ PromoteDataT* src = (__ubuf__ PromoteDataT*)srcTensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<PromoteDataT> aReg, bReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<PromoteDataT> aReg, bReg;
+        AscendC::Reg::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) { // outerLoopTimes是dimA的大小
-            pMask = AscendC::MicroAPI::UpdateMask<PromoteDataT>(sreg);
-            MicroAPI::LoadAlign(aReg, (__ubuf__ PromoteDataT*)src + i * outerLoopStride);
+            pMask = AscendC::Reg::UpdateMask<PromoteDataT>(sreg);
+            Reg::LoadAlign(aReg, (__ubuf__ PromoteDataT*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                MicroAPI::LoadAlign(bReg, (__ubuf__ PromoteDataT*)dst + i * outerLoopStride + j * innerLoopStride);
-                Add<PromoteDataT, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Reg::LoadAlign(bReg, (__ubuf__ PromoteDataT*)dst + i * outerLoopStride + j * innerLoopStride);
+                Add<PromoteDataT, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            MicroAPI::StoreAlign((__ubuf__ PromoteDataT*)cah + i * outerLoopStride, aReg, pMask);
+            Reg::StoreAlign((__ubuf__ PromoteDataT*)cah + i * outerLoopStride, aReg, pMask);
         }
     }
 }

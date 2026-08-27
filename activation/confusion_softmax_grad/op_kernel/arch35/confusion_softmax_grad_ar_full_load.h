@@ -58,10 +58,10 @@ private:
     __aicore__ inline void CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm, int64_t ubA,
                                    int64_t offset);
     __aicore__ inline void CopyOutY(const LocalTensor<T>& yOutUb, int64_t ubA, int64_t offset);
-    __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
-                                                   AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
-    __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T* src, AscendC::MicroAPI::RegTensor<float>& dst,
-                                                 AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
+                                                   AscendC::Reg::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T* src, AscendC::Reg::RegTensor<float>& dst,
+                                                 AscendC::Reg::MaskReg& preg, uint32_t offset);
 
 private:
     /* global memory address */
@@ -175,18 +175,17 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
         __VEC_SCOPE__
         {
             uint32_t count = static_cast<uint32_t>(rSize);
-            AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg maskOri;
+            AscendC::Reg::RegTensor<float> reg0, reg1, reg2;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadTensorForDtypeTIn(x0, reg0, pMask, i * stride);
                 LoadTensorForDtypeTIn(x1, reg1, pMask, i * stride);
-                AscendC::MicroAPI::Mul(reg2, reg0, reg1, pMask);
+                AscendC::Reg::Mul(reg2, reg0, reg1, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pMask);
                 Duplicate(reg2, reg2, pFull);
-                AscendC::MicroAPI::Sub(reg0, reg0, reg2, pMask);
+                AscendC::Reg::Sub(reg0, reg0, reg2, pMask);
                 StoreTensorForDtypeTOut(dst, reg0, pMask, i * stride);
             }
         }
@@ -201,11 +200,10 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
         __VEC_SCOPE__
         {
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
-            AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg maskOri;
+            AscendC::Reg::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadTensorForDtypeTIn(x0, reg0, pFull, i * stride);
                 LoadTensorForDtypeTIn(x0_1, reg0_1, pMask, i * stride);
@@ -213,11 +211,11 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
                 LoadTensorForDtypeTIn(x1, reg1, pFull, i * stride);
                 LoadTensorForDtypeTIn(x1_1, reg1_1, pMask, i * stride);
 
-                AscendC::MicroAPI::Mul(reg2, reg0, reg1, pFull);
-                AscendC::MicroAPI::Mul(reg2_1, reg0_1, reg1_1, pMask);
+                AscendC::Reg::Mul(reg2, reg0, reg1, pFull);
+                AscendC::Reg::Mul(reg2_1, reg0_1, reg1_1, pMask);
 
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 Duplicate(reg2, reg2, pFull);
 
@@ -284,30 +282,30 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::UnalignRegForStore UReg;
+        AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::UnalignRegForStore UReg;
 
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             dst = (__ubuf__ float*)reduceSumTempTensor.GetPhyAddr() + i * outerLoopDstStride;
             for (uint16_t j = 0; j < mainFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
+                AscendC::Reg::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
                 LoadTensorForDtypeTIn(foldSrcX0A, reg0, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(foldSrcX0B, reg1, pFull, i * outerLoopStride + j * innerLoopStride);
 
                 LoadTensorForDtypeTIn(foldSrcX1A, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(foldSrcX1B, reg1_1, pFull, i * outerLoopStride + j * innerLoopStride);
 
-                AscendC::MicroAPI::Mul(reg2, reg0, reg0_1, pFull);
-                AscendC::MicroAPI::Mul(reg2_1, reg1, reg1_1, pFull);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2, reg2, reg2_1, pFull);
+                AscendC::Reg::Mul(reg2, reg0, reg0_1, pFull);
+                AscendC::Reg::Mul(reg2_1, reg1, reg1_1, pFull);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2, reg2, reg2_1, pFull);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
                 uint32_t count = static_cast<uint32_t>(tailFoldElemCount);
-                AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
+                AscendC::Reg::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
 
-                AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
 
                 LoadTensorForDtypeTIn(tailSrcX0A, reg0, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(tailSrcX0B, reg1, pMask, i * outerLoopStride + j * innerLoopStride);
@@ -315,24 +313,24 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
                 LoadTensorForDtypeTIn(tailSrcX1A, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(tailSrcX1B, reg1_1, pMask, i * outerLoopStride + j * innerLoopStride);
 
-                AscendC::MicroAPI::Mul(reg2, reg0, reg0_1, pFull);
-                AscendC::MicroAPI::Mul(reg2_1, reg1, reg1_1, pMask);
+                AscendC::Reg::Mul(reg2, reg0, reg0_1, pFull);
+                AscendC::Reg::Mul(reg2_1, reg1, reg1_1, pMask);
 
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1;
+                AscendC::Reg::RegTensor<float> reg0, reg1, reg0_1;
                 LoadTensorForDtypeTIn(unFoldX0, reg0, pFull, i * outerLoopStride + j * innerLoopStride);
                 LoadTensorForDtypeTIn(unFoldX1, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
 
-                AscendC::MicroAPI::Mul(reg1, reg0, reg0_1, pFull);
+                AscendC::Reg::Mul(reg1, reg0, reg0_1, pFull);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg1, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg1, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, reg1, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     }
     NormComputePost(dstTensor, x0Tensor, x1Tensor, reduceSumTempTensor, aSize, foldPoint, outerLoopDstStride);
@@ -367,21 +365,20 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
         __VEC_SCOPE__
         {
             uint32_t count = static_cast<uint32_t>(rSize);
-            AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg maskOri;
+            AscendC::Reg::RegTensor<float> reg0, reg1, reg2;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmp + i * stride);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg0, pMask);
                 Duplicate(reg2, reg1, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
                 for (uint16_t j = 0; j < rLoopCount; ++j) {
-                    maskOri = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    maskOri = AscendC::Reg::UpdateMask<float>(sreg0);
                     uint32_t addrPtr = j * VL_FP32 + i * oriRAligned;
                     LoadTensorForDtypeTIn(x0, reg1, maskOri, addrPtr);
-                    AscendC::MicroAPI::Sub(reg1, reg1, reg2, maskOri);
+                    AscendC::Reg::Sub(reg1, reg1, reg2, maskOri);
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, addrPtr);
                 }
             }
@@ -395,25 +392,24 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
         __VEC_SCOPE__
         {
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
-            AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::MaskReg maskOri;
+            AscendC::Reg::RegTensor<float> reg0, reg1, reg2;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+            AscendC::Reg::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmpA + i * stride);
                 LoadAlign(reg1, (__ubuf__ float*)sumTmpB + i * stride);
 
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg0, reg1, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(reg0, reg1, pMask);
                 Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
                 for (uint16_t j = 0; j < rLoopCount; ++j) {
-                    maskOri = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                    maskOri = AscendC::Reg::UpdateMask<float>(sreg0);
                     uint32_t addrPtr = j * VL_FP32 + i * oriRAligned;
                     LoadTensorForDtypeTIn(x0, reg1, maskOri, addrPtr);
-                    AscendC::MicroAPI::Sub(reg1, reg1, reg2, maskOri);
+                    AscendC::Reg::Sub(reg1, reg1, reg2, maskOri);
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, addrPtr);
                 }
             }
@@ -423,15 +419,14 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
 
 template <typename T>
 __aicore__ inline void ConfusionSoftmaxGradAR<T>::LoadTensorForDtypeTIn(__ubuf__ T* src,
-                                                                        AscendC::MicroAPI::RegTensor<float>& dst,
-                                                                        AscendC::MicroAPI::MaskReg& preg,
-                                                                        uint32_t offset)
+                                                                        AscendC::Reg::RegTensor<float>& dst,
+                                                                        AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(dst, src + offset);
+        LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(dst, src + offset);
     } else {
-        AscendC::MicroAPI::RegTensor<T> xFp16;
-        LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, src + offset);
+        AscendC::Reg::RegTensor<T> xFp16;
+        LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(xFp16, src + offset);
         Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
     }
 }
@@ -451,16 +446,15 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::CopyInX(const LocalTensor<T>& 
 
 template <typename T>
 __aicore__ inline void ConfusionSoftmaxGradAR<T>::StoreTensorForDtypeTOut(__ubuf__ T* dst,
-                                                                          AscendC::MicroAPI::RegTensor<float>& src,
-                                                                          AscendC::MicroAPI::MaskReg& preg,
-                                                                          uint32_t offset)
+                                                                          AscendC::Reg::RegTensor<float>& src,
+                                                                          AscendC::Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_NORM>(dst + offset, src, preg);
     } else {
-        AscendC::MicroAPI::RegTensor<T> xFp16;
+        AscendC::Reg::RegTensor<T> xFp16;
         Cast<T, float, castTraitFp32ToFp16>(xFp16, src, preg);
-        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
+        StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 

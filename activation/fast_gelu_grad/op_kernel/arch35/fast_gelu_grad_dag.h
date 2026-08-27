@@ -37,37 +37,36 @@ struct FastGeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
             __ubuf__ T* src2Addr = (__ubuf__ T*)src2.GetPhyAddr();
             __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> dy;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> x;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> constantOne;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> value1MulsX;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> temp1Reg;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> temp2Reg;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> divRes;
-            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
-                                                                        true};
-            AscendC::MicroAPI::MaskReg mask;
-            AscendC::MicroAPI::Duplicate(constantOne, value3);
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> dy;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> x;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> constantOne;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> value1MulsX;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> temp1Reg;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> temp2Reg;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> divRes;
+            static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
+            AscendC::Reg::MaskReg mask;
+            AscendC::Reg::Duplicate(constantOne, value3);
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = AscendC::MicroAPI::UpdateMask<T, AscendC::MicroAPI::RegTraitNumOne>(count);
+                mask = AscendC::Reg::UpdateMask<T, AscendC::Reg::RegTraitNumOne>(count);
                 // OpCopyIn0
-                AscendC::MicroAPI::LoadAlign(x, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                AscendC::Reg::LoadAlign(x, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                 // temp1Reg = e^(-1.702x) + 1
-                AscendC::MicroAPI::Muls(value1MulsX, x, value2, mask);
-                AscendC::MicroAPI::Exp(temp1Reg, value1MulsX, mask);
-                AscendC::MicroAPI::Adds(temp1Reg, temp1Reg, value3, mask);
+                AscendC::Reg::Muls(value1MulsX, x, value2, mask);
+                AscendC::Reg::Exp(temp1Reg, value1MulsX, mask);
+                AscendC::Reg::Adds(temp1Reg, temp1Reg, value3, mask);
                 // temp2Reg = (1/(e^(-1.702x) + 1)) - 1
-                AscendC::MicroAPI::Div<T, &mode>(divRes, constantOne, temp1Reg, mask);
-                AscendC::MicroAPI::Adds(temp2Reg, divRes, value4, mask);
+                AscendC::Reg::Div<T, &mode>(divRes, constantOne, temp1Reg, mask);
+                AscendC::Reg::Adds(temp2Reg, divRes, value4, mask);
                 // divRes = (temp2Reg * -1.702x + 1) * 1/(e^(-1.702x) * dy
-                AscendC::MicroAPI::Mul(temp2Reg, temp2Reg, value1MulsX, mask);
-                AscendC::MicroAPI::Adds(temp2Reg, temp2Reg, value3, mask);
-                AscendC::MicroAPI::Mul(divRes, temp2Reg, divRes, mask);
-                AscendC::MicroAPI::LoadAlign(dy, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                AscendC::MicroAPI::Mul(divRes, dy, divRes, mask);
+                AscendC::Reg::Mul(temp2Reg, temp2Reg, value1MulsX, mask);
+                AscendC::Reg::Adds(temp2Reg, temp2Reg, value3, mask);
+                AscendC::Reg::Mul(divRes, temp2Reg, divRes, mask);
+                AscendC::Reg::LoadAlign(dy, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                AscendC::Reg::Mul(divRes, dy, divRes, mask);
 
                 // OpCopyOut
-                AscendC::MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), divRes, mask);
+                AscendC::Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), divRes, mask);
             }
         }
 #endif

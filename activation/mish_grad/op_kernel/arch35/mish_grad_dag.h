@@ -42,37 +42,35 @@ struct MishGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
         __ubuf__ T* src2Addr = (__ubuf__ T*)src2.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput2;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputExp2;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputSqr;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput2;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputExp2;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputSqr;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMaskReg;
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                    mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
-                                                                          (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(vregInput2,
-                                                                          (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
 
-                    MicroAPI::Mul(vregInputSqr, vregInput2, vregInput2, mask); // vregInput2 = tanh(z)
-                    MicroAPI::Adds(vregInputSqr, vregInputSqr, FP32_NEG_ONE, mask);
-                    MicroAPI::Mul(vregInputSqr, vregInputSqr, vregInput, mask);
+                    Reg::Mul(vregInputSqr, vregInput2, vregInput2, mask); // vregInput2 = tanh(z)
+                    Reg::Adds(vregInputSqr, vregInputSqr, FP32_NEG_ONE, mask);
+                    Reg::Mul(vregInputSqr, vregInputSqr, vregInput, mask);
 
-                    MicroAPI::Muls(vregInputExp2, vregInput, FP32_NEG_ONE, mask); // vregInput = x
-                    MicroAPI::Exp(vregInputExp2, vregInputExp2, mask);
-                    MicroAPI::Adds(vregInputExp2, vregInputExp2, FP32_ONE, mask);
+                    Reg::Muls(vregInputExp2, vregInput, FP32_NEG_ONE, mask); // vregInput = x
+                    Reg::Exp(vregInputExp2, vregInputExp2, mask);
+                    Reg::Adds(vregInputExp2, vregInputExp2, FP32_ONE, mask);
 
-                    MicroAPI::Div(vregInputExp2, vregInputSqr, vregInputExp2, mask);
-                    MicroAPI::Sub(vregOutput, vregInput2, vregInputExp2, mask);
+                    Reg::Div(vregInputExp2, vregInputSqr, vregInputExp2, mask);
+                    Reg::Sub(vregOutput, vregInput2, vregInputExp2, mask);
                     // OpCopyOut
-                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM_B32>(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                      vregOutput, mask);
                 }
             }
         }
@@ -96,45 +94,44 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputExp;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputNeg;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputNeg2;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputMid;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputExp;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputNeg;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputNeg2;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputMid;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMaskReg;
         __VEC_SCOPE__
         {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
-                                                                      (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
 
-                MicroAPI::Muls(vregInputNeg, vregInput, FP32_NEG_ONE, mask);
-                MicroAPI::Muls(vregInputNeg2, vregInput, FP32_NEG_TWO, mask);
-                MicroAPI::Exp(vregInputNeg, vregInputNeg, mask);   // x = e^(-x)
-                MicroAPI::Exp(vregInputNeg2, vregInputNeg2, mask); // x = e^(-2x)
+                Reg::Muls(vregInputNeg, vregInput, FP32_NEG_ONE, mask);
+                Reg::Muls(vregInputNeg2, vregInput, FP32_NEG_TWO, mask);
+                Reg::Exp(vregInputNeg, vregInputNeg, mask);   // x = e^(-x)
+                Reg::Exp(vregInputNeg2, vregInputNeg2, mask); // x = e^(-2x)
 
-                MicroAPI::Muls(vregInputNeg, vregInputNeg, FP32_TWO, mask);
-                MicroAPI::Adds(vregInputNeg, vregInputNeg, FP32_ONE, mask); // x = 2e^(-x)+1
-                MicroAPI::Muls(vregInputNeg2, vregInputNeg2, FP32_TWO, mask);
-                MicroAPI::Add(vregInputNeg2, vregInputNeg2, vregInputNeg, mask);
-                MicroAPI::Div(vregOutput, vregInputNeg, vregInputNeg2, mask);
+                Reg::Muls(vregInputNeg, vregInputNeg, FP32_TWO, mask);
+                Reg::Adds(vregInputNeg, vregInputNeg, FP32_ONE, mask); // x = 2e^(-x)+1
+                Reg::Muls(vregInputNeg2, vregInputNeg2, FP32_TWO, mask);
+                Reg::Add(vregInputNeg2, vregInputNeg2, vregInputNeg, mask);
+                Reg::Div(vregOutput, vregInputNeg, vregInputNeg2, mask);
 
-                MicroAPI::Muls(vregInputMid, vregInput, FP32_TWO, mask);
-                MicroAPI::Exp(vregInputMid, vregInputMid, mask);
-                MicroAPI::Exp(vregInputExp, vregInput, mask);
-                MicroAPI::Axpy(vregInputMid, vregInputExp, FP32_TWO, mask);
-                MicroAPI::Adds(vregInputExp, vregInputMid, FP32_TWO, mask);
-                MicroAPI::Div(vregInputMid, vregInputMid, vregInputExp, mask);
+                Reg::Muls(vregInputMid, vregInput, FP32_TWO, mask);
+                Reg::Exp(vregInputMid, vregInputMid, mask);
+                Reg::Exp(vregInputExp, vregInput, mask);
+                Reg::Axpy(vregInputMid, vregInputExp, FP32_TWO, mask);
+                Reg::Adds(vregInputExp, vregInputMid, FP32_TWO, mask);
+                Reg::Div(vregInputMid, vregInputMid, vregInputExp, mask);
 
-                MicroAPI::Compares<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
-                MicroAPI::Select(vregOutput, vregInputMid, vregOutput, cmpMaskReg);
+                Reg::Compares<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
+                Reg::Select(vregOutput, vregInputMid, vregOutput, cmpMaskReg);
                 // OpCopyOut
-                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                            vregOutput, mask);
+                Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput,
+                                                                  mask);
             }
         }
 #endif

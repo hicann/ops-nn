@@ -71,11 +71,11 @@ __simd_vf__ inline void Relu6DVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, T low
 
 // bf16 cast trait：
 //   widen：bf16→fp32（无舍入）；narrow：fp32→bf16（CAST_RINT 就近舍入，输出边界处唯一一次降精度）。
-constexpr static AscendC::MicroAPI::CastTrait g_relu6dCastWiden = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait g_relu6dCastWiden = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait g_relu6dCastNarrow = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait g_relu6dCastNarrow = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
 
 // RegBase VF 两步 clamp —— bf16 cast-compute 路径：
@@ -86,23 +86,22 @@ constexpr static AscendC::MicroAPI::CastTrait g_relu6dCastNarrow = {
 __simd_vf__ inline void Relu6DVFBf16(__ubuf__ bfloat16_t* dstAddr, __ubuf__ bfloat16_t* srcAddr, float lowerBound,
                                      float upperThr, uint32_t count, uint32_t fp32Lane, uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::RegTensor<bfloat16_t> srcRegB, dstRegB;
-    AscendC::MicroAPI::RegTensor<float> regF;
-    AscendC::MicroAPI::MaskReg mask;
+    AscendC::Reg::RegTensor<bfloat16_t> srcRegB, dstRegB;
+    AscendC::Reg::RegTensor<float> regF;
+    AscendC::Reg::MaskReg mask;
     for (uint16_t i = 0; i < repeatTimes; ++i) {
         uint32_t rem = count - static_cast<uint32_t>(i) * fp32Lane;
-        mask = AscendC::MicroAPI::UpdateMask<float>(rem);
+        mask = AscendC::Reg::UpdateMask<float>(rem);
         // 载入 bf16(2B) 到 fp32 lane 布局 → widen 到 fp32
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcRegB,
-                                                                                              srcAddr + i * fp32Lane);
-        AscendC::MicroAPI::Cast<float, bfloat16_t, g_relu6dCastWiden>(regF, srcRegB, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(srcRegB, srcAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, bfloat16_t, g_relu6dCastWiden>(regF, srcRegB, mask);
         // fp32 两步 clamp（float 标量，backend 原生支持）
-        AscendC::MicroAPI::Maxs(regF, regF, lowerBound, mask); // Step 1: max(x, 0)
-        AscendC::MicroAPI::Mins(regF, regF, upperThr, mask);   // Step 2: min(·, 6*scale)
+        AscendC::Reg::Maxs(regF, regF, lowerBound, mask); // Step 1: max(x, 0)
+        AscendC::Reg::Mins(regF, regF, upperThr, mask);   // Step 2: min(·, 6*scale)
         // narrow 回 bf16（CAST_RINT）→ 存回 2B
-        AscendC::MicroAPI::Cast<bfloat16_t, float, g_relu6dCastNarrow>(dstRegB, regF, mask);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane,
-                                                                                             dstRegB, mask);
+        AscendC::Reg::Cast<bfloat16_t, float, g_relu6dCastNarrow>(dstRegB, regF, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane, dstRegB,
+                                                                                   mask);
     }
 }
 

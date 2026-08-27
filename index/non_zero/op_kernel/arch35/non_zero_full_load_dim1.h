@@ -20,8 +20,8 @@
 
 namespace NonZero {
 using namespace AscendC;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T1, typename T2, int TILING_KEY>
 class NonZeroFullLoadDim1 : public NonZeroFullLoadBase<T1, T2, TILING_KEY> {

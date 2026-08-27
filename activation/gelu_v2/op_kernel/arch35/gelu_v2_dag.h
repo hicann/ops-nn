@@ -50,25 +50,25 @@ struct GeluV2ErfPost : public Vec::ElemwiseBinaryOP<T, T, T> {
         __ubuf__ T* src2Addr = (__ubuf__ T*)src2.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput1;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput2;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputAdds;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputMuls;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput1;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput2;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputAdds;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputMuls;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                    mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
+                    mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::LoadAlign(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::LoadAlign(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
-                    MicroAPI::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
-                    MicroAPI::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
-                    MicroAPI::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
+                    Reg::LoadAlign(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::LoadAlign(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    Reg::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
+                    Reg::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
+                    Reg::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
                     // OpCopyOut
-                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }
@@ -88,28 +88,28 @@ struct GeluV2Tanh : public Vec::ElemwiseUnaryOP<T, T> {
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputSqr;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputCub;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputSqr;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputCub;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                    mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
+                    mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
-                    MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
-                    MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
-                    MicroAPI::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
-                    MicroAPI::Exp(vregInputCub, vregInputCub, mask);
-                    MicroAPI::Adds(vregInputCub, vregInputCub, (float)1.0, mask);
-                    MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
+                    Reg::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::Mul(vregInputSqr, vregInput, vregInput, mask);
+                    Reg::Mul(vregInputCub, vregInputSqr, vregInput, mask);
+                    Reg::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
+                    Reg::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
+                    Reg::Exp(vregInputCub, vregInputCub, mask);
+                    Reg::Adds(vregInputCub, vregInputCub, (float)1.0, mask);
+                    Reg::Div(vregOutput, vregInput, vregInputCub, mask);
 
                     // OpCopyOut
-                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

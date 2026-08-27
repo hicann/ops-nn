@@ -206,24 +206,22 @@ __aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t>& xLocalR
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int32_t> xReg;
-        AscendC::MicroAPI::RegTensor<int32_t> dataSeqReg;
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg
-            preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg2;
-        AscendC::MicroAPI::MaskReg
-            pregResultMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<int32_t> xReg;
+        AscendC::Reg::RegTensor<int32_t> dataSeqReg;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg preg1 = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg preg2;
+        AscendC::Reg::MaskReg pregResultMask = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
 
         uint32_t sreg0 = calCount;
         for (uint16_t i = 0; i < loopNum; i++) { // 256B
-            preg0 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg0);
-            AscendC::MicroAPI::LoadAlign(xReg, xAddr + i * vl);
-            AscendC::MicroAPI::LoadAlign(dataSeqReg, dataSeqAddr + i * vl);
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::EQ>(preg2, xReg, dataSeqReg, preg0);
-            AscendC::MicroAPI::And(pregResultMask, pregResultMask, preg2, preg0);
+            preg0 = AscendC::Reg::UpdateMask<int32_t>(sreg0);
+            AscendC::Reg::LoadAlign(xReg, xAddr + i * vl);
+            AscendC::Reg::LoadAlign(dataSeqReg, dataSeqAddr + i * vl);
+            AscendC::Reg::Compare<int32_t, CMPMODE::EQ>(preg2, xReg, dataSeqReg, preg0);
+            AscendC::Reg::And(pregResultMask, pregResultMask, preg2, preg0);
         }
-        AscendC::MicroAPI::StoreAlign(maskAddr, pregResultMask);
+        AscendC::Reg::StoreAlign(maskAddr, pregResultMask);
     }
 }
 

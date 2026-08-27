@@ -44,7 +44,7 @@ using AscendC::TPosition;
 using AscendC::TQue;
 using AscendC::VECTOR_REG_WIDTH;
 using AscendC::WaitFlag;
-namespace MicroAPI = AscendC::Reg;
+namespace Reg = AscendC::Reg;
 using AscendC::Dn2NzParams;
 using AscendC::Reg::GetRound;
 using AscendC::Reg::MaskReg;
@@ -1436,8 +1436,8 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     uint32_t maskB8Tail1 = 0;
     uint32_t maskWeight0Tmp = 0;
     uint32_t maskWeight1Tmp = 0;
-    MicroAPI::MaskReg MaskRegB8Tail0;
-    MicroAPI::MaskReg MaskRegB8Tail1;
+    Reg::MaskReg MaskRegB8Tail0;
+    Reg::MaskReg MaskRegB8Tail1;
     maskB8Tail0 = Min(bubKLen % VECTOR_REG_WIDTH_FOR_4BITS, VECTOR_REG_WIDTH) +
                   bubKLen / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
     maskB8Tail1 = Max(bubKLen % VECTOR_REG_WIDTH_FOR_4BITS - VECTOR_REG_WIDTH, 0) +
@@ -1450,44 +1450,42 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 #ifndef __CCE_KT_TEST__
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, wLoad1, wLoad2, wLoad3, sAnd0, sAnd1, wShr, wShl, s1,
-            wOr0, wOr1, wdup1, wdup4;
-        MicroAPI::RegTensor<int8_t> wdup0, wdup2, wdup3;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
-        MicroAPI::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
+        Reg::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, wLoad1, wLoad2, wLoad3, sAnd0, sAnd1, wShr, wShl, s1, wOr0,
+            wOr1, wdup1, wdup4;
+        Reg::RegTensor<int8_t> wdup0, wdup2, wdup3;
+        Reg::MaskReg preg = Reg::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
+        Reg::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
+        Reg::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
         // 一次处理一个N轴
         for (uint16_t outIdx = 0; outIdx < outExtend; ++outIdx) {
             // 一次处理K轴512个element groupSize=32,需要加载16个Scale
             maskWeight0Tmp = maskB8Tail0;
             maskWeight1Tmp = maskB8Tail1;
             for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {
-                MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
-                MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
-                MicroAPI::AddrReg aregWeightB8 = MicroAPI::CreateAddrReg<uint8_t>(outIdx, bubKLen >> 1, repeatIdx,
-                                                                                  VEC_MAX_ELEM_B8);
-                MicroAPI::DataCopy(wLoad0, (__local_mem__ uint8_t*&)weightInUbBaseAddr, aregWeightB8);
+                MaskRegB8Tail0 = Reg::UpdateMask<uint8_t>(maskWeight0Tmp);
+                MaskRegB8Tail1 = Reg::UpdateMask<uint8_t>(maskWeight1Tmp);
+                Reg::AddrReg aregWeightB8 = Reg::CreateAddrReg<uint8_t>(outIdx, bubKLen >> 1, repeatIdx,
+                                                                        VEC_MAX_ELEM_B8);
+                Reg::DataCopy(wLoad0, (__local_mem__ uint8_t*&)weightInUbBaseAddr, aregWeightB8);
                 // 提取E/M
-                MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
-                MicroAPI::And(wShr, wShr, wdup1, preg);          // vr1
-                MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);  // vr2
-                MicroAPI::And(wShl, wShl, wdup1, preg);          // vr2
+                Reg::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
+                Reg::And(wShr, wShr, wdup1, preg);          // vr1
+                Reg::ShiftLeft(wShl, wLoad0, wdup2, preg);  // vr2
+                Reg::And(wShl, wShl, wdup1, preg);          // vr2
                 // 提取S
-                MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg); // vr3
-                MicroAPI::And(sAnd0, s1, wdup4, preg);        // vr3
-                MicroAPI::And(sAnd1, wLoad0, wdup4, preg);    // vr4
+                Reg::ShiftLeft(s1, wLoad0, wdup3, preg); // vr3
+                Reg::And(sAnd0, s1, wdup4, preg);        // vr3
+                Reg::And(sAnd1, wLoad0, wdup4, preg);    // vr4
                 // 合并S/E/M
-                MicroAPI::Or(wOr0, wShr, sAnd1, preg); // odd
-                MicroAPI::Or(wOr1, wShl, sAnd0, preg); // even
-                MicroAPI::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                Reg::Or(wOr0, wShr, sAnd1, preg); // odd
+                Reg::Or(wOr1, wShl, sAnd0, preg); // even
+                Reg::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
+                Reg::DataCopy<uint8_t, Reg::DataCopyMode::DATA_BLOCK_COPY, Reg::PostLiteral::POST_MODE_UPDATE>(
                     (__local_mem__ uint8_t*&)weightOutUbAddr, wDIntlv0, dataBlockStride, repeatStride, MaskRegB8Tail0);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                Reg::DataCopy<uint8_t, Reg::DataCopyMode::DATA_BLOCK_COPY, Reg::PostLiteral::POST_MODE_UPDATE>(
                     (__local_mem__ uint8_t*&)weightOutUbAddr1, wDIntlv1, dataBlockStride, repeatStride, MaskRegB8Tail1);
             }
             weightOutUbAddr += outDimOffset;
@@ -1517,7 +1515,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     uint32_t maskWeight0Tmp = 0;
     uint32_t innerDstExtend = VECTOR_REG_WIDTH * tiling_->BL1Pingpong;
     uint32_t innerSrcExtend = VECTOR_REG_WIDTH >> 1;
-    MicroAPI::MaskReg MaskRegB8Tail0;
+    Reg::MaskReg MaskRegB8Tail0;
     maskB8Tail0 = bubKLen;
     __local_mem__ int8_t* weightInUbBaseAddr = weightInUbBaseAddr_;
     __local_mem__ xType* weightOutUbAddr = weightOutUbAddr_;
@@ -1526,27 +1524,27 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 #ifndef __CCE_KT_TEST__
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
+        Reg::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
+        Reg::MaskReg preg = Reg::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+        Reg::MaskReg pregVsel = Reg::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, shiftLeftSize, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, andMask, preg);
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, shiftLeftSize, preg);
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
+        Reg::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, andMask, preg);
 
         // 一次处理一个N轴
         for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {
-            MicroAPI::AddrReg aregWeightB8In = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, innerSrcExtend);
-            MicroAPI::AddrReg aregWeightB8Out = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, innerDstExtend);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
-                (MicroAPI::RegTensor<uint8_t>&)wLoad0, (__local_mem__ uint8_t*&)weightInUbBaseAddr, aregWeightB8In);
-            MicroAPI::ShiftRight(wShr0, wLoad0, wdup0, preg);
-            MicroAPI::ShiftLeft(wShl, wLoad0, wdup1, preg);
-            MicroAPI::ShiftRight(wShr1, wShl, wdup0, preg);
-            MicroAPI::Select(wSel0, wShr1, wShr0, pregVsel);
-            MicroAPI::And(sAnd0, wSel0, wdup2, preg);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_NORM_B8>(
-                (__local_mem__ uint8_t*&)weightOutUbAddr, (MicroAPI::RegTensor<uint8_t>&)sAnd0, aregWeightB8Out, preg);
+            Reg::AddrReg aregWeightB8In = Reg::CreateAddrReg<uint8_t>(repeatIdx, innerSrcExtend);
+            Reg::AddrReg aregWeightB8Out = Reg::CreateAddrReg<uint8_t>(repeatIdx, innerDstExtend);
+            Reg::DataCopy<uint8_t, Reg::LoadDist::DIST_US_B8>(
+                (Reg::RegTensor<uint8_t>&)wLoad0, (__local_mem__ uint8_t*&)weightInUbBaseAddr, aregWeightB8In);
+            Reg::ShiftRight(wShr0, wLoad0, wdup0, preg);
+            Reg::ShiftLeft(wShl, wLoad0, wdup1, preg);
+            Reg::ShiftRight(wShr1, wShl, wdup0, preg);
+            Reg::Select(wSel0, wShr1, wShr0, pregVsel);
+            Reg::And(sAnd0, wSel0, wdup2, preg);
+            Reg::DataCopy<uint8_t, Reg::StoreDist::DIST_NORM_B8>(
+                (__local_mem__ uint8_t*&)weightOutUbAddr, (Reg::RegTensor<uint8_t>&)sAnd0, aregWeightB8Out, preg);
         }
     }
 #endif

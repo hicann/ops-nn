@@ -36,8 +36,8 @@ constexpr uint32_t THREAD_NUM = 1024;
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 1024;
 #endif
 
-static constexpr MicroAPI::CastTrait castTraitB8B162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                           MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait castTraitB8B162B32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                      Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 class ScatterAddSimt {
@@ -167,15 +167,15 @@ template <typename VAR_T, typename CAST_T>
 __simd_vf__ inline void CastToInt32Vf(__ubuf__ VAR_T* srcAddr, __ubuf__ CAST_T* dstAddr, uint32_t dataLen,
                                       uint16_t loopTimes)
 {
-    MicroAPI::RegTensor<VAR_T> srcValue;
-    MicroAPI::RegTensor<CAST_T> dstValue;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<VAR_T> srcValue;
+    Reg::RegTensor<CAST_T> dstValue;
+    Reg::MaskReg preg;
     uint32_t sregMask = dataLen;
     for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-        MicroAPI::LoadAlign<VAR_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
-        MicroAPI::Cast<CAST_T, VAR_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-        MicroAPI::StoreAlign<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
+        preg = Reg::UpdateMask<uint32_t>(sregMask);
+        Reg::LoadAlign<VAR_T, Reg::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
+        Reg::Cast<CAST_T, VAR_T, castTraitB8B162B32>(dstValue, srcValue, preg);
+        Reg::StoreAlign<CAST_T, Reg::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
     }
 }
 
@@ -194,14 +194,14 @@ template <typename VAR_T, typename CAST_T>
 __simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ VAR_T* dstAddr, uint32_t dataLen,
                                        uint16_t loopTimes)
 {
-    MicroAPI::RegTensor<CAST_T> srcValue;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<CAST_T> srcValue;
+    Reg::MaskReg preg;
     uint32_t sregMask = dataLen;
     for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-        MicroAPI::LoadAlign<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
-        MicroAPI::StoreAlign<VAR_T, MicroAPI::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j,
-                                                                         (MicroAPI::RegTensor<VAR_T>&)srcValue, preg);
+        preg = Reg::UpdateMask<uint32_t>(sregMask);
+        Reg::LoadAlign<CAST_T, Reg::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
+        Reg::StoreAlign<VAR_T, Reg::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j, (Reg::RegTensor<VAR_T>&)srcValue,
+                                                               preg);
     }
 }
 

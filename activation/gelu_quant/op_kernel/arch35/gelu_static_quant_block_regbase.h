@@ -305,20 +305,20 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeScale(LocalTensor<float>
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregGeluRes;
-        AscendC::MicroAPI::RegTensor<float> vregScale;
-        AscendC::MicroAPI::RegTensor<float> vregTmpRes;
-        AscendC::MicroAPI::MaskReg preg0;
+        AscendC::Reg::RegTensor<float> vregGeluRes;
+        AscendC::Reg::RegTensor<float> vregScale;
+        AscendC::Reg::RegTensor<float> vregTmpRes;
+        AscendC::Reg::MaskReg preg0;
 
         for (uint16_t i = 0; i < rowActualVF; i++) {
             uint32_t sreg0 = colActual_;
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto tmpOutAddr = geluResAddr + i * colActualAlignTo32_ + j * vl;
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                AscendC::MicroAPI::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
-                AscendC::MicroAPI::DataCopy(vregScale, scaleAddr + j * vl);
-                AscendC::MicroAPI::Mul(vregTmpRes, vregGeluRes, vregScale, preg0);
-                AscendC::MicroAPI::DataCopy<float>(tmpOutAddr, vregTmpRes, preg0);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
+                AscendC::Reg::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
+                AscendC::Reg::DataCopy(vregScale, scaleAddr + j * vl);
+                AscendC::Reg::Mul(vregTmpRes, vregGeluRes, vregScale, preg0);
+                AscendC::Reg::DataCopy<float>(tmpOutAddr, vregTmpRes, preg0);
             }
         }
     }
@@ -341,20 +341,20 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeOffset(LocalTensor<float
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregGeluRes;
-        AscendC::MicroAPI::RegTensor<float> vregOffset;
-        AscendC::MicroAPI::RegTensor<float> vregTmpRes;
-        AscendC::MicroAPI::MaskReg preg0;
+        AscendC::Reg::RegTensor<float> vregGeluRes;
+        AscendC::Reg::RegTensor<float> vregOffset;
+        AscendC::Reg::RegTensor<float> vregTmpRes;
+        AscendC::Reg::MaskReg preg0;
 
         for (uint16_t i = 0; i < rowActualVF; i++) {
             uint32_t sreg0 = colActual_;
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto tmpOutAddr = geluResAddr + i * colActualAlignTo32_ + j * vl;
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                AscendC::MicroAPI::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
-                AscendC::MicroAPI::DataCopy(vregOffset, offsetAddr + j * vl);
-                AscendC::MicroAPI::Add(vregTmpRes, vregGeluRes, vregOffset, preg0);
-                AscendC::MicroAPI::DataCopy<float>(tmpOutAddr, vregTmpRes, preg0);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
+                AscendC::Reg::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
+                AscendC::Reg::DataCopy(vregOffset, offsetAddr + j * vl);
+                AscendC::Reg::Add(vregTmpRes, vregGeluRes, vregOffset, preg0);
+                AscendC::Reg::DataCopy<float>(tmpOutAddr, vregTmpRes, preg0);
             }
         }
     }
@@ -378,33 +378,32 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeCast(LocalTensor<float>&
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregGeluRes;
-        AscendC::MicroAPI::RegTensor<half> vregHalf;
-        AscendC::MicroAPI::RegTensor<dstType> vregRes;
-        AscendC::MicroAPI::MaskReg preg0;
+        AscendC::Reg::RegTensor<float> vregGeluRes;
+        AscendC::Reg::RegTensor<half> vregHalf;
+        AscendC::Reg::RegTensor<dstType> vregRes;
+        AscendC::Reg::MaskReg preg0;
 
         for (uint16_t i = 0; i < rowActualVF; i++) {
             uint32_t sreg0 = colActualAlignTo32_;
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto yOutAddr = yAddr + i * colActualAlignTo8_ + j * vl;
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                AscendC::MicroAPI::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
+                AscendC::Reg::DataCopy(vregGeluRes, geluResAddr + i * colActualAlignTo32_ + j * vl);
 
                 if constexpr (IsSameType<dstType, int8_t>::value) {
-                    AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregGeluRes, preg0);
-                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregRes, vregHalf, preg0);
+                    AscendC::Reg::Cast<half, float, castTraitF32ToF16>(vregHalf, vregGeluRes, preg0);
+                    AscendC::Reg::Cast<dstType, half, castTraitF16ToI8Rint>(vregRes, vregHalf, preg0);
                 } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value ||
                                      IsSameType<dstType, fp8_e5m2_t>::value) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregRes, vregGeluRes, preg0);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToF8>(vregRes, vregGeluRes, preg0);
                 } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                      roundMode == AscendC::RoundMode::CAST_HYBRID) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregRes, vregGeluRes, preg0);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregRes, vregGeluRes, preg0);
                 } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                      roundMode == AscendC::RoundMode::CAST_ROUND) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregRes, vregGeluRes, preg0);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Round>(vregRes, vregGeluRes, preg0);
                 }
-                AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregRes,
-                                                                                                   preg0);
+                AscendC::Reg::DataCopy<dstType, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yOutAddr, vregRes, preg0);
             }
         }
     }

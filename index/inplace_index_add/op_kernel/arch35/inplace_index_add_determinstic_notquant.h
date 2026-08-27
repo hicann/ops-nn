@@ -97,15 +97,15 @@ __simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyX
                                                                                         uint32_t totalBytes,
                                                                                         uint16_t stride, uint16_t size)
 {
-    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    AscendC::Reg::RegTensor<int8_t> inputRegTensor;
     uint32_t sreg = totalBytes;
-    AscendC::MicroAPI::MaskReg preg;
+    AscendC::Reg::MaskReg preg;
 
     for (uint16_t i = 0; i < size; i++) {
-        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-        AscendC::MicroAPI::LoadAlign(inputRegTensor, inAddr, offset);
-        AscendC::MicroAPI::StoreAlign(outAddr, inputRegTensor, offset, preg);
+        preg = AscendC::Reg::UpdateMask<int8_t>(sreg);
+        AscendC::Reg::AddrReg offset = AscendC::Reg::CreateAddrReg<int8_t>(i, stride);
+        AscendC::Reg::LoadAlign(inputRegTensor, inAddr, offset);
+        AscendC::Reg::StoreAlign(outAddr, inputRegTensor, offset, preg);
     }
 }
 

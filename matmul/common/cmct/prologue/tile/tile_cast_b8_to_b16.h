@@ -24,7 +24,7 @@ using Cmct::CeilAlign;
 using Cmct::CeilDiv;
 using Cmct::Gemm::Get;
 using Gemm::Arch::DAV3510;
-namespace MicroAPI = AscendC::MicroAPI;
+namespace Reg = AscendC::Reg;
 namespace detail {
 
 // ND NK
@@ -45,32 +45,31 @@ struct TileCastImpl<DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::Loca
         __ubuf__ DtypeOut* antiQuantScaleF16PhyAddr1 = antiQuantScaleF16PhyAddr0 + (VECTOR_REG_SIZE<DtypeOut>);
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<uint8_t> antiQuantScaleE8m0Vreg0;
-            MicroAPI::RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
-            MicroAPI::RegTensor<DtypeOut> antiQuantScaleF16Vreg0;
-            MicroAPI::RegTensor<DtypeOut> antiQuantScaleF16Vreg1;
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            Reg::RegTensor<uint8_t> antiQuantScaleE8m0Vreg0;
+            Reg::RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
+            Reg::RegTensor<DtypeOut> antiQuantScaleF16Vreg0;
+            Reg::RegTensor<DtypeOut> antiQuantScaleF16Vreg1;
+            Reg::MaskReg maskAll = Reg::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
             for (uint16_t ubLoopNIdx = 0; ubLoopNIdx < ubLoopN; ubLoopNIdx++) {
                 // 搬运128个E8M0的antiquantscale, 通过两倍上采样变成256个E8M0， DIST_US_B8表示搬运模式如下：
                 // Vn s1 s2 s3 s4 s5 s6 s7 s8 s9 ...... s125 s126 s127 s128
                 // Vd s1 s1 s2 s2 s3 s3 s4 s4 s5 ...... s125 s125 s126 s126 s127 s127 s128 s128
-                MicroAPI::LoadAlign<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
-                    antiQuantScaleE8m0Vreg0, antiQuantScaleBasePhyAddr + ubLoopNIdx * 128);
-                MicroAPI::RegTensor<uint8_t> zeroVreg;
-                MicroAPI::Duplicate(zeroVreg, 0);
+                Reg::LoadAlign<uint8_t, Reg::LoadDist::DIST_US_B8>(antiQuantScaleE8m0Vreg0,
+                                                                   antiQuantScaleBasePhyAddr + ubLoopNIdx * 128);
+                Reg::RegTensor<uint8_t> zeroVreg;
+                Reg::Duplicate(zeroVreg, 0);
                 // 通过数据重排指令， 交织 antiQuantScaleE8m0Vreg0 和 zeroVreg , Interleave后变为
                 // antiQuantScaleE8m0Vreg0
                 // Vn s1 0 s2 0 s3 0 s4 0 s5 0 s6 0 s7 0 s8 0....... s127 0 s128 0
                 // antiQuantScaleE8m0Vreg1
                 // Vd s128 0 s129 0 s130 0 s131 0 s132 0 s133 0....... s255 0 s256 0
-                MicroAPI::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg,
-                                     antiQuantScaleE8m0Vreg0);
+                Reg::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg, antiQuantScaleE8m0Vreg0);
                 CastLowBitToF16(antiQuantScaleF16Vreg0, antiQuantScaleE8m0Vreg0, maskAll);
                 CastLowBitToF16(antiQuantScaleF16Vreg1, antiQuantScaleE8m0Vreg1, maskAll);
-                MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                Reg::StoreAlign<DtypeOut, Reg::StoreDist::DIST_NORM_B16>(
                     antiQuantScaleF16PhyAddr0 + ubLoopNIdx * AscendC::VECTOR_REG_WIDTH, antiQuantScaleF16Vreg0,
                     maskAll);
-                MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                Reg::StoreAlign<DtypeOut, Reg::StoreDist::DIST_NORM_B16>(
                     antiQuantScaleF16PhyAddr1 + ubLoopNIdx * AscendC::VECTOR_REG_WIDTH, antiQuantScaleF16Vreg1,
                     maskAll);
             }
@@ -97,31 +96,30 @@ struct TileCastImpl<DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::Loca
         __VEC_SCOPE__
         {
             // KN mte2搬运的antiquantscale的标准大小为(4，256), 按照一行的粒度处理
-            MicroAPI::RegTensor<uint8_t> antiQuantScaleE8m0Vreg0;
-            MicroAPI::RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
-            MicroAPI::RegTensor<DtypeOut> antiQuantScaleF16Vreg0;
-            MicroAPI::RegTensor<DtypeOut> antiQuantScaleF16Vreg1;
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            Reg::RegTensor<uint8_t> antiQuantScaleE8m0Vreg0;
+            Reg::RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
+            Reg::RegTensor<DtypeOut> antiQuantScaleF16Vreg0;
+            Reg::RegTensor<DtypeOut> antiQuantScaleF16Vreg1;
+            Reg::MaskReg maskAll = Reg::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
             for (uint16_t ubLoopKIdx = 0; ubLoopKIdx < ubLoopK; ubLoopKIdx++) {
                 // 搬运256个E8M0的antiquantscale, DIST_NORM表示搬运模式如下：
                 // Vn s1 s2 s3 s4 s5 s6 s7 s8 s9 ...... s254 s255 s256
                 // Vd s1 s2 s3 s4 s5 s6 s7 s8 s9 ...... s254 s255 s256
-                MicroAPI::LoadAlign<uint8_t, MicroAPI::LoadDist::DIST_NORM>(
+                Reg::LoadAlign<uint8_t, Reg::LoadDist::DIST_NORM>(
                     antiQuantScaleE8m0Vreg0, antiQuantScaleBasePhyAddr + ubLoopKIdx * VECTOR_REG_WIDTH);
-                MicroAPI::RegTensor<uint8_t> zeroVreg;
-                MicroAPI::Duplicate(zeroVreg, 0);
+                Reg::RegTensor<uint8_t> zeroVreg;
+                Reg::Duplicate(zeroVreg, 0);
                 // 通过数据重排指令， 交织 antiQuantScaleE8m0Vreg0 和 zeroVreg , Interleave后变为
                 // antiQuantScaleE8m0Vreg0
                 // Vn s1 0 s2 0 s3 0 s4 0 s5 0 s6 0 s7 0 s8 0....... s127 0 s128 0
                 // antiQuantScaleE8m0Vreg1
                 // Vd s128 0 s129 0 s130 0 s131 0 s132 0 s133 0....... s255 0 s256 0
-                MicroAPI::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg,
-                                     antiQuantScaleE8m0Vreg0);
+                Reg::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg, antiQuantScaleE8m0Vreg0);
                 CastLowBitToF16(antiQuantScaleF16Vreg0, antiQuantScaleE8m0Vreg0, maskAll);
                 CastLowBitToF16(antiQuantScaleF16Vreg1, antiQuantScaleE8m0Vreg1, maskAll);
-                MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                Reg::StoreAlign<DtypeOut, Reg::StoreDist::DIST_NORM_B16>(
                     antiQuantScaleF16PhyAddr0 + ubLoopKIdx * VECTOR_REG_WIDTH, antiQuantScaleF16Vreg0, maskAll);
-                MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                Reg::StoreAlign<DtypeOut, Reg::StoreDist::DIST_NORM_B16>(
                     antiQuantScaleF16PhyAddr1 + ubLoopKIdx * VECTOR_REG_WIDTH, antiQuantScaleF16Vreg1, maskAll);
             }
         }

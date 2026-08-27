@@ -293,7 +293,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitS(int64_t src
         if (sStart + dimSNum < seqLen_) {
             ComputeSplitSGatherSmallA<U>(srcOffset, bStart, sStart, dimSNum);
         } else if (sStart >= seqLen_) {
-            //直接搬入搬出
+            // 直接搬入搬出
             ComputeSplitSCopyA(srcOffset, dimSNum);
         } else {
             int64_t reverseDims = seqLen_ - sStart;
@@ -306,7 +306,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitS(int64_t src
         if (sStart + dimSNum < seqLen_) {
             ComputeSplitSReverseBigA(srcOffset, bStart, sStart, dimSNum);
         } else if (sStart >= seqLen_) {
-            //直接搬入搬出
+            // 直接搬入搬出
             ComputeSplitSCopyA(srcOffset, dimSNum);
         } else {
             int64_t reverseDims = seqLen_ - sStart;
@@ -331,33 +331,33 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenDimSGatherIndex(int64_
     __VEC_SCOPE__
     {
         using regType = typename VciTypeGet<U>::type;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
-        MicroAPI::RegTensor<U> v3;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
+        Reg::RegTensor<U> v3;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * repeatNum);
-            MicroAPI::Duplicate(v1, (U)stride, p0);
-            MicroAPI::Duplicate(v2, (U)reverseLen, p0);
-            MicroAPI::Duplicate(v3, (U)1, p0);
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * repeatNum);
+            Reg::Duplicate(v1, (U)stride, p0);
+            Reg::Duplicate(v2, (U)reverseLen, p0);
+            Reg::Duplicate(v3, (U)1, p0);
 
-            MicroAPI::Div(vd1, v0, v1, p0);
-            MicroAPI::Sub(vd2, v2, vd1, p0);
-            MicroAPI::Sub(vd3, vd2, v3, p0);
-            MicroAPI::Mul(vd4, vd3, v1, p0); // (dimSNum - i/ dimA - 1) * stride
+            Reg::Div(vd1, v0, v1, p0);
+            Reg::Sub(vd2, v2, vd1, p0);
+            Reg::Sub(vd3, vd2, v3, p0);
+            Reg::Mul(vd4, vd3, v1, p0); // (dimSNum - i/ dimA - 1) * stride
 
-            MicroAPI::Mul(vd5, vd1, v1, p0);
-            MicroAPI::Sub(vd6, v0, vd5, p0); // i % dimA
-            MicroAPI::Add(vd7, vd4, vd6, p0);
-            MicroAPI::DataCopy(dstAddr + i * repeatNum, vd7, p0);
+            Reg::Mul(vd5, vd1, v1, p0);
+            Reg::Sub(vd6, v0, vd5, p0); // i % dimA
+            Reg::Add(vd7, vd4, vd6, p0);
+            Reg::DataCopy(dstAddr + i * repeatNum, vd7, p0);
         }
     }
 }
@@ -380,27 +380,27 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA
     uint16_t loop = (totalNum + repeatNum - 1) / repeatNum;
     __VEC_SCOPE__
     {
-        using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                                  MicroAPI::RegTensor<T>>::type;
+        using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                                  Reg::RegTensor<T>>::type;
         using gatherType = typename GetGatherType<T>::type;
         uint32_t updateNum = totalNum;
         uint32_t updateNumB8 = totalNum;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<gatherType> vd0;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<gatherType> vd0;
         RegDstT vd1;
-        MicroAPI::MaskReg pMask;
-        MicroAPI::MaskReg pMaskB8;
+        Reg::MaskReg pMask;
+        Reg::MaskReg pMaskB8;
         for (uint16_t i = 0; i < loop; i++) {
-            pMask = MicroAPI::UpdateMask<U>(updateNum);
-            MicroAPI::DataCopy(v0, indexAddr + i * repeatNum);
+            pMask = Reg::UpdateMask<U>(updateNum);
+            Reg::DataCopy(v0, indexAddr + i * repeatNum);
             if constexpr (sizeof(T) == 1) {
-                MicroAPI::DataCopyGather(vd0, xLocalAddr, v0, pMask);
-                MicroAPI::Pack((MicroAPI::RegTensor<uint8_t>&)vd1, vd0);
-                MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pMaskB8, pMask);
-                MicroAPI::DataCopy(yLocalAddr + i * repeatNum, vd1, pMaskB8);
+                Reg::DataCopyGather(vd0, xLocalAddr, v0, pMask);
+                Reg::Pack((Reg::RegTensor<uint8_t>&)vd1, vd0);
+                Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
+                Reg::DataCopy(yLocalAddr + i * repeatNum, vd1, pMaskB8);
             } else {
-                MicroAPI::DataCopyGather(vd1, xLocalAddr, v0, pMask);
-                MicroAPI::DataCopy(yLocalAddr + i * repeatNum, vd1, pMask);
+                Reg::DataCopyGather(vd1, xLocalAddr, v0, pMask);
+                Reg::DataCopy(yLocalAddr + i * repeatNum, vd1, pMask);
             }
         }
     }
@@ -425,12 +425,12 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSCopyA(int64_
     __VEC_SCOPE__
     {
         uint32_t updateNum = totalNum;
-        MicroAPI::RegTensor<int8_t> v0;
-        AscendC::MicroAPI::MaskReg preg;
+        Reg::RegTensor<int8_t> v0;
+        AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < loop; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(updateNum);
-            MicroAPI::DataCopy(v0, xLocalAddr + i * repeatNum);
-            MicroAPI::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
+            preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
+            Reg::DataCopy(v0, xLocalAddr + i * repeatNum);
+            Reg::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
         }
     }
     inputQue_.FreeTensor(xLocal);
@@ -455,18 +455,18 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(
     uint32_t seqLen = dimSNum;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int8_t> inReg;
-        AscendC::MicroAPI::MaskReg preg;
+        AscendC::Reg::RegTensor<int8_t> inReg;
+        AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < dimSLoop; i++) {
             auto srcAddr = xLocalAddr + i * dimSStride;
             auto dstAddr = yLocalAddr + (seqLen - i - 1) * dimSStride;
             uint32_t updateNum = dimSStride;
             for (uint16_t j = 0; j < dimALoop; j++) {
-                preg = AscendC::MicroAPI::UpdateMask<int8_t>(updateNum);
+                preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
                 auto curSrcAddr = srcAddr + j * repeatNum;
                 auto curDstAddr = dstAddr + j * repeatNum;
-                AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
-                AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
+                AscendC::Reg::DataCopy(inReg, curSrcAddr);
+                AscendC::Reg::DataCopy(curDstAddr, inReg, preg);
             }
         }
     }
@@ -495,44 +495,44 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(int64_
     {
         using regType = typename VciTypeGet<U>::type;
         uint32_t updateNum = startNum;
-        MicroAPI::RegTensor<U> vd1;
-        MicroAPI::RegTensor<U> vd2;
-        MicroAPI::RegTensor<U> vd3;
-        MicroAPI::RegTensor<U> vd4;
-        MicroAPI::RegTensor<U> vd5;
-        MicroAPI::RegTensor<U> vd6;
-        MicroAPI::RegTensor<U> vd7;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<U> v1;
-        MicroAPI::RegTensor<U> v2;
-        MicroAPI::RegTensor<U> vOne;
+        Reg::RegTensor<U> vd1;
+        Reg::RegTensor<U> vd2;
+        Reg::RegTensor<U> vd3;
+        Reg::RegTensor<U> vd4;
+        Reg::RegTensor<U> vd5;
+        Reg::RegTensor<U> vd6;
+        Reg::RegTensor<U> vd7;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<U> v1;
+        Reg::RegTensor<U> v2;
+        Reg::RegTensor<U> vOne;
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(updateNum);
+            Reg::MaskReg p0 = Reg::UpdateMask<U>(updateNum);
             ;
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * repeatNum);
-            MicroAPI::Duplicate(v1, (U)stride, p0);
-            MicroAPI::Duplicate(v2, (U)seqLen, p0);
-            MicroAPI::Duplicate(vOne, (U)1, p0);
-            MicroAPI::Div(vd1, v0, v1, p0);
-            MicroAPI::Sub(vd2, v2, vd1, p0);
-            MicroAPI::Sub(vd3, vd2, vOne, p0);
-            MicroAPI::Mul(vd4, vd3, v1, p0); // (dimSNum - i/ dimA - 1) * stride
-            MicroAPI::Mul(vd5, vd1, v1, p0);
+            Reg::Arange((Reg::RegTensor<regType>&)v0, i * repeatNum);
+            Reg::Duplicate(v1, (U)stride, p0);
+            Reg::Duplicate(v2, (U)seqLen, p0);
+            Reg::Duplicate(vOne, (U)1, p0);
+            Reg::Div(vd1, v0, v1, p0);
+            Reg::Sub(vd2, v2, vd1, p0);
+            Reg::Sub(vd3, vd2, vOne, p0);
+            Reg::Mul(vd4, vd3, v1, p0); // (dimSNum - i/ dimA - 1) * stride
+            Reg::Mul(vd5, vd1, v1, p0);
             // i % dimA
-            MicroAPI::Sub(vd6, v0, vd5, p0);
-            MicroAPI::Add(vd7, vd4, vd6, p0);
-            MicroAPI::DataCopy(dstAddr + i * repeatNum, vd7, p0);
+            Reg::Sub(vd6, v0, vd5, p0);
+            Reg::Add(vd7, vd4, vd6, p0);
+            Reg::DataCopy(dstAddr + i * repeatNum, vd7, p0);
         }
 
-        MicroAPI::RegTensor<U> v5;
-        MicroAPI::UnalignReg u0;
+        Reg::RegTensor<U> v5;
+        Reg::UnalignReg u0;
         for (uint16_t i = 0; i < notReverseLoopNum; i++) {
-            MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v5, startNum + i * repeatNum);
-            MicroAPI::DataCopyUnAlign(dstAddr1, v5, u0, repeatNum);
+            Reg::Arange((Reg::RegTensor<regType>&)v5, startNum + i * repeatNum);
+            Reg::DataCopyUnAlign(dstAddr1, v5, u0, repeatNum);
         }
-        MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v5, startNum + notReverseLoopNum * repeatNum);
-        MicroAPI::DataCopyUnAlign(dstAddr1, v5, u0, tailNum);
-        MicroAPI::DataCopyUnAlignPost(dstAddr1, u0, 0);
+        Reg::Arange((Reg::RegTensor<regType>&)v5, startNum + notReverseLoopNum * repeatNum);
+        Reg::DataCopyUnAlign(dstAddr1, v5, u0, tailNum);
+        Reg::DataCopyUnAlignPost(dstAddr1, u0, 0);
     }
 }
 
@@ -593,26 +593,26 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(__loc
     auto dstAddr1 = dstAddr;
     __VEC_SCOPE__
     {
-        using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                                  MicroAPI::RegTensor<T>>::type;
+        using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
+                                                  Reg::RegTensor<T>>::type;
         using gatherType = typename GetGatherType<T>::type;
         uint32_t updateNum = gatherNum;
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::RegTensor<gatherType> vd0;
+        Reg::RegTensor<U> v0;
+        Reg::RegTensor<gatherType> vd0;
         RegDstT vd1;
-        MicroAPI::MaskReg pMask;
-        MicroAPI::MaskReg pMaskB8;
+        Reg::MaskReg pMask;
+        Reg::MaskReg pMaskB8;
         for (uint16_t i = 0; i < loop; i++) {
-            pMask = MicroAPI::UpdateMask<U>(updateNum);
-            MicroAPI::DataCopy(v0, indexAddr + i * repeatNum);
+            pMask = Reg::UpdateMask<U>(updateNum);
+            Reg::DataCopy(v0, indexAddr + i * repeatNum);
             if constexpr (sizeof(T) == 1) {
-                MicroAPI::DataCopyGather(vd0, srcAddr1, v0, pMask);
-                MicroAPI::Pack((MicroAPI::RegTensor<uint8_t>&)vd1, vd0);
-                MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pMaskB8, pMask);
-                MicroAPI::DataCopy(dstAddr1 + i * repeatNum, vd1, pMaskB8);
+                Reg::DataCopyGather(vd0, srcAddr1, v0, pMask);
+                Reg::Pack((Reg::RegTensor<uint8_t>&)vd1, vd0);
+                Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
+                Reg::DataCopy(dstAddr1 + i * repeatNum, vd1, pMaskB8);
             } else {
-                MicroAPI::DataCopyGather(vd1, srcAddr1, v0, pMask);
-                MicroAPI::DataCopy(dstAddr1 + i * repeatNum, vd1, pMask);
+                Reg::DataCopyGather(vd1, srcAddr1, v0, pMask);
+                Reg::DataCopy(dstAddr1 + i * repeatNum, vd1, pMask);
             }
         }
     }
@@ -633,27 +633,27 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__
     uint16_t notRevrseLoop = (notRevrseTotalNum + repeatNum - 1) / repeatNum;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int8_t> inReg;
-        AscendC::MicroAPI::MaskReg preg;
+        AscendC::Reg::RegTensor<int8_t> inReg;
+        AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < dimSLoop; i++) {
             auto srcAddr1 = srcAddr + i * dimSStride;
             auto dstAddr1 = dstAddr + (dimSLoop - i - 1) * dimSStride;
             uint32_t updateNum = dimSStride;
             for (uint16_t j = 0; j < dimALoop; j++) {
-                preg = AscendC::MicroAPI::UpdateMask<int8_t>(updateNum);
+                preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
                 auto curSrcAddr = srcAddr1 + j * repeatNum;
                 auto curDstAddr = dstAddr1 + j * repeatNum;
-                AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
-                AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
+                AscendC::Reg::DataCopy(inReg, curSrcAddr);
+                AscendC::Reg::DataCopy(curDstAddr, inReg, preg);
             }
         }
         uint32_t notReverseNum = notRevrseTotalNum;
-        MicroAPI::RegTensor<int8_t> v0;
-        AscendC::MicroAPI::MaskReg preg1;
+        Reg::RegTensor<int8_t> v0;
+        AscendC::Reg::MaskReg preg1;
         for (uint16_t i = 0; i < notRevrseLoop; i++) {
-            preg1 = AscendC::MicroAPI::UpdateMask<int8_t>(notReverseNum);
-            MicroAPI::DataCopy(v0, srcAddr2 + i * repeatNum);
-            MicroAPI::DataCopy(dstAddr2 + i * repeatNum, v0, preg1);
+            preg1 = AscendC::Reg::UpdateMask<int8_t>(notReverseNum);
+            Reg::DataCopy(v0, srcAddr2 + i * repeatNum);
+            Reg::DataCopy(dstAddr2 + i * repeatNum, v0, preg1);
         }
     }
 }

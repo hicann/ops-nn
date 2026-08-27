@@ -28,67 +28,66 @@
 namespace AscendC {
 namespace Vec {
 #ifdef __CCE_AICORE__
-using MicroAPI::RegTensor;
+using Reg::RegTensor;
 
 constexpr static uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
 
 template <typename U = float>
-__aicore__ inline void CalcLr(MicroAPI::RegTensor<U>& regLrT, MicroAPI::MaskReg& pregUp, U beta1PowerUp, U beta2PowerUp,
-                              U lrUp)
+__aicore__ inline void CalcLr(Reg::RegTensor<U>& regLrT, Reg::MaskReg& pregUp, U beta1PowerUp, U beta2PowerUp, U lrUp)
 {
-    MicroAPI::RegTensor<U> regBeta1Power;
-    MicroAPI::RegTensor<U> regBeta2Power;
-    MicroAPI::RegTensor<U> regNegBeta2Power;
-    MicroAPI::RegTensor<U> regAddBeta2Power;
-    MicroAPI::RegTensor<U> regSqrtBeta2Power;
-    MicroAPI::RegTensor<U> regNegBeta1Power;
-    MicroAPI::RegTensor<U> regAddBeta1Power;
-    MicroAPI::RegTensor<U> regMulLrSqrt;
+    Reg::RegTensor<U> regBeta1Power;
+    Reg::RegTensor<U> regBeta2Power;
+    Reg::RegTensor<U> regNegBeta2Power;
+    Reg::RegTensor<U> regAddBeta2Power;
+    Reg::RegTensor<U> regSqrtBeta2Power;
+    Reg::RegTensor<U> regNegBeta1Power;
+    Reg::RegTensor<U> regAddBeta1Power;
+    Reg::RegTensor<U> regMulLrSqrt;
 
-    MicroAPI::Duplicate(regBeta1Power, beta1PowerUp, pregUp);
-    MicroAPI::Duplicate(regBeta2Power, beta2PowerUp, pregUp);
-    MicroAPI::Muls(regNegBeta2Power, regBeta2Power, -1.0f, pregUp);
-    MicroAPI::Adds(regAddBeta2Power, regNegBeta2Power, 1.0f, pregUp);
-    MicroAPI::Sqrt(regSqrtBeta2Power, regAddBeta2Power, pregUp);
-    MicroAPI::Muls(regNegBeta1Power, regBeta1Power, -1.0f, pregUp);
-    MicroAPI::Adds(regAddBeta1Power, regNegBeta1Power, 1.0f, pregUp);
-    MicroAPI::Muls(regMulLrSqrt, regSqrtBeta2Power, lrUp, pregUp);
-    MicroAPI::Div(regLrT, regMulLrSqrt, regAddBeta1Power, pregUp);
+    Reg::Duplicate(regBeta1Power, beta1PowerUp, pregUp);
+    Reg::Duplicate(regBeta2Power, beta2PowerUp, pregUp);
+    Reg::Muls(regNegBeta2Power, regBeta2Power, -1.0f, pregUp);
+    Reg::Adds(regAddBeta2Power, regNegBeta2Power, 1.0f, pregUp);
+    Reg::Sqrt(regSqrtBeta2Power, regAddBeta2Power, pregUp);
+    Reg::Muls(regNegBeta1Power, regBeta1Power, -1.0f, pregUp);
+    Reg::Adds(regAddBeta1Power, regNegBeta1Power, 1.0f, pregUp);
+    Reg::Muls(regMulLrSqrt, regSqrtBeta2Power, lrUp, pregUp);
+    Reg::Div(regLrT, regMulLrSqrt, regAddBeta1Power, pregUp);
 }
 
 template <typename U = float>
-__aicore__ inline void CalcVarTWithLr(MicroAPI::RegTensor<U>& regVarT, MicroAPI::RegTensor<U>& regVar,
-                                      MicroAPI::RegTensor<U>& regLrT, MicroAPI::RegTensor<U>& regMt,
-                                      MicroAPI::RegTensor<U>& regVt, MicroAPI::MaskReg& pregUp, U epsilonUp)
+__aicore__ inline void CalcVarTWithLr(Reg::RegTensor<U>& regVarT, Reg::RegTensor<U>& regVar, Reg::RegTensor<U>& regLrT,
+                                      Reg::RegTensor<U>& regMt, Reg::RegTensor<U>& regVt, Reg::MaskReg& pregUp,
+                                      U epsilonUp)
 {
-    MicroAPI::RegTensor<U> regMulLeft;
-    MicroAPI::RegTensor<U> regSqrtVt;
-    MicroAPI::RegTensor<U> regAddSqrtV;
-    MicroAPI::RegTensor<U> regDivRes;
+    Reg::RegTensor<U> regMulLeft;
+    Reg::RegTensor<U> regSqrtVt;
+    Reg::RegTensor<U> regAddSqrtV;
+    Reg::RegTensor<U> regDivRes;
 
-    MicroAPI::Mul(regMulLeft, regLrT, regMt, pregUp);
-    MicroAPI::Sqrt(regSqrtVt, regVt, pregUp);
-    MicroAPI::Adds(regAddSqrtV, regSqrtVt, epsilonUp, pregUp);
-    MicroAPI::Div(regDivRes, regMulLeft, regAddSqrtV, pregUp);
-    MicroAPI::Sub(regVarT, regVar, regDivRes, pregUp);
+    Reg::Mul(regMulLeft, regLrT, regMt, pregUp);
+    Reg::Sqrt(regSqrtVt, regVt, pregUp);
+    Reg::Adds(regAddSqrtV, regSqrtVt, epsilonUp, pregUp);
+    Reg::Div(regDivRes, regMulLeft, regAddSqrtV, pregUp);
+    Reg::Sub(regVarT, regVar, regDivRes, pregUp);
 }
 
 template <typename U = float>
-__aicore__ inline void CalcMtLookAhead(MicroAPI::RegTensor<U>& regMtAhead, MicroAPI::RegTensor<U>& regMt,
-                                       MicroAPI::RegTensor<U>& regGrad, MicroAPI::MaskReg& pregUp, U beta1Up)
+__aicore__ inline void CalcMtLookAhead(Reg::RegTensor<U>& regMtAhead, Reg::RegTensor<U>& regMt,
+                                       Reg::RegTensor<U>& regGrad, Reg::MaskReg& pregUp, U beta1Up)
 {
-    MicroAPI::RegTensor<U> regBeta1;
-    MicroAPI::RegTensor<U> regMulMtBeta1;
-    MicroAPI::RegTensor<U> regNegBeta1;
-    MicroAPI::RegTensor<U> regSub1Beta1;
-    MicroAPI::RegTensor<U> regMulGrad;
+    Reg::RegTensor<U> regBeta1;
+    Reg::RegTensor<U> regMulMtBeta1;
+    Reg::RegTensor<U> regNegBeta1;
+    Reg::RegTensor<U> regSub1Beta1;
+    Reg::RegTensor<U> regMulGrad;
 
-    MicroAPI::Duplicate(regBeta1, beta1Up, pregUp);
-    MicroAPI::Mul(regMulMtBeta1, regBeta1, regMt, pregUp);
-    MicroAPI::Muls(regNegBeta1, regBeta1, -1.0f, pregUp);
-    MicroAPI::Adds(regSub1Beta1, regNegBeta1, 1.0f, pregUp);
-    MicroAPI::Mul(regMulGrad, regSub1Beta1, regGrad, pregUp);
-    MicroAPI::Add(regMtAhead, regMulMtBeta1, regMulGrad, pregUp);
+    Reg::Duplicate(regBeta1, beta1Up, pregUp);
+    Reg::Mul(regMulMtBeta1, regBeta1, regMt, pregUp);
+    Reg::Muls(regNegBeta1, regBeta1, -1.0f, pregUp);
+    Reg::Adds(regSub1Beta1, regNegBeta1, 1.0f, pregUp);
+    Reg::Mul(regMulGrad, regSub1Beta1, regGrad, pregUp);
+    Reg::Add(regMtAhead, regMulMtBeta1, regMulGrad, pregUp);
 }
 
 #endif
@@ -109,28 +108,27 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, float> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regM;
-            MicroAPI::RegTensor<U> regBeta1;
-            MicroAPI::RegTensor<U> regGrad;
-            MicroAPI::RegTensor<U> regSubMGrad;
-            MicroAPI::RegTensor<U> regMulM;
-            MicroAPI::RegTensor<U> regMt;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regM;
+            Reg::RegTensor<U> regBeta1;
+            Reg::RegTensor<U> regGrad;
+            Reg::RegTensor<U> regSubMGrad;
+            Reg::RegTensor<U> regMulM;
+            Reg::RegTensor<U> regMt;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regM, mAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regM, mAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
-                MicroAPI::Duplicate(regBeta1, beta1, pregUp);
-                MicroAPI::Adds(regBeta1, regBeta1, -1.0f, pregUp);
-                MicroAPI::Sub(regSubMGrad, regM, regGrad, pregUp);
-                MicroAPI::Mul(regMulM, regBeta1, regSubMGrad, pregUp);
-                MicroAPI::Add(regMt, regM, regMulM, pregUp);
+                Reg::Duplicate(regBeta1, beta1, pregUp);
+                Reg::Adds(regBeta1, regBeta1, -1.0f, pregUp);
+                Reg::Sub(regSubMGrad, regM, regGrad, pregUp);
+                Reg::Mul(regMulM, regBeta1, regSubMGrad, pregUp);
+                Reg::Add(regMt, regM, regMulM, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat,
-                                                                               pregUp);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat, pregUp);
             }
         }
 #endif
@@ -153,30 +151,29 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, float> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regV;
-            MicroAPI::RegTensor<U> regBeta2;
-            MicroAPI::RegTensor<U> regGrad;
-            MicroAPI::RegTensor<U> regGradSquare;
-            MicroAPI::RegTensor<U> regSubVGrad;
-            MicroAPI::RegTensor<U> regMulV;
-            MicroAPI::RegTensor<U> regVt;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regV;
+            Reg::RegTensor<U> regBeta2;
+            Reg::RegTensor<U> regGrad;
+            Reg::RegTensor<U> regGradSquare;
+            Reg::RegTensor<U> regSubVGrad;
+            Reg::RegTensor<U> regMulV;
+            Reg::RegTensor<U> regVt;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regV, vAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regV, vAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
-                MicroAPI::Duplicate(regBeta2, beta2, pregUp);
-                MicroAPI::Adds(regBeta2, regBeta2, -1.0f, pregUp);
-                MicroAPI::Mul(regGradSquare, regGrad, regGrad, pregUp);
-                MicroAPI::Sub(regSubVGrad, regV, regGradSquare, pregUp);
-                MicroAPI::Mul(regMulV, regBeta2, regSubVGrad, pregUp);
-                MicroAPI::Add(regVt, regV, regMulV, pregUp);
+                Reg::Duplicate(regBeta2, beta2, pregUp);
+                Reg::Adds(regBeta2, regBeta2, -1.0f, pregUp);
+                Reg::Mul(regGradSquare, regGrad, regGrad, pregUp);
+                Reg::Sub(regSubVGrad, regV, regGradSquare, pregUp);
+                Reg::Mul(regMulV, regBeta2, regSubVGrad, pregUp);
+                Reg::Add(regVt, regV, regMulV, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat,
-                                                                               pregUp);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat, pregUp);
             }
         }
 #endif
@@ -201,26 +198,25 @@ struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, float, float, f
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regVar;
-            MicroAPI::RegTensor<U> regMt;
-            MicroAPI::RegTensor<U> regVt;
-            MicroAPI::RegTensor<U> regVarT;
-            MicroAPI::RegTensor<U> regEpsilon;
-            MicroAPI::RegTensor<U> regLrT;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regVar;
+            Reg::RegTensor<U> regMt;
+            Reg::RegTensor<U> regVt;
+            Reg::RegTensor<U> regVarT;
+            Reg::RegTensor<U> regEpsilon;
+            Reg::RegTensor<U> regLrT;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
 
                 CalcLr<U>(regLrT, pregUp, beta1Power, beta2Power, lr);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMt, regVt, pregUp, epsilon);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
-                                                                               pregUp);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat, pregUp);
             }
         }
 #endif
@@ -247,22 +243,21 @@ struct CalcVarTNesterov : public Ops::Base::Vec::Elemwise9OP<U, U, U, U, U, floa
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regVar, regMt, regVt, regGrad, regVarT, regLrT, regMtAhead;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regVar, regMt, regVt, regGrad, regVarT, regLrT, regMtAhead;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                pregUp = Reg::UpdateMask<U>(totalLen);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
                 CalcLr<U>(regLrT, pregUp, beta1Power, beta2Power, lr);
                 CalcMtLookAhead<U>(regMtAhead, regMt, regGrad, pregUp, beta1);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMtAhead, regVt, pregUp, epsilon);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
-                                                                               pregUp);
+                Reg::DataCopy<U, Reg::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat, pregUp);
             }
         }
 #endif

@@ -24,8 +24,8 @@ using AscendC::LocalTensor;
 using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 using namespace Ops::Base;
 
 // dy is bfloat16, x is bfloat16, dx is bfloat16, max dims in ub is 5 and nddma does not need loops
@@ -108,9 +108,9 @@ private:
             RegTensor<float> vreg8;
             MaskReg preg0;
             uint32_t size = ubSplitSize * tilingDataPtr_->outputStrides[tilingDataPtr_->ubSplitAxis];
-            preg0 = AscendC::MicroAPI::CreateMask<float>();
-            AscendC::MicroAPI::Duplicate<float, AscendC::MicroAPI::MaskMergeMode::ZEROING, float>(
-                vreg2, static_cast<float>(1), preg0);
+            preg0 = AscendC::Reg::CreateMask<float>();
+            AscendC::Reg::Duplicate<float, AscendC::Reg::MaskMergeMode::ZEROING, float>(vreg2, static_cast<float>(1),
+                                                                                        preg0);
             uint16_t vfLoopNum = (ubSplitSize * tilingDataPtr_->outputStrides[tilingDataPtr_->ubSplitAxis] +
                                   (AscendC::VECTOR_REG_WIDTH / 4) - 1) /
                                  (AscendC::VECTOR_REG_WIDTH / 4);
@@ -119,21 +119,21 @@ private:
             __ubuf__ float* bufferTmp1Addr = (__ubuf__ float*)bufferTmp1_.GetPhyAddr();
             __ubuf__ float* bufferTmp2Addr = (__ubuf__ float*)bufferTmp2_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                preg0 = AscendC::Reg::UpdateMask<float>(size);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                     vreg3, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg4, vreg3, preg0);
-                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vreg5, vreg4, static_cast<float>(-1), preg0);
-                AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg6, vreg5, preg0);
-                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vreg7, vreg6, static_cast<float>(1), preg0);
-                AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg8, vreg2, vreg7, preg0);
-                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::Reg::Cast<float, bfloat16_t, castTrait0>(vreg4, vreg3, preg0);
+                AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg5, vreg4,
+                                                                                       static_cast<float>(-1), preg0);
+                AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg6, vreg5, preg0);
+                AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg7, vreg6,
+                                                                                       static_cast<float>(1), preg0);
+                AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg8, vreg2, vreg7, preg0);
+                AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
                     bufferTmp0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4), vreg8, preg0);
-                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
                     bufferTmp1Addr + i * (AscendC::VECTOR_REG_WIDTH / 4), vreg2, preg0);
-                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
                     bufferTmp2Addr + i * (AscendC::VECTOR_REG_WIDTH / 4), vreg4, preg0);
             }
         }
@@ -183,23 +183,23 @@ private:
             __ubuf__ float* bufferTmp1Addr = (__ubuf__ float*)bufferTmp1_.GetPhyAddr();
             __ubuf__ float* bufferTmp2Addr = (__ubuf__ float*)bufferTmp2_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                preg0 = AscendC::Reg::UpdateMask<float>(size);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                     vreg0, bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::Reg::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                     vreg8, bufferTmp0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                     vreg2, bufferTmp1Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg9, vreg2, vreg8, preg0);
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg9, vreg2, vreg8, preg0);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                     vreg4, bufferTmp2Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg10, vreg9, vreg4, preg0);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg11, vreg2, vreg10, preg0);
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg12, vreg8, vreg11, preg0);
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg13, vreg1, vreg12, preg0);
-                AscendC::MicroAPI::Cast<bfloat16_t, float, castTrait1>(vreg14, vreg13, preg0);
-                AscendC::MicroAPI::StoreAlign<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg10, vreg9, vreg4, preg0);
+                AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg11, vreg2, vreg10, preg0);
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg12, vreg8, vreg11, preg0);
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg13, vreg1, vreg12, preg0);
+                AscendC::Reg::Cast<bfloat16_t, float, castTrait1>(vreg14, vreg13, preg0);
+                AscendC::Reg::StoreAlign<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4), vreg14, preg0);
             }
         }
@@ -239,12 +239,12 @@ private:
     LocalTensor<float> bufferTmp0_;
     LocalTensor<float> bufferTmp1_;
     LocalTensor<float> bufferTmp2_;
-    constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
-    constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTrait0 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                           AscendC::Reg::MaskMergeMode::ZEROING,
+                                                           AscendC::RoundMode::CAST_RINT};
 };
 
 } // namespace SiluGrad

@@ -127,25 +127,25 @@ __simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedI
                                                     int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
-    AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
-    AscendC::MicroAPI::RegTensor<INDEX_TYPE> sortedIdxReg, sortedIdxShiftOneReg;
-    AscendC::MicroAPI::MaskReg cmpMask, maskReg, maskHalf;
-    AscendC::MicroAPI::UnalignRegForLoad u0;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
+    AscendC::Reg::RegTensor<int32_t> orderReg, selReg;
+    AscendC::Reg::RegTensor<INDEX_TYPE> sortedIdxReg, sortedIdxShiftOneReg;
+    AscendC::Reg::MaskReg cmpMask, maskReg, maskHalf;
+    AscendC::Reg::UnalignRegForLoad u0;
+    AscendC::Reg::UnalignRegForStore uOut;
     for (uint16_t i = 0; i < loopCnt; ++i) {
-        AscendC::MicroAPI::Arange(orderReg, i * VFLEN_INT64);
-        maskReg = AscendC::MicroAPI::UpdateMask<INDEX_TYPE>(counter);
+        AscendC::Reg::Arange(orderReg, i * VFLEN_INT64);
+        maskReg = AscendC::Reg::UpdateMask<INDEX_TYPE>(counter);
         auto startAddr = sortedInputAddr + i * VFLEN_INT64;
-        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr - 1);
-        AscendC::MicroAPI::LoadUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
-        AscendC::MicroAPI::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
-        AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-        AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
-        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr,
-                                                                                                   selReg, uOut);
+        AscendC::Reg::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(u0, startAddr - 1);
+        AscendC::Reg::LoadUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
+        AscendC::Reg::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
+        AscendC::Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskHalf, cmpMask);
+        AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
+        AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr, selReg,
+                                                                                         uOut);
     }
-    AscendC::MicroAPI::StoreUnAlignPost(uniqueIndicesAddr, uOut);
+    AscendC::Reg::StoreUnAlignPost(uniqueIndicesAddr, uOut);
 }
 
 template <typename INDEX_TYPE>
@@ -154,31 +154,31 @@ __simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedI
                                                     int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
-    AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
-    AscendC::MicroAPI::RegTensor<INDEX_TYPE> sortedIdxReg, sortedIdxShiftOneReg;
-    AscendC::MicroAPI::MaskReg cmpMask, maskReg;
-    AscendC::MicroAPI::UnalignRegForLoad u0;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
+    AscendC::Reg::RegTensor<int32_t> orderReg, selReg;
+    AscendC::Reg::RegTensor<INDEX_TYPE> sortedIdxReg, sortedIdxShiftOneReg;
+    AscendC::Reg::MaskReg cmpMask, maskReg;
+    AscendC::Reg::UnalignRegForLoad u0;
+    AscendC::Reg::UnalignRegForStore uOut;
     for (uint16_t i = 0; i < loopCnt; ++i) {
-        AscendC::MicroAPI::Arange(orderReg, i * VFLEN_INT32);
-        maskReg = AscendC::MicroAPI::UpdateMask<INDEX_TYPE>(counter);
+        AscendC::Reg::Arange(orderReg, i * VFLEN_INT32);
+        maskReg = AscendC::Reg::UpdateMask<INDEX_TYPE>(counter);
         auto startAddr = sortedInputAddr + i * VFLEN_INT32;
-        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr - 1);
-        AscendC::MicroAPI::LoadUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
-        AscendC::MicroAPI::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
-        AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
-        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr,
-                                                                                                   selReg, uOut);
+        AscendC::Reg::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(u0, startAddr - 1);
+        AscendC::Reg::LoadUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
+        AscendC::Reg::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
+        AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
+        AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr, selReg,
+                                                                                         uOut);
     }
-    AscendC::MicroAPI::StoreUnAlignPost(uniqueIndicesAddr, uOut);
+    AscendC::Reg::StoreUnAlignPost(uniqueIndicesAddr, uOut);
 }
 
 template <typename INDEX_TYPE>
 __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr,
                                              uint16_t loopCnt, int64_t dataLen)
 {
-    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
     if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
         ComputeUniqueIdNumInt64<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
     } else if constexpr (std::is_same<int32_t, INDEX_TYPE>::value) {
@@ -195,7 +195,7 @@ __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInpu
     ComputeUniqueIdNumVf<INDEX_TYPE>(
         (__ubuf__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr(),
         (__ubuf__ int32_t*)uniqueIndicesOut.GetPhyAddr(), loopCnt, dataLen);
-    uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
+    uint32_t uniqueIdNum = ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }
 

@@ -23,8 +23,8 @@ using AscendC::LocalTensor;
 using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 // x is bfloat16, y is bfloat16, scale is any value
 class SwishBf16AttrComb0 {
@@ -92,18 +92,18 @@ private:
             __ubuf__ bfloat16_t* bufferIn0Addr = (__ubuf__ bfloat16_t*)bufferIn0_.GetPhyAddr();
             __ubuf__ bfloat16_t* bufferOut0Addr = (__ubuf__ bfloat16_t*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                preg0 = AscendC::Reg::UpdateMask<float>(size);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                     vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
-                AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
-                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                AscendC::Reg::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
+                AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(
                     vreg2, vreg1, static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
-                AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
-                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vreg4, vreg3, static_cast<float>(1.0), preg0);
-                AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
-                AscendC::MicroAPI::Cast<bfloat16_t, float, castTrait1>(vreg6, vreg5, preg0);
-                AscendC::MicroAPI::StoreAlign<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
+                AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg4, vreg3,
+                                                                                       static_cast<float>(1.0), preg0);
+                AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
+                AscendC::Reg::Cast<bfloat16_t, float, castTrait1>(vreg6, vreg5, preg0);
+                AscendC::Reg::StoreAlign<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg6, preg0);
             }
         }
@@ -132,12 +132,12 @@ private:
     TQue<AscendC::QuePosition::VECOUT, 1> queOut0_;
     LocalTensor<bfloat16_t> bufferIn0_;
     LocalTensor<bfloat16_t> bufferOut0_;
-    constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTrait0 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                           AscendC::Reg::MaskMergeMode::ZEROING,
+                                                           AscendC::RoundMode::CAST_RINT};
 };
 } // namespace Swish
 #endif // ASCENDC_SWISH_BF16_ATTR_COMB_0_H_

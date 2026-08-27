@@ -113,19 +113,19 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::Init(GM_ADDR x, GM_ADD
 
 __simd_vf__ inline void GenIndexBufVF(__ubuf__ int32_t* helpAddr, int32_t colFactor)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> v0;
-    AscendC::MicroAPI::RegTensor<int32_t> v1;
-    AscendC::MicroAPI::RegTensor<int32_t> vd1;
-    AscendC::MicroAPI::RegTensor<int32_t> vd2;
-    AscendC::MicroAPI::RegTensor<int32_t> vd3;
+    AscendC::Reg::RegTensor<int32_t> v0;
+    AscendC::Reg::RegTensor<int32_t> v1;
+    AscendC::Reg::RegTensor<int32_t> vd1;
+    AscendC::Reg::RegTensor<int32_t> vd2;
+    AscendC::Reg::RegTensor<int32_t> vd3;
 
-    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(v1, colFactor, preg);
-    AscendC::MicroAPI::Arange(v0, 0);
-    AscendC::MicroAPI::Div(vd1, v0, v1, preg);
-    AscendC::MicroAPI::Mul(vd2, vd1, v1, preg);
-    AscendC::MicroAPI::Sub(vd3, v0, vd2, preg);
-    AscendC::MicroAPI::StoreAlign(helpAddr, vd3, preg);
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(v1, colFactor, preg);
+    AscendC::Reg::Arange(v0, 0);
+    AscendC::Reg::Div(vd1, v0, v1, preg);
+    AscendC::Reg::Mul(vd2, vd1, v1, preg);
+    AscendC::Reg::Sub(vd3, v0, vd2, preg);
+    AscendC::Reg::StoreAlign(helpAddr, vd3, preg);
 }
 
 template <typename INDICES_T, const bool NIS>
@@ -171,15 +171,15 @@ __aicore__ inline void Gatherv2GaAllLoad<INDICES_T, NIS>::xProcess(int32_t gaCor
 __simd_vf__ inline void InitializationXVF(__ubuf__ int8_t* xAddr, uint32_t aSizeAligned, uint32_t gaOffset,
                                           uint16_t computeSize, uint16_t repeatimes, int32_t xBufGaNum)
 {
-    AscendC::MicroAPI::RegTensor<int8_t> zeroConstReg;
-    AscendC::MicroAPI::Duplicate(zeroConstReg, int8_t(0));
-    MicroAPI::MaskReg preg;
+    AscendC::Reg::RegTensor<int8_t> zeroConstReg;
+    AscendC::Reg::Duplicate(zeroConstReg, int8_t(0));
+    Reg::MaskReg preg;
     for (uint16_t g = 0; g < static_cast<uint16_t>(xBufGaNum); g++) {
         uint32_t sreg = aSizeAligned;
         for (uint16_t r = 0; r < repeatimes; r++) {
-            preg = MicroAPI::UpdateMask<int8_t>(sreg);
-            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-            MicroAPI::StoreAlign(xAddr, zeroConstReg, offset, preg);
+            preg = Reg::UpdateMask<int8_t>(sreg);
+            Reg::AddrReg offset = Reg::CreateAddrReg<int8_t>(r, computeSize);
+            Reg::StoreAlign(xAddr, zeroConstReg, offset, preg);
         }
         xAddr += gaOffset;
     }
@@ -263,18 +263,18 @@ __simd_vf__ inline void GatherProcessVF(__ubuf__ int8_t* xAddr, __ubuf__ int8_t*
                                         uint16_t computeSize, uint16_t repeatimes, uint32_t aSize,
                                         uint32_t aSizeAligned)
 {
-    MicroAPI::RegTensor<int8_t> vregTemp;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<int8_t> vregTemp;
+    Reg::MaskReg preg;
 
     for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
         uint32_t indicesValue = (curIndicesAddr[indices]);
         uint32_t sreg = aSize;
         __ubuf__ int8_t* curXAddr = xAddr + indicesValue;
         for (uint16_t r = 0; r < repeatimes; r++) {
-            preg = MicroAPI::UpdateMask<int8_t>(sreg);
-            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-            MicroAPI::LoadAlign(vregTemp, curXAddr, offset);
-            MicroAPI::StoreAlign(curYAddr, vregTemp, offset, preg);
+            preg = Reg::UpdateMask<int8_t>(sreg);
+            Reg::AddrReg offset = Reg::CreateAddrReg<int8_t>(r, computeSize);
+            Reg::LoadAlign(vregTemp, curXAddr, offset);
+            Reg::StoreAlign(curYAddr, vregTemp, offset, preg);
         }
         curYAddr += aSizeAligned;
     }
@@ -299,8 +299,8 @@ __simd_vf__ inline void RepeatOneVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ i
                                     int32_t indicesNumCurPro, uint16_t gaNumPro, uint32_t aSize, uint32_t aSizeAligned,
                                     uint32_t gaOffset, uint32_t yOffset)
 {
-    MicroAPI::RegTensor<int8_t> vregTemp;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<int8_t> vregTemp;
+    Reg::MaskReg preg;
 
     for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
         uint32_t indicesValue = (curIndicesAddr[indices]);
@@ -308,9 +308,9 @@ __simd_vf__ inline void RepeatOneVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__ i
         __ubuf__ int8_t* curXAddr = xAddr + indicesValue;
         for (uint16_t ga = 0; ga < gaNumPro; ga++) {
             uint32_t sreg = aSize;
-            preg = MicroAPI::UpdateMask<int8_t>(sreg);
-            MicroAPI::LoadAlign(vregTemp, curXAddr);
-            MicroAPI::StoreAlign(curYAddr, vregTemp, preg);
+            preg = Reg::UpdateMask<int8_t>(sreg);
+            Reg::LoadAlign(vregTemp, curXAddr);
+            Reg::StoreAlign(curYAddr, vregTemp, preg);
             curXAddr += gaOffset;
             curYAddr += yOffset;
         }
@@ -323,8 +323,8 @@ __simd_vf__ inline void RepeatOtherVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__
                                       uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset, uint16_t repeatimes,
                                       uint16_t computeSize)
 {
-    MicroAPI::RegTensor<int8_t> vregTemp;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<int8_t> vregTemp;
+    Reg::MaskReg preg;
 
     for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
         uint32_t indicesValue = (curIndicesAddr[indices]);
@@ -333,10 +333,10 @@ __simd_vf__ inline void RepeatOtherVF(__ubuf__ int32_t* curIndicesAddr, __ubuf__
         for (uint16_t ga = 0; ga < gaNumPro; ga++) {
             uint32_t sreg = aSize;
             for (uint16_t r = 0; r < repeatimes; r++) {
-                preg = MicroAPI::UpdateMask<int8_t>(sreg);
-                MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-                MicroAPI::LoadAlign(vregTemp, curXAddr, offset);
-                MicroAPI::StoreAlign(curYAddr, vregTemp, offset, preg);
+                preg = Reg::UpdateMask<int8_t>(sreg);
+                Reg::AddrReg offset = Reg::CreateAddrReg<int8_t>(r, computeSize);
+                Reg::LoadAlign(vregTemp, curXAddr, offset);
+                Reg::StoreAlign(curYAddr, vregTemp, offset, preg);
             }
             curXAddr += gaOffset;
             curYAddr += yOffset;
@@ -373,39 +373,38 @@ __simd_vf__ inline void GatherProcessWithGA2VF(__ubuf__ int32_t* curIndicesAddr,
                                                uint16_t aAlignedLoopNum, uint16_t aNumPerLoop, uint16_t pLoopNum,
                                                uint32_t blockStride, int32_t yInnerOffset, uint32_t tailANum)
 {
-    MicroAPI::RegTensor<uint32_t> indicesReg;
-    MicroAPI::RegTensor<uint32_t> upIndex;
-    MicroAPI::RegTensor<uint32_t> curUpIndex;
+    Reg::RegTensor<uint32_t> indicesReg;
+    Reg::RegTensor<uint32_t> upIndex;
+    Reg::RegTensor<uint32_t> curUpIndex;
 
-    MicroAPI::RegTensor<int32_t> vd0;
+    Reg::RegTensor<int32_t> vd0;
 
-    MicroAPI::MaskReg preg = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<int32_t>(tailANum);
+    Reg::MaskReg preg = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+    Reg::MaskReg pTail = Reg::UpdateMask<int32_t>(tailANum);
 
     __ubuf__ int32_t* curXAddr = (__ubuf__ int32_t*)xAddr;
     __ubuf__ int32_t* pYAddr = (__ubuf__ int32_t*)yAddr;
-    MicroAPI::LoadAlign<uint32_t>(upIndex, helpAddr);
+    Reg::LoadAlign<uint32_t>(upIndex, helpAddr);
     for (uint16_t ga = 0; ga < pLoopNum; ga++) {
-        MicroAPI::Move(curUpIndex, upIndex, preg);
+        Reg::Move(curUpIndex, upIndex, preg);
         __ubuf__ int32_t* aYAddr = pYAddr;
         for (uint16_t r = 0; r < aAlignedLoopNum; r++) {
             __ubuf__ uint32_t* indicesAddr = (__ubuf__ uint32_t*)curIndicesAddr;
             __ubuf__ int32_t* curYAddr = aYAddr;
             for (uint16_t indices = 0; indices < indicesLoopNum; indices++) {
-                MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_E2B_B32>(indicesReg, indicesAddr);
+                Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_E2B_B32>(indicesReg, indicesAddr);
 
-                MicroAPI::Add(indicesReg, indicesReg, curUpIndex, preg);
-                MicroAPI::Gather(vd0, curXAddr, indicesReg, preg);
-                MicroAPI::StoreAlign<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride,
-                                                                                       preg);
+                Reg::Add(indicesReg, indicesReg, curUpIndex, preg);
+                Reg::Gather(vd0, curXAddr, indicesReg, preg);
+                Reg::StoreAlign<int32_t, Reg::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride, preg);
                 indicesAddr += vRegBlockNum;
                 curYAddr += yInnerOffset;
             }
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_E2B_B32>(indicesReg, indicesAddr);
-            MicroAPI::Add(indicesReg, indicesReg, curUpIndex, pTail);
-            MicroAPI::Gather(vd0, curXAddr, indicesReg, pTail);
-            MicroAPI::StoreAlign<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride, pTail);
-            MicroAPI::Adds(curUpIndex, curUpIndex, aNumPerLoop, preg);
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_E2B_B32>(indicesReg, indicesAddr);
+            Reg::Add(indicesReg, indicesReg, curUpIndex, pTail);
+            Reg::Gather(vd0, curXAddr, indicesReg, pTail);
+            Reg::StoreAlign<int32_t, Reg::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride, pTail);
+            Reg::Adds(curUpIndex, curUpIndex, aNumPerLoop, preg);
             aYAddr += aNumPerLoop;
         }
         curXAddr += gaOffset;
@@ -449,44 +448,44 @@ template <typename INDICES_T, const bool NIS>
 __simd_vf__ inline void FixIndicesVF(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro, int32_t aSizeAligned,
                                      int32_t gatherDimSize, uint16_t computeSizeT, uint16_t repeatimes)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-    AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
+    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
+    AscendC::Reg::Duplicate(zeroConstReg, int32_t(0));
 
-    AscendC::MicroAPI::RegTensor<int32_t> limitConstReg;
-    AscendC::MicroAPI::Duplicate(limitConstReg, int32_t(gatherDimSize));
+    AscendC::Reg::RegTensor<int32_t> limitConstReg;
+    AscendC::Reg::Duplicate(limitConstReg, int32_t(gatherDimSize));
 
-    AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
-    AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
+    AscendC::Reg::RegTensor<int32_t> indicesReg;
+    AscendC::Reg::RegTensor<int32_t> tmpReg;
 
     uint32_t indicesMask = indicesNumPro;
-    AscendC::MicroAPI::MaskReg fixMask;
+    AscendC::Reg::MaskReg fixMask;
     for (uint16_t i = 0; i < repeatimes; i++) {
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
+        AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<int32_t>(indicesMask);
         if constexpr (std::is_same<INDICES_T, int32_t>::value) {
-            AscendC::MicroAPI::LoadAlign(indicesReg, indicesAddr + i * computeSizeT);
+            AscendC::Reg::LoadAlign(indicesReg, indicesAddr + i * computeSizeT);
         } else {
-            AscendC::MicroAPI::RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo> indicesRegTwo;
-            AscendC::MicroAPI::LoadAlign(indicesRegTwo, indicesAddr + i * computeSizeT);
-            indicesReg = (AscendC::MicroAPI::RegTensor<int32_t>&)indicesRegTwo.reg[0];
+            AscendC::Reg::RegTensor<int64_t, AscendC::Reg::RegTraitNumTwo> indicesRegTwo;
+            AscendC::Reg::LoadAlign(indicesRegTwo, indicesAddr + i * computeSizeT);
+            indicesReg = (AscendC::Reg::RegTensor<int32_t>&)indicesRegTwo.reg[0];
         }
 
         if constexpr (NIS) {
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(fixMask, indicesReg, zeroConstReg, preg);
-            AscendC::MicroAPI::Adds(tmpReg, indicesReg, gatherDimSize, fixMask); // 补偿负索引场景
-            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+            AscendC::Reg::Compare<int32_t, CMPMODE::LT>(fixMask, indicesReg, zeroConstReg, preg);
+            AscendC::Reg::Adds(tmpReg, indicesReg, gatherDimSize, fixMask); // 补偿负索引场景
+            AscendC::Reg::Move<int32_t, AscendC::Reg::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
         }
 
-        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(fixMask, indicesReg, zeroConstReg, preg);
-        AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿负越界场景
-        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+        AscendC::Reg::Compare<int32_t, CMPMODE::LT>(fixMask, indicesReg, zeroConstReg, preg);
+        AscendC::Reg::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿负越界场景
+        AscendC::Reg::Move<int32_t, AscendC::Reg::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
 
-        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(fixMask, indicesReg, limitConstReg, preg);
-        AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿正越界场景
-        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+        AscendC::Reg::Compare<int32_t, CMPMODE::GE>(fixMask, indicesReg, limitConstReg, preg);
+        AscendC::Reg::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿正越界场景
+        AscendC::Reg::Move<int32_t, AscendC::Reg::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
 
-        AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
-        AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-        AscendC::MicroAPI::StoreAlign((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+        AscendC::Reg::Adds(indicesReg, indicesReg, 1, preg);
+        AscendC::Reg::Muls(indicesReg, indicesReg, aSizeAligned, preg);
+        AscendC::Reg::StoreAlign((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
     }
 }
 

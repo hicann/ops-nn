@@ -212,33 +212,33 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
     __ubuf__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<SELF_TYPE> valueReg;
-        AscendC::MicroAPI::RegTensor<SELF_TYPE> valueSumReg;
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> valueCastReg;
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> castsumReg;
-        AscendC::MicroAPI::MaskReg valueMaskReg;
+        AscendC::Reg::RegTensor<SELF_TYPE> valueReg;
+        AscendC::Reg::RegTensor<SELF_TYPE> valueSumReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> valueCastReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> castsumReg;
+        AscendC::Reg::MaskReg valueMaskReg;
         uint32_t maskLen = static_cast<uint32_t>(colLen);
         for (uint16_t i = 0; i < loopCnt; i++) {
-            valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskLen);
-            AscendC::MicroAPI::AddrReg valueAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
+            valueMaskReg = AscendC::Reg::UpdateMask<CAST_TYPE>(maskLen);
+            AscendC::Reg::AddrReg valueAddrOfst = AscendC::Reg::CreateAddrReg<SELF_TYPE>(i, vfLen);
             if constexpr (IS_CAST) {
-                AscendC::MicroAPI::LoadAlign<SELF_TYPE, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    valueReg, valueAddr, valueAddrOfst);
-                AscendC::MicroAPI::AddrReg castSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-                AscendC::MicroAPI::LoadAlign(castsumReg, castSumAddr, castSumAddrOfst);
-                AscendC::MicroAPI::Cast<CAST_TYPE, SELF_TYPE, castTrait16ToFloat>(valueCastReg, valueReg, valueMaskReg);
-                AscendC::MicroAPI::Add(castsumReg, valueCastReg, castsumReg, valueMaskReg);
-                AscendC::MicroAPI::StoreAlign(castSumAddr, castsumReg, castSumAddrOfst, valueMaskReg);
+                AscendC::Reg::LoadAlign<SELF_TYPE, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(valueReg, valueAddr,
+                                                                                            valueAddrOfst);
+                AscendC::Reg::AddrReg castSumAddrOfst = AscendC::Reg::CreateAddrReg<CAST_TYPE>(i, vfLen);
+                AscendC::Reg::LoadAlign(castsumReg, castSumAddr, castSumAddrOfst);
+                AscendC::Reg::Cast<CAST_TYPE, SELF_TYPE, castTrait16ToFloat>(valueCastReg, valueReg, valueMaskReg);
+                AscendC::Reg::Add(castsumReg, valueCastReg, castsumReg, valueMaskReg);
+                AscendC::Reg::StoreAlign(castSumAddr, castsumReg, castSumAddrOfst, valueMaskReg);
             } else {
-                AscendC::MicroAPI::LoadAlign(valueReg, valueAddr, valueAddrOfst);
-                AscendC::MicroAPI::AddrReg valueSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-                AscendC::MicroAPI::LoadAlign(valueSumReg, valueSumAddr, valueSumAddrOfst);
+                AscendC::Reg::LoadAlign(valueReg, valueAddr, valueAddrOfst);
+                AscendC::Reg::AddrReg valueSumAddrOfst = AscendC::Reg::CreateAddrReg<SELF_TYPE>(i, vfLen);
+                AscendC::Reg::LoadAlign(valueSumReg, valueSumAddr, valueSumAddrOfst);
                 if constexpr (IsSameType<SELF_TYPE, bool>::value) {
-                    AscendC::MicroAPI::Or(valueSumReg, valueReg, valueSumReg, valueMaskReg);
+                    AscendC::Reg::Or(valueSumReg, valueReg, valueSumReg, valueMaskReg);
                 } else {
-                    AscendC::MicroAPI::Add(valueSumReg, valueReg, valueSumReg, valueMaskReg);
+                    AscendC::Reg::Add(valueSumReg, valueReg, valueSumReg, valueMaskReg);
                 }
-                AscendC::MicroAPI::StoreAlign(valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
+                AscendC::Reg::StoreAlign(valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
             }
         }
     }
@@ -506,20 +506,20 @@ __aicore__ inline void IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMUL
     uint32_t maskCount = static_cast<uint32_t>(dataLen);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> valueReg;
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> sumReg;
-        AscendC::MicroAPI::MaskReg valueMaskReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> valueReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> sumReg;
+        AscendC::Reg::MaskReg valueMaskReg;
         for (uint16_t i = 0; i < loopCnt; i++) {
-            valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskCount);
-            AscendC::MicroAPI::AddrReg addrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-            AscendC::MicroAPI::LoadAlign(valueReg, valueAddr, addrOfst);
-            AscendC::MicroAPI::LoadAlign(sumReg, valueSumAddr, addrOfst);
+            valueMaskReg = AscendC::Reg::UpdateMask<CAST_TYPE>(maskCount);
+            AscendC::Reg::AddrReg addrOfst = AscendC::Reg::CreateAddrReg<CAST_TYPE>(i, vfLen);
+            AscendC::Reg::LoadAlign(valueReg, valueAddr, addrOfst);
+            AscendC::Reg::LoadAlign(sumReg, valueSumAddr, addrOfst);
             if constexpr (IsSameType<SELF_TYPE, bool>::value) {
-                AscendC::MicroAPI::Or(sumReg, sumReg, valueReg, valueMaskReg);
+                AscendC::Reg::Or(sumReg, sumReg, valueReg, valueMaskReg);
             } else {
-                AscendC::MicroAPI::Add(sumReg, sumReg, valueReg, valueMaskReg);
+                AscendC::Reg::Add(sumReg, sumReg, valueReg, valueMaskReg);
             }
-            AscendC::MicroAPI::StoreAlign(valueSumAddr, sumReg, addrOfst, valueMaskReg);
+            AscendC::Reg::StoreAlign(valueSumAddr, sumReg, addrOfst, valueMaskReg);
         }
     }
     valueQue_.FreeTensor(valueLocal);
@@ -539,18 +539,17 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
     uint32_t maskCount = static_cast<uint32_t>(dataLen);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> valueSumReg;
-        AscendC::MicroAPI::RegTensor<SELF_TYPE> valueResultReg;
-        AscendC::MicroAPI::MaskReg valueMaskReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> valueSumReg;
+        AscendC::Reg::RegTensor<SELF_TYPE> valueResultReg;
+        AscendC::Reg::MaskReg valueMaskReg;
         for (uint16_t i = 0; i < loopCnt; i++) {
-            valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskCount);
-            AscendC::MicroAPI::AddrReg addrOfstCast = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-            AscendC::MicroAPI::AddrReg addrOfstSelf = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-            AscendC::MicroAPI::LoadAlign(valueSumReg, valueSumAddr, addrOfstCast);
-            AscendC::MicroAPI::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueResultReg, valueSumReg,
-                                                                              valueMaskReg);
-            AscendC::MicroAPI::StoreAlign<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(
-                valueResultAddr, valueResultReg, addrOfstSelf, valueMaskReg);
+            valueMaskReg = AscendC::Reg::UpdateMask<CAST_TYPE>(maskCount);
+            AscendC::Reg::AddrReg addrOfstCast = AscendC::Reg::CreateAddrReg<CAST_TYPE>(i, vfLen);
+            AscendC::Reg::AddrReg addrOfstSelf = AscendC::Reg::CreateAddrReg<SELF_TYPE>(i, vfLen);
+            AscendC::Reg::LoadAlign(valueSumReg, valueSumAddr, addrOfstCast);
+            AscendC::Reg::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueResultReg, valueSumReg, valueMaskReg);
+            AscendC::Reg::StoreAlign<SELF_TYPE, Reg::StoreDist::DIST_PACK_B32>(valueResultAddr, valueResultReg,
+                                                                               addrOfstSelf, valueMaskReg);
         }
     }
     valueSumQue_.EnQue(valueResult);

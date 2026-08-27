@@ -23,9 +23,9 @@
 namespace NonZeroWithValue {
 using namespace Ops::Base;
 using namespace AscendC;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 
 constexpr int32_t NZV_ONE_BLOCK = 32;
 constexpr int32_t NZV_ADD_UB_SIZE = 72 * 32;
@@ -116,29 +116,25 @@ protected:
             addComReg = UpdateMask<uint32_t>(addMask);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 preg = UpdateMask<TValue>(sreg);
-                AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<TValue>(i, repeatElm);
+                AscendC::Reg::AddrReg srcOffset = AscendC::Reg::CreateAddrReg<TValue>(i, repeatElm);
                 DataCopy(xSrcReg, xUbPtr, srcOffset);
                 Select(xSrcReg, xSrcReg, zeroXReg, preg);
                 CompareScalar<TValue, CMPMODE::NE>(cmpReg, xSrcReg, (TValue)0, preg);
                 Select(selectReg, src1Reg, src0Reg, cmpReg);
                 if constexpr (sizeof(TValue) == 1) {
-                    AscendC::MicroAPI::UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u16a,
-                                                                                                         selectReg);
-                    AscendC::MicroAPI::UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u16b,
-                                                                                                          selectReg);
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32a, u16a);
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32b, u16a);
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32c, u16b);
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32d, u16b);
+                    AscendC::Reg::UnPack<uint16_t, uint8_t, AscendC::Reg::HighLowPart::LOWEST>(u16a, selectReg);
+                    AscendC::Reg::UnPack<uint16_t, uint8_t, AscendC::Reg::HighLowPart::HIGHEST>(u16b, selectReg);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::LOWEST>(u32a, u16a);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::HIGHEST>(u32b, u16a);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::LOWEST>(u32c, u16b);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::HIGHEST>(u32d, u16b);
                     Add(addReg, u32a, addReg, addComReg);
                     Add(addReg, u32b, addReg, addComReg);
                     Add(addReg, u32c, addReg, addComReg);
                     Add(addReg, u32d, addReg, addComReg);
                 } else {
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32a,
-                                                                                                          selectReg);
-                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32b,
-                                                                                                           selectReg);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::LOWEST>(u32a, selectReg);
+                    AscendC::Reg::UnPack<uint32_t, uint16_t, AscendC::Reg::HighLowPart::HIGHEST>(u32b, selectReg);
                     Add(addReg, u32a, addReg, addComReg);
                     Add(addReg, u32b, addReg, addComReg);
                 }
@@ -178,15 +174,15 @@ protected:
             addComReg = UpdateMask<uint32_t>(addMask);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 preg = UpdateMask<int64_t>(sreg);
-                AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, repeatElm);
+                AscendC::Reg::AddrReg srcOffset = AscendC::Reg::CreateAddrReg<int64_t>(i, repeatElm);
                 DataCopy(xSrcReg, xUbPtr, srcOffset);
                 if constexpr (isFp) {
-                    AscendC::MicroAPI::ShiftLefts(shiftReg, xSrcReg, (int16_t)1, preg); // 丢符号位:-0.0/+0.0 都→0
+                    AscendC::Reg::ShiftLefts(shiftReg, xSrcReg, (int16_t)1, preg); // 丢符号位:-0.0/+0.0 都→0
                     CompareScalar<int64_t, CMPMODE::NE>(cmpReg, shiftReg, (int64_t)0, preg);
                 } else {
                     CompareScalar<int64_t, CMPMODE::NE>(cmpReg, xSrcReg, (int64_t)0, preg);
                 }
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(packedMask, cmpReg);
+                AscendC::Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(packedMask, cmpReg);
                 Select(selectReg, src1Reg, src0Reg, packedMask);
                 Add(addReg, selectReg, addReg, addComReg);
             }
@@ -229,7 +225,7 @@ protected:
                 addComReg = UpdateMask<uint32_t>(addMask);
                 for (uint16_t i = 0; i < repeatTimes; i++) {
                     preg = UpdateMask<TValue>(sreg);
-                    AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, repeatElm);
+                    AscendC::Reg::AddrReg srcOffset = AscendC::Reg::CreateAddrReg<uint32_t>(i, repeatElm);
                     DataCopy(xSrcReg, xUbPtr, srcOffset);
                     // DataCopyPad 仅载入 computeNum 个元素,VF 读满整寄存器 → 尾部车道为脏 UB。
                     // 显式将非活跃车道(超出本次 preg)清 0,避免脏非零值被误计数/误压缩。

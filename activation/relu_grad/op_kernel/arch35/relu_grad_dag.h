@@ -61,7 +61,7 @@ struct ReluGradCastDag {
     using input_x1_cast = Bind<Vec::Cast<half, T, CAST_MODE_NONE>, input_x1>;
     using select_cast = Bind<Vec::Cast<half, T, CAST_MODE_NONE>, select>;
     using mul_cast = Bind<Vec::Mul<half>, input_x1_cast, select_cast>;
-    // microapi mul not support uint8/int8, so need to cast
+    // reg mul not support uint8/int8, so need to cast
     using mul = Bind<Vec::Cast<T, half, CAST_MODE_RINT>, mul_cast>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, mul>;
     // 指定输出节点

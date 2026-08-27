@@ -146,15 +146,15 @@ public:
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg maskReg;
-            MicroAPI::RegTensor<float> inRegToFloat;
-            MicroAPI::RegTensor<float> reduceFloat;
-            MicroAPI::RegTensor<float> selectReg;
-            MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+            Reg::MaskReg maskReg;
+            Reg::RegTensor<float> inRegToFloat;
+            Reg::RegTensor<float> reduceFloat;
+            Reg::RegTensor<float> selectReg;
+            Reg::MaskReg pregMain = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
             Duplicate(reduceFloat, (float)0.0, pregMain);
             Duplicate(selectReg, (float)0.0, pregMain);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = MicroAPI::UpdateMask<float>(sreg);
+                maskReg = Reg::UpdateMask<float>(sreg);
                 ops::LoadOneTensorForDtypeT<float>(inUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);
                 // 抛弃后面的脏数据
                 Select(inRegToFloat, inRegToFloat, selectReg, maskReg);
@@ -205,14 +205,14 @@ public:
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg maskReg;
-            MicroAPI::RegTensor<float> inRegToFloat;
-            MicroAPI::RegTensor<float> reduceFloat;
-            MicroAPI::RegTensor<float> outFloat;
-            MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+            Reg::MaskReg maskReg;
+            Reg::RegTensor<float> inRegToFloat;
+            Reg::RegTensor<float> reduceFloat;
+            Reg::RegTensor<float> outFloat;
+            Reg::MaskReg pregMain = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
             Duplicate(reduceFloat, (float)0.0, pregMain);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = MicroAPI::UpdateMask<float>(sreg);
+                maskReg = Reg::UpdateMask<float>(sreg);
                 ops::LoadOneTensorForDtypeT<T>(inUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);
                 if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
                     Abs(inRegToFloat, inRegToFloat, maskReg);
@@ -230,19 +230,19 @@ public:
             } else {
                 Reduce<ReduceType::SUM>(reduceFloat, reduceFloat, pregMain);
             }
-            MicroAPI::MaskReg pregMarge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
+            Reg::MaskReg pregMarge = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
             if constexpr (isFirst) {
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)(outUbAddr + outOffset), reduceFloat, pregMarge);
             } else {
-                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(outFloat,
-                                                                            (__ubuf__ float*)(outUbAddr + outOffset));
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(outFloat,
+                                                                       (__ubuf__ float*)(outUbAddr + outOffset));
                 if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
                     Max(outFloat, outFloat, reduceFloat, pregMarge);
                 } else {
                     Add(outFloat, outFloat, reduceFloat, pregMarge);
                 }
-                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)(outUbAddr + outOffset), outFloat, pregMarge);
             }
         }

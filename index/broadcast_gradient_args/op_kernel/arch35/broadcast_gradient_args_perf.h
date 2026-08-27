@@ -77,42 +77,39 @@ public:
         __VEC_SCOPE__
         {
             uint32_t srg0 = xLen;
-            MicroAPI::RegTensor<int32_t> init_index_reg, calc_index_reg, x_int32_reg, dst_reg;
-            MicroAPI::RegTensor<T> in_reg;
-            MicroAPI::UnalignRegForStore ureg;
-            MicroAPI::MaskReg maskCompare;
-            MicroAPI::MaskReg maskCalc;
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-            MicroAPI::Arange(init_index_reg, 0);
+            Reg::RegTensor<int32_t> init_index_reg, calc_index_reg, x_int32_reg, dst_reg;
+            Reg::RegTensor<T> in_reg;
+            Reg::UnalignRegForStore ureg;
+            Reg::MaskReg maskCompare;
+            Reg::MaskReg maskCalc;
+            Reg::MaskReg maskAll = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+            Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+            Reg::Arange(init_index_reg, 0);
             if constexpr (IsSameType<T, int64_t>::value) {
                 for (uint16_t i = 0; i < vLoopInt64; i++) {
-                    MicroAPI::Adds(calc_index_reg, init_index_reg, i * vlInt64, maskAll);
-                    MicroAPI::LoadAlign(in_reg, x + i * vlInt64);
-                    maskCalc = MicroAPI::UpdateMask<int64_t>(srg0);
+                    Reg::Adds(calc_index_reg, init_index_reg, i * vlInt64, maskAll);
+                    Reg::LoadAlign(in_reg, x + i * vlInt64);
+                    maskCalc = Reg::UpdateMask<int64_t>(srg0);
                     // mask未选择位置会置0，对尾块无影响
-                    MicroAPI::Cast<int32_t, int64_t, castTraitB642B32>(x_int32_reg, in_reg, maskCalc);
-                    MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)x_int32_reg,
-                                   (MicroAPI::RegTensor<uint64_t>&)x_int32_reg);
-                    MicroAPI::Compares<int32_t, CMPMODE::EQ>(maskCompare, x_int32_reg, 1, maskAll);
-                    MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
-                                                                                    maskCompare);
-                    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
+                    Reg::Cast<int32_t, int64_t, castTraitB642B32>(x_int32_reg, in_reg, maskCalc);
+                    Reg::Pack((Reg::RegTensor<uint32_t>&)x_int32_reg, (Reg::RegTensor<uint64_t>&)x_int32_reg);
+                    Reg::Compares<int32_t, CMPMODE::EQ>(maskCompare, x_int32_reg, 1, maskAll);
+                    Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg, maskCompare);
+                    Reg::StoreUnAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             } else {
                 for (uint16_t i = 0; i < vLoopT; i++) {
-                    maskCalc = MicroAPI::UpdateMask<int32_t>(srg0);
-                    MicroAPI::Adds(calc_index_reg, init_index_reg, i * vlInput, maskAll);
-                    MicroAPI::LoadAlign(in_reg, x + i * vlInput);
-                    MicroAPI::Compares<int32_t, CMPMODE::EQ>(maskCompare, in_reg, 1, maskCalc);
-                    MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
-                                                                                    maskCompare);
-                    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
+                    maskCalc = Reg::UpdateMask<int32_t>(srg0);
+                    Reg::Adds(calc_index_reg, init_index_reg, i * vlInput, maskAll);
+                    Reg::LoadAlign(in_reg, x + i * vlInput);
+                    Reg::Compares<int32_t, CMPMODE::EQ>(maskCompare, in_reg, 1, maskCalc);
+                    Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg, maskCompare);
+                    Reg::StoreUnAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             }
-            MicroAPI::StoreUnAlignPost(y, ureg);
+            Reg::StoreUnAlignPost(y, ureg);
         }
-        return ((MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
+        return ((Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
     }
 
     __aicore__ inline void CheckInput(__ubuf__ T* x1, __ubuf__ T* x2, __ubuf__ T* invalidFlag, __ubuf__ T* equalFlag,
@@ -120,44 +117,44 @@ public:
     {
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<T> x1_reg, x2_reg, one_reg, zero_reg, eq_flag_reg, bool_reg1, bool_reg2, out_eq_reg,
+            Reg::RegTensor<T> x1_reg, x2_reg, one_reg, zero_reg, eq_flag_reg, bool_reg1, bool_reg2, out_eq_reg,
                 out_invalid_reg;
-            MicroAPI::MaskReg maskCompare0, maskCompare1, maskCompare2;
-            MicroAPI::MaskReg maskCalc;
-            MicroAPI::MaskReg maskMerge = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Duplicate(one_reg, 1, maskAll);
-            MicroAPI::Duplicate(zero_reg, 0, maskAll);
-            MicroAPI::Duplicate(out_eq_reg, 0, maskAll);
-            MicroAPI::Duplicate(out_invalid_reg, 0, maskAll);
+            Reg::MaskReg maskCompare0, maskCompare1, maskCompare2;
+            Reg::MaskReg maskCalc;
+            Reg::MaskReg maskMerge = Reg::CreateMask<T, Reg::MaskPattern::VL1>();
+            Reg::MaskReg maskAll = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+            Reg::Duplicate(one_reg, 1, maskAll);
+            Reg::Duplicate(zero_reg, 0, maskAll);
+            Reg::Duplicate(out_eq_reg, 0, maskAll);
+            Reg::Duplicate(out_invalid_reg, 0, maskAll);
             for (uint16_t i = 0; i < vLoopT; i++) {
-                maskCalc = MicroAPI::UpdateMask<T>(calcLen);
-                MicroAPI::LoadAlign(x1_reg, x1 + i * vlInput);
-                MicroAPI::LoadAlign(x2_reg, x2 + i * vlInput);
+                maskCalc = Reg::UpdateMask<T>(calcLen);
+                Reg::LoadAlign(x1_reg, x1 + i * vlInput);
+                Reg::LoadAlign(x2_reg, x2 + i * vlInput);
                 // x1 x2不等的维度标识为true
-                MicroAPI::Compare<T, CMPMODE::NE>(maskCompare0, x1_reg, x2_reg, maskCalc);
+                Reg::Compare<T, CMPMODE::NE>(maskCompare0, x1_reg, x2_reg, maskCalc);
                 // x1 维度值不等于1维度标识为true
-                MicroAPI::Compares<T, CMPMODE::NE>(maskCompare1, x1_reg, 1, maskCalc);
+                Reg::Compares<T, CMPMODE::NE>(maskCompare1, x1_reg, 1, maskCalc);
                 // x2 维度值不等于1维度标识为true
-                MicroAPI::Compares<T, CMPMODE::NE>(maskCompare2, x2_reg, 1, maskCalc);
+                Reg::Compares<T, CMPMODE::NE>(maskCompare2, x2_reg, 1, maskCalc);
                 // maskReg转RegTensor
                 // 可修改为Mask计算
-                MicroAPI::Select(eq_flag_reg, one_reg, zero_reg, maskCompare0);
-                MicroAPI::Select(bool_reg1, one_reg, zero_reg, maskCompare1);
-                MicroAPI::Select(bool_reg2, one_reg, zero_reg, maskCompare2);
+                Reg::Select(eq_flag_reg, one_reg, zero_reg, maskCompare0);
+                Reg::Select(bool_reg1, one_reg, zero_reg, maskCompare1);
+                Reg::Select(bool_reg2, one_reg, zero_reg, maskCompare2);
                 // 将未筛选的置0
-                MicroAPI::Adds(eq_flag_reg, eq_flag_reg, 0, maskCalc);
+                Reg::Adds(eq_flag_reg, eq_flag_reg, 0, maskCalc);
                 // 两次与筛选出(x1 != x2) && (x1 != 1) && (x2 != 1)
-                MicroAPI::And(bool_reg1, bool_reg1, eq_flag_reg, maskCalc);
-                MicroAPI::And(bool_reg2, bool_reg2, bool_reg1, maskCalc);
+                Reg::And(bool_reg1, bool_reg1, eq_flag_reg, maskCalc);
+                Reg::And(bool_reg2, bool_reg2, bool_reg1, maskCalc);
                 // 与之前vl循环的结果Max
-                MicroAPI::Max(out_eq_reg, out_eq_reg, eq_flag_reg, maskAll);
-                MicroAPI::Max(out_invalid_reg, out_invalid_reg, bool_reg2, maskAll);
+                Reg::Max(out_eq_reg, out_eq_reg, eq_flag_reg, maskAll);
+                Reg::Max(out_invalid_reg, out_invalid_reg, bool_reg2, maskAll);
             }
-            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(x1_reg, out_invalid_reg, maskAll);
-            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(x2_reg, out_eq_reg, maskAll);
-            MicroAPI::StoreAlign(invalidFlag, x1_reg, maskMerge);
-            MicroAPI::StoreAlign(equalFlag, x2_reg, maskMerge);
+            Reg::Reduce<AscendC::Reg::ReduceType::SUM>(x1_reg, out_invalid_reg, maskAll);
+            Reg::Reduce<AscendC::Reg::ReduceType::SUM>(x2_reg, out_eq_reg, maskAll);
+            Reg::StoreAlign(invalidFlag, x1_reg, maskMerge);
+            Reg::StoreAlign(equalFlag, x2_reg, maskMerge);
         }
     }
 

@@ -26,18 +26,18 @@
 namespace ClippedSwigluOp {
 
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize(); // 32
 constexpr int64_t DIM_HALVE = 2;
 constexpr uint32_t VF_LEN_FP32 = Ops::Base::GetVRegSize() / sizeof(float);
 
-static constexpr AscendC::MicroAPI::CastTrait CAST_BF16_FP16_TO_FP32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+static constexpr AscendC::Reg::CastTrait CAST_BF16_FP16_TO_FP32 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait CAST_FP32_TO_FP16_BF16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait CAST_FP32_TO_FP16_BF16 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
 
 __aicore__ inline void ReduceAllVf(LocalTensor<int64_t>& reduceSumUb, LocalTensor<int64_t>& groupIndexUb,
@@ -52,26 +52,26 @@ __aicore__ inline void ReduceAllVf(LocalTensor<int64_t>& reduceSumUb, LocalTenso
     auto srcAddr1 = (__ubuf__ int64_t*)groupIndexUb[times * vfTidx].GetPhyAddr();
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int64_t> addReg;
-        AscendC::MicroAPI::RegTensor<int64_t> reduceSumReg;
-        AscendC::MicroAPI::RegTensor<int64_t> reduceSumTReg;
-        AscendC::MicroAPI::RegTensor<int64_t> srcReg;
-        AscendC::MicroAPI::Duplicate(addReg, 0);
-        AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<int64_t, MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::RegTensor<int64_t> addReg;
+        AscendC::Reg::RegTensor<int64_t> reduceSumReg;
+        AscendC::Reg::RegTensor<int64_t> reduceSumTReg;
+        AscendC::Reg::RegTensor<int64_t> srcReg;
+        AscendC::Reg::Duplicate(addReg, 0);
+        AscendC::Reg::MaskReg mask = AscendC::Reg::CreateMask<int64_t, Reg::MaskPattern::ALL>();
         for (uint16_t i = 0; i < times; i++) {
-            AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, vfTidx);
-            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr, srcIdxOffset);
-            AscendC::MicroAPI::Add(addReg, addReg, srcReg, mask);
+            AscendC::Reg::AddrReg srcIdxOffset = AscendC::Reg::CreateAddrReg<int64_t>(i, vfTidx);
+            AscendC::Reg::LoadAlign(srcReg, srcAddr, srcIdxOffset);
+            AscendC::Reg::Add(addReg, addReg, srcReg, mask);
         }
-        AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumReg, addReg, mask);
+        AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumReg, addReg, mask);
         for (uint16_t j = 0; j < tailTimes; j++) {
-            AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<int64_t>(tailNum);
-            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr1);
-            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
-            AscendC::MicroAPI::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
+            AscendC::Reg::MaskReg maskT = AscendC::Reg::UpdateMask<int64_t>(tailNum);
+            AscendC::Reg::LoadAlign(srcReg, srcAddr1);
+            AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
+            AscendC::Reg::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
         }
-        AscendC::MicroAPI::MaskReg maskOne = AscendC::MicroAPI::CreateMask<int64_t, MicroAPI::MaskPattern::VL1>();
-        AscendC::MicroAPI::StoreAlign(dstAddr, reduceSumReg, maskOne);
+        AscendC::Reg::MaskReg maskOne = AscendC::Reg::CreateMask<int64_t, Reg::MaskPattern::VL1>();
+        AscendC::Reg::StoreAlign(dstAddr, reduceSumReg, maskOne);
     }
 }
 
@@ -305,13 +305,13 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>
     uint16_t times = CeilDivision(size, vfLen);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> xReg;
-        AscendC::MicroAPI::MaskReg mask;
+        AscendC::Reg::RegTensor<T> xReg;
+        AscendC::Reg::MaskReg mask;
         for (uint16_t i = 0; i < times; i++) {
-            mask = MicroAPI::UpdateMask<T>(size);
-            AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(i, vfLen);
-            AscendC::MicroAPI::LoadAlign(xReg, inAddr, srcIdxOffset);
-            AscendC::MicroAPI::StoreAlign(outAddr, xReg, srcIdxOffset, mask);
+            mask = Reg::UpdateMask<T>(size);
+            AscendC::Reg::AddrReg srcIdxOffset = AscendC::Reg::CreateAddrReg<T>(i, vfLen);
+            AscendC::Reg::LoadAlign(xReg, inAddr, srcIdxOffset);
+            AscendC::Reg::StoreAlign(outAddr, xReg, srcIdxOffset, mask);
         }
     }
 }
@@ -351,147 +351,146 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>
     __ubuf__ T* swigluUbAddrT = swigluUbAddr + dim1VfTimes * VF_LEN_FP32;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<T> vregX1;
-        AscendC::MicroAPI::RegTensor<T> vregX2;
-        AscendC::MicroAPI::RegTensor<float> vregX1F;
-        AscendC::MicroAPI::RegTensor<float> vregX2F;
+        AscendC::Reg::RegTensor<T> vregX1;
+        AscendC::Reg::RegTensor<T> vregX2;
+        AscendC::Reg::RegTensor<float> vregX1F;
+        AscendC::Reg::RegTensor<float> vregX2F;
 
-        AscendC::MicroAPI::RegTensor<float> vregX1DeF;
-        AscendC::MicroAPI::RegTensor<float> vregX2DeF;
-        AscendC::MicroAPI::RegTensor<float> minsReg;
-        AscendC::MicroAPI::RegTensor<float> mulsReg;
-        AscendC::MicroAPI::RegTensor<float> expReg;
-        AscendC::MicroAPI::RegTensor<float> addsReg;
-        AscendC::MicroAPI::RegTensor<float> sigmoidReg;
-        AscendC::MicroAPI::RegTensor<float> outFReg;
-        AscendC::MicroAPI::RegTensor<float> vregX1NegDeF;
-        AscendC::MicroAPI::RegTensor<T> outTReg;
-        MicroAPI::MaskReg mask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskT = MicroAPI::UpdateMask<float>(tail);
+        AscendC::Reg::RegTensor<float> vregX1DeF;
+        AscendC::Reg::RegTensor<float> vregX2DeF;
+        AscendC::Reg::RegTensor<float> minsReg;
+        AscendC::Reg::RegTensor<float> mulsReg;
+        AscendC::Reg::RegTensor<float> expReg;
+        AscendC::Reg::RegTensor<float> addsReg;
+        AscendC::Reg::RegTensor<float> sigmoidReg;
+        AscendC::Reg::RegTensor<float> outFReg;
+        AscendC::Reg::RegTensor<float> vregX1NegDeF;
+        AscendC::Reg::RegTensor<T> outTReg;
+        Reg::MaskReg mask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskT = Reg::UpdateMask<float>(tail);
         for (uint16_t dim0vfLoopIdx = 0; dim0vfLoopIdx < dim0VfTimes; dim0vfLoopIdx++) {
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
-                AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
-                    dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, vfLen);
+                AscendC::Reg::AddrReg srcIdxOffset = AscendC::Reg::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In,
+                                                                                    dim1vfLoopIdx, vfLen);
                 if constexpr (isInterleaved) {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                                      srcIdxOffset);
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                                      srcIdxOffset);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                            srcIdxOffset);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                            srcIdxOffset);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddr, srcIdxOffset);
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddr, srcIdxOffset);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX1F, x1UbAddr, srcIdxOffset);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX2F, x2UbAddr, srcIdxOffset);
                     }
-                    AscendC::MicroAPI::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
+                    AscendC::Reg::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
                 } else {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                                      srcIdxOffset);
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                                      srcIdxOffset);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                            srcIdxOffset);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                            srcIdxOffset);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddr, srcIdxOffset);
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddr, srcIdxOffset);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX1DeF, x1UbAddr, srcIdxOffset);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX2DeF, x2UbAddr, srcIdxOffset);
                     }
                 }
                 if constexpr (clampMode == 0) {
-                    AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, mask);
-                    AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, mask);
-                    AscendC::MicroAPI::Exp(expReg, mulsReg, mask);
-                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
-                    AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, mask);
+                    AscendC::Reg::Mins(minsReg, vregX1DeF, clampLimit, mask);
+                    AscendC::Reg::Muls(mulsReg, minsReg, negAlpha, mask);
+                    AscendC::Reg::Exp(expReg, mulsReg, mask);
+                    AscendC::Reg::Adds(addsReg, expReg, scalarOne, mask);
+                    AscendC::Reg::Div(sigmoidReg, minsReg, addsReg, mask);
 
-                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
-                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
-                    AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, mask);
+                    AscendC::Reg::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
+                    AscendC::Reg::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
+                    AscendC::Reg::Adds(vregX2DeF, vregX2DeF, gluBias, mask);
 
-                    AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, mask);
+                    AscendC::Reg::Mul(outFReg, sigmoidReg, vregX2DeF, mask);
                 } else {
-                    AscendC::MicroAPI::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, mask);
-                    AscendC::MicroAPI::Exp(expReg, vregX1NegDeF, mask);
-                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
-                    AscendC::MicroAPI::Div(sigmoidReg, vregX1DeF, addsReg, mask);
-                    AscendC::MicroAPI::Mins(minsReg, sigmoidReg, clampLimit, mask);
+                    AscendC::Reg::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, mask);
+                    AscendC::Reg::Exp(expReg, vregX1NegDeF, mask);
+                    AscendC::Reg::Adds(addsReg, expReg, scalarOne, mask);
+                    AscendC::Reg::Div(sigmoidReg, vregX1DeF, addsReg, mask);
+                    AscendC::Reg::Mins(minsReg, sigmoidReg, clampLimit, mask);
 
-                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
-                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
-                    AscendC::MicroAPI::Mul(outFReg, minsReg, vregX2DeF, mask);
+                    AscendC::Reg::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
+                    AscendC::Reg::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
+                    AscendC::Reg::Mul(outFReg, minsReg, vregX2DeF, mask);
                 }
-                AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
-                                                                                           dim1vfLoopIdx, VF_LEN_FP32);
+                AscendC::Reg::AddrReg outOffset = AscendC::Reg::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
+                                                                                 dim1vfLoopIdx, VF_LEN_FP32);
                 if constexpr (sizeof(T) == sizeof(half)) {
-                    AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
-                    StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+                    AscendC::Reg::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
+                    StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
                 } else {
-                    StoreAlign(swigluUbAddr, (MicroAPI::RegTensor<T>&)outFReg, outOffset, mask);
+                    StoreAlign(swigluUbAddr, (Reg::RegTensor<T>&)outFReg, outOffset, mask);
                 }
             }
-            AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
-            AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
+            AscendC::Reg::AddrReg srcIdxOffset1 = AscendC::Reg::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
+            AscendC::Reg::AddrReg outOffset1 = AscendC::Reg::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
             for (uint16_t ti = 0; ti < tailTimes; ti++) {
                 if constexpr (isInterleaved) {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
-                                                                                                      srcIdxOffset1);
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
-                                                                                                      srcIdxOffset1);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
+                                                                                            srcIdxOffset1);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
+                                                                                            srcIdxOffset1);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddrT, srcIdxOffset1);
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddrT, srcIdxOffset1);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX1F, x1UbAddrT, srcIdxOffset1);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX2F, x2UbAddrT, srcIdxOffset1);
                     }
-                    AscendC::MicroAPI::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
+                    AscendC::Reg::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
                 } else {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
-                                                                                                      srcIdxOffset1);
-                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
-                                                                                                      srcIdxOffset1);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
-                        AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
+                                                                                            srcIdxOffset1);
+                        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
+                                                                                            srcIdxOffset1);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
+                        AscendC::Reg::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddrT, srcIdxOffset1);
-                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddrT, srcIdxOffset1);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX1DeF, x1UbAddrT, srcIdxOffset1);
+                        AscendC::Reg::LoadAlign((Reg::RegTensor<T>&)vregX2DeF, x2UbAddrT, srcIdxOffset1);
                     }
                 }
                 if constexpr (clampMode == 0) {
-                    AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, maskT);
-                    AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, maskT);
-                    AscendC::MicroAPI::Exp(expReg, mulsReg, maskT);
-                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, maskT);
-                    AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, maskT);
+                    AscendC::Reg::Mins(minsReg, vregX1DeF, clampLimit, maskT);
+                    AscendC::Reg::Muls(mulsReg, minsReg, negAlpha, maskT);
+                    AscendC::Reg::Exp(expReg, mulsReg, maskT);
+                    AscendC::Reg::Adds(addsReg, expReg, scalarOne, maskT);
+                    AscendC::Reg::Div(sigmoidReg, minsReg, addsReg, maskT);
 
-                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
-                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
-                    AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, maskT);
+                    AscendC::Reg::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
+                    AscendC::Reg::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
+                    AscendC::Reg::Adds(vregX2DeF, vregX2DeF, gluBias, maskT);
 
-                    AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, maskT);
+                    AscendC::Reg::Mul(outFReg, sigmoidReg, vregX2DeF, maskT);
                 } else {
-                    AscendC::MicroAPI::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, maskT);
-                    AscendC::MicroAPI::Exp(expReg, vregX1NegDeF, maskT);
-                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, maskT);
-                    AscendC::MicroAPI::Div(sigmoidReg, vregX1DeF, addsReg, maskT);
-                    AscendC::MicroAPI::Mins(minsReg, sigmoidReg, clampLimit, maskT);
+                    AscendC::Reg::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, maskT);
+                    AscendC::Reg::Exp(expReg, vregX1NegDeF, maskT);
+                    AscendC::Reg::Adds(addsReg, expReg, scalarOne, maskT);
+                    AscendC::Reg::Div(sigmoidReg, vregX1DeF, addsReg, maskT);
+                    AscendC::Reg::Mins(minsReg, sigmoidReg, clampLimit, maskT);
 
-                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
-                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
-                    AscendC::MicroAPI::Mul(outFReg, minsReg, vregX2DeF, maskT);
+                    AscendC::Reg::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
+                    AscendC::Reg::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
+                    AscendC::Reg::Mul(outFReg, minsReg, vregX2DeF, maskT);
                 }
                 if constexpr (sizeof(T) == sizeof(half)) {
-                    AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, maskT);
-                    StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddrT, outTReg, outOffset1,
-                                                                               maskT);
+                    AscendC::Reg::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, maskT);
+                    StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(swigluUbAddrT, outTReg, outOffset1, maskT);
                 } else {
-                    StoreAlign(swigluUbAddrT, (MicroAPI::RegTensor<T>&)outFReg, outOffset1, maskT);
+                    StoreAlign(swigluUbAddrT, (Reg::RegTensor<T>&)outFReg, outOffset1, maskT);
                 }
             }
         }

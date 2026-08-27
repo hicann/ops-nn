@@ -42,29 +42,29 @@ struct EluCustom : public Vec::ElemwiseQuaternaryOP<T, T, float, float, float> {
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregNeg;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregNeg;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMask;
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < static_cast<uint16_t>(loopNum); loopIdx++) {
-                    mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
+                    mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::Muls(vregNeg, vregInput, inputScale, mask);
-                    MicroAPI::Exp(vregNeg, vregNeg, mask);
-                    MicroAPI::Adds(vregNeg, vregNeg, constNegOne, mask);
-                    MicroAPI::Muls(vregNeg, vregNeg, alpha, mask);
+                    Reg::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::Muls(vregNeg, vregInput, inputScale, mask);
+                    Reg::Exp(vregNeg, vregNeg, mask);
+                    Reg::Adds(vregNeg, vregNeg, constNegOne, mask);
+                    Reg::Muls(vregNeg, vregNeg, alpha, mask);
 
-                    MicroAPI::CompareScalar<T, CMPMODE::GT>(cmpMask, vregInput, (float)0.0, mask);
-                    MicroAPI::Select<T>(vregOutput, vregInput, vregNeg, cmpMask);
-                    MicroAPI::Muls(vregOutput, vregOutput, scale, mask);
+                    Reg::CompareScalar<T, CMPMODE::GT>(cmpMask, vregInput, (float)0.0, mask);
+                    Reg::Select<T>(vregOutput, vregInput, vregNeg, cmpMask);
+                    Reg::Muls(vregOutput, vregOutput, scale, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

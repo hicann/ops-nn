@@ -24,42 +24,42 @@
 namespace ScatterNdAdd {
 using namespace AscendC;
 
-static constexpr MicroAPI::CastTrait castTraitFp32ToInt32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitInt32ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitFp32ToVarT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFp32ToInt32 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitInt32ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFp32ToVarT = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                       Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
 __simd_vf__ inline void QuantizeForSumVf(__ubuf__ float* sumAddr, __ubuf__ float* rValueAddr,
                                          __ubuf__ int32_t* quantaSumAddr, uint16_t rowLen, uint16_t loopCnt,
                                          uint32_t afterAxis, uint32_t afterAxisAlignFp32, uint32_t vfLen, float scaling)
 {
-    AscendC::MicroAPI::RegTensor<float> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rValueReg;
-    AscendC::MicroAPI::RegTensor<float> resReg;
-    AscendC::MicroAPI::RegTensor<float> oneReg;
-    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-    AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::MaskReg cmpReg;
+    AscendC::Reg::RegTensor<float> dataReg;
+    AscendC::Reg::RegTensor<float> rValueReg;
+    AscendC::Reg::RegTensor<float> resReg;
+    AscendC::Reg::RegTensor<float> oneReg;
+    AscendC::Reg::RegTensor<int32_t> scaleReg;
+    AscendC::Reg::MaskReg maskReg;
+    AscendC::Reg::MaskReg cmpReg;
     for (uint16_t rowIdx = 0; rowIdx < static_cast<uint16_t>(rowLen); rowIdx++) {
         uint32_t maskLen = afterAxis;
-        AscendC::MicroAPI::Duplicate(oneReg, (float)1);
+        AscendC::Reg::Duplicate(oneReg, (float)1);
         for (uint16_t i = 0; i < loopCnt; i++) {
-            maskReg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+            maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
             auto sumAddrOfst = sumAddr + rowAlignOfst;
             auto rValueAddrOfst = rValueAddr + rowAlignOfst;
             auto quantaSumAddrOfst = quantaSumAddr + rowAlignOfst;
-            AscendC::MicroAPI::LoadAlign(dataReg, sumAddrOfst);
-            AscendC::MicroAPI::LoadAlign(rValueReg, rValueAddrOfst);
-            AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
-            AscendC::MicroAPI::Select(rValueReg, oneReg, rValueReg, cmpReg);
-            AscendC::MicroAPI::Div(resReg, dataReg, rValueReg, maskReg);
-            AscendC::MicroAPI::Muls(resReg, resReg, scaling, maskReg);
-            AscendC::MicroAPI::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
-            AscendC::MicroAPI::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
+            AscendC::Reg::LoadAlign(dataReg, sumAddrOfst);
+            AscendC::Reg::LoadAlign(rValueReg, rValueAddrOfst);
+            AscendC::Reg::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
+            AscendC::Reg::Select(rValueReg, oneReg, rValueReg, cmpReg);
+            AscendC::Reg::Div(resReg, dataReg, rValueReg, maskReg);
+            AscendC::Reg::Muls(resReg, resReg, scaling, maskReg);
+            AscendC::Reg::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
+            AscendC::Reg::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
         }
     }
 }
@@ -70,22 +70,22 @@ __simd_vf__ inline void InverseQuantizeVf(__ubuf__ int32_t* sumQuanToIntAddr, __
                                           uint32_t colLen, uint32_t afterAxisAlignFp32, uint32_t afterAxisAlignSize,
                                           uint32_t vfLen, float scaleValue)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rReg;
-    AscendC::MicroAPI::RegTensor<float> resReg;
-    AscendC::MicroAPI::RegTensor<float> scaleReg;
-    AscendC::MicroAPI::RegTensor<T> varTReg;
-    AscendC::MicroAPI::MaskReg pregLoop;
-    AscendC::MicroAPI::MaskReg maskReg;
-    maskReg = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(scaleReg, scaleValue, maskReg);
+    AscendC::Reg::RegTensor<int32_t> dataReg;
+    AscendC::Reg::RegTensor<float> rReg;
+    AscendC::Reg::RegTensor<float> resReg;
+    AscendC::Reg::RegTensor<float> scaleReg;
+    AscendC::Reg::RegTensor<T> varTReg;
+    AscendC::Reg::MaskReg pregLoop;
+    AscendC::Reg::MaskReg maskReg;
+    maskReg = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(scaleReg, scaleValue, maskReg);
     for (uint16_t rowIdx = 0; rowIdx < static_cast<uint16_t>(rowLen); rowIdx++) {
         uint32_t maskLen = colLen;
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            pregLoop = AscendC::MicroAPI::UpdateMask<uint32_t>(maskLen);
+            pregLoop = AscendC::Reg::UpdateMask<uint32_t>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
-            AscendC::MicroAPI::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
-            AscendC::MicroAPI::LoadAlign(rReg, rValueAddr + rowAlignOfst);
+            AscendC::Reg::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
+            AscendC::Reg::LoadAlign(rReg, rValueAddr + rowAlignOfst);
             Cast<float, int32_t, castTraitInt32ToFp32>(resReg, dataReg, pregLoop);
             Mul(resReg, resReg, rReg, pregLoop);
             Div(resReg, resReg, scaleReg, pregLoop);
@@ -93,9 +93,9 @@ __simd_vf__ inline void InverseQuantizeVf(__ubuf__ int32_t* sumQuanToIntAddr, __
             auto outOfset = invQuantDataAddr + rowIdx * afterAxisAlignSize + i * vfLen;
             if constexpr (!std::is_same<float, T>::value) {
                 Cast<T, float, castTraitFp32ToVarT>(varTReg, resReg, pregLoop);
-                AscendC::MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
+                AscendC::Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
             } else {
-                AscendC::MicroAPI::StoreAlign(outOfset, resReg, pregLoop);
+                AscendC::Reg::StoreAlign(outOfset, resReg, pregLoop);
             }
         }
     }

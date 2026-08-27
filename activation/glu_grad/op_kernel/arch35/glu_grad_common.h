@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -28,9 +28,8 @@ constexpr static int64_t BUFFER_SIZE = 4 * 1024;
 constexpr static int32_t BLOCK_BYTES = 32;
 
 template <typename T>
-__aicore__ inline void SetGlobalBuffers(
-    GlobalTensor<T>& gradOutGm, GlobalTensor<T>& selfGm, GlobalTensor<T>& outGm,
-    GM_ADDR gradOut, GM_ADDR self, GM_ADDR out)
+__aicore__ inline void SetGlobalBuffers(GlobalTensor<T>& gradOutGm, GlobalTensor<T>& selfGm, GlobalTensor<T>& outGm,
+                                        GM_ADDR gradOut, GM_ADDR self, GM_ADDR out)
 {
     gradOutGm.SetGlobalBuffer((__gm__ T*)gradOut);
     selfGm.SetGlobalBuffer((__gm__ T*)self);
@@ -40,148 +39,111 @@ __aicore__ inline void SetGlobalBuffers(
 #ifdef __CCE_AICORE__
 
 template <typename T>
-__aicore__ inline void ComputeGluGradCore(
-    AscendC::MicroAPI::RegTensor<T>& vregA,
-    AscendC::MicroAPI::RegTensor<T>& vregB,
-    AscendC::MicroAPI::RegTensor<T>& vregGrad,
-    AscendC::MicroAPI::RegTensor<T>& vregOutputA,
-    AscendC::MicroAPI::RegTensor<T>& vregOutputB,
-    __local_mem__ T* outALocalPtr,
-    __local_mem__ T* outBLocalPtr,
-    uint16_t loopIdx,
-    uint32_t vlSize,
-    AscendC::MicroAPI::MaskReg& preg0,
-    AscendC::MicroAPI::MaskReg& maskAll8,
-    AscendC::MicroAPI::RegTensor<float>& vregOne)
+__aicore__ inline void ComputeGluGradCore(AscendC::Reg::RegTensor<T>& vregA, AscendC::Reg::RegTensor<T>& vregB,
+                                          AscendC::Reg::RegTensor<T>& vregGrad, AscendC::Reg::RegTensor<T>& vregOutputA,
+                                          AscendC::Reg::RegTensor<T>& vregOutputB, __local_mem__ T* outALocalPtr,
+                                          __local_mem__ T* outBLocalPtr, uint16_t loopIdx, uint32_t vlSize,
+                                          AscendC::Reg::MaskReg& preg0, AscendC::Reg::MaskReg& maskAll8,
+                                          AscendC::Reg::RegTensor<float>& vregOne)
 {
-    AscendC::MicroAPI::RegTensor<float> vregSigmoidB;
-    AscendC::MicroAPI::RegTensor<float> vregGradA;
-    AscendC::MicroAPI::RegTensor<float> vregTemp;
-    AscendC::MicroAPI::RegTensor<float> vregSub;
-    AscendC::MicroAPI::RegTensor<float> vregGradB;
+    AscendC::Reg::RegTensor<float> vregSigmoidB;
+    AscendC::Reg::RegTensor<float> vregGradA;
+    AscendC::Reg::RegTensor<float> vregTemp;
+    AscendC::Reg::RegTensor<float> vregSub;
+    AscendC::Reg::RegTensor<float> vregGradB;
 
-    static constexpr AscendC::MicroAPI::DivSpecificMode highPrecisionDivMode = {
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
+    static constexpr AscendC::Reg::DivSpecificMode highPrecisionDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
 
     if constexpr (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
-        AscendC::MicroAPI::RegTensor<float> vregAF;
-        AscendC::MicroAPI::RegTensor<float> vregBF;
-        AscendC::MicroAPI::RegTensor<float> vregGradF;
+        AscendC::Reg::RegTensor<float> vregAF;
+        AscendC::Reg::RegTensor<float> vregBF;
+        AscendC::Reg::RegTensor<float> vregGradF;
 
-        constexpr static AscendC::MicroAPI::CastTrait castToFloatEven = {
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        constexpr static AscendC::MicroAPI::CastTrait castToFloatOdd = {
-            AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::NO_SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        constexpr static AscendC::MicroAPI::CastTrait castFromFloatEven = {
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        constexpr static AscendC::MicroAPI::CastTrait castFromFloatOdd = {
-            AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::NO_SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        constexpr static AscendC::Reg::CastTrait castToFloatEven = {
+            AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+            RoundMode::UNKNOWN};
+        constexpr static AscendC::Reg::CastTrait castToFloatOdd = {
+            AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+            RoundMode::UNKNOWN};
+        constexpr static AscendC::Reg::CastTrait castFromFloatEven = {
+            AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+            RoundMode::CAST_RINT};
+        constexpr static AscendC::Reg::CastTrait castFromFloatOdd = {
+            AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+            RoundMode::CAST_RINT};
 
-        AscendC::MicroAPI::RegTensor<T> vregOutAT;
-        AscendC::MicroAPI::RegTensor<T> vregOutBT;
+        AscendC::Reg::RegTensor<T> vregOutAT;
+        AscendC::Reg::RegTensor<T> vregOutBT;
 
-        AscendC::MicroAPI::Cast<float, T, castToFloatEven>(vregAF, vregA, maskAll8);
-        AscendC::MicroAPI::Cast<float, T, castToFloatEven>(vregBF, vregB, maskAll8);
-        AscendC::MicroAPI::Cast<float, T, castToFloatEven>(vregGradF, vregGrad, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatEven>(vregAF, vregA, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatEven>(vregBF, vregB, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatEven>(vregGradF, vregGrad, maskAll8);
 
-        AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregBF, static_cast<float>(-1), preg0);
-        AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregSub, vregTemp, preg0);
-        AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregSub, static_cast<float>(1), preg0);
-        AscendC::MicroAPI::Div<float, &highPrecisionDivMode>(
-            vregSigmoidB, vregOne, vregTemp, preg0);
+        AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregBF, static_cast<float>(-1),
+                                                                               preg0);
+        AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregSub, vregTemp, preg0);
+        AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregSub, static_cast<float>(1),
+                                                                               preg0);
+        AscendC::Reg::Div<float, &highPrecisionDivMode>(vregSigmoidB, vregOne, vregTemp, preg0);
 
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradA, vregGradF, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradA, vregGradF, vregSigmoidB, preg0);
 
-        AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregOne, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregAF, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradB, vregTemp, vregGradF, preg0);
+        AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregOne, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregAF, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradB, vregTemp, vregGradF, preg0);
 
-        AscendC::MicroAPI::Cast<T, float, castFromFloatEven>(vregOutputA, vregGradA, maskAll8);
-        AscendC::MicroAPI::Cast<T, float, castFromFloatEven>(vregOutputB, vregGradB, maskAll8);
+        AscendC::Reg::Cast<T, float, castFromFloatEven>(vregOutputA, vregGradA, maskAll8);
+        AscendC::Reg::Cast<T, float, castFromFloatEven>(vregOutputB, vregGradB, maskAll8);
 
-        AscendC::MicroAPI::Cast<float, T, castToFloatOdd>(vregAF, vregA, maskAll8);
-        AscendC::MicroAPI::Cast<float, T, castToFloatOdd>(vregBF, vregB, maskAll8);
-        AscendC::MicroAPI::Cast<float, T, castToFloatOdd>(vregGradF, vregGrad, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatOdd>(vregAF, vregA, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatOdd>(vregBF, vregB, maskAll8);
+        AscendC::Reg::Cast<float, T, castToFloatOdd>(vregGradF, vregGrad, maskAll8);
 
-        AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregBF, static_cast<float>(-1), preg0);
-        AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregSub, vregTemp, preg0);
-        AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregSub, static_cast<float>(1), preg0);
-        AscendC::MicroAPI::Div<float, &highPrecisionDivMode>(
-            vregSigmoidB, vregOne, vregTemp, preg0);
+        AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregBF, static_cast<float>(-1),
+                                                                               preg0);
+        AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregSub, vregTemp, preg0);
+        AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregSub, static_cast<float>(1),
+                                                                               preg0);
+        AscendC::Reg::Div<float, &highPrecisionDivMode>(vregSigmoidB, vregOne, vregTemp, preg0);
 
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradA, vregGradF, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradA, vregGradF, vregSigmoidB, preg0);
 
-        AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregOne, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregAF, preg0);
-        AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradB, vregTemp, vregGradF, preg0);
+        AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregOne, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregAF, preg0);
+        AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradB, vregTemp, vregGradF, preg0);
 
-        AscendC::MicroAPI::Cast<T, float, castFromFloatOdd>(vregOutAT, vregGradA, maskAll8);
-        AscendC::MicroAPI::Cast<T, float, castFromFloatOdd>(vregOutBT, vregGradB, maskAll8);
+        AscendC::Reg::Cast<T, float, castFromFloatOdd>(vregOutAT, vregGradA, maskAll8);
+        AscendC::Reg::Cast<T, float, castFromFloatOdd>(vregOutBT, vregGradB, maskAll8);
 
-        AscendC::MicroAPI::Add<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregOutputA, vregOutputA, vregOutAT, preg0);
-        AscendC::MicroAPI::Add<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregOutputB, vregOutputB, vregOutBT, preg0);
+        AscendC::Reg::Add<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregOutputA, vregOutputA, vregOutAT, preg0);
+        AscendC::Reg::Add<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregOutputB, vregOutputB, vregOutBT, preg0);
 
-        AscendC::MicroAPI::DataCopy(outALocalPtr + loopIdx * vlSize, vregOutputA, preg0);
-        AscendC::MicroAPI::DataCopy(outBLocalPtr + loopIdx * vlSize, vregOutputB, preg0);
+        AscendC::Reg::DataCopy(outALocalPtr + loopIdx * vlSize, vregOutputA, preg0);
+        AscendC::Reg::DataCopy(outBLocalPtr + loopIdx * vlSize, vregOutputB, preg0);
     } else {
-        AscendC::MicroAPI::Muls<T, T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregB, static_cast<T>(-1), preg0);
-        AscendC::MicroAPI::Exp<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregSub, vregTemp, preg0);
-        AscendC::MicroAPI::Adds<T, T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregSub, static_cast<T>(1), preg0);
-        AscendC::MicroAPI::Div<T, &highPrecisionDivMode>(
-            vregSigmoidB, vregOne, vregTemp, preg0);
+        AscendC::Reg::Muls<T, T, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregB, static_cast<T>(-1), preg0);
+        AscendC::Reg::Exp<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregSub, vregTemp, preg0);
+        AscendC::Reg::Adds<T, T, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregSub, static_cast<T>(1), preg0);
+        AscendC::Reg::Div<T, &highPrecisionDivMode>(vregSigmoidB, vregOne, vregTemp, preg0);
 
-        AscendC::MicroAPI::Mul<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradA, vregGrad, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradA, vregGrad, vregSigmoidB, preg0);
 
-        AscendC::MicroAPI::Sub<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregOne, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregSigmoidB, preg0);
-        AscendC::MicroAPI::Mul<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregTemp, vregTemp, vregA, preg0);
-        AscendC::MicroAPI::Mul<T, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-            vregGradB, vregTemp, vregGrad, preg0);
+        AscendC::Reg::Sub<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregOne, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregSigmoidB, preg0);
+        AscendC::Reg::Mul<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregTemp, vregTemp, vregA, preg0);
+        AscendC::Reg::Mul<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregGradB, vregTemp, vregGrad, preg0);
 
-        AscendC::MicroAPI::DataCopy(outALocalPtr + loopIdx * vlSize, vregGradA, preg0);
-        AscendC::MicroAPI::DataCopy(outBLocalPtr + loopIdx * vlSize, vregGradB, preg0);
+        AscendC::Reg::DataCopy(outALocalPtr + loopIdx * vlSize, vregGradA, preg0);
+        AscendC::Reg::DataCopy(outBLocalPtr + loopIdx * vlSize, vregGradB, preg0);
     }
 }
 
 template <typename T>
-__aicore__ inline void ComputeGluGradImpl(
-    __local_mem__ T* aLocalPtr,
-    __local_mem__ T* bLocalPtr,
-    __local_mem__ T* gradLocalPtr,
-    __local_mem__ T* outALocalPtr,
-    __local_mem__ T* outBLocalPtr,
-    const int64_t& count)
+__aicore__ inline void ComputeGluGradImpl(__local_mem__ T* aLocalPtr, __local_mem__ T* bLocalPtr,
+                                          __local_mem__ T* gradLocalPtr, __local_mem__ T* outALocalPtr,
+                                          __local_mem__ T* outBLocalPtr, const int64_t& count)
 {
     using namespace Ops::Base;
     constexpr uint32_t VECTOR_LENGTH = GetVRegSize();
@@ -192,28 +154,28 @@ __aicore__ inline void ComputeGluGradImpl(
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregOne;
-        AscendC::MicroAPI::RegTensor<T> vregA;
-        AscendC::MicroAPI::RegTensor<T> vregB;
-        AscendC::MicroAPI::RegTensor<T> vregGrad;
-        AscendC::MicroAPI::RegTensor<T> vregOutputA;
-        AscendC::MicroAPI::RegTensor<T> vregOutputB;
+        AscendC::Reg::RegTensor<float> vregOne;
+        AscendC::Reg::RegTensor<T> vregA;
+        AscendC::Reg::RegTensor<T> vregB;
+        AscendC::Reg::RegTensor<T> vregGrad;
+        AscendC::Reg::RegTensor<T> vregOutputA;
+        AscendC::Reg::RegTensor<T> vregOutputB;
 
-        AscendC::MicroAPI::MaskReg preg0;
+        AscendC::Reg::MaskReg preg0;
         uint32_t size = count;
-        preg0 = AscendC::MicroAPI::CreateMask<T>();
-        AscendC::MicroAPI::Duplicate<float, AscendC::MicroAPI::MaskMergeMode::ZEROING, float>(
-            vregOne, static_cast<float>(1), preg0);
-        AscendC::MicroAPI::MaskReg maskAll8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        preg0 = AscendC::Reg::CreateMask<T>();
+        AscendC::Reg::Duplicate<float, AscendC::Reg::MaskMergeMode::ZEROING, float>(vregOne, static_cast<float>(1),
+                                                                                    preg0);
+        AscendC::Reg::MaskReg maskAll8 = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
 
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-            preg0 = AscendC::MicroAPI::UpdateMask<T>(size);
-            AscendC::MicroAPI::DataCopy(vregA, (__ubuf__ T*)(aLocalPtr + loopIdx * vlSize));
-            AscendC::MicroAPI::DataCopy(vregB, (__ubuf__ T*)(bLocalPtr + loopIdx * vlSize));
-            AscendC::MicroAPI::DataCopy(vregGrad, (__ubuf__ T*)(gradLocalPtr + loopIdx * vlSize));
+            preg0 = AscendC::Reg::UpdateMask<T>(size);
+            AscendC::Reg::DataCopy(vregA, (__ubuf__ T*)(aLocalPtr + loopIdx * vlSize));
+            AscendC::Reg::DataCopy(vregB, (__ubuf__ T*)(bLocalPtr + loopIdx * vlSize));
+            AscendC::Reg::DataCopy(vregGrad, (__ubuf__ T*)(gradLocalPtr + loopIdx * vlSize));
 
-            ComputeGluGradCore<T>(vregA, vregB, vregGrad, vregOutputA, vregOutputB,
-                outALocalPtr, outBLocalPtr, loopIdx, vlSize, preg0, maskAll8, vregOne);
+            ComputeGluGradCore<T>(vregA, vregB, vregGrad, vregOutputA, vregOutputB, outALocalPtr, outBLocalPtr, loopIdx,
+                                  vlSize, preg0, maskAll8, vregOne);
         }
     }
 }
@@ -224,4 +186,3 @@ __aicore__ inline void ComputeGluGradImpl(
 } // namespace GluGrad
 
 #endif // GLU_GRAD_COMMON_ARCH35_H
-

@@ -28,112 +28,110 @@
 namespace AscendC {
 namespace Vec {
 #ifdef __CCE_AICORE__
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::RegTensor;
 using namespace Ops::Base;
 
-constexpr static MicroAPI::CastTrait castTrait0 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                   MicroAPI::MaskMergeMode::ZEROING,
-                                                   RoundMode::UNKNOWN}; // bf16/fp16 --float
+constexpr static Reg::CastTrait castTrait0 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
+                                              RoundMode::UNKNOWN}; // bf16/fp16 --float
 
-constexpr static MicroAPI::CastTrait castTrait1 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                   MicroAPI::MaskMergeMode::ZEROING,
-                                                   RoundMode::CAST_RINT}; // float---bf16/fp16
+constexpr static Reg::CastTrait castTrait1 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING,
+                                              RoundMode::CAST_RINT}; // float---bf16/fp16
 
 constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 
 template <typename T, typename U = float>
-__aicore__ inline void LoadOneTensor(MicroAPI::RegTensor<U>& dst, __ubuf__ T*& input, MicroAPI::MaskReg& pregUp,
+__aicore__ inline void LoadOneTensor(Reg::RegTensor<U>& dst, __ubuf__ T*& input, Reg::MaskReg& pregUp,
                                      int32_t oneRepeat)
 {
-    MicroAPI::RegTensor<T> regTmp;
-    MicroAPI::RegTensor<T> regCopyIn;
+    Reg::RegTensor<T> regTmp;
+    Reg::RegTensor<T> regCopyIn;
     if constexpr (IsSameType<U, float>::value && !IsSameType<T, U>::value) {
-        MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
-        MicroAPI::UnPack((RegTensor<int32_t>&)regTmp, (RegTensor<int16_t>&)regCopyIn);
-        MicroAPI::Cast<U, T, castTrait0>(dst, regTmp, pregUp);
+        Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
+        Reg::UnPack((RegTensor<int32_t>&)regTmp, (RegTensor<int16_t>&)regCopyIn);
+        Reg::Cast<U, T, castTrait0>(dst, regTmp, pregUp);
     } else {
-        MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
+        Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
     }
 }
 
 template <typename T, typename U = float>
-__aicore__ inline void StoreOneTensor(__ubuf__ T*& output, MicroAPI::RegTensor<U>& src, MicroAPI::MaskReg& pregUp,
+__aicore__ inline void StoreOneTensor(__ubuf__ T*& output, Reg::RegTensor<U>& src, Reg::MaskReg& pregUp,
                                       int32_t oneRepeat)
 {
-    MicroAPI::RegTensor<T> regTmp;
-    MicroAPI::RegTensor<T> regCopyOut;
-    MicroAPI::MaskReg pregT;
+    Reg::RegTensor<T> regTmp;
+    Reg::RegTensor<T> regCopyOut;
+    Reg::MaskReg pregT;
 
     if constexpr (IsSameType<U, float>::value && !IsSameType<T, U>::value) {
-        MicroAPI::Cast<T, U, castTrait1>(regTmp, src, pregUp);
-        MicroAPI::Pack((RegTensor<uint16_t>&)regCopyOut, (RegTensor<uint32_t>&)regTmp);
-        MicroAPI::Pack(pregT, pregUp);
-        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat, pregT);
+        Reg::Cast<T, U, castTrait1>(regTmp, src, pregUp);
+        Reg::Pack((RegTensor<uint16_t>&)regCopyOut, (RegTensor<uint32_t>&)regTmp);
+        Reg::Pack(pregT, pregUp);
+        Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat, pregT);
     } else {
-        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
+        Reg::StoreAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
     }
 }
 
 template <typename U = float>
-__aicore__ inline void CalcVarT(MicroAPI::RegTensor<U>& regVarT, MicroAPI::MaskReg& pregUp,
-                                MicroAPI::RegTensor<U>& regVar, U weightDecayUp, U lrUp)
+__aicore__ inline void CalcVarT(Reg::RegTensor<U>& regVarT, Reg::MaskReg& pregUp, Reg::RegTensor<U>& regVar,
+                                U weightDecayUp, U lrUp)
 {
     // // var_t = var * (1 + (-lr * weight_decay))
-    MicroAPI::RegTensor<U> regWeightDecay;
-    MicroAPI::RegTensor<U> regLr;
+    Reg::RegTensor<U> regWeightDecay;
+    Reg::RegTensor<U> regLr;
 
-    MicroAPI::Duplicate(regWeightDecay, weightDecayUp, pregUp);
-    MicroAPI::Muls(regLr, regWeightDecay, lrUp, pregUp);
-    MicroAPI::Muls(regLr, regLr, -1.0f, pregUp);
-    MicroAPI::Adds(regLr, regLr, 1.0f, pregUp);
-    MicroAPI::Mul(regVarT, regVar, regLr, pregUp);
+    Reg::Duplicate(regWeightDecay, weightDecayUp, pregUp);
+    Reg::Muls(regLr, regWeightDecay, lrUp, pregUp);
+    Reg::Muls(regLr, regLr, -1.0f, pregUp);
+    Reg::Adds(regLr, regLr, 1.0f, pregUp);
+    Reg::Mul(regVarT, regVar, regLr, pregUp);
 }
 
 template <typename U = float>
-__aicore__ inline void CalcDenom(MicroAPI::RegTensor<U>& regDenom, MicroAPI::MaskReg& pregUp,
-                                 MicroAPI::RegTensor<U>& regVOut, U beta2PowerUp, U beta2Up, U epsilonUp)
+__aicore__ inline void CalcDenom(Reg::RegTensor<U>& regDenom, Reg::MaskReg& pregUp, Reg::RegTensor<U>& regVOut,
+                                 U beta2PowerUp, U beta2Up, U epsilonUp)
 {
-    MicroAPI::RegTensor<U> regBeta2Power;
-    MicroAPI::RegTensor<U> regTmp1;
-    MicroAPI::RegTensor<U> regAddSqrtV;
-    MicroAPI::RegTensor<U> regDivRes;
-    MicroAPI::RegTensor<U> regSqrtVt;
-    MicroAPI::RegTensor<U> regVtLeft;
+    Reg::RegTensor<U> regBeta2Power;
+    Reg::RegTensor<U> regTmp1;
+    Reg::RegTensor<U> regAddSqrtV;
+    Reg::RegTensor<U> regDivRes;
+    Reg::RegTensor<U> regSqrtVt;
+    Reg::RegTensor<U> regVtLeft;
     // v_t_left = -1 * v_out
     // beta2_power_out = beta2_power * beta2
     // denom = sqrt(v_t_left / (beta2_power_out - 1)) + epsilon
-    MicroAPI::Muls(regVtLeft, regVOut, -1.0f, pregUp);
-    MicroAPI::Duplicate(regBeta2Power, beta2PowerUp, pregUp);
-    MicroAPI::Muls(regTmp1, regBeta2Power, beta2Up, pregUp);
-    MicroAPI::Adds(regTmp1, regTmp1, -1.0f, pregUp);
-    MicroAPI::Div(regDivRes, regVtLeft, regTmp1, pregUp);
-    MicroAPI::Sqrt(regSqrtVt, regDivRes, pregUp);
-    MicroAPI::Adds(regDenom, regSqrtVt, epsilonUp, pregUp);
+    Reg::Muls(regVtLeft, regVOut, -1.0f, pregUp);
+    Reg::Duplicate(regBeta2Power, beta2PowerUp, pregUp);
+    Reg::Muls(regTmp1, regBeta2Power, beta2Up, pregUp);
+    Reg::Adds(regTmp1, regTmp1, -1.0f, pregUp);
+    Reg::Div(regDivRes, regVtLeft, regTmp1, pregUp);
+    Reg::Sqrt(regSqrtVt, regDivRes, pregUp);
+    Reg::Adds(regDenom, regSqrtVt, epsilonUp, pregUp);
 }
 
 // CalcDataVarOut<U>(regVarOut, pregUp, regVarT, regDenom, regMOut, beta1PowerUp, beta1Up, lrUp);
 template <typename U = float>
-__aicore__ inline void CalcDataVarOut(MicroAPI::RegTensor<U>& regVarOut, MicroAPI::MaskReg& pregUp,
-                                      MicroAPI::RegTensor<U>& regVarT, MicroAPI::RegTensor<U>& regDenom,
-                                      MicroAPI::RegTensor<U>& regMOut, U beta1PowerUp, U beta1Up, U lrUp)
+__aicore__ inline void CalcDataVarOut(Reg::RegTensor<U>& regVarOut, Reg::MaskReg& pregUp, Reg::RegTensor<U>& regVarT,
+                                      Reg::RegTensor<U>& regDenom, Reg::RegTensor<U>& regMOut, U beta1PowerUp,
+                                      U beta1Up, U lrUp)
 {
-    MicroAPI::RegTensor<U> regTmp1;
-    MicroAPI::RegTensor<U> regTmp2;
-    MicroAPI::RegTensor<U> regTmp3;
-    MicroAPI::RegTensor<U> regLr;
-    MicroAPI::RegTensor<U> regStepSize;
-    MicroAPI::RegTensor<U> regBeta1Power;
+    Reg::RegTensor<U> regTmp1;
+    Reg::RegTensor<U> regTmp2;
+    Reg::RegTensor<U> regTmp3;
+    Reg::RegTensor<U> regLr;
+    Reg::RegTensor<U> regStepSize;
+    Reg::RegTensor<U> regBeta1Power;
     // beta1_power_out = beta1_power * beta1
     // step_size = lr / (beta1_power_out - 1)
     // data_var_out = var_t + step_size * (m_out / denom)
-    MicroAPI::Duplicate(regBeta1Power, beta1PowerUp, pregUp);
-    MicroAPI::Muls(regTmp1, regBeta1Power, beta1Up, pregUp);
-    MicroAPI::Adds(regTmp1, regTmp1, -1.0f, pregUp);
-    MicroAPI::Duplicate(regLr, lrUp, pregUp);
-    MicroAPI::Div(regStepSize, regLr, regTmp1, pregUp);
-    MicroAPI::Mul(regTmp2, regStepSize, regMOut, pregUp);
-    MicroAPI::Div(regTmp3, regTmp2, regDenom, pregUp);
-    MicroAPI::Add(regVarOut, regVarT, regTmp3, pregUp);
+    Reg::Duplicate(regBeta1Power, beta1PowerUp, pregUp);
+    Reg::Muls(regTmp1, regBeta1Power, beta1Up, pregUp);
+    Reg::Adds(regTmp1, regTmp1, -1.0f, pregUp);
+    Reg::Duplicate(regLr, lrUp, pregUp);
+    Reg::Div(regStepSize, regLr, regTmp1, pregUp);
+    Reg::Mul(regTmp2, regStepSize, regMOut, pregUp);
+    Reg::Div(regTmp3, regTmp2, regDenom, pregUp);
+    Reg::Add(regVarOut, regVarT, regTmp3, pregUp);
 }
 
 #endif
@@ -152,16 +150,16 @@ struct CalcGt : public Ops::Base::Vec::ElemwiseBinaryOP<U, T, U> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regGrad;
-            MicroAPI::RegTensor<U> regGtOut;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regGrad;
+            Reg::RegTensor<U> regGtOut;
 
             // gt = maximizeFactor * gt
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
                 LoadOneTensor(regGrad, gradAddr, pregUp, (int32_t)oneRepeat);
-                MicroAPI::Muls(regGtOut, regGrad, maximizeFactor, pregUp);
+                Reg::Muls(regGtOut, regGrad, maximizeFactor, pregUp);
                 StoreOneTensor<U, U>(gTOutAddr, regGtOut, pregUp, (int32_t)oneRepeat);
             }
         }
@@ -191,25 +189,25 @@ struct CalcM : public Ops::Base::Vec::ElemwiseTernaryOP<U, T, U, T> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regM;
-            MicroAPI::RegTensor<U> regBeta1;
-            MicroAPI::RegTensor<U> regGrad;
-            MicroAPI::RegTensor<U> regBeta1Sub1;
-            MicroAPI::RegTensor<U> regMOut;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regM;
+            Reg::RegTensor<U> regBeta1;
+            Reg::RegTensor<U> regGrad;
+            Reg::RegTensor<U> regBeta1Sub1;
+            Reg::RegTensor<U> regMOut;
 
             // m_out = m * beta1 - (beta1 - 1) * gt
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
                 LoadOneTensor(regM, mAddr, pregUp, (int32_t)oneRepeat);
                 LoadOneTensor<U, U>(regGrad, gradAddr, pregUp, (int32_t)oneRepeat);
 
-                MicroAPI::Duplicate(regBeta1, beta1Up, pregUp);
-                MicroAPI::Adds(regBeta1Sub1, regBeta1, -1.0f, pregUp);
-                MicroAPI::Mul(regBeta1Sub1, regBeta1Sub1, regGrad, pregUp);
-                MicroAPI::Mul(regM, regM, regBeta1, pregUp);
-                MicroAPI::Sub(regMOut, regM, regBeta1Sub1, pregUp);
+                Reg::Duplicate(regBeta1, beta1Up, pregUp);
+                Reg::Adds(regBeta1Sub1, regBeta1, -1.0f, pregUp);
+                Reg::Mul(regBeta1Sub1, regBeta1Sub1, regGrad, pregUp);
+                Reg::Mul(regM, regM, regBeta1, pregUp);
+                Reg::Sub(regMOut, regM, regBeta1Sub1, pregUp);
 
                 StoreOneTensor<U, U>(mOutAddr, regMOut, pregUp, (int32_t)oneRepeat);
             }
@@ -240,25 +238,25 @@ struct CalcV : public Ops::Base::Vec::ElemwiseTernaryOP<U, T, U, T> {
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regV;
-            MicroAPI::RegTensor<U> regBeta2;
-            MicroAPI::RegTensor<U> regGrad;
-            MicroAPI::RegTensor<U> regTmp1;
-            MicroAPI::RegTensor<U> regBeta2Sub1;
-            MicroAPI::RegTensor<U> regVOut;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regV;
+            Reg::RegTensor<U> regBeta2;
+            Reg::RegTensor<U> regGrad;
+            Reg::RegTensor<U> regTmp1;
+            Reg::RegTensor<U> regBeta2Sub1;
+            Reg::RegTensor<U> regVOut;
             // v_out = v * beta2 - (beta2 - 1) * gt * gt
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
                 LoadOneTensor(regV, vAddr, pregUp, (int32_t)oneRepeat);
                 LoadOneTensor<U, U>(regGrad, gradAddr, pregUp, (int32_t)oneRepeat);
-                MicroAPI::Duplicate(regBeta2, beta2Up, pregUp);
-                MicroAPI::Adds(regBeta2Sub1, regBeta2, -1.0f, pregUp);
-                MicroAPI::Mul(regBeta2Sub1, regBeta2Sub1, regGrad, pregUp);
-                MicroAPI::Mul(regBeta2Sub1, regBeta2Sub1, regGrad, pregUp);
-                MicroAPI::Mul(regTmp1, regBeta2, regV, pregUp);
-                MicroAPI::Sub(regVOut, regTmp1, regBeta2Sub1, pregUp);
+                Reg::Duplicate(regBeta2, beta2Up, pregUp);
+                Reg::Adds(regBeta2Sub1, regBeta2, -1.0f, pregUp);
+                Reg::Mul(regBeta2Sub1, regBeta2Sub1, regGrad, pregUp);
+                Reg::Mul(regBeta2Sub1, regBeta2Sub1, regGrad, pregUp);
+                Reg::Mul(regTmp1, regBeta2, regV, pregUp);
+                Reg::Sub(regVOut, regTmp1, regBeta2Sub1, pregUp);
 
                 StoreOneTensor<U, U>(vOutAddr, regVOut, pregUp, (int32_t)oneRepeat);
             }
@@ -311,11 +309,11 @@ struct CalcVar : public Ops::Base::Vec::Elemwise10OP<U, T, U, U, T, T, T, T, T, 
 
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg pregUp;
-            MicroAPI::RegTensor<U> regVar, regMOut, regVOut, regVarT, regDenom, regVarOut;
+            Reg::MaskReg pregUp;
+            Reg::RegTensor<U> regVar, regMOut, regVOut, regVarT, regDenom, regVarOut;
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
-                pregUp = MicroAPI::UpdateMask<U>(totalLen);
+                pregUp = Reg::UpdateMask<U>(totalLen);
 
                 LoadOneTensor(regVar, varAddr, pregUp, (int32_t)oneRepeat);
                 LoadOneTensor<U, U>(regMOut, mOutAddr, pregUp, (int32_t)oneRepeat);

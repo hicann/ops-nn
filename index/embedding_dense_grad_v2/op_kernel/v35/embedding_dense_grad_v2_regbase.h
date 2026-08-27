@@ -143,11 +143,11 @@ protected:
     const EmbeddingDenseGradV2TilingData4RegBase& tiling_;
 
     using RegTensorType = typename std::conditional<IsSameType<IDX_T, int64_t>::value,
-                                                    typename MicroAPI::RegTensor<IDX_T, MicroAPI::RegTraitNumTwo>,
-                                                    typename MicroAPI::RegTensor<IDX_T>>::type;
+                                                    typename Reg::RegTensor<IDX_T, Reg::RegTraitNumTwo>,
+                                                    typename Reg::RegTensor<IDX_T>>::type;
     using RegCastType = typename std::conditional<IsSameType<IDX_T, int64_t>::value,
-                                                  typename MicroAPI::RegTensor<uint64_t, MicroAPI::RegTraitNumTwo>,
-                                                  typename MicroAPI::RegTensor<uint32_t>>::type;
+                                                  typename Reg::RegTensor<uint64_t, Reg::RegTraitNumTwo>,
+                                                  typename Reg::RegTensor<uint32_t>>::type;
 };
 
 template <typename GRAD_T, typename CAST_T, typename IDX_T, bool isScale, bool SplitEltwiseAxis, int32_t bufferNum>
@@ -290,7 +290,7 @@ EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, buf
 
     Duplicate(noDupCount, 0, indicesNumber);
     UniqueGetElm(indicesTensor, noDupCount, indicesNumber, arNum);
-    arNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1; // noDupRes的数组大小
+    arNum = ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1; // noDupRes的数组大小
     UniqueStat(indicesTensor, noDupCount, indicesNumber, arNum);
 }
 
@@ -309,43 +309,40 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint32_t counter = indicesFactorReal + 1;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-        AscendC::MicroAPI::RegTensor<int32_t> selReg;
-        AscendC::MicroAPI::RegTensor<IDX_T> indicesReg;
-        AscendC::MicroAPI::RegTensor<IDX_T> indicesShiftOneReg;
+        AscendC::Reg::RegTensor<int32_t> orderReg;
+        AscendC::Reg::RegTensor<int32_t> selReg;
+        AscendC::Reg::RegTensor<IDX_T> indicesReg;
+        AscendC::Reg::RegTensor<IDX_T> indicesShiftOneReg;
 
-        AscendC::MicroAPI::MaskReg
-            maskReg = AscendC::MicroAPI::CreateMask<IDX_T, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg cmpMask;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignRegForLoad u0;
-        MicroAPI::UnalignRegForStore ureg;
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+        AscendC::Reg::MaskReg maskReg = AscendC::Reg::CreateMask<IDX_T, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg cmpMask;
+        AscendC::Reg::MaskReg maskRegUpdate;
+        AscendC::Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore ureg;
+        AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
         for (uint16_t i = 0; i < loopCnt; ++i) {
             scalar = i * perVfIndices_;
             auto sortedIndicesAddrUpdate = sortedIndicesAddr + shiftOffset + i * perVfIndices_;
-            AscendC::MicroAPI::Arange(orderReg, scalar);
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<IDX_T>(counter);
+            AscendC::Reg::Arange(orderReg, scalar);
+            maskRegUpdate = AscendC::Reg::UpdateMask<IDX_T>(counter);
             DataCopy(indicesReg, sortedIndicesAddrUpdate);
-            AscendC::MicroAPI::LoadUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
-            AscendC::MicroAPI::LoadUnAlign<IDX_T>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
-            AscendC::MicroAPI::Compare<IDX_T, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
+            AscendC::Reg::LoadUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
+            AscendC::Reg::LoadUnAlign<IDX_T>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
+            AscendC::Reg::Compare<IDX_T, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+                AscendC::Reg::MaskReg maskHalf;
+                AscendC::Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskHalf, cmpMask);
                 // vSQZ
-                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                  maskHalf);
+                AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
             } else {
                 // vSQZ
-                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                  cmpMask);
+                AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
             }
 
-            AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(noDupResAddr,
-                                                                                                       selReg, ureg);
-            AscendC::MicroAPI::StoreUnAlignPost(noDupResAddr, ureg);
+            AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(noDupResAddr, selReg,
+                                                                                             ureg);
+            AscendC::Reg::StoreUnAlignPost(noDupResAddr, ureg);
         }
     }
 }
@@ -363,18 +360,18 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint32_t counterStatFre = arNum;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int32_t> beginReg;
-        AscendC::MicroAPI::RegTensor<int32_t> endReg;
-        AscendC::MicroAPI::RegTensor<int32_t> subReg;
-        AscendC::MicroAPI::MaskReg maskRegUpdateFre;
-        AscendC::MicroAPI::UnalignRegForLoad u0Fre;
+        AscendC::Reg::RegTensor<int32_t> beginReg;
+        AscendC::Reg::RegTensor<int32_t> endReg;
+        AscendC::Reg::RegTensor<int32_t> subReg;
+        AscendC::Reg::MaskReg maskRegUpdateFre;
+        AscendC::Reg::UnalignRegForLoad u0Fre;
         for (uint16_t i = 0; i < loopCntStatFre; i++) {
             auto noDupResAddrUpdate = noDupResAddr + i * vfLen + 1;
-            maskRegUpdateFre = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
+            maskRegUpdateFre = AscendC::Reg::UpdateMask<int32_t>(counterStatFre);
             DataCopy(beginReg, noDupResAddr + i * vfLen);
-            AscendC::MicroAPI::LoadUnAlignPre(u0Fre, noDupResAddrUpdate);
-            AscendC::MicroAPI::LoadUnAlign<int32_t>(endReg, u0Fre, noDupResAddrUpdate);
-            AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdateFre);
+            AscendC::Reg::LoadUnAlignPre(u0Fre, noDupResAddrUpdate);
+            AscendC::Reg::LoadUnAlign<int32_t>(endReg, u0Fre, noDupResAddrUpdate);
+            AscendC::Reg::Sub(subReg, endReg, beginReg, maskRegUpdateFre);
             DataCopy(noDupResAddr + i * vfLen, subReg, maskRegUpdateFre);
         }
     }
@@ -404,13 +401,13 @@ EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, buf
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> srcGrad;
-        MicroAPI::RegTensor<float> groupAdd;
-        MicroAPI::RegTensor<float> gradResult;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<float> srcGrad;
+        Reg::RegTensor<float> groupAdd;
+        Reg::RegTensor<float> gradResult;
+        Reg::MaskReg preg;
 
         for (uint16_t col = 0; col < perColLoopNum; col++) { // grad 一行
-            preg = MicroAPI::UpdateMask<float>(processColLen);
+            preg = Reg::UpdateMask<float>(processColLen);
             uint32_t colOffset = col * vfFp32Block_; // 列方向偏移
             if constexpr (useRes) {                  // 相同UB间相同索引，需要累加
                 ops::LoadOneTensorForDtypeT<CAST_T>(ubLastBufAddr, gradResult, preg, colOffset);
@@ -619,11 +616,11 @@ EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, buf
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> srcGrad;
-        MicroAPI::RegTensor<float> groupAdd;
-        MicroAPI::RegTensor<float> gradResult;
+        Reg::RegTensor<float> srcGrad;
+        Reg::RegTensor<float> groupAdd;
+        Reg::RegTensor<float> gradResult;
 
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
         for (uint16_t col = 0; col < perColLoopNum; col++) { // grad 一行
             uint32_t colOffset = col * vfFp32Block_;         // 列方向的偏移
             Duplicate(gradResult, (float)0, preg);
@@ -652,7 +649,7 @@ EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale, SplitEltwiseAxis, buf
             }
 
             ops::StoreOneTensorForDtypeT<GRAD_T>(ubResultAddr, gradResult, preg, colOffset);
-            preg = MicroAPI::UpdateMask<float>(processColLen);
+            preg = Reg::UpdateMask<float>(processColLen);
         }
     }
 }
@@ -998,33 +995,33 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         RegCastType indexCast;
         RegTensorType vregFreq;
 
-        MicroAPI::MaskReg pMaskAll;
+        Reg::MaskReg pMaskAll;
         if constexpr (IsSameType<IDX_T, int64_t>::value) {
-            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL, MicroAPI::RegTraitNumTwo>();
+            pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL, Reg::RegTraitNumTwo>();
         } else {
-            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL>();
+            pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL>();
         }
 
-        MicroAPI::Arange(index, 0);
+        Reg::Arange(index, 0);
         Muls(index, index, (IDX_T)interval, pMaskAll);
         indexCast = (RegCastType&)index;
 
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            MicroAPI::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pMaskAll);
-            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pMaskAll);
+            Reg::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pMaskAll);
+            Reg::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pMaskAll);
             ubFreqAddr = ubFreqAddr + srcStride;
             ubDstAddr = ubDstAddr + dstStride;
         }
 
-        MicroAPI::MaskReg pTail;
+        Reg::MaskReg pTail;
         if constexpr (IsSameType<IDX_T, int64_t>::value) {
-            pTail = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(tail);
+            pTail = Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(tail);
         } else {
-            pTail = MicroAPI::UpdateMask<IDX_T>(tail);
+            pTail = Reg::UpdateMask<IDX_T>(tail);
         }
 
-        MicroAPI::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pTail);
-        MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pTail);
+        Reg::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pTail);
+        Reg::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pTail);
     }
 }
 
@@ -1055,37 +1052,36 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             RegTensorType freqReg;
             RegTensorType sumReg;
             RegTensorType resultReg;
-            MicroAPI::UnalignRegForStore udst;
-            MicroAPI::UnalignRegForLoad uSrc;
-            MicroAPI::MaskReg pMaskAll;
+            Reg::UnalignRegForStore udst;
+            Reg::UnalignRegForLoad uSrc;
+            Reg::MaskReg pMaskAll;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL, MicroAPI::RegTraitNumTwo>();
+                pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL, Reg::RegTraitNumTwo>();
             } else {
-                pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL>();
+                pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL>();
             }
 
-            MicroAPI::Duplicate(resultReg, 0);
-            MicroAPI::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
+            Reg::Duplicate(resultReg, 0);
+            Reg::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
             for (uint16_t j = 0; j < (uint16_t)sumLoop; j++) {
-                MicroAPI::LoadUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
-                                                                                      vfIndicesLen);
-                MicroAPI::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, pMaskAll);
-                MicroAPI::Add(resultReg, resultReg, sumReg, pMaskAll);
+                Reg::LoadUnAlign<IDX_T, Reg::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, vfIndicesLen);
+                Reg::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, pMaskAll);
+                Reg::Add(resultReg, resultReg, sumReg, pMaskAll);
             }
 
-            MicroAPI::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
-            MicroAPI::LoadUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, tail);
-            MicroAPI::MaskReg preg;
+            Reg::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
+            Reg::LoadUnAlign<IDX_T, Reg::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, tail);
+            Reg::MaskReg preg;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                preg = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(tail);
+                preg = Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(tail);
             } else {
-                preg = MicroAPI::UpdateMask<IDX_T>(tail);
+                preg = Reg::UpdateMask<IDX_T>(tail);
             }
-            MicroAPI::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, preg);
-            MicroAPI::Add(resultReg, resultReg, sumReg, preg);
+            Reg::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, preg);
+            Reg::Add(resultReg, resultReg, sumReg, preg);
 
-            MicroAPI::StoreUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst, 1);
-            MicroAPI::StoreUnAlignPost(ubFreqDstAddr, udst, 0);
+            Reg::StoreUnAlign<IDX_T, Reg::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst, 1);
+            Reg::StoreUnAlignPost(ubFreqDstAddr, udst, 0);
         }
         ubFreqDstAddr = ubFreqDstAddr + 1;
         ubFreqSrcAddr = ubFreqSrcAddr + countNum;
@@ -1122,41 +1118,41 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         RegTensorType vregBegin;
         RegTensorType vregEnd;
 
-        MicroAPI::MaskReg pMaskAll;
+        Reg::MaskReg pMaskAll;
         if constexpr (IsSameType<IDX_T, int64_t>::value) {
-            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL, MicroAPI::RegTraitNumTwo>();
+            pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL, Reg::RegTraitNumTwo>();
         } else {
-            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL>();
+            pMaskAll = Reg::CreateMask<IDX_T, Reg::MaskPattern::ALL>();
         }
 
-        MicroAPI::Arange(index, 0);
+        Reg::Arange(index, 0);
         Muls(index, index, (IDX_T)interval, pMaskAll);
         indexCast = (RegCastType&)index;
 
         uint32_t sregBegin = beginNumber;
         for (uint16_t i = 0; i < beginLoop; ++i) {
-            MicroAPI::MaskReg pMask;
+            Reg::MaskReg pMask;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                pMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sregBegin);
+                pMask = Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(sregBegin);
             } else {
-                pMask = MicroAPI::UpdateMask<IDX_T>(sregBegin);
+                pMask = Reg::UpdateMask<IDX_T>(sregBegin);
             }
-            MicroAPI::Gather(vregBegin, (__ubuf__ IDX_T*)(ubBeginSrc), indexCast, pMask);
-            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubBeginDst, vregBegin, pMask);
+            Reg::Gather(vregBegin, (__ubuf__ IDX_T*)(ubBeginSrc), indexCast, pMask);
+            Reg::StoreAlign((__ubuf__ IDX_T*)ubBeginDst, vregBegin, pMask);
             ubBeginSrc = ubBeginSrc + srcStride;
             ubBeginDst = ubBeginDst + perVfProcessNum;
         }
 
         uint32_t sregEnd = endNumber;
         for (uint16_t i = 0; i < endLoop; ++i) {
-            MicroAPI::MaskReg pMask;
+            Reg::MaskReg pMask;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                pMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sregEnd);
+                pMask = Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(sregEnd);
             } else {
-                pMask = MicroAPI::UpdateMask<IDX_T>(sregEnd);
+                pMask = Reg::UpdateMask<IDX_T>(sregEnd);
             }
-            MicroAPI::Gather(vregEnd, (__ubuf__ IDX_T*)(ubEndSrc), indexCast, pMask);
-            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubEndDst, vregEnd, pMask);
+            Reg::Gather(vregEnd, (__ubuf__ IDX_T*)(ubEndSrc), indexCast, pMask);
+            Reg::StoreAlign((__ubuf__ IDX_T*)ubEndDst, vregEnd, pMask);
             ubEndSrc = ubEndSrc + srcStride;
             ubEndDst = ubEndDst + perVfProcessNum;
         }
@@ -1196,20 +1192,20 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
         uint32_t sreg = totalIndicesNum;
         for (uint16_t i = 0; i < totalLoop; i++) {
-            AscendC::MicroAPI::LoadAlign(vSrcReg0, ubIdxEndSrc);
-            AscendC::MicroAPI::LoadAlign(vSrcReg1, ubIdxBeginSrc);
-            AscendC::MicroAPI::Interleave(vDstReg0, vDstReg1, vSrcReg0, vSrcReg1);
-            MicroAPI::MaskReg mask0;
-            MicroAPI::MaskReg mask1;
+            AscendC::Reg::LoadAlign(vSrcReg0, ubIdxEndSrc);
+            AscendC::Reg::LoadAlign(vSrcReg1, ubIdxBeginSrc);
+            AscendC::Reg::Interleave(vDstReg0, vDstReg1, vSrcReg0, vSrcReg1);
+            Reg::MaskReg mask0;
+            Reg::MaskReg mask1;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
-                mask0 = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sreg);
-                mask1 = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sreg);
+                mask0 = AscendC::Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(sreg);
+                mask1 = AscendC::Reg::UpdateMask<IDX_T, Reg::RegTraitNumTwo>(sreg);
             } else {
-                mask0 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
-                mask1 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
+                mask0 = AscendC::Reg::UpdateMask<IDX_T>(sreg);
+                mask1 = AscendC::Reg::UpdateMask<IDX_T>(sreg);
             }
-            AscendC::MicroAPI::StoreAlign(ubDst, vDstReg0, mask0);
-            AscendC::MicroAPI::StoreAlign(ubDst + strideNum, vDstReg1, mask1);
+            AscendC::Reg::StoreAlign(ubDst, vDstReg0, mask0);
+            AscendC::Reg::StoreAlign(ubDst + strideNum, vDstReg1, mask1);
             ubIdxEndSrc = ubIdxEndSrc + perVfProcessNum;
             ubIdxBeginSrc = ubIdxBeginSrc + perVfProcessNum;
             ubDst = ubDst + perInterleave;

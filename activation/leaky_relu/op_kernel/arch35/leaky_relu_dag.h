@@ -10,7 +10,7 @@
 
 /*!
  * \file leaky_relu_dag.h
- * \brief LeakyReLU 算子 DAG 定义及 MicroAPI 自定义 Kernel 实现
+ * \brief LeakyReLU 算子 DAG 定义及 Reg 自定义 Kernel 实现
  */
 #ifndef OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_DAG_H
 #define OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_DAG_H
@@ -32,24 +32,24 @@ struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregNegPart;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregZero;
-        MicroAPI::MaskReg mask, cmpMask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregNegPart;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregZero;
+        Reg::MaskReg mask, cmpMask;
 
         __VEC_SCOPE__
         {
-            MicroAPI::Duplicate(vregZero, (T)0.0);
+            Reg::Duplicate(vregZero, (T)0.0);
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
+                Reg::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
 
-                MicroAPI::Muls(vregNegPart, vregInput, negativeSlope, mask);
-                MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, vregInput, vregZero, mask);
-                MicroAPI::Select<T>(vregOutput, vregInput, vregNegPart, cmpMask);
+                Reg::Muls(vregNegPart, vregInput, negativeSlope, mask);
+                Reg::Compare<T, CMPMODE::GT>(cmpMask, vregInput, vregZero, mask);
+                Reg::Select<T>(vregOutput, vregInput, vregNegPart, cmpMask);
 
-                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
 #endif

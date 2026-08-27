@@ -22,17 +22,17 @@
 
 namespace SoftmaxGradExt {
 using namespace AscendC;
-constexpr static AscendC::MicroAPI::CastTrait castTraitFp16ToFp32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitFp16ToFp32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitFp32ToFp16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitFp32ToFp16 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::NO_SAT,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
 
@@ -115,15 +115,15 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(const LocalTensor
             __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
             __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(rSize);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::UnalignRegForStore UReg;
+            AscendC::Reg::RegTensor<float> aReg, bReg;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::UnalignRegForStore UReg;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 Reg::LoadAlign(aReg, (__ubuf__ float*)src + i * stride);
                 Reduce<ReduceType::SUM>(bReg, aReg, pMask);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     } else {
         __VEC_SCOPE__
@@ -132,20 +132,19 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSumSmallR(const LocalTensor
             __ubuf__ float* src0 = (__ubuf__ float*)srcTensor.GetPhyAddr();
             __ubuf__ float* src1 = (__ubuf__ float*)srcTensor.GetPhyAddr() + VL_FP32;
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-            AscendC::MicroAPI::UnalignRegForStore UReg;
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg
-                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::UnalignRegForStore UReg;
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 Reg::LoadAlign(aReg, (__ubuf__ float*)src0 + i * stride);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)src1 + i * stride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                 Reduce<ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     }
 }
@@ -196,37 +195,37 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSum(const LocalTensor<float
         __ubuf__ float* tailSrcA = (__ubuf__ float*)srcTensor.GetPhyAddr() + tailSrcAOffset;
         __ubuf__ float* tailSrcB = (__ubuf__ float*)srcTensor.GetPhyAddr() + tailSrcBOffset;
         __ubuf__ float* unFoldSrc = (__ubuf__ float*)srcTensor.GetPhyAddr() + unFoldSrcOffset;
-        AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::UnalignRegForStore UReg;
+        AscendC::Reg::MaskReg pFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::UnalignRegForStore UReg;
 
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             dst = (__ubuf__ float*)reduceSumTempTensor.GetPhyAddr() + i * outerLoopDstStride;
             for (uint16_t j = 0; j < mainFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg, dReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg, dReg;
                 Reg::LoadAlign(aReg, (__ubuf__ float*)foldSrcA + i * outerLoopStride + j * innerLoopStride);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)foldSrcB + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
                 Reduce<ReduceType::SUM>(dReg, cReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
                 uint32_t count = static_cast<uint32_t>(tailFoldElemCount);
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
-                AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+                AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
                 Reg::LoadAlign(aReg, (__ubuf__ float*)tailSrcA + i * outerLoopStride + j * innerLoopStride);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)tailSrcB + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
+                Move<float, AscendC::Reg::MaskMergeMode::MERGING>(aReg, cReg, pMask);
                 Reduce<ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 Reg::LoadAlign(aReg, (__ubuf__ float*)unFoldSrc + i * outerLoopStride + j * innerLoopStride);
                 Reduce<ReduceType::SUM>(bReg, aReg, pFull);
-                AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
+                AscendC::Reg::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
+            AscendC::Reg::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
         }
     }
     LastReduceSumSmallR(dstTensor, reduceSumTempTensor, aSize, foldPoint, outerLoopDstStride);
@@ -234,11 +233,11 @@ __aicore__ inline void SoftmaxGradExtBase::LastReduceSum(const LocalTensor<float
 
 template <uint32_t RSize, int32_t TailCount = -1, int32_t Index = 0, int32_t Depth = 1>
 struct NlastDichotomyAdd {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         __ubuf__ float* srcAOffset = srcA + stride * CONST_TWO;
         __ubuf__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
@@ -246,13 +245,13 @@ struct NlastDichotomyAdd {
                                                                           stride * CONST_TWO);
             NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO);
         }
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         __ubuf__ float* srcAOffset = srcA + stride * CONST_TWO;
         __ubuf__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
@@ -266,56 +265,56 @@ struct NlastDichotomyAdd {
             NlastDichotomyAdd<RSize / CONST_TWO, TailCount, Index + Depth, Depth * CONST_TWO>::LoadAndAccumulate(
                 bReg, srcB, srcBOffset, pMask, stride * CONST_TWO, offset);
         }
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
 };
 
 template <int32_t TailCount, int32_t Index, int32_t Depth>
 struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
         Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
         if constexpr (TailCount <= 0) {
-            AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
             Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
             Reg::LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
             Reg::LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-            Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+            Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
         } else {
             if constexpr (Index + Depth < TailCount) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
                 Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
                 Reg::LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             } else if constexpr (Index < TailCount) {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             } else {
-                AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+                AscendC::Reg::RegTensor<float> aReg, bReg;
                 Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
                 Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
             }
         }
     }
@@ -323,34 +322,34 @@ struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
 
 template <>
 struct NlastDichotomyAdd<CONST_TWO> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
         Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
         Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride, uint32_t offset)
     {
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+        AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
         Reg::LoadAlign(aReg, (__ubuf__ float*)srcA);
         Reg::LoadAlign(bReg, (__ubuf__ float*)srcA + offset);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         Reg::LoadAlign(bReg, (__ubuf__ float*)srcB);
         Reg::LoadAlign(cReg, (__ubuf__ float*)srcB + offset);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
-        Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, bReg, cReg, pMask);
+        Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
 };
 
 template <>
 struct NlastDichotomyAdd<1> {
-    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc, __ubuf__ float*& srcA,
-                                                    __ubuf__ float*& srcB, AscendC::MicroAPI::MaskReg& pMask,
+    __aicore__ static inline void LoadAndAccumulate(AscendC::Reg::RegTensor<float>& acc, __ubuf__ float*& srcA,
+                                                    __ubuf__ float*& srcB, AscendC::Reg::MaskReg& pMask,
                                                     uint32_t stride)
     {
         Reg::LoadAlign(acc, (__ubuf__ float*)srcA);
@@ -373,14 +372,14 @@ __aicore__ inline void SoftmaxGradExtBase::UpdateCache(const LocalTensor<float>&
         __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
         __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg;
-        AscendC::MicroAPI::MaskReg pMask;
+        AscendC::Reg::RegTensor<float> aReg, bReg;
+        AscendC::Reg::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-            pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
+            pMask = AscendC::Reg::UpdateMask<float>(sreg);
             Reg::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                 Reg::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
             Reg::StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
         }

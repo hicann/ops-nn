@@ -20,8 +20,8 @@
 
 namespace NonZero {
 using namespace AscendC;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T1, typename T2>
 class NonZeroBigMaskDim1 : public NonZeroBigMask<T1, T2> {

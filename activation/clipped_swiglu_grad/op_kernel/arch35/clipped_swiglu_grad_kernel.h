@@ -13,7 +13,7 @@
  * \brief Regbase VF kernel for ClippedSwigluGrad (Ascend 950 / arch35)
  *
  * 基于910B版反向逻辑，减少 UB 间搬运：
- * - 单个 __VEC_SCOPE__：MicroAPI RegTensor 加载 a/b/dy → 寄存器内 Compare/Select 做 clamp mask
+ * - 单个 __VEC_SCOPE__：Reg RegTensor 加载 a/b/dy → 寄存器内 Compare/Select 做 clamp mask
  *   → 计算 da/db（寄存器内）→ 写回 vecBuf(交错) / dxFloatLocal(前后切分)
  * - interleaved 散开：scope 外用 LocalTensor 级 Interleave（向量化，无标量大循环；仅 <=7 元素 32B 尾标量补齐）
  * - 16-bit：写回后 Cast float→T（与910B一致）
@@ -37,8 +37,8 @@ constexpr int64_t SWI_FACTOR = 2;
 constexpr int64_t ZERO_CHUNK_BYTES = 65535 / BLOCK_SIZE * BLOCK_SIZE;
 constexpr uint32_t VF_LEN_FP32 = Ops::Base::GetVRegSize() / sizeof(float);
 
-static constexpr MicroAPI::CastTrait CAST_BF16_FP16_TO_FP32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait CAST_BF16_FP16_TO_FP32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename T, bool isInterleaved, bool isGroup>
 class ClippedSwigluGradArch35Kernel {
@@ -68,8 +68,8 @@ private:
     __aicore__ inline void InitZeroBuffer();
     __aicore__ inline void ZeroInvalidRows();
     __aicore__ inline int64_t AlignBytes(int64_t number) { return (number + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE; }
-    __aicore__ inline void LoadOneTensor(__local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
-                                         MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void LoadOneTensor(__local_mem__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                         uint32_t offset);
 
 private:
     GlobalTensor<T> xGm_;
@@ -386,19 +386,18 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
 
 template <typename T, bool isInterleaved, bool isGroup>
 __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>::LoadOneTensor(
-    __local_mem__ void* input, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset)
+    __local_mem__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (std::is_same_v<T, half>) {
-        MicroAPI::RegTensor<half> xFp16;
-        MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)input + offset);
+        Reg::RegTensor<half> xFp16;
+        Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)input + offset);
         Cast<float, half, CAST_BF16_FP16_TO_FP32>(dst, xFp16, preg);
     } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16,
-                                                                             (__local_mem__ bfloat16_t*)input + offset);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)input + offset);
         Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(dst, xBf16, preg);
     } else {
-        MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(dst, (__local_mem__ float*)input + offset);
+        Reg::LoadAlign<float, Reg::LoadDist::DIST_NORM>(dst, (__local_mem__ float*)input + offset);
     }
 }
 
@@ -435,74 +434,72 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
     // ---- VF: load a/b/dy, clamp-mask in reg, compute da/db ----
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> vregX0;
-        MicroAPI::RegTensor<float> vregX1;
-        MicroAPI::RegTensor<float> vregX0DeF;
-        MicroAPI::RegTensor<float> vregX1DeF;
-        MicroAPI::RegTensor<float> vregDY;
-        MicroAPI::RegTensor<float> minsReg;
-        MicroAPI::RegTensor<float> mulsReg;
-        MicroAPI::RegTensor<float> expReg;
-        MicroAPI::RegTensor<float> addsReg;
-        MicroAPI::RegTensor<float> sigReg;
-        MicroAPI::RegTensor<float> tmpReg;
-        MicroAPI::RegTensor<float> oneReg;
-        MicroAPI::RegTensor<float> daReg;
-        MicroAPI::RegTensor<float> dbReg;
-        MicroAPI::RegTensor<float> limitReg;
-        MicroAPI::RegTensor<float> negLimitReg;
-        MicroAPI::RegTensor<float> zeroReg;
+        Reg::RegTensor<float> vregX0;
+        Reg::RegTensor<float> vregX1;
+        Reg::RegTensor<float> vregX0DeF;
+        Reg::RegTensor<float> vregX1DeF;
+        Reg::RegTensor<float> vregDY;
+        Reg::RegTensor<float> minsReg;
+        Reg::RegTensor<float> mulsReg;
+        Reg::RegTensor<float> expReg;
+        Reg::RegTensor<float> addsReg;
+        Reg::RegTensor<float> sigReg;
+        Reg::RegTensor<float> tmpReg;
+        Reg::RegTensor<float> oneReg;
+        Reg::RegTensor<float> daReg;
+        Reg::RegTensor<float> dbReg;
+        Reg::RegTensor<float> limitReg;
+        Reg::RegTensor<float> negLimitReg;
+        Reg::RegTensor<float> zeroReg;
 
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskT = MicroAPI::UpdateMask<float>(tail);
-        MicroAPI::MaskReg maskA;
-        MicroAPI::MaskReg maskB;
-        MicroAPI::MaskReg maskBn;
+        Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskT = Reg::UpdateMask<float>(tail);
+        Reg::MaskReg maskA;
+        Reg::MaskReg maskB;
+        Reg::MaskReg maskBn;
 
-        MicroAPI::Duplicate(limitReg, clampLimit);
-        MicroAPI::Duplicate(negLimitReg, negClampLimit);
-        MicroAPI::Duplicate(zeroReg, scalarZero);
+        Reg::Duplicate(limitReg, clampLimit);
+        Reg::Duplicate(negLimitReg, negClampLimit);
+        Reg::Duplicate(zeroReg, scalarZero);
 
         for (uint16_t vfIdx = 0; vfIdx < dim1VfTimes + tailTimes; vfIdx++) {
             uint32_t offset = vfIdx * static_cast<uint32_t>(VF_LEN_FP32);
-            MicroAPI::MaskReg preg = (vfIdx < dim1VfTimes) ? maskAll : maskT;
+            Reg::MaskReg preg = (vfIdx < dim1VfTimes) ? maskAll : maskT;
 
             if constexpr (isInterleaved) {
                 uint32_t vfLenT = VF_LEN_FP32 * SWI_FACTOR;
-                MicroAPI::AddrReg srcIdxOffset = MicroAPI::CreateAddrReg<T>(vfIdx, vfLenT);
+                Reg::AddrReg srcIdxOffset = Reg::CreateAddrReg<T>(vfIdx, vfLenT);
                 if constexpr (std::is_same_v<T, half>) {
-                    MicroAPI::RegTensor<half> vregX0Raw;
-                    MicroAPI::RegTensor<half> vregX1Raw;
-                    MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
-                    MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::RegTensor<half> vregX0Raw;
+                    Reg::RegTensor<half> vregX1Raw;
+                    Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
+                    Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregX1Raw, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
-                    MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
-                    MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
+                    Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
+                    Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
                 } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-                    MicroAPI::RegTensor<bfloat16_t> vregX0Raw;
-                    MicroAPI::RegTensor<bfloat16_t> vregX1Raw;
-                    MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr,
-                                                                                         srcIdxOffset);
-                    MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    Reg::RegTensor<bfloat16_t> vregX0Raw;
+                    Reg::RegTensor<bfloat16_t> vregX1Raw;
+                    Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
+                    Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(
                         vregX1Raw, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
-                    MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
-                    MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
+                    Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
+                    Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
                 } else {
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>((MicroAPI::RegTensor<T>&)vregX0, xAddr,
-                                                                          srcIdxOffset);
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(
-                        (MicroAPI::RegTensor<T>&)vregX1, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<T>&)vregX0, xAddr, srcIdxOffset);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(
+                        (Reg::RegTensor<T>&)vregX1, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
                 }
-                MicroAPI::DeInterleave(vregX0DeF, vregX1DeF, vregX0, vregX1);
+                Reg::DeInterleave(vregX0DeF, vregX1DeF, vregX0, vregX1);
             } else {
                 LoadOneTensor(x0Addr, vregX0DeF, preg, offset);
                 LoadOneTensor(x1Addr, vregX1DeF, preg, offset);
             }
             LoadOneTensor(dyAddr, vregDY, preg, offset);
 
-            MicroAPI::Compare<float, CMPMODE::LE>(maskA, vregX0DeF, limitReg, preg);
-            MicroAPI::Compare<float, CMPMODE::LE>(maskB, vregX1DeF, limitReg, preg);
-            MicroAPI::Compare<float, CMPMODE::GE>(maskBn, vregX1DeF, negLimitReg, preg);
+            Reg::Compare<float, CMPMODE::LE>(maskA, vregX0DeF, limitReg, preg);
+            Reg::Compare<float, CMPMODE::LE>(maskB, vregX1DeF, limitReg, preg);
+            Reg::Compare<float, CMPMODE::GE>(maskBn, vregX1DeF, negLimitReg, preg);
 
             Mins(minsReg, vregX0DeF, clampLimit, preg);
 
@@ -529,16 +526,16 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
             Mul(tmpReg, tmpReg, vregX1DeF, preg);
             Mul(daReg, tmpReg, vregDY, preg);
 
-            MicroAPI::Select<float>(daReg, daReg, zeroReg, maskA);
-            MicroAPI::Select<float>(dbReg, dbReg, zeroReg, maskB);
-            MicroAPI::Select<float>(dbReg, dbReg, zeroReg, maskBn);
+            Reg::Select<float>(daReg, daReg, zeroReg, maskA);
+            Reg::Select<float>(dbReg, dbReg, zeroReg, maskB);
+            Reg::Select<float>(dbReg, dbReg, zeroReg, maskBn);
 
             if constexpr (isInterleaved) {
-                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(vecAddr + offset, daReg, preg);
-                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(vecAddr + halfU32 + offset, dbReg, preg);
+                Reg::StoreAlign<float, Reg::StoreDist::DIST_NORM>(vecAddr + offset, daReg, preg);
+                Reg::StoreAlign<float, Reg::StoreDist::DIST_NORM>(vecAddr + halfU32 + offset, dbReg, preg);
             } else {
-                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(dxFAddr + offset, daReg, preg);
-                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(dxFAddr + halfU32 + offset, dbReg, preg);
+                Reg::StoreAlign<float, Reg::StoreDist::DIST_NORM>(dxFAddr + offset, daReg, preg);
+                Reg::StoreAlign<float, Reg::StoreDist::DIST_NORM>(dxFAddr + halfU32 + offset, dbReg, preg);
             }
         }
     }

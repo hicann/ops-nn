@@ -19,26 +19,25 @@ namespace RepeatInterleave {
 using namespace AscendC;
 
 template <typename IdxT, typename GatherIdxT>
-__simd_callee__ inline void CalcGatherSrcIdx(AscendC::MicroAPI::RegTensor<GatherIdxT>& srcIdxReg,
-                                             AscendC::MicroAPI::RegTensor<IdxT>& idxReg,
-                                             AscendC::MicroAPI::MaskReg& maskIdx, GatherIdxT repeatsMulCpSize,
-                                             GatherIdxT cpSize)
+__simd_callee__ inline void CalcGatherSrcIdx(AscendC::Reg::RegTensor<GatherIdxT>& srcIdxReg,
+                                             AscendC::Reg::RegTensor<IdxT>& idxReg, AscendC::Reg::MaskReg& maskIdx,
+                                             GatherIdxT repeatsMulCpSize, GatherIdxT cpSize)
 {
-    AscendC::MicroAPI::RegTensor<GatherIdxT> groupIdxReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> cpSizeReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> qReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> qCpReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> cpIdxCpReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> offsetReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> divReg;
-    AscendC::MicroAPI::Duplicate(divReg, repeatsMulCpSize, maskIdx);
-    AscendC::MicroAPI::Div(groupIdxReg, (AscendC::MicroAPI::RegTensor<GatherIdxT>&)idxReg, divReg, maskIdx);
-    AscendC::MicroAPI::Duplicate(cpSizeReg, cpSize, maskIdx);
-    AscendC::MicroAPI::Div(qReg, (AscendC::MicroAPI::RegTensor<GatherIdxT>&)idxReg, cpSizeReg, maskIdx);
-    AscendC::MicroAPI::Mul(qCpReg, qReg, cpSizeReg, maskIdx);
-    AscendC::MicroAPI::Sub(offsetReg, (AscendC::MicroAPI::RegTensor<GatherIdxT>&)idxReg, qCpReg, maskIdx);
-    AscendC::MicroAPI::Mul(cpIdxCpReg, groupIdxReg, cpSizeReg, maskIdx);
-    AscendC::MicroAPI::Add(srcIdxReg, cpIdxCpReg, offsetReg, maskIdx);
+    AscendC::Reg::RegTensor<GatherIdxT> groupIdxReg;
+    AscendC::Reg::RegTensor<GatherIdxT> cpSizeReg;
+    AscendC::Reg::RegTensor<GatherIdxT> qReg;
+    AscendC::Reg::RegTensor<GatherIdxT> qCpReg;
+    AscendC::Reg::RegTensor<GatherIdxT> cpIdxCpReg;
+    AscendC::Reg::RegTensor<GatherIdxT> offsetReg;
+    AscendC::Reg::RegTensor<GatherIdxT> divReg;
+    AscendC::Reg::Duplicate(divReg, repeatsMulCpSize, maskIdx);
+    AscendC::Reg::Div(groupIdxReg, (AscendC::Reg::RegTensor<GatherIdxT>&)idxReg, divReg, maskIdx);
+    AscendC::Reg::Duplicate(cpSizeReg, cpSize, maskIdx);
+    AscendC::Reg::Div(qReg, (AscendC::Reg::RegTensor<GatherIdxT>&)idxReg, cpSizeReg, maskIdx);
+    AscendC::Reg::Mul(qCpReg, qReg, cpSizeReg, maskIdx);
+    AscendC::Reg::Sub(offsetReg, (AscendC::Reg::RegTensor<GatherIdxT>&)idxReg, qCpReg, maskIdx);
+    AscendC::Reg::Mul(cpIdxCpReg, groupIdxReg, cpSizeReg, maskIdx);
+    AscendC::Reg::Add(srcIdxReg, cpIdxCpReg, offsetReg, maskIdx);
 }
 
 template <typename T, typename IdxT, typename GatherIdxT>
@@ -49,29 +48,28 @@ __simd_callee__ inline void DataCopyGatherCpBatchUnalign(__ubuf__ T* xInLocalPtr
 {
     uint32_t sreg = tailOutElems;
     uint32_t sregFull = fullOutElems;
-    AscendC::MicroAPI::RegTensor<IdxT> idxReg;
-    AscendC::MicroAPI::RegTensor<GatherIdxT> srcIdxReg;
-    AscendC::MicroAPI::RegTensor<T> vDstReg;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::MaskReg
-        maskIdx = AscendC::MicroAPI::CreateMask<GatherIdxT, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::MaskReg maskFull = AscendC::MicroAPI::UpdateMask<T>(sregFull);
+    AscendC::Reg::RegTensor<IdxT> idxReg;
+    AscendC::Reg::RegTensor<GatherIdxT> srcIdxReg;
+    AscendC::Reg::RegTensor<T> vDstReg;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::MaskReg maskIdx = AscendC::Reg::CreateMask<GatherIdxT, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg maskFull = AscendC::Reg::UpdateMask<T>(sregFull);
 
-    AscendC::MicroAPI::Arange(idxReg, (IdxT)0);
+    AscendC::Reg::Arange(idxReg, (IdxT)0);
     CalcGatherSrcIdx<IdxT, GatherIdxT>(srcIdxReg, idxReg, maskIdx, (GatherIdxT)(repeatsScalarValue * cpSize),
                                        (GatherIdxT)cpSize);
 
     for (uint16_t batch = 0; batch < fullBatches; batch++) {
-        AscendC::MicroAPI::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFull);
-        AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg,
-                                                                                             uOut, fullOutElems);
-        AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (GatherIdxT)offsetStep, maskIdx);
+        AscendC::Reg::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFull);
+        AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg, uOut,
+                                                                                   fullOutElems);
+        AscendC::Reg::Adds(srcIdxReg, srcIdxReg, (GatherIdxT)offsetStep, maskIdx);
     }
-    AscendC::MicroAPI::MaskReg maskTailDyn = AscendC::MicroAPI::UpdateMask<T>(sreg);
-    AscendC::MicroAPI::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailDyn);
-    AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg, uOut,
-                                                                                         tailOutElems);
-    AscendC::MicroAPI::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
+    AscendC::Reg::MaskReg maskTailDyn = AscendC::Reg::UpdateMask<T>(sreg);
+    AscendC::Reg::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailDyn);
+    AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg, uOut,
+                                                                               tailOutElems);
+    AscendC::Reg::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
 template <typename T, typename WideT>
@@ -81,35 +79,35 @@ __simd_callee__ inline void DataCopyGatherCpBatchB8(__ubuf__ T* xInLocalPtr, __u
 {
     uint32_t sreg = tailOutElems;
     uint32_t sregFull = fullOutElems;
-    AscendC::MicroAPI::RegTensor<int16_t> idxReg;
-    AscendC::MicroAPI::RegTensor<uint16_t> srcIdxReg;
-    AscendC::MicroAPI::RegTensor<WideT> vWideReg;
-    AscendC::MicroAPI::RegTensor<uint8_t> vEvenReg;
-    AscendC::MicroAPI::RegTensor<uint8_t> vOddReg;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::MaskReg maskIdx = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::MaskReg maskFullU16 = AscendC::MicroAPI::UpdateMask<uint16_t>(sregFull);
+    AscendC::Reg::RegTensor<int16_t> idxReg;
+    AscendC::Reg::RegTensor<uint16_t> srcIdxReg;
+    AscendC::Reg::RegTensor<WideT> vWideReg;
+    AscendC::Reg::RegTensor<uint8_t> vEvenReg;
+    AscendC::Reg::RegTensor<uint8_t> vOddReg;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::MaskReg maskIdx = AscendC::Reg::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::MaskReg maskFullU16 = AscendC::Reg::UpdateMask<uint16_t>(sregFull);
 
-    AscendC::MicroAPI::Arange(idxReg, (int16_t)0);
+    AscendC::Reg::Arange(idxReg, (int16_t)0);
     CalcGatherSrcIdx<int16_t, uint16_t>(srcIdxReg, idxReg, maskIdx, (uint16_t)(repeatsScalarValue * cpSize),
                                         (uint16_t)cpSize);
 
     __ubuf__ uint8_t* outPtr = (__ubuf__ uint8_t*)xOutLocalPtr;
     for (uint16_t batch = 0; batch < fullBatches; batch++) {
-        AscendC::MicroAPI::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
-        AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
-                                                 (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
-        AscendC::MicroAPI::StoreUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg,
-                                                                                                   uOut, fullOutElems);
-        AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (uint16_t)offsetStep, maskIdx);
+        AscendC::Reg::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
+        AscendC::Reg::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::Reg::RegTensor<uint8_t>&)vWideReg,
+                                            (AscendC::Reg::RegTensor<uint8_t>&)vWideReg);
+        AscendC::Reg::StoreUnAlign<uint8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg, uOut,
+                                                                                         fullOutElems);
+        AscendC::Reg::Adds(srcIdxReg, srcIdxReg, (uint16_t)offsetStep, maskIdx);
     }
-    AscendC::MicroAPI::MaskReg maskTailU16Dyn = AscendC::MicroAPI::UpdateMask<uint16_t>(sreg);
-    AscendC::MicroAPI::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
-    AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
-                                             (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
-    AscendC::MicroAPI::StoreUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg, uOut,
-                                                                                               tailOutElems);
-    AscendC::MicroAPI::StoreUnAlignPost(outPtr, uOut, 0);
+    AscendC::Reg::MaskReg maskTailU16Dyn = AscendC::Reg::UpdateMask<uint16_t>(sreg);
+    AscendC::Reg::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
+    AscendC::Reg::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::Reg::RegTensor<uint8_t>&)vWideReg,
+                                        (AscendC::Reg::RegTensor<uint8_t>&)vWideReg);
+    AscendC::Reg::StoreUnAlign<uint8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg, uOut,
+                                                                                     tailOutElems);
+    AscendC::Reg::StoreUnAlignPost(outPtr, uOut, 0);
 }
 
 template <typename T>

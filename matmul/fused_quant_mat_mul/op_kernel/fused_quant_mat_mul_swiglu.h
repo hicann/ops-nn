@@ -55,24 +55,24 @@ protected:
     TQue<QuePosition::VECIN, 1> quantScaleQueue;
     TBuf<TPosition::VECCALC> outBuf;
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitHalf2Float = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitHalf2Float = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::UNKNOWN,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT,
     };
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitFloat2Half = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitFloat2Half = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::NO_SAT,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT,
     };
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitHalf2Int8 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitHalf2Int8 = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::NO_SAT,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT,
     };
 
@@ -125,8 +125,8 @@ using AscendC::LocalTensor;
 using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Init(
@@ -215,19 +215,18 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         __local_mem__ half* swishResAddr = (__local_mem__ half*)swishRes.GetPhyAddr();
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
-                                                                                            bufferAddr + i * calSize);
-            AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                vreg2, vreg1, static_cast<float>(-1.0), preg0);
-            AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
-            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                vreg4, vreg3, static_cast<float>(1.0), preg0);
-            AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
-            AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg6, vreg5, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swishResAddr + i * calSize,
-                                                                                           vreg6, preg0);
+            preg0 = AscendC::Reg::UpdateMask<float>(size);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, bufferAddr + i * calSize);
+            AscendC::Reg::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg2, vreg1,
+                                                                                   static_cast<float>(-1.0), preg0);
+            AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
+            AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg4, vreg3,
+                                                                                   static_cast<float>(1.0), preg0);
+            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
+            AscendC::Reg::Cast<half, float, castTraitFloat2Half>(vreg6, vreg5, preg0);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(swishResAddr + i * calSize, vreg6,
+                                                                                 preg0);
         }
     }
     AscendC::PipeBarrier<PIPE_V>();
@@ -268,24 +267,23 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         for (uint16_t j = 0; j < static_cast<uint16_t>(curAicM); j++) {
             uint32_t count = curAicN;
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(count);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                preg0 = AscendC::Reg::UpdateMask<float>(count);
+                AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                     vreg0, leftAddr + j * curAicN + i * calSize);
-                AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::Reg::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
+                AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(
                     vreg2, rightAddr + j * curAicN + i * calSize);
-                AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
+                AscendC::Reg::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
 
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vreg5,
-                                                                                           scaleAddr + i * calSize);
-                AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg6, vreg4, vreg5, preg0);
+                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg5, scaleAddr + i * calSize);
+                AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg6, vreg4, vreg5, preg0);
 
-                AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg7, vreg6, preg0);
-                AscendC::MicroAPI::Cast<int8_t, half, castTraitHalf2Int8>(vreg8, vreg7, preg0);
+                AscendC::Reg::Cast<half, float, castTraitFloat2Half>(vreg7, vreg6, preg0);
+                AscendC::Reg::Cast<int8_t, half, castTraitHalf2Int8>(vreg8, vreg7, preg0);
 
-                AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                AscendC::Reg::DataCopy<int8_t, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
                     outAddr + j * curAicN + i * calSize, vreg8, preg0);
             }
         }
@@ -323,19 +321,16 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         __local_mem__ half* outAddr = (__local_mem__ half*)left.GetPhyAddr(); // out复用swish计算结果内存
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
-                                                                                            leftAddr + i * calSize);
-            AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
-                                                                                            rightAddr + i * calSize);
-            AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
+            preg0 = AscendC::Reg::UpdateMask<float>(size);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, leftAddr + i * calSize);
+            AscendC::Reg::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg2, rightAddr + i * calSize);
+            AscendC::Reg::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
 
-            AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
+            AscendC::Reg::Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
 
-            AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg5, vreg4, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * calSize, vreg5,
-                                                                                           preg0);
+            AscendC::Reg::Cast<half, float, castTraitFloat2Half>(vreg5, vreg4, preg0);
+            AscendC::Reg::DataCopy<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(outAddr + i * calSize, vreg5, preg0);
         }
     }
     AscendC::TEventID eventID = GetTPipePtr()->AllocEventID<AscendC::HardEvent::V_MTE3>();

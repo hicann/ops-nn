@@ -43,7 +43,7 @@ using Cmct::Gemm::_32;
 using Cmct::Gemm::Get;
 using Cmct::Gemm::GetTile;
 using Cmct::Gemm::Min;
-namespace MicroAPI = AscendC::MicroAPI;
+namespace Reg = AscendC::Reg;
 
 template <class InType, class OutType, class BiasType, class TileShapeL1>
 class BlockPrologue<BCastScsc, InType, OutType, BiasType, TileShapeL1> {
@@ -480,17 +480,16 @@ private:
 
     __simd_callee__ inline void RegBiasCompute(const VfParamsBias biasParams)
     {
-        MicroAPI::RegTensor<ElementBias> biasVreg, factorVreg;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<ElementBias, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::Duplicate<ElementBias, MicroAPI::MaskMergeMode::ZEROING>(factorVreg, BIAS_REDUCE_FACTOR, maskAll);
+        Reg::RegTensor<ElementBias> biasVreg, factorVreg;
+        Reg::MaskReg maskAll = Reg::CreateMask<ElementBias, Reg::MaskPattern::ALL>();
+        Reg::Duplicate<ElementBias, Reg::MaskMergeMode::ZEROING>(factorVreg, BIAS_REDUCE_FACTOR, maskAll);
 
         for (uint16_t nLoopIdx = 0; nLoopIdx < biasParams.biasLoopNum; ++nLoopIdx) {
-            MicroAPI::AddrReg biasAreg = MicroAPI::CreateAddrReg<ElementBias>(nLoopIdx, VEC_MAX_ELEM_B16);
-            MicroAPI::LoadAlign<ElementBias, MicroAPI::LoadDist::DIST_NORM>(biasVreg, biasParams.biasInUbBaseAddr,
-                                                                            biasAreg);
-            MicroAPI::Mul(biasVreg, biasVreg, factorVreg, maskAll);
-            MicroAPI::StoreAlign<ElementBias, MicroAPI::StoreDist::DIST_NORM_B16>(biasParams.biasOutUbAddr, biasVreg,
-                                                                                  biasAreg, maskAll);
+            Reg::AddrReg biasAreg = Reg::CreateAddrReg<ElementBias>(nLoopIdx, VEC_MAX_ELEM_B16);
+            Reg::LoadAlign<ElementBias, Reg::LoadDist::DIST_NORM>(biasVreg, biasParams.biasInUbBaseAddr, biasAreg);
+            Reg::Mul(biasVreg, biasVreg, factorVreg, maskAll);
+            Reg::StoreAlign<ElementBias, Reg::StoreDist::DIST_NORM_B16>(biasParams.biasOutUbAddr, biasVreg, biasAreg,
+                                                                        maskAll);
         }
     }
 
@@ -502,45 +501,43 @@ private:
         }
         __ubuf__ ElementOut* weightOutUbAddr = wParams.weightOutUbAddr;
         __ubuf__ ElementOut* weightOutUbAddr1 = wParams.weightOutUbAddr1;
-        MicroAPI::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, sAnd0, sAnd1, wShr, wShl, s1, wOr0, wOr1, wdup1, wdup4;
-        MicroAPI::RegTensor<int8_t> wdup0, wdup2, wdup3;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
-        MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
+        Reg::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, sAnd0, sAnd1, wShr, wShl, s1, wOr0, wOr1, wdup1, wdup4;
+        Reg::RegTensor<int8_t> wdup0, wdup2, wdup3;
+        Reg::MaskReg preg = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
+        Reg::Duplicate<uint8_t, Reg::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
+        Reg::Duplicate<uint8_t, Reg::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
         // 一次处理一个N轴
         for (uint16_t outIdx = 0; outIdx < wParams.outExtend; ++outIdx) {
             uint32_t maskWeight0Tmp = wParams.maskB8Tail0;
             uint32_t maskWeight1Tmp = wParams.maskB8Tail1;
             for (uint16_t repeatIdx = 0; repeatIdx < wParams.innerExtend; ++repeatIdx) {
-                MicroAPI::MaskReg MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
-                MicroAPI::MaskReg MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
-                MicroAPI::AddrReg aregWeightB8 = MicroAPI::CreateAddrReg<uint8_t>(
+                Reg::MaskReg MaskRegB8Tail0 = Reg::UpdateMask<uint8_t>(maskWeight0Tmp);
+                Reg::MaskReg MaskRegB8Tail1 = Reg::UpdateMask<uint8_t>(maskWeight1Tmp);
+                Reg::AddrReg aregWeightB8 = Reg::CreateAddrReg<uint8_t>(
                     outIdx, CeilAlign(kUbLen_, static_cast<int32_t>(K_ALIGN_SIZE)) >> 1, repeatIdx, VEC_MAX_ELEM_B8);
-                MicroAPI::LoadAlign(wLoad0, (__ubuf__ uint8_t*&)wParams.weightInUbBaseAddr, aregWeightB8);
+                Reg::LoadAlign(wLoad0, (__ubuf__ uint8_t*&)wParams.weightInUbBaseAddr, aregWeightB8);
                 // 提取E/M
-                MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
-                MicroAPI::And(wShr, wShr, wdup1, preg);          // vr1
-                MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);  // vr2
-                MicroAPI::And(wShl, wShl, wdup1, preg);          // vr2
+                Reg::ShiftRight(wShr, wLoad0, wdup0, preg); // vr1
+                Reg::And(wShr, wShr, wdup1, preg);          // vr1
+                Reg::ShiftLeft(wShl, wLoad0, wdup2, preg);  // vr2
+                Reg::And(wShl, wShl, wdup1, preg);          // vr2
                 // 提取S
-                MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg); // vr3
-                MicroAPI::And(sAnd0, s1, wdup4, preg);        // vr3
-                MicroAPI::And(sAnd1, wLoad0, wdup4, preg);    // vr4
+                Reg::ShiftLeft(s1, wLoad0, wdup3, preg); // vr3
+                Reg::And(sAnd0, s1, wdup4, preg);        // vr3
+                Reg::And(sAnd1, wLoad0, wdup4, preg);    // vr4
                 // 合并S/E/M
-                MicroAPI::Or(wOr0, wShr, sAnd1, preg); // odd
-                MicroAPI::Or(wOr1, wShl, sAnd0, preg); // even
-                MicroAPI::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
-                MicroAPI::StoreAlign<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                     MicroAPI::PostLiteral::POST_MODE_UPDATE>((__ubuf__ uint8_t*&)weightOutUbAddr,
-                                                                              wDIntlv0, wParams.dataBlockStride,
-                                                                              wParams.repeatStride, MaskRegB8Tail0);
-                MicroAPI::StoreAlign<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                     MicroAPI::PostLiteral::POST_MODE_UPDATE>((__ubuf__ uint8_t*&)weightOutUbAddr1,
-                                                                              wDIntlv1, wParams.dataBlockStride,
-                                                                              wParams.repeatStride, MaskRegB8Tail1);
+                Reg::Or(wOr0, wShr, sAnd1, preg); // odd
+                Reg::Or(wOr1, wShl, sAnd0, preg); // even
+                Reg::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
+                Reg::StoreAlign<uint8_t, Reg::DataCopyMode::DATA_BLOCK_COPY, Reg::PostLiteral::POST_MODE_UPDATE>(
+                    (__ubuf__ uint8_t*&)weightOutUbAddr, wDIntlv0, wParams.dataBlockStride, wParams.repeatStride,
+                    MaskRegB8Tail0);
+                Reg::StoreAlign<uint8_t, Reg::DataCopyMode::DATA_BLOCK_COPY, Reg::PostLiteral::POST_MODE_UPDATE>(
+                    (__ubuf__ uint8_t*&)weightOutUbAddr1, wDIntlv1, wParams.dataBlockStride, wParams.repeatStride,
+                    MaskRegB8Tail1);
             }
             weightOutUbAddr += wParams.outDimOffset;
             weightOutUbAddr1 += wParams.outDimOffset;
@@ -603,25 +600,24 @@ private:
         if constexpr (calcBias) {
             RegBiasCompute(biasParams);
         }
-        MicroAPI::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, wParams.shiftLeftSize, preg);
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
-        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, wParams.andMask, preg);
+        Reg::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
+        Reg::MaskReg preg = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg pregVsel = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup0, wParams.shiftLeftSize, preg);
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
+        Reg::Duplicate<int8_t, Reg::MaskMergeMode::ZEROING>(wdup2, wParams.andMask, preg);
         for (uint16_t repeatIdx = 0; repeatIdx < wParams.innerExtend; ++repeatIdx) {
-            MicroAPI::AddrReg aregWeightB8In = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerSrcExtend);
-            MicroAPI::AddrReg aregWeightB8Out = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerDstExtend);
-            MicroAPI::LoadAlign<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
-                (MicroAPI::RegTensor<uint8_t>&)wLoad0, (__ubuf__ uint8_t*&)wParams.weightInUbBaseAddr, aregWeightB8In);
-            MicroAPI::ShiftRight(wShr0, wLoad0, wdup0, preg);
-            MicroAPI::ShiftLeft(wShl, wLoad0, wdup1, preg);
-            MicroAPI::ShiftRight(wShr1, wShl, wdup0, preg);
-            MicroAPI::Select(wSel0, wShr1, wShr0, pregVsel);
-            MicroAPI::And(sAnd0, wSel0, wdup2, preg);
-            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_NORM_B8>(
-                (__ubuf__ uint8_t*&)wParams.weightOutUbAddr, (MicroAPI::RegTensor<uint8_t>&)sAnd0, aregWeightB8Out,
-                preg);
+            Reg::AddrReg aregWeightB8In = Reg::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerSrcExtend);
+            Reg::AddrReg aregWeightB8Out = Reg::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerDstExtend);
+            Reg::LoadAlign<uint8_t, Reg::LoadDist::DIST_US_B8>(
+                (Reg::RegTensor<uint8_t>&)wLoad0, (__ubuf__ uint8_t*&)wParams.weightInUbBaseAddr, aregWeightB8In);
+            Reg::ShiftRight(wShr0, wLoad0, wdup0, preg);
+            Reg::ShiftLeft(wShl, wLoad0, wdup1, preg);
+            Reg::ShiftRight(wShr1, wShl, wdup0, preg);
+            Reg::Select(wSel0, wShr1, wShr0, pregVsel);
+            Reg::And(sAnd0, wSel0, wdup2, preg);
+            Reg::StoreAlign<uint8_t, Reg::StoreDist::DIST_NORM_B8>(
+                (__ubuf__ uint8_t*&)wParams.weightOutUbAddr, (Reg::RegTensor<uint8_t>&)sAnd0, aregWeightB8Out, preg);
         }
     }
 

@@ -21,12 +21,12 @@
 
 using namespace AscendC;
 
-constexpr static AscendC::MicroAPI::CastTrait castTrait16ToFloat = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTrait16ToFloat = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitFloatTo16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait castTraitFloatTo16 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
 
 template <typename PARAM_T>
@@ -57,18 +57,18 @@ __aicore__ inline void CastSumValue(LocalTensor<SELF_TYPE>& valueSumLocal, Local
     __ubuf__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<SELF_TYPE> valueSumReg;
-        AscendC::MicroAPI::RegTensor<CAST_TYPE> valueCastReg;
-        AscendC::MicroAPI::MaskReg valueMaskReg;
+        AscendC::Reg::RegTensor<SELF_TYPE> valueSumReg;
+        AscendC::Reg::RegTensor<CAST_TYPE> valueCastReg;
+        AscendC::Reg::MaskReg valueMaskReg;
         uint32_t maskLen = static_cast<uint32_t>(colLen);
         for (uint16_t i = 0; i < loopCnt; i++) {
-            valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskLen);
-            AscendC::MicroAPI::AddrReg castSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-            AscendC::MicroAPI::AddrReg valueSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-            AscendC::MicroAPI::LoadAlign(valueCastReg, castSumAddr, castSumAddrOfst);
-            AscendC::MicroAPI::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueSumReg, valueCastReg, valueMaskReg);
-            AscendC::MicroAPI::StoreAlign<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(
-                valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
+            valueMaskReg = AscendC::Reg::UpdateMask<CAST_TYPE>(maskLen);
+            AscendC::Reg::AddrReg castSumAddrOfst = AscendC::Reg::CreateAddrReg<CAST_TYPE>(i, vfLen);
+            AscendC::Reg::AddrReg valueSumAddrOfst = AscendC::Reg::CreateAddrReg<SELF_TYPE>(i, vfLen);
+            AscendC::Reg::LoadAlign(valueCastReg, castSumAddr, castSumAddrOfst);
+            AscendC::Reg::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueSumReg, valueCastReg, valueMaskReg);
+            AscendC::Reg::StoreAlign<SELF_TYPE, Reg::StoreDist::DIST_PACK_B32>(valueSumAddr, valueSumReg,
+                                                                               valueSumAddrOfst, valueMaskReg);
         }
     }
 }

@@ -143,8 +143,8 @@ private:
         int32_t vfLenInt32 = (int32_t)NZV_VF_LEN_INT32;
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-            AscendC::MicroAPI::UnalignReg uregIdx;
+            AscendC::Reg::ClearSpr<SpecialPurposeReg::AR>();
+            AscendC::Reg::UnalignReg uregIdx;
             RegTensor<int32_t> idsReg;
             RegTensor<int32_t> sqzIdx;
             RegTensor<TValue> xReg;
@@ -152,51 +152,51 @@ private:
             MaskReg cmpReg;
             MaskReg preg;
             MaskReg mL, mH, m0, m1, m2, m3;
-            preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            preg = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
             Duplicate(zeroXReg, (TValue)0);
             Arange(idsReg, scalar);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 MaskReg pnum = UpdateMask<TValue>(sreg1);
-                AscendC::MicroAPI::AddrReg xOffset = AscendC::MicroAPI::CreateAddrReg<TValue>(i, repeatElm);
+                AscendC::Reg::AddrReg xOffset = AscendC::Reg::CreateAddrReg<TValue>(i, repeatElm);
                 DataCopy(xReg, xPtr, xOffset);
                 Select(xReg, xReg, zeroXReg, pnum);
                 CompareScalar<TValue, CMPMODE::NE>(cmpReg, xReg, (TValue)0, pnum);
-                using GM = AscendC::MicroAPI::GatherMaskMode;
-                using HL = AscendC::MicroAPI::HighLowPart;
-                using PL = AscendC::MicroAPI::PostLiteral;
+                using GM = AscendC::Reg::GatherMaskMode;
+                using HL = AscendC::Reg::HighLowPart;
+                using PL = AscendC::Reg::PostLiteral;
                 if constexpr (sizeof(TValue) == 1) {
-                    AscendC::MicroAPI::MaskUnPack<HL::LOWEST>(mL, cmpReg);
-                    AscendC::MicroAPI::MaskUnPack<HL::HIGHEST>(mH, cmpReg);
-                    AscendC::MicroAPI::MaskUnPack<HL::LOWEST>(m0, mL);
-                    AscendC::MicroAPI::MaskUnPack<HL::HIGHEST>(m1, mL);
-                    AscendC::MicroAPI::MaskUnPack<HL::LOWEST>(m2, mH);
-                    AscendC::MicroAPI::MaskUnPack<HL::HIGHEST>(m3, mH);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m0);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m1);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m2);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m3);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::MaskUnPack<HL::LOWEST>(mL, cmpReg);
+                    AscendC::Reg::MaskUnPack<HL::HIGHEST>(mH, cmpReg);
+                    AscendC::Reg::MaskUnPack<HL::LOWEST>(m0, mL);
+                    AscendC::Reg::MaskUnPack<HL::HIGHEST>(m1, mL);
+                    AscendC::Reg::MaskUnPack<HL::LOWEST>(m2, mH);
+                    AscendC::Reg::MaskUnPack<HL::HIGHEST>(m3, mH);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m0);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m1);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m2);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m3);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
                 } else {
-                    AscendC::MicroAPI::MaskUnPack<HL::LOWEST>(m0, cmpReg);
-                    AscendC::MicroAPI::MaskUnPack<HL::HIGHEST>(m1, cmpReg);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m0);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
-                    AscendC::MicroAPI::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m1);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::MaskUnPack<HL::LOWEST>(m0, cmpReg);
+                    AscendC::Reg::MaskUnPack<HL::HIGHEST>(m1, cmpReg);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m0);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
+                    AscendC::Reg::GatherMask<int32_t, GM::STORE_REG>(sqzIdx, idsReg, m1);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, PL::POST_MODE_UPDATE>(idxPtr, sqzIdx, uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, vfLenInt32, preg);
                 }
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(idxPtr, uregIdx);
+            AscendC::Reg::DataCopyUnAlignPost(idxPtr, uregIdx);
         }
-        arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
+        arNum = (AscendC::Reg::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
     }
 
     // 8 字节索引压缩:reinterpret int64,CompareScalar<int64>(double 左移丢符号位),MaskPack 把 int64 mask
@@ -214,8 +214,8 @@ private:
         int32_t advance = (int32_t)this->vfLenV_;
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-            AscendC::MicroAPI::UnalignReg uregIdx;
+            AscendC::Reg::ClearSpr<SpecialPurposeReg::AR>();
+            AscendC::Reg::UnalignReg uregIdx;
             RegTensor<int32_t> idsReg;
             RegTensor<int32_t> sqzIdx;
             RegTensor<int64_t> xReg;
@@ -223,28 +223,27 @@ private:
             MaskReg cmpReg;
             MaskReg packedMask;
             MaskReg preg;
-            preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            preg = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
             Arange(idsReg, scalar);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 MaskReg pnum = UpdateMask<int64_t>(sreg1);
-                AscendC::MicroAPI::AddrReg xOffset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, repeatElm);
+                AscendC::Reg::AddrReg xOffset = AscendC::Reg::CreateAddrReg<int64_t>(i, repeatElm);
                 DataCopy(xReg, xUbPtr, xOffset);
                 if constexpr (isFp) {
-                    AscendC::MicroAPI::ShiftLefts(shiftReg, xReg, (int16_t)1, pnum);
+                    AscendC::Reg::ShiftLefts(shiftReg, xReg, (int16_t)1, pnum);
                     CompareScalar<int64_t, CMPMODE::NE>(cmpReg, shiftReg, (int64_t)0, pnum);
                 } else {
                     CompareScalar<int64_t, CMPMODE::NE>(cmpReg, xReg, (int64_t)0, pnum);
                 }
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(packedMask, cmpReg);
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(sqzIdx, idsReg,
-                                                                                                     packedMask);
-                AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    idxPtr, sqzIdx, uregIdx);
-                AscendC::MicroAPI::Adds(idsReg, idsReg, advance, preg);
+                AscendC::Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(packedMask, cmpReg);
+                AscendC::Reg::GatherMask<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(sqzIdx, idsReg, packedMask);
+                AscendC::Reg::DataCopyUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(idxPtr, sqzIdx,
+                                                                                                    uregIdx);
+                AscendC::Reg::Adds(idsReg, idsReg, advance, preg);
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(idxPtr, uregIdx);
+            AscendC::Reg::DataCopyUnAlignPost(idxPtr, uregIdx);
         }
-        arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
+        arNum = (AscendC::Reg::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
     }
 
     // 8 字节值(double/int64/uint64):CompactIdx 已把非零的全局线性位置压缩进 idxUb[0:count](连续)。
@@ -266,13 +265,13 @@ private:
         {
             RegTensor<int32_t> posReg;
             RegTensor<int32_t> localPos;
-            RegTensor<int64_t, AscendC::MicroAPI::RegTraitNumTwo> valReg;
+            RegTensor<int64_t, AscendC::Reg::RegTraitNumTwo> valReg;
             for (uint16_t i = 0; i < loops; i++) {
                 MaskReg preg = UpdateMask<int32_t>(cntReg);
-                AscendC::MicroAPI::AddrReg off = AscendC::MicroAPI::CreateAddrReg<int32_t>(i, vfLen32);
+                AscendC::Reg::AddrReg off = AscendC::Reg::CreateAddrReg<int32_t>(i, vfLen32);
                 DataCopy(posReg, idxPtr, off);
-                AscendC::MicroAPI::Adds(localPos, posReg, gmBaseNeg, preg); // 全局位置 → tile 局部
-                AscendC::MicroAPI::DataCopyGather(valReg, xUbPtr, (RegTensor<uint32_t>&)localPos, preg);
+                AscendC::Reg::Adds(localPos, posReg, gmBaseNeg, preg); // 全局位置 → tile 局部
+                AscendC::Reg::DataCopyGather(valReg, xUbPtr, (RegTensor<uint32_t>&)localPos, preg);
                 DataCopy(valPtr + (uint64_t)i * vfLen32, valReg, preg); // 1:1 对齐写(gather_v2 模式)
             }
         }
@@ -299,32 +298,31 @@ private:
             uint32_t sreg1 = (uint32_t)num;
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-                AscendC::MicroAPI::UnalignReg uregIdx;
+                AscendC::Reg::ClearSpr<SpecialPurposeReg::AR>();
+                AscendC::Reg::UnalignReg uregIdx;
                 RegTensor<int32_t> idsReg;
                 RegTensor<int32_t> sqzIdx;
                 RegTensor<TValue> xReg;
                 RegTensor<TValue> zeroXReg;
                 MaskReg cmpReg;
                 MaskReg preg;
-                preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+                preg = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
                 Duplicate(zeroXReg, (TValue)0);
                 Arange(idsReg, scalar);
                 for (uint16_t i = 0; i < repeatTimes; i++) {
                     MaskReg pnum = UpdateMask<TValue>(sreg1);
-                    AscendC::MicroAPI::AddrReg xOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, repeatElm);
+                    AscendC::Reg::AddrReg xOffset = AscendC::Reg::CreateAddrReg<uint32_t>(i, repeatElm);
                     DataCopy(xReg, xPtr, xOffset);
                     Select(xReg, xReg, zeroXReg, pnum);                                // 尾部脏 UB 清 0
                     CompareScalar<TValue, CMPMODE::NE>(cmpReg, xReg, (TValue)0, pnum); // nan!=0 → nan 计非零
-                    AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(sqzIdx, idsReg,
-                                                                                                         cmpReg);
-                    AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        idxPtr, sqzIdx, uregIdx);
-                    AscendC::MicroAPI::Adds(idsReg, idsReg, (int32_t)repeatElm, preg);
+                    AscendC::Reg::GatherMask<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(sqzIdx, idsReg, cmpReg);
+                    AscendC::Reg::DataCopyUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(idxPtr, sqzIdx,
+                                                                                                        uregIdx);
+                    AscendC::Reg::Adds(idsReg, idsReg, (int32_t)repeatElm, preg);
                 }
-                AscendC::MicroAPI::DataCopyUnAlignPost(idxPtr, uregIdx);
+                AscendC::Reg::DataCopyUnAlignPost(idxPtr, uregIdx);
             }
-            arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
+            arNum = (AscendC::Reg::GetSpr<SpecialPurposeReg::AR>()) / sizeof(int32_t);
         }
     }
 
@@ -346,8 +344,8 @@ private:
             uint32_t sreg2 = (uint32_t)num;
             __VEC_SCOPE__
             {
-                AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-                AscendC::MicroAPI::UnalignReg uregVal;
+                AscendC::Reg::ClearSpr<SpecialPurposeReg::AR>();
+                AscendC::Reg::UnalignReg uregVal;
                 RegTensor<TValue> sqzVal;
                 RegTensor<TValue> xReg;
                 RegTensor<TValue> zeroXReg;
@@ -356,16 +354,15 @@ private:
                 for (uint16_t i = 0; i < repeatTimes; i++) {
                     MaskReg pnum = UpdateMask<TValue>(sreg2);
                     // AddrReg 用 TValue 宽度(sub-32bit 时步长按 dtype 字节;4 字节等价原 uint32 无变化)
-                    AscendC::MicroAPI::AddrReg xOffset = AscendC::MicroAPI::CreateAddrReg<TValue>(i, repeatElm);
+                    AscendC::Reg::AddrReg xOffset = AscendC::Reg::CreateAddrReg<TValue>(i, repeatElm);
                     DataCopy(xReg, xPtr, xOffset);
                     Select(xReg, xReg, zeroXReg, pnum);
                     CompareScalar<TValue, CMPMODE::NE>(cmpReg, xReg, (TValue)0, pnum);
-                    AscendC::MicroAPI::GatherMask<TValue, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(sqzVal, xReg,
-                                                                                                        cmpReg);
-                    AscendC::MicroAPI::DataCopyUnAlign<TValue, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        valPtr, sqzVal, uregVal);
+                    AscendC::Reg::GatherMask<TValue, AscendC::Reg::GatherMaskMode::STORE_REG>(sqzVal, xReg, cmpReg);
+                    AscendC::Reg::DataCopyUnAlign<TValue, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(valPtr, sqzVal,
+                                                                                                       uregVal);
                 }
-                AscendC::MicroAPI::DataCopyUnAlignPost(valPtr, uregVal);
+                AscendC::Reg::DataCopyUnAlignPost(valPtr, uregVal);
             }
         }
     }
@@ -395,7 +392,7 @@ private:
             Duplicate(qmReg, qm);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 preg = UpdateMask<uint32_t>(sreg);
-                AscendC::MicroAPI::AddrReg off = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, NZV_VF_LEN_INT32);
+                AscendC::Reg::AddrReg off = AscendC::Reg::CreateAddrReg<uint32_t>(i, NZV_VF_LEN_INT32);
                 DataCopy(idsReg, idxPtr, off);
                 // row = idx / col:  hi = mulhi(idx, qm); t = idx + hi; row = t >> qk
                 Mull(tmp, qmulHi, idsReg, qmReg, preg);

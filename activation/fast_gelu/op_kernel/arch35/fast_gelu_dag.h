@@ -34,23 +34,23 @@ struct FastGeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
             __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
             __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> x;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> denominator;
-            AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> result;
-            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
-                                                                        highPrecisionDiv};
-            AscendC::MicroAPI::MaskReg mask;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> x;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> denominator;
+            AscendC::Reg::RegTensor<T, AscendC::Reg::RegTraitNumOne> result;
+            static constexpr AscendC::Reg::DivSpecificMode mode = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                                   highPrecisionDiv};
+            AscendC::Reg::MaskReg mask;
 
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = AscendC::MicroAPI::UpdateMask<T, AscendC::MicroAPI::RegTraitNumOne>(count);
-                AscendC::MicroAPI::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                AscendC::MicroAPI::Muls(denominator, x, value1, mask);
-                AscendC::MicroAPI::Exp(denominator, denominator, mask);
-                AscendC::MicroAPI::Adds(denominator, denominator, value2, mask);
+                mask = AscendC::Reg::UpdateMask<T, AscendC::Reg::RegTraitNumOne>(count);
+                AscendC::Reg::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                AscendC::Reg::Muls(denominator, x, value1, mask);
+                AscendC::Reg::Exp(denominator, denominator, mask);
+                AscendC::Reg::Adds(denominator, denominator, value2, mask);
                 // result = x / (Exp(-1.702 * x) + 1)
-                AscendC::MicroAPI::Div<T, &mode>(result, x, denominator, mask);
+                AscendC::Reg::Div<T, &mode>(result, x, denominator, mask);
                 // OpCopyOut
-                AscendC::MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), result, mask);
+                AscendC::Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), result, mask);
             }
         }
 #endif

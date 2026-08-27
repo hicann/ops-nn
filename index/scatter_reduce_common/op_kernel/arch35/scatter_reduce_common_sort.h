@@ -80,7 +80,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Fol
             if constexpr (AscendC::IsSameType<PARAMS_T, AccT>::value) {
                 Mul(accUb, accUb, curRaw, static_cast<int32_t>(width));
             } else {
-                if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 via MicroAPI
+                if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 via Reg
                     SubwordWidenToI32(rowAccUb, curRaw, static_cast<uint32_t>(width));
                 } else { // fp16 -> float
                     Cast(rowAccUb, curRaw, RoundMode::CAST_NONE, static_cast<int32_t>(width));
@@ -164,7 +164,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Loa
         DataCopyPad(varUb, srcGm[off], cp, pad);
         SetFlag<HardEvent::MTE2_V>(evMV);
         WaitFlag<HardEvent::MTE2_V>(evMV);
-        if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 via MicroAPI (high-level Cast broken)
+        if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 via Reg (high-level Cast broken)
             SubwordWidenToI32(accUb, varUb, static_cast<uint32_t>(sliceSize));
         } else { // fp16 -> float
             Cast(accUb, varUb, RoundMode::CAST_NONE, static_cast<int32_t>(sliceSize));
@@ -183,7 +183,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Nar
         WaitFlag<HardEvent::V_MTE3>(evVM3);
         DataCopyPad(dstGm[off], accUb.template ReinterpretCast<PARAMS_T>(), cp);
     } else {
-        if constexpr (sizeof(PARAMS_T) == 1) { // int32 -> int8/uint8 via MicroAPI (low-byte wrap)
+        if constexpr (sizeof(PARAMS_T) == 1) { // int32 -> int8/uint8 via Reg (low-byte wrap)
             SubwordNarrowFromI32(varUb, accUb, static_cast<uint32_t>(sliceSize));
         } else { // float -> half
             Cast(varUb, accUb, RoundMode::CAST_NONE, static_cast<int32_t>(sliceSize));
@@ -225,7 +225,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     }
     while ((M + P2 - 1) / P2 > static_cast<ADDR_T>(SORT_TILE)) {
         P2 *= 2;
-    }                                         // ... raised so each chunk fits one Sort
+    } // ... raised so each chunk fits one Sort
     const ADDR_T runLen0 = (M + P2 - 1) / P2; // padded chunk length (every run is this long)
     ADDR_T nRounds = 0;
     {
@@ -472,7 +472,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
 {
     // ACC: float for fp16 (match golden fp32 intermediate); native for fp32/int32; int32 for int8/uint8.
     // The int8/uint8 widening is forced by HARDWARE -- vmul has no 8-bit form -- not by math (mod 256 is
-    // preserved through int32 wrapping). int8/uint8 widen/narrow via MicroAPI (high-level Cast i8<->i32 is
+    // preserved through int32 wrapping). int8/uint8 widen/narrow via Reg (high-level Cast i8<->i32 is
     // broken on this device); fp16 via Cast; fp32/int32 are native.
     using ACC = AccT;
     SortIndices(M);

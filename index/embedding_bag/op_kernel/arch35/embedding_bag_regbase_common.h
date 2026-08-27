@@ -93,19 +93,19 @@ __aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal, LocalTen
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::RegTensor<float> sumCastReg;
-        AscendC::MicroAPI::RegTensor<float> weightCastReg;
+        AscendC::Reg::MaskReg maskRegUpdate;
+        AscendC::Reg::RegTensor<float> sumCastReg;
+        AscendC::Reg::RegTensor<float> weightCastReg;
         for (uint16_t i = 0; i < loopCnt; ++i) {
             uint32_t colOffset = i * vfLen; //
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<float>(counter);
+            maskRegUpdate = AscendC::Reg::UpdateMask<float>(counter);
             ops::LoadOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
             for (uint16_t j = 0; j < numRows; ++j) {
                 uint32_t weightOffset = colOffset + j * colNumAlign;
                 ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
-                AscendC::MicroAPI::Muls(weightCastReg, weightCastReg, val, maskRegUpdate);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg,
-                                                                                         weightCastReg, maskRegUpdate);
+                AscendC::Reg::Muls(weightCastReg, weightCastReg, val, maskRegUpdate);
+                AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg, weightCastReg,
+                                                                               maskRegUpdate);
             }
             ops::StoreOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
         }
@@ -125,19 +125,19 @@ __aicore__ inline void ComputeSum(LocalTensor<T> weightLocal, LocalTensor<float>
     uint16_t numRows = static_cast<uint16_t>(rowNum);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> weightCastReg;
-        AscendC::MicroAPI::RegTensor<float> sumCastReg;
+        AscendC::Reg::RegTensor<float> weightCastReg;
+        AscendC::Reg::RegTensor<float> sumCastReg;
 
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
+        AscendC::Reg::MaskReg maskRegUpdate;
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<float>(counter);
+            maskRegUpdate = AscendC::Reg::UpdateMask<float>(counter);
             uint32_t colOffset = i * vfLen; //
             ops::LoadOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
             for (uint16_t j = 0; j < numRows; ++j) {
                 uint32_t weightOffset = colOffset + j * colNumAlign;
                 ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg,
-                                                                                         weightCastReg, maskRegUpdate);
+                AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg, weightCastReg,
+                                                                               maskRegUpdate);
             }
             ops::StoreOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
         }
@@ -154,17 +154,17 @@ __aicore__ inline void DivForMean(LocalTensor<T> sumLocal, int64_t count, int64_
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> castReg;
-        AscendC::MicroAPI::RegTensor<float> countReg;
-        AscendC::MicroAPI::MaskReg maskReg;
+        AscendC::Reg::RegTensor<float> castReg;
+        AscendC::Reg::RegTensor<float> countReg;
+        AscendC::Reg::MaskReg maskReg;
         uint32_t maskLen = static_cast<uint32_t>(dataLen);
-        AscendC::MicroAPI::MaskReg countMask = AscendC::MicroAPI::CreateMask<float>();
-        AscendC::MicroAPI::Duplicate(countReg, static_cast<float>(count), countMask);
+        AscendC::Reg::MaskReg countMask = AscendC::Reg::CreateMask<float>();
+        AscendC::Reg::Duplicate(countReg, static_cast<float>(count), countMask);
         for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-            maskReg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+            maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
             auto sumAddrOffet = j * vfLen;
             ops::LoadOneTensorForDtypeT<T>(sumAddr, castReg, maskReg, sumAddrOffet);
-            AscendC::MicroAPI::Div(castReg, castReg, countReg, maskReg);
+            AscendC::Reg::Div(castReg, castReg, countReg, maskReg);
             ops::StoreOneTensorForDtypeT<T>(sumAddr, castReg, maskReg, sumAddrOffet);
         }
     }
@@ -201,10 +201,10 @@ public:
     static constexpr uint32_t vfISizeNum_ = platform::GetVRegSize() / sizeof(I);
     static constexpr uint32_t floatSizeNum_ = platform::GetVRegSize() / sizeof(float);
 
-    static constexpr AscendC::MicroAPI::CastTrait castTraitInt32Int64 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    static constexpr AscendC::Reg::CastTrait castTraitInt32Int64 = {
+        AscendC::Reg::RegLayout::ZERO,
+        AscendC::Reg::SatMode::UNKNOWN,
+        AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::UNKNOWN,
     };
     using OffsetRegType = typename std::conditional<IsSameType<I, E>::value, E, int64_t>::type;
@@ -338,36 +338,36 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<E> offsetsReg;
-            AscendC::MicroAPI::RegTensor<E> offsetsShiftOneReg;
-            AscendC::MicroAPI::RegTensor<OffsetRegType> bagSizeReg;
+            AscendC::Reg::RegTensor<E> offsetsReg;
+            AscendC::Reg::RegTensor<E> offsetsShiftOneReg;
+            AscendC::Reg::RegTensor<OffsetRegType> bagSizeReg;
 
-            AscendC::MicroAPI::MaskReg maskERegUpdate;
-            AscendC::MicroAPI::MaskReg maskIRegUpdate;
-            AscendC::MicroAPI::UnalignRegForLoad u0;
+            AscendC::Reg::MaskReg maskERegUpdate;
+            AscendC::Reg::MaskReg maskIRegUpdate;
+            AscendC::Reg::UnalignRegForLoad u0;
 
             for (uint16_t i = 0; i < loopCnt; ++i) {
-                maskIRegUpdate = AscendC::MicroAPI::UpdateMask<I>(counter1);
+                maskIRegUpdate = AscendC::Reg::UpdateMask<I>(counter1);
                 if constexpr (sizeof(I) / sizeof(E) == DIGIT_2) {
-                    AscendC::MicroAPI::Pack(maskERegUpdate, maskIRegUpdate);
+                    AscendC::Reg::Pack(maskERegUpdate, maskIRegUpdate);
                 } else {
-                    maskERegUpdate = AscendC::MicroAPI::UpdateMask<E>(counter);
+                    maskERegUpdate = AscendC::Reg::UpdateMask<E>(counter);
                 }
                 auto offsetsLocalAddrUpdate = offsetsLocalAddr + i * vfISizeNum_;
                 auto bagSizeLocalAddrUpdate = bagSizeLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::LoadAlign(offsetsReg, offsetsLocalAddrUpdate);
-                AscendC::MicroAPI::LoadUnAlignPre(u0, offsetsLocalAddrUpdate + 1);
-                AscendC::MicroAPI::LoadUnAlign<E>(offsetsShiftOneReg, u0, offsetsLocalAddrUpdate + 1);
-                AscendC::MicroAPI::Sub<E, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    offsetsShiftOneReg, offsetsShiftOneReg, offsetsReg, maskERegUpdate);
+                AscendC::Reg::LoadAlign(offsetsReg, offsetsLocalAddrUpdate);
+                AscendC::Reg::LoadUnAlignPre(u0, offsetsLocalAddrUpdate + 1);
+                AscendC::Reg::LoadUnAlign<E>(offsetsShiftOneReg, u0, offsetsLocalAddrUpdate + 1);
+                AscendC::Reg::Sub<E, AscendC::Reg::MaskMergeMode::ZEROING>(offsetsShiftOneReg, offsetsShiftOneReg,
+                                                                           offsetsReg, maskERegUpdate);
 
                 if constexpr (sizeof(I) / sizeof(E) == DIGIT_2) {
-                    AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<I>&)offsetsShiftOneReg,
-                                              (AscendC::MicroAPI::RegTensor<E>&)offsetsShiftOneReg);
-                    AscendC::MicroAPI::Cast<I, E, castTraitInt32Int64>(bagSizeReg, offsetsShiftOneReg, maskIRegUpdate);
-                    AscendC::MicroAPI::StoreAlign(bagSizeLocalAddrUpdate, bagSizeReg, maskIRegUpdate);
+                    AscendC::Reg::UnPack((AscendC::Reg::RegTensor<I>&)offsetsShiftOneReg,
+                                         (AscendC::Reg::RegTensor<E>&)offsetsShiftOneReg);
+                    AscendC::Reg::Cast<I, E, castTraitInt32Int64>(bagSizeReg, offsetsShiftOneReg, maskIRegUpdate);
+                    AscendC::Reg::StoreAlign(bagSizeLocalAddrUpdate, bagSizeReg, maskIRegUpdate);
                 } else {
-                    AscendC::MicroAPI::StoreAlign(bagSizeLocalAddrUpdate, offsetsShiftOneReg, maskERegUpdate);
+                    AscendC::Reg::StoreAlign(bagSizeLocalAddrUpdate, offsetsShiftOneReg, maskERegUpdate);
                 }
             }
         }
@@ -389,25 +389,25 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<T> weightReg;
-            AscendC::MicroAPI::RegTensor<float> outYReg;
-            AscendC::MicroAPI::RegTensor<float> weightCastReg;
-            AscendC::MicroAPI::RegTensor<float> outYCastReg;
-            AscendC::MicroAPI::RegTensor<float> countReg;
+            AscendC::Reg::RegTensor<T> weightReg;
+            AscendC::Reg::RegTensor<float> outYReg;
+            AscendC::Reg::RegTensor<float> weightCastReg;
+            AscendC::Reg::RegTensor<float> outYCastReg;
+            AscendC::Reg::RegTensor<float> countReg;
 
-            AscendC::MicroAPI::MaskReg maskRegUpdate;
-            AscendC::MicroAPI::MaskReg cmpMaskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::Duplicate(countReg, static_cast<float>(indicesNumber), cmpMaskAll);
+            AscendC::Reg::MaskReg maskRegUpdate;
+            AscendC::Reg::MaskReg cmpMaskAll = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+            AscendC::Reg::Duplicate(countReg, static_cast<float>(indicesNumber), cmpMaskAll);
             for (uint16_t i = 0; i < loopCnt; ++i) {
-                maskRegUpdate = AscendC::MicroAPI::UpdateMask<float>(counter);
+                maskRegUpdate = AscendC::Reg::UpdateMask<float>(counter);
                 uint32_t colOffset = i * floatSizeNum_;
 
                 ops::LoadOneTensorForDtypeT<float>(outYLocalAddr, outYCastReg, maskRegUpdate, colOffset);
                 for (uint16_t j = 0; j < indicesNumber; ++j) {
                     uint32_t weightOffset = i * floatSizeNum_ + j * weightDimFactor_; // weight
                     ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                        outYCastReg, outYCastReg, weightCastReg, maskRegUpdate);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(outYCastReg, outYCastReg,
+                                                                                   weightCastReg, maskRegUpdate);
                 }
                 ops::StoreOneTensorForDtypeT<float>(outYLocalAddr, outYCastReg, maskRegUpdate, colOffset);
             }
@@ -435,24 +435,24 @@ public:
 
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<T> weightReg;
-            AscendC::MicroAPI::RegTensor<T> outYReg;
-            AscendC::MicroAPI::RegTensor<float> weightCastReg;
-            AscendC::MicroAPI::RegTensor<float> outYCastReg;
-            AscendC::MicroAPI::RegTensor<float> perSampleCastReg;
+            AscendC::Reg::RegTensor<T> weightReg;
+            AscendC::Reg::RegTensor<T> outYReg;
+            AscendC::Reg::RegTensor<float> weightCastReg;
+            AscendC::Reg::RegTensor<float> outYCastReg;
+            AscendC::Reg::RegTensor<float> perSampleCastReg;
 
-            AscendC::MicroAPI::MaskReg maskRegUpdate;
+            AscendC::Reg::MaskReg maskRegUpdate;
             for (uint16_t i = 0; i < loopCnt; ++i) {
-                maskRegUpdate = AscendC::MicroAPI::UpdateMask<float>(counter);
+                maskRegUpdate = AscendC::Reg::UpdateMask<float>(counter);
                 uint32_t colOffset = i * floatSizeNum_; //
                 ops::LoadOneTensorForDtypeT<float>(outYLocalAddr, outYCastReg, maskRegUpdate, colOffset);
                 for (uint16_t j = 0; j < indicesNumber; ++j) {
                     uint32_t weightOffset = i * floatSizeNum_ + j * weightDimFactor_;
                     ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
-                    AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                    AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(
                         weightCastReg, weightCastReg, perSampleLocalAddr[j], maskRegUpdate);
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                        outYCastReg, outYCastReg, weightCastReg, maskRegUpdate);
+                    AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(outYCastReg, outYCastReg,
+                                                                                   weightCastReg, maskRegUpdate);
                 }
                 ops::StoreOneTensorForDtypeT<float>(outYLocalAddr, outYCastReg, maskRegUpdate, colOffset);
             }
@@ -480,68 +480,68 @@ public:
         uint32_t counter1 = number;
         __VEC_SCOPE__
         {
-            AscendC::MicroAPI::RegTensor<T> weightReg;
-            AscendC::MicroAPI::RegTensor<T> outYReg;
-            AscendC::MicroAPI::RegTensor<I> maxIndicesCalcReg;
-            AscendC::MicroAPI::RegTensor<I> maxIndicesReg;
+            AscendC::Reg::RegTensor<T> weightReg;
+            AscendC::Reg::RegTensor<T> outYReg;
+            AscendC::Reg::RegTensor<I> maxIndicesCalcReg;
+            AscendC::Reg::RegTensor<I> maxIndicesReg;
 
-            AscendC::MicroAPI::MaskReg cmpMask;
-            AscendC::MicroAPI::MaskReg initMask;
-            AscendC::MicroAPI::MaskReg cmpMaskT2;
-            AscendC::MicroAPI::MaskReg cmpMaskT4;
+            AscendC::Reg::MaskReg cmpMask;
+            AscendC::Reg::MaskReg initMask;
+            AscendC::Reg::MaskReg cmpMaskT2;
+            AscendC::Reg::MaskReg cmpMaskT4;
 
-            AscendC::MicroAPI::MaskReg tMaskRegUpdate;
-            AscendC::MicroAPI::MaskReg iMaskRegUpdate;
+            AscendC::Reg::MaskReg tMaskRegUpdate;
+            AscendC::Reg::MaskReg iMaskRegUpdate;
 
             for (uint16_t i = 0; i < loopCnt; ++i) {
-                iMaskRegUpdate = AscendC::MicroAPI::UpdateMask<I>(counter1);
+                iMaskRegUpdate = AscendC::Reg::UpdateMask<I>(counter1);
 
                 if constexpr (sizeof(I) / sizeof(T) == DIGIT_1) {
-                    tMaskRegUpdate = AscendC::MicroAPI::UpdateMask<T>(counter);
+                    tMaskRegUpdate = AscendC::Reg::UpdateMask<T>(counter);
                 } else if constexpr (sizeof(I) / sizeof(T) == DIGIT_2) {
-                    AscendC::MicroAPI::Pack(tMaskRegUpdate, iMaskRegUpdate);
+                    AscendC::Reg::Pack(tMaskRegUpdate, iMaskRegUpdate);
                 } else if (sizeof(I) / sizeof(T) == DIGIT_4) {
-                    AscendC::MicroAPI::Pack(tMaskRegUpdate, iMaskRegUpdate);
-                    AscendC::MicroAPI::Pack(tMaskRegUpdate, tMaskRegUpdate);
+                    AscendC::Reg::Pack(tMaskRegUpdate, iMaskRegUpdate);
+                    AscendC::Reg::Pack(tMaskRegUpdate, tMaskRegUpdate);
                 }
 
                 auto outYLocalAddrUpdate = outYLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::LoadAlign(outYReg, outYLocalAddrUpdate);
+                AscendC::Reg::LoadAlign(outYReg, outYLocalAddrUpdate);
                 auto maxIndicesLocalAddrUpdate = maxIndicesLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::LoadAlign(maxIndicesReg, maxIndicesLocalAddrUpdate);
+                AscendC::Reg::LoadAlign(maxIndicesReg, maxIndicesLocalAddrUpdate);
 
                 for (uint16_t j = 0; j < indicesNumber; ++j) {
                     auto weightLocalAddrUpdate = weightLocalAddr + i * vfISizeNum_ + j * weightDimFactor_;
-                    AscendC::MicroAPI::LoadAlign(weightReg, weightLocalAddrUpdate);
-                    AscendC::MicroAPI::Duplicate(maxIndicesCalcReg, maxIndicesCalcLocalAddr[j]); // 当前处理行的索引
-                    AscendC::MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, weightReg, outYReg, tMaskRegUpdate);
+                    AscendC::Reg::LoadAlign(weightReg, weightLocalAddrUpdate);
+                    AscendC::Reg::Duplicate(maxIndicesCalcReg, maxIndicesCalcLocalAddr[j]); // 当前处理行的索引
+                    AscendC::Reg::Compare<T, CMPMODE::GT>(cmpMask, weightReg, outYReg, tMaskRegUpdate);
 
                     if constexpr (sizeof(I) / sizeof(T) == DIGIT_1) {
-                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                    iMaskRegUpdate);
-                        AscendC::MicroAPI::Or(cmpMask, initMask, cmpMask, iMaskRegUpdate);
-                        AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMask);
+                        AscendC::Reg::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                               iMaskRegUpdate);
+                        AscendC::Reg::Or(cmpMask, initMask, cmpMask, iMaskRegUpdate);
+                        AscendC::Reg::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMask);
                     } else if constexpr (sizeof(I) / sizeof(T) == DIGIT_2) {
-                        AscendC::MicroAPI::UnPack(cmpMaskT2, cmpMask);
-                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                    iMaskRegUpdate);
-                        AscendC::MicroAPI::Or(cmpMaskT2, initMask, cmpMaskT2, iMaskRegUpdate);
-                        AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT2);
-                        AscendC::MicroAPI::Pack(cmpMask, cmpMaskT2);
+                        AscendC::Reg::UnPack(cmpMaskT2, cmpMask);
+                        AscendC::Reg::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                               iMaskRegUpdate);
+                        AscendC::Reg::Or(cmpMaskT2, initMask, cmpMaskT2, iMaskRegUpdate);
+                        AscendC::Reg::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT2);
+                        AscendC::Reg::Pack(cmpMask, cmpMaskT2);
                     } else if (sizeof(I) / sizeof(T) == DIGIT_4) {
-                        AscendC::MicroAPI::UnPack(cmpMaskT2, cmpMask);
-                        AscendC::MicroAPI::UnPack(cmpMaskT4, cmpMaskT2);
-                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                    iMaskRegUpdate);
-                        AscendC::MicroAPI::Or(cmpMaskT4, initMask, cmpMaskT4, iMaskRegUpdate);
-                        AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT4);
-                        AscendC::MicroAPI::Pack(cmpMaskT2, cmpMaskT4);
-                        AscendC::MicroAPI::Pack(cmpMask, cmpMaskT2);
+                        AscendC::Reg::UnPack(cmpMaskT2, cmpMask);
+                        AscendC::Reg::UnPack(cmpMaskT4, cmpMaskT2);
+                        AscendC::Reg::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                               iMaskRegUpdate);
+                        AscendC::Reg::Or(cmpMaskT4, initMask, cmpMaskT4, iMaskRegUpdate);
+                        AscendC::Reg::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT4);
+                        AscendC::Reg::Pack(cmpMaskT2, cmpMaskT4);
+                        AscendC::Reg::Pack(cmpMask, cmpMaskT2);
                     }
-                    AscendC::MicroAPI::Select(outYReg, weightReg, outYReg, cmpMask);
+                    AscendC::Reg::Select(outYReg, weightReg, outYReg, cmpMask);
                 }
-                AscendC::MicroAPI::StoreAlign(outYLocalAddrUpdate, outYReg, tMaskRegUpdate);
-                AscendC::MicroAPI::StoreAlign(maxIndicesLocalAddrUpdate, maxIndicesReg, iMaskRegUpdate);
+                AscendC::Reg::StoreAlign(outYLocalAddrUpdate, outYReg, tMaskRegUpdate);
+                AscendC::Reg::StoreAlign(maxIndicesLocalAddrUpdate, maxIndicesReg, iMaskRegUpdate);
             }
         }
         int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));

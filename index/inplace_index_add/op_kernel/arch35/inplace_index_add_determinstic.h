@@ -23,12 +23,12 @@
 namespace InplaceIndexAdd {
 using namespace AscendC;
 
-static constexpr MicroAPI::CastTrait castTraitFp32ToInt32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitInt32ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitFp32ToVarT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFp32ToInt32 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitInt32ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFp32ToVarT = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                       Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename VAR_T, typename IDX_T>
 class InplaceIndexAddDeterminstic {
@@ -222,37 +222,35 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUnique
     __ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, uint32_t counter,
     int64_t vfLen)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-    AscendC::MicroAPI::RegTensor<IDX_T> sortedIdxReg;
-    AscendC::MicroAPI::RegTensor<IDX_T> sortedIdxShiftOneReg;
-    AscendC::MicroAPI::RegTensor<int32_t> selReg;
-    AscendC::MicroAPI::MaskReg cmpMask;
-    AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::UnalignRegForLoad u0;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    AscendC::Reg::RegTensor<int32_t> orderReg;
+    AscendC::Reg::RegTensor<IDX_T> sortedIdxReg;
+    AscendC::Reg::RegTensor<IDX_T> sortedIdxShiftOneReg;
+    AscendC::Reg::RegTensor<int32_t> selReg;
+    AscendC::Reg::MaskReg cmpMask;
+    AscendC::Reg::MaskReg maskReg;
+    AscendC::Reg::UnalignRegForLoad u0;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
     for (uint16_t i = 0; i < loopCnt; ++i) {
-        AscendC::MicroAPI::Arange(orderReg, i * vfLen);
-        maskReg = AscendC::MicroAPI::UpdateMask<IDX_T>(counter);
+        AscendC::Reg::Arange(orderReg, i * vfLen);
+        maskReg = AscendC::Reg::UpdateMask<IDX_T>(counter);
         auto startAddr = indicesAddr + i * vfLen;
-        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr - 1);
-        AscendC::MicroAPI::LoadUnAlign<IDX_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
-        AscendC::MicroAPI::Compare<IDX_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
+        AscendC::Reg::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(u0, startAddr - 1);
+        AscendC::Reg::LoadUnAlign<IDX_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
+        AscendC::Reg::Compare<IDX_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
         if constexpr (std::is_same<int64_t, IDX_T>::value) {
-            AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                              maskHalf);
+            AscendC::Reg::MaskReg maskHalf;
+            AscendC::Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
         } else {
-            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                              cmpMask);
+            AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
         }
-        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr,
-                                                                                                   selReg, uOut);
+        AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg,
+                                                                                         uOut);
     }
-    AscendC::MicroAPI::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
+    AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
 }
 
 template <typename VAR_T, typename IDX_T>
@@ -268,7 +266,7 @@ __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUniqueIdNum(in
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
     uint32_t counter = dataLen + 1;
     ComputeUniqueIdNumVf(indicesAddr, uniqueIdCountsAddr, loopCnt, counter, vfLen);
-    uniqueIdNum_ = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
+    uniqueIdNum_ = ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
 
     LocalTensor<IDX_T> updateSumIdxLocal = updateSumIdxQue_.AllocTensor<IDX_T>();
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -291,20 +289,20 @@ template <typename VAR_T, typename IDX_T>
 __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUinqueIdTimesVf(
     __ubuf__ int32_t* uniqueIdCountsAddr, uint32_t vfLen, uint16_t loopSize, uint32_t uniqueIdNum)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> preReg;
-    AscendC::MicroAPI::RegTensor<int32_t> postReg;
-    AscendC::MicroAPI::RegTensor<int32_t> subReg;
-    AscendC::MicroAPI::UnalignRegForLoad uIn;
-    AscendC::MicroAPI::MaskReg maskReg;
+    AscendC::Reg::RegTensor<int32_t> preReg;
+    AscendC::Reg::RegTensor<int32_t> postReg;
+    AscendC::Reg::RegTensor<int32_t> subReg;
+    AscendC::Reg::UnalignRegForLoad uIn;
+    AscendC::Reg::MaskReg maskReg;
     for (uint16_t i = 0; i < loopSize; ++i) {
-        maskReg = AscendC::MicroAPI::UpdateMask<int32_t>(uniqueIdNum);
+        maskReg = AscendC::Reg::UpdateMask<int32_t>(uniqueIdNum);
         auto startAddr = uniqueIdCountsAddr + i * vfLen;
         auto startAddrOfstOne = startAddr + 1;
-        AscendC::MicroAPI::LoadAlign(preReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(uIn, startAddrOfstOne);
-        AscendC::MicroAPI::LoadUnAlign<int32_t>(postReg, uIn, startAddrOfstOne, vfLen);
-        AscendC::MicroAPI::Sub(subReg, postReg, preReg, maskReg);
-        AscendC::MicroAPI::StoreAlign(startAddr, subReg, maskReg);
+        AscendC::Reg::LoadAlign(preReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(uIn, startAddrOfstOne);
+        AscendC::Reg::LoadUnAlign<int32_t>(postReg, uIn, startAddrOfstOne, vfLen);
+        AscendC::Reg::Sub(subReg, postReg, preReg, maskReg);
+        AscendC::Reg::StoreAlign(startAddr, subReg, maskReg);
     }
 }
 
@@ -329,24 +327,24 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeSumVf(
 {
     int32_t idLocation = 0;
     for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
-        AscendC::MicroAPI::RegTensor<float> sumReg;
-        AscendC::MicroAPI::RegTensor<float> updateReg;
-        AscendC::MicroAPI::UnalignRegForLoad uIn;
-        AscendC::MicroAPI::MaskReg maskReg;
-        AscendC::MicroAPI::MaskReg zeroMask = AscendC::MicroAPI::CreateMask<int32_t>();
+        AscendC::Reg::RegTensor<float> sumReg;
+        AscendC::Reg::RegTensor<float> updateReg;
+        AscendC::Reg::UnalignRegForLoad uIn;
+        AscendC::Reg::MaskReg maskReg;
+        AscendC::Reg::MaskReg zeroMask = AscendC::Reg::CreateMask<int32_t>();
         uint32_t maskLen = colLen;
         uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
         for (uint16_t j = 0; j < loopSize; j++) {
-            maskReg = AscendC::MicroAPI::UpdateMask<int32_t>(maskLen);
-            AscendC::MicroAPI::Duplicate(sumReg, (float)0, zeroMask);
+            maskReg = AscendC::Reg::UpdateMask<int32_t>(maskLen);
+            AscendC::Reg::Duplicate(sumReg, (float)0, zeroMask);
             for (uint16_t k = 0; k < idRepeatTimes; k++) {
                 auto updatesOffet = updatesOriginIdexAddr[idLocation + k] * afterAxisAlignSize + j * vfLen;
                 auto startAddr = updatesAddr + updatesOffet;
-                AscendC::MicroAPI::LoadAlign(updateReg, startAddr);
-                AscendC::MicroAPI::Add(sumReg, sumReg, updateReg, maskReg);
+                AscendC::Reg::LoadAlign(updateReg, startAddr);
+                AscendC::Reg::Add(sumReg, sumReg, updateReg, maskReg);
             }
             auto updateSumAddrOfst = updateSumAddr + i * afterAxisAlignFp32 + j * vfLen;
-            AscendC::MicroAPI::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
+            AscendC::Reg::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
         }
         idLocation += idRepeatTimes;
     }
@@ -488,31 +486,31 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::QuantizeForSu
     __ubuf__ float* sumAddr, __ubuf__ float* rValueAddr, __ubuf__ int32_t* quantaSumAddr, uint16_t rowLen,
     uint32_t colLen, uint16_t loopCnt, uint32_t vfLen, float scaling, uint64_t afterAxisAlignFp32)
 {
-    AscendC::MicroAPI::RegTensor<float> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rValueReg;
-    AscendC::MicroAPI::RegTensor<float> resReg;
-    AscendC::MicroAPI::RegTensor<float> oneReg;
-    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-    AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::MaskReg cmpReg;
+    AscendC::Reg::RegTensor<float> dataReg;
+    AscendC::Reg::RegTensor<float> rValueReg;
+    AscendC::Reg::RegTensor<float> resReg;
+    AscendC::Reg::RegTensor<float> oneReg;
+    AscendC::Reg::RegTensor<int32_t> scaleReg;
+    AscendC::Reg::MaskReg maskReg;
+    AscendC::Reg::MaskReg cmpReg;
     for (uint16_t rowIdx = 0; rowIdx < rowLen; rowIdx++) {
         uint32_t maskLen = colLen;
-        AscendC::MicroAPI::Duplicate(oneReg, (float)1);
+        AscendC::Reg::Duplicate(oneReg, (float)1);
         for (uint16_t i = 0; i < loopCnt; i++) {
-            maskReg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+            maskReg = AscendC::Reg::UpdateMask<float>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
             auto sumAddrOfst = sumAddr + rowAlignOfst;
             auto rValueAddrOfst = rValueAddr + rowAlignOfst;
             auto quantaSumAddrOfst = quantaSumAddr + rowAlignOfst;
-            AscendC::MicroAPI::LoadAlign(dataReg, sumAddrOfst);
-            AscendC::MicroAPI::LoadAlign(rValueReg, rValueAddrOfst);
+            AscendC::Reg::LoadAlign(dataReg, sumAddrOfst);
+            AscendC::Reg::LoadAlign(rValueReg, rValueAddrOfst);
             /* 防止除0操作 */
-            AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
+            AscendC::Reg::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
             Select(rValueReg, oneReg, rValueReg, cmpReg);
             Div(resReg, dataReg, rValueReg, maskReg);
             Muls(resReg, resReg, scaling, maskReg);
-            AscendC::MicroAPI::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
-            AscendC::MicroAPI::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
+            AscendC::Reg::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
+            AscendC::Reg::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
         }
     }
 }
@@ -647,22 +645,22 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::InverseQuanti
     uint32_t colLen, uint16_t loopCnt, uint32_t vfLen, float scaleValue, uint64_t afterAxisAlignFp32,
     uint64_t afterAxisAlignSize)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rReg;
-    AscendC::MicroAPI::RegTensor<float> resReg;
-    AscendC::MicroAPI::RegTensor<float> scaleReg;
-    AscendC::MicroAPI::RegTensor<VAR_T> varTReg;
-    AscendC::MicroAPI::MaskReg pregLoop;
-    AscendC::MicroAPI::MaskReg maskReg;
-    maskReg = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::Duplicate(scaleReg, scaleValue, maskReg);
+    AscendC::Reg::RegTensor<int32_t> dataReg;
+    AscendC::Reg::RegTensor<float> rReg;
+    AscendC::Reg::RegTensor<float> resReg;
+    AscendC::Reg::RegTensor<float> scaleReg;
+    AscendC::Reg::RegTensor<VAR_T> varTReg;
+    AscendC::Reg::MaskReg pregLoop;
+    AscendC::Reg::MaskReg maskReg;
+    maskReg = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::Duplicate(scaleReg, scaleValue, maskReg);
     for (uint16_t rowIdx = 0; rowIdx < rowLen; rowIdx++) {
         uint32_t maskLen = colLen;
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            pregLoop = AscendC::MicroAPI::UpdateMask<uint32_t>(maskLen);
+            pregLoop = AscendC::Reg::UpdateMask<uint32_t>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
-            AscendC::MicroAPI::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
-            AscendC::MicroAPI::LoadAlign(rReg, rValueAddr + rowAlignOfst);
+            AscendC::Reg::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
+            AscendC::Reg::LoadAlign(rReg, rValueAddr + rowAlignOfst);
             Cast<float, int32_t, castTraitInt32ToFp32>(resReg, dataReg, pregLoop);
             Mul(resReg, resReg, rReg, pregLoop);
             Div(resReg, resReg, scaleReg, pregLoop);
@@ -670,9 +668,9 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::InverseQuanti
             auto outOfset = invQuantDataAddr + rowIdx * afterAxisAlignSize + i * vfLen;
             if constexpr (!std::is_same<float, VAR_T>::value) {
                 Cast<VAR_T, float, castTraitFp32ToVarT>(varTReg, resReg, pregLoop);
-                AscendC::MicroAPI::StoreAlign<VAR_T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
+                AscendC::Reg::StoreAlign<VAR_T, Reg::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
             } else {
-                AscendC::MicroAPI::StoreAlign(outOfset, resReg, pregLoop);
+                AscendC::Reg::StoreAlign(outOfset, resReg, pregLoop);
             }
         }
     }

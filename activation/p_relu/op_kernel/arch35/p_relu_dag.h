@@ -39,28 +39,28 @@ struct PreluCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputX;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputWeight;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputZero;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputProd;
-        MicroAPI::MaskReg mask, cmpMask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputX;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputWeight;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputZero;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputProd;
+        Reg::MaskReg mask, cmpMask;
         __VEC_SCOPE__
         {
-            MicroAPI::Duplicate(vregInputZero, (T)0.0);
+            Reg::Duplicate(vregInputZero, (T)0.0);
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::LoadAlign(vregInputX, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                MicroAPI::LoadAlign(vregInputWeight, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                Reg::LoadAlign(vregInputX, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                Reg::LoadAlign(vregInputWeight, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
 
                 // compute
-                MicroAPI::Mul(vregInputProd, vregInputX, vregInputWeight, mask);
-                MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, vregInputX, vregInputZero, mask);
-                MicroAPI::Select<T>(vregOutput, vregInputX, vregInputProd, cmpMask);
+                Reg::Mul(vregInputProd, vregInputX, vregInputWeight, mask);
+                Reg::Compare<T, CMPMODE::GT>(cmpMask, vregInputX, vregInputZero, mask);
+                Reg::Select<T>(vregOutput, vregInputX, vregInputProd, cmpMask);
 
                 // OpCopyOut
-                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
 #endif

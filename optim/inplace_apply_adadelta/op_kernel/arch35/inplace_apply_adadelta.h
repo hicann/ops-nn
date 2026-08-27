@@ -389,29 +389,29 @@ __aicore__ inline void InplaceApplyAdadelta<T, BUFFER_MODE>::RefinedRsqrt(const 
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> valueReg;
-        MicroAPI::RegTensor<float> sqrtReg;
-        MicroAPI::RegTensor<float> seedReg;
-        MicroAPI::RegTensor<float> r2Reg;
-        MicroAPI::RegTensor<float> halfReg;
-        MicroAPI::RegTensor<float> residualReg;
-        MicroAPI::RegTensor<float> correctionReg;
-        MicroAPI::RegTensor<float> refinedReg;
-        MicroAPI::RegTensor<float> resultReg;
-        MicroAPI::RegTensor<float> oneReg;
-        MicroAPI::MaskReg validMask;
-        MicroAPI::MaskReg refinedIsNumberMask;
+        Reg::RegTensor<float> valueReg;
+        Reg::RegTensor<float> sqrtReg;
+        Reg::RegTensor<float> seedReg;
+        Reg::RegTensor<float> r2Reg;
+        Reg::RegTensor<float> halfReg;
+        Reg::RegTensor<float> residualReg;
+        Reg::RegTensor<float> correctionReg;
+        Reg::RegTensor<float> refinedReg;
+        Reg::RegTensor<float> resultReg;
+        Reg::RegTensor<float> oneReg;
+        Reg::MaskReg validMask;
+        Reg::MaskReg refinedIsNumberMask;
 
         for (uint16_t loop = 0; loop < loopCount; ++loop) {
-            validMask = MicroAPI::UpdateMask<float>(remain);
-            MicroAPI::DataCopy(valueReg, srcAddr + loop * vectorLength);
+            validMask = Reg::UpdateMask<float>(remain);
+            Reg::DataCopy(valueReg, srcAddr + loop * vectorLength);
 
             // The reference CPU first obtains an approximate reciprocal-square-root
             // seed, then applies exactly one Newton step. Use the native Sqrt/Div
             // modes for the seed instead of encoding an architecture-specific table.
-            MicroAPI::Sqrt(sqrtReg, valueReg, validMask);
-            MicroAPI::Duplicate(oneReg, FP32_ONE, validMask);
-            MicroAPI::Div(seedReg, oneReg, sqrtReg, validMask);
+            Reg::Sqrt(sqrtReg, valueReg, validMask);
+            Reg::Duplicate(oneReg, FP32_ONE, validMask);
+            Reg::Div(seedReg, oneReg, sqrtReg, validMask);
 
             // r2 = x * seed
             // half = seed * -0.5
@@ -420,19 +420,19 @@ __aicore__ inline void InplaceApplyAdadelta<T, BUFFER_MODE>::RefinedRsqrt(const 
             //
             // Keep Mul and Add separate: a fused multiply-add changes the overflow
             // boundary in Step4 for values close to FLT_MAX.
-            MicroAPI::Mul(r2Reg, valueReg, seedReg, validMask);
-            MicroAPI::Muls(halfReg, seedReg, -0.5f, validMask);
-            MicroAPI::Mul(residualReg, r2Reg, seedReg, validMask);
-            MicroAPI::Adds(residualReg, residualReg, -1.0f, validMask);
-            MicroAPI::Mul(correctionReg, halfReg, residualReg, validMask);
-            MicroAPI::Add(refinedReg, correctionReg, seedReg, validMask);
+            Reg::Mul(r2Reg, valueReg, seedReg, validMask);
+            Reg::Muls(halfReg, seedReg, -0.5f, validMask);
+            Reg::Mul(residualReg, r2Reg, seedReg, validMask);
+            Reg::Adds(residualReg, residualReg, -1.0f, validMask);
+            Reg::Mul(correctionReg, halfReg, residualReg, validMask);
+            Reg::Add(refinedReg, correctionReg, seedReg, validMask);
 
             // For zero, infinity and exceptional inputs the Newton expression can
             // become NaN even though the native seed is meaningful. Preserve that
             // seed in the same cases as the reference implementation.
-            MicroAPI::Compare<float, CMPMODE::EQ>(refinedIsNumberMask, refinedReg, refinedReg, validMask);
-            MicroAPI::Select(resultReg, refinedReg, seedReg, refinedIsNumberMask);
-            MicroAPI::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
+            Reg::Compare<float, CMPMODE::EQ>(refinedIsNumberMask, refinedReg, refinedReg, validMask);
+            Reg::Select(resultReg, refinedReg, seedReg, refinedIsNumberMask);
+            Reg::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
         }
     }
 #else
@@ -460,17 +460,17 @@ __aicore__ inline void InplaceApplyAdadelta<T, BUFFER_MODE>::ExactSqrt(const Loc
 
     __VEC_SCOPE__
     {
-        static constexpr MicroAPI::SqrtSpecificMode kSqrtMode = {MicroAPI::MaskMergeMode::ZEROING, false,
-                                                                 SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
-        MicroAPI::RegTensor<float> valueReg;
-        MicroAPI::RegTensor<float> resultReg;
-        MicroAPI::MaskReg validMask;
+        static constexpr Reg::SqrtSpecificMode kSqrtMode = {Reg::MaskMergeMode::ZEROING, false,
+                                                            SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
+        Reg::RegTensor<float> valueReg;
+        Reg::RegTensor<float> resultReg;
+        Reg::MaskReg validMask;
 
         for (uint16_t loop = 0; loop < loopCount; ++loop) {
-            validMask = MicroAPI::UpdateMask<float>(remain);
-            MicroAPI::DataCopy(valueReg, srcAddr + loop * vectorLength);
-            MicroAPI::Sqrt<float, &kSqrtMode>(resultReg, valueReg, validMask);
-            MicroAPI::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
+            validMask = Reg::UpdateMask<float>(remain);
+            Reg::DataCopy(valueReg, srcAddr + loop * vectorLength);
+            Reg::Sqrt<float, &kSqrtMode>(resultReg, valueReg, validMask);
+            Reg::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
         }
     }
 #else
@@ -493,20 +493,20 @@ __aicore__ inline void InplaceApplyAdadelta<T, BUFFER_MODE>::ExactReciprocal(con
 
     __VEC_SCOPE__
     {
-        static constexpr MicroAPI::DivSpecificMode kDivMode = {MicroAPI::MaskMergeMode::ZEROING, false,
-                                                               DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+        static constexpr Reg::DivSpecificMode kDivMode = {Reg::MaskMergeMode::ZEROING, false,
+                                                          DivAlgo::PRECISION_0ULP_FTZ_FALSE};
 
-        MicroAPI::RegTensor<float> valueReg;
-        MicroAPI::RegTensor<float> resultReg;
-        MicroAPI::RegTensor<float> oneReg;
-        MicroAPI::MaskReg validMask;
+        Reg::RegTensor<float> valueReg;
+        Reg::RegTensor<float> resultReg;
+        Reg::RegTensor<float> oneReg;
+        Reg::MaskReg validMask;
 
         for (uint16_t loop = 0; loop < loopCount; ++loop) {
-            validMask = MicroAPI::UpdateMask<float>(remain);
-            MicroAPI::DataCopy(valueReg, srcAddr + loop * vectorLength);
-            MicroAPI::Duplicate(oneReg, FP32_ONE, validMask);
-            MicroAPI::Div<float, &kDivMode>(resultReg, oneReg, valueReg, validMask);
-            MicroAPI::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
+            validMask = Reg::UpdateMask<float>(remain);
+            Reg::DataCopy(valueReg, srcAddr + loop * vectorLength);
+            Reg::Duplicate(oneReg, FP32_ONE, validMask);
+            Reg::Div<float, &kDivMode>(resultReg, oneReg, valueReg, validMask);
+            Reg::DataCopy(dstAddr + loop * vectorLength, resultReg, validMask);
         }
     }
 #else

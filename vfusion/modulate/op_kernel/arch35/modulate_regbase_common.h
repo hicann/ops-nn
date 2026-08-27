@@ -220,33 +220,33 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScaleShif
     uint16_t rowLen = static_cast<uint16_t>(rows);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<CAST_T> xReg;
-        MicroAPI::RegTensor<CAST_T> scaleReg;
-        MicroAPI::RegTensor<CAST_T> shiftReg;
-        MicroAPI::RegTensor<CAST_T> yReg;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<CAST_T> xReg;
+        Reg::RegTensor<CAST_T> scaleReg;
+        Reg::RegTensor<CAST_T> shiftReg;
+        Reg::RegTensor<CAST_T> yReg;
+        Reg::MaskReg preg;
         for (uint16_t i = 0; i < vfLoop; i++) {
-            preg = MicroAPI::UpdateMask<CAST_T>(sreg);
+            preg = Reg::UpdateMask<CAST_T>(sreg);
             if constexpr (IsSameType<T, bfloat16_t>::value) {
                 ops::LoadTwoTensorForDtypeT<T>(scaleAddr, shiftAddr, scaleReg, shiftReg, preg, preg, i * VL, i * VL);
-                MicroAPI::Adds(scaleReg, scaleReg, 1.0f, preg);
+                Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < rowLen; row++) {
                     uint64_t rowOffset = row * calCountAlign;
                     ops::LoadOneTensorForDtypeT<T>(xAddr, xReg, preg, rowOffset + i * VL);
-                    MicroAPI::Mul(xReg, xReg, scaleReg, preg);
-                    MicroAPI::Add(yReg, xReg, shiftReg, preg);
+                    Reg::Mul(xReg, xReg, scaleReg, preg);
+                    Reg::Add(yReg, xReg, shiftReg, preg);
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
-                MicroAPI::Adds(scaleReg, scaleReg, 1.0f, preg);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
+                Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < rowLen; row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
-                    MicroAPI::Mul(xReg, xReg, scaleReg, preg);
-                    MicroAPI::Add(yReg, xReg, shiftReg, preg);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::Mul(xReg, xReg, scaleReg, preg);
+                    Reg::Add(yReg, xReg, shiftReg, preg);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }
@@ -280,29 +280,29 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(con
     uint16_t rowLen = static_cast<uint16_t>(rows);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<CAST_T> xReg;
-        MicroAPI::RegTensor<CAST_T> scaleReg;
-        MicroAPI::RegTensor<CAST_T> yReg;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<CAST_T> xReg;
+        Reg::RegTensor<CAST_T> scaleReg;
+        Reg::RegTensor<CAST_T> yReg;
+        Reg::MaskReg preg;
         for (uint16_t i = 0; i < vfLoop; i++) {
-            preg = MicroAPI::UpdateMask<CAST_T>(sreg);
+            preg = Reg::UpdateMask<CAST_T>(sreg);
             if constexpr (IsSameType<T, bfloat16_t>::value) {
                 ops::LoadOneTensorForDtypeT<T>(scaleAddr, scaleReg, preg, i * VL);
-                MicroAPI::Adds(scaleReg, scaleReg, 1.0f, preg);
+                Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < rowLen; row++) {
                     uint64_t rowOffset = row * calCountAlign;
                     ops::LoadOneTensorForDtypeT<T>(xAddr, xReg, preg, rowOffset + i * VL);
-                    MicroAPI::Mul(yReg, xReg, scaleReg, preg);
+                    Reg::Mul(yReg, xReg, scaleReg, preg);
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
-                MicroAPI::Adds(scaleReg, scaleReg, 1.0f, preg);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
+                Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < static_cast<uint16_t>(rows); row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
-                    MicroAPI::Mul(yReg, xReg, scaleReg, preg);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::Mul(yReg, xReg, scaleReg, preg);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }
@@ -336,27 +336,27 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(con
     uint16_t rowLen = static_cast<uint16_t>(rows);
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<CAST_T> xReg;
-        MicroAPI::RegTensor<CAST_T> shiftReg;
-        MicroAPI::RegTensor<CAST_T> yReg;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<CAST_T> xReg;
+        Reg::RegTensor<CAST_T> shiftReg;
+        Reg::RegTensor<CAST_T> yReg;
+        Reg::MaskReg preg;
         for (uint16_t i = 0; i < vfLoop; i++) {
-            preg = MicroAPI::UpdateMask<CAST_T>(sreg);
+            preg = Reg::UpdateMask<CAST_T>(sreg);
             if constexpr (IsSameType<T, bfloat16_t>::value) {
                 ops::LoadOneTensorForDtypeT<T>(shiftAddr, shiftReg, preg, i * VL);
                 for (uint16_t row = 0; row < rowLen; row++) {
                     uint64_t rowOffset = row * calCountAlign;
                     ops::LoadOneTensorForDtypeT<T>(xAddr, xReg, preg, rowOffset + i * VL);
-                    MicroAPI::Add(yReg, xReg, shiftReg, preg);
+                    Reg::Add(yReg, xReg, shiftReg, preg);
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
                 for (uint16_t row = 0; row < static_cast<uint16_t>(rows); row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
-                    MicroAPI::Add(yReg, xReg, shiftReg, preg);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::Add(yReg, xReg, shiftReg, preg);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }

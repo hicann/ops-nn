@@ -196,7 +196,7 @@ __aicore__ inline void ScalarReduceWiden(TPipe& pipe, GlobalTensor<PARAMS_T>& ou
     event_t e2v = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(e2v);
     WaitFlag<HardEvent::MTE2_V>(e2v);
-    if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 (MicroAPI; high-level Cast broken)
+    if constexpr (sizeof(PARAMS_T) == 1) { // int8/uint8 -> int32 (Reg; high-level Cast broken)
         SubwordWidenToI32(accUb, varUb, static_cast<uint32_t>(varFirstDim));
     } else { // fp16 -> float
         Cast(accUb, varUb, RoundMode::CAST_NONE, static_cast<int32_t>(varFirstDim));

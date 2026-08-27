@@ -30,12 +30,12 @@ const float FP32_NEG_ONE = -1.0;
 const float FP32_NEG_TWO = -2.0;
 
 #ifdef __CCE_AICORE__
-constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+constexpr static AscendC::Reg::CastTrait castTrait0 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::UNKNOWN};
+constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::CAST_RINT};
 #endif
 
 namespace MishDag1 {
@@ -53,60 +53,59 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputNegNumerator;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputNegDenominator;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputNumerator;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputDenominator;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputNegNumerator;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputNegDenominator;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputNumerator;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputDenominator;
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMaskReg;
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput16;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput16;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput16;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput16;
         __VEC_SCOPE__
         {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 // OpCopyIn
                 if constexpr (std::is_same_v<T, float>) {
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
-                                                                          (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 } else {
-                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregInput16, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInput16,
+                                                                      (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
                 }
-                MicroAPI::Muls(vregInputNegNumerator, vregInput, FP32_NEG_ONE, mask);             // -x
-                MicroAPI::Muls(vregInputNegDenominator, vregInput, FP32_NEG_TWO, mask);           // -2x
-                MicroAPI::Exp(vregInputNegNumerator, vregInputNegNumerator, mask);                // e^-x
-                MicroAPI::Exp(vregInputNegDenominator, vregInputNegDenominator, mask);            // e^-2x
-                MicroAPI::Muls(vregInputNegNumerator, vregInputNegNumerator, FP32_TWO, mask);     // 2e^-x
-                MicroAPI::Adds(vregInputNegNumerator, vregInputNegNumerator, FP32_ONE, mask);     // 2e^-x + 1
-                MicroAPI::Muls(vregInputNegDenominator, vregInputNegDenominator, FP32_TWO, mask); // 2e^-2x
-                MicroAPI::Add(vregInputNegDenominator, vregInputNegNumerator, vregInputNegDenominator, mask);
-                MicroAPI::Div(vregOutput, vregInputNegNumerator, vregInputNegDenominator, mask);
+                Reg::Muls(vregInputNegNumerator, vregInput, FP32_NEG_ONE, mask);             // -x
+                Reg::Muls(vregInputNegDenominator, vregInput, FP32_NEG_TWO, mask);           // -2x
+                Reg::Exp(vregInputNegNumerator, vregInputNegNumerator, mask);                // e^-x
+                Reg::Exp(vregInputNegDenominator, vregInputNegDenominator, mask);            // e^-2x
+                Reg::Muls(vregInputNegNumerator, vregInputNegNumerator, FP32_TWO, mask);     // 2e^-x
+                Reg::Adds(vregInputNegNumerator, vregInputNegNumerator, FP32_ONE, mask);     // 2e^-x + 1
+                Reg::Muls(vregInputNegDenominator, vregInputNegDenominator, FP32_TWO, mask); // 2e^-2x
+                Reg::Add(vregInputNegDenominator, vregInputNegNumerator, vregInputNegDenominator, mask);
+                Reg::Div(vregOutput, vregInputNegNumerator, vregInputNegDenominator, mask);
 
-                MicroAPI::Muls(vregInputNumerator, vregInput, FP32_TWO, mask);            // 2x
-                MicroAPI::Exp(vregInputNumerator, vregInputNumerator, mask);              // e^2x
-                MicroAPI::Exp(vregInputDenominator, vregInput, mask);                     // e^x
-                MicroAPI::Axpy(vregInputNumerator, vregInputDenominator, FP32_TWO, mask); // e^2x + 2e^x
-                MicroAPI::Adds(vregInputDenominator, vregInputNumerator, FP32_TWO, mask); // e^2x + 2e^x + 2
-                MicroAPI::Div(vregInputNumerator, vregInputNumerator, vregInputDenominator, mask);
+                Reg::Muls(vregInputNumerator, vregInput, FP32_TWO, mask);            // 2x
+                Reg::Exp(vregInputNumerator, vregInputNumerator, mask);              // e^2x
+                Reg::Exp(vregInputDenominator, vregInput, mask);                     // e^x
+                Reg::Axpy(vregInputNumerator, vregInputDenominator, FP32_TWO, mask); // e^2x + 2e^x
+                Reg::Adds(vregInputDenominator, vregInputNumerator, FP32_TWO, mask); // e^2x + 2e^x + 2
+                Reg::Div(vregInputNumerator, vregInputNumerator, vregInputDenominator, mask);
 
-                MicroAPI::Compares<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
-                MicroAPI::Select(vregOutput, vregInputNumerator, vregOutput, cmpMaskReg);
-                MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
+                Reg::Compares<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
+                Reg::Select(vregOutput, vregInputNumerator, vregOutput, cmpMaskReg);
+                Reg::Mul(vregOutput, vregOutput, vregInput, mask);
 
                 // OpCopyOut
                 if constexpr (std::is_same_v<T, float>) {
-                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM_B32>(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                      vregOutput, mask);
                 } else {
-                    MicroAPI::Cast<T, float, castTrait1>(vregOutput16, vregOutput, mask);
-                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput16, mask);
+                    Reg::Cast<T, float, castTrait1>(vregOutput16, vregOutput, mask);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                      vregOutput16, mask);
                 }
             }
         }

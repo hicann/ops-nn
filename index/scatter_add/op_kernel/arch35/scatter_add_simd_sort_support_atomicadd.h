@@ -23,8 +23,8 @@ using namespace AscendC;
 using namespace ScatterAddCommon;
 
 constexpr uint32_t SORT_PADDING = 64;
-constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING};
+constexpr AscendC::Reg::CastTrait castTraitU32U16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING};
 
 template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 class ScatterAddSIMDSortSupportAtomicAdd {
@@ -121,72 +121,70 @@ __aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, upda
 
 template <typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt>
 __simd_callee__ inline void ProcessPerUpdateGroup(__ubuf__ T* updatesLocalAddr, __ubuf__ T* resLocalAddr,
-                                                  MicroAPI::MaskReg& maskRegUpdate,
-                                                  MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg,
-                                                  MicroAPI::AddrReg& addrReg, updateAddParams& params)
+                                                  Reg::MaskReg& maskRegUpdate,
+                                                  Reg::RegTensor<VGatherIndexDTypeInt>& serReg, Reg::AddrReg& addrReg,
+                                                  updateAddParams& params)
 {
     if constexpr (IsSameType<VGatherIndexDType, uint16_t>::value) {
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg1;
-        MicroAPI::RegTensor<uint32_t> tmReg;
-        MicroAPI::RegTensor<T> gatherOut;
-        MicroAPI::RegTensor<int16_t> gatherOutInt16; // 用于int8转int16
-        MicroAPI::RegTensor<T> outReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskRegU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        Reg::RegTensor<VGatherIndexDType> initIdsReg1;
+        Reg::RegTensor<uint32_t> tmReg;
+        Reg::RegTensor<T> gatherOut;
+        Reg::RegTensor<int16_t> gatherOutInt16; // 用于int8转int16
+        Reg::RegTensor<T> outReg;
+        Reg::MaskReg maskReg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskRegU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(outReg, (T)0, maskReg);
+        Reg::Duplicate(outReg, (T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
-                tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
-            MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg,
-                                                                maskRegU32);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::HIGHEST>(
-                (MicroAPI::RegTensor<uint16_t>&)initIdsReg, (MicroAPI::RegTensor<uint32_t>&)tmReg);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                (MicroAPI::RegTensor<uint16_t>&)initIdsReg1, (MicroAPI::RegTensor<uint32_t>&)tmReg);
-            MicroAPI::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
-            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
-            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::Gather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
-            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>(tmReg,
+                                                                  params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            Reg::Cast<uint16_t, uint32_t, castTraitU32U16>((Reg::RegTensor<uint16_t>&)tmReg, tmReg, maskRegU32);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::HIGHEST>((Reg::RegTensor<uint16_t>&)initIdsReg,
+                                                                     (Reg::RegTensor<uint32_t>&)tmReg);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)initIdsReg1,
+                                                                    (Reg::RegTensor<uint32_t>&)tmReg);
+            Reg::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
+            Reg::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            Reg::Add(idsReg, (Reg::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            Reg::Gather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
+            Reg::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
+        Reg::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
     } else {
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
-        MicroAPI::RegTensor<T> gatherOut;
-        MicroAPI::RegTensor<T> outReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        Reg::RegTensor<T> gatherOut;
+        Reg::RegTensor<T> outReg;
+        Reg::MaskReg maskReg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(outReg, (T)0, maskReg);
+        Reg::Duplicate(outReg, (T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
-                (MicroAPI::RegTensor<uint32_t>&)initIdsReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
-            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
-            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::Gather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
-            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>((Reg::RegTensor<uint32_t>&)initIdsReg,
+                                                                  params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            Reg::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            Reg::Add(idsReg, (Reg::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            Reg::Gather(gatherOut, updatesLocalAddr, idsReg, maskRegUpdate);
+            Reg::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
+        Reg::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
     }
 }
 
 template <typename T>
-__simd_callee__ inline void ProcessPerUpdateScalar(__ubuf__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
-                                                   MicroAPI::AddrReg& addrReg, updateAddParams& params,
-                                                   T updateScalarValue)
+__simd_callee__ inline void ProcessPerUpdateScalar(__ubuf__ T* resLocalAddr, Reg::MaskReg& maskRegUpdate,
+                                                   Reg::AddrReg& addrReg, updateAddParams& params, T updateScalarValue)
 {
-    MicroAPI::RegTensor<T> addOut;
-    MicroAPI::RegTensor<T> outReg;
-    MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(outReg, (T)0, maskReg);
-    MicroAPI::Duplicate(addOut, updateScalarValue, maskReg);
+    Reg::RegTensor<T> addOut;
+    Reg::RegTensor<T> outReg;
+    Reg::MaskReg maskReg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+    Reg::Duplicate(outReg, (T)0, maskReg);
+    Reg::Duplicate(addOut, updateScalarValue, maskReg);
     for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-        MicroAPI::Add(outReg, outReg, addOut, maskRegUpdate);
+        Reg::Add(outReg, outReg, addOut, maskRegUpdate);
     }
-    MicroAPI::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
+    Reg::StoreAlign(resLocalAddr, outReg, addrReg, maskRegUpdate);
 }
 
 template <typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt, bool updatesIsScalar>
@@ -198,19 +196,19 @@ __simd_vf__ inline void ComputeUpdatesSumRegbaseVf(__ubuf__ T* updatesLocalAddr,
 {
     int32_t sclar0 = 0;
     for (uint16_t i = 0; i < (uint16_t)uniqueIdNum; ++i) {
-        MicroAPI::RegTensor<VGatherIndexDTypeInt> serReg;
-        MicroAPI::RegTensor<VGatherIndexDTypeInt> serRegBase;
-        MicroAPI::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
+        Reg::RegTensor<VGatherIndexDTypeInt> serReg;
+        Reg::RegTensor<VGatherIndexDTypeInt> serRegBase;
+        Reg::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
         params.segCount = static_cast<uint16_t>(uniqueIdCountLocalAddr[i]);
         uint32_t colCount = cols;
         resLocalAddr = resLocalBaseAddr + i * colsAlign;
         for (uint16_t j = 0; j < (uint16_t)loopPerRow; ++j) {
-            MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<VGatherIndexDType>(colCount);
-            auto addrReg = MicroAPI::CreateAddrReg<T>(j, static_cast<uint16_t>(vfLenUpdate));
+            Reg::MaskReg maskRegUpdate = Reg::UpdateMask<VGatherIndexDType>(colCount);
+            auto addrReg = Reg::CreateAddrReg<T>(j, static_cast<uint16_t>(vfLenUpdate));
             if constexpr (updatesIsScalar) {
                 ProcessPerUpdateScalar(resLocalAddr, maskRegUpdate, addrReg, params, updateScalarValue);
             } else {
-                MicroAPI::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLenUpdate * j), maskRegUpdate);
+                Reg::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLenUpdate * j), maskRegUpdate);
                 ProcessPerUpdateGroup<T, VGatherIndexDType, VGatherIndexDTypeInt>(
                     updatesLocalAddr, resLocalAddr, maskRegUpdate, serReg, addrReg, params);
             }

@@ -12,8 +12,8 @@
  * \file inplace_index_add_with_sorted_fix.h
  * \brief A5 (ascend950) Fix kernel — bufCnt=3, float32 compute, Cast at CopyIn/CopyOut boundary
  *
- *   CopySelfIn:  Load T→staging, MicroAPI VF Cast T→float32→compute area
- *   CopyValueIn: Same: Load T→staging, MicroAPI VF Cast T→float32→compute area
+ *   CopySelfIn:  Load T→staging, Reg VF Cast T→float32→compute area
+ *   CopyValueIn: Same: Load T→staging, Reg VF Cast T→float32→compute area
  *   Compute:     Pure float32 VF (T=float, DIST_NORM, zero Cast inside VF)
  *   CopyOut:     AscendC Cast float32→T, DataCopy→VECOUT→GM
  */
@@ -31,19 +31,16 @@ constexpr int64_t BUFFER_NUM = 2;
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t INDEX_UB_NUM = 1536;
-constexpr uint32_t B32_REP_SIZE = platform::GetVRegSize() / sizeof(float);  // = 64
+constexpr uint32_t B32_REP_SIZE = platform::GetVRegSize() / sizeof(float); // = 64
 
-constexpr MicroAPI::CastTrait castTraitB162B32 = {
-    MicroAPI::RegLayout::ZERO,
-    MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING,
+constexpr Reg::CastTrait castTraitB162B32 = {
+    Reg::RegLayout::ZERO,
+    Reg::SatMode::UNKNOWN,
+    Reg::MaskMergeMode::ZEROING,
     RoundMode::UNKNOWN,
 };
 
-__aicore__ inline int64_t CeilAlignFix(int64_t val, int64_t align)
-{
-    return ((val + align - 1) / align) * align;
-}
+__aicore__ inline int64_t CeilAlignFix(int64_t val, int64_t align) { return ((val + align - 1) / align) * align; }
 
 // ============================================================================
 // A5 VF functions — pure float32 (T=float), DIST_NORM, zero Cast inside VF
@@ -51,50 +48,47 @@ __aicore__ inline int64_t CeilAlignFix(int64_t val, int64_t align)
 // ============================================================================
 
 template <typename T>
-__simd_vf__ inline void IndexAddSimdVf(
-    __ubuf__ T* selfUb, __ubuf__ T* valueUb,
-    __ubuf__ T* outUb, uint32_t count, uint32_t oneRepeat, uint16_t repeat)
+__simd_vf__ inline void IndexAddSimdVf(__ubuf__ T* selfUb, __ubuf__ T* valueUb, __ubuf__ T* outUb, uint32_t count,
+                                       uint32_t oneRepeat, uint16_t repeat)
 {
-    MicroAPI::RegTensor<T> selfReg, valueReg, outReg;
-    MicroAPI::MaskReg mask;
+    Reg::RegTensor<T> selfReg, valueReg, outReg;
+    Reg::MaskReg mask;
 
     for (uint16_t r = 0; r < repeat; ++r) {
         uint32_t offset = r * oneRepeat;
         uint32_t curCount = (r == repeat - 1) ? (count - r * oneRepeat) : oneRepeat;
-        mask = MicroAPI::UpdateMask<T>(curCount);
-        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(selfReg,  selfUb  + offset);
-        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(valueReg, valueUb + offset);
-        MicroAPI::Add(outReg, selfReg, valueReg, mask);
-        MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM>(outUb + offset, outReg, mask);
+        mask = Reg::UpdateMask<T>(curCount);
+        Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(selfReg, selfUb + offset);
+        Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(valueReg, valueUb + offset);
+        Reg::Add(outReg, selfReg, valueReg, mask);
+        Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM>(outUb + offset, outReg, mask);
     }
 }
 
 template <typename T>
-__simd_vf__ inline void IndexAddSimdVfAlpha(
-    __ubuf__ T* selfUb, __ubuf__ T* valueUb,
-    __ubuf__ T* outUb, uint32_t count, uint32_t oneRepeat, uint16_t repeat, float alphaVal)
+__simd_vf__ inline void IndexAddSimdVfAlpha(__ubuf__ T* selfUb, __ubuf__ T* valueUb, __ubuf__ T* outUb, uint32_t count,
+                                            uint32_t oneRepeat, uint16_t repeat, float alphaVal)
 {
-    MicroAPI::RegTensor<T> selfReg, valueReg, scaledReg, outReg;
-    MicroAPI::MaskReg mask;
+    Reg::RegTensor<T> selfReg, valueReg, scaledReg, outReg;
+    Reg::MaskReg mask;
 
     for (uint16_t r = 0; r < repeat; ++r) {
         uint32_t offset = r * oneRepeat;
         uint32_t curCount = (r == repeat - 1) ? (count - r * oneRepeat) : oneRepeat;
-        mask = MicroAPI::UpdateMask<T>(curCount);
-        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(selfReg,  selfUb  + offset);
-        MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(valueReg, valueUb + offset);
-        MicroAPI::Muls(scaledReg, valueReg, alphaVal, mask);
-        MicroAPI::Add(outReg, selfReg, scaledReg, mask);
-        MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM>(outUb + offset, outReg, mask);
+        mask = Reg::UpdateMask<T>(curCount);
+        Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(selfReg, selfUb + offset);
+        Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(valueReg, valueUb + offset);
+        Reg::Muls(scaledReg, valueReg, alphaVal, mask);
+        Reg::Add(outReg, selfReg, scaledReg, mask);
+        Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM>(outUb + offset, outReg, mask);
     }
 }
 
 template <typename T>
-class InplaceIndexAddWithSortedFix
-{
+class InplaceIndexAddWithSortedFix {
 public:
-    __aicore__ inline InplaceIndexAddWithSortedFix(
-        TPipe* pipeIn, const InplaceIndexAddWithSortedTilingData* __restrict tilingData)
+    __aicore__ inline InplaceIndexAddWithSortedFix(TPipe* pipeIn,
+                                                   const InplaceIndexAddWithSortedTilingData* __restrict tilingData)
     {
         pipe = pipeIn;
         coreId = GetBlockIdx();
@@ -135,11 +129,11 @@ public:
                 enableAlpha = 0;
             }
         }
-        
+
         indicesGmFix.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(sorted_indices), indicesCountFix);
         posGmFix.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(pos), indicesCountFix);
         finalIndex = indicesGmFix.GetValue(indicesCountFix - 1);
-        
+
         pipe->InitBuffer(inQueueSelfFix, BUFFER_NUM, maxSize * sizeof(float));
         pipe->InitBuffer(inQueueValueFix, BUFFER_NUM, maxSize * sizeof(float));
         pipe->InitBuffer(inQueueIndex, 1, NUM_TWO * INDEX_UB_NUM * sizeof(int32_t));
@@ -178,8 +172,8 @@ private:
             int64_t indexOffset = coreId * eachIndexCountFix + idxRound * eachUBIndexCount;
 
             DataCopyPadExtParams<int32_t> tPadParams = {false, 0, 0, static_cast<int32_t>(0)};
-            DataCopyExtParams updatesExtParams = {
-                (uint16_t)1, static_cast<uint32_t>(currentEachIndex * sizeof(int32_t)), 0, 0, 0};
+            DataCopyExtParams updatesExtParams = {(uint16_t)1,
+                                                  static_cast<uint32_t>(currentEachIndex * sizeof(int32_t)), 0, 0, 0};
             DataCopyPad(indexLocal, indicesGmFix[indexOffset], updatesExtParams, tPadParams);
             DataCopyPad(indexLocal[INDEX_UB_NUM], posGmFix[indexOffset], updatesExtParams, tPadParams);
 
@@ -256,7 +250,7 @@ private:
         ifContinue = true;
     }
 
-    // ---- §6.5.1 CopySelfIn: T→float32 via MicroAPI VF ----
+    // ---- §6.5.1 CopySelfIn: T→float32 via Reg VF ----
     __aicore__ inline void CopySelfIn(int32_t index, int64_t progress, int64_t dataLen)
     {
         // 1. Alloc float buffer
@@ -268,9 +262,8 @@ private:
 
         DataCopyPadExtParams<T> tPadParams = {false, 0, 0, static_cast<T>(0)};
         DataCopyExtParams updatesExtParams = {(uint16_t)1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0};
-        DataCopyPad(inputLocalT[inputOffset],
-                    inputGmFix[index * updatesOneTime + progress * maxSize],
-                    updatesExtParams, tPadParams);
+        DataCopyPad(inputLocalT[inputOffset], inputGmFix[index * updatesOneTime + progress * maxSize], updatesExtParams,
+                    tPadParams);
 
         // 3. Sync MTE2 → V (ensure T staging data is ready for VF Cast)
         event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -279,23 +272,24 @@ private:
 
         int64_t count = CeilAlignFix(dataLen, BLOCK_UB_SIZE);
         uint16_t loops = AscendC::CeilDivision(count * sizeof(float), platform::GetVRegSize());
-        uint32_t loopsStride = platform::GetVRegSize() / sizeof(float);  // = 64
+        uint32_t loopsStride = platform::GetVRegSize() / sizeof(float); // = 64
 
-        // 4. MicroAPI VF: T staging → DIST_UNPACK_B16 → Cast float32 → DataCopy to float compute area
-        __VEC_SCOPE__ {
+        // 4. Reg VF: T staging → DIST_UNPACK_B16 → Cast float32 → DataCopy to float compute area
+        __VEC_SCOPE__
+        {
             __local_mem__ float* dst = reinterpret_cast<__local_mem__ float*>(inputLocal.GetPhyAddr());
             __local_mem__ T* src = reinterpret_cast<__local_mem__ T*>(inputLocalT.GetPhyAddr()) + inputOffset;
             uint32_t sreg = static_cast<uint32_t>(count);
 
-            MicroAPI::MaskReg mask;
-            MicroAPI::RegTensor<T> aReg;
-            MicroAPI::RegTensor<float> bReg;
+            Reg::MaskReg mask;
+            Reg::RegTensor<T> aReg;
+            Reg::RegTensor<float> bReg;
 
             for (uint16_t i = 0; i < loops; i++) {
-                mask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(aReg, src + i * loopsStride);
-                MicroAPI::Cast<float, T, castTraitB162B32>(bReg, aReg, mask);
-                MicroAPI::DataCopy(dst + i * loopsStride, bReg, mask);
+                mask = Reg::UpdateMask<float>(sreg);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK_B16>(aReg, src + i * loopsStride);
+                Reg::Cast<float, T, castTraitB162B32>(bReg, aReg, mask);
+                Reg::DataCopy(dst + i * loopsStride, bReg, mask);
             }
         }
 
@@ -304,7 +298,7 @@ private:
         inputLocal = inQueueSelfFix.DeQue<float>();
     }
 
-    // ---- §6.5.2 CopyValueIn: T→float32 via MicroAPI VF (same as CopySelfIn) ----
+    // ---- §6.5.2 CopyValueIn: T→float32 via Reg VF (same as CopySelfIn) ----
     __aicore__ inline void CopyValueIn(int32_t index, int64_t progress, int64_t dataLen)
     {
         // 1. Alloc float buffer
@@ -315,9 +309,8 @@ private:
         int64_t valueOffset = CeilAlignFix(dataLen, BLOCK_UB_SIZE);
         DataCopyPadExtParams<T> tPadParams = {false, 0, 0, static_cast<T>(0)};
         DataCopyExtParams updatesExtParams = {(uint16_t)1, static_cast<uint32_t>(dataLen * sizeof(T)), 0, 0, 0};
-        DataCopyPad(valueLocalT[valueOffset],
-                    valueGmFix[index * updatesOneTime + progress * maxSize],
-                    updatesExtParams, tPadParams);
+        DataCopyPad(valueLocalT[valueOffset], valueGmFix[index * updatesOneTime + progress * maxSize], updatesExtParams,
+                    tPadParams);
 
         // 3. Sync MTE2 → V
         event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -326,22 +319,23 @@ private:
 
         int64_t count = CeilAlignFix(dataLen, BLOCK_UB_SIZE);
         uint16_t loops = AscendC::CeilDivision(count * sizeof(float), platform::GetVRegSize());
-        uint32_t loopsStride = platform::GetVRegSize() / sizeof(float);  // = 64
+        uint32_t loopsStride = platform::GetVRegSize() / sizeof(float); // = 64
 
-        // 4. MicroAPI VF: T → float32 Cast
-        __VEC_SCOPE__ {
+        // 4. Reg VF: T → float32 Cast
+        __VEC_SCOPE__
+        {
             __local_mem__ float* dst = reinterpret_cast<__local_mem__ float*>(valueLocal.GetPhyAddr());
             __local_mem__ T* src = reinterpret_cast<__local_mem__ T*>(valueLocalT.GetPhyAddr()) + valueOffset;
             uint32_t sreg = static_cast<uint32_t>(count);
 
-            MicroAPI::MaskReg mask;
-            MicroAPI::RegTensor<T> aReg;
-            MicroAPI::RegTensor<float> bReg;
+            Reg::MaskReg mask;
+            Reg::RegTensor<T> aReg;
+            Reg::RegTensor<float> bReg;
             for (uint16_t i = 0; i < loops; i++) {
-                mask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(aReg, src + i * loopsStride);
-                MicroAPI::Cast<float, T, castTraitB162B32>(bReg, aReg, mask);
-                MicroAPI::DataCopy(dst + i * loopsStride, bReg, mask);
+                mask = Reg::UpdateMask<float>(sreg);
+                Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK_B16>(aReg, src + i * loopsStride);
+                Reg::Cast<float, T, castTraitB162B32>(bReg, aReg, mask);
+                Reg::DataCopy(dst + i * loopsStride, bReg, mask);
             }
         }
 
@@ -354,7 +348,7 @@ private:
     {
         valueLocal = inQueueValueFix.DeQue<float>();
 
-        __ubuf__ float* selfUb  = reinterpret_cast<__ubuf__ float*>(inputLocal.GetPhyAddr());
+        __ubuf__ float* selfUb = reinterpret_cast<__ubuf__ float*>(inputLocal.GetPhyAddr());
         __ubuf__ float* valueUb = reinterpret_cast<__ubuf__ float*>(valueLocal.GetPhyAddr());
 
         uint32_t count = static_cast<uint32_t>(dataLenAlign);
@@ -362,7 +356,8 @@ private:
 
         // VF writes result back to selfUb (in-place float32 accumulation)
         if (enableAlpha == 1) {
-            AscendC::VF_CALL<IndexAddSimdVfAlpha<float>>(selfUb, valueUb, selfUb, count, B32_REP_SIZE, repeat, alphaDataFix);
+            AscendC::VF_CALL<IndexAddSimdVfAlpha<float>>(selfUb, valueUb, selfUb, count, B32_REP_SIZE, repeat,
+                                                         alphaDataFix);
         } else {
             AscendC::VF_CALL<IndexAddSimdVf<float>>(selfUb, valueUb, selfUb, count, B32_REP_SIZE, repeat);
         }
@@ -403,7 +398,7 @@ private:
     TQue<QuePosition::VECIN, 1> inQueueIndex;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueOutFix;
 
-    static constexpr int64_t BLOCK_UB_SIZE = 32 / sizeof(T);  // T elem align for ReinterpretCast
+    static constexpr int64_t BLOCK_UB_SIZE = 32 / sizeof(T); // T elem align for ReinterpretCast
 
     int64_t coreId;
     int32_t usedCoreNum;

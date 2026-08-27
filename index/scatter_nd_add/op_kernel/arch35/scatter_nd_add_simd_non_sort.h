@@ -50,13 +50,13 @@ private:
     TPipe& pipe_;
     const ScatterNdAddRegBaseTilingData& tilingData_;
 
-    constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN}; // bf16 --float
+    constexpr static AscendC::Reg::CastTrait castTrait0 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN}; // bf16 --float
 
-    constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT}; // float---bf16
+    constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                           AscendC::Reg::MaskMergeMode::ZEROING,
+                                                           AscendC::RoundMode::CAST_RINT}; // float---bf16
 
     int64_t curCoreIndexCount_{0};
     uint64_t strideList[MAX_RANK_COUNT];
@@ -124,20 +124,20 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> vreg_x1;
-        MicroAPI::RegTensor<T> vreg_x2;
-        MicroAPI::RegTensor<float> vreg0;
-        MicroAPI::RegTensor<float> vreg1;
-        MicroAPI::RegTensor<float> sumReg;
-        MicroAPI::RegTensor<T> vregy;
-        MicroAPI::MaskReg maskReg;
+        Reg::RegTensor<T> vreg_x1;
+        Reg::RegTensor<T> vreg_x2;
+        Reg::RegTensor<float> vreg0;
+        Reg::RegTensor<float> vreg1;
+        Reg::RegTensor<float> sumReg;
+        Reg::RegTensor<T> vregy;
+        Reg::MaskReg maskReg;
 
         for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
-            maskReg = MicroAPI::UpdateMask<float>(size);
+            maskReg = Reg::UpdateMask<float>(size);
             uint32_t offset = i * vfLen;
             ops::LoadOneTensorForDtypeT<T>(yLocalAddr, vreg0, maskReg, offset);
             ops::LoadOneTensorForDtypeT<T>(updatesLocalAddr, vreg1, maskReg, offset);
-            MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumReg, vreg0, vreg1, maskReg);
+            Reg::Add<float, AscendC::Reg::MaskMergeMode::ZEROING>(sumReg, vreg0, vreg1, maskReg);
             ops::StoreOneTensorForDtypeT<T>(yLocalAddr, sumReg, maskReg, offset);
         }
     }

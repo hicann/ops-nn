@@ -242,41 +242,41 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalT
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> xRegFp16, gradRegFp16;
-        MicroAPI::RegTensor<float> sumReg, xRegFp32, gradRegFp32, expReg, vreg0, vreg1;
-        MicroAPI::RegTensor<T> vreg2;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T> xRegFp16, gradRegFp16;
+        Reg::RegTensor<float> sumReg, xRegFp32, gradRegFp32, expReg, vreg0, vreg1;
+        Reg::RegTensor<T> vreg2;
+        Reg::MaskReg mask;
 
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
-        MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, gradSumPtr);
+        Reg::LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(sumReg, gradSumPtr);
 
         for (uint16_t j = 0; j < repeatTimes; j++) {
-            mask = MicroAPI::UpdateMask<float>(width);
+            mask = Reg::UpdateMask<float>(width);
             auto gradAddr = gradPtr + j * VL_FP32;
             auto xAddr = xPtr + j * VL_FP32;
             auto yAddr = yPtr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(xRegFp16, xAddr);
-                MicroAPI::Cast<float, T, castTraitFp16ToFp32>(xRegFp32, xRegFp16, mask);
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(gradRegFp16, gradAddr);
-                MicroAPI::Cast<float, T, castTraitFp16ToFp32>(gradRegFp32, gradRegFp16, mask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(xRegFp16, xAddr);
+                Reg::Cast<float, T, castTraitFp16ToFp32>(xRegFp32, xRegFp16, mask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(gradRegFp16, gradAddr);
+                Reg::Cast<float, T, castTraitFp16ToFp32>(gradRegFp32, gradRegFp16, mask);
             } else {
-                MicroAPI::LoadAlign(xRegFp32, xAddr);
-                MicroAPI::LoadAlign(gradRegFp32, gradAddr);
+                Reg::LoadAlign(xRegFp32, xAddr);
+                Reg::LoadAlign(gradRegFp32, gradAddr);
             }
 
-            MicroAPI::Exp(expReg, xRegFp32, mask);
-            MicroAPI::Mul(vreg0, expReg, sumReg, mask);
-            MicroAPI::Sub(vreg1, gradRegFp32, vreg0, mask);
+            Reg::Exp(expReg, xRegFp32, mask);
+            Reg::Mul(vreg0, expReg, sumReg, mask);
+            Reg::Sub(vreg1, gradRegFp32, vreg0, mask);
 
             if constexpr (yToFp32_) {
-                MicroAPI::StoreAlign(yAddr, vreg1, mask);
+                Reg::StoreAlign(yAddr, vreg1, mask);
             } else {
-                MicroAPI::Cast<T, float, castTraitFp32ToFp16>(vreg2, vreg1, mask);
-                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(yAddr, vreg2, mask);
+                Reg::Cast<T, float, castTraitFp32ToFp16>(vreg2, vreg1, mask);
+                Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(yAddr, vreg2, mask);
             }
         }
     }
@@ -292,26 +292,26 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CastVF(const LocalTensor<fl
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> vreg0;
-        MicroAPI::RegTensor<float> vreg1, vreg2, vreg3;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<T> vreg0;
+        Reg::RegTensor<float> vreg1, vreg2, vreg3;
+        Reg::MaskReg mask;
 
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
         for (uint16_t j = 0; j < repeatTimes; j++) {
-            mask = MicroAPI::UpdateMask<float>(width);
+            mask = Reg::UpdateMask<float>(width);
             auto gradAddr = gradPtr + j * VL_FP32;
             auto gradFp32Addr = gradFp32Ptr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, gradAddr);
-                MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vreg1, vreg0, mask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vreg0, gradAddr);
+                Reg::Cast<float, T, castTraitFp16ToFp32>(vreg1, vreg0, mask);
             } else {
-                MicroAPI::LoadAlign(vreg1, gradAddr);
+                Reg::LoadAlign(vreg1, gradAddr);
             }
 
-            MicroAPI::StoreAlign(gradFp32Addr, vreg1, mask);
+            Reg::StoreAlign(gradFp32Addr, vreg1, mask);
         }
     }
 }
@@ -326,32 +326,32 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::FoldBlockVF(const LocalTens
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> vreg0;
-        MicroAPI::RegTensor<float> vreg1, vreg2, vreg3;
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg maskFull = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<T> vreg0;
+        Reg::RegTensor<float> vreg1, vreg2, vreg3;
+        Reg::MaskReg mask;
+        Reg::MaskReg maskFull = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
         uint16_t foldTimes = CeilDivision(ubFactor, VL_FP32);
 
         uint32_t width = ubFactor;
         for (uint16_t j = 0; j < foldTimes; j++) {
-            mask = MicroAPI::UpdateMask<float>(width);
+            mask = Reg::UpdateMask<float>(width);
             auto grad1Addr = grad1Fp32Ptr + j * VL_FP32;
             auto grad2Addr = grad2Ptr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, grad2Addr);
-                MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vreg2, vreg0, mask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vreg0, grad2Addr);
+                Reg::Cast<float, T, castTraitFp16ToFp32>(vreg2, vreg0, mask);
             } else {
-                MicroAPI::LoadAlign(vreg2, grad2Addr);
+                Reg::LoadAlign(vreg2, grad2Addr);
             }
 
-            MicroAPI::LoadAlign(vreg1, grad1Addr);
+            Reg::LoadAlign(vreg1, grad1Addr);
 
-            MicroAPI::Add(vreg3, vreg1, vreg2, mask);
-            MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(vreg1, vreg3, mask);
+            Reg::Add(vreg3, vreg1, vreg2, mask);
+            Reg::Move<float, Reg::MaskMergeMode::MERGING>(vreg1, vreg3, mask);
 
-            MicroAPI::StoreAlign(grad1Addr, vreg1, maskFull);
+            Reg::StoreAlign(grad1Addr, vreg1, maskFull);
         }
     }
 }
@@ -375,16 +375,16 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
     __VEC_SCOPE__
     {
         uint32_t sreg = static_cast<uint32_t>(count);
-        MicroAPI::RegTensor<float> aReg, bReg;
-        MicroAPI::MaskReg pMask;
+        Reg::RegTensor<float> aReg, bReg;
+        Reg::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-            pMask = MicroAPI::UpdateMask<float>(sreg);
-            MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
+            pMask = Reg::UpdateMask<float>(sreg);
+            Reg::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                MicroAPI::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
-                MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
+                Reg::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                Reg::Add<float, Reg::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
+            Reg::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
         }
     }
 }

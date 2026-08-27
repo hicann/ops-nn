@@ -276,19 +276,19 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<TIDX> idxReg;       // 当前维度的索引值
-        MicroAPI::RegTensor<TIDX> idxFusionReg; // 累加的线性索引
-        MicroAPI::RegTensor<TIDX> zeroReg;      // 零值寄存器，用于负索引比较
-        MicroAPI::RegTensor<TIDX> selectReg;
-        MicroAPI::RegTensor<TIDX> dimSizeReg;
+        Reg::RegTensor<TIDX> idxReg;       // 当前维度的索引值
+        Reg::RegTensor<TIDX> idxFusionReg; // 累加的线性索引
+        Reg::RegTensor<TIDX> zeroReg;      // 零值寄存器，用于负索引比较
+        Reg::RegTensor<TIDX> selectReg;
+        Reg::RegTensor<TIDX> dimSizeReg;
         uint32_t curRepeatNum = curRows;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<TIDX>(curRepeatNum);
+            Reg::MaskReg maskReg = Reg::UpdateMask<TIDX>(curRepeatNum);
 
-            MicroAPI::Duplicate(idxFusionReg, static_cast<TIDX>(0), maskReg);
+            Reg::Duplicate(idxFusionReg, static_cast<TIDX>(0), maskReg);
             // 初始化越界融合掩码为全 0（无越界），后续用 OR 累积
-            MicroAPI::MaskReg crossFusionMask = MicroAPI::CreateMask<TIDX, MicroAPI::MaskPattern::ALLF>();
-            MicroAPI::Duplicate(zeroReg, static_cast<TIDX>(0), maskReg);
+            Reg::MaskReg crossFusionMask = Reg::CreateMask<TIDX, Reg::MaskPattern::ALLF>();
+            Reg::Duplicate(zeroReg, static_cast<TIDX>(0), maskReg);
 
             for (uint16_t k = 0; k < indexedDimNum; k++) {
                 TIDX inputShape = static_cast<TIDX>(inputShapesTensor.GetValue(k));
@@ -296,34 +296,34 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
 
                 // 偏移 = k * rowsFactor_ + i * oneRepeatNum（元素单位 → 字节偏移）
                 auto indicesAddrUpdate = indicesAddr + (k * rowsFactorU16 + i * oneRepeatNum);
-                MicroAPI::LoadAlign(idxReg, indicesAddrUpdate);
+                Reg::LoadAlign(idxReg, indicesAddrUpdate);
 
                 // ---- 1. 负索引转正：idx < 0 → idx += inputShape[k] ----
-                MicroAPI::MaskReg negMask;
-                MicroAPI::Compare<TIDX, CMPMODE::LT>(negMask, idxReg, zeroReg, maskReg);
-                MicroAPI::Duplicate(selectReg, inputShape, maskReg);
-                MicroAPI::Select(selectReg, selectReg, zeroReg, negMask);
-                MicroAPI::Add(idxReg, idxReg, selectReg, maskReg);
+                Reg::MaskReg negMask;
+                Reg::Compare<TIDX, CMPMODE::LT>(negMask, idxReg, zeroReg, maskReg);
+                Reg::Duplicate(selectReg, inputShape, maskReg);
+                Reg::Select(selectReg, selectReg, zeroReg, negMask);
+                Reg::Add(idxReg, idxReg, selectReg, maskReg);
 
                 // ---- 2. 越界检查：idx >= inputShape[k] → 标记为越界 ----
                 // 0-based 索引，有效范围 [0, inputShape[k]-1]，等于 inputShape[k] 时也越界
-                MicroAPI::MaskReg crossMask;
-                MicroAPI::Duplicate(dimSizeReg, inputShape, maskReg);
-                MicroAPI::Compare<TIDX, CMPMODE::GE>(crossMask, idxReg, dimSizeReg, maskReg);
-                MicroAPI::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
-                MicroAPI::Compare<TIDX, CMPMODE::LT>(crossMask, idxReg, zeroReg, maskReg);
-                MicroAPI::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
+                Reg::MaskReg crossMask;
+                Reg::Duplicate(dimSizeReg, inputShape, maskReg);
+                Reg::Compare<TIDX, CMPMODE::GE>(crossMask, idxReg, dimSizeReg, maskReg);
+                Reg::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
+                Reg::Compare<TIDX, CMPMODE::LT>(crossMask, idxReg, zeroReg, maskReg);
+                Reg::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
 
                 // ---- 3. 索引合一：idxFusion += idx * stride[k] ----
-                MicroAPI::Muls(idxReg, idxReg, indexedStride, maskReg);
-                MicroAPI::Add(idxFusionReg, idxFusionReg, idxReg, maskReg);
+                Reg::Muls(idxReg, idxReg, indexedStride, maskReg);
+                Reg::Add(idxFusionReg, idxFusionReg, idxReg, maskReg);
             }
 
             // ---- 4. 所有维度处理完后，将越界位置标记为 -1 ----
-            MicroAPI::Duplicate(selectReg, static_cast<TIDX>(-1), maskReg);
-            MicroAPI::Select(idxFusionReg, selectReg, idxFusionReg, crossFusionMask);
+            Reg::Duplicate(selectReg, static_cast<TIDX>(-1), maskReg);
+            Reg::Select(idxFusionReg, selectReg, idxFusionReg, crossFusionMask);
             auto linearIndexAddrUpdate = linearIndexAddr + i * oneRepeatNum;
-            MicroAPI::StoreAlign(linearIndexAddrUpdate, idxFusionReg, maskReg);
+            Reg::StoreAlign(linearIndexAddrUpdate, idxFusionReg, maskReg);
         }
     }
 

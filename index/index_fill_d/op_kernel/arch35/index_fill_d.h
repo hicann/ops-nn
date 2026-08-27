@@ -90,20 +90,20 @@ __simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* as
                                         __ubuf__ DTYPE* yPtr, uint32_t count, uint16_t onRepeatSize,
                                         uint16_t repeatTimes)
 {
-    MicroAPI::RegTensor<DTYPE> vSrcRegX;
-    MicroAPI::RegTensor<DTYPE> vSrcRegAssist1;
-    MicroAPI::RegTensor<DTYPE> vSrcRegAssist2;
-    MicroAPI::RegTensor<DTYPE> vDstRegY;
-    MicroAPI::MaskReg cmpMaskReg;
+    Reg::RegTensor<DTYPE> vSrcRegX;
+    Reg::RegTensor<DTYPE> vSrcRegAssist1;
+    Reg::RegTensor<DTYPE> vSrcRegAssist2;
+    Reg::RegTensor<DTYPE> vDstRegY;
+    Reg::MaskReg cmpMaskReg;
     for (uint16_t i = 0; i < repeatTimes; i++) {
-        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<DTYPE>(count);
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::LoadAlign(vSrcRegX, xPtr + i * onRepeatSize);
-        MicroAPI::LoadAlign(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
-        MicroAPI::LoadAlign(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
-        MicroAPI::Compares<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
-        MicroAPI::Select(vDstRegY, vSrcRegX, vSrcRegAssist2, cmpMaskReg);
-        MicroAPI::StoreAlign(yPtr + i * onRepeatSize, vDstRegY, maskReg);
+        Reg::MaskReg maskReg = Reg::UpdateMask<DTYPE>(count);
+        Reg::MaskReg maskAll = Reg::CreateMask<DTYPE, Reg::MaskPattern::ALL>();
+        Reg::LoadAlign(vSrcRegX, xPtr + i * onRepeatSize);
+        Reg::LoadAlign(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
+        Reg::LoadAlign(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
+        Reg::Compares<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
+        Reg::Select(vDstRegY, vSrcRegX, vSrcRegAssist2, cmpMaskReg);
+        Reg::StoreAlign(yPtr + i * onRepeatSize, vDstRegY, maskReg);
     }
 }
 

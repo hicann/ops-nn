@@ -70,59 +70,59 @@ protected:
     constexpr static int64_t BUFFER_NUM = 2;
     constexpr static int64_t BLOCK_SIZE = 32;
     constexpr static int64_t INDICES_SHAPE_RANK_2 = 2;
-    constexpr static AscendC::MicroAPI::CastTrait CAST_TRAIT_INT8_TO_HALF = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait CAST_TRAIT_INT8_TO_HALF = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait CAST_TRAIT_UINT8_TO_HALF = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait CAST_TRAIT_UINT8_TO_HALF = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait CAST_TRAIT_HALF_TO_FP32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait CAST_TRAIT_HALF_TO_FP32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait CAST_TRAIT_BF16_TO_FP32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    constexpr static AscendC::Reg::CastTrait CAST_TRAIT_BF16_TO_FP32 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
-    constexpr static AscendC::MicroAPI::CastTrait CAST_TRAIT_INT32_TO_FP32 = {
-        AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait CAST_TRAIT_INT32_TO_FP32 = {
+        AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_RINT};
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_INT16 = []() {
-        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_INT16 = []() {
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_INT16_TO_HALF = []() {
-        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_INT16_TO_HALF = []() {
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::NO_SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_HALF_TO_INT8 = []() {
-        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_HALF_TO_INT8 = []() {
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_HIFP8 = []() {
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_HIFP8 = []() {
         if constexpr (CastRoundMode == TPL_ROUND_MODE_HYBRID) {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         } else {
-            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                           AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         }
     }();
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E5M2 = []() {
-        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_FP8E5M2 = []() {
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
-    static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E4M3 = []() {
-        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_FP8E4M3 = []() {
+        return AscendC::Reg::CastTrait{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
+                                       AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     __aicore__ inline void ParseTilingData(const QuantUpdateScatterTilingData* tilingData,

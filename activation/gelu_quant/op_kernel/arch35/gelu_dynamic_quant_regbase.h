@@ -286,63 +286,61 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(Loca
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregInput;
-        AscendC::MicroAPI::RegTensor<float> vregSmoothScale;
-        AscendC::MicroAPI::RegTensor<float> vregAbs;
-        AscendC::MicroAPI::RegTensor<float> vregReduceMax;
-        AscendC::MicroAPI::RegTensor<float> vregOutScale;
-        AscendC::MicroAPI::RegTensor<float> vregQuantRes;
-        AscendC::MicroAPI::RegTensor<float> vregMax;
-        AscendC::MicroAPI::RegTensor<half> vregHalf;
-        AscendC::MicroAPI::RegTensor<dstType> vregY;
-        AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg2;
+        AscendC::Reg::RegTensor<float> vregInput;
+        AscendC::Reg::RegTensor<float> vregSmoothScale;
+        AscendC::Reg::RegTensor<float> vregAbs;
+        AscendC::Reg::RegTensor<float> vregReduceMax;
+        AscendC::Reg::RegTensor<float> vregOutScale;
+        AscendC::Reg::RegTensor<float> vregQuantRes;
+        AscendC::Reg::RegTensor<float> vregMax;
+        AscendC::Reg::RegTensor<half> vregHalf;
+        AscendC::Reg::RegTensor<dstType> vregY;
+        AscendC::Reg::MaskReg preg0;
+        AscendC::Reg::MaskReg preg1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg preg2;
 
         for (uint16_t i = 0; i < rowCountLocal; i++) {
-            AscendC::MicroAPI::Duplicate(vregMax, 0.0);
+            AscendC::Reg::Duplicate(vregMax, 0.0);
             uint32_t sreg0 = endAxisActualAlignLen_;
             for (uint16_t j = 0; j < loopNum; j++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
+                preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
+                AscendC::Reg::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
                 // compute smoothscale
-                AscendC::MicroAPI::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
-                AscendC::MicroAPI::Mul(vregInput, vregInput, vregSmoothScale, preg0);
-                AscendC::MicroAPI::Abs(vregAbs, vregInput, preg0);
-                AscendC::MicroAPI::Max(vregMax, vregAbs, vregMax, preg1);
+                AscendC::Reg::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
+                AscendC::Reg::Mul(vregInput, vregInput, vregSmoothScale, preg0);
+                AscendC::Reg::Abs(vregAbs, vregInput, preg0);
+                AscendC::Reg::Max(vregMax, vregAbs, vregMax, preg1);
             }
             {
-                AscendC::MicroAPI::Reduce<AscendC::MicroAPI::ReduceType::MAX>(vregReduceMax, vregMax, preg1);
-                AscendC::MicroAPI::Muls(vregReduceMax, vregReduceMax, maxValue_, preg1);
-                AscendC::MicroAPI::Duplicate(vregOutScale, vregReduceMax, preg1);
-                AscendC::MicroAPI::StoreAlign(scaleOutAddr + i * FP32_BLOCK_NUM, vregOutScale, preg1);
+                AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MAX>(vregReduceMax, vregMax, preg1);
+                AscendC::Reg::Muls(vregReduceMax, vregReduceMax, maxValue_, preg1);
+                AscendC::Reg::Duplicate(vregOutScale, vregReduceMax, preg1);
+                AscendC::Reg::StoreAlign(scaleOutAddr + i * FP32_BLOCK_NUM, vregOutScale, preg1);
             }
             uint32_t sreg1 = endAxisLen_;
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto yOutAddr = yAddr + i * endAxisLenAlignTo8_ + j * vl;
-                preg2 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-                AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
-                AscendC::MicroAPI::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
-                AscendC::MicroAPI::Mul(vregInput, vregInput, vregSmoothScale, preg2);
-                AscendC::MicroAPI::Div(vregQuantRes, vregInput, vregOutScale, preg2);
+                preg2 = AscendC::Reg::UpdateMask<float>(sreg1);
+                AscendC::Reg::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
+                AscendC::Reg::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
+                AscendC::Reg::Mul(vregInput, vregInput, vregSmoothScale, preg2);
+                AscendC::Reg::Div(vregQuantRes, vregInput, vregOutScale, preg2);
 
                 if constexpr (IsSameType<dstType, int8_t>::value) {
-                    AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregQuantRes, preg2);
-                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg2);
+                    AscendC::Reg::Cast<half, float, castTraitF32ToF16>(vregHalf, vregQuantRes, preg2);
+                    AscendC::Reg::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg2);
                 } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value ||
                                      IsSameType<dstType, fp8_e5m2_t>::value) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregQuantRes, preg2);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToF8>(vregY, vregQuantRes, preg2);
                 } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                      roundMode == AscendC::RoundMode::CAST_HYBRID) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregQuantRes, preg2);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregQuantRes, preg2);
                 } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                      roundMode == AscendC::RoundMode::CAST_ROUND) {
-                    AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregQuantRes, preg2);
+                    AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregQuantRes, preg2);
                 }
-                AscendC::MicroAPI::StoreAlign<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
-                                                                                                     preg2);
+                AscendC::Reg::StoreAlign<dstType, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY, preg2);
             }
         }
     }

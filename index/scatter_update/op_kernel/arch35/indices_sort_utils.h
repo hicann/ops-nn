@@ -26,14 +26,14 @@ constexpr uint64_t FNV_PRIME_B64 = 0x0100000001B3;
 constexpr uint32_t FNV_OFFSET_BIASIS_B32 = 0x811C9DC5;
 constexpr uint64_t FNV_OFFSET_BIASIS_B64 = 0xCBF29CE484222325;
 
-static constexpr MicroAPI::CastTrait castTraitInt16ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait castTraitInt16ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ float* dstLocalAddr,
                                               int32_t lastDimShift, uint16_t mainLoop, uint16_t tailLoop,
                                               uint32_t tailNum)
 {
-    using namespace AscendC::MicroAPI;
+    using namespace AscendC::Reg;
     MaskReg patAllB32 = CreateMask<uint32_t, MaskPattern::ALL>();
     MaskReg patAllB16 = CreateMask<uint16_t, MaskPattern::ALL>();
     MaskReg patAllB8 = CreateMask<uint8_t, MaskPattern::ALL>();
@@ -102,7 +102,7 @@ __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ 
     }
 
     Max(histVector0, histVector0, histVector1, patAllB16);
-    Reduce<MicroAPI::ReduceType::MAX>(histVector0, histVector0, patAllB16);
+    Reduce<Reg::ReduceType::MAX>(histVector0, histVector0, patAllB16);
 
     Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)histVector0, patAllB16);
     StoreAlign<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
@@ -112,7 +112,7 @@ __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ 
 __simd_vf__ inline void IndexStatisticInt64Vf(__ubuf__ uint64_t* srcM, __ubuf__ float* dstLocalAddr,
                                               int64_t lastDimShift, uint16_t loopSize, uint32_t dataLen)
 {
-    using namespace AscendC::MicroAPI;
+    using namespace AscendC::Reg;
     MaskReg patAllB32 = CreateMask<uint32_t, MaskPattern::ALL>();
     MaskReg patAllB16 = CreateMask<uint16_t, MaskPattern::ALL>();
 
@@ -140,7 +140,7 @@ __simd_vf__ inline void IndexStatisticInt64Vf(__ubuf__ uint64_t* srcM, __ubuf__ 
             histVector1, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
         Max(maxValue, histVector0, histVector1, patAllB16);
     }
-    Reduce<MicroAPI::ReduceType::MAX>(maxValue, maxValue, patAllB16);
+    Reduce<Reg::ReduceType::MAX>(maxValue, maxValue, patAllB16);
     Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)maxValue, patAllB16);
     StoreAlign<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
                                                                                         patAllB32);

@@ -41,7 +41,7 @@ using AscendC::TEventID;
 using AscendC::TPipe;
 using AscendC::VECTOR_REG_WIDTH;
 using AscendC::WaitFlag;
-namespace MicroAPI = AscendC::Reg;
+namespace Reg = AscendC::Reg;
 using AscendC::Reg::AddrReg;
 using AscendC::Reg::GetRound;
 using AscendC::Reg::MaskReg;

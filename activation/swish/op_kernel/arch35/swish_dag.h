@@ -23,12 +23,12 @@ namespace SwishDag {
 // using namespace AscendC;
 using namespace Ops::Base;
 #ifdef __CCE_AICORE__
-constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+constexpr static AscendC::Reg::CastTrait castTrait0 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::UNKNOWN};
+constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::CAST_RINT};
 #endif
 const int PLACEHOLDER_INDEX_0 = 0;
 
@@ -47,43 +47,43 @@ struct SwishNegOneDagCalc : public Vec::ElemwiseBinaryOP<T, T, float> {
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputfloat;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> expResult;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> addsResult;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> divResult;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputfloat;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> expResult;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> addsResult;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> divResult;
+        Reg::MaskReg mask;
 
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < static_cast<uint16_t>(loopNum); loopIdx++) {
-                    mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInputfloat,
-                                                                         (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::Exp(expResult, vregInputfloat, mask);
-                    MicroAPI::Adds(addsResult, expResult, 1, mask);
-                    MicroAPI::Div(divResult, vregInputfloat, addsResult, mask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              divResult, mask);
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(vregInputfloat,
+                                                               (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::Exp(expResult, vregInputfloat, mask);
+                    Reg::Adds(addsResult, expResult, 1, mask);
+                    Reg::Div(divResult, vregInputfloat, addsResult, mask);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                    divResult, mask);
                 }
             }
         } else {
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputT;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> divResultT;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputT;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> divResultT;
             __VEC_SCOPE__
             {
                 // 不需要cast
                 for (uint16_t loopIdx = 0; loopIdx < static_cast<uint16_t>(loopNum); loopIdx++) {
-                    mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregInputT, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);
-                    MicroAPI::Exp(expResult, vregInputfloat, mask);
-                    MicroAPI::Adds(addsResult, expResult, 1, mask);
-                    MicroAPI::Div(divResult, vregInputfloat, addsResult, mask);
-                    MicroAPI::Cast<T, float, castTrait1>(divResultT, divResult, mask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              divResultT, mask);
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInputT,
+                                                                     (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);
+                    Reg::Exp(expResult, vregInputfloat, mask);
+                    Reg::Adds(addsResult, expResult, 1, mask);
+                    Reg::Div(divResult, vregInputfloat, addsResult, mask);
+                    Reg::Cast<T, float, castTrait1>(divResultT, divResult, mask);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                    divResultT, mask);
                 }
             }
         }
@@ -106,48 +106,48 @@ struct SwishCalc : public Vec::ElemwiseBinaryOP<T, T, float> {
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputfloat;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> MulsResult;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> expResult;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> addsResult;
-        MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> divResult;
-        MicroAPI::MaskReg mask;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputfloat;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> MulsResult;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> expResult;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> addsResult;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> divResult;
+        Reg::MaskReg mask;
 
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
                 for (uint16_t loopIdx = 0; loopIdx < static_cast<uint16_t>(loopNum); loopIdx++) {
-                    mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInputfloat,
-                                                                         (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::Muls(MulsResult, vregInputfloat, NEGATIVE_ONE, mask);
-                    MicroAPI::Muls(MulsResult, MulsResult, scale, mask);
-                    MicroAPI::Exp(expResult, MulsResult, mask);
-                    MicroAPI::Adds(addsResult, expResult, 1, mask);
-                    MicroAPI::Div(divResult, vregInputfloat, addsResult, mask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              divResult, mask);
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(vregInputfloat,
+                                                               (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::Muls(MulsResult, vregInputfloat, NEGATIVE_ONE, mask);
+                    Reg::Muls(MulsResult, MulsResult, scale, mask);
+                    Reg::Exp(expResult, MulsResult, mask);
+                    Reg::Adds(addsResult, expResult, 1, mask);
+                    Reg::Div(divResult, vregInputfloat, addsResult, mask);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                    divResult, mask);
                 }
             }
         } else {
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputT;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> divResultT;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputT;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> divResultT;
             __VEC_SCOPE__
             {
                 // 不需要cast
                 for (uint16_t loopIdx = 0; loopIdx < static_cast<uint16_t>(loopNum); loopIdx++) {
-                    mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregInputT, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);
-                    MicroAPI::Muls(MulsResult, vregInputfloat, NEGATIVE_ONE, mask);
-                    MicroAPI::Muls(MulsResult, MulsResult, scale, mask);
-                    MicroAPI::Exp(expResult, MulsResult, mask);
-                    MicroAPI::Adds(addsResult, expResult, 1, mask);
-                    MicroAPI::Div(divResult, vregInputfloat, addsResult, mask);
-                    MicroAPI::Cast<T, float, castTrait1>(divResultT, divResult, mask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              divResultT, mask);
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                    Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInputT,
+                                                                     (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);
+                    Reg::Muls(MulsResult, vregInputfloat, NEGATIVE_ONE, mask);
+                    Reg::Muls(MulsResult, MulsResult, scale, mask);
+                    Reg::Exp(expResult, MulsResult, mask);
+                    Reg::Adds(addsResult, expResult, 1, mask);
+                    Reg::Div(divResult, vregInputfloat, addsResult, mask);
+                    Reg::Cast<T, float, castTrait1>(divResultT, divResult, mask);
+                    Reg::DataCopy<T, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                    divResultT, mask);
                 }
             }
         }

@@ -61,9 +61,9 @@ constexpr int8_t FLOAT_OVERFLOW_MODE_CTRL = 60;
 constexpr int64_t FLOAT_OVERFLOW_MODE_SATURATE = 0;
 
 #ifdef __CCE_AICORE__
-constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+constexpr static AscendC::Reg::CastTrait castTrait0 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::UNKNOWN};
 #endif
 class GeluQuantBase {
 public:
@@ -110,23 +110,23 @@ public:
     uint32_t dstType_;
     AscendC::RoundMode roundMode_;
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ODD};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Rint = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Round = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ROUND};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitF32ToF16 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_ODD};
+    constexpr static AscendC::Reg::CastTrait castTraitF16ToI8Rint = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Round = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitF16ToI8Round = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_ROUND};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Hybrid = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    constexpr static AscendC::Reg::CastTrait castTraitF32ToF8 = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::Reg::CastTrait castTraitF32ToH8Round = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_ROUND};
+    constexpr static AscendC::Reg::CastTrait castTraitF32ToH8Hybrid = {
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_HYBRID};
 };
 
@@ -157,24 +157,24 @@ __aicore__ inline void GeluQuantBase::GeluV2ErfPost(LocalTensor<float>& dst, Loc
     __ubuf__ float* src2Addr = (__ubuf__ float*)src2.GetPhyAddr();
     __ubuf__ float* dstAddr = (__ubuf__ float*)dst.GetPhyAddr();
 
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput1;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput2;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputAdds;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputMuls;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-    MicroAPI::MaskReg mask;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput1;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput2;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputAdds;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputMuls;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+    Reg::MaskReg mask;
     __VEC_SCOPE__
     {
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-            mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+            mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
             // OpCopyIn
-            MicroAPI::LoadAlign(vregInput1, (__ubuf__ float*)(src1Addr + loopIdx * vlSize));
-            MicroAPI::LoadAlign(vregInput2, (__ubuf__ float*)(src2Addr + loopIdx * vlSize));
-            MicroAPI::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
-            MicroAPI::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
-            MicroAPI::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
+            Reg::LoadAlign(vregInput1, (__ubuf__ float*)(src1Addr + loopIdx * vlSize));
+            Reg::LoadAlign(vregInput2, (__ubuf__ float*)(src2Addr + loopIdx * vlSize));
+            Reg::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
+            Reg::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
+            Reg::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
             // OpCopyOut
-            MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+            Reg::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
         }
     }
 #endif
@@ -192,50 +192,50 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src,
     __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
     __ubuf__ float* dstAddr = (__ubuf__ float*)dst.GetPhyAddr();
 
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputSqr;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputCub;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-    MicroAPI::MaskReg mask;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInput;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputSqr;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputCub;
+    Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+    Reg::MaskReg mask;
     if constexpr (std::is_same_v<T, float>) {
         __VEC_SCOPE__
         {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::LoadAlign(vregInput, (__ubuf__ float*)(srcAddr + loopIdx * vlSize));
-                MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
-                MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
-                MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
-                MicroAPI::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
-                MicroAPI::Exp(vregInputCub, vregInputCub, mask);
-                MicroAPI::Adds(vregInputCub, vregInputCub, 1.0f, mask);
-                MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
+                Reg::LoadAlign(vregInput, (__ubuf__ float*)(srcAddr + loopIdx * vlSize));
+                Reg::Mul(vregInputSqr, vregInput, vregInput, mask);
+                Reg::Mul(vregInputCub, vregInputSqr, vregInput, mask);
+                Reg::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
+                Reg::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
+                Reg::Exp(vregInputCub, vregInputCub, mask);
+                Reg::Adds(vregInputCub, vregInputCub, 1.0f, mask);
+                Reg::Div(vregOutput, vregInput, vregInputCub, mask);
 
                 // OpCopyOut
-                MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                Reg::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
     } else {
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput16;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput16;
         __VEC_SCOPE__
         {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregInput16,
-                                                                            (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
-                MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
-                MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
-                MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
-                MicroAPI::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
-                MicroAPI::Exp(vregInputCub, vregInputCub, mask);
-                MicroAPI::Adds(vregInputCub, vregInputCub, 1.0f, mask);
-                MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInput16,
+                                                                  (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                Reg::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
+                Reg::Mul(vregInputSqr, vregInput, vregInput, mask);
+                Reg::Mul(vregInputCub, vregInputSqr, vregInput, mask);
+                Reg::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
+                Reg::Muls(vregInputCub, vregInputCub, NEG_SQRT_EIGHT_OVER_PI, mask);
+                Reg::Exp(vregInputCub, vregInputCub, mask);
+                Reg::Adds(vregInputCub, vregInputCub, 1.0f, mask);
+                Reg::Div(vregOutput, vregInput, vregInputCub, mask);
 
                 // OpCopyOut
-                MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                Reg::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
     }
@@ -266,35 +266,34 @@ __aicore__ inline void GeluQuantBase::CastOutLocal(LocalTensor<float>& src, Loca
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<float> vregInput;
-        AscendC::MicroAPI::RegTensor<half> vregHalf;
-        AscendC::MicroAPI::RegTensor<dstType> vregY;
-        AscendC::MicroAPI::MaskReg preg0;
+        AscendC::Reg::RegTensor<float> vregInput;
+        AscendC::Reg::RegTensor<half> vregHalf;
+        AscendC::Reg::RegTensor<dstType> vregY;
+        AscendC::Reg::MaskReg preg0;
 
         uint32_t sreg1 = calCount;
         for (uint16_t i = 0; i < loopNum; i++) {
             auto yOutAddr = yAddr + i * vl;
-            preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-            AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * vl);
+            preg0 = AscendC::Reg::UpdateMask<float>(sreg1);
+            AscendC::Reg::LoadAlign(vregInput, xAddr + i * vl);
 
             if constexpr (IsSameType<dstType, int8_t>::value) {
-                AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregInput, preg0);
+                AscendC::Reg::Cast<half, float, castTraitF32ToF16>(vregHalf, vregInput, preg0);
                 if constexpr (roundMode == AscendC::RoundMode::CAST_ROUND) {
-                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Round>(vregY, vregHalf, preg0);
+                    AscendC::Reg::Cast<dstType, half, castTraitF16ToI8Round>(vregY, vregHalf, preg0);
                 } else if constexpr (roundMode == AscendC::RoundMode::CAST_RINT) {
-                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg0);
+                    AscendC::Reg::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg0);
                 }
             } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value || IsSameType<dstType, fp8_e5m2_t>::value) {
-                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregInput, preg0);
+                AscendC::Reg::Cast<dstType, float, castTraitF32ToF8>(vregY, vregInput, preg0);
             } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                  roundMode == AscendC::RoundMode::CAST_HYBRID) {
-                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregInput, preg0);
+                AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregInput, preg0);
             } else if constexpr (IsSameType<dstType, hifloat8_t>::value &&
                                  roundMode == AscendC::RoundMode::CAST_ROUND) {
-                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregInput, preg0);
+                AscendC::Reg::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregInput, preg0);
             }
-            AscendC::MicroAPI::StoreAlign<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
-                                                                                                 preg0);
+            AscendC::Reg::StoreAlign<dstType, AscendC::Reg::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY, preg0);
         }
     }
 }

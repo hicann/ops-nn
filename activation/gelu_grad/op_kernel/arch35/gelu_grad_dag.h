@@ -45,58 +45,58 @@ struct GeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputDy;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputX;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputXSqr;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputPX;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputRes0;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputT;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputDiv;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputOne;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputZero;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInputResp;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregSelect;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
-        MicroAPI::MaskReg mask, cmpMask;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputDy;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputX;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputXSqr;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputPX;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputRes0;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputT;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputDiv;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputOne;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputZero;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputResp;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregSelect;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
+        Reg::MaskReg mask, cmpMask;
 
-        static constexpr AscendC::MicroAPI::DivSpecificMode DIV_MODE = {
-            AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        static constexpr AscendC::Reg::DivSpecificMode DIV_MODE = {
+            AscendC::Reg::MaskMergeMode::ZEROING,
             false,
         };
         if constexpr (std::is_same_v<T, float>) {
             __VEC_SCOPE__
             {
-                MicroAPI::Duplicate(vregInputOne, (float)1.0);
-                MicroAPI::Duplicate(vregInputZero, (float)0.0);
+                Reg::Duplicate(vregInputOne, (float)1.0);
+                Reg::Duplicate(vregInputZero, (float)0.0);
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                    mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                    MicroAPI::Duplicate(vregInputPX, BETAN);
+                    mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
+                    Reg::Duplicate(vregInputPX, BETAN);
                     // OpCopyIn
-                    MicroAPI::LoadAlign(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                    MicroAPI::LoadAlign(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    Reg::LoadAlign(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                    Reg::LoadAlign(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
                     // compute
-                    MicroAPI::Mul(vregInputXSqr, vregInputX, vregInputX, mask);
-                    MicroAPI::Axpy(vregInputPX, vregInputXSqr, AN, mask);
-                    MicroAPI::Mul(vregInputPX, vregInputPX, vregInputX, mask);
-                    MicroAPI::Exp(vregInputPX, vregInputPX, mask);
+                    Reg::Mul(vregInputXSqr, vregInputX, vregInputX, mask);
+                    Reg::Axpy(vregInputPX, vregInputXSqr, AN, mask);
+                    Reg::Mul(vregInputPX, vregInputPX, vregInputX, mask);
+                    Reg::Exp(vregInputPX, vregInputPX, mask);
 
-                    MicroAPI::Duplicate(vregInputRes0, BETA);
-                    MicroAPI::Axpy(vregInputRes0, vregInputXSqr, A3, mask);
-                    MicroAPI::Mul(vregInputRes0, vregInputRes0, vregInputX, mask);
+                    Reg::Duplicate(vregInputRes0, BETA);
+                    Reg::Axpy(vregInputRes0, vregInputXSqr, A3, mask);
+                    Reg::Mul(vregInputRes0, vregInputRes0, vregInputX, mask);
 
-                    MicroAPI::Adds(vregInputT, vregInputPX, (float)1.0, mask);
-                    MicroAPI::Div(vregInputDiv, vregInputOne, vregInputT, mask);
+                    Reg::Adds(vregInputT, vregInputPX, (float)1.0, mask);
+                    Reg::Div(vregInputDiv, vregInputOne, vregInputT, mask);
 
-                    MicroAPI::Mul(vregInputResp, vregInputPX, vregInputDiv, mask);
-                    MicroAPI::Mul(vregInputResp, vregInputResp, vregInputRes0, mask);
-                    MicroAPI::Mul(vregInputResp, vregInputResp, vregInputDiv, mask);
-                    MicroAPI::Compare<T, CMPMODE::EQ>(cmpMask, vregInputResp, vregInputResp, mask);
-                    MicroAPI::Select<T>(vregSelect, vregInputResp, vregInputZero, cmpMask);
-                    MicroAPI::Add(vregInputResp, vregSelect, vregInputDiv, mask);
-                    MicroAPI::Mul(vregOutput, vregInputDy, vregInputResp, mask);
+                    Reg::Mul(vregInputResp, vregInputPX, vregInputDiv, mask);
+                    Reg::Mul(vregInputResp, vregInputResp, vregInputRes0, mask);
+                    Reg::Mul(vregInputResp, vregInputResp, vregInputDiv, mask);
+                    Reg::Compare<T, CMPMODE::EQ>(cmpMask, vregInputResp, vregInputResp, mask);
+                    Reg::Select<T>(vregSelect, vregInputResp, vregInputZero, cmpMask);
+                    Reg::Add(vregInputResp, vregSelect, vregInputDiv, mask);
+                    Reg::Mul(vregOutput, vregInputDy, vregInputResp, mask);
 
                     // OpCopyOut
-                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

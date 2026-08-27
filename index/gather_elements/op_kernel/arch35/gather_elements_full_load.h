@@ -107,72 +107,69 @@ __aicore__ inline void GatherElementsFullLoadKernel<X_T, INDEX_T, DIM_NUM, AXIS>
 }
 
 template <typename X_T, typename INDEX_T, typename OFFSET_T>
-__aicore__ inline void GatherValue(MicroAPI::MaskReg& maskRegInput, uint16_t index, uint16_t oneRepeatSize,
-                                   __ubuf__ X_T* xPtr, __ubuf__ X_T* yPtr,
-                                   MicroAPI::RegTensor<OFFSET_T>& RegGatherIndex)
+__aicore__ inline void GatherValue(Reg::MaskReg& maskRegInput, uint16_t index, uint16_t oneRepeatSize,
+                                   __ubuf__ X_T* xPtr, __ubuf__ X_T* yPtr, Reg::RegTensor<OFFSET_T>& RegGatherIndex)
 {
-    MicroAPI::RegTensor<X_T> RegY;
+    Reg::RegTensor<X_T> RegY;
     __ubuf__ X_T* yPtrOffset = yPtr + index * oneRepeatSize;
     if constexpr (std::is_same<X_T, int8_t>::value) {
-        MicroAPI::RegTensor<int16_t> RegInt16Y;
-        MicroAPI::RegTensor<int8_t> RegInt8Y1;
-        MicroAPI::RegTensor<int8_t> RegInt8Y2;
-        MicroAPI::MaskReg maskRegU16;
-        MicroAPI::MaskReg maskRegU8;
+        Reg::RegTensor<int16_t> RegInt16Y;
+        Reg::RegTensor<int8_t> RegInt8Y1;
+        Reg::RegTensor<int8_t> RegInt8Y2;
+        Reg::MaskReg maskRegU16;
+        Reg::MaskReg maskRegU8;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
-            MicroAPI::MaskReg maskRegU32;
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            Reg::MaskReg maskRegU32;
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::Gather(RegInt16Y, xPtr, RegGatherIndex, maskRegU16);
-        MicroAPI::DeInterleave(RegInt8Y1, RegInt8Y2, (MicroAPI::RegTensor<X_T>&)RegInt16Y,
-                               (MicroAPI::RegTensor<X_T>&)RegInt16Y);
-        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
-        MicroAPI::StoreAlign(yPtrOffset, RegInt8Y1, maskRegU8);
+        Reg::Gather(RegInt16Y, xPtr, RegGatherIndex, maskRegU16);
+        Reg::DeInterleave(RegInt8Y1, RegInt8Y2, (Reg::RegTensor<X_T>&)RegInt16Y, (Reg::RegTensor<X_T>&)RegInt16Y);
+        Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
+        Reg::StoreAlign(yPtrOffset, RegInt8Y1, maskRegU8);
     } else if constexpr (std::is_same<X_T, uint8_t>::value) {
-        MicroAPI::RegTensor<uint16_t> RegUint16Y;
-        MicroAPI::RegTensor<uint8_t> RegUint8Y1;
-        MicroAPI::RegTensor<uint8_t> RegUint8Y2;
-        MicroAPI::MaskReg maskRegU16;
-        MicroAPI::MaskReg maskRegU8;
+        Reg::RegTensor<uint16_t> RegUint16Y;
+        Reg::RegTensor<uint8_t> RegUint8Y1;
+        Reg::RegTensor<uint8_t> RegUint8Y2;
+        Reg::MaskReg maskRegU16;
+        Reg::MaskReg maskRegU8;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
-            MicroAPI::MaskReg maskRegU32;
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            Reg::MaskReg maskRegU32;
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::Gather(RegUint16Y, xPtr, RegGatherIndex, maskRegU16);
-        MicroAPI::DeInterleave(RegUint8Y1, RegUint8Y2, (MicroAPI::RegTensor<X_T>&)RegUint16Y,
-                               (MicroAPI::RegTensor<X_T>&)RegUint16Y);
-        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
-        MicroAPI::StoreAlign(yPtrOffset, RegUint8Y1, maskRegU8);
+        Reg::Gather(RegUint16Y, xPtr, RegGatherIndex, maskRegU16);
+        Reg::DeInterleave(RegUint8Y1, RegUint8Y2, (Reg::RegTensor<X_T>&)RegUint16Y, (Reg::RegTensor<X_T>&)RegUint16Y);
+        Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
+        Reg::StoreAlign(yPtrOffset, RegUint8Y1, maskRegU8);
     } else if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) ||
                          ((std::is_same<X_T, uint32_t>::value || std::is_same<X_T, int32_t>::value ||
                            std::is_same<X_T, float32_t>::value) &&
                           std::is_same<INDEX_T, int32_t>::value)) {
-        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegInput);
-        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegInput);
+        Reg::Gather(RegY, xPtr, RegGatherIndex, maskRegInput);
+        Reg::StoreAlign(yPtrOffset, RegY, maskRegInput);
     } else if constexpr ((std::is_same<X_T, uint32_t>::value || std::is_same<X_T, int32_t>::value ||
                           std::is_same<X_T, float32_t>::value) &&
                          std::is_same<INDEX_T, int64_t>::value) {
-        MicroAPI::MaskReg maskRegU32;
-        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegU32);
-        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegU32);
+        Reg::MaskReg maskRegU32;
+        Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+        Reg::Gather(RegY, xPtr, RegGatherIndex, maskRegU32);
+        Reg::StoreAlign(yPtrOffset, RegY, maskRegU32);
     } else {
-        MicroAPI::MaskReg maskRegU16;
+        Reg::MaskReg maskRegU16;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
-            MicroAPI::MaskReg maskRegU32;
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            Reg::MaskReg maskRegU32;
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegU16);
-        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegU16);
+        Reg::Gather(RegY, xPtr, RegGatherIndex, maskRegU16);
+        Reg::StoreAlign(yPtrOffset, RegY, maskRegU16);
     }
     return;
 }
@@ -189,29 +186,29 @@ __aicore__ inline void ComputeDim1Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<X_T> RegY;
+        Reg::MaskReg maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegIndex);
         }
@@ -231,48 +228,48 @@ __aicore__ inline void ComputeDim2Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim0;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim0;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(RegXDim0, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(RegXDim1, RegIdxStride, RegXDim0, maskReg);
-            MicroAPI::Sub(RegXDim1, RegArange, RegXDim1, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegXDim1, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(RegXDim0, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(RegXDim1, RegIdxStride, RegXDim0, maskReg);
+            Reg::Sub(RegXDim1, RegArange, RegXDim1, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegXDim1, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -292,57 +289,57 @@ __aicore__ inline void ComputeDim3Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim2, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim2, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim2, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim2, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -362,65 +359,65 @@ __aicore__ inline void ComputeDim4Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim3;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim2Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegXDim3;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<OFFSET_T> RegDim2Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
-            MicroAPI::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim3, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim3, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
+            Reg::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim3, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim3, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -441,73 +438,73 @@ __aicore__ inline void ComputeDim5Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim3;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim4;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim2Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim3Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegXDim3;
+        Reg::RegTensor<OFFSET_T> RegXDim4;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<OFFSET_T> RegDim2Stride;
+        Reg::RegTensor<OFFSET_T> RegDim3Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
-            MicroAPI::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
-            MicroAPI::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim4, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
-            MicroAPI::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim4, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
+            Reg::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
+            Reg::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim4, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
+            Reg::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim4, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -529,81 +526,81 @@ __aicore__ inline void ComputeDim6Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim3;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim4;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim5;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim2Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim3Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim4Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegXDim3;
+        Reg::RegTensor<OFFSET_T> RegXDim4;
+        Reg::RegTensor<OFFSET_T> RegXDim5;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<OFFSET_T> RegDim2Stride;
+        Reg::RegTensor<OFFSET_T> RegDim3Stride;
+        Reg::RegTensor<OFFSET_T> RegDim4Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
-            MicroAPI::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
-            MicroAPI::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
-            MicroAPI::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim5, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
-            MicroAPI::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
-            MicroAPI::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim5, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
+            Reg::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
+            Reg::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
+            Reg::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim5, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
+            Reg::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
+            Reg::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim5, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -625,89 +622,89 @@ __aicore__ inline void ComputeDim7Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim3;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim4;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim5;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim6;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim2Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim3Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim4Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim5Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegXDim3;
+        Reg::RegTensor<OFFSET_T> RegXDim4;
+        Reg::RegTensor<OFFSET_T> RegXDim5;
+        Reg::RegTensor<OFFSET_T> RegXDim6;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<OFFSET_T> RegDim2Stride;
+        Reg::RegTensor<OFFSET_T> RegDim3Stride;
+        Reg::RegTensor<OFFSET_T> RegDim4Stride;
+        Reg::RegTensor<OFFSET_T> RegDim5Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
-            MicroAPI::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
-            MicroAPI::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
-            MicroAPI::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr5);
-            MicroAPI::Div(RegXDim5, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim5, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim6, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
-            MicroAPI::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
-            MicroAPI::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
-            MicroAPI::Muls(RegDim5Stride, RegXDim5, (OFFSET_T)xStrideArr5, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim5Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim6, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
+            Reg::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
+            Reg::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
+            Reg::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr5);
+            Reg::Div(RegXDim5, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim5, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim6, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
+            Reg::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
+            Reg::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
+            Reg::Muls(RegDim5Stride, RegXDim5, (OFFSET_T)xStrideArr5, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim5Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim6, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }
@@ -730,97 +727,97 @@ __aicore__ inline void ComputeDim8Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<OFFSET_T> RegIndex;
-        MicroAPI::RegTensor<uint32_t> RegIndextmp;
-        MicroAPI::RegTensor<OFFSET_T> RegGatherIndex;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim1;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim2;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim3;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim4;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim5;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim6;
-        MicroAPI::RegTensor<OFFSET_T> RegXDim7;
-        MicroAPI::RegTensor<OFFSET_T> RegIdxStride;
-        MicroAPI::RegTensor<OFFSET_T> Regidx;
-        MicroAPI::RegTensor<OFFSET_T> Regtmp;
-        MicroAPI::RegTensor<OFFSET_T> RegDim0Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim1Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim2Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim3Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim4Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim5Stride;
-        MicroAPI::RegTensor<OFFSET_T> RegDim6Stride;
-        MicroAPI::RegTensor<X_T> RegY;
-        MicroAPI::RegTensor<OFFSET_T> RegArange;
-        MicroAPI::MaskReg maskReg;
-        MicroAPI::MaskReg maskRegInput;
+        Reg::RegTensor<OFFSET_T> RegIndex;
+        Reg::RegTensor<uint32_t> RegIndextmp;
+        Reg::RegTensor<OFFSET_T> RegGatherIndex;
+        Reg::RegTensor<OFFSET_T> RegXDim1;
+        Reg::RegTensor<OFFSET_T> RegXDim2;
+        Reg::RegTensor<OFFSET_T> RegXDim3;
+        Reg::RegTensor<OFFSET_T> RegXDim4;
+        Reg::RegTensor<OFFSET_T> RegXDim5;
+        Reg::RegTensor<OFFSET_T> RegXDim6;
+        Reg::RegTensor<OFFSET_T> RegXDim7;
+        Reg::RegTensor<OFFSET_T> RegIdxStride;
+        Reg::RegTensor<OFFSET_T> Regidx;
+        Reg::RegTensor<OFFSET_T> Regtmp;
+        Reg::RegTensor<OFFSET_T> RegDim0Stride;
+        Reg::RegTensor<OFFSET_T> RegDim1Stride;
+        Reg::RegTensor<OFFSET_T> RegDim2Stride;
+        Reg::RegTensor<OFFSET_T> RegDim3Stride;
+        Reg::RegTensor<OFFSET_T> RegDim4Stride;
+        Reg::RegTensor<OFFSET_T> RegDim5Stride;
+        Reg::RegTensor<OFFSET_T> RegDim6Stride;
+        Reg::RegTensor<X_T> RegY;
+        Reg::RegTensor<OFFSET_T> RegArange;
+        Reg::MaskReg maskReg;
+        Reg::MaskReg maskRegInput;
         for (uint16_t i = 0; i < repeatNum; i++) {
-            maskReg = MicroAPI::CreateMask<OFFSET_T, MicroAPI::MaskPattern::ALL>();
+            maskReg = Reg::CreateMask<OFFSET_T, Reg::MaskPattern::ALL>();
             if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) &&
                           (std::is_same<INDEX_T, int32_t>::value)) {
-                maskRegInput = MicroAPI::UpdateMask<X_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<X_T>(inputMask);
             } else {
-                maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
+                maskRegInput = Reg::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            Reg::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
-                MicroAPI::RegTensor<uint32_t> RegUint32Index;
-                MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
+                Reg::RegTensor<uint32_t> RegUint32Index;
+                Reg::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::RegTensor<uint16_t> RegUint16Index;
-                MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
-                                       (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
+                Reg::RegTensor<uint16_t> RegUint16Index;
+                Reg::DeInterleave(RegIndex, RegUint16Index, (Reg::RegTensor<uint16_t>&)RegIndextmp,
+                                  (Reg::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
+                Reg::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
-                MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
             } else {
-                MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
+                Reg::Arange((Reg::RegTensor<int32_t>&)RegArange, (int32_t)idxOffset + i * oneRepeatSize);
             }
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
-            MicroAPI::Div(Regtmp, RegArange, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
-            MicroAPI::Sub(Regidx, RegArange, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
-            MicroAPI::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
-            MicroAPI::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
-            MicroAPI::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
-            MicroAPI::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr5);
-            MicroAPI::Div(RegXDim5, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim5, RegIdxStride, maskReg);
-            MicroAPI::Sub(Regidx, Regidx, Regtmp, maskReg);
-            MicroAPI::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr6);
-            MicroAPI::Div(RegXDim6, Regidx, RegIdxStride, maskReg);
-            MicroAPI::Mul(Regtmp, RegXDim6, RegIdxStride, maskReg);
-            MicroAPI::Sub(RegXDim7, Regidx, Regtmp, maskReg);
-            MicroAPI::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
-            MicroAPI::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
-            MicroAPI::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
-            MicroAPI::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
-            MicroAPI::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
-            MicroAPI::Muls(RegDim5Stride, RegXDim5, (OFFSET_T)xStrideArr5, maskReg);
-            MicroAPI::Muls(RegDim6Stride, RegXDim6, (OFFSET_T)xStrideArr6, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim5Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegDim6Stride, maskReg);
-            MicroAPI::Add(RegGatherIndex, RegGatherIndex, RegXDim7, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr0);
+            Reg::Div(Regtmp, RegArange, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegIdxStride, Regtmp, maskReg);
+            Reg::Sub(Regidx, RegArange, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr1);
+            Reg::Div(RegXDim1, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim1, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr2);
+            Reg::Div(RegXDim2, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim2, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr3);
+            Reg::Div(RegXDim3, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim3, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr4);
+            Reg::Div(RegXDim4, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim4, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr5);
+            Reg::Div(RegXDim5, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim5, RegIdxStride, maskReg);
+            Reg::Sub(Regidx, Regidx, Regtmp, maskReg);
+            Reg::Duplicate(RegIdxStride, (OFFSET_T)indexStrideArr6);
+            Reg::Div(RegXDim6, Regidx, RegIdxStride, maskReg);
+            Reg::Mul(Regtmp, RegXDim6, RegIdxStride, maskReg);
+            Reg::Sub(RegXDim7, Regidx, Regtmp, maskReg);
+            Reg::Muls(RegDim0Stride, RegIndex, (OFFSET_T)xStrideArr0, maskReg);
+            Reg::Muls(RegDim1Stride, RegXDim1, (OFFSET_T)xStrideArr1, maskReg);
+            Reg::Muls(RegDim2Stride, RegXDim2, (OFFSET_T)xStrideArr2, maskReg);
+            Reg::Muls(RegDim3Stride, RegXDim3, (OFFSET_T)xStrideArr3, maskReg);
+            Reg::Muls(RegDim4Stride, RegXDim4, (OFFSET_T)xStrideArr4, maskReg);
+            Reg::Muls(RegDim5Stride, RegXDim5, (OFFSET_T)xStrideArr5, maskReg);
+            Reg::Muls(RegDim6Stride, RegXDim6, (OFFSET_T)xStrideArr6, maskReg);
+            Reg::Add(RegGatherIndex, RegDim0Stride, RegDim1Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim2Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim3Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim4Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim5Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegDim6Stride, maskReg);
+            Reg::Add(RegGatherIndex, RegGatherIndex, RegXDim7, maskReg);
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegGatherIndex);
         }
     }

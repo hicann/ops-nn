@@ -31,8 +31,8 @@ using namespace AscendC;
 
 constexpr int32_t ONCE_STORE_REG_NUM = 2;
 
-constexpr static MicroAPI::CastTrait CAST_TRAIT_INT8_TO_INT16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                                 MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+constexpr static Reg::CastTrait CAST_TRAIT_INT8_TO_INT16 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                            Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename T>
 __aicore__ inline void CopyGmToUb(LocalTensor<T> xLocal, GlobalTensor<T> xGm, int64_t offset, uint32_t nBurst,
@@ -65,59 +65,57 @@ __aicore__ inline void CopyUbToGm(GlobalTensor<T> xGm, LocalTensor<T> xLocal, in
 }
 
 template <typename TARGET_T, typename ORG_T>
-__simd_callee__ inline void StoreTensor(__ubuf__ ORG_T* dstAddr, MicroAPI::RegTensor<ORG_T>& orgReg,
-                                        MicroAPI::MaskReg preg)
+__simd_callee__ inline void StoreTensor(__ubuf__ ORG_T* dstAddr, Reg::RegTensor<ORG_T>& orgReg, Reg::MaskReg preg)
 {
     if constexpr (sizeof(ORG_T) == sizeof(int32_t)) {
         if constexpr (sizeof(TARGET_T) == sizeof(int32_t)) {
-            MicroAPI::StoreAlign(dstAddr, orgReg, preg);
+            Reg::StoreAlign(dstAddr, orgReg, preg);
         } else {
-            MicroAPI::RegTensor<ORG_T> zeroReg;
-            MicroAPI::Duplicate(zeroReg, static_cast<ORG_T>(0));
-            MicroAPI::StoreAlign<ORG_T, MicroAPI::StoreDist::DIST_INTLV_B32>(dstAddr, orgReg, zeroReg, preg);
+            Reg::RegTensor<ORG_T> zeroReg;
+            Reg::Duplicate(zeroReg, static_cast<ORG_T>(0));
+            Reg::StoreAlign<ORG_T, Reg::StoreDist::DIST_INTLV_B32>(dstAddr, orgReg, zeroReg, preg);
         }
     } else {
         if constexpr (sizeof(TARGET_T) == sizeof(int32_t)) {
-            MicroAPI::RegTensor<ORG_T> zeroReg;
-            MicroAPI::Duplicate(zeroReg, static_cast<ORG_T>(0));
-            MicroAPI::StoreAlign<ORG_T, MicroAPI::StoreDist::DIST_INTLV_B16>(dstAddr, orgReg, zeroReg, preg);
+            Reg::RegTensor<ORG_T> zeroReg;
+            Reg::Duplicate(zeroReg, static_cast<ORG_T>(0));
+            Reg::StoreAlign<ORG_T, Reg::StoreDist::DIST_INTLV_B16>(dstAddr, orgReg, zeroReg, preg);
         } else {
             constexpr int16_t stride = ONCE_STORE_REG_NUM * AscendC::VECTOR_REG_WIDTH / sizeof(ORG_T);
-            MicroAPI::RegTensor<ORG_T> zeroReg;
-            MicroAPI::RegTensor<ORG_T> tmpReg;
-            MicroAPI::Duplicate(zeroReg, static_cast<ORG_T>(0));
-            MicroAPI::Interleave(orgReg, tmpReg, orgReg, zeroReg);
-            MicroAPI::StoreAlign<ORG_T, MicroAPI::StoreDist::DIST_INTLV_B16>(dstAddr, orgReg, zeroReg, preg);
-            MicroAPI::StoreAlign<ORG_T, MicroAPI::StoreDist::DIST_INTLV_B16>(dstAddr + stride, tmpReg, zeroReg, preg);
+            Reg::RegTensor<ORG_T> zeroReg;
+            Reg::RegTensor<ORG_T> tmpReg;
+            Reg::Duplicate(zeroReg, static_cast<ORG_T>(0));
+            Reg::Interleave(orgReg, tmpReg, orgReg, zeroReg);
+            Reg::StoreAlign<ORG_T, Reg::StoreDist::DIST_INTLV_B16>(dstAddr, orgReg, zeroReg, preg);
+            Reg::StoreAlign<ORG_T, Reg::StoreDist::DIST_INTLV_B16>(dstAddr + stride, tmpReg, zeroReg, preg);
         }
     }
 }
 
 template <typename ORG_T, typename REG_T>
-__simd_callee__ inline void LoadTensor(REG_T& dstReg, __ubuf__ ORG_T* srcAddr, MicroAPI::MaskReg preg)
+__simd_callee__ inline void LoadTensor(REG_T& dstReg, __ubuf__ ORG_T* srcAddr, Reg::MaskReg preg)
 {
     if constexpr (std::is_same_v<ORG_T, uint8_t>) {
-        MicroAPI::LoadAlign<ORG_T, MicroAPI::LoadDist::DIST_UNPACK_B8>((MicroAPI::RegTensor<uint8_t>&)dstReg, srcAddr);
+        Reg::LoadAlign<ORG_T, Reg::LoadDist::DIST_UNPACK_B8>((Reg::RegTensor<uint8_t>&)dstReg, srcAddr);
     } else if constexpr (std::is_same_v<ORG_T, int8_t>) {
-        MicroAPI::LoadAlign<ORG_T, MicroAPI::LoadDist::DIST_UNPACK_B8>((MicroAPI::RegTensor<int8_t>&)dstReg, srcAddr);
-        MicroAPI::Cast<int16_t, int8_t, CAST_TRAIT_INT8_TO_INT16>(dstReg, (MicroAPI::RegTensor<int8_t>&)dstReg, preg);
+        Reg::LoadAlign<ORG_T, Reg::LoadDist::DIST_UNPACK_B8>((Reg::RegTensor<int8_t>&)dstReg, srcAddr);
+        Reg::Cast<int16_t, int8_t, CAST_TRAIT_INT8_TO_INT16>(dstReg, (Reg::RegTensor<int8_t>&)dstReg, preg);
     } else {
-        MicroAPI::LoadAlign(dstReg, srcAddr);
+        Reg::LoadAlign(dstReg, srcAddr);
     }
 }
 
 template <typename ORG_T, typename REG_T, typename INDICES_REG_T>
 __simd_callee__ inline void LoadMidValue(REG_T& midValueReg, __ubuf__ ORG_T* srcPtr, INDICES_REG_T midIndicesReg,
-                                         MicroAPI::MaskReg preg)
+                                         Reg::MaskReg preg)
 {
     if constexpr (std::is_same_v<ORG_T, uint8_t>) {
-        MicroAPI::Gather((MicroAPI::RegTensor<int16_t>&)midValueReg, srcPtr, midIndicesReg, preg);
+        Reg::Gather((Reg::RegTensor<int16_t>&)midValueReg, srcPtr, midIndicesReg, preg);
     } else if constexpr (std::is_same_v<ORG_T, int8_t>) {
-        MicroAPI::Gather((MicroAPI::RegTensor<int16_t>&)midValueReg, srcPtr, midIndicesReg, preg);
-        MicroAPI::Cast<int16_t, int8_t, CAST_TRAIT_INT8_TO_INT16>(midValueReg,
-                                                                  (MicroAPI::RegTensor<int8_t>&)midValueReg, preg);
+        Reg::Gather((Reg::RegTensor<int16_t>&)midValueReg, srcPtr, midIndicesReg, preg);
+        Reg::Cast<int16_t, int8_t, CAST_TRAIT_INT8_TO_INT16>(midValueReg, (Reg::RegTensor<int8_t>&)midValueReg, preg);
     } else {
-        MicroAPI::Gather(midValueReg, srcPtr, midIndicesReg, preg);
+        Reg::Gather(midValueReg, srcPtr, midIndicesReg, preg);
     }
 }
 
@@ -128,39 +126,39 @@ __simd_vf__ inline void BinaryQueryVF(__ubuf__ X_T* xPtr, __ubuf__ B_T* boundPtr
                                       uint32_t dstRepeatStride, uint16_t maxIter, uint32_t boundLength)
 {
     RegT xReg;
-    MicroAPI::RegTensor<INDICES_T> leftReg;
-    MicroAPI::RegTensor<INDICES_T> rightReg;
-    MicroAPI::RegTensor<INDICES_T> subReg;
-    MicroAPI::RegTensor<INDICES_T> tmpReg;
-    MicroAPI::RegTensor<INDICES_T> midIndicesReg;
-    MicroAPI::RegTensor<INDICES_T> midOneReg;
-    MicroAPI::RegTensor<SHIFT_T> shiftReg;
+    Reg::RegTensor<INDICES_T> leftReg;
+    Reg::RegTensor<INDICES_T> rightReg;
+    Reg::RegTensor<INDICES_T> subReg;
+    Reg::RegTensor<INDICES_T> tmpReg;
+    Reg::RegTensor<INDICES_T> midIndicesReg;
+    Reg::RegTensor<INDICES_T> midOneReg;
+    Reg::RegTensor<SHIFT_T> shiftReg;
 
     RegT midValueReg;
     uint32_t count = dataLen;
-    MicroAPI::Duplicate(shiftReg, static_cast<SHIFT_T>(1));
+    Reg::Duplicate(shiftReg, static_cast<SHIFT_T>(1));
     for (uint16_t i = 0; i < repeatNum; i++) {
-        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<INDICES_T>(count);
+        Reg::MaskReg maskReg = Reg::UpdateMask<INDICES_T>(count);
         LoadTensor<X_T, RegT>(xReg, xPtr + i * onRepeatSize, maskReg);
-        MicroAPI::Duplicate(leftReg, static_cast<INDICES_T>(0));
-        MicroAPI::Duplicate(rightReg, static_cast<INDICES_T>(boundLength));
-        MicroAPI::MaskReg pReg = maskReg;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::Duplicate(leftReg, static_cast<INDICES_T>(0));
+        Reg::Duplicate(rightReg, static_cast<INDICES_T>(boundLength));
+        Reg::MaskReg pReg = maskReg;
+        Reg::MaskReg cmpMaskReg;
         for (uint16_t j = 0; j < maxIter; j++) {
-            MicroAPI::Compare<INDICES_T, CMPMODE::NE>(pReg, leftReg, rightReg, pReg);
-            MicroAPI::Sub(subReg, rightReg, leftReg, pReg);
-            MicroAPI::ShiftRight(tmpReg, subReg, shiftReg, pReg);
-            MicroAPI::Add(midIndicesReg, leftReg, tmpReg, pReg);
-            LoadMidValue<B_T, RegT, MicroAPI::RegTensor<INDICES_T>>(midValueReg, boundPtr, midIndicesReg, pReg);
+            Reg::Compare<INDICES_T, CMPMODE::NE>(pReg, leftReg, rightReg, pReg);
+            Reg::Sub(subReg, rightReg, leftReg, pReg);
+            Reg::ShiftRight(tmpReg, subReg, shiftReg, pReg);
+            Reg::Add(midIndicesReg, leftReg, tmpReg, pReg);
+            LoadMidValue<B_T, RegT, Reg::RegTensor<INDICES_T>>(midValueReg, boundPtr, midIndicesReg, pReg);
             if constexpr (RIGHT) {
-                MicroAPI::Compare<COMPUTE_T, CMPMODE::GT>(cmpMaskReg, midValueReg, xReg, pReg);
+                Reg::Compare<COMPUTE_T, CMPMODE::GT>(cmpMaskReg, midValueReg, xReg, pReg);
             } else {
-                MicroAPI::Compare<COMPUTE_T, CMPMODE::GE>(cmpMaskReg, midValueReg, xReg, pReg);
+                Reg::Compare<COMPUTE_T, CMPMODE::GE>(cmpMaskReg, midValueReg, xReg, pReg);
             }
-            MicroAPI::Not(cmpMaskReg, cmpMaskReg, pReg);
-            MicroAPI::Adds(midOneReg, midIndicesReg, 1, pReg);
-            MicroAPI::Select(leftReg, midOneReg, leftReg, cmpMaskReg);
-            MicroAPI::Select(rightReg, rightReg, midIndicesReg, cmpMaskReg);
+            Reg::Not(cmpMaskReg, cmpMaskReg, pReg);
+            Reg::Adds(midOneReg, midIndicesReg, 1, pReg);
+            Reg::Select(leftReg, midOneReg, leftReg, cmpMaskReg);
+            Reg::Select(rightReg, rightReg, midIndicesReg, cmpMaskReg);
         }
         StoreTensor<Y_T, INDICES_T>(yPtr + i * dstRepeatStride, leftReg, maskReg);
     }
@@ -177,8 +175,8 @@ __aicore__ inline void BinaryQuery(LocalTensor<X_T>& xLocal, LocalTensor<B_T>& b
         std::is_same<B_T, uint8_t>::value, uint16_t,
         typename std::conditional<std::is_same<B_T, int8_t>::value, int16_t, B_T>::type>::type;
     using RegT = typename std::conditional<sizeof(COMPUTE_T) == sizeof(int64_t),
-                                           MicroAPI::RegTensor<COMPUTE_T, MicroAPI::RegTraitNumTwo>,
-                                           MicroAPI::RegTensor<COMPUTE_T>>::type;
+                                           Reg::RegTensor<COMPUTE_T, Reg::RegTraitNumTwo>,
+                                           Reg::RegTensor<COMPUTE_T>>::type;
     __ubuf__ X_T* xPtr = (__ubuf__ X_T*)xLocal.GetPhyAddr();
     __ubuf__ B_T* boundPtr = (__ubuf__ B_T*)boundLocal.GetPhyAddr();
     __ubuf__ INDICES_T* yPtr = (__ubuf__ INDICES_T*)yLocal.GetPhyAddr();

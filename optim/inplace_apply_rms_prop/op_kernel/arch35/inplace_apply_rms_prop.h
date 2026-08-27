@@ -50,24 +50,22 @@ namespace NsInplaceApplyRmsProp {
 
 using namespace AscendC;
 
-constexpr AscendC::MicroAPI::CastTrait kRmsBf16ToF32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
-constexpr AscendC::MicroAPI::CastTrait kRmsF32ToBf16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait kRmsBf16ToF32 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait kRmsF32ToBf16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
 __simd_vf__ inline void RmsBf16ToF32(__ubuf__ float* dst, __ubuf__ bfloat16_t* src, uint32_t count, uint32_t lanes,
                                      uint16_t repeats)
 {
     for (uint16_t i = 0; i < repeats; ++i) {
         uint32_t rem = count - static_cast<uint32_t>(i) * lanes;
-        auto mask = AscendC::MicroAPI::UpdateMask<float>(rem);
-        AscendC::MicroAPI::RegTensor<bfloat16_t> src_reg;
-        AscendC::MicroAPI::RegTensor<float> dst_reg;
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(src_reg, src + i * lanes);
-        AscendC::MicroAPI::Cast<float, bfloat16_t, kRmsBf16ToF32>(dst_reg, src_reg, mask);
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + i * lanes, dst_reg, mask);
+        auto mask = AscendC::Reg::UpdateMask<float>(rem);
+        AscendC::Reg::RegTensor<bfloat16_t> src_reg;
+        AscendC::Reg::RegTensor<float> dst_reg;
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(src_reg, src + i * lanes);
+        AscendC::Reg::Cast<float, bfloat16_t, kRmsBf16ToF32>(dst_reg, src_reg, mask);
+        AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM>(dst + i * lanes, dst_reg, mask);
     }
 }
 
@@ -76,13 +74,12 @@ __simd_vf__ inline void RmsF32ToBf16(__ubuf__ bfloat16_t* dst, __ubuf__ float* s
 {
     for (uint16_t i = 0; i < repeats; ++i) {
         uint32_t rem = count - static_cast<uint32_t>(i) * lanes;
-        auto mask = AscendC::MicroAPI::UpdateMask<float>(rem);
-        AscendC::MicroAPI::RegTensor<float> src_reg;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> dst_reg;
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(src_reg, src + i * lanes);
-        AscendC::MicroAPI::Cast<bfloat16_t, float, kRmsF32ToBf16>(dst_reg, src_reg, mask);
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + i * lanes, dst_reg,
-                                                                                             mask);
+        auto mask = AscendC::Reg::UpdateMask<float>(rem);
+        AscendC::Reg::RegTensor<float> src_reg;
+        AscendC::Reg::RegTensor<bfloat16_t> dst_reg;
+        AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(src_reg, src + i * lanes);
+        AscendC::Reg::Cast<bfloat16_t, float, kRmsF32ToBf16>(dst_reg, src_reg, mask);
+        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + i * lanes, dst_reg, mask);
     }
 }
 

@@ -54,7 +54,7 @@ __aicore__ inline void SetWaitFlag()
 __simd_vf__ __aicore__ void ComputeInplaceReduceSumB64(__ubuf__ int64_t* inAddr, uint32_t vlForElem, uint32_t elemNum,
                                                        uint16_t vfLoopNum)
 {
-    using namespace AscendC::MicroAPI;
+    using namespace AscendC::Reg;
 
     RegTensor<int64_t> inReg;
     RegTensor<int64_t> sumReg, zeroReg;
@@ -71,7 +71,7 @@ __simd_vf__ __aicore__ void ComputeInplaceReduceSumB64(__ubuf__ int64_t* inAddr,
         Add<int64_t>(sumReg, sumReg, inReg, maskALL);  // 然后sum就可以求和整个Reg的元素
     }
     // 最后ReduceSum一个总和值
-    Reduce<AscendC::MicroAPI::ReduceType::SUM, int64_t>(sumReg, sumReg, maskALL);
+    Reduce<AscendC::Reg::ReduceType::SUM, int64_t>(sumReg, sumReg, maskALL);
     StoreAlign<int64_t>(inAddr, sumReg, maskVL1); // 写进第一个位置
 }
 

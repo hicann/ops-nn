@@ -26,16 +26,16 @@
 namespace ArgMaxGradD {
 using namespace AscendC;
 
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 
 // fp16/bf16 <-> fp32 的随路 cast trait(与 activation/clipped_swiglu 同款)
-constexpr static AscendC::MicroAPI::CastTrait CAST_B16_TO_FP32 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait CAST_B16_TO_FP32 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
-constexpr static AscendC::MicroAPI::CastTrait CAST_FP32_TO_B16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr static AscendC::Reg::CastTrait CAST_FP32_TO_B16 = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
 
 constexpr static int64_t B16_BYTES = 2;
@@ -73,65 +73,64 @@ __aicore__ inline T ScalarZero()
 // 从 __simd_vf__ 里调用的被调函数必须标 __simd_callee__。
 template <typename T, bool IDX_IS_SCALAR>
 __simd_callee__ inline void SelectLane32(__ubuf__ T* outAddr, __ubuf__ T* varAddr, __ubuf__ T* updAddr, T updScalar,
-                                         AscendC::MicroAPI::MaskReg& hit, AscendC::MicroAPI::MaskReg& mask)
+                                         AscendC::Reg::MaskReg& hit, AscendC::Reg::MaskReg& mask)
 {
-    AscendC::MicroAPI::RegTensor<T> varReg;
-    AscendC::MicroAPI::RegTensor<T> updReg;
-    AscendC::MicroAPI::RegTensor<T> outReg;
-    AscendC::MicroAPI::LoadAlign(varReg, varAddr);
+    AscendC::Reg::RegTensor<T> varReg;
+    AscendC::Reg::RegTensor<T> updReg;
+    AscendC::Reg::RegTensor<T> outReg;
+    AscendC::Reg::LoadAlign(varReg, varAddr);
     if constexpr (IDX_IS_SCALAR) {
-        AscendC::MicroAPI::Duplicate(updReg, updScalar);
+        AscendC::Reg::Duplicate(updReg, updScalar);
     } else {
-        AscendC::MicroAPI::LoadAlign(updReg, updAddr);
+        AscendC::Reg::LoadAlign(updReg, updAddr);
     }
-    AscendC::MicroAPI::Select<T>(outReg, updReg, varReg, hit);
-    AscendC::MicroAPI::StoreAlign(outAddr, outReg, mask);
+    AscendC::Reg::Select<T>(outReg, updReg, varReg, hit);
+    AscendC::Reg::StoreAlign(outAddr, outReg, mask);
 }
 
 // fp16/bf16: 拆包到 fp32 域选, 选完打包回去(纯搬运, 拆/打包互逆, 逐位无损)
 template <typename T, bool IDX_IS_SCALAR>
 __simd_callee__ inline void SelectLaneB16(__ubuf__ T* outAddr, __ubuf__ T* varAddr, __ubuf__ T* updAddr,
-                                          float updScalarF, AscendC::MicroAPI::MaskReg& hit,
-                                          AscendC::MicroAPI::MaskReg& mask)
+                                          float updScalarF, AscendC::Reg::MaskReg& hit, AscendC::Reg::MaskReg& mask)
 {
-    AscendC::MicroAPI::RegTensor<T> rawVar;
-    AscendC::MicroAPI::RegTensor<T> rawUpd;
-    AscendC::MicroAPI::RegTensor<T> rawOut;
-    AscendC::MicroAPI::RegTensor<float> varF;
-    AscendC::MicroAPI::RegTensor<float> updF;
-    AscendC::MicroAPI::RegTensor<float> outF;
-    AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(rawVar, varAddr);
-    AscendC::MicroAPI::Cast<float, T, CAST_B16_TO_FP32>(varF, rawVar, mask);
+    AscendC::Reg::RegTensor<T> rawVar;
+    AscendC::Reg::RegTensor<T> rawUpd;
+    AscendC::Reg::RegTensor<T> rawOut;
+    AscendC::Reg::RegTensor<float> varF;
+    AscendC::Reg::RegTensor<float> updF;
+    AscendC::Reg::RegTensor<float> outF;
+    AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(rawVar, varAddr);
+    AscendC::Reg::Cast<float, T, CAST_B16_TO_FP32>(varF, rawVar, mask);
     if constexpr (IDX_IS_SCALAR) {
-        AscendC::MicroAPI::Duplicate(updF, updScalarF);
+        AscendC::Reg::Duplicate(updF, updScalarF);
     } else {
-        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(rawUpd, updAddr);
-        AscendC::MicroAPI::Cast<float, T, CAST_B16_TO_FP32>(updF, rawUpd, mask);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(rawUpd, updAddr);
+        AscendC::Reg::Cast<float, T, CAST_B16_TO_FP32>(updF, rawUpd, mask);
     }
-    AscendC::MicroAPI::Select<float>(outF, updF, varF, hit);
-    AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_B16>(rawOut, outF, mask);
-    AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr, rawOut, mask);
+    AscendC::Reg::Select<float>(outF, updF, varF, hit);
+    AscendC::Reg::Cast<T, float, CAST_FP32_TO_B16>(rawOut, outF, mask);
+    AscendC::Reg::StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(outAddr, rawOut, mask);
 }
 
 // int8: 拆到 32bit 车道按 int32 选, 再打包回 b8
 template <typename T, bool IDX_IS_SCALAR>
 __simd_callee__ inline void SelectLaneB8(__ubuf__ T* outAddr, __ubuf__ T* varAddr, __ubuf__ T* updAddr, T updScalar,
-                                         AscendC::MicroAPI::MaskReg& hit, AscendC::MicroAPI::MaskReg& mask)
+                                         AscendC::Reg::MaskReg& hit, AscendC::Reg::MaskReg& mask)
 {
-    AscendC::MicroAPI::RegTensor<T> rawVar;
-    AscendC::MicroAPI::RegTensor<T> rawUpd;
-    AscendC::MicroAPI::RegTensor<T> rawOut;
-    AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(rawVar, varAddr);
+    AscendC::Reg::RegTensor<T> rawVar;
+    AscendC::Reg::RegTensor<T> rawUpd;
+    AscendC::Reg::RegTensor<T> rawOut;
+    AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(rawVar, varAddr);
     if constexpr (IDX_IS_SCALAR) {
-        AscendC::MicroAPI::Duplicate(reinterpret_cast<AscendC::MicroAPI::RegTensor<int32_t>&>(rawUpd),
-                                     static_cast<int32_t>(updScalar));
+        AscendC::Reg::Duplicate(reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(rawUpd),
+                                static_cast<int32_t>(updScalar));
     } else {
-        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK4_B8>(rawUpd, updAddr);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(rawUpd, updAddr);
     }
-    AscendC::MicroAPI::Select<int32_t>(reinterpret_cast<AscendC::MicroAPI::RegTensor<int32_t>&>(rawOut),
-                                       reinterpret_cast<AscendC::MicroAPI::RegTensor<int32_t>&>(rawUpd),
-                                       reinterpret_cast<AscendC::MicroAPI::RegTensor<int32_t>&>(rawVar), hit);
-    AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr, rawOut, mask);
+    AscendC::Reg::Select<int32_t>(reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(rawOut),
+                                  reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(rawUpd),
+                                  reinterpret_cast<AscendC::Reg::RegTensor<int32_t>&>(rawVar), hit);
+    AscendC::Reg::StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outAddr, rawOut, mask);
 }
 
 // 非对齐行长的 tile 铺设: 把 base[0, copyElems) 追加到 base[curElems, ...)。
@@ -142,19 +141,19 @@ template <typename T>
 __simd_vf__ inline void TileAppendUnalignVF(__ubuf__ T* base, uint32_t curElems, uint32_t copyElems, uint32_t lane,
                                             uint16_t loops)
 {
-    AscendC::MicroAPI::UnalignRegForStore ureg;
+    AscendC::Reg::UnalignRegForStore ureg;
     __ubuf__ T* dst = base + curElems;
-    AscendC::MicroAPI::MaskReg mask;
+    AscendC::Reg::MaskReg mask;
     uint32_t remain = copyElems;
     for (uint16_t t = 0; t < loops; ++t) {
         uint32_t before = remain;
-        mask = AscendC::MicroAPI::UpdateMask<T>(remain);
+        mask = AscendC::Reg::UpdateMask<T>(remain);
         uint32_t step = before - remain; // 本轮实际元素数(尾轮不足一个 VL)
-        AscendC::MicroAPI::RegTensor<T> reg;
-        AscendC::MicroAPI::LoadAlign(reg, base + t * lane);
-        AscendC::MicroAPI::StoreUnAlign(dst, reg, ureg, step);
+        AscendC::Reg::RegTensor<T> reg;
+        AscendC::Reg::LoadAlign(reg, base + t * lane);
+        AscendC::Reg::StoreUnAlign(dst, reg, ureg, step);
     }
-    AscendC::MicroAPI::StoreUnAlignPost<T>(dst, ureg, 0);
+    AscendC::Reg::StoreUnAlignPost<T>(dst, ureg, 0);
 }
 
 // ── regbase VF: mask = (assist == idx), out = mask ? updates : var ──────────────
@@ -168,22 +167,22 @@ __simd_vf__ inline void ArgMaxGradSelectVF(__ubuf__ T* outAddr, __ubuf__ T* varA
                                            T updScalar, float updScalarF, uint32_t count, uint32_t lane,
                                            uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> assistReg;
-    AscendC::MicroAPI::RegTensor<int32_t> idxReg;
-    AscendC::MicroAPI::MaskReg mask;
-    AscendC::MicroAPI::MaskReg hit;
+    AscendC::Reg::RegTensor<int32_t> assistReg;
+    AscendC::Reg::RegTensor<int32_t> idxReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::MaskReg hit;
     uint32_t remain = count; // UpdateMask 每轮自减, 不用外部算余量
 
     if constexpr (IDX_IS_SCALAR) {
-        AscendC::MicroAPI::Duplicate(idxReg, idxScalar);
+        AscendC::Reg::Duplicate(idxReg, idxScalar);
     }
     for (uint16_t i = 0; i < repeatTimes; ++i) {
-        mask = AscendC::MicroAPI::UpdateMask<int32_t>(remain);
-        AscendC::MicroAPI::LoadAlign(assistReg, assistAddr + i * lane);
+        mask = AscendC::Reg::UpdateMask<int32_t>(remain);
+        AscendC::Reg::LoadAlign(assistReg, assistAddr + i * lane);
         if constexpr (!IDX_IS_SCALAR) {
-            AscendC::MicroAPI::LoadAlign(idxReg, idxAddr + i * lane);
+            AscendC::Reg::LoadAlign(idxReg, idxAddr + i * lane);
         }
-        AscendC::MicroAPI::Compare<int32_t, AscendC::CMPMODE::EQ>(hit, assistReg, idxReg, mask);
+        AscendC::Reg::Compare<int32_t, AscendC::CMPMODE::EQ>(hit, assistReg, idxReg, mask);
 
         if constexpr (IsSameType<T, float>::value || IsSameType<T, int32_t>::value) {
             SelectLane32<T, IDX_IS_SCALAR>(outAddr + i * lane, varAddr + i * lane,

@@ -23,8 +23,8 @@ using AscendC::LocalTensor;
 using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 // x is float32, y is float32, scale is any value
 class SwishF32AttrComb0 {
@@ -90,16 +90,16 @@ private:
             __ubuf__ float* bufferIn0Addr = (__ubuf__ float*)bufferIn0_.GetPhyAddr();
             __ubuf__ float* bufferOut0Addr = (__ubuf__ float*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
-                preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                preg0 = AscendC::Reg::UpdateMask<float>(size);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(
                     vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
-                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(
                     vreg1, vreg0, static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
-                AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg2, vreg1, preg0);
-                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vreg3, vreg2, static_cast<float>(1.0), preg0);
-                AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg0, vreg3, preg0);
-                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::Reg::Exp<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg2, vreg1, preg0);
+                AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg3, vreg2,
+                                                                                       static_cast<float>(1.0), preg0);
+                AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(vreg4, vreg0, vreg3, preg0);
+                AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg4, preg0);
             }
         }

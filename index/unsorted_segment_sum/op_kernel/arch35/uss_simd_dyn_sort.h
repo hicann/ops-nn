@@ -28,8 +28,8 @@ constexpr uint32_t DYN_SORT_DB_BUF = 1;
 constexpr uint32_t SORT_PADDING = 64;
 constexpr uint32_t HELP_FRE = 2;
 
-constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING};
+constexpr AscendC::Reg::CastTrait castTraitU32U16 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING};
 
 template <typename X_T, typename IDS_T, typename CAST_T, uint32_t castType>
 class USSKernelSimdDynSort {
@@ -46,9 +46,8 @@ public:
     __aicore__ inline void Process();
     template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
     __aicore__ inline void ProcessPerXGroup(__ubuf__ X_T* xLocalAddr, __ubuf__ X_T* resBufAddr,
-                                            MicroAPI::MaskReg& maskRegUpdate,
-                                            MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg,
-                                            MicroAPI::AddrReg& addrReg, xAddParams& params);
+                                            Reg::MaskReg& maskRegUpdate, Reg::RegTensor<VGatherIndexDTypeInt>& serReg,
+                                            Reg::AddrReg& addrReg, xAddParams& params);
 
 private:
     AscendC::GlobalTensor<X_T> xGm_;
@@ -141,54 +140,53 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Proce
 template <typename X_T, typename IDS_T, typename CAST_T, uint32_t castType>
 template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
 __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::ProcessPerXGroup(
-    __ubuf__ X_T* xLocalAddr, __ubuf__ X_T* resBufAddr, MicroAPI::MaskReg& maskRegUpdate,
-    MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, xAddParams& params)
+    __ubuf__ X_T* xLocalAddr, __ubuf__ X_T* resBufAddr, Reg::MaskReg& maskRegUpdate,
+    Reg::RegTensor<VGatherIndexDTypeInt>& serReg, Reg::AddrReg& addrReg, xAddParams& params)
 {
     if constexpr (IsSameType<VGatherIndexDType, uint16_t>::value) {
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg1;
-        MicroAPI::RegTensor<uint32_t> tmReg;
-        MicroAPI::RegTensor<X_T> gatherOut;
-        MicroAPI::RegTensor<X_T> outReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<X_T, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg maskRegU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        Reg::RegTensor<VGatherIndexDType> initIdsReg1;
+        Reg::RegTensor<uint32_t> tmReg;
+        Reg::RegTensor<X_T> gatherOut;
+        Reg::RegTensor<X_T> outReg;
+        Reg::MaskReg maskReg = Reg::CreateMask<X_T, Reg::MaskPattern::ALL>();
+        Reg::MaskReg maskRegU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(outReg, (X_T)0, maskReg);
+        Reg::Duplicate(outReg, (X_T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
-                tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>(tmReg,
+                                                                  params.sortedIdxAddr + (params.outGmIndex + pIdx));
 
-            MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg,
-                                                                maskRegU32);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::HIGHEST>(
-                (MicroAPI::RegTensor<uint16_t>&)initIdsReg, (MicroAPI::RegTensor<uint32_t>&)tmReg);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                (MicroAPI::RegTensor<uint16_t>&)initIdsReg1, (MicroAPI::RegTensor<uint32_t>&)tmReg);
-            MicroAPI::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
-            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
-            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
-            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+            Reg::Cast<uint16_t, uint32_t, castTraitU32U16>((Reg::RegTensor<uint16_t>&)tmReg, tmReg, maskRegU32);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::HIGHEST>((Reg::RegTensor<uint16_t>&)initIdsReg,
+                                                                     (Reg::RegTensor<uint32_t>&)tmReg);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)initIdsReg1,
+                                                                    (Reg::RegTensor<uint32_t>&)tmReg);
+            Reg::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
+            Reg::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            Reg::Add(idsReg, (Reg::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            Reg::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
+            Reg::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
+        Reg::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
     } else {
-        MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
-        MicroAPI::RegTensor<X_T> gatherOut;
-        MicroAPI::RegTensor<X_T> outReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<X_T, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
+        Reg::RegTensor<X_T> gatherOut;
+        Reg::RegTensor<X_T> outReg;
+        Reg::MaskReg maskReg = Reg::CreateMask<X_T, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(outReg, (X_T)0, maskReg);
+        Reg::Duplicate(outReg, (X_T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
-                (MicroAPI::RegTensor<uint32_t>&)initIdsReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
-            MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
-            MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
-            MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>((Reg::RegTensor<uint32_t>&)initIdsReg,
+                                                                  params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            Reg::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
+            Reg::Add(idsReg, (Reg::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
+            Reg::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
+            Reg::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
+        Reg::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
     }
 }
 
@@ -218,19 +216,19 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Compu
     __VEC_SCOPE__
     {
         for (uint16_t i = 0; i < (uint16_t)arNum; ++i) {
-            MicroAPI::RegTensor<VGatherIndexDTypeInt> serReg;
-            MicroAPI::RegTensor<VGatherIndexDTypeInt> serRegBase;
+            Reg::RegTensor<VGatherIndexDTypeInt> serReg;
+            Reg::RegTensor<VGatherIndexDTypeInt> serRegBase;
 
-            MicroAPI::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
+            Reg::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
 
             params.segCount = static_cast<uint16_t>(noDupRes(i));
 
             uint32_t colCount = cols;
             resBufAddr = resBufBaseAddr + i * colsAlign;
             for (uint16_t j = 0; j < (uint16_t)loopPerRow; ++j) {
-                MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<VGatherIndexDType>(colCount);
-                auto addrReg = MicroAPI::CreateAddrReg<X_T>(j, static_cast<uint16_t>(vfLengthX_));
-                MicroAPI::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLengthX_ * j), maskRegUpdate);
+                Reg::MaskReg maskRegUpdate = Reg::UpdateMask<VGatherIndexDType>(colCount);
+                auto addrReg = Reg::CreateAddrReg<X_T>(j, static_cast<uint16_t>(vfLengthX_));
+                Reg::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLengthX_ * j), maskRegUpdate);
                 ProcessPerXGroup<VGatherIndexDType, VGatherIndexDTypeInt>(xLocalAddr, resBufAddr, maskRegUpdate, serReg,
                                                                           addrReg, params);
             }

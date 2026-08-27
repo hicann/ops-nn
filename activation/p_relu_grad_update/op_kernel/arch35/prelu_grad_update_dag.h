@@ -39,31 +39,31 @@ struct PReluGradDxCustom : public Vec::ElemwiseTernaryOP<T, T, T, T> {
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* src2Addr = (__ubuf__ T*)src2.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputFeatures;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputWeights;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputGradients;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorOutputDx;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputZero;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputFeatures;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputWeights;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputGradients;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorOutputDx;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputZero;
 
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMaskReg;
         __VEC_SCOPE__
         {
-            MicroAPI::Duplicate(vRegTensorInputZero, FP32_ZERO);
+            Reg::Duplicate(vRegTensorInputZero, FP32_ZERO);
             uint32_t sregMask = count;
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(sregMask);
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(sregMask);
                 // OpCopyIn
-                MicroAPI::DataCopy(vRegTensorInputGradients, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                MicroAPI::DataCopy(vRegTensorInputFeatures, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                MicroAPI::DataCopy(vRegTensorInputWeights, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                Reg::DataCopy(vRegTensorInputGradients, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                Reg::DataCopy(vRegTensorInputFeatures, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                Reg::DataCopy(vRegTensorInputWeights, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
 
                 // compute
-                MicroAPI::Mul(vRegTensorOutputDx, vRegTensorInputWeights, vRegTensorInputGradients, mask);
-                MicroAPI::Compare<T, CMPMODE::GT>(cmpMaskReg, vRegTensorInputFeatures, vRegTensorInputZero, mask);
-                MicroAPI::Select<T>(vRegTensorOutputDx, vRegTensorInputGradients, vRegTensorOutputDx, cmpMaskReg);
+                Reg::Mul(vRegTensorOutputDx, vRegTensorInputWeights, vRegTensorInputGradients, mask);
+                Reg::Compare<T, CMPMODE::GT>(cmpMaskReg, vRegTensorInputFeatures, vRegTensorInputZero, mask);
+                Reg::Select<T>(vRegTensorOutputDx, vRegTensorInputGradients, vRegTensorOutputDx, cmpMaskReg);
                 // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vRegTensorOutputDx, mask);
+                Reg::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vRegTensorOutputDx, mask);
             }
         }
 #endif
@@ -83,29 +83,29 @@ struct PReluGradDaCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
         __ubuf__ T* src0Addr = (__ubuf__ T*)src0.GetPhyAddr();
         __ubuf__ T* src1Addr = (__ubuf__ T*)src1.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputFeatures;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputGradients;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorOutputDa;
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vRegTensorInputZero;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputFeatures;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputGradients;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorOutputDa;
+        Reg::RegTensor<T, Reg::RegTraitNumOne> vRegTensorInputZero;
 
-        MicroAPI::MaskReg mask;
-        MicroAPI::MaskReg cmpMaskReg;
+        Reg::MaskReg mask;
+        Reg::MaskReg cmpMaskReg;
         __VEC_SCOPE__
         {
-            MicroAPI::Duplicate(vRegTensorInputZero, FP32_ZERO);
+            Reg::Duplicate(vRegTensorInputZero, FP32_ZERO);
             uint32_t sregMask = count;
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(sregMask);
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(sregMask);
                 // OpCopyIn
-                MicroAPI::DataCopy(vRegTensorInputGradients, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                MicroAPI::DataCopy(vRegTensorInputFeatures, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                Reg::DataCopy(vRegTensorInputGradients, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                Reg::DataCopy(vRegTensorInputFeatures, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
 
                 // compute
-                MicroAPI::Mul(vRegTensorOutputDa, vRegTensorInputFeatures, vRegTensorInputGradients, mask);
-                MicroAPI::Compare<T, CMPMODE::GT>(cmpMaskReg, vRegTensorInputFeatures, vRegTensorInputZero, mask);
-                MicroAPI::Select<T>(vRegTensorOutputDa, vRegTensorInputZero, vRegTensorOutputDa, cmpMaskReg);
+                Reg::Mul(vRegTensorOutputDa, vRegTensorInputFeatures, vRegTensorInputGradients, mask);
+                Reg::Compare<T, CMPMODE::GT>(cmpMaskReg, vRegTensorInputFeatures, vRegTensorInputZero, mask);
+                Reg::Select<T>(vRegTensorOutputDa, vRegTensorInputZero, vRegTensorOutputDa, cmpMaskReg);
                 // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vRegTensorOutputDa, mask);
+                Reg::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vRegTensorOutputDa, mask);
             }
         }
 #endif

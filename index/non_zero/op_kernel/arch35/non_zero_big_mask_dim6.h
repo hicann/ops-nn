@@ -20,8 +20,8 @@
 
 namespace NonZero {
 using namespace AscendC;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 template <typename T1, typename T2>
 class NonZeroBigMaskDim6 : public NonZeroBigMask<T1, T2> {
@@ -88,16 +88,16 @@ __aicore__ inline void NonZeroBigMaskDim6<T1, T2>::ComputeOutput(LocalTensor<int
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg preg;
-        AscendC::MicroAPI::RegTensor<uint32_t> srcReg, subReg, shapeReg;
-        AscendC::MicroAPI::RegTensor<uint32_t> mulReg, mReg;
-        AscendC::MicroAPI::RegTensor<uint32_t> divReg0, divReg1;
+        AscendC::Reg::MaskReg preg;
+        AscendC::Reg::RegTensor<uint32_t> srcReg, subReg, shapeReg;
+        AscendC::Reg::RegTensor<uint32_t> mulReg, mReg;
+        AscendC::Reg::RegTensor<uint32_t> divReg0, divReg1;
 
         // 处理2维
         uint32_t sreg = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
+            preg = AscendC::Reg::UpdateMask<int32_t>(sreg);
+            AscendC::Reg::AddrReg vagReg = AscendC::Reg::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(srcPtr, dstPtr0, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
                                         mReg, divReg0, divReg1, dim0SValue, dim0MValue, dim0KValue);
         }
@@ -105,8 +105,8 @@ __aicore__ inline void NonZeroBigMaskDim6<T1, T2>::ComputeOutput(LocalTensor<int
         // 处理3维
         sreg = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
+            preg = AscendC::Reg::UpdateMask<int32_t>(sreg);
+            AscendC::Reg::AddrReg vagReg = AscendC::Reg::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(dstLastPtr, dstPtr1, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
                                         mReg, divReg0, divReg1, dim1SValue, dim1MValue, dim1KValue);
         }
@@ -114,8 +114,8 @@ __aicore__ inline void NonZeroBigMaskDim6<T1, T2>::ComputeOutput(LocalTensor<int
         // 处理4维
         sreg = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
+            preg = AscendC::Reg::UpdateMask<int32_t>(sreg);
+            AscendC::Reg::AddrReg vagReg = AscendC::Reg::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(dstLastPtr, dstPtr2, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
                                         mReg, divReg0, divReg1, dim2SValue, dim2MValue, dim2KValue);
         }
@@ -123,8 +123,8 @@ __aicore__ inline void NonZeroBigMaskDim6<T1, T2>::ComputeOutput(LocalTensor<int
         // 处理5维
         sreg = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
+            preg = AscendC::Reg::UpdateMask<int32_t>(sreg);
+            AscendC::Reg::AddrReg vagReg = AscendC::Reg::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(dstLastPtr, dstPtr3, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
                                         mReg, divReg0, divReg1, dim3SValue, dim3MValue, dim3KValue);
         }
@@ -132,8 +132,8 @@ __aicore__ inline void NonZeroBigMaskDim6<T1, T2>::ComputeOutput(LocalTensor<int
         // 处理6维
         sreg = num;
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
+            preg = AscendC::Reg::UpdateMask<int32_t>(sreg);
+            AscendC::Reg::AddrReg vagReg = AscendC::Reg::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(dstLastPtr, dstPtr4, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
                                         mReg, divReg0, divReg1, dim4SValue, dim4MValue, dim4KValue);
         }

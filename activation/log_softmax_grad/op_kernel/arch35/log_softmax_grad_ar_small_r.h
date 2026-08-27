@@ -28,13 +28,13 @@
 
 namespace LogSoftmaxGradOps {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
+using AscendC::Reg::LoadDist;
+using AscendC::Reg::MaskMergeMode;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::StoreDist;
 
 template <typename T>
 class LogSoftmaxGradARSmallR {
@@ -189,12 +189,11 @@ private:
                     Sub(gradReg, gradReg, xReg, pregMask);
 
                     if constexpr (xToFp32_) {
-                        MicroAPI::StoreAlign(tmpAddrTy + xOffset, gradReg, pregMask);
+                        Reg::StoreAlign(tmpAddrTy + xOffset, gradReg, pregMask);
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
-                        MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
-                        MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16,
-                                                                                    pregMask);
+                        Reg::Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
+                        Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
                     }
                 }
             }

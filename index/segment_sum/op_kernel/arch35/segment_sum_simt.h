@@ -104,43 +104,41 @@ __aicore__ inline int32_t SegmentSumSimt<TX, Index>::GetUniqueSegIdCount(uint32_
     uint32_t offset = platform::GetUbBlockSize() / sizeof(Index);
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-        AscendC::MicroAPI::RegTensor<int32_t> selReg;
-        AscendC::MicroAPI::RegTensor<Index> indicesReg;
-        AscendC::MicroAPI::RegTensor<Index> indicesShiftOneReg;
-        AscendC::MicroAPI::MaskReg cmpMask;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignRegForLoad u0;
-        MicroAPI::UnalignRegForStore ureg;
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+        AscendC::Reg::RegTensor<int32_t> orderReg;
+        AscendC::Reg::RegTensor<int32_t> selReg;
+        AscendC::Reg::RegTensor<Index> indicesReg;
+        AscendC::Reg::RegTensor<Index> indicesShiftOneReg;
+        AscendC::Reg::MaskReg cmpMask;
+        AscendC::Reg::MaskReg maskRegUpdate;
+        AscendC::Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore ureg;
+        AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
         int32_t vciStart = 0;
         for (uint16_t i = 0; i < loopCnt; ++i) {
             vciStart = i * vl;
             auto segIdsOffset = segmentIdsAddr + offset + i * vl;
-            AscendC::MicroAPI::Arange(orderReg, vciStart);
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<Index>(maskCount);
-            AscendC::MicroAPI::LoadAlign(indicesReg, segIdsOffset);
-            AscendC::MicroAPI::LoadUnAlignPre(u0, segIdsOffset - 1);
-            AscendC::MicroAPI::LoadUnAlign<Index>(indicesShiftOneReg, u0, segIdsOffset - 1);
-            AscendC::MicroAPI::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
+            AscendC::Reg::Arange(orderReg, vciStart);
+            maskRegUpdate = AscendC::Reg::UpdateMask<Index>(maskCount);
+            AscendC::Reg::LoadAlign(indicesReg, segIdsOffset);
+            AscendC::Reg::LoadUnAlignPre(u0, segIdsOffset - 1);
+            AscendC::Reg::LoadUnAlign<Index>(indicesShiftOneReg, u0, segIdsOffset - 1);
+            AscendC::Reg::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
 
             if constexpr (IsSameType<Index, int64_t>::value) {
-                AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+                AscendC::Reg::MaskReg maskHalf;
+                AscendC::Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskHalf, cmpMask);
                 // vSQZ
-                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                  maskHalf);
+                AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
             } else {
                 // vSQZ
-                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                  cmpMask);
+                AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
             }
-            AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(segIdsPosAddr,
-                                                                                                       selReg, ureg);
+            AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(segIdsPosAddr, selReg,
+                                                                                             ureg);
         }
-        AscendC::MicroAPI::StoreUnAlignPost(segIdsPosAddr, ureg);
+        AscendC::Reg::StoreUnAlignPost(segIdsPosAddr, ureg);
     }
-    return ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
+    return ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
 }
 
 template <typename TX, typename Index>

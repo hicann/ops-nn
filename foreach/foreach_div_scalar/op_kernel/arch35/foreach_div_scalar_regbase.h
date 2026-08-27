@@ -70,13 +70,13 @@ public:
         }
         __VEC_SCOPE__
         {
-            MicroAPI::MaskReg maskReg;
-            MicroAPI::RegTensor<float> tensorOneRegToFloat;
-            MicroAPI::RegTensor<float> outReg;
+            Reg::MaskReg maskReg;
+            Reg::RegTensor<float> tensorOneRegToFloat;
+            Reg::RegTensor<float> outReg;
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = MicroAPI::UpdateMask<float>(sreg);
+                maskReg = Reg::UpdateMask<float>(sreg);
                 ops::LoadOneTensorForDtypeT<T>(tensorOneUbAddr, tensorOneRegToFloat, maskReg, i * dataCountPerLoop);
-                MicroAPI::Muls(outReg, tensorOneRegToFloat, invScalarVal, maskReg);
+                Reg::Muls(outReg, tensorOneRegToFloat, invScalarVal, maskReg);
                 ops::StoreOneTensorForDtypeT<T>(outUbAddr, outReg, maskReg, i * dataCountPerLoop);
             }
         }

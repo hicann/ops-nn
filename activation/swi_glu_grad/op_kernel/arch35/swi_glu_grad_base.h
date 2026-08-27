@@ -30,11 +30,11 @@ constexpr uint32_t ONE_VL_SIZE = platform::GetVRegSize();
 
 __aicore__ inline uint32_t RoundDownToVL(uint32_t x) { return x / ONE_VL_SIZE * ONE_VL_SIZE; }
 
-static constexpr MicroAPI::CastTrait castTraitB162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait castTraitB162B32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-static constexpr MicroAPI::CastTrait castTraitB322B16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitB322B16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
 class SwiGluGradBaseKernel {
@@ -43,10 +43,10 @@ public:
     __aicore__ inline bool InitBase(const GluBaseTilingData& tilingData);
 
 protected:
-    __aicore__ inline void LoadOneTensor(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
-                                         MicroAPI::MaskReg& preg, uint32_t offset);
-    __aicore__ inline void StoreOneTensor(const __ubuf__ void* output, MicroAPI::RegTensor<float>& src,
-                                          MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void LoadOneTensor(const __ubuf__ void* input, Reg::RegTensor<float>& dst, Reg::MaskReg& preg,
+                                         uint32_t offset);
+    __aicore__ inline void StoreOneTensor(const __ubuf__ void* output, Reg::RegTensor<float>& src, Reg::MaskReg& preg,
+                                          uint32_t offset);
     __aicore__ inline void Compute(LocalTensor<T>& xATensor, LocalTensor<T>& xBTensor, LocalTensor<T>& gradTensor,
                                    LocalTensor<T>& outATensor, LocalTensor<T>& outBTensor, int64_t dataCount);
 
@@ -114,17 +114,16 @@ __aicore__ inline bool SwiGluGradBaseKernel<T>::InitBase(const GluBaseTilingData
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradBaseKernel<T>::LoadOneTensor(const __ubuf__ void* input,
-                                                              MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg,
-                                                              uint32_t offset)
+__aicore__ inline void SwiGluGradBaseKernel<T>::LoadOneTensor(const __ubuf__ void* input, Reg::RegTensor<float>& dst,
+                                                              Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        Reg::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input) + offset);
+        Reg::RegTensor<half> xFp16;
+        Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
-        Reg::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
+        Reg::RegTensor<bfloat16_t> xBf16;
+        Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
         Reg::LoadAlign(dst, (__ubuf__ float*)(input) + offset);
@@ -132,19 +131,18 @@ __aicore__ inline void SwiGluGradBaseKernel<T>::LoadOneTensor(const __ubuf__ voi
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradBaseKernel<T>::StoreOneTensor(const __ubuf__ void* output,
-                                                               MicroAPI::RegTensor<float>& src, MicroAPI::MaskReg& preg,
-                                                               uint32_t offset)
+__aicore__ inline void SwiGluGradBaseKernel<T>::StoreOneTensor(const __ubuf__ void* output, Reg::RegTensor<float>& src,
+                                                               Reg::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
+        Reg::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        Reg::StoreAlign<half, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ half*)(output) + offset, xFp16, preg);
+        Reg::StoreAlign<half, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        MicroAPI::RegTensor<bfloat16_t> xBf16;
+        Reg::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        Reg::StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ bfloat16_t*)(output) + offset, xBf16,
-                                                                        preg);
+        Reg::StoreAlign<bfloat16_t, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ bfloat16_t*)(output) + offset, xBf16,
+                                                                   preg);
     } else {
         Reg::StoreAlign((__ubuf__ float*)(output) + offset, src, preg);
     }
@@ -168,14 +166,14 @@ __aicore__ inline void SwiGluGradBaseKernel<T>::Compute(LocalTensor<T>& xATensor
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<float> srcA;
-        MicroAPI::RegTensor<float> srcB;
-        MicroAPI::RegTensor<float> grad;
-        MicroAPI::RegTensor<float> dstA;
-        MicroAPI::RegTensor<float> dstB;
-        MicroAPI::RegTensor<float> tempReg;
+        Reg::RegTensor<float> srcA;
+        Reg::RegTensor<float> srcB;
+        Reg::RegTensor<float> grad;
+        Reg::RegTensor<float> dstA;
+        Reg::RegTensor<float> dstB;
+        Reg::RegTensor<float> tempReg;
 
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<float>(calcCount);
+        Reg::MaskReg preg = Reg::UpdateMask<float>(calcCount);
 
         for (uint16_t i = 0; i < repeatTimes; i++) {
             uint32_t offset = i * vfFp32Block_;

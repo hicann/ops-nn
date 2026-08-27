@@ -33,7 +33,7 @@ using namespace AscendC;
 constexpr uint32_t SCALAR_SLICE1_CAP = 8192;
 constexpr SortConfig scatterSortConfig{SortType::RADIX_SORT, false}; // radix sort of int32 index keys
 
-// Subword (int8/uint8) <-> int32 conversion via MicroAPI. High-level Cast<int32,int8> is broken on
+// Subword (int8/uint8) <-> int32 conversion via Reg. High-level Cast<int32,int8> is broken on
 // dav_3510 (produces garbage for signed int8); the established ops-nn pattern is UNPACK4_B8 (widen,
 // sign-correct by the RegTensor<T> type) and PACK4_B32 (narrow, low-byte/wrapping). Mirrors
 // scatter_add_common.h CastToInt32 / CastToOrigin.
@@ -46,16 +46,16 @@ __aicore__ inline void SubwordWidenToI32(const LocalTensor<int32_t>& dst, const 
     uint16_t loopTimes = (n + VL_B32 - 1) / VL_B32;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<T> srcValue;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<T> srcValue;
+        Reg::MaskReg preg;
         uint32_t sregMask = n;
         for (uint16_t i = 0; i < loopTimes; i++) {
-            auto dstReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
-            auto srcReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
-            preg = MicroAPI::UpdateMask<int32_t>(sregMask);
-            MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr, srcReg);
-            MicroAPI::DataCopy<int32_t, MicroAPI::StoreDist::DIST_NORM>(
-                dstAddr, (MicroAPI::RegTensor<int32_t>&)srcValue, dstReg, preg);
+            auto dstReg = Reg::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
+            auto srcReg = Reg::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
+            preg = Reg::UpdateMask<int32_t>(sregMask);
+            Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr, srcReg);
+            Reg::DataCopy<int32_t, Reg::StoreDist::DIST_NORM>(dstAddr, (Reg::RegTensor<int32_t>&)srcValue, dstReg,
+                                                              preg);
         }
     }
 }
@@ -69,16 +69,15 @@ __aicore__ inline void SubwordNarrowFromI32(const LocalTensor<T>& dst, const Loc
     uint16_t loopTimes = (n + VL_B32 - 1) / VL_B32;
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int32_t> srcValue;
-        MicroAPI::MaskReg preg;
+        Reg::RegTensor<int32_t> srcValue;
+        Reg::MaskReg preg;
         uint32_t sregMask = n;
         for (uint16_t i = 0; i < loopTimes; i++) {
-            auto srcReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
-            auto dstReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
-            preg = MicroAPI::UpdateMask<int32_t>(sregMask);
-            MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr, srcReg);
-            MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK4_B32>(dstAddr, (MicroAPI::RegTensor<T>&)srcValue,
-                                                                       dstReg, preg);
+            auto srcReg = Reg::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
+            auto dstReg = Reg::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
+            preg = Reg::UpdateMask<int32_t>(sregMask);
+            Reg::DataCopy<int32_t, Reg::LoadDist::DIST_NORM>(srcValue, srcAddr, srcReg);
+            Reg::DataCopy<T, Reg::StoreDist::DIST_PACK4_B32>(dstAddr, (Reg::RegTensor<T>&)srcValue, dstReg, preg);
         }
     }
 }

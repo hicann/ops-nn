@@ -119,10 +119,10 @@ public:
         __VEC_SCOPE__
         {
             for (uint16_t i = 0; i < (uint16_t)arNum; ++i) {
-                MicroAPI::RegTensor<int32_t> serReg;
-                MicroAPI::RegTensor<int32_t> serRegBase;
+                Reg::RegTensor<int32_t> serReg;
+                Reg::RegTensor<int32_t> serRegBase;
 
-                MicroAPI::Arange(serRegBase, sclar0);
+                Reg::Arange(serRegBase, sclar0);
 
                 gradParams.segCount = static_cast<uint32_t>(noDupRes(i));
                 gradParams.loopSegCount = static_cast<uint32_t>(noDupResProcessLoop(i));
@@ -131,8 +131,8 @@ public:
                 colCount = gradPerRowNum;
                 resBufAddr = resBufBaseAddr + i * gradFactorPerRowAlign_;
                 for (uint16_t j = 0; j < (uint16_t)loopPerGradRow; ++j) {
-                    MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<uint32_t>(colCount);
-                    MicroAPI::Adds(serReg, serRegBase, perVfIndicesIdx_ * j, maskRegUpdate);
+                    Reg::MaskReg maskRegUpdate = Reg::UpdateMask<uint32_t>(colCount);
+                    Reg::Adds(serReg, serRegBase, perVfIndicesIdx_ * j, maskRegUpdate);
                     this->template ProcessPerGradGroup<T, T, VGatherIndexDType, true, isScale>(
                         gradLocalAddr, resBufAddr, maskRegUpdate, serReg, gradParams);
                     gradParams.ubOutOffset = gradParams.ubOutOffset + vfLengthFp32_;

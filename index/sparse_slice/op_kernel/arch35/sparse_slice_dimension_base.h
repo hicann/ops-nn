@@ -431,105 +431,100 @@ __aicore__ inline void SparseSliceDimension<T>::CompareMultiDim(const LocalTenso
     __VEC_SCOPE__
     {
         uint16_t rankNum = rn;
-        MicroAPI::RegTensor<int64_t> vregInputOne;
-        MicroAPI::RegTensor<int64_t> vregInputTwo;
+        Reg::RegTensor<int64_t> vregInputOne;
+        Reg::RegTensor<int64_t> vregInputTwo;
 
-        MicroAPI::RegTensor<uint32_t> vregLowerBoundLowerHalf;
-        MicroAPI::RegTensor<int32_t> vregLowerBoundHigherHalf;
-        MicroAPI::RegTensor<uint32_t> vregUpperBoundLowerHalf;
-        MicroAPI::RegTensor<int32_t> vregUpperBoundHigherHalf;
+        Reg::RegTensor<uint32_t> vregLowerBoundLowerHalf;
+        Reg::RegTensor<int32_t> vregLowerBoundHigherHalf;
+        Reg::RegTensor<uint32_t> vregUpperBoundLowerHalf;
+        Reg::RegTensor<int32_t> vregUpperBoundHigherHalf;
 
-        MicroAPI::RegTensor<int32_t> vregInputLowerHalf; // defined as int32, but use as uint32 in comparison
-        MicroAPI::RegTensor<int32_t> vregInputHigherHalf;
+        Reg::RegTensor<int32_t> vregInputLowerHalf; // defined as int32, but use as uint32 in comparison
+        Reg::RegTensor<int32_t> vregInputHigherHalf;
 
-        MicroAPI::RegTensor<int8_t> vregInMask;
-        MicroAPI::RegTensor<int8_t> vregOutMask;
-        MicroAPI::RegTensor<int32_t> vregZeros;
+        Reg::RegTensor<int8_t> vregInMask;
+        Reg::RegTensor<int8_t> vregOutMask;
+        Reg::RegTensor<int32_t> vregZeros;
 
-        MicroAPI::RegTensor<int32_t> vregCounterIn;
-        MicroAPI::RegTensor<int32_t> reduceResult;
+        Reg::RegTensor<int32_t> vregCounterIn;
+        Reg::RegTensor<int32_t> reduceResult;
 
-        MicroAPI::MaskReg flagHigherEqual;
-        MicroAPI::MaskReg flagHigherCmp;
-        MicroAPI::MaskReg flagLowerCmp;
-        MicroAPI::MaskReg flagResultB32;
-        MicroAPI::MaskReg flagResultB32Two;
-        MicroAPI::MaskReg pregB32All = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregB32First = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::VL1>();
-        MicroAPI::MaskReg pregIndicesB32;
+        Reg::MaskReg flagHigherEqual;
+        Reg::MaskReg flagHigherCmp;
+        Reg::MaskReg flagLowerCmp;
+        Reg::MaskReg flagResultB32;
+        Reg::MaskReg flagResultB32Two;
+        Reg::MaskReg pregB32All = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
+        Reg::MaskReg pregB32First = Reg::CreateMask<int32_t, Reg::MaskPattern::VL1>();
+        Reg::MaskReg pregIndicesB32;
 
-        MicroAPI::Duplicate<int32_t>(vregZeros, 0);
+        Reg::Duplicate<int32_t>(vregZeros, 0);
 
         for (uint16_t dim = 0; dim < rankNum; dim++) {
             uint32_t sreg0 = count;
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>(
                 vregLowerBoundLowerHalf, (__ubuf__ uint32_t*)(sliceStartAddr) + dim * DIGIT_TWO);
-            MicroAPI::LoadAlign<int32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            Reg::LoadAlign<int32_t, Reg::LoadDist::DIST_BRC_B32>(
                 vregLowerBoundHigherHalf, (__ubuf__ int32_t*)(sliceStartAddr) + dim * DIGIT_TWO + 1);
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
-                vregUpperBoundLowerHalf, (__ubuf__ uint32_t*)(sliceEndAddr) + dim * DIGIT_TWO);
-            MicroAPI::LoadAlign<int32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>(vregUpperBoundLowerHalf,
+                                                                  (__ubuf__ uint32_t*)(sliceEndAddr) + dim * DIGIT_TWO);
+            Reg::LoadAlign<int32_t, Reg::LoadDist::DIST_BRC_B32>(
                 vregUpperBoundHigherHalf, (__ubuf__ int32_t*)(sliceEndAddr) + dim * DIGIT_TWO + 1);
 
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
             for (uint16_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
                 // use b32 updatemask since there's twice copyin of int64 from ub to register
-                pregIndicesB32 = MicroAPI::UpdateMask<int32_t>(sreg0);
-                MicroAPI::LoadAlign(vregInputOne,
-                                    (__ubuf__ int64_t*)(indicesUbAddr + dim * offsetPerLoop + loopIndex * vl));
-                MicroAPI::LoadAlign(vregInputTwo,
-                                    (__ubuf__ int64_t*)(indicesUbAddr + dim * offsetPerLoop + loopIndex * vl + vlSize));
+                pregIndicesB32 = Reg::UpdateMask<int32_t>(sreg0);
+                Reg::LoadAlign(vregInputOne, (__ubuf__ int64_t*)(indicesUbAddr + dim * offsetPerLoop + loopIndex * vl));
+                Reg::LoadAlign(vregInputTwo,
+                               (__ubuf__ int64_t*)(indicesUbAddr + dim * offsetPerLoop + loopIndex * vl + vlSize));
 
                 // copyin b8 mask and unpack it to b32 mask
-                MicroAPI::LoadAlign<int8_t, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
-                    vregInMask, (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
+                Reg::LoadAlign<int8_t, Reg::LoadDist::DIST_UNPACK4_B8>(vregInMask,
+                                                                       (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
 
                 // split lower part and higher part to compare
-                MicroAPI::DeInterleave<int32_t>(vregInputLowerHalf, vregInputHigherHalf,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInputOne,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInputTwo);
+                Reg::DeInterleave<int32_t>(vregInputLowerHalf, vregInputHigherHalf,
+                                           (Reg::RegTensor<int32_t>&)vregInputOne,
+                                           (Reg::RegTensor<int32_t>&)vregInputTwo);
                 // lower bound compare
-                MicroAPI::Compare<uint32_t, CMPMODE::GE>(flagLowerCmp,
-                                                         (MicroAPI::RegTensor<uint32_t>&)vregInputLowerHalf,
-                                                         vregLowerBoundLowerHalf, pregB32All);
-                MicroAPI::Compare<int32_t, CMPMODE::GE>(flagHigherCmp, vregInputHigherHalf, vregLowerBoundHigherHalf,
-                                                        pregB32All);
-                MicroAPI::Compare<int32_t, CMPMODE::EQ>(flagHigherEqual, vregInputHigherHalf, vregLowerBoundHigherHalf,
-                                                        pregB32All);
-                MicroAPI::Select(flagResultB32, flagLowerCmp, flagHigherCmp, flagHigherEqual);
+                Reg::Compare<uint32_t, CMPMODE::GE>(flagLowerCmp, (Reg::RegTensor<uint32_t>&)vregInputLowerHalf,
+                                                    vregLowerBoundLowerHalf, pregB32All);
+                Reg::Compare<int32_t, CMPMODE::GE>(flagHigherCmp, vregInputHigherHalf, vregLowerBoundHigherHalf,
+                                                   pregB32All);
+                Reg::Compare<int32_t, CMPMODE::EQ>(flagHigherEqual, vregInputHigherHalf, vregLowerBoundHigherHalf,
+                                                   pregB32All);
+                Reg::Select(flagResultB32, flagLowerCmp, flagHigherCmp, flagHigherEqual);
                 // upper bound compare
-                MicroAPI::Compare<uint32_t, CMPMODE::LT>(flagLowerCmp,
-                                                         (MicroAPI::RegTensor<uint32_t>&)vregInputLowerHalf,
-                                                         vregUpperBoundLowerHalf, pregB32All);
-                MicroAPI::Compare<int32_t, CMPMODE::LT>(flagHigherCmp, vregInputHigherHalf, vregUpperBoundHigherHalf,
-                                                        pregB32All);
-                MicroAPI::Compare<int32_t, CMPMODE::EQ>(flagHigherEqual, vregInputHigherHalf, vregUpperBoundHigherHalf,
-                                                        pregB32All);
-                MicroAPI::Select(flagResultB32Two, flagLowerCmp, flagHigherCmp, flagHigherEqual);
+                Reg::Compare<uint32_t, CMPMODE::LT>(flagLowerCmp, (Reg::RegTensor<uint32_t>&)vregInputLowerHalf,
+                                                    vregUpperBoundLowerHalf, pregB32All);
+                Reg::Compare<int32_t, CMPMODE::LT>(flagHigherCmp, vregInputHigherHalf, vregUpperBoundHigherHalf,
+                                                   pregB32All);
+                Reg::Compare<int32_t, CMPMODE::EQ>(flagHigherEqual, vregInputHigherHalf, vregUpperBoundHigherHalf,
+                                                   pregB32All);
+                Reg::Select(flagResultB32Two, flagLowerCmp, flagHigherCmp, flagHigherEqual);
 
-                MicroAPI::And(flagResultB32, flagResultB32, flagResultB32Two, pregIndicesB32);
+                Reg::And(flagResultB32, flagResultB32, flagResultB32Two, pregIndicesB32);
 
-                MicroAPI::Select((MicroAPI::RegTensor<int32_t>&)vregOutMask, (MicroAPI::RegTensor<int32_t>&)vregInMask,
-                                 vregZeros, flagResultB32);
-                MicroAPI::StoreAlign<int8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl), vregOutMask, pregIndicesB32);
+                Reg::Select((Reg::RegTensor<int32_t>&)vregOutMask, (Reg::RegTensor<int32_t>&)vregInMask, vregZeros,
+                            flagResultB32);
+                Reg::StoreAlign<int8_t, Reg::StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl),
+                                                                        vregOutMask, pregIndicesB32);
             }
         }
         // reduce part
-        AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+        AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
         uint32_t sreg0 = count;
-        MicroAPI::LoadAlign<int32_t, MicroAPI::LoadDist::DIST_NORM>(vregCounterIn, (__ubuf__ int32_t*)(counterUbAddr));
+        Reg::LoadAlign<int32_t, Reg::LoadDist::DIST_NORM>(vregCounterIn, (__ubuf__ int32_t*)(counterUbAddr));
         for (uint16_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-            pregIndicesB32 = MicroAPI::UpdateMask<int32_t>(sreg0);
-            MicroAPI::LoadAlign<int8_t, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
-                vregInMask, (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
-            MicroAPI::Reduce<ReduceType::SUM, int32_t>(reduceResult, (MicroAPI::RegTensor<int32_t>&)vregInMask,
-                                                       pregIndicesB32);
-            MicroAPI::Add(vregCounterIn, vregCounterIn, reduceResult, pregB32First);
+            pregIndicesB32 = Reg::UpdateMask<int32_t>(sreg0);
+            Reg::LoadAlign<int8_t, Reg::LoadDist::DIST_UNPACK4_B8>(vregInMask,
+                                                                   (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
+            Reg::Reduce<ReduceType::SUM, int32_t>(reduceResult, (Reg::RegTensor<int32_t>&)vregInMask, pregIndicesB32);
+            Reg::Add(vregCounterIn, vregCounterIn, reduceResult, pregB32First);
         }
-        MicroAPI::StoreAlign<int32_t, MicroAPI::StoreDist::DIST_NORM>((__ubuf__ int32_t*)(counterUbAddr), vregCounterIn,
-                                                                      pregB32First);
+        Reg::StoreAlign<int32_t, Reg::StoreDist::DIST_NORM>((__ubuf__ int32_t*)(counterUbAddr), vregCounterIn,
+                                                            pregB32First);
     } // vf ends
 }
 
@@ -653,101 +648,101 @@ __aicore__ inline void SparseSliceDimension<T>::GatherIndicesMultiDim(__ubuf__ i
     __VEC_SCOPE__
     {
         // clear special AR for GatherMask
-        MicroAPI::RegTensor<int64_t> vregInputOne;
-        MicroAPI::RegTensor<int64_t> vregInputTwo;
+        Reg::RegTensor<int64_t> vregInputOne;
+        Reg::RegTensor<int64_t> vregInputTwo;
 
-        MicroAPI::RegTensor<uint32_t> vregLowerBoundLowerHalf;
-        MicroAPI::RegTensor<int32_t> vregLowerBoundHigherHalf;
+        Reg::RegTensor<uint32_t> vregLowerBoundLowerHalf;
+        Reg::RegTensor<int32_t> vregLowerBoundHigherHalf;
 
-        MicroAPI::RegTensor<uint32_t> vregInputLowerHalf;
-        MicroAPI::RegTensor<int32_t> vregInputHigherHalf;
+        Reg::RegTensor<uint32_t> vregInputLowerHalf;
+        Reg::RegTensor<int32_t> vregInputHigherHalf;
 
-        MicroAPI::RegTensor<uint32_t> vregInputSubLower;
-        MicroAPI::RegTensor<int32_t> vregInputSubHigher;
+        Reg::RegTensor<uint32_t> vregInputSubLower;
+        Reg::RegTensor<int32_t> vregInputSubHigher;
 
-        MicroAPI::RegTensor<int32_t> vregGatherLowerHalf;
-        MicroAPI::RegTensor<int32_t> vregGatherHigherHalf;
+        Reg::RegTensor<int32_t> vregGatherLowerHalf;
+        Reg::RegTensor<int32_t> vregGatherHigherHalf;
 
-        MicroAPI::RegTensor<int32_t> vregGatherOutput0;
-        MicroAPI::RegTensor<int32_t> vregGatherOutput1;
-        MicroAPI::RegTensor<int32_t> vregGatherResult0;
-        MicroAPI::RegTensor<int32_t> vregGatherResult1;
+        Reg::RegTensor<int32_t> vregGatherOutput0;
+        Reg::RegTensor<int32_t> vregGatherOutput1;
+        Reg::RegTensor<int32_t> vregGatherResult0;
+        Reg::RegTensor<int32_t> vregGatherResult1;
 
-        MicroAPI::RegTensor<int8_t> vregInMask;
-        MicroAPI::RegTensor<int32_t> vregInMaskGathered;
+        Reg::RegTensor<int8_t> vregInMask;
+        Reg::RegTensor<int32_t> vregInMaskGathered;
 
-        MicroAPI::RegTensor<int32_t> vregOnes;
+        Reg::RegTensor<int32_t> vregOnes;
 
-        MicroAPI::MaskReg pregIndices;
-        MicroAPI::MaskReg pregSelect;
-        MicroAPI::MaskReg carryOut;
-        MicroAPI::MaskReg pregSelectFinal0;
-        MicroAPI::MaskReg pregSelectFinal1;
+        Reg::MaskReg pregIndices;
+        Reg::MaskReg pregSelect;
+        Reg::MaskReg carryOut;
+        Reg::MaskReg pregSelectFinal0;
+        Reg::MaskReg pregSelectFinal1;
 
-        MicroAPI::MaskReg pregGathered;
-        MicroAPI::MaskReg pregGatheredTwo;
+        Reg::MaskReg pregGathered;
+        Reg::MaskReg pregGatheredTwo;
 
         uint16_t rankNum = rn;
-        MicroAPI::UnalignRegForStore ureg0;
+        Reg::UnalignRegForStore ureg0;
 
-        MicroAPI::Duplicate(vregOnes, 1);
+        Reg::Duplicate(vregOnes, 1);
 
         for (uint16_t dim = 0; dim < rankNum; dim++) {
-            MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
+            Reg::ClearSpr<SpecialPurposeReg::AR>();
             uint32_t sreg0 = count;
             __ubuf__ int64_t* yIndicesCurDimAddr = (__ubuf__ int64_t*)(yIndicesUbAddr) + dim * count;
-            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            Reg::LoadAlign<uint32_t, Reg::LoadDist::DIST_BRC_B32>(
                 vregLowerBoundLowerHalf, (__ubuf__ uint32_t*)(sliceStartAddr) + dim * DIGIT_TWO);
-            MicroAPI::LoadAlign<int32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            Reg::LoadAlign<int32_t, Reg::LoadDist::DIST_BRC_B32>(
                 vregLowerBoundHigherHalf, (__ubuf__ int32_t*)(sliceStartAddr) + dim * DIGIT_TWO + 1);
-            carryOut = MicroAPI::CreateMask<uint8_t>();
+            carryOut = Reg::CreateMask<uint8_t>();
             for (uint16_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-                pregIndices = MicroAPI::UpdateMask<int32_t>(sreg0);
-                MicroAPI::LoadAlign(vregInputOne, (__ubuf__ int64_t*)(indicesUbAddr + dim * count + loopIndex * vl));
-                MicroAPI::LoadAlign(vregInputTwo,
-                                    (__ubuf__ int64_t*)(indicesUbAddr + dim * count + loopIndex * vl + vlSize));
-                MicroAPI::LoadAlign<int8_t, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
-                    vregInMask, (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
-                MicroAPI::Compare<int32_t, CMPMODE::EQ>(pregSelect, (MicroAPI::RegTensor<int32_t>&)vregInMask, vregOnes,
-                                                        pregIndices);
+                pregIndices = Reg::UpdateMask<int32_t>(sreg0);
+                Reg::LoadAlign(vregInputOne, (__ubuf__ int64_t*)(indicesUbAddr + dim * count + loopIndex * vl));
+                Reg::LoadAlign(vregInputTwo,
+                               (__ubuf__ int64_t*)(indicesUbAddr + dim * count + loopIndex * vl + vlSize));
+                Reg::LoadAlign<int8_t, Reg::LoadDist::DIST_UNPACK4_B8>(vregInMask,
+                                                                       (__ubuf__ int8_t*)(maskUbAddr + loopIndex * vl));
+                Reg::Compare<int32_t, CMPMODE::EQ>(pregSelect, (Reg::RegTensor<int32_t>&)vregInMask, vregOnes,
+                                                   pregIndices);
 
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::NO_STORE_REG>(
-                    vregInMaskGathered, (MicroAPI::RegTensor<int32_t>&)vregInMask, pregSelect);
-                MicroAPI::Compare<int32_t, CMPMODE::EQ>(pregGathered, vregInMaskGathered, vregOnes, pregIndices);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::NO_STORE_REG>(
+                    vregInMaskGathered, (Reg::RegTensor<int32_t>&)vregInMask, pregSelect);
+                Reg::Compare<int32_t, CMPMODE::EQ>(pregGathered, vregInMaskGathered, vregOnes, pregIndices);
 
                 // deinterleave -> gathermask -> interleave to implement b64 gathermask
-                MicroAPI::DeInterleave<int32_t>((MicroAPI::RegTensor<int32_t>&)vregInputLowerHalf, vregInputHigherHalf,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInputOne,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInputTwo);
+                Reg::DeInterleave<int32_t>((Reg::RegTensor<int32_t>&)vregInputLowerHalf, vregInputHigherHalf,
+                                           (Reg::RegTensor<int32_t>&)vregInputOne,
+                                           (Reg::RegTensor<int32_t>&)vregInputTwo);
 
                 // do int64 sub before gathermask
-                MicroAPI::Sub(carryOut, vregInputLowerHalf, vregInputLowerHalf, vregLowerBoundLowerHalf, pregSelect);
-                MicroAPI::SubC(carryOut, vregInputHigherHalf, vregInputHigherHalf, vregLowerBoundHigherHalf, carryOut,
-                               pregSelect);
+                Reg::Sub(carryOut, vregInputLowerHalf, vregInputLowerHalf, vregLowerBoundLowerHalf, pregSelect);
+                Reg::SubC(carryOut, vregInputHigherHalf, vregInputHigherHalf, vregLowerBoundHigherHalf, carryOut,
+                          pregSelect);
 
                 // gather mask
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::NO_STORE_REG>(
-                    vregGatherLowerHalf, (MicroAPI::RegTensor<int32_t>&)vregInputLowerHalf, pregSelect);
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::NO_STORE_REG>(vregGatherHigherHalf,
-                                                                                   vregInputHigherHalf, pregSelect);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::NO_STORE_REG>(
+                    vregGatherLowerHalf, (Reg::RegTensor<int32_t>&)vregInputLowerHalf, pregSelect);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::NO_STORE_REG>(vregGatherHigherHalf, vregInputHigherHalf,
+                                                                         pregSelect);
 
                 // vreg interleave and mask interleave
-                MicroAPI::Interleave<int32_t>(vregGatherResult0, vregGatherResult1, vregGatherLowerHalf,
-                                              vregGatherHigherHalf);
-                MicroAPI::MaskInterleave<int32_t>(pregSelectFinal0, pregSelectFinal1, pregGathered, pregGathered);
+                Reg::Interleave<int32_t>(vregGatherResult0, vregGatherResult1, vregGatherLowerHalf,
+                                         vregGatherHigherHalf);
+                Reg::MaskInterleave<int32_t>(pregSelectFinal0, pregSelectFinal1, pregGathered, pregGathered);
 
                 // additional gathermask to save real copyout data len
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vregGatherOutput0, vregGatherResult0,
-                                                                                pregSelectFinal0);
-                MicroAPI::StoreUnAlign<int64_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    (__ubuf__ int64_t*)(yIndicesCurDimAddr), (MicroAPI::RegTensor<int64_t>&)vregGatherResult0, ureg0);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(vregGatherOutput0, vregGatherResult0,
+                                                                      pregSelectFinal0);
+                Reg::StoreUnAlign<int64_t, Reg::PostLiteral::POST_MODE_UPDATE>(
+                    (__ubuf__ int64_t*)(yIndicesCurDimAddr), (Reg::RegTensor<int64_t>&)vregGatherResult0, ureg0);
 
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vregGatherOutput1, vregGatherResult1,
-                                                                                pregSelectFinal1);
-                MicroAPI::StoreUnAlign<int64_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    (__ubuf__ int64_t*)(yIndicesCurDimAddr), (MicroAPI::RegTensor<int64_t>&)vregGatherResult1, ureg0);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(vregGatherOutput1, vregGatherResult1,
+                                                                      pregSelectFinal1);
+                Reg::StoreUnAlign<int64_t, Reg::PostLiteral::POST_MODE_UPDATE>(
+                    (__ubuf__ int64_t*)(yIndicesCurDimAddr), (Reg::RegTensor<int64_t>&)vregGatherResult1, ureg0);
             }
-            AscendC::MicroAPI::StoreUnAlignPost(yIndicesCurDimAddr, ureg0);
+            AscendC::Reg::StoreUnAlignPost(yIndicesCurDimAddr, ureg0);
         }
     }
 }
@@ -759,22 +754,22 @@ __aicore__ inline void SparseSliceDimension<T>::GatherValues(__ubuf__ int8_t* ma
 {
     uint32_t repeatElm;
     uint32_t sreg0 = count;
-    MicroAPI::RegTensor<T1> vregInput;
-    MicroAPI::RegTensor<int8_t> vregMask;
+    Reg::RegTensor<T1> vregInput;
+    Reg::RegTensor<int8_t> vregMask;
 
-    MicroAPI::RegTensor<int32_t> vregInputLowerHalf;
-    MicroAPI::RegTensor<int32_t> vregInputHigherHalf;
-    MicroAPI::RegTensor<int32_t> vregGatherLowerHalf;
-    MicroAPI::RegTensor<int32_t> vregGatherHigherHalf;
-    MicroAPI::RegTensor<int32_t> vregGatherTemp;
-    MicroAPI::RegTensor<T1> vregGathered;
+    Reg::RegTensor<int32_t> vregInputLowerHalf;
+    Reg::RegTensor<int32_t> vregInputHigherHalf;
+    Reg::RegTensor<int32_t> vregGatherLowerHalf;
+    Reg::RegTensor<int32_t> vregGatherHigherHalf;
+    Reg::RegTensor<int32_t> vregGatherTemp;
+    Reg::RegTensor<T1> vregGathered;
 
-    MicroAPI::MaskReg pregInput;
-    MicroAPI::MaskReg pregCompare;
-    MicroAPI::MaskReg pregSelectB8;
-    MicroAPI::MaskReg pregSelected;
-    MicroAPI::MaskReg pregSelectFinal1;
-    MicroAPI::MaskReg pregSelectFinal2;
+    Reg::MaskReg pregInput;
+    Reg::MaskReg pregCompare;
+    Reg::MaskReg pregSelectB8;
+    Reg::MaskReg pregSelected;
+    Reg::MaskReg pregSelectFinal1;
+    Reg::MaskReg pregSelectFinal2;
 
     if constexpr (sizeof(T1) == sizeof(int8_t)) {
         repeatElm = repeatElmB8_;
@@ -789,59 +784,58 @@ __aicore__ inline void SparseSliceDimension<T>::GatherValues(__ubuf__ int8_t* ma
 
     __VEC_SCOPE__
     {
-        MicroAPI::UnalignRegForStore ureg0;
-        AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
+        Reg::UnalignRegForStore ureg0;
+        AscendC::Reg::ClearSpr<SpecialPurposeReg::AR>();
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-            pregInput = MicroAPI::UpdateMask<T1>(sreg0);
-            MicroAPI::LoadAlign(vregInput, valuesUbAddr + loopIdx * repeatElm);
-            MicroAPI::LoadAlign(vregMask, maskUbAddr + loopIdx * repeatElm);
+            pregInput = Reg::UpdateMask<T1>(sreg0);
+            Reg::LoadAlign(vregInput, valuesUbAddr + loopIdx * repeatElm);
+            Reg::LoadAlign(vregMask, maskUbAddr + loopIdx * repeatElm);
             if constexpr (sizeof(T1) == sizeof(int8_t)) {
                 pregCompare = pregInput;
             } else if constexpr (sizeof(T1) == sizeof(int16_t)) {
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregInput);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregInput);
             } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregInput);
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregCompare);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregInput);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregCompare);
             } else if constexpr (sizeof(T1) == sizeof(int64_t)) {
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregInput);
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregCompare);
-                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregCompare, pregCompare);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregInput);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregCompare);
+                Reg::Pack<Reg::HighLowPart::LOWEST>(pregCompare, pregCompare);
             }
-            MicroAPI::Compares<int8_t, CMPMODE::EQ>(pregSelectB8, vregMask, (int8_t)1, pregCompare);
+            Reg::Compares<int8_t, CMPMODE::EQ>(pregSelectB8, vregMask, (int8_t)1, pregCompare);
             if constexpr (sizeof(T1) == sizeof(int64_t)) {
-                MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
-                MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(pregSelected, pregSelected);
-                MicroAPI::DeInterleave<int32_t>(vregInputLowerHalf, vregInputHigherHalf,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInput,
-                                                (MicroAPI::RegTensor<int32_t>&)vregInput);
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::NO_STORE_REG>(vregGatherLowerHalf,
-                                                                                   vregInputLowerHalf, pregSelected);
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::NO_STORE_REG>(vregGatherHigherHalf,
-                                                                                   vregInputHigherHalf, pregSelected);
-                MicroAPI::Interleave<int32_t>((MicroAPI::RegTensor<int32_t>&)vregGathered, vregGatherTemp,
-                                              vregGatherLowerHalf, vregGatherHigherHalf);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(pregSelected, pregSelected);
+                Reg::DeInterleave<int32_t>(vregInputLowerHalf, vregInputHigherHalf, (Reg::RegTensor<int32_t>&)vregInput,
+                                           (Reg::RegTensor<int32_t>&)vregInput);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::NO_STORE_REG>(vregGatherLowerHalf, vregInputLowerHalf,
+                                                                         pregSelected);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::NO_STORE_REG>(vregGatherHigherHalf, vregInputHigherHalf,
+                                                                         pregSelected);
+                Reg::Interleave<int32_t>((Reg::RegTensor<int32_t>&)vregGathered, vregGatherTemp, vregGatherLowerHalf,
+                                         vregGatherHigherHalf);
             } else if constexpr (sizeof(T1) == sizeof(int8_t)) {
                 pregSelected = pregSelectB8;
             } else if constexpr (sizeof(T1) == sizeof(int16_t)) {
-                MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
             } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
-                MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
-                MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(pregSelected, pregSelected);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(pregSelected, pregSelectB8);
+                Reg::UnPack<Reg::HighLowPart::LOWEST>(pregSelected, pregSelected);
             }
             if constexpr (sizeof(T1) == sizeof(int64_t)) {
-                MicroAPI::MaskInterleave<int32_t>(pregSelectFinal1, pregSelectFinal2, pregSelected, pregSelected);
-                MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vregGatherTemp, vregInputHigherHalf,
-                                                                                pregSelectFinal1);
-                MicroAPI::StoreUnAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    yValuesUbAddr, (MicroAPI::RegTensor<T1>&)vregGathered, ureg0);
+                Reg::MaskInterleave<int32_t>(pregSelectFinal1, pregSelectFinal2, pregSelected, pregSelected);
+                Reg::Squeeze<int32_t, Reg::GatherMaskMode::STORE_REG>(vregGatherTemp, vregInputHigherHalf,
+                                                                      pregSelectFinal1);
+                Reg::StoreUnAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(yValuesUbAddr,
+                                                                          (Reg::RegTensor<T1>&)vregGathered, ureg0);
             } else {
-                MicroAPI::Squeeze<T1, MicroAPI::GatherMaskMode::STORE_REG>(vregGathered, vregInput, pregSelected);
-                MicroAPI::StoreUnAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yValuesUbAddr, vregGathered, ureg0);
+                Reg::Squeeze<T1, Reg::GatherMaskMode::STORE_REG>(vregGathered, vregInput, pregSelected);
+                Reg::StoreUnAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(yValuesUbAddr, vregGathered, ureg0);
             }
         }
-        MicroAPI::StoreUnAlignPost(yValuesUbAddr, ureg0);
+        Reg::StoreUnAlignPost(yValuesUbAddr, ureg0);
     }
-    specialArNum_ = AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>() / sizeof(T1);
+    specialArNum_ = AscendC::Reg::GetSpr<SpecialPurposeReg::AR>() / sizeof(T1);
 }
 
 template <typename T>
@@ -881,35 +875,35 @@ __aicore__ inline void SparseSliceDimension<T>::Transpose2D(LocalTensor<int64_t>
 
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<int64_t> vregInput;
-        MicroAPI::RegTensor<int32_t> vregSrcIndex;
-        MicroAPI::RegTensor<int32_t> vregDstIndex;
-        MicroAPI::RegTensor<int64_t> vregDstIndexB64;
-        MicroAPI::RegTensor<int32_t> vreg0;
-        MicroAPI::RegTensor<int32_t> vreg1;
-        MicroAPI::RegTensor<int32_t> vreg2;
-        MicroAPI::RegTensor<int32_t> vreg3;
-        MicroAPI::RegTensor<int32_t> vregCol;
-        MicroAPI::RegTensor<int32_t> vregRow;
-        MicroAPI::MaskReg preg;
-        MicroAPI::MaskReg pregB32;
-        MicroAPI::MaskReg pregB32ALL = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+        Reg::RegTensor<int64_t> vregInput;
+        Reg::RegTensor<int32_t> vregSrcIndex;
+        Reg::RegTensor<int32_t> vregDstIndex;
+        Reg::RegTensor<int64_t> vregDstIndexB64;
+        Reg::RegTensor<int32_t> vreg0;
+        Reg::RegTensor<int32_t> vreg1;
+        Reg::RegTensor<int32_t> vreg2;
+        Reg::RegTensor<int32_t> vreg3;
+        Reg::RegTensor<int32_t> vregCol;
+        Reg::RegTensor<int32_t> vregRow;
+        Reg::MaskReg preg;
+        Reg::MaskReg pregB32;
+        Reg::MaskReg pregB32ALL = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate(vregCol, colNum, pregB32ALL);
-        MicroAPI::Duplicate(vregRow, rowNum, pregB32ALL);
+        Reg::Duplicate(vregCol, colNum, pregB32ALL);
+        Reg::Duplicate(vregRow, rowNum, pregB32ALL);
 
         for (uint16_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-            preg = MicroAPI::UpdateMask<int64_t>(sreg0);
-            MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(pregB32, preg);
-            MicroAPI::LoadAlign(vregInput, yIndicesTransposedAddr + loopIndex * vlSize);
-            MicroAPI::Arange<int32_t>(vregSrcIndex, (int32_t)(loopIndex * vlSize));
-            MicroAPI::Div(vreg0, vregSrcIndex, vregCol, pregB32);
-            MicroAPI::Mul(vreg1, vreg0, vregCol, pregB32);
-            MicroAPI::Sub(vreg2, vregSrcIndex, vreg1, pregB32);
-            MicroAPI::Mul(vreg3, vreg2, vregRow, pregB32);
-            MicroAPI::Add(vregDstIndex, vreg3, vreg0, pregB32);
-            MicroAPI::UnPack<int64_t, int32_t, MicroAPI::HighLowPart::LOWEST>(vregDstIndexB64, vregDstIndex);
-            MicroAPI::Scatter(yIndicesAddr, vregInput, (MicroAPI::RegTensor<uint64_t>&)vregDstIndexB64, preg);
+            preg = Reg::UpdateMask<int64_t>(sreg0);
+            Reg::Pack<Reg::HighLowPart::LOWEST>(pregB32, preg);
+            Reg::LoadAlign(vregInput, yIndicesTransposedAddr + loopIndex * vlSize);
+            Reg::Arange<int32_t>(vregSrcIndex, (int32_t)(loopIndex * vlSize));
+            Reg::Div(vreg0, vregSrcIndex, vregCol, pregB32);
+            Reg::Mul(vreg1, vreg0, vregCol, pregB32);
+            Reg::Sub(vreg2, vregSrcIndex, vreg1, pregB32);
+            Reg::Mul(vreg3, vreg2, vregRow, pregB32);
+            Reg::Add(vregDstIndex, vreg3, vreg0, pregB32);
+            Reg::UnPack<int64_t, int32_t, Reg::HighLowPart::LOWEST>(vregDstIndexB64, vregDstIndex);
+            Reg::Scatter(yIndicesAddr, vregInput, (Reg::RegTensor<uint64_t>&)vregDstIndexB64, preg);
         }
     }
     yIndicesQueue_.EnQue(yIndicesUb);
@@ -928,23 +922,23 @@ __aicore__ inline void SparseSliceDimension<T>::Transpose2D2Dim(LocalTensor<int6
     LocalTensor<int64_t> yIndicesUb = yIndicesQueue_.AllocTensor<int64_t>();
     __ubuf__ int64_t* yIndicesAddr = (__ubuf__ int64_t*)yIndicesUb.GetPhyAddr();
 
-    MicroAPI::RegTensor<int64_t, MicroAPI::RegTraitNumTwo> vregInputDim0;
-    MicroAPI::RegTensor<int64_t, MicroAPI::RegTraitNumTwo> vregInputDim1;
-    MicroAPI::RegTensor<int64_t, MicroAPI::RegTraitNumTwo> vregOutputPart0;
-    MicroAPI::RegTensor<int64_t, MicroAPI::RegTraitNumTwo> vregOutputPart1;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<int64_t, Reg::RegTraitNumTwo> vregInputDim0;
+    Reg::RegTensor<int64_t, Reg::RegTraitNumTwo> vregInputDim1;
+    Reg::RegTensor<int64_t, Reg::RegTraitNumTwo> vregOutputPart0;
+    Reg::RegTensor<int64_t, Reg::RegTraitNumTwo> vregOutputPart1;
+    Reg::MaskReg preg;
 
     __VEC_SCOPE__
     {
         for (uint16_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-            preg = MicroAPI::UpdateMask<int64_t, MicroAPI::RegTraitNumTwo>(sreg0);
-            MicroAPI::LoadAlign(vregInputDim0, yIndicesTransposedAddr + loopIndex * vlSize);
-            MicroAPI::LoadAlign(vregInputDim1, yIndicesTransposedAddr + loopIndex * vlSize + colNum);
-            MicroAPI::Interleave(vregOutputPart0, vregOutputPart1, vregInputDim0, vregInputDim1);
-            MicroAPI::StoreAlign<int64_t, MicroAPI::StoreDist::DIST_NORM>(yIndicesAddr + loopIndex * vlSize * DIGIT_TWO,
-                                                                          vregOutputPart0, preg);
-            MicroAPI::StoreAlign<int64_t, MicroAPI::StoreDist::DIST_NORM>(
-                yIndicesAddr + loopIndex * vlSize * DIGIT_TWO + vlSize, vregOutputPart1, preg);
+            preg = Reg::UpdateMask<int64_t, Reg::RegTraitNumTwo>(sreg0);
+            Reg::LoadAlign(vregInputDim0, yIndicesTransposedAddr + loopIndex * vlSize);
+            Reg::LoadAlign(vregInputDim1, yIndicesTransposedAddr + loopIndex * vlSize + colNum);
+            Reg::Interleave(vregOutputPart0, vregOutputPart1, vregInputDim0, vregInputDim1);
+            Reg::StoreAlign<int64_t, Reg::StoreDist::DIST_NORM>(yIndicesAddr + loopIndex * vlSize * DIGIT_TWO,
+                                                                vregOutputPart0, preg);
+            Reg::StoreAlign<int64_t, Reg::StoreDist::DIST_NORM>(yIndicesAddr + loopIndex * vlSize * DIGIT_TWO + vlSize,
+                                                                vregOutputPart1, preg);
         }
     }
     yIndicesQueue_.EnQue(yIndicesUb);

@@ -57,8 +57,8 @@ constexpr int16_t TILING_ARRAY_LEN = 7;
 constexpr int16_t TWO_TILING_ARRAY_LEN = 14;
 constexpr int16_t THREE_TILING_ARRAY_LEN = 21;
 
-static constexpr MicroAPI::CastTrait castTraitB8B162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                           MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr Reg::CastTrait castTraitB8B162B32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                      Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename COMP_T>
 struct ScatterElementsQuickDivParamDim8 {
@@ -168,19 +168,19 @@ template <typename DATA_T, typename CAST_T>
 __simd_vf__ inline void CastToInt32Vf(__ubuf__ DATA_T* srcAddr, __ubuf__ CAST_T* dstAddr, uint32_t dataLen,
                                       uint16_t loopTimes)
 {
-    MicroAPI::RegTensor<DATA_T> srcValue;
-    MicroAPI::RegTensor<CAST_T> dstValue;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<DATA_T> srcValue;
+    Reg::RegTensor<CAST_T> dstValue;
+    Reg::MaskReg preg;
     uint32_t sregMask = dataLen;
     for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
+        preg = Reg::UpdateMask<uint32_t>(sregMask);
         if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            MicroAPI::LoadAlign<DATA_T, MicroAPI::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
+            Reg::LoadAlign<DATA_T, Reg::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
         } else {
-            MicroAPI::LoadAlign<DATA_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
+            Reg::LoadAlign<DATA_T, Reg::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
         }
-        MicroAPI::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-        MicroAPI::StoreAlign<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
+        Reg::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
+        Reg::StoreAlign<CAST_T, Reg::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
     }
 }
 
@@ -188,18 +188,18 @@ template <typename DATA_T, typename CAST_T>
 __simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ DATA_T* dstAddr, uint32_t dataLen,
                                        uint16_t loopTimes)
 {
-    MicroAPI::RegTensor<CAST_T> srcValue;
-    MicroAPI::MaskReg preg;
+    Reg::RegTensor<CAST_T> srcValue;
+    Reg::MaskReg preg;
     uint32_t sregMask = dataLen;
     for (uint16_t j = 0; j < loopTimes; j++) {
-        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-        MicroAPI::LoadAlign<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
+        preg = Reg::UpdateMask<uint32_t>(sregMask);
+        Reg::LoadAlign<CAST_T, Reg::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
         if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            MicroAPI::StoreAlign<DATA_T, MicroAPI::StoreDist::DIST_PACK_B32>(
-                dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
+            Reg::StoreAlign<DATA_T, Reg::StoreDist::DIST_PACK_B32>(dstAddr + VL_B32 * j,
+                                                                   (Reg::RegTensor<DATA_T>&)srcValue, preg);
         } else {
-            MicroAPI::StoreAlign<DATA_T, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
+            Reg::StoreAlign<DATA_T, Reg::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j,
+                                                                    (Reg::RegTensor<DATA_T>&)srcValue, preg);
         }
     }
 }

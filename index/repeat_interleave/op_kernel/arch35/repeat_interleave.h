@@ -30,31 +30,31 @@ template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount,
                                                uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::UnalignRegForLoad uIn;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-    AscendC::MicroAPI::LoadUnAlignPre(uIn, xInLocalPtr);
-    AscendC::MicroAPI::LoadUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
-                                                                                        xInLocalPtr, dataCount);
+    AscendC::Reg::UnalignRegForLoad uIn;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::RegTensor<T> inputRegTensor;
+    AscendC::Reg::LoadUnAlignPre(uIn, xInLocalPtr);
+    AscendC::Reg::LoadUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn, xInLocalPtr,
+                                                                              dataCount);
     for (uint16_t i = 0; i < repeatTimes; i++) {
-        AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            xOutLocalPtr, inputRegTensor, uOut, dataCount);
+        AscendC::Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, inputRegTensor, uOut,
+                                                                                   dataCount);
     }
-    AscendC::MicroAPI::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
+    AscendC::Reg::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
 __simd_vf__ inline void CopyXToOutNormVf(__ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr,
                                          uint32_t totalBytes, uint16_t size, uint16_t stride)
 {
-    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    AscendC::Reg::RegTensor<int8_t> inputRegTensor;
     uint32_t sreg = totalBytes;
-    AscendC::MicroAPI::MaskReg preg;
+    AscendC::Reg::MaskReg preg;
 
     for (uint16_t i = 0; i < size; i++) {
-        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-        AscendC::MicroAPI::LoadAlign(inputRegTensor, xInLocalPtr, offset);
-        AscendC::MicroAPI::StoreAlign(xOutLocalPtr, inputRegTensor, offset, preg);
+        preg = AscendC::Reg::UpdateMask<int8_t>(sreg);
+        AscendC::Reg::AddrReg offset = AscendC::Reg::CreateAddrReg<int8_t>(i, stride);
+        AscendC::Reg::LoadAlign(inputRegTensor, xInLocalPtr, offset);
+        AscendC::Reg::StoreAlign(xOutLocalPtr, inputRegTensor, offset, preg);
     }
 }
 

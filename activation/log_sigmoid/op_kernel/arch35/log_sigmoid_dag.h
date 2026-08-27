@@ -44,45 +44,45 @@ struct LogSigmoidCustom : public Vec::ElemwiseUnaryOP<T, T> {
         __VEC_SCOPE__
         {
             // init vars
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> x;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> zeroReg;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> xAbs;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> xAbsNeg;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> expRes;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> expResPlusOne;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> expResPlusOneSubOne;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> logExpXPlus1;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> divRes;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> mulRes;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> minRes;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> selectRes;
-            MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> ans;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> x;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> zeroReg;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> xAbs;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> xAbsNeg;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> expRes;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> expResPlusOne;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> expResPlusOneSubOne;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> logExpXPlus1;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> divRes;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> mulRes;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> minRes;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> selectRes;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> ans;
 
-            MicroAPI::MaskReg mask;
-            MicroAPI::MaskReg cmpLog1pPosMaskReg;
+            Reg::MaskReg mask;
+            Reg::MaskReg cmpLog1pPosMaskReg;
 
-            MicroAPI::Duplicate(zeroReg, valZero);
+            Reg::Duplicate(zeroReg, valZero);
 
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 // regCopyIn
-                mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                MicroAPI::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                MicroAPI::Min(minRes, x, zeroReg, mask);        // x1 = min(x, 0)
-                MicroAPI::Abs(xAbs, x, mask);                   // x2 = abs(x)
-                MicroAPI::Muls(xAbsNeg, xAbs, valNegOne, mask); // x3 = -x2
-                MicroAPI::Exp(expRes, xAbsNeg, mask);           // x4 = e^x3
+                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
+                Reg::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                Reg::Min(minRes, x, zeroReg, mask);        // x1 = min(x, 0)
+                Reg::Abs(xAbs, x, mask);                   // x2 = abs(x)
+                Reg::Muls(xAbsNeg, xAbs, valNegOne, mask); // x3 = -x2
+                Reg::Exp(expRes, xAbsNeg, mask);           // x4 = e^x3
                 // log1p
-                MicroAPI::Adds(expResPlusOne, expRes, valPosOne, mask);              // y1 = 1 + x4
-                MicroAPI::Adds(expResPlusOneSubOne, expResPlusOne, valNegOne, mask); // y2 = y1 - 1
-                MicroAPI::Div(divRes, expRes, expResPlusOneSubOne, mask);            // y3 = x4 / y2
-                MicroAPI::Log(logExpXPlus1, expResPlusOne, mask);                    // y4 = log(y1)
-                MicroAPI::Mul(mulRes, logExpXPlus1, divRes, mask);                   // y5 = y4 * y3
-                MicroAPI::Compares<T, CMPMODE::NE>(cmpLog1pPosMaskReg, expResPlusOne, valPosOne, mask);
-                MicroAPI::Select(selectRes, mulRes, expRes, cmpLog1pPosMaskReg); // z1 = select(x4, y5)
-                MicroAPI::Sub(ans, minRes, selectRes, mask);                     // z2 = x1 - z1
+                Reg::Adds(expResPlusOne, expRes, valPosOne, mask);              // y1 = 1 + x4
+                Reg::Adds(expResPlusOneSubOne, expResPlusOne, valNegOne, mask); // y2 = y1 - 1
+                Reg::Div(divRes, expRes, expResPlusOneSubOne, mask);            // y3 = x4 / y2
+                Reg::Log(logExpXPlus1, expResPlusOne, mask);                    // y4 = log(y1)
+                Reg::Mul(mulRes, logExpXPlus1, divRes, mask);                   // y5 = y4 * y3
+                Reg::Compares<T, CMPMODE::NE>(cmpLog1pPosMaskReg, expResPlusOne, valPosOne, mask);
+                Reg::Select(selectRes, mulRes, expRes, cmpLog1pPosMaskReg); // z1 = select(x4, y5)
+                Reg::Sub(ans, minRes, selectRes, mask);                     // z2 = x1 - z1
 
                 // regCopyOut
-                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), ans, mask);
+                Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), ans, mask);
             }
         }
 #endif

@@ -32,19 +32,19 @@ constexpr uint64_t THREE = 3;
 constexpr uint32_t SORT_STAT_PADDING = 64;
 constexpr uint64_t UB_AGLIN_VALUE = 32;
 
-static constexpr MicroAPI::CastTrait castTraitFP322INT32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
-                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFP322INT32 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::SAT,
+                                                       Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-static constexpr MicroAPI::CastTrait castTraitINT322FP32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitINT322FP32 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                       Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
-static constexpr MicroAPI::CastTrait castTraitFP322T = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-                                                        MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr Reg::CastTrait castTraitFP322T = {Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING,
+                                                   RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
+    AscendC::Reg::RegLayout::ZERO,
+    AscendC::Reg::SatMode::UNKNOWN,
+    AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
 };
 
@@ -290,39 +290,37 @@ template <typename U>
 __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ U* sortedIndicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr,
                                              uint32_t vfLen, uint16_t loopCnt, uint32_t counter)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-    AscendC::MicroAPI::RegTensor<U> sortedIdxReg;
-    AscendC::MicroAPI::RegTensor<U> sortedIdxShiftOneReg;
-    AscendC::MicroAPI::RegTensor<int32_t> selReg0;
-    AscendC::MicroAPI::MaskReg cmpMask;
-    AscendC::MicroAPI::MaskReg maskRegUpdate;
-    AscendC::MicroAPI::UnalignRegForLoad u0;
-    AscendC::MicroAPI::UnalignRegForLoad u1;
-    AscendC::MicroAPI::UnalignRegForStore ureg0;
-    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    AscendC::Reg::RegTensor<int32_t> orderReg;
+    AscendC::Reg::RegTensor<U> sortedIdxReg;
+    AscendC::Reg::RegTensor<U> sortedIdxShiftOneReg;
+    AscendC::Reg::RegTensor<int32_t> selReg0;
+    AscendC::Reg::MaskReg cmpMask;
+    AscendC::Reg::MaskReg maskRegUpdate;
+    AscendC::Reg::UnalignRegForLoad u0;
+    AscendC::Reg::UnalignRegForLoad u1;
+    AscendC::Reg::UnalignRegForStore ureg0;
+    AscendC::Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
     for (uint16_t i = 0; i < loopCnt; ++i) {
-        AscendC::MicroAPI::Arange(orderReg, i * vfLen);
-        maskRegUpdate = AscendC::MicroAPI::UpdateMask<U>(counter);
+        AscendC::Reg::Arange(orderReg, i * vfLen);
+        maskRegUpdate = AscendC::Reg::UpdateMask<U>(counter);
         auto startAddr = sortedIndicesAddr + i * vfLen;
-        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(u1, startAddr - 1);
-        AscendC::MicroAPI::LoadUnAlign<U>(sortedIdxShiftOneReg, u1, startAddr - 1);
+        AscendC::Reg::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(u1, startAddr - 1);
+        AscendC::Reg::LoadUnAlign<U>(sortedIdxShiftOneReg, u1, startAddr - 1);
 
-        AscendC::MicroAPI::Compare<U, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskRegUpdate);
+        AscendC::Reg::Compare<U, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskRegUpdate);
         if constexpr (std::is_same<int64_t, U>::value) {
-            AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
-                                                                                              maskHalf);
+            AscendC::Reg::MaskReg maskHalf;
+            AscendC::Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg0, orderReg, maskHalf);
         } else {
-            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
-                                                                                              cmpMask);
+            AscendC::Reg::Squeeze<int32_t, AscendC::Reg::GatherMaskMode::STORE_REG>(selReg0, orderReg, cmpMask);
         }
 
-        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr,
-                                                                                                   selReg0, ureg0);
+        AscendC::Reg::StoreUnAlign<int32_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr, selReg0,
+                                                                                         ureg0);
     }
-    AscendC::MicroAPI::StoreUnAlignPost(uniqueIdCountsAddr, ureg0);
+    AscendC::Reg::StoreUnAlignPost(uniqueIdCountsAddr, ureg0);
 }
 
 template <typename T, typename U, uint32_t scatterOp>
@@ -342,7 +340,7 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniq
 
     ComputeUniqueIdNumVf(sortedIndicesAddr, uniqueIdCountsAddr, vfLen, loopCnt, counter);
 
-    uniqueIdNum_ = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
+    uniqueIdNum_ = ((AscendC::Reg::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     event_t eventS2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventS2V);
     WaitFlag<HardEvent::V_S>(eventS2V);
@@ -358,22 +356,22 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniq
 __simd_vf__ inline void ComputeUinqueIdTimesVf(__ubuf__ int32_t* uniqueIdCountsAddr, uint32_t uniqueIdNum,
                                                uint32_t vfLen, uint16_t loopSize)
 {
-    AscendC::MicroAPI::RegTensor<int32_t> preReg;
-    AscendC::MicroAPI::RegTensor<int32_t> postReg;
-    AscendC::MicroAPI::RegTensor<int32_t> subReg;
-    AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::UnalignRegForLoad uIn;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::UnalignRegForLoad uInShift;
+    AscendC::Reg::RegTensor<int32_t> preReg;
+    AscendC::Reg::RegTensor<int32_t> postReg;
+    AscendC::Reg::RegTensor<int32_t> subReg;
+    AscendC::Reg::MaskReg maskReg;
+    AscendC::Reg::UnalignRegForLoad uIn;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::UnalignRegForLoad uInShift;
     for (uint16_t i = 0; i < loopSize; ++i) {
-        maskReg = AscendC::MicroAPI::UpdateMask<uint32_t>(uniqueIdNum);
+        maskReg = AscendC::Reg::UpdateMask<uint32_t>(uniqueIdNum);
         auto startAddr = uniqueIdCountsAddr + i * vfLen;
         auto startAddrOfstOne = startAddr + 1;
-        AscendC::MicroAPI::LoadAlign(preReg, startAddr);
-        AscendC::MicroAPI::LoadUnAlignPre(uInShift, startAddrOfstOne);
-        AscendC::MicroAPI::LoadUnAlign<int32_t>(postReg, uInShift, startAddrOfstOne, vfLen);
-        AscendC::MicroAPI::Sub(subReg, postReg, preReg, maskReg);
-        AscendC::MicroAPI::StoreAlign(startAddr, subReg, maskReg);
+        AscendC::Reg::LoadAlign(preReg, startAddr);
+        AscendC::Reg::LoadUnAlignPre(uInShift, startAddrOfstOne);
+        AscendC::Reg::LoadUnAlign<int32_t>(postReg, uInShift, startAddrOfstOne, vfLen);
+        AscendC::Reg::Sub(subReg, postReg, preReg, maskReg);
+        AscendC::Reg::StoreAlign(startAddr, subReg, maskReg);
     }
 }
 
@@ -400,40 +398,39 @@ __simd_vf__ inline void ComputeSumVf(__ubuf__ T* updatesAddr, __ubuf__ float* up
     int32_t idLocation = 0;
 
     for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
-        AscendC::MicroAPI::RegTensor<float> sumReg;
-        AscendC::MicroAPI::RegTensor<T> tmpReg;
-        AscendC::MicroAPI::RegTensor<T> dstReg1;
-        AscendC::MicroAPI::RegTensor<T> dstReg2;
-        AscendC::MicroAPI::RegTensor<float> tmpRegB32;
-        AscendC::MicroAPI::MaskReg
-            maskReg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        MicroAPI::UnalignRegForLoad u0;
-        AscendC::MicroAPI::UnalignRegForStore uOut;
-        AscendC::MicroAPI::MaskReg maskReg1;
+        AscendC::Reg::RegTensor<float> sumReg;
+        AscendC::Reg::RegTensor<T> tmpReg;
+        AscendC::Reg::RegTensor<T> dstReg1;
+        AscendC::Reg::RegTensor<T> dstReg2;
+        AscendC::Reg::RegTensor<float> tmpRegB32;
+        AscendC::Reg::MaskReg maskReg = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+        Reg::UnalignRegForLoad u0;
+        AscendC::Reg::UnalignRegForStore uOut;
+        AscendC::Reg::MaskReg maskReg1;
         uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
         for (uint16_t j = 0; j < loopSize; ++j) {
-            maskReg1 = AscendC::MicroAPI::UpdateMask<int32_t>(maskLen);
-            AscendC::MicroAPI::Duplicate(sumReg, (float)0, maskReg);
+            maskReg1 = AscendC::Reg::UpdateMask<int32_t>(maskLen);
+            AscendC::Reg::Duplicate(sumReg, (float)0, maskReg);
             for (uint16_t k = 0; k < idRepeatTimes; k++) {
                 auto updatesOffet = updatesOriginIdexAddr[idLocation + k] * totalCol + j * vfLen;
                 auto startAddr = updatesAddr + updatesOffet;
-                AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr);
-                AscendC::MicroAPI::LoadUnAlign<T>(tmpReg, u0, startAddr, vfLen);
+                AscendC::Reg::LoadUnAlignPre(u0, startAddr);
+                AscendC::Reg::LoadUnAlign<T>(tmpReg, u0, startAddr, vfLen);
                 if constexpr (std::is_same<half, T>::value) {
                     Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
                     Cast<float, half, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
-                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
+                    AscendC::Reg::Add(sumReg, sumReg, tmpRegB32, maskReg1);
                 } else if constexpr (std::is_same<bfloat16_t, T>::value) {
                     Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
                     Cast<float, bfloat16_t, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
-                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
+                    AscendC::Reg::Add(sumReg, sumReg, tmpRegB32, maskReg1);
                 } else {
-                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpReg, maskReg1);
+                    AscendC::Reg::Add(sumReg, sumReg, tmpReg, maskReg1);
                 }
             }
             auto sumOffset = i * postVarAlignSizeFp32 + j * vfLen;
             auto curUpdateSumAddr = updateSumAddr + sumOffset;
-            AscendC::MicroAPI::StoreAlign(curUpdateSumAddr, sumReg, maskReg1);
+            AscendC::Reg::StoreAlign(curUpdateSumAddr, sumReg, maskReg1);
         }
         idLocation += idRepeatTimes;
     }
@@ -593,30 +590,30 @@ __simd_vf__ inline void QuantizeForSumVf(uint64_t postVarAlignSizeFp32, uint64_t
                                          __ubuf__ float* updateSumAddr, __ubuf__ float* updatesRValueAddr,
                                          __ubuf__ int* updateSumIntAddr)
 {
-    AscendC::MicroAPI::RegTensor<float> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rReg;
-    AscendC::MicroAPI::RegTensor<float> resReg;
-    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-    AscendC::MicroAPI::RegTensor<float> oneReg;
-    AscendC::MicroAPI::MaskReg cmpReg;
-    AscendC::MicroAPI::Duplicate(oneReg, (float)1);
-    AscendC::MicroAPI::MaskReg pregLoop;
+    AscendC::Reg::RegTensor<float> dataReg;
+    AscendC::Reg::RegTensor<float> rReg;
+    AscendC::Reg::RegTensor<float> resReg;
+    AscendC::Reg::RegTensor<int32_t> scaleReg;
+    AscendC::Reg::RegTensor<float> oneReg;
+    AscendC::Reg::MaskReg cmpReg;
+    AscendC::Reg::Duplicate(oneReg, (float)1);
+    AscendC::Reg::MaskReg pregLoop;
     float scaling = static_cast<float>(1 << 30);
 
     for (uint16_t i = 0; i < loopCnt; i++) {
-        pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+        pregLoop = AscendC::Reg::UpdateMask<float>(maskLen);
         auto sumOffset = updateSumAddr + curRowIdx * postVarAlignSizeFp32 + i * vfLen;
         auto rValueOffset = updatesRValueAddr + i * vfLen;
         auto sumIntOffset = updateSumIntAddr + i * vfLen;
-        AscendC::MicroAPI::LoadAlign(dataReg, sumOffset);
-        AscendC::MicroAPI::LoadAlign(rReg, rValueOffset);
+        AscendC::Reg::LoadAlign(dataReg, sumOffset);
+        AscendC::Reg::LoadAlign(rReg, rValueOffset);
         Muls(rReg, rReg, (float)RCountsValue, pregLoop);
-        AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
+        AscendC::Reg::Compares<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
         Select(rReg, oneReg, rReg, cmpReg);
         Div(resReg, dataReg, rReg, pregLoop);
         Muls(resReg, resReg, scaling, pregLoop);
         Cast<int32_t, float, castTraitFP322INT32>(scaleReg, resReg, pregLoop);
-        AscendC::MicroAPI::StoreAlign(sumIntOffset, scaleReg, pregLoop);
+        AscendC::Reg::StoreAlign(sumIntOffset, scaleReg, pregLoop);
     }
 }
 
@@ -706,39 +703,38 @@ __simd_vf__ inline void DeQuantizeForSumVf(uint64_t postVarAlignSizeFp32, uint64
                                            __ubuf__ int32_t* updateSumIntAddr)
 {
     float scaling = static_cast<float>(1 << 30);
-    AscendC::MicroAPI::RegTensor<float> dataReg;
-    AscendC::MicroAPI::RegTensor<float> rReg;
-    AscendC::MicroAPI::RegTensor<float> resRegFp32;
-    AscendC::MicroAPI::RegTensor<T> resReg;
-    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-    AscendC::MicroAPI::MaskReg pregLoop;
-    AscendC::MicroAPI::MaskReg maskReg = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::UnalignRegForLoad uIn;
-    AscendC::MicroAPI::UnalignRegForStore uOut;
-    AscendC::MicroAPI::RegTensor<float> oneReg;
-    AscendC::MicroAPI::MaskReg cmpReg;
-    AscendC::MicroAPI::Duplicate(oneReg, (float)1);
-    AscendC::MicroAPI::Duplicate(dataReg, scaling, maskReg);
+    AscendC::Reg::RegTensor<float> dataReg;
+    AscendC::Reg::RegTensor<float> rReg;
+    AscendC::Reg::RegTensor<float> resRegFp32;
+    AscendC::Reg::RegTensor<T> resReg;
+    AscendC::Reg::RegTensor<int32_t> scaleReg;
+    AscendC::Reg::MaskReg pregLoop;
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::UnalignRegForLoad uIn;
+    AscendC::Reg::UnalignRegForStore uOut;
+    AscendC::Reg::RegTensor<float> oneReg;
+    AscendC::Reg::MaskReg cmpReg;
+    AscendC::Reg::Duplicate(oneReg, (float)1);
+    AscendC::Reg::Duplicate(dataReg, scaling, maskReg);
 
     auto sumIntOffset = updateSumIntAddr + curRowIdx * postVarAlignSizeFp32;
     auto rValueOffset = updatesRValueAddr;
     auto sumResOffset = updateSumAddr;
     for (uint16_t i = 0; i < loopCnt; ++i) {
-        pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
-        AscendC::MicroAPI::LoadAlign(scaleReg, sumIntOffset + i * vfLen);
-        AscendC::MicroAPI::LoadAlign(rReg, rValueOffset + i * vfLen);
+        pregLoop = AscendC::Reg::UpdateMask<float>(maskLen);
+        AscendC::Reg::LoadAlign(scaleReg, sumIntOffset + i * vfLen);
+        AscendC::Reg::LoadAlign(rReg, rValueOffset + i * vfLen);
         Muls(rReg, rReg, (float)RCountsValue, pregLoop);
-        AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
+        AscendC::Reg::Compares<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
         Select(rReg, oneReg, rReg, cmpReg);
         Cast<float, int, castTraitINT322FP32>(resRegFp32, scaleReg, pregLoop);
         Mul(resRegFp32, resRegFp32, rReg, pregLoop);
         Div(resRegFp32, resRegFp32, dataReg, pregLoop);
         if constexpr (!std::is_same<float, T>::value) {
             Cast<T, float, castTraitFP322T>(resReg, resRegFp32, pregLoop);
-            AscendC::MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(sumResOffset + i * vfLen, resReg,
-                                                                                 pregLoop);
+            AscendC::Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>(sumResOffset + i * vfLen, resReg, pregLoop);
         } else {
-            AscendC::MicroAPI::StoreAlign(sumResOffset + i * vfLen, resRegFp32, pregLoop);
+            AscendC::Reg::StoreAlign(sumResOffset + i * vfLen, resRegFp32, pregLoop);
         }
     }
 }

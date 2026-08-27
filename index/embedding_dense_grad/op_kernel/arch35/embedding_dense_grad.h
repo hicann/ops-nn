@@ -185,9 +185,9 @@ public:
         __VEC_SCOPE__
         {
             for (uint16_t i = 0; i < (uint16_t)arNum; ++i) {
-                MicroAPI::RegTensor<int32_t> serReg, serRegBase;
+                Reg::RegTensor<int32_t> serReg, serRegBase;
 
-                MicroAPI::Arange(serRegBase, sclar0);
+                Reg::Arange(serRegBase, sclar0);
 
                 gradParams.segCount = static_cast<uint32_t>(noDupRes(i));
                 gradParams.loopSegCount = static_cast<uint32_t>(noDupResProcessLoop(i));
@@ -197,8 +197,8 @@ public:
                 resBufAddr = resBufBaseAddr + i * gradFactorPerRowAlign_;
 
                 for (uint16_t j = 0; j < (uint16_t)loopPerGradRow; ++j) {
-                    MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<uint32_t>(colCount);
-                    MicroAPI::Adds(serReg, serRegBase, perVfIndicesIdx_ * j, maskRegUpdate);
+                    Reg::MaskReg maskRegUpdate = Reg::UpdateMask<uint32_t>(colCount);
+                    Reg::Adds(serReg, serRegBase, perVfIndicesIdx_ * j, maskRegUpdate);
                     this->template ProcessPerGradGroup<T, float, VGatherIndexDType>(gradLocalAddr, resBufAddr,
                                                                                     maskRegUpdate, serReg, gradParams);
                     gradParams.ubOutOffset = gradParams.ubOutOffset + vfLengthFp32_;
@@ -258,16 +258,15 @@ public:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<int32_t> freqReg, indexDstReg;
-            MicroAPI::MaskReg maskFull = MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Arange(indexDstReg, (int32_t)0);
-            MicroAPI::Muls(indexDstReg, indexDstReg, interval, maskFull);
+            Reg::RegTensor<int32_t> freqReg, indexDstReg;
+            Reg::MaskReg maskFull = Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
+            Reg::Arange(indexDstReg, (int32_t)0);
+            Reg::Muls(indexDstReg, indexDstReg, interval, maskFull);
 
             for (uint16_t i = 0; i < loopNum; ++i) {
-                MicroAPI::MaskReg mask = MicroAPI::UpdateMask<uint32_t>(uniqueIndexNum);
-                MicroAPI::LoadAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, noDupResAddr,
-                                                                                      perVfIndicesIdx_);
-                MicroAPI::Scatter(resultAddr, freqReg, (MicroAPI::RegTensor<uint32_t>&)indexDstReg, mask);
+                Reg::MaskReg mask = Reg::UpdateMask<uint32_t>(uniqueIndexNum);
+                Reg::LoadAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(freqReg, noDupResAddr, perVfIndicesIdx_);
+                Reg::Scatter(resultAddr, freqReg, (Reg::RegTensor<uint32_t>&)indexDstReg, mask);
 
                 resultAddr = resultAddr + resultOffset;
             }
@@ -353,15 +352,15 @@ public:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<float> srcReg;
-            MicroAPI::MaskReg maskUpdate;
+            Reg::RegTensor<float> srcReg;
+            Reg::MaskReg maskUpdate;
             for (uint16_t i = 0; i < static_cast<uint16_t>(indicesNum); i++) {
                 uint32_t colCount = gradPerRowNum;
                 __ubuf__ float* gradFp32Addr = gradFp32BaseAddr + i * gradPerRowAlign;
                 __ubuf__ T* resBufAddr = resBufBaseAddr + i * resultPerRowAlign;
                 uint32_t offset = 0;
                 for (uint16_t j = 0; j < loopPerRow; j++) {
-                    maskUpdate = MicroAPI::UpdateMask<int32_t>(colCount);
+                    maskUpdate = Reg::UpdateMask<int32_t>(colCount);
                     ops::LoadOneTensorForDtypeT(gradFp32Addr, srcReg, maskUpdate, offset);
                     ops::StoreOneTensorForDtypeT(resBufAddr, srcReg, maskUpdate, offset);
                     offset = offset + vfLengthFp32_;

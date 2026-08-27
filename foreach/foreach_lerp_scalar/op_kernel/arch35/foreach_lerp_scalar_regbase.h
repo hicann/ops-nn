@@ -22,9 +22,9 @@
 
 namespace ForeachLerpScalar {
 using namespace AscendC;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::UpdateMask;
 constexpr int32_t VL_SIZE = platform::GetVRegSize();
 constexpr float FLOAT_NUM_NEG = -0.5f;
 constexpr float FLOAT_NUM_POS = 0.5f;

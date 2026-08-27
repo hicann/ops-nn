@@ -19,7 +19,7 @@
 #include "unique_consecutive_constant.h"
 
 using namespace AscendC;
-using AscendC::MicroAPI::LoadAlign;
+using AscendC::Reg::LoadAlign;
 
 template <typename Tp, Tp v>
 struct integral_constant {
@@ -63,21 +63,20 @@ __aicore__ inline void SimpleNativePipeSync()
 }
 
 template <typename T>
-__aicore__ inline void CollectAndCopy2Ub(__ubuf__ T* dstUbAddr, MicroAPI::RegTensor<T>& srcReg,
-                                         MicroAPI::RegTensor<T>& tmpReg, MicroAPI::MaskReg& cmpMask,
-                                         MicroAPI::UnalignRegForStore& ureg)
+__aicore__ inline void CollectAndCopy2Ub(__ubuf__ T* dstUbAddr, Reg::RegTensor<T>& srcReg, Reg::RegTensor<T>& tmpReg,
+                                         Reg::MaskReg& cmpMask, Reg::UnalignRegForStore& ureg)
 {
-    MicroAPI::Squeeze<T, MicroAPI::GatherMaskMode::STORE_REG>(tmpReg, srcReg, cmpMask);
-    MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstUbAddr, tmpReg, ureg);
+    Reg::Squeeze<T, Reg::GatherMaskMode::STORE_REG>(tmpReg, srcReg, cmpMask);
+    Reg::StoreUnAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(dstUbAddr, tmpReg, ureg);
 }
 
 template <int IDX_INC_NUMS>
-__aicore__ inline void CollectIdxWithUpdateAndCopy2Ub(__ubuf__ int32_t* dstUbAddr, MicroAPI::RegTensor<int32_t>& srcReg,
-                                                      MicroAPI::RegTensor<int32_t>& tmpReg, MicroAPI::MaskReg& cmpMask,
-                                                      MicroAPI::MaskReg& pregAll, MicroAPI::UnalignRegForStore& ureg)
+__aicore__ inline void CollectIdxWithUpdateAndCopy2Ub(__ubuf__ int32_t* dstUbAddr, Reg::RegTensor<int32_t>& srcReg,
+                                                      Reg::RegTensor<int32_t>& tmpReg, Reg::MaskReg& cmpMask,
+                                                      Reg::MaskReg& pregAll, Reg::UnalignRegForStore& ureg)
 {
     CollectAndCopy2Ub<int32_t>(dstUbAddr, srcReg, tmpReg, cmpMask, ureg);
-    MicroAPI::Adds(srcReg, srcReg, (int32_t)IDX_INC_NUMS, pregAll);
+    Reg::Adds(srcReg, srcReg, (int32_t)IDX_INC_NUMS, pregAll);
 }
 
 // process 64 elements only
@@ -85,45 +84,44 @@ template <typename T, typename T1, int REP_LENGTH>
 static __aicore__ inline void VFCollectPostUniqueIdx(__ubuf__ int32_t* dstIdxAddr, __ubuf__ T* srcValueAddr,
                                                      int32_t startCount, uint32_t repeatTimes, uint32_t totalNums)
 {
-    MicroAPI::RegTensor<T> xPrev;
-    MicroAPI::RegTensor<T> xNext;
+    Reg::RegTensor<T> xPrev;
+    Reg::RegTensor<T> xNext;
 
-    MicroAPI::RegTensor<int32_t> out;
-    MicroAPI::RegTensor<int32_t> idx;
+    Reg::RegTensor<int32_t> out;
+    Reg::RegTensor<int32_t> idx;
 
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
 
-    MicroAPI::MaskReg cmpRet;
-    MicroAPI::MaskReg pregLoop;
-    MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+    Reg::MaskReg cmpRet;
+    Reg::MaskReg pregLoop;
+    Reg::MaskReg pregAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
     uint32_t sreg0 = totalNums;
 
-    MicroAPI::Arange(idx, startCount);
-    MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    Reg::Arange(idx, startCount);
+    Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        pregLoop = Reg::UpdateMask<T>(sreg0);
         auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
 
         LoadAlign(xPrev, srcValueAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(xNext, uregIn, curtSrcAddr);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
-                                           pregLoop);
+        Reg::Compare<T1, CMPMODE::NE>(cmpRet, (Reg::RegTensor<T1>&)xPrev, (Reg::RegTensor<T1>&)xNext, pregLoop);
 
         if constexpr (sizeof(T) == 1) {
-            MicroAPI::MaskReg maskQ1;
-            MicroAPI::MaskReg maskQ2;
-            MicroAPI::MaskReg maskQ3;
-            MicroAPI::MaskReg maskQ4;
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskQ2, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ4, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskQ1, maskQ2);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ2, maskQ2);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskQ3, maskQ4);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ4, maskQ4);
+            Reg::MaskReg maskQ1;
+            Reg::MaskReg maskQ2;
+            Reg::MaskReg maskQ3;
+            Reg::MaskReg maskQ4;
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskQ2, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskQ4, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskQ1, maskQ2);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskQ2, maskQ2);
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskQ3, maskQ4);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskQ4, maskQ4);
 
             constexpr uint32_t idxIncNums = GetVLEleNums<int32_t>();
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, maskQ1, pregAll, uregOut);
@@ -131,10 +129,10 @@ static __aicore__ inline void VFCollectPostUniqueIdx(__ubuf__ int32_t* dstIdxAdd
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, maskQ3, pregAll, uregOut);
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, maskQ4, pregAll, uregOut);
         } else if constexpr (sizeof(T) == 2) {
-            MicroAPI::MaskReg maskLowHalf;
-            MicroAPI::MaskReg maskHighHalf;
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskLowHalf, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskHighHalf, cmpRet);
+            Reg::MaskReg maskLowHalf;
+            Reg::MaskReg maskHighHalf;
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskLowHalf, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskHighHalf, cmpRet);
 
             constexpr uint32_t idxIncNums = GetVLEleNums<int32_t>();
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, maskLowHalf, pregAll, uregOut);
@@ -143,13 +141,13 @@ static __aicore__ inline void VFCollectPostUniqueIdx(__ubuf__ int32_t* dstIdxAdd
             constexpr uint32_t idxIncNums = GetVLEleNums<int32_t>();
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, cmpRet, pregAll, uregOut);
         } else {
-            AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpRet);
+            AscendC::Reg::MaskReg maskHalf;
+            AscendC::Reg::Pack<Reg::HighLowPart::LOWEST>(maskHalf, cmpRet);
             constexpr uint32_t idxIncNums = GetVLEleNums<int64_t>();
             CollectIdxWithUpdateAndCopy2Ub<idxIncNums>(dstIdxAddr, idx, out, maskHalf, pregAll, uregOut);
         }
     }
-    MicroAPI::StoreUnAlignPost(dstIdxAddr, uregOut);
+    Reg::StoreUnAlignPost(dstIdxAddr, uregOut);
 }
 
 // support B8~B32 only, B64 use other implement
@@ -157,34 +155,33 @@ template <typename T, typename T1, int REP_LENGTH>
 static __aicore__ inline void VFCollectPostUniqueValue(__ubuf__ T* dstValueAddr, __ubuf__ T* srcValueAddr,
                                                        uint32_t repeatTimes, uint32_t totalNums)
 {
-    MicroAPI::RegTensor<T> xPrev;
-    MicroAPI::RegTensor<T> xNext;
-    MicroAPI::RegTensor<T> out;
+    Reg::RegTensor<T> xPrev;
+    Reg::RegTensor<T> xNext;
+    Reg::RegTensor<T> out;
 
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
 
-    MicroAPI::MaskReg cmpRet;
-    MicroAPI::MaskReg pregLoop;
+    Reg::MaskReg cmpRet;
+    Reg::MaskReg pregLoop;
 
     uint32_t sreg0 = totalNums;
 
-    MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        pregLoop = Reg::UpdateMask<T>(sreg0);
         auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
 
         LoadAlign(xPrev, srcValueAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(xNext, uregIn, curtSrcAddr);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
-                                           pregLoop);
+        Reg::Compare<T1, CMPMODE::NE>(cmpRet, (Reg::RegTensor<T1>&)xPrev, (Reg::RegTensor<T1>&)xNext, pregLoop);
 
         CollectAndCopy2Ub<T>(dstValueAddr, xPrev, out, cmpRet, uregOut);
     }
-    MicroAPI::StoreUnAlignPost(dstValueAddr, uregOut);
+    Reg::StoreUnAlignPost(dstValueAddr, uregOut);
 }
 
 template <int REP_LENGTH>
@@ -192,37 +189,37 @@ static __aicore__ inline void VFCollectPostUniqueValueB64(__ubuf__ int32_t* dstV
                                                           __ubuf__ int32_t* srcValueAddr, uint32_t repeatTimes,
                                                           uint32_t totalNums)
 {
-    MicroAPI::RegTensor<int32_t> xPrev;
-    MicroAPI::RegTensor<int32_t> xNext;
-    MicroAPI::RegTensor<int32_t> out;
+    Reg::RegTensor<int32_t> xPrev;
+    Reg::RegTensor<int32_t> xNext;
+    Reg::RegTensor<int32_t> out;
 
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
 
-    MicroAPI::MaskReg cmpRet;
-    MicroAPI::MaskReg pregLoop;
+    Reg::MaskReg cmpRet;
+    Reg::MaskReg pregLoop;
 
-    MicroAPI::MaskReg maskEven;
-    MicroAPI::MaskReg maskOdd;
+    Reg::MaskReg maskEven;
+    Reg::MaskReg maskOdd;
 
     uint32_t sreg0 = totalNums;
 
-    MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    Reg::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<int32_t>(sreg0);
+        pregLoop = Reg::UpdateMask<int32_t>(sreg0);
         auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 2;
         LoadAlign(xPrev, srcValueAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(xNext, uregIn, curtSrcAddr);
-        MicroAPI::Compare<int32_t, CMPMODE::NE>(cmpRet, xPrev, xNext, pregLoop);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(xNext, uregIn, curtSrcAddr);
+        Reg::Compare<int32_t, CMPMODE::NE>(cmpRet, xPrev, xNext, pregLoop);
 
-        MicroAPI::MaskDeInterleave<int32_t>(maskEven, maskOdd, cmpRet, cmpRet);
-        MicroAPI::Or(cmpRet, maskEven, maskOdd, pregLoop);
-        MicroAPI::MaskInterleave<int32_t>(maskEven, maskOdd, cmpRet, cmpRet);
+        Reg::MaskDeInterleave<int32_t>(maskEven, maskOdd, cmpRet, cmpRet);
+        Reg::Or(cmpRet, maskEven, maskOdd, pregLoop);
+        Reg::MaskInterleave<int32_t>(maskEven, maskOdd, cmpRet, cmpRet);
         CollectAndCopy2Ub<int32_t>(dstValueAddr, xPrev, out, maskEven, uregOut);
     }
-    MicroAPI::StoreUnAlignPost(dstValueAddr, uregOut);
+    Reg::StoreUnAlignPost(dstValueAddr, uregOut);
 }
 
 /*
@@ -297,14 +294,14 @@ template <int REP_LENGTH, typename T>
 static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* srcIdxAddr, uint32_t repeatTimes,
                                             uint32_t totalNums, uint16_t hasTail)
 {
-    MicroAPI::RegTensor<T> idxPrev;
-    MicroAPI::RegTensor<T> idxNext;
-    MicroAPI::RegTensor<T> out;
+    Reg::RegTensor<T> idxPrev;
+    Reg::RegTensor<T> idxNext;
+    Reg::RegTensor<T> out;
 
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
 
-    MicroAPI::MaskReg pregLoop;
+    Reg::MaskReg pregLoop;
 
     uint32_t sreg0 = totalNums;
     uint32_t tailLen = totalNums % REP_LENGTH;
@@ -313,26 +310,26 @@ static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* 
 
     // main block
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        pregLoop = Reg::UpdateMask<T>(sreg0);
         auto curtSrcAddr = srcIdxAddr + REP_LENGTH * i + 1;
         LoadAlign(idxPrev, srcIdxAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(idxNext, uregIn, curtSrcAddr);
-        MicroAPI::Sub(out, idxNext, idxPrev, pregLoop);
-        MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut, REP_LENGTH);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(idxNext, uregIn, curtSrcAddr);
+        Reg::Sub(out, idxNext, idxPrev, pregLoop);
+        Reg::StoreUnAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut, REP_LENGTH);
     }
 
     // tail block
     for (uint16_t i = 0; i < (uint16_t)hasTail; ++i) {
-        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        pregLoop = Reg::UpdateMask<T>(sreg0);
         auto curtSrcAddr = srcIdxAddr + REP_LENGTH * repeatTimes + 1;
         LoadAlign(idxPrev, srcIdxAddr + REP_LENGTH * repeatTimes);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(idxNext, uregIn, curtSrcAddr);
-        MicroAPI::Sub(out, idxNext, idxPrev, pregLoop);
-        MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut, tailLen);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(idxNext, uregIn, curtSrcAddr);
+        Reg::Sub(out, idxNext, idxPrev, pregLoop);
+        Reg::StoreUnAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut, tailLen);
     }
-    MicroAPI::StoreUnAlignPost(curtDstAddr, uregOut, 0);
+    Reg::StoreUnAlignPost(curtDstAddr, uregOut, 0);
 }
 
 /*
@@ -363,19 +360,19 @@ template <int REP_LENGTH>
 static __aicore__ inline void VFCastAndAddsOffsets(__ubuf__ int64_t* dstIdxAddr, __ubuf__ int32_t* srcIdxAddr,
                                                    uint32_t repeatTimes, uint32_t totalNums, int64_t offset)
 {
-    MicroAPI::RegTensor<int64_t> srcReg;
-    MicroAPI::RegTensor<int64_t> dstReg;
+    Reg::RegTensor<int64_t> srcReg;
+    Reg::RegTensor<int64_t> dstReg;
 
-    MicroAPI::MaskReg pregLoop;
+    Reg::MaskReg pregLoop;
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<int64_t>(totalNums);
-        MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<int32_t>(i, REP_LENGTH);
-        MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<int64_t>(i, REP_LENGTH);
-        MicroAPI::LoadAlign<int32_t, MicroAPI::LoadDist::DIST_UNPACK_B32>((MicroAPI::RegTensor<int32_t>&)srcReg,
-                                                                          srcIdxAddr, srcOffset);
-        MicroAPI::Adds(dstReg, srcReg, offset, pregLoop);
-        MicroAPI::StoreAlign(dstIdxAddr, dstReg, dstOffset, pregLoop);
+        pregLoop = Reg::UpdateMask<int64_t>(totalNums);
+        Reg::AddrReg srcOffset = Reg::CreateAddrReg<int32_t>(i, REP_LENGTH);
+        Reg::AddrReg dstOffset = Reg::CreateAddrReg<int64_t>(i, REP_LENGTH);
+        Reg::LoadAlign<int32_t, Reg::LoadDist::DIST_UNPACK_B32>((Reg::RegTensor<int32_t>&)srcReg, srcIdxAddr,
+                                                                srcOffset);
+        Reg::Adds(dstReg, srcReg, offset, pregLoop);
+        Reg::StoreAlign(dstIdxAddr, dstReg, dstOffset, pregLoop);
     }
 }
 
@@ -397,111 +394,110 @@ template <typename T, typename T1, int REP_LENGTH>
 static __aicore__ inline void VFCountAdjacentNe(__ubuf__ int32_t* dstCountAddr, __ubuf__ T* srcValueAddr,
                                                 uint32_t repeatTimes, uint32_t totalNums)
 {
-    MicroAPI::RegTensor<T> xPrev;
-    MicroAPI::RegTensor<T> xNext;
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
-    MicroAPI::MaskReg cmpRet;
-    MicroAPI::MaskReg pregLoop;
+    Reg::RegTensor<T> xPrev;
+    Reg::RegTensor<T> xNext;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
+    Reg::MaskReg cmpRet;
+    Reg::MaskReg pregLoop;
 
-    MicroAPI::RegTensor<int32_t> addReg, dstReg, oneReg, zeroReg, selectReg;
-    MicroAPI::MaskReg addComReg;
+    Reg::RegTensor<int32_t> addReg, dstReg, oneReg, zeroReg, selectReg;
+    Reg::MaskReg addComReg;
 
     uint32_t sreg0 = totalNums;
     uint32_t addSreg = GetVLEleNums<int32_t>();
 
-    MicroAPI::Duplicate(addReg, (int32_t)0);
-    MicroAPI::Duplicate(oneReg, (int32_t)1);
-    MicroAPI::Duplicate(zeroReg, (int32_t)0);
-    addComReg = MicroAPI::UpdateMask<int32_t>(addSreg);
+    Reg::Duplicate(addReg, (int32_t)0);
+    Reg::Duplicate(oneReg, (int32_t)1);
+    Reg::Duplicate(zeroReg, (int32_t)0);
+    addComReg = Reg::UpdateMask<int32_t>(addSreg);
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        pregLoop = Reg::UpdateMask<T>(sreg0);
         auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
 
         LoadAlign(xPrev, srcValueAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(xNext, uregIn, curtSrcAddr);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
-                                           pregLoop);
+        Reg::Compare<T1, CMPMODE::NE>(cmpRet, (Reg::RegTensor<T1>&)xPrev, (Reg::RegTensor<T1>&)xNext, pregLoop);
 
         if constexpr (sizeof(T) == 1) {
-            MicroAPI::MaskReg maskQ1, maskQ2, maskQ3, maskQ4, maskTmp;
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskTmp, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskQ1, maskTmp);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ2, maskTmp);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskTmp, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskQ3, maskTmp);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ4, maskTmp);
+            Reg::MaskReg maskQ1, maskQ2, maskQ3, maskQ4, maskTmp;
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskTmp, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskQ1, maskTmp);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskQ2, maskTmp);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskTmp, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskQ3, maskTmp);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskQ4, maskTmp);
 
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ1);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ2);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ3);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ4);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ1);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ2);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ3);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ4);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
         } else if constexpr (sizeof(T) == 2) {
-            MicroAPI::MaskReg maskLow, maskHigh;
-            MicroAPI::UnPack<MicroAPI::HighLowPart::LOWEST>(maskLow, cmpRet);
-            MicroAPI::UnPack<MicroAPI::HighLowPart::HIGHEST>(maskHigh, cmpRet);
+            Reg::MaskReg maskLow, maskHigh;
+            Reg::UnPack<Reg::HighLowPart::LOWEST>(maskLow, cmpRet);
+            Reg::UnPack<Reg::HighLowPart::HIGHEST>(maskHigh, cmpRet);
 
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskLow);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskHigh);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskLow);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, maskHigh);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
         } else {
-            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, cmpRet);
-            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            Reg::Select<int32_t>(selectReg, oneReg, zeroReg, cmpRet);
+            Reg::Add(addReg, addReg, selectReg, addComReg);
         }
     }
 
-    MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
-    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstCountAddr, dstReg, uregOut, 1);
-    MicroAPI::StoreUnAlignPost(dstCountAddr, uregOut, 0);
+    Reg::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
+    Reg::StoreUnAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(dstCountAddr, dstReg, uregOut, 1);
+    Reg::StoreUnAlignPost(dstCountAddr, uregOut, 0);
 }
 
 template <int REP_LENGTH>
 static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAddr, __ubuf__ int64_t* srcValueAddr,
                                                    uint32_t repeatTimes, uint32_t totalNums)
 {
-    MicroAPI::RegTensor<int64_t> xPrev;
-    MicroAPI::RegTensor<int64_t> xNext;
-    MicroAPI::UnalignRegForLoad uregIn;
-    MicroAPI::UnalignRegForStore uregOut;
-    MicroAPI::MaskReg cmpRet;
-    MicroAPI::MaskReg pregLoop;
+    Reg::RegTensor<int64_t> xPrev;
+    Reg::RegTensor<int64_t> xNext;
+    Reg::UnalignRegForLoad uregIn;
+    Reg::UnalignRegForStore uregOut;
+    Reg::MaskReg cmpRet;
+    Reg::MaskReg pregLoop;
 
-    MicroAPI::RegTensor<int64_t> addReg, dstReg, oneReg, zeroReg, selectReg;
-    MicroAPI::MaskReg addComReg;
+    Reg::RegTensor<int64_t> addReg, dstReg, oneReg, zeroReg, selectReg;
+    Reg::MaskReg addComReg;
 
     uint32_t sreg0 = totalNums;
     uint32_t addSreg = GetVLEleNums<int64_t>();
 
-    MicroAPI::Duplicate(addReg, (int64_t)0);
-    MicroAPI::Duplicate(oneReg, (int64_t)1);
-    MicroAPI::Duplicate(zeroReg, (int64_t)0);
-    addComReg = MicroAPI::UpdateMask<int64_t>(addSreg);
+    Reg::Duplicate(addReg, (int64_t)0);
+    Reg::Duplicate(oneReg, (int64_t)1);
+    Reg::Duplicate(zeroReg, (int64_t)0);
+    addComReg = Reg::UpdateMask<int64_t>(addSreg);
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
-        pregLoop = MicroAPI::UpdateMask<int64_t>(sreg0);
+        pregLoop = Reg::UpdateMask<int64_t>(sreg0);
         auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
 
         LoadAlign(xPrev, srcValueAddr + REP_LENGTH * i);
-        MicroAPI::LoadUnAlignPre(uregIn, curtSrcAddr);
-        MicroAPI::LoadUnAlign(xNext, uregIn, curtSrcAddr);
+        Reg::LoadUnAlignPre(uregIn, curtSrcAddr);
+        Reg::LoadUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<int64_t, CMPMODE::NE>(cmpRet, xPrev, xNext, pregLoop);
-        MicroAPI::Select<int64_t>(selectReg, oneReg, zeroReg, cmpRet);
-        MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+        Reg::Compare<int64_t, CMPMODE::NE>(cmpRet, xPrev, xNext, pregLoop);
+        Reg::Select<int64_t>(selectReg, oneReg, zeroReg, cmpRet);
+        Reg::Add(addReg, addReg, selectReg, addComReg);
     }
 
-    MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
-    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-        dstCountAddr, (MicroAPI::RegTensor<int32_t>&)dstReg, uregOut, 1);
-    MicroAPI::StoreUnAlignPost(dstCountAddr, uregOut, 0);
+    Reg::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
+    Reg::StoreUnAlign<int32_t, Reg::PostLiteral::POST_MODE_UPDATE>(dstCountAddr, (Reg::RegTensor<int32_t>&)dstReg,
+                                                                   uregOut, 1);
+    Reg::StoreUnAlignPost(dstCountAddr, uregOut, 0);
 }
 
 template <typename VALUE_TYPE, typename INPUT_TYPE, bool IS_TAIL>

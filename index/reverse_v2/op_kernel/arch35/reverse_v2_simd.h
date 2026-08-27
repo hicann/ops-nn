@@ -46,11 +46,11 @@ __simd_vf__ inline void AreaReverseSmallTailVf(__ubuf__ int8_t* xPtr, __ubuf__ i
                                                int32_t dim2Stride, int32_t repeatNum, uint16_t dim2Loop,
                                                uint16_t dim1Loop, uint16_t dim0Loop)
 {
-    AscendC::MicroAPI::RegTensor<int8_t> inReg;
+    AscendC::Reg::RegTensor<int8_t> inReg;
     uint32_t sreg = dim2Stride;
-    AscendC::MicroAPI::MaskReg preg;
+    AscendC::Reg::MaskReg preg;
     for (uint16_t i = 0; i < dim2Loop; i++) {
-        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        preg = AscendC::Reg::UpdateMask<int8_t>(sreg);
         auto srcAddr = xPtr + i * repeatNum;
         auto dstAddr = yPtr + i * repeatNum + (dim1 - 1) * dim2Stride;
         for (uint16_t j = 0; j < dim0Loop; j++) {
@@ -59,8 +59,8 @@ __simd_vf__ inline void AreaReverseSmallTailVf(__ubuf__ int8_t* xPtr, __ubuf__ i
             for (uint16_t k = 0; k < dim1Loop; k++) {
                 auto curSrcAddr = srcAddr1 + k * dim2Stride;
                 auto curDstAddr = dstAddr1 - k * dim2Stride;
-                AscendC::MicroAPI::LoadAlign(inReg, curSrcAddr);
-                AscendC::MicroAPI::StoreAlign(curDstAddr, inReg, preg);
+                AscendC::Reg::LoadAlign(inReg, curSrcAddr);
+                AscendC::Reg::StoreAlign(curDstAddr, inReg, preg);
             }
         }
     }
@@ -70,7 +70,7 @@ __simd_vf__ inline void AreaReverseVf(__ubuf__ int8_t* xPtr, __ubuf__ int8_t* yP
                                       int32_t dim2Stride, int32_t repeatNum, uint16_t dim0Loop, uint16_t dim1Loop,
                                       uint16_t dim2Loop)
 {
-    AscendC::MicroAPI::RegTensor<int8_t> inReg;
+    AscendC::Reg::RegTensor<int8_t> inReg;
     for (uint16_t i = 0; i < dim0Loop; i++) {
         auto srcAddr = xPtr + i * dim1 * dim2Stride;
         auto dstAddr = yPtr + i * dim1 * dim2Stride + (dim1 - 1) * dim2Stride;
@@ -79,11 +79,11 @@ __simd_vf__ inline void AreaReverseVf(__ubuf__ int8_t* xPtr, __ubuf__ int8_t* yP
             auto dstAddr1 = dstAddr - j * dim2Stride;
             uint32_t sreg = dim2Size;
             for (uint16_t k = 0; k < dim2Loop; k++) {
-                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+                AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<int8_t>(sreg);
                 auto curSrcAddr = srcAddr1 + k * repeatNum;
                 auto curDstAddr = dstAddr1 + k * repeatNum;
-                AscendC::MicroAPI::LoadAlign(inReg, curSrcAddr);
-                AscendC::MicroAPI::StoreAlign(curDstAddr, inReg, preg);
+                AscendC::Reg::LoadAlign(inReg, curSrcAddr);
+                AscendC::Reg::StoreAlign(curDstAddr, inReg, preg);
             }
         }
     }

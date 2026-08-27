@@ -201,12 +201,12 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitSCopy(int64_t
     __VEC_SCOPE__
     {
         uint32_t updateNum = totalNum;
-        MicroAPI::RegTensor<int8_t> v0;
-        AscendC::MicroAPI::MaskReg preg;
+        Reg::RegTensor<int8_t> v0;
+        AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < loop; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(updateNum);
-            MicroAPI::DataCopy(v0, xLocalAddr + i * repeatNum);
-            MicroAPI::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
+            preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
+            Reg::DataCopy(v0, xLocalAddr + i * repeatNum);
+            Reg::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
         }
     }
     inputQue_.FreeTensor(xLocal);
