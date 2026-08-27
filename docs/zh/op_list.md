@@ -888,6 +888,17 @@
     <td>分配8个float32零值的Tensor，用于NPU溢出状态检测。</td>
   </tr>
   <tr>
+    <td>control</td>
+    <td><a href="../../control/npu_clear_float_status/README.md">npu_clear_float_status</a></td>
+    <td>√</td>
+    <td>×</td>
+    <td>×</td>
+    <td>√</td>
+    <td>√</td>
+    <td>AI Core</td>
+    <td>清除NPU浮点溢出状态寄存器，输出固定8个float32零值。</td>
+  </tr>
+  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>
