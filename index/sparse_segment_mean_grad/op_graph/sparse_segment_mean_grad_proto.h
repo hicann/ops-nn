@@ -39,6 +39,8 @@ SparseSegmentMean op. \n
 *@par Third-party framework compatibility
 *Compatible with tensorflow SparseSegmentMeanGrad operator.
 */
+#ifndef OPS_PROTO_DEF_SPARSESEGMENTMEANGRAD
+#define OPS_PROTO_DEF_SPARSESEGMENTMEANGRAD
 REG_OP(SparseSegmentMeanGrad)
     .INPUT(x, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BFLOAT16}))
     .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
@@ -46,6 +48,7 @@ REG_OP(SparseSegmentMeanGrad)
     .INPUT(output_dim0, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SparseSegmentMeanGrad)
+#endif
 
 } // namespace ge
 
