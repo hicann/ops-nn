@@ -18,7 +18,7 @@
 #include "max_pool_grad_tiling_simt.h"
 #include "op_host/tiling_util.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "../../op_kernel/arch35/max_pool_grad_struct.h"
+#include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_struct.h"
 
 using namespace ge;
 using namespace PoolGradNameSpace;

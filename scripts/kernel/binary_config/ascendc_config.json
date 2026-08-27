@@ -453,6 +453,7 @@
     {"name": "AvgPoolV2", "compute_units": ["ascend950", "mc62"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name":"MaxPoolV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"MaxPoolV3", "compute_units": ["ascend950", "mc62"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
+    {"name":"MaxPoolV3Grad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"MaxPool3D", "compute_units": ["ascend950", "mc62"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name":"ScatterList", "compute_units": ["ascend910_93", "ascend910b", "ascend910", "ascend950", "ascend310p", "kirinx90", "kirin9030"], "auto_sync" : true, "compile_options": {"ascend910":["-mllvm -cce-aicore-jump-expand=true"]}},
     {"name":"AvgPool3D", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "kirinx90", "kirin9030", "mc62"], "auto_sync" : {"ascend910_93": true, "ascend910b": true, "ascend950": false}, "compile_options": {"mc62": ["--cce-no-dcache-flush"]}},

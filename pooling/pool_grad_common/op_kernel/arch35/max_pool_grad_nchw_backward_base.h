@@ -15,8 +15,8 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "max_pool_grad_struct.h"
 #include "../inc/platform.h"
-#include "../pool_grad_common/arch35/max_pool_grad_with_argmax_base_common.h"
-#include "../pool_grad_common/arch35/max_pool_grad_nchw_scatter_common.h"
+#include "max_pool_grad_with_argmax_base_common.h"
+#include "max_pool_grad_nchw_scatter_common.h"
 
 namespace MaxPoolGradNCHWBackwardBaseNameSpace {
 using namespace AscendC;

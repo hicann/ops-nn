@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,10 +10,10 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/max_pool_grad_struct.h"
-#include "arch35/max_pool_grad_simt.h"
-#include "arch35/max_pool_grad_nchw_big_kernel.h"
-#include "arch35/max_pool_grad_nchw_small_kernel.h"
+#include "../pool_grad_common/arch35/max_pool_grad_struct.h"
+#include "../pool_grad_common/arch35/max_pool_grad_simt.h"
+#include "../pool_grad_common/arch35/max_pool_grad_nchw_big_kernel.h"
+#include "../pool_grad_common/arch35/max_pool_grad_nchw_small_kernel.h"
 
 using namespace AscendC;
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
@@ -30,6 +30,7 @@ __global__ __aicore__ void max_pool_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;
     }
+
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(MaxPoolGradWithArgmaxSimtTilingCommonData);
@@ -37,11 +38,13 @@ __global__ __aicore__ void max_pool_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR
     if constexpr (KERNEL_MODE == TPL_SIMT_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxSimtTilingCommonData, tilingData, tiling);
         if constexpr (INDICES_DTYPE == TPL_INT32) {
-            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int32_t, FORMAT> op(&pipe, &tilingData);
+            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int32_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_PROPAGATE> op(
+                &pipe, &tilingData);
             op.Init(orig_x, orig_y, grads, y, workspace);
             op.Process();
         } else {
-            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int64_t, FORMAT> op(&pipe, &tilingData);
+            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int64_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_PROPAGATE> op(
+                &pipe, &tilingData);
             op.Init(orig_x, orig_y, grads, y, workspace);
             op.Process();
         }

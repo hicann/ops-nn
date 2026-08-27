@@ -16,7 +16,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_MAX_POOL_GRAD_WITH_AGRMAX_TILING_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_MAX_POOL_GRAD_WITH_AGRMAX_TILING_H_
 
-#include "../../op_kernel/arch35/max_pool_grad_struct.h"
+#include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_struct.h"
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_tiling_common.h"
 #include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_nchw_tiling_common.h"
