@@ -48,7 +48,7 @@ constexpr CubeFormat format_x2 = CubeFormat::ND;
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG = GetMDLConfig(false, false, 0, false, false, false, true, true,
                                                                        false, false, false);
 
-#define TQBMM_IMPL_CLASS_COMMON_TRNAS(transposeX1, transposeX2, precisionMode, templateClass, ...)            \
+#define TQBMM_IMPL_CLASS_COMMON_TRANS(transposeX1, transposeX2, precisionMode, templateClass, ...)            \
     do {                                                                                                      \
         templateClass<DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_X1_SCALE, DTYPE_Y, precisionMode, \
                       transposeX1, transposeX2, format_x2, DTYPE_LOC_LOCAL, __VA_ARGS__>                      \
@@ -69,17 +69,17 @@ __global__ __aicore__ void transpose_quant_batch_mat_mul(GM_ADDR aGM, GM_ADDR bG
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     GET_TILING_DATA(tilingData, tilingGM);
     if constexpr (sizeof(DTYPE_X2_SCALE) == sizeof(uint64_t)) {
-        TQBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8),
+        TQBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8),
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswKernel,
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswBlock,
                                       MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
     } else if constexpr (sizeof(DTYPE_X2_SCALE) == sizeof(float)) {
-        TQBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_FP8),
+        TQBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_FP8),
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswKernel,
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswBlock,
                                       MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
     } else if constexpr (sizeof(DTYPE_X2_SCALE) == sizeof(uint8_t)) {
-        TQBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_MXFP8),
+        TQBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_MXFP8),
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswKernel,
                                       TransposeQuantBatchMatMulAdvanced::TransposeQuantBatchMatMulAswBlock,
                                       MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);

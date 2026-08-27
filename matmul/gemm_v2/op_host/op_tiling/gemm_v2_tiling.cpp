@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file gemm_v2_tiling.cc
+ * \file gemm_v2_tiling.cpp
  * \brief
  */
 #include "gemm_v2_tiling.h"
@@ -49,7 +49,7 @@ static ge::graphStatus TilingPrepareForGemmV2(gert::TilingParseContext* context)
     platformInfo->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_fix_pipe_l0c2out", val);
     platformInfo->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_data_move_l12bt", dataMoveL12Bt);
     compileInfoPtr->supportL0c2out = !val.empty();
-    compileInfoPtr->supportL12BtBf16 = (dataMoveL12Bt.find("bf16") != string::npos);
+    compileInfoPtr->supportL12BtBf16 = (dataMoveL12Bt.find("bf16") != std::string::npos);
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->socVersion = ascendcPlatform.GetSocVersion();
     compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();

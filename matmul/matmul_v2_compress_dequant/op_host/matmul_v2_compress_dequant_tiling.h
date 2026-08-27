@@ -36,7 +36,7 @@ TILING_DATA_FIELD_DEF(uint32_t, mLoop);
 TILING_DATA_FIELD_DEF(uint32_t, kLoop);
 TILING_DATA_FIELD_DEF(uint32_t, nLoop);
 TILING_DATA_FIELD_DEF(uint32_t, coreLoop);
-TILING_DATA_FIELD_DEF(uint32_t, swizzlCount);
+TILING_DATA_FIELD_DEF(uint32_t, swizzleCount);
 TILING_DATA_FIELD_DEF(uint32_t, tilingK);
 TILING_DATA_FIELD_DEF(uint32_t, tilingN);
 TILING_DATA_FIELD_DEF(uint32_t, compressOverlapN);

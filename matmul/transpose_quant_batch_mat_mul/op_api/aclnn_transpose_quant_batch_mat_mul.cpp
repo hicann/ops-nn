@@ -284,7 +284,7 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 OP_NAME, "x1Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
-                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFp8", "x1Scale",
+                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFP8", "x1Scale",
                                       static_cast<int>(EXPECTED_MX_SCALE_DIM))
                     .c_str());
             return false;
@@ -294,7 +294,7 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
             x1Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 OP_NAME, "x1Scale", op::ToString(x1Scale->GetViewShape()).GetString(),
-                Ops::NN::FormatString("In %s scene, the shape of %s must be %s", "MXFp8", "x1Scale",
+                Ops::NN::FormatString("In %s scene, the shape of %s must be %s", "MXFP8", "x1Scale",
                                       Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, batch, numGroup).c_str())
                     .c_str());
             return false;
@@ -329,7 +329,7 @@ inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, in
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 OP_NAME, "x2Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
-                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFp8", "x2Scale",
+                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFP8", "x2Scale",
                                       static_cast<int>(EXPECTED_MX_SCALE_DIM))
                     .c_str());
             return false;
@@ -340,7 +340,7 @@ inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, in
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 OP_NAME, "x2Scale", op::ToString(x2Scale->GetViewShape()).GetString(),
                 Ops::NN::FormatString(
-                    "In %s scene, the shape of %s must be %s", "MXFp8", "x2Scale",
+                    "In %s scene, the shape of %s must be %s", "MXFP8", "x2Scale",
                     Ops::NN::FormatString("[%ld, %ld, %ld, 2]", batch, dims[(*permX2)[1]], dims[(*permX2)[NUM_TWO]])
                         .c_str())
                     .c_str());
@@ -611,22 +611,22 @@ static const aclTensor* BuildTransposeQuantBatchMatMulGraph(const aclTensor* x1,
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
     OP_CHECK(contiguousX1 != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, contiguous return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
     OP_CHECK(reformX1 != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, reformat return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     auto contiguousX2 = l0op::Contiguous(x2, executor);
     OP_CHECK(contiguousX2 != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, contiguous return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX2 = contiguousX2;
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_NZ) {
         reformX2 = l0op::ReFormat(contiguousX2, op::Format::FORMAT_ND);
         OP_CHECK(reformX2 != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, reformat return nullptr."),
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, reformat return nullptr."),
                  return nullptr);
     } else {
         reformX2->SetStorageShape(x2->GetStorageShape());
@@ -636,18 +636,18 @@ static const aclTensor* BuildTransposeQuantBatchMatMulGraph(const aclTensor* x1,
     if (contiguousX1Scale != nullptr) {
         contiguousX1Scale = l0op::Contiguous(x1Scale, executor);
         OP_CHECK(contiguousX1Scale != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1Scale perprocess failed, contiguous return nullptr."),
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1Scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
     auto contiguousX2Scale = x2Scale;
     if (contiguousX2Scale != nullptr) {
         contiguousX2Scale = l0op::Contiguous(x2Scale, executor);
         OP_CHECK(contiguousX2Scale != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2Scale perprocess failed, contiguous return nullptr."),
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2Scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
 
-    // Invoke tqbmmm l0 api
+    // Invoke tqbmm l0 api
     return l0op::TransposeQuantBatchMatMul(reformX1, reformX2, nullptr, contiguousX1Scale, contiguousX2Scale, dtype,
                                            groupSize, permX1, permX2, permY, batchSplitFactor, executor);
 }

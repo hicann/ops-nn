@@ -78,7 +78,7 @@ ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context)
     constexpr size_t ALLOW_DIM = 3;
     constexpr int64_t SUPPORTED_INNER_AXIS = 65536;
     if (CheckInputArgs(context) != ge::GRAPH_SUCCESS) {
-        OP_LOGI(context->GetNodeName(), "Current scenario is not support PpMatmulEinsum.");
+        OP_LOGI(context->GetNodeName(), "Current scenario does not support PpMatmulEinsum.");
         return ge::GRAPH_FAILED;
     }
     auto attrs = context->GetAttrs();
@@ -111,7 +111,7 @@ ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context)
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGI(context->GetNodeName(), "Current scenario is not support PpMatmulEinsum.");
+    OP_LOGI(context->GetNodeName(), "Current scenario does not support PpMatmulEinsum.");
     return ge::GRAPH_FAILED;
 }
 

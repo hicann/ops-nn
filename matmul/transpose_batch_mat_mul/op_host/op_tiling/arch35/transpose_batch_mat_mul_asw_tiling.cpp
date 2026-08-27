@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file transpose_batch_mat_mul_asw_tiling.cc
+ * \file transpose_batch_mat_mul_asw_tiling.cpp
  * \brief
  */
 

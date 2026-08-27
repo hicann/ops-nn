@@ -440,4 +440,4 @@ __aicore__ inline void RemovePaddingImpl(GlobalTensor<T2> outputGlobal, GlobalTe
 }
 
 #endif
-#endif // __OP_KERNEL_MATMUL_V3_H__
+#endif // __OP_KERNEL_MATMUL_V3_COMMON_H__

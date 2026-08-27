@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file gemm_v2_infer.cpp
+ * \file gemm_v2_infershape.cpp
  * \brief
  */
 #include "common/op_host/matmul_common_infershape.h"
@@ -49,7 +49,7 @@ static ge::graphStatus InferShapeForGemmV2(InferShapeContext* context)
     OP_LOGD(op_name, "check the input shape length.");
     CHECK((shape_a->GetDimNum() != kMatmulV2MinShapeSize || shape_b->GetDimNum() != kMatmulV2MinShapeSize ||
            shape_c->GetDimNum() != kMatmulV2MinShapeSize),
-          CUBE_INNER_ERR_REPORT(op_name, "input dim num[%zu] [%zu] [%zu]is not 2!", shape_a->GetDimNum(),
+          CUBE_INNER_ERR_REPORT(op_name, "input dim num[%zu] [%zu] [%zu] is not 2!", shape_a->GetDimNum(),
                                 shape_b->GetDimNum(), shape_c->GetDimNum()),
           return ge::GRAPH_FAILED);
 
@@ -64,8 +64,8 @@ static ge::graphStatus InferShapeForGemmV2(InferShapeContext* context)
           return ge::GRAPH_FAILED);
 
     CHECK(shape_a->GetDim(idx_m) != shape_c->GetDim(0) || shape_b->GetDim(idx_n) != shape_c->GetDim(1),
-          CUBE_INNER_ERR_REPORT(op_name, "The m(%ld), n(%ld) tensors must be the same c(%ld, %ld)",
-                                shape_a->GetDim(idx_m), shape_b->GetDim(idx_n), shape_c->GetDim(0), shape_c->GetDim(1)),
+          CUBE_INNER_ERR_REPORT(op_name, "The m(%ld), n(%ld) tensors must match c(%ld, %ld)", shape_a->GetDim(idx_m),
+                                shape_b->GetDim(idx_n), shape_c->GetDim(0), shape_c->GetDim(1)),
           return ge::GRAPH_FAILED);
 
     shape_out->SetDimNum(kMatmulV2MinShapeSize);
@@ -84,7 +84,7 @@ static ge::graphStatus InferDataTypeForGemmV2(gert::InferDataTypeContext* contex
     const ge::DataType c_data_type = context->GetInputDataType(4);
     CHECK(((a_data_type != ge::DT_FLOAT16 && a_data_type != ge::DT_BF16) ||
            (b_data_type != ge::DT_FLOAT16 && b_data_type != ge::DT_BF16) || c_data_type != ge::DT_FLOAT),
-          CUBE_INNER_ERR_REPORT(op_name, "input dtype not support"), return ge::GRAPH_FAILED);
+          CUBE_INNER_ERR_REPORT(op_name, "input dtype is not supported"), return ge::GRAPH_FAILED);
     ge::graphStatus ret = context->SetOutputDataType(0, ge::DT_FLOAT);
     return ret;
 }

@@ -321,7 +321,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
         if (invalidScaleX1) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args_.opName, "x1Scale", Ops::Base::ToString(scaleX1ShapePtr->GetStorageShape()).c_str(),
-                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFp8", "x1Scale",
+                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8", "x1Scale",
                                       Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, b, numGroup).c_str())
                     .c_str());
             return ge::GRAPH_FAILED;
@@ -335,7 +335,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
         if (invalidScaleX2) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args_.opName, "x2Scale", Ops::Base::ToString(scaleX2ShapePtr->GetStorageShape()).c_str(),
-                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFp8", "x2Scale",
+                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8", "x2Scale",
                                       "[b, numGroup, n, 2] after permX2")
                     .c_str());
             return ge::GRAPH_FAILED;

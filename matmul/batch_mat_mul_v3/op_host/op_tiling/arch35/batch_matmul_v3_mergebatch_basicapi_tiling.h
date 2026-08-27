@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_mergebatch_tiling.h
+ * \file batch_matmul_v3_mergebatch_basicapi_tiling.h
  * \brief
  */
 
@@ -23,9 +23,9 @@ using namespace matmul_v3_advanced;
 class BatchMatMulV3MergeBatchBasicApiTiling : public MatMulV3BaseTiling {
 public:
     BatchMatMulV3MergeBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BaseTiling(context, cfg){};
+        : MatMulV3BaseTiling(context, cfg) {};
 
-    ~BatchMatMulV3MergeBatchBasicApiTiling() override{};
+    ~BatchMatMulV3MergeBatchBasicApiTiling() override {};
 
 protected:
     bool IsCapable() override;

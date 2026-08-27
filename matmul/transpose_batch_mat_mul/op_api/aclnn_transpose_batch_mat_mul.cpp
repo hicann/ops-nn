@@ -37,16 +37,16 @@
 using namespace std;
 using namespace op;
 using namespace Ops::NN;
-static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+static const std::initializer_list<op::DataType> X1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                     DataType::DT_BF16};
-static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+static const std::initializer_list<op::DataType> X2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                     DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16,
                                                                                 op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, DataType::DT_INT8};
-static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
-static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                            DataType::DT_BF16, DataType::DT_INT8};
@@ -81,7 +81,7 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
         auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
+                    "TransposeBatchMatMulWeightNz is unsupported by the current SOC version [%s].",
                     op::ToString(socVersion).GetString());
             return false;
         }
@@ -90,8 +90,8 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
         OP_CHECK_DTYPE_NOT_SUPPORT(out, OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
         if (scale != nullptr) {
             OP_CHECK_DTYPE_NOT_SUPPORT(scale, SCALE_DTYPE_SUPPORT_LIST, return false);
-            OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SCALE_SUPPORT_LIST, return false);
-            OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SCALE_SUPPORT_LIST, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(x1, X1_SCALE_SUPPORT_LIST, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(x2, X2_SCALE_SUPPORT_LIST, return false);
         }
         if ((x1->GetDataType() != out->GetDataType()) && (npuArch == NpuArch::DAV_2201)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1's dtype [%s] and out's dtype [%s] are not equal in DAV_2201.",
@@ -102,12 +102,12 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
     }
 
     // Regular ND format checks
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1, X1_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2, X2_SUPPORT_LIST, return false);
     if (scale != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scale, SCALE_DTYPE_SUPPORT_LIST, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SCALE_SUPPORT_LIST, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SCALE_SUPPORT_LIST, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, X1_SCALE_SUPPORT_LIST, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x2, X2_SCALE_SUPPORT_LIST, return false);
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(out, OUT_DTYPE_SUPPORT_LIST, return false);
     return true;
@@ -120,16 +120,16 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_
         auto dimTensorScale = scale->GetViewShape().GetDimNum();
         int64_t scaleDim = scale->GetViewShape().GetDim(0);
         if (ops::FloorDiv(INT64_MAX, batch) < n) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, " batch mul N > INT64_MAX");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch * N > INT64_MAX");
             return false;
         }
         if ((dimTensorScale != 1) || (scaleDim != batch * n)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "dimTensorScale[%zu] != 1 or the length of the first dim of scale != batch mul N", dimTensorScale);
+                    "dimTensorScale[%zu] != 1 or the length of the first dim of scale != batch * N", dimTensorScale);
             return false;
         }
         if (!IsNpuArch3510Series() && scaleDim >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul N should be less than 65536.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch * N should be less than 65536.");
             return false;
         }
     }
@@ -222,12 +222,12 @@ static inline bool CheckNzStorageShape(const aclTensor* x2)
     auto storageShape = x2->GetStorageShape();
     auto storageShapeDim = storageShape.GetDimNum();
     if (x2Shape[1] == 1 || x2Shape[2] == 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1 when the format is nz.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis cannot be 1 when the format is nz.");
         return false;
     }
     OP_CHECK(
         storageShapeDim == EXPECTED_NZ_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only supports x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only supports x2 storageShapeDim is 5, which is [%zu].", storageShapeDim),
         return false);
     return true;
 }
@@ -245,7 +245,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     }
     // perm必须为3维
     if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional!");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional.");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (IsNpuArch3510Series() && cubeMathType == -1) {
@@ -264,7 +264,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     // 不支持x1Format、 outFormat为NZ
     if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
         ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out can not be FORMAT_FRACTAL_NZ.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out cannot be FORMAT_FRACTAL_NZ.");
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
@@ -375,8 +375,8 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
                    DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
-    auto unique_executor = CREATE_EXECUTOR();
-    CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
@@ -387,34 +387,34 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
 
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMul do not support empty tensor!");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMul does not support empty tensor.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not support in TBMM.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not supported in TBMM.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
     tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor,
-                                             unique_executor.get());
+                                             uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     if (tbmmOut->IsEmpty()) {
         *workspaceSize = 0;
-        unique_executor.ReleaseTo(executor);
+        uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), unique_executor.get());
+    tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
-    auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, unique_executor.get());
+    auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_PARAM_INVALID);
 
-    *workspaceSize = unique_executor->GetWorkspaceSize();
-    unique_executor.ReleaseTo(executor);
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 
@@ -436,8 +436,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
                    DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
-    auto unique_executor = CREATE_EXECUTOR();
-    CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
@@ -455,34 +455,34 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
 
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMulWeightNz do not support empty tensor!");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMulWeightNz does not support empty tensor.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not support in TBMM.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not supported in TBMM.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
     tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType,
-                                                     batchSplitFactor, unique_executor.get());
+                                                     batchSplitFactor, uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     if (tbmmOut->IsEmpty()) {
         *workspaceSize = 0;
-        unique_executor.ReleaseTo(executor);
+        uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), unique_executor.get());
+    tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
-    auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, unique_executor.get());
+    auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_PARAM_INVALID);
 
-    *workspaceSize = unique_executor->GetWorkspaceSize();
-    unique_executor.ReleaseTo(executor);
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

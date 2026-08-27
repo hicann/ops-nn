@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file pp_matmul_default.cc
+ * \file pp_matmul_default.cpp
  * \brief
  */
 #include "pp_matmul_default.h"

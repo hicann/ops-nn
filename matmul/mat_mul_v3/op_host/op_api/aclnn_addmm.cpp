@@ -130,7 +130,7 @@ static inline bool CheckBroadcast(const aclTensor* self, const aclTensor* mat1, 
         return false;
     }
     if (self->GetStorageShape().GetDimNum() < DIM_SIZE_ONE) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self can not be empty.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self cannot be empty.");
         return false;
     }
     op::Shape matmulShape = {(mat1->GetViewShape())[0], (mat2->GetViewShape())[1]};
@@ -139,7 +139,7 @@ static inline bool CheckBroadcast(const aclTensor* self, const aclTensor* mat1, 
     return true;
 }
 
-// 假设mat1是 n x m，mat2是 m x p，out必须是 n x p    如果n / p为0，那么out为empty即可
+// 假设mat1是 n x k，mat2是 k x p，out必须是 n x p    如果n / p为0，那么out为empty即可
 static inline bool CheckOutShape(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
 {
     int64_t n = mat1->GetViewShape().GetDim(0);
@@ -389,7 +389,7 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
 {
     if (mat1->GetDataType() == op::DataType::DT_FLOAT || mat2->GetDataType() == op::DataType::DT_FLOAT ||
         mat1->GetDataType() != mat2->GetDataType()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "invalid mat1 dtype [%s] or mat2 dtype [%s] ",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "invalid mat1 dtype [%s] or mat2 dtype [%s]",
                 op::ToString(mat1->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
@@ -419,7 +419,7 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
     }
 
     if ((mat2->GetViewShape())[0] == 1 || (mat2->GetViewShape())[1] == 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis cannot be 1.");
         return false;
     }
 

@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file mat_mul_base_vector_nz2nd_kernel.h
+ * \file mat_mul_base_kernel_vec_nz2nd.h
  * \brief Matmul kernel with AIV-based NZ2ND conversion for half/bfloat16 output
  */
 #ifndef OP_KERNEL_MATMUL_V3_BASE_VECTOR_NZ2ND_KERNEL_H
@@ -125,7 +125,7 @@ __aicore__ inline void MatmulBaseVectorNz2NdKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_
         }
 
         if (ubProcessMNum == 0UL) {
-            //补充同步信号
+            // 补充同步信号
             WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(AIV_DB_SYNC_FLAG + pingPongId));
             CrossCoreSetFlag<0x2, PIPE_MTE2>(AIC_SYNC_AIV_FLAG + pingPongId);
             SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(AIV_DB_SYNC_FLAG + pingPongId));

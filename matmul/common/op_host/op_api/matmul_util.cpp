@@ -259,7 +259,7 @@ static const aclTensor* ProcessEmptyTensorWithTrans(const aclTensor* self, const
 static bool CheckSupportSingleSplitKFp16Bf16(const aclTensor* self, const aclTensor* mat2, const DataType selfDtype,
                                              const DataType mat2Dtype)
 {
-    // 判决门限
+    // 判断门限
     // 1. 输入数据类型为fp16/bf16
     // 2. 在K轴非256字节对齐场景下，输入数据大小不超过INT32最大值
     // 3. K轴大于27392
@@ -299,10 +299,10 @@ static aclnnStatus SetMatmulOpSupportInfo(const aclTensor* self, const aclTensor
     // 判断当前Shape是否支持使用ND输入输出
     SetMmSupportFormat(self, mat2, mmOpInfo);
 
-    TensorInfo SpTensor_sefl = {self, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.self_format};
+    TensorInfo SpTensor_self = {self, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.self_format};
     TensorInfo SpTensor_mat2 = {mat2, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_format};
 
-    if (IsSplitk(&SpTensor_sefl, &SpTensor_mat2)) {
+    if (IsSplitk(&SpTensor_self, &SpTensor_mat2)) {
         mmOpInfo.supporSplitK = true;
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         if (npuArch == NpuArch::DAV_2002) {
@@ -521,8 +521,8 @@ static const aclTensor* GetMatMulV2Op(const aclTensor* x1, const aclTensor* x2, 
                            (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
     if ((enable16In32Out || (isFp32Out && bothMatFp16Bf16)) && bias == nullptr) {
-        // This is Split K Mode; Check if MatMul using Nd in Nd Out
-        OP_LOGI("hit matmulv2 fp16/bp16 in fp32 out case.");
+        // This is Split K Mode; Check if MatMul using ND in ND Out
+        OP_LOGI("hit matmulv2 fp16/bf16 in fp32 out case.");
         const aclTensor* mmOut = (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
                                   mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
                                      l0op::MatMulNdFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
@@ -581,7 +581,7 @@ static const aclTensor* GetMatMulOp(const aclTensor* x1, const aclTensor* x2, co
 
             const aclTensor* mmOut = l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX,
                                                                opImplModeEnum, executor);
-            OP_LOGI("hit matmulv3 fp16/bp16 in fp32 out case.");
+            OP_LOGI("hit matmulv3 fp16/bf16 in fp32 out case.");
             return mmOut;
         }
 
@@ -808,10 +808,10 @@ static aclnnStatus SetMatmulOpSupportFormat(const aclTensor* self, const aclTens
     // 判断当前Shape是否支持使用ND输入输出
     SetMmSupportFormat(self, mat2, mmOpInfo);
 
-    TensorInfo SpTensor_sefl = {self, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.self_format};
+    TensorInfo SpTensor_self = {self, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.self_format};
     TensorInfo SpTensor_mat2 = {mat2, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_format};
 
-    if (IsSplitk(&SpTensor_sefl, &SpTensor_mat2)) {
+    if (IsSplitk(&SpTensor_self, &SpTensor_mat2)) {
         mmOpInfo.supporSplitK = true;
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         if (npuArch == NpuArch::DAV_2002) {
@@ -1265,7 +1265,7 @@ const aclTensor* ExecMmOp(const aclTensor* self, const aclTensor* mat2, const ac
 }
 
 /*
-   注意：虽然申明为const指针引用，但selfReshapeOutput和mat2ReshapeOutput会重新赋值修改指针指向新的const aclTensor
+   注意：虽然声明为const指针引用，但selfReshapeOutput和mat2ReshapeOutput会重新赋值修改指针指向新的const aclTensor
 */
 int64_t ProcessSpecialCases(const aclTensor*& selfCastOut, const aclTensor*& mat2CastOut, MmOpInfo& mmOpInfo,
                             const aclTensor*& bias, const aclTensor*& selfReshapeOutput,
@@ -1299,7 +1299,7 @@ int64_t ProcessSpecialCases(const aclTensor*& selfCastOut, const aclTensor*& mat
 }
 
 /*
-计算MatMul的workSize， 内涵MatMul算子的构图流程
+计算MatMul的workSize， 包含MatMul算子的构图流程
                   self            mat2
                    |               |
               contiguous       contiguous
@@ -1354,7 +1354,7 @@ const aclTensor* ExecMmOpWithBias(const aclTensor* self, const aclTensor* mat2, 
         mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
         CHECK_RET(mat2 != nullptr, nullptr);
     }
-    OP_LOGI("mat2 origin storage shape is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
+    OP_LOGI("mat2 origin storage shape is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // bias非连续转连续以及转换dtype
     auto contiguousBias = bias;
     if (contiguousBias != nullptr) {
@@ -1371,7 +1371,7 @@ const aclTensor* ExecMmOpWithBias(const aclTensor* self, const aclTensor* mat2, 
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("mat2 GetStorageFormat FORMAT_FRACTAL_NZ.");
         aclTensor* mat2ShapeSet = const_cast<aclTensor*>(mat2CastOut);
-        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的stroageShape刷新
+        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的storageShape刷新
     }
     OP_LOGI("mat2 storage shape is [%s].", op::ToString(mat2StorageShape).GetString());
 
@@ -1517,7 +1517,7 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
             CHECK_RET(mat2 != nullptr, nullptr);
         }
     }
-    OP_LOGI("mat2 origin storage shape is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
+    OP_LOGI("mat2 origin storage shape is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
 
     auto mat2CastOut = mat2;
     auto mat2StorageShape = mat2->GetStorageShape();
@@ -1527,7 +1527,7 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("mat2 GetStorageFormat FORMAT_FRACTAL_NZ.");
         aclTensor* mat2ShapeSet = const_cast<aclTensor*>(mat2CastOut);
-        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的stroageShape刷新
+        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的storageShape刷新
     }
     OP_LOGI("mat2 storage shape is [%s].", op::ToString(mat2StorageShape).GetString());
     // bias非连续转连续以及转换dtype
@@ -2702,7 +2702,7 @@ const aclTensor* TransposeAndContiguousMat(const aclTensor* mat, aclOpExecutor* 
     if (mat->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("mat GetStorageFormat FORMAT_FRACTAL_NZ.");
         aclTensor* matShapeSet = const_cast<aclTensor*>(contiguousMat);
-        matShapeSet->SetStorageShape(matStorageShape); // 对NZ的场景用原来的stroageShape刷新
+        matShapeSet->SetStorageShape(matStorageShape); // 对NZ的场景用原来的storageShape刷新
     }
     OP_LOGI("mat storage shape is [%s].", op::ToString(matStorageShape).GetString());
     CHECK_RET(contiguousMat != nullptr, nullptr);

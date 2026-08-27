@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file debug_tiilng.cpp
+ * \file debug_tiling.cpp
  * \brief
  */
 

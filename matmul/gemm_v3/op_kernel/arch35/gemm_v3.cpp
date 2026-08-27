@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file gemm_v3_apt.cpp
+ * \file gemm_v3.cpp
  * \brief
  */
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
@@ -40,7 +40,7 @@ using namespace matmul;
 #define FORMAT_FRACTAL_NZ
 #endif
 
-#define MMV3_IMPL_CLASS_TRNAS(transA, transB, templateClass, ...)                          \
+#define MMV3_IMPL_CLASS_TRANS(transA, transB, templateClass, ...)                          \
     do {                                                                                   \
         using cType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_C>;         \
         using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;   \
@@ -73,7 +73,7 @@ __global__ __aicore__ void gemm_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADD
     // GemmV3复用matmulV3 kernel和tilingKey，暂只支持aswt模板
     if constexpr (API_LEVEL == MAT_MUL_HIGH_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
                   L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-        MMV3_IMPL_CLASS_TRNAS(aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock,
+        MMV3_IMPL_CLASS_TRANS(aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock,
                               MM_CFG_NO_PRELOAD);
     }
 #endif

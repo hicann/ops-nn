@@ -500,4 +500,4 @@ __aicore__ inline void MatmulBaseUnAlignedKernelBL1FullLoad<A_TYPE, B_TYPE, C_TY
 }
 
 } // namespace MatmulV3
-#endif // MMV3_MATMUL_BL1_FULL_LOAD_H
+#endif // __OP_KERNEL_MATMUL_V3_BL1_FULL_LOAD_H__

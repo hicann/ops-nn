@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file mat_mul_fixpipe_basic_cmct.h
+ * \file mat_mul_fixpipe_opti_basic_cmct.h
  * \brief
  */
 #pragma once

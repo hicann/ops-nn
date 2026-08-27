@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_tiling_key.cc
+ * \file batch_matmul_v3_tiling_key.cpp
  * \brief
  */
 

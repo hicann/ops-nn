@@ -102,22 +102,21 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     }
     // selfDimNum - 1 means self's last dim, and otherDimNum - 2 means mat2's penultimate dim
     if (selfDimNum < 2 || otherDimNum < 2 || outDimNum < 2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "shapedim of self, other or out must > 2, actual selfshapeDim [%zu], otherDimNum [%zu] , outDimNum [%zu].",
-            selfDimNum, otherDimNum, outDimNum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "dim of self, other or out must be > 2, actual selfDimNum [%zu], otherDimNum [%zu], outDimNum [%zu].",
+                selfDimNum, otherDimNum, outDimNum);
         return false;
     }
     if (self[selfDimNum - 1] != other[otherDimNum - PENULTIMATE_DIM]) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "self's last dim and mat2's penultimate dim shoule be same, self [%ld], mat2 [%ld].",
+                "self's last dim and mat2's penultimate dim should be same, self [%ld], mat2 [%ld].",
                 self[selfDimNum - LAST_DIM], other[otherDimNum - PENULTIMATE_DIM]);
         return false;
     }
     if (self[FIRST_DIM] != other[FIRST_DIM] && self[FIRST_DIM] != 1 && other[FIRST_DIM] != 1) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "self's first dim and mat2's first dim shoule be same, or at least one of the self's first dim and "
-                "mat2's first dim is 1.Now self [%ld], mat2 [%ld].",
+                "self's first dim and mat2's first dim should be same, or at least one of the self's first dim and "
+                "mat2's first dim is 1. Now self [%ld], mat2 [%ld].",
                 self[FIRST_DIM], other[FIRST_DIM]);
         return false;
     }
@@ -125,7 +124,7 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* otherTensor
     if (out[outDimNum - PENULTIMATE_DIM] != self[selfDimNum - PENULTIMATE_DIM] ||
         out[outDimNum - LAST_DIM] != other[otherDimNum - LAST_DIM] || out[FIRST_DIM] != firstDim) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "output's shape is not match input, out_m[%ld] must be same with self_m[%ld], "
+                "output's shape does not match input, out_m[%ld] must be same with self_m[%ld], "
                 "out_n[%ld] must be same with other_n[%ld], out_batch[%ld] must be same with input_batch[%ld].",
                 out[outDimNum - PENULTIMATE_DIM], self[selfDimNum - PENULTIMATE_DIM], out[outDimNum - LAST_DIM],
                 other[otherDimNum - LAST_DIM], out[FIRST_DIM], firstDim);
@@ -179,7 +178,7 @@ static inline bool CheckStorageShape(const aclTensor* otherTensor)
     auto storageShapeDim = storageShape.GetDimNum();
     OP_CHECK(
         storageShapeDim == 5,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support mat2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support mat2 storageShapeDim is 5, which is [%zu].", storageShapeDim),
         return false);
     return true;
 }
@@ -196,7 +195,7 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchmatmulweightnz is unsupported in this npu arch");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "BatchMatMulWeightNz is unsupported in this NPU arch.");
         return false;
     }
     bool enable16In32Out = NeedEnableFp32Output(self->GetDataType(), mat2->GetDataType(), out->GetDataType(),

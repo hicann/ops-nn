@@ -125,7 +125,7 @@ protected:
     void CalcBatchDimAll();
     bool CheckNd2NzOnTheFlyLimit();
     void DoMultiBatchAndL1FullLoadTiling();
-    bool CheckBMMTilingDataIsVaild() const;
+    bool CheckBMMTilingDataIsValid() const;
     void DoTilingKeyCustom();
     void DoUnAlignCommonTiling();
     void DoMultiBatchTiling();

@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file batch_mat_mul_v3_tiling.cc
+ * \file batch_mat_mul_v3_tiling.cpp
  * \brief
  */
 #include "batch_mat_mul_v3_tiling.h"

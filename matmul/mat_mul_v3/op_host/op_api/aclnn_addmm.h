@@ -68,7 +68,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(const aclTensor* self, 
 
 /**
  * @brief aclnnAddmmWeightNz的第二段接口，用于执行计算。
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddmmWeightNzGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
@@ -80,4 +80,4 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize
 }
 #endif
 
-#endif // OP_API_INC_ADD_H_
+#endif // OP_API_INC_ADDMM_H_

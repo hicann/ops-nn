@@ -130,8 +130,8 @@ bool GemmV3BaseTiling::IsCapable()
     bool is16In32Out = dtypeY == ge::DT_FLOAT && isLowPrecInput;
     if ((!is16In32Out && dtypeC != dtypeY) || (is16In32Out && dtypeC != dtypeA && dtypeC != dtypeY)) {
         OP_LOGW(params_.opName,
-                "Expected self dtype(%s) to be equal to mat dtype or out dtype(%s) in 16in32out scenario. or"
-                "Expected self dtype(%s) to be equal to out dtype(%s).",
+                "Expected self dtype(%s) to be equal to mat dtype or out dtype(%s) in 16in32out scenario; "
+                "or expected self dtype to be equal to out dtype in other scenarios.",
                 Ops::Base::ToString(dtypeC).c_str(), Ops::Base::ToString(dtypeY).c_str());
         return false;
     }
@@ -139,7 +139,7 @@ bool GemmV3BaseTiling::IsCapable()
                           (dtypeY == ge::DT_FLOAT && isLowPrecInput));
     if (!isValidOutput) {
         OP_LOGW(params_.opName,
-                "invalid out dtype (%s), only support half, bfloat16 or float(with low-precision input) output.",
+                "invalid out dtype (%s), only supports half, bfloat16 or float (with low-precision input) output.",
                 Ops::Base::ToString(dtypeY).c_str());
         return false;
     }

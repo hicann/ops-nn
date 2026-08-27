@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file transpose_batch_mat_mul_tiling_key.cc
+ * \file transpose_batch_mat_mul_tiling_key.cpp
  * \brief
  */
 

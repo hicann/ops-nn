@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_matmul2mul_tiling.h
+ * \file batch_mat_mul_v3_matmul2mul_block_scheduler.h
  * \brief
  */
 

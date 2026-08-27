@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_iterbatch_tiling.cc
+ * \file batch_matmul_v3_iterbatch_tiling.cpp
  * \brief
  */
 

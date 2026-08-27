@@ -24,7 +24,7 @@ using namespace std;
 using namespace ge;
 
 namespace {
-bool IsDisplayTilingdata(const string& case_name, size_t index)
+bool IsDisplayTilingData(const string& case_name, size_t index)
 {
     if (index <= 18 || (index >= 22 && index <= 27) || (index >= 30 && index <= 32) || index >= 48) {
         return true;
@@ -41,7 +41,7 @@ static string TilingData2Str(const gert::TilingData* tiling_data, const string& 
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
-        if (IsDisplayTilingdata(case_name, i / sizeof(int32_t))) {
+        if (IsDisplayTilingData(case_name, i / sizeof(int32_t))) {
             result += std::to_string((reinterpret_cast<const int32_t*>(tiling_data->GetData())[i / sizeof(int32_t)]));
             result += " ";
         }
@@ -59,7 +59,7 @@ static string GenGoldenTilingData(const string& tiling_data, const string& case_
     }
     string golden_tiling_data;
     for (size_t i = 0; i < data_list.size(); i++) {
-        if (IsDisplayTilingdata(case_name, i)) {
+        if (IsDisplayTilingData(case_name, i)) {
             golden_tiling_data += data_list[i];
             golden_tiling_data += " ";
         }
@@ -161,8 +161,8 @@ TEST_P(GemmV2TilingRuntime, general_cases)
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto tiling_data = gert::TilingData::CreateCap(2048);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     gert::KernelRunContextHolder holder;
     holder = gert::TilingContextFaker()

@@ -23,7 +23,7 @@ extern "C" __global__ __aicore__ void mat_mul_v2_compress_dequant(GM_ADDR x1, GM
 {
     SetPadding<uint64_t>((uint64_t)0x0);
     SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
-    SetAtomicnone();
+    AscendC::SetAtomicNone();
 
     PpMatmulI8NzCompress<0, false, true, false, int8_t, uint64_t, int32_t> kernel;
 
@@ -48,7 +48,7 @@ extern "C" __global__ __aicore__ void mat_mul_v2_compress_dequant(GM_ADDR x1, GM
                 ub_tiling.GetValue(8),   // kLoop
                 ub_tiling.GetValue(9),   // nLoop
                 ub_tiling.GetValue(10),  // coreLoop
-                ub_tiling.GetValue(11),  // swizzlCount
+                ub_tiling.GetValue(11),  // swizzleCount
                 ub_tiling.GetValue(12),  // tilingK
                 ub_tiling.GetValue(13),  // tilingN
                 ub_tiling.GetValue(14)); // compressOverlapN

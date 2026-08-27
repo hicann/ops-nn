@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file transpose_batch_mat_mul_infer.cpp
+ * \file transpose_batch_mat_mul_infershape.cpp
  * \brief
  */
 #include <string>
@@ -121,7 +121,7 @@ static ge::graphStatus CheckPermForTransposeBatchMatMul(const TypedContinuousVec
 
     const auto perm_y_attr = perm_y.GetData();
     auto check_perm_y = *perm_y_attr == 1 && *(perm_y_attr + 1) == 0 && *(perm_y_attr + 2) == 2;
-    CHECK(!check_perm_y, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_y should {1, 0, 2}"),
+    CHECK(!check_perm_y, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_y should be {1, 0, 2}"),
           return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -137,14 +137,14 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
     auto attrs = context->GetAttrs();
     auto name_op = context->GetNodeName();
     CHECK(shape_x1 == nullptr || shape_x2 == nullptr || shape_y == nullptr || attrs == nullptr,
-          CUBE_INNER_ERR_REPORT(name_op, "[Infershape]shape or attrs is null"), return ge::GRAPH_FAILED);
+          CUBE_INNER_ERR_REPORT(name_op, "[InferShape] shape or attrs is null"), return ge::GRAPH_FAILED);
 
     const auto perm_x1 = attrs->GetListInt(0);
     const auto perm_x2 = attrs->GetListInt(1);
     const auto perm_y = attrs->GetListInt(2);
     const auto batch_split_factor = attrs->GetAttrPointer<int32_t>(4); // batch_split_factor index is 4
     CHECK(perm_x1 == nullptr || perm_x2 == nullptr || perm_y == nullptr || batch_split_factor == nullptr,
-          CUBE_INNER_ERR_REPORT(name_op, "[Infershape] null"), return ge::GRAPH_FAILED);
+          CUBE_INNER_ERR_REPORT(name_op, "[InferShape] null"), return ge::GRAPH_FAILED);
 
     CHECK(CheckPermForTransposeBatchMatMul(*perm_x1, *perm_x2, *perm_y) != ge::GRAPH_SUCCESS,
           CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to check perm"), return ge::GRAPH_FAILED);
@@ -175,7 +175,7 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
               return ge::GRAPH_FAILED);
         CHECK(!CheckIsUnknownDimNum(*shape_scale) &&
                   shape_scale->GetDim(0) != shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
-              CUBE_INNER_ERR_REPORT(name_op, "The dimension of n mul b [%ld] and scale [%ld] tensors must be the same",
+              CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
                                     shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
                                     shape_scale->GetDim(0)),
               return ge::GRAPH_FAILED);
@@ -183,14 +183,12 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
         auto tensor_x2 = context->GetInputDesc(1);
         ge::DataType dtype_x1 = tensor_x1->GetDataType();
         ge::DataType dtype_x2 = tensor_x2->GetDataType();
-        CHECK(
-            dtype_x1 != ge::DT_FLOAT16,
-            CUBE_INNER_ERR_REPORT(name_op, "the dtype of input is only supported FLOAT16 when the scale takes effect."),
-            return ge::GRAPH_FAILED);
-        CHECK(
-            dtype_x2 != ge::DT_FLOAT16,
-            CUBE_INNER_ERR_REPORT(name_op, "the dtype of input is only supported FLOAT16 when the scale takes effect."),
-            return ge::GRAPH_FAILED);
+        CHECK(dtype_x1 != ge::DT_FLOAT16,
+              CUBE_INNER_ERR_REPORT(name_op, "the dtype of input only supports FLOAT16 when the scale takes effect."),
+              return ge::GRAPH_FAILED);
+        CHECK(dtype_x2 != ge::DT_FLOAT16,
+              CUBE_INNER_ERR_REPORT(name_op, "the dtype of input only supports FLOAT16 when the scale takes effect."),
+              return ge::GRAPH_FAILED);
     }
     ge::graphStatus ret = SetShapeY(*shape_y, shape_x1_transposed, shape_x2_transposed, *perm_y, *batch_split_factor,
                                     shape_scale != nullptr);

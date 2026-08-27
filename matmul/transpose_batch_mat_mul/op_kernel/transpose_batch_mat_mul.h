@@ -12,8 +12,8 @@
  * \file transpose_batch_mat_mul.h
  * \brief
  */
-#ifndef TRNASPOSE_BATCH_MAT_MUL_H
-#define TRNASPOSE_BATCH_MAT_MUL_H
+#ifndef TRANSPOSE_BATCH_MAT_MUL_H
+#define TRANSPOSE_BATCH_MAT_MUL_H
 
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
@@ -234,4 +234,4 @@ TransposeBatchMatMulKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE, 
     mm_.SetHF32(false, 0);
     return;
 }
-#endif // TRNASPOSE_BATCH_MAT_MUL_H
+#endif // TRANSPOSE_BATCH_MAT_MUL_H

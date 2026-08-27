@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_mergebatch_basicapi_tiling.cc
+ * \file batch_matmul_v3_mergebatch_basicapi_tiling.cpp
  * \brief
  */
 #include <cmath>

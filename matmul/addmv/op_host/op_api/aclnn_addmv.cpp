@@ -96,7 +96,7 @@ static bool CheckPromoteType(const aclTensor* self, const aclTensor* mat, const 
     // 检查mat和vec能否做数据类型推导
     DataType promoteType = PromoteType(mat->GetDataType(), vec->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Mat dtype %s and Vec dtype %s can not promote dtype.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Mat dtype %s and Vec dtype %s cannot be promoted.",
                 ToString(mat->GetDataType()).GetString(), ToString(vec->GetDataType()).GetString());
         return false;
     }
@@ -106,7 +106,7 @@ static bool CheckPromoteType(const aclTensor* self, const aclTensor* mat, const 
     if (std::abs(alpha->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
         promoteType2 = PromoteType(alpha->GetDataType(), promoteType);
         if (promoteType2 == DataType::DT_UNDEFINED) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s can not promote dtype.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s cannot be promoted.",
                     ToString(alpha->GetDataType()).GetString(), ToString(promoteType).GetString());
             return false;
         }
@@ -117,7 +117,7 @@ static bool CheckPromoteType(const aclTensor* self, const aclTensor* mat, const 
     if (std::abs(beta->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
         promoteType3 = PromoteType(beta->GetDataType(), self->GetDataType());
         if (promoteType3 == DataType::DT_UNDEFINED) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s can not promote dtype.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s cannot be promoted.",
                     ToString(self->GetDataType()).GetString(), ToString(beta->GetDataType()).GetString());
             return false;
         }
@@ -127,7 +127,7 @@ static bool CheckPromoteType(const aclTensor* self, const aclTensor* mat, const 
     DataType promoteTypeFinal = PromoteType(promoteType3, promoteType2);
     if (promoteTypeFinal == DataType::DT_UNDEFINED) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "part1(beta*self) dtype %s and part2(alpha*(mat@vec)) dtype %s can not promote dtype.",
+                "part1(beta*self) dtype %s and part2(alpha*(mat@vec)) dtype %s cannot be promoted.",
                 ToString(promoteType3).GetString(), ToString(promoteType2).GetString());
         return false;
     }
@@ -149,7 +149,7 @@ static bool CheckTensorDimAndSize(const aclTensor* self, const aclTensor* mat, c
     if ((selfShape.GetDimNum() > 1) || (matShape.GetDimNum() != MATRIX_DIM) || (vecShape.GetDimNum() != 1) ||
         (outShape.GetDimNum() != 1)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Expect input tensor dim [0/1,2,1,1], but receive self [%zu], mat [%zu], vec [%zu], out [%zu].",
+                "Expect input tensor dim [0/1,2,1,1], but received self [%zu], mat [%zu], vec [%zu], out [%zu].",
                 selfShape.GetDimNum(), matShape.GetDimNum(), vecShape.GetDimNum(), outShape.GetDimNum());
         return false;
     }
@@ -158,7 +158,7 @@ static bool CheckTensorDimAndSize(const aclTensor* self, const aclTensor* mat, c
         (selfShape.GetDimNum() != 0 && matShape.GetDim(0) != selfShape.GetDim(0) &&
          (selfShape.GetDim(0) != 1 || std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Input tensor shape not satisfy, current shape : self [%s], mat [%s], vec [%s], out [%s].",
+                "Input tensor shape does not satisfy, current shape: self [%s], mat [%s], vec [%s], out [%s].",
                 op::ToString(selfShape).GetString(), op::ToString(matShape).GetString(),
                 op::ToString(vecShape).GetString(), op::ToString(outShape).GetString());
         return false;
@@ -176,7 +176,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* mat, const aclTe
     bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (matFormat == Format::FORMAT_FRACTAL_NZ) ||
                             (vecFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "One of the tensors ('self', 'mat', 'vec', 'out') does not support NZ format");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "One of the tensors ('self', 'mat', 'vec', 'out') does not support NZ format.");
         return false;
     }
     return true;
@@ -254,11 +255,11 @@ const aclTensor* GetMatMulResult(const aclTensor* mat, const aclTensor* vec, int
     // 调用matmul之前需要对mat和vec做数据类型转换，以满足运算条件
     auto promoteType = PromoteType(matContiguous->GetDataType(), mat2->GetDataType());
 
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+    // 将输入 mat 的数据类型转换成隐式数据类型，根据具体算子语义按需调用
     auto matCasted = l0op::Cast(matContiguous, promoteType, executor);
     CHECK_RET(matCasted != nullptr, nullptr);
 
-    // 将输入other的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+    // 将输入 vec 的数据类型转换成隐式数据类型，根据具体算子语义按需调用
     auto mat2Casted = l0op::Cast(mat2, promoteType, executor);
     CHECK_RET(mat2Casted != nullptr, nullptr);
 
@@ -290,11 +291,11 @@ const aclTensor* GetMulResult(const aclTensor* mat, const aclTensor* vec, const 
     // 调用matmul之前需要对mat和vec做数据类型转换，以满足运算条件
     auto promoteType = PromoteType(matContiguous->GetDataType(), vecContiguous->GetDataType());
 
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+    // 将输入 mat 的数据类型转换成隐式数据类型，根据具体算子语义按需调用
     auto matCasted = l0op::Cast(matContiguous, promoteType, executor);
     CHECK_RET(matCasted != nullptr, nullptr);
 
-    // 将输入other的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+    // 将输入 vec 的数据类型转换成隐式数据类型，根据具体算子语义按需调用
     auto vecCasted = l0op::Cast(vecContiguous, promoteType, executor);
     CHECK_RET(vecCasted != nullptr, nullptr);
 

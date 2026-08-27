@@ -311,4 +311,4 @@ __aicore__ inline void MatmulSingleCoreSplitKBaseBlock::CalcGMOffset(uint64_t in
 
 __aicore__ inline void MatmulSingleCoreSplitKBaseBlock::UpdateBlockIndex() { params_.index += 1; }
 
-#endif // MMV3_MATMUL_BLOCK_H
+#endif // __OP_KERNEL_MATMUL_V3_SC_SPLITK_BLOCK_H__

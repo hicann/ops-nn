@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file mat_mul_bl1_full_load.h
+ * \file transpose_batch_mat_mul_asw_kernel.h
  * \brief
  */
 #ifndef TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_H

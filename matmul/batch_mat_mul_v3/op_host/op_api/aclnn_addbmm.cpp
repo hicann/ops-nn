@@ -110,7 +110,7 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     // check batch1 last dim and batch2 penultimate dim is equal or not
     if (batch1[THIRD_DIM] != batch2[SECOND_DIM]) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
+                "batch1's last dim and batch2's penultimate dim should be same, batch1 [%ld], batch2 [%ld].",
                 batch1[THIRD_DIM], batch2[SECOND_DIM]);
         return false;
     }
@@ -118,7 +118,7 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     auto batch1DimNum = batch1Tensor->GetViewShape().GetDimNum();
     auto batch2DimNum = batch2Tensor->GetViewShape().GetDimNum();
     if (!CheckBatchDimBroadcast(batch1DimNum, batch2DimNum, batch1, batch2)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self's batch dim and mat2's batch dim can not broadcast");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self's batch dim and mat2's batch dim cannot broadcast");
         return false;
     }
 
@@ -417,10 +417,10 @@ public:
         // 进行Add或Axpy计算
         const aclTensor* addOut = nullptr;
         if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
-            // alpha == 0    addOut = mulOutCasted + bmmOutCasted
+            // alpha == 1, addOut = mulOutCasted + reduceSumOutCasted
             addOut = l0op::Add(mulOutCasted, reduceSumOutCasted, executor);
         } else {
-            // alpha != 0    addOut = mulOutCasted + bmmOutCasted * alpha
+            // alpha != 1, addOut = mulOutCasted + reduceSumOutCasted * alpha
             addOut = l0op::Axpy(mulOutCasted, reduceSumOutCasted, alpha->ToFloat(), executor);
         }
         CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

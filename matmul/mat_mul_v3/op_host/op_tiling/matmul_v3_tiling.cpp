@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file matmul_v3_tiling.cc
+ * \file matmul_v3_tiling.cpp
  * \brief
  */
 #include "matmul_v3_tiling.h"

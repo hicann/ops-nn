@@ -39,4 +39,4 @@ inline void InitTilingData(uint8_t* tiling, T* const_data)
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
     tiling_struct tiling_data;                                              \
     InitTilingData<tiling_struct>(tiling_arg, &tiling_data);
-#endif // FOREACH_MINIMUM_SCALAR_TILING_DEF_H
+#endif // _TEST_GEMM_V3_TILING_DEF_H_

@@ -156,7 +156,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         }                                                                                                             \
     } while (0)
 
-#define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                \
+#define BMMV3_IMPL_CLASS_COMMON_TRANS(transA, transB, templateClass, ...)                \
     do {                                                                                 \
         GET_TILING_DATA(tilingData, tilingGM);                                           \
         using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \
@@ -200,7 +200,7 @@ __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bi
     if constexpr (BATCH_API_LEVEL == MAT_MUL_HIGH_LEVEL && BMODEL == MAT_MUL_BASIC &&
                   BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD && BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY &&
                   BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
-        BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+        BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                       BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC &&
                          BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD && BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY &&
@@ -289,7 +289,7 @@ __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bi
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3TilingData, tilingData, tilingGM);
 #if IS_BLAZE
         if constexpr (format_x2 == CubeFormat::NZ) {
-            BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+            BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                           BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
         } else {
             BatchMatMulIterBatchBroadcastKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC,
@@ -298,7 +298,7 @@ __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bi
                 aGM, bGM, biasGM, cGM, nullptr, tilingData);
         }
 #else
-        BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+        BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                       BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
 #endif
     } else if constexpr (BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC &&
@@ -309,7 +309,7 @@ __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bi
         BatchMatMulV3Advanced::BatchMatMulBroadcastKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
                                                           layoutC>(aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #else
-        BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+        BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                       BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
 #endif
     } else if constexpr (BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC &&

@@ -207,4 +207,4 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
     mm_.SetHF32(false, 0);
     return;
 }
-#endif // MMV3_MATMUL_KERNEL_H
+#endif // __OP_KERNEL_MATMUL_V3_BASE_KERNEL_H__

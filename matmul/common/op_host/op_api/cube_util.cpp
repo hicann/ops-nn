@@ -73,7 +73,7 @@ bool CheckUnSupportDtype(const aclTensor* input, const aclTensor* weight)
 int8_t routeCubeMathType4ToCubeMathType0DAV_2201(int8_t cubeMathType)
 {
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 && cubeMathType == USE_FP32_ADD) {
-        OP_LOGD("The cubeMathType is USE_FP32_ADD for which the API does not support temporarily, "
+        OP_LOGD("The cubeMathType is USE_FP32_ADD for which the API is not temporarily supported, "
                 "route to KEEP_DTYPE instead.");
         return KEEP_DTYPE;
     }

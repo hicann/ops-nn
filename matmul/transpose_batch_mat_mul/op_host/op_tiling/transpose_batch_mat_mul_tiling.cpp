@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file transpose_batch_mat_mul_tiling.cc
+ * \file transpose_batch_mat_mul_tiling.cpp
  * \brief
  */
 #include "transpose_batch_mat_mul_tiling.h"

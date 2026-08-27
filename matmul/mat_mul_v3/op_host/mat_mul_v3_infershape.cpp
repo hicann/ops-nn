@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file mat_mul_v3_infer.cpp
+ * \file mat_mul_v3_infershape.cpp
  * \brief
  */
 

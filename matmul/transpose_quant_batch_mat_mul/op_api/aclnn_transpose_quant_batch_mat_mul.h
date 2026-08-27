@@ -17,9 +17,9 @@
 extern "C" {
 #endif
 /**
- * @brief aclnnTransposeQuantBatchMatmul的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @brief aclnnTransposeQuantBatchMatMul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
- * 算子功能：实现TransposeQuantBatchMatmul计算。
+ * 算子功能：实现TransposeQuantBatchMatMul计算。
  * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn, float8_e5m2。
  * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn, float8_e5m2。
  * @param [in] bias: 偏置，当前不支持。
@@ -42,7 +42,7 @@ ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     int32_t batchSplitFactor, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnTransposeBatchMatmul的第二段接口，用于执行计算。
+ * @brief aclnnTransposeQuantBatchMatMul的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                      const aclrtStream stream);
@@ -74,8 +74,8 @@ ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
 
 /**
  * @brief aclnnTransposeQuantBatchMatMulWeightNz的第二段接口，用于执行计算。
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
+ * @param [in] workspaceSize: 在npu
  * device侧申请的workspace大小，由第一段接口aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。

@@ -85,7 +85,7 @@ using L0TileShape = AscendC::Shape<_256, _256, _64>;
 enum class FusionOpType : uint8_t { ADD, MUL, GELU, GELU_ERF };
 
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-#define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                \
+#define BMMV3_IMPL_CLASS_COMMON_TRANS(transA, transB, templateClass, ...)                \
     do {                                                                                 \
         GET_TILING_DATA(tilingData, tilingGM);                                           \
         using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \
@@ -811,13 +811,13 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
             API_LEVEL == MAT_MUL_HIGH_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
             BATCH_ITER_MODEL == MAT_MUL_FOR_FUSED_BATCH) {
             if constexpr (OPTYPE == F_OPTYPE_QUANT) {
-                BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+                BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                               BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD, true);
             } else if constexpr (OPTYPE == F_OPTYPE_RELU_QUANT) {
-                BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+                BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                               BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD_RELU, true);
             } else {
-                BMMV3_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
+                BMMV3_IMPL_CLASS_COMMON_TRANS(aTran, bTran, BatchMatMulV3Advanced::BatchMatMulAswKernel,
                                               BatchMatMulV3Advanced::BatchMatMulAswBlock, MM_CFG_NO_PRELOAD_RELU);
             }
         } else if constexpr ( // basic, aswt, from bmmv3

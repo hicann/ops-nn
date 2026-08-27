@@ -346,4 +346,4 @@ __aicore__ inline void MatmulBaseBlock::UpdateBlockIndex()
     }
 }
 
-#endif // MMV3_MATMUL_BLOCK_H
+#endif // __OP_KERNEL_MATMUL_V3_BASE_BLOCK_H__

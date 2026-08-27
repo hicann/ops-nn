@@ -106,7 +106,7 @@ bool CheckNotNull(const aclTensor* x, const aclTensor* x2, const aclTensor* bias
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(x2, return false);
     if (bias != nullptr && !IsInSupportedOpTypes(fusedOpType, kSupportedBiasOpTypes)) {
-        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "bias is not supported right now");
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "bias is not supported for the current fusedOpType");
         return false;
     }
     if (IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes)) {
@@ -122,7 +122,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
     if (cubeMathType != USE_HF32 && promoteType == DataType::DT_FLOAT) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul is only supported bf16/fp16/hf32, does not support fp32.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul only supports bf16/fp16/hf32, does not support fp32.");
         return false;
     }
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
@@ -267,7 +267,7 @@ static bool CheckBiasShape(const aclTensor* bias)
     }
     size_t biasDimNum = bias->GetViewShape().GetDimNum();
     if (biasDimNum != 1 && biasDimNum != DIM_LEN_MIN) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dim of bias cannot be larger than 2");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dimension of bias cannot be larger than 2");
         return false;
     }
     return true;
@@ -640,7 +640,7 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
     // 空tensor 处理，对于非16Cast32放开空tensor
     bool allowEmptyTensor = IsInSupportedOpTypes(fusedOpType, kSupportedEmptyTensorOpTypes);
     if (!allowEmptyTensor && (x->IsEmpty() || x2->IsEmpty())) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "fused matmul is not supported empty tensor handle");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FusedMatmul does not support empty tensor for this fusedOpType");
         return nullptr;
     }
     // 解析当前规格matmulop支持的dtype、format能力

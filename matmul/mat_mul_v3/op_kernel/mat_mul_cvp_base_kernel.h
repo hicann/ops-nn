@@ -363,4 +363,4 @@ __aicore__ inline void MatmulCvpBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
     return;
 }
 } // namespace MatmulV3
-#endif // MMV3_MATMUL_KERNEL_H
+#endif // __OP_KERNEL_MATMUL_V3_CVP_BASE_KERNEL__H__

@@ -37,7 +37,7 @@ extern "C" {
  * @param [in] beta: host侧的aclScalar，默认为1
  * @param [in] alpha: host侧的aclScalar，默认为1
  * @param [in] cubeMathType:
- * INT8类型的枚举值，用于判断Cube单元应该使用那种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
+ * INT8类型的枚举值，用于判断Cube单元应该使用哪种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
  * @param [in] out: npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16类型，dtype和format均需要与self、batch1@batch2保持一致。
  * 支持非连续的Tensor，数据格式支持ND。输出的shape要求与batch1@batch2的shape保持一致。
@@ -57,8 +57,8 @@ ACLNN_API aclnnStatus aclnnBaddbmmGetWorkspaceSize(const aclTensor* self, const 
  * 计算公式：计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和
  * $$ out = βself+α(batch1@batch2) $$
  *
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnBaddbmmGetWorkspaceSize获取。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnBaddbmmGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
@@ -86,7 +86,7 @@ ACLNN_API aclnnStatus aclnnBaddbmm(void* workspace, uint64_t workspaceSize, aclO
  * @param [in] beta: host侧的aclScalar，默认为1
  * @param [in] alpha: host侧的aclScalar，默认为1
  * @param [in] cubeMathType:
- * INT8类型的枚举值，用于判断Cube单元应该使用那种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
+ * INT8类型的枚举值，用于判断Cube单元应该使用哪种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -103,8 +103,8 @@ ACLNN_API aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(const aclTensor* selfR
  * 计算公式：计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和
  * $$ out = βself+α(batch1@batch2) $$
  *
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnInplaceBaddbmmGetWorkspaceSize获取。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnInplaceBaddbmmGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

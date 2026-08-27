@@ -27,4 +27,4 @@ class MatMulUnAlignedSingleCoreSplitKKernel
 public:
     __aicore__ inline MatMulUnAlignedSingleCoreSplitKKernel() = default;
 };
-#endif // MMV3_MATMUL_KERNEL_H
+#endif // __OP_KERNEL_MATMUL_V3_UNALIGNED_SC_SPLITK_KERNEL_H__

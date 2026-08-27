@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_iterbatch_tiling.h
+ * \file batch_matmul_v3_iterbatch_basicapi_tiling.h
  * \brief
  */
 

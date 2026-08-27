@@ -40,7 +40,7 @@ constexpr CubeFormat format_x2 = CubeFormat::NZ;
 constexpr CubeFormat format_x2 = CubeFormat::ND;
 #endif
 
-#define TBMM_IMPL_CLASS_COMMON_TRNAS(transA, transB, Mode, templateClass, ...)           \
+#define TBMM_IMPL_CLASS_COMMON_TRANS(transA, transB, Mode, templateClass, ...)           \
     do {                                                                                 \
         using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \
         using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>; \
@@ -82,25 +82,25 @@ __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_
     if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
                   BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                   PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
-        TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS,
+        TBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, TBMM_MODE::BMM_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
-        TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS,
+        TBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
-        TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS_TRANS,
+        TBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, TBMM_MODE::BMM_TRANS_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
-        TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS_TRANS,
+        TBMM_IMPL_CLASS_COMMON_TRANS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__

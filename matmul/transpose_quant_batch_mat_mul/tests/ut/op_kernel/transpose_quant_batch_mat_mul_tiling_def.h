@@ -24,7 +24,7 @@ inline void InitTqbmmTilingData(void* tiling, void* const_data)
     InitTqbmmTilingData(tiling_arg, &tiling_data);
 #endif
 
-#define TQBMM_IMPL_CLASS_COMMON_TRNAS(transposeX1, transposeX2, templateClass, ...)                         \
+#define TQBMM_IMPL_CLASS_COMMON_TRANS(transposeX1, transposeX2, templateClass, ...)                         \
     do {                                                                                                    \
         templateClass<DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_X1_SCALE, DTYPE_Y, transposeX1, \
                       transposeX2, DTYPE_LOC_LOCAL, __VA_ARGS__>                                            \

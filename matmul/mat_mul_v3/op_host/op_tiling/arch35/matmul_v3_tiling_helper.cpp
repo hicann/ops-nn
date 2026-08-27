@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file matmul_v3_tiling_helper.cc
+ * \file matmul_v3_tiling_helper.cpp
  * \brief
  */
 

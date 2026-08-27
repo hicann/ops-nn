@@ -127,7 +127,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         }                                                                                                             \
     } while (0)
 
-#define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                \
+#define BMMV3_IMPL_CLASS_COMMON_TRANS(transA, transB, templateClass, ...)                \
     do {                                                                                 \
         GET_TILING_DATA(tilingData, tilingGM);                                           \
         using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \

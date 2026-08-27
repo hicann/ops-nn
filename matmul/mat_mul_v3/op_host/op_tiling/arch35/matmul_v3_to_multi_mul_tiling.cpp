@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file matmul_v3_to_multi_mul_tiling.cc
+ * \file matmul_v3_to_multi_mul_tiling.cpp
  * \brief
  */
 

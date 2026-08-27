@@ -1156,4 +1156,4 @@ __aicore__ inline void MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE
     }
 }
 
-#endif // MMV3_MATMUL_KERNEL_H
+#endif // __OP_KERNEL_MATMUL_V3_SC_SPLITK_KERNEL_GM_TO_L1_H__

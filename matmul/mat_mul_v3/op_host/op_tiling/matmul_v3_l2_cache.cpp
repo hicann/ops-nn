@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file matmul_v3_l2_cache.cc
+ * \file matmul_v3_l2_cache.cpp
  * \brief
  */
 #include "matmul_v3_l2_cache.h"

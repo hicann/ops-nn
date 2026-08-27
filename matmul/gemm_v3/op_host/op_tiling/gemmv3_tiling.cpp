@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file gemmv3_tiling.cc
+ * \file gemmv3_tiling.cpp
  * \brief
  */
 #include "../../../mat_mul_v3/op_host/op_tiling/matmul_v3_tiling.h"

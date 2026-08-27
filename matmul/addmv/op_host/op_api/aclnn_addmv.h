@@ -35,4 +35,4 @@ ACLNN_API aclnnStatus aclnnAddmv(void* workspace, uint64_t workspaceSize, aclOpE
 }
 #endif
 
-#endif // OP_API_INC_ADD_H_
+#endif // OP_API_INC_ADDMV_H_

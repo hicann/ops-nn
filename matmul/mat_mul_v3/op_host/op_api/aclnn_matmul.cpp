@@ -98,7 +98,7 @@ inline static bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTenso
     if (curArch != NpuArch::DAV_2201 && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
         (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .",
+                "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s.",
                 op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
                 op::ToString(mat2->GetDataType()).GetString());
         return false;
@@ -116,14 +116,14 @@ inline static bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTenso
     // keeptype模式支持类型检查
     if (cubeMathType == KEEP_DTYPE && !IsInputSupportFp32() &&
         (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s or mat2 dtype %s not support under keep type mode.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s or mat2 dtype %s are not supported under keep type mode.",
                 op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
     if (cubeMathType == KEEP_DTYPE && out->GetDataType() == op::DataType::DT_FLOAT16 &&
         self->GetDataType() == op::DataType::DT_FLOAT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
+                "Input tensor's dtype[DT_FLOAT] should be the same as output's dtype[DT_FLOAT16].");
         return false;
     }
     return CheckWeightNzDtype(self, mat2);
@@ -160,7 +160,7 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
 
     // Tensor1 dims number is 0 OR error dims number is 0
     if (dimTensor1 == 0 || dimTensor2 == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Matmul not support %s, %s", op::ToString(selfShape).GetString(),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Matmul does not support %s, %s", op::ToString(selfShape).GetString(),
                 op::ToString(mat2Shape).GetString());
         return false;
     } else if (dimTensor2 == 1 || dimTensor2 == 2) { // tensor1 dims number is 1 OR tensor2 dims number is 2
@@ -203,7 +203,7 @@ static bool CheckFormat(const aclTensor* selfTensor, [[maybe_unused]] const aclT
     bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) ||
                             (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, " The 'self' or 'out' tensor currently does not support NZ format");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The 'self' or 'out' tensor currently does not support NZ format");
         return false;
     }
     return true;
@@ -422,7 +422,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(const aclTensor* self, const ac
 
     const aclTensor* matmulOut = nullptr;
 
-    // adpat for weightNz transpose scene
+    // adapt for weightNz transpose scene
     bool transposeX2 = GetTransposeAttrValue(mat2);
     // swap last two dims value
     if (transposeX2) {
@@ -693,7 +693,7 @@ public:
         if (dimTensor1 == 1) {
             dimData = FVector<int64_t>{0}; // unsquee dim 0
         } else {
-            dimData = FVector<int64_t>{0, 1}; //  unsquee dim 0,1
+            dimData = FVector<int64_t>{0, 1}; // unsquee dim 0,1
         }
         auto selfUnsqueeze = ContiguousUnsqueezeNd(matA, dimData, executor);
         CHECK_RET(selfUnsqueeze != nullptr, ACLNN_ERR_INNER_NULLPTR);

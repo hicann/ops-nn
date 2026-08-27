@@ -28,7 +28,7 @@ extern "C" {
  * @param [in]   equation: 输入字符串，数据类型支持const char *。
  * @param [out]  output:
  * 输出Tensor，数据类型支持FLOAT16、FLOAT、INT16、UINT16、INT32、UINT32、INT64、UINT64。支持非连续Tensor，数据格式支持ND。
- * @param [out]  workspaceSize：返回用户需要在npu device侧申的的workspace大小。
+ * @param [out]  workspaceSize：返回用户需要在npu device侧申请的workspace大小。
  * @param [out]  executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
@@ -37,7 +37,7 @@ ACLNN_API aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList* tensors, 
 
 /**
  * @brief aclnnEinsum的第二段接口，用于执行计算。
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnEinsumGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。

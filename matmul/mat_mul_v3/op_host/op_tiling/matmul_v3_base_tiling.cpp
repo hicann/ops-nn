@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file matmul_v3_base_tiling.cc
+ * \file matmul_v3_base_tiling.cpp
  * \brief
  */
 
@@ -765,7 +765,7 @@ bool MatmulV3BaseTiling::IsPowerOfTwo(uint64_t x) const { return x > 0UL && (x &
 void MatmulV3BaseTiling::OptimizeLoadBalanceBasicKernel()
 {
     OP_LOGI(args_.opName, "Optimize LoadBalance for BasicKernel");
-    // 判决门限
+    // 判断门限
     //  1. 需要tiling_key==10000000000000000001UL或10000000000000000000UL，表示时BasicKernel场景
     //  2. baseM==128或256，baseN==256或128, baseK==128/dtypesize，刚好将L0 cache的利用最大化
     //  3. 要求m,n方向分合小于4轮或调小m可以不增加轮次
@@ -807,7 +807,7 @@ void MatmulV3BaseTiling::OptimizeLoadBalanceBasicKernel()
 
 void MatmulV3BaseTiling::OptimizeBasicKernelStepK()
 {
-    // 判决门限
+    // 判断门限
     //  1. 需要tiling_key==10000000000000000001UL，表示时BasicKernel场景
     //  2. baseM==128或256，baseN==256或128,baseK==64，刚好将L0 cache的利用最大化
     //  3. 要求m,n是256的倍数且大于等于768, k是256的倍数但不能是2的幂次方 或者m=[10368, 18000] && n,k=[1280, 5120]

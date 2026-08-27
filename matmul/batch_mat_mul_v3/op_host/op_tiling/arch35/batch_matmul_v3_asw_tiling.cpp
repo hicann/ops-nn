@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_matmul_v3_asw_tiling.cc
+ * \file batch_matmul_v3_asw_tiling.cpp
  * \brief
  */
 

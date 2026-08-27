@@ -217,7 +217,7 @@ template <typename PpTilingDataType>
 uint64_t Swizzl(PpTilingDataType& tilingData)
 {
     uint64_t swizzlDirect = 0UL;
-    uint64_t swizzlCount = 1UL;
+    uint64_t swizzleCount = 1UL;
     float m0 = tilingData.opShape.m0;
     float n0 = tilingData.opShape.n0;
     float m = tilingData.opShape.m;
@@ -234,19 +234,19 @@ uint64_t Swizzl(PpTilingDataType& tilingData)
             cost = n0 * i + m0 * c;
             if (cost <= mincost) {
                 mincost = cost;
-                swizzlCount = i;
+                swizzleCount = i;
             }
         } else {
             swizzlDirect = 0UL; // Zn
             cost = m0 * i + n0 * c;
             if (cost < mincost) {
                 mincost = cost;
-                swizzlCount = i;
+                swizzleCount = i;
             }
         }
     }
     tilingData.swizzlDirect = swizzlDirect;
-    tilingData.swizzlCount = swizzlCount;
+    tilingData.swizzleCount = swizzleCount;
     return swizzlDirect;
 }
 } // namespace matmulCompressDequant

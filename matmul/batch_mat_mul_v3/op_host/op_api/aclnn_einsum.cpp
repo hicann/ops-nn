@@ -142,24 +142,24 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList* tensors, aclTensor* outpu
                             0 :
                             g_useFP16;
 
-    auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
-    auto tensor1Contigous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
-    CHECK_RET(tensor0Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(tensor1Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto tensor0Contiguous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
+    auto tensor1Contiguous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
+    CHECK_RET(tensor0Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(tensor1Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* tensor0Cast = tensor0Contigous;
-    const aclTensor* tensor1Cast = tensor1Contigous;
+    const aclTensor* tensor0Cast = tensor0Contiguous;
+    const aclTensor* tensor1Cast = tensor1Contiguous;
     const aclTensor* outputCast = output;
 
     auto inputDtype = (*tensors)[0]->GetDataType();
     if (inputDtype != op::DataType::DT_FLOAT && inputDtype != op::DataType::DT_FLOAT16) {
-        tensor0Cast = l0op::Cast(tensor0Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        tensor0Cast = l0op::Cast(tensor0Contiguous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
         CHECK_RET(tensor0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensor1Cast = l0op::Cast(tensor1Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        tensor1Cast = l0op::Cast(tensor1Contiguous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
         CHECK_RET(tensor1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto outputContigous = l0op::Contiguous(output, uniqueExecutor.get());
-        CHECK_RET(outputContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        outputCast = l0op::Cast(outputContigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        auto outputContiguous = l0op::Contiguous(output, uniqueExecutor.get());
+        CHECK_RET(outputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        outputCast = l0op::Cast(outputContiguous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
         CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto expandA = l0op::UnsqueezeNd(tensor0Cast, DIM_FOUR, uniqueExecutor.get());
@@ -197,13 +197,13 @@ aclnnStatus HandleAxB2AB(const aclTensorList* tensors, aclTensor* output, uint64
                              return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为1
     OP_CHECK_WRONG_DIMENSION(output, 2, return ACLNN_ERR_PARAM_INVALID); // 校验Tensor output的dimNum为2
 
-    auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
-    CHECK_RET(tensor0Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto tensor1Contigous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
-    CHECK_RET(tensor1Contigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto tensor0Contiguous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
+    CHECK_RET(tensor0Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto tensor1Contiguous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
+    CHECK_RET(tensor1Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto leftMatrix = l0op::UnsqueezeNd(tensor0Contigous, DIM_ONE, uniqueExecutor.get());
-    auto rightMatrix = l0op::UnsqueezeNd(tensor1Contigous, DIM_ZERO, uniqueExecutor.get());
+    auto leftMatrix = l0op::UnsqueezeNd(tensor0Contiguous, DIM_ONE, uniqueExecutor.get());
+    auto rightMatrix = l0op::UnsqueezeNd(tensor1Contiguous, DIM_ZERO, uniqueExecutor.get());
     auto result = l0op::Mul(leftMatrix, rightMatrix, uniqueExecutor.get());
 
     // 固定写法，将计算结果拷贝到输出 output output可能是非连续的tensor
@@ -290,7 +290,7 @@ static inline bool CheckTensorValid(const aclTensorList* tensors, const aclTenso
     auto input1Dtype = (*tensors)[1]->GetDataType();
     auto outputDtype = output->GetDataType();
     if ((input0Dtype != input1Dtype) || (input0Dtype != outputDtype)) { // 校验三个tensor的数据类型一致
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "all inputs dtype is not equal, please check.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "all inputs dtype are not equal, please check.");
         return false;
     }
     return true;

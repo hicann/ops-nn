@@ -81,13 +81,13 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     // batch1DimNum - LAST_DIM means the last element, batch2DimNum - PENULTIMATE_DIM means the penultimate element
     if (batch1[batch1DimNum - LAST_DIM] != batch2[batch2DimNum - PENULTIMATE_DIM]) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
+                "batch1's last dim and batch2's penultimate dim should be same, batch1 [%ld], batch2 [%ld].",
                 batch1[batch1DimNum - LAST_DIM], batch2[batch2DimNum - PENULTIMATE_DIM]);
         return false;
     }
 
     if (!CheckBatchDimBroadcast(batch1DimNum, batch2DimNum, batch1, batch2)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mat1's batch dim and mat2's batch dim can not broadcast");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mat1's batch dim and mat2's batch dim cannot broadcast");
         return false;
     }
 

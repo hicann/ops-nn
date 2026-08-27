@@ -237,4 +237,4 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         return;
     }
 }
-#endif // __OP_KERNEL_MATMUL_V3_H__
+#endif // __OP_KERNEL_MATMUL_V3_UNALIGNED_DETERMINISTIC_SPLITK_KERNEL_H__

@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnTransposeBatchMatmul的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @brief aclnnTransposeBatchMatMul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现TransposeBatchMatMul算子和Quant的融合算子，TransposeBatchMatMul可支持参数为int8。
  * @param [in] x1: matmul左矩阵，数据类型支持：float16、float32、bfloat16。
@@ -44,7 +44,7 @@ ACLNN_API aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor*
                                                                 uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnTransposeBatchMatmul的第二段接口，用于执行计算。
+ * @brief aclnnTransposeBatchMatMul的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                 const aclrtStream stream);
@@ -52,7 +52,7 @@ ACLNN_API aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t worksp
 /**
  * @brief aclnnTransposeBatchMatMulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
- * 算子功能：相对于aclnnTransposeBatchMatmul, mat2为NZ格式。
+ * 算子功能：相对于aclnnTransposeBatchMatMul, mat2为NZ格式。
  * @param [in] x1: matmul左矩阵，数据类型支持：float16、bfloat16。数据格式支持ND。
  * @param [in] x2: matmul右矩阵，数据类型支持：float16、bfloat16。数据格式支持NZ。
  * @param [in] bias: 偏置，当前不支持。
@@ -74,9 +74,9 @@ ACLNN_API aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(
 
 /**
  * @brief aclnnTransposeBatchMatMulWeightNz的第二段接口，用于执行计算。
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu
- * device侧申请的workspace大小，由第一段接口aclnnBatchMatMulWeightNzGetWorkspaceSize获取。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

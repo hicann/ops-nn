@@ -1672,4 +1672,4 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
     }
 }
 
-#endif // __OP_KERNEL_MATMUL_V3_H__
+#endif // __OP_KERNEL_MATMUL_V3_DETERMINISTIC_SPLITK_KERNEL_H__

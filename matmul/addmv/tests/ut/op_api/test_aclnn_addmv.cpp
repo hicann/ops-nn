@@ -132,10 +132,10 @@ TEST_F(l2_addmv_test, input_nullptr)
 // 输入数据类型遍历
 TEST_F(l2_addmv_test, input_alldtype_in_list)
 {
-    vector<aclDataType> vaild_dtype_list{ACL_FLOAT, ACL_FLOAT16, ACL_DOUBLE, ACL_INT8, ACL_INT32,
+    vector<aclDataType> valid_dtype_list{ACL_FLOAT, ACL_FLOAT16, ACL_DOUBLE, ACL_INT8, ACL_INT32,
                                          ACL_UINT8, ACL_INT16,   ACL_INT64,  ACL_BOOL};
-    vector<aclDataType> invaild_dtype_list{ACL_COMPLEX64, ACL_COMPLEX128};
-    for (auto dtype : vaild_dtype_list) {
+    vector<aclDataType> invalid_dtype_list{ACL_COMPLEX64, ACL_COMPLEX128};
+    for (auto dtype : valid_dtype_list) {
         auto input_tensor_desc = TensorDesc({10}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto mat_tensor_desc = TensorDesc({10, 5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto vec_tensor_desc = TensorDesc({5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -154,7 +154,7 @@ TEST_F(l2_addmv_test, input_alldtype_in_list)
         // SAMPLE: precision simulate
         // ut.TestPrecision();
     }
-    for (auto dtype : invaild_dtype_list) {
+    for (auto dtype : invalid_dtype_list) {
         auto input_tensor_desc = TensorDesc({10}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto mat_tensor_desc = TensorDesc({10, 5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto vec_tensor_desc = TensorDesc({5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);

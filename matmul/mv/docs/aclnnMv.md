@@ -27,7 +27,7 @@
 - 计算公式：
 
   $$
-  out = input * vec
+  out = input @ vec
   $$
 
   其中$input$为n*m的二维张量，$vec$为长度为m的一维张量，$out$为长度为n的一维张量。

@@ -30,7 +30,7 @@ __aicore__ inline void SetPadding(IN_DTYPE padValue)
 {
     AscendC::SetLoadDataPaddingValue<IN_DTYPE>(padValue);
 }
-__aicore__ inline void SetAtomicnone() { AscendC::SetAtomicNone(); }
+__aicore__ inline void SetAtomicNone() { AscendC::SetAtomicNone(); }
 __aicore__ inline void SetMasknorm()
 {
 #if __CCE_AICORE__ == 100

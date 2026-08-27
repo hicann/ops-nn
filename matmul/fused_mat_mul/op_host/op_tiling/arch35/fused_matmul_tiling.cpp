@@ -57,7 +57,7 @@ ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
     OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatMul", "context is null"),
                     return ge::GRAPH_FAILED);
     if (!IsAdvancedSocVersion(context)) {
-        OP_LOGE("FusedMatMul", "not support npu arch");
+        OP_LOGE("FusedMatMul", "does not support npu arch");
         return ge::GRAPH_FAILED;
     }
 
@@ -77,7 +77,7 @@ ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
     const auto& supportedOps = it->second;
     bool useBuiltInTiling = std::find(supportedOps.begin(), supportedOps.end(), fusedOpType) != supportedOps.end();
     OP_TILING_CHECK(!useBuiltInTiling,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "unsupported fused op type: %s, supported: %s",
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "unsupported fusedOpType: %s, supported: %s",
                                           fusedOpType.c_str(), JoinOpTypes(supportedOps).c_str()),
                     return ge::GRAPH_FAILED);
 

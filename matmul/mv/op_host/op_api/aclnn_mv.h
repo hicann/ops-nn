@@ -23,12 +23,12 @@ extern "C" {
  * @domain aclnn_ops_infer
  *
  * 算子功能： 计算矩阵input与向量vec的乘积
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128类型。支持
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT类型。支持
  * [非连续的Tensor](#)，shape为n*m的二维张量，数据格式支持ND([参考](#))。
- * @param [in] vec: npu device侧的aclTensor。数据类型支持FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128类型，且数据类型与
+ * @param [in] vec: npu device侧的aclTensor。数据类型支持FLOAT16、BFLOAT16、FLOAT类型，且数据类型与
  * self保持一致。支持[非连续的Tensor](#)，shape为长度为m的一维张量，数据格式支持ND([参考](#))。
  * @param [in] out: npu
- * device侧的aclTensor，数据类型支持FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128类型，且数据类型与self
+ * device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16、FLOAT类型，且数据类型与self
  * 保持一致。支持[非连续的Tensor](#)，shape为长度为n的一维张量，数据格式支持ND([参考](#))。
  * @param [in] cubeMathType(INT8,
  * 计算输入)：INT8类型的枚举值，用于判断Cube单元应该使用哪种计算逻辑进行运算，0：KEEP_DTYPE, 保
@@ -45,7 +45,7 @@ ACLNN_API aclnnStatus aclnnMvGetWorkspaceSize(const aclTensor* self, const aclTe
  * @brief: aclnnMv的第二段接口，用于执行计算
  *
  * 算子功能： 计算矩阵input与向量vec的乘积
- * @param [in] workspace: 在npu device侧申请的workspace内存起址。
+ * @param [in] workspace: 在npu device侧申请的workspace内存地址。
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnMvGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。

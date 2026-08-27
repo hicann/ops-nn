@@ -202,4 +202,4 @@ __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TY
     }
 }
 
-#endif // MMV3_MATMUL_KERNEL_H
+#endif // __OP_KERNEL_MATMUL_V3_UNALIGNED_BASE_KERNEL_H__

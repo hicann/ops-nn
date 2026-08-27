@@ -154,7 +154,7 @@ void FusedMatMulBuiltInTiling::ExtractAttrFlags()
 {
     args_.isHf32 = *context_->GetAttrs()->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX);
     if (args_.isHf32 && arch_ != NpuArch::DAV_3510) {
-        OP_LOGW(args_.opName, "Hf32 flag is: %d, which is not support yet", args_.isHf32);
+        OP_LOGW(args_.opName, "Hf32 flag is: %d, which is not supported yet", args_.isHf32);
     }
     innerPrecise_ = *context_->GetAttrs()->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
     OP_LOGI(args_.opName, "FusedMatMul built-in tiling inner_precise is %ld", innerPrecise_);

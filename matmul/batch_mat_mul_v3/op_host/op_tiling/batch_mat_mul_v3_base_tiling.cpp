@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file batch_mat_mul_v3_base_tiling.cc
+ * \file batch_mat_mul_v3_base_tiling.cpp
  * \brief
  */
 #include "batch_mat_mul_v3_base_tiling.h"
@@ -209,7 +209,7 @@ void BatchMatmulV3BaseTiling::MergeBatchAndMAxis()
     return;
 }
 
-bool BatchMatmulV3BaseTiling::CheckBMMTilingDataIsVaild() const
+bool BatchMatmulV3BaseTiling::CheckBMMTilingDataIsValid() const
 {
     return (optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA3, args_.opName, "batchInfo_.batchA3") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA2, args_.opName, "batchInfo_.batchA2") ||
@@ -357,7 +357,7 @@ ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
     auto ret = MatmulV3BaseTiling::DoLibApiTiling();
     SetBatchDimInfo();
     CalcBatchDimAll();
-    if (CheckBMMTilingDataIsVaild()) {
+    if (CheckBMMTilingDataIsValid()) {
         return ge::GRAPH_FAILED;
     }
     bmmTilingData_.multiBatchInfo.biasWithBatch = static_cast<uint32_t>(batchInfo_.biasWithBatch);
@@ -386,7 +386,7 @@ ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
 /*
  * Algorithm to calculate the best (baseM, baseN) that gives even workload amongst iterations.
  * Parameter `divisor` is used to control the starting point of the algorithm.
- * Choosing different starting point can sometimes get better performence.
+ * Choosing different starting point can sometimes get better performance.
  * The starting point of `divisor = 2` is half of that of `divisor = 1`
  */
 static void CalcBaseMN(uint64_t& baseM, uint64_t& baseN, const matmul_v3::MatmulV3Args& args, uint64_t divisor = 1UL)
@@ -845,9 +845,9 @@ void BatchMatmulV3BaseTiling::CalculateNd2nzWorkspaceSize()
  * Func:    tune down parameter x until either y(x) is below target value, or x has reached its minimum
  * Args:    `target` - target value
  *          `y` - current value of y(x)
- *          `x` - the paramter being tuned
+ *          `x` - the parameter being tuned
  *          `dydx` - the slope, dy/dx
- *          `step` - the step length (i.e. the minimul variation value) of x. Default is 1.
+ *          `step` - the step length (i.e. the minimal variation value) of x. Default is 1.
  * Note:    `x` is assumed to be aligned to `step`, that makes `step` the minimum of `x`.
  */
 static void TuneDownParam(uint64_t target, uint64_t& y, uint64_t& x, uint64_t dydx, uint64_t step = 1UL)
@@ -919,9 +919,9 @@ static void AL1FullLoadTiling(const matmul_v3::MatmulV3Args& args, uint64_t l1Si
     const uint64_t biasSizePerStepN = args.hasBias ? baseN * ge::GetSizeByDataType(args.biasType) * NUM_TWO : 0UL;
     uint64_t loadSize = aSize + (bSizePerStepN + biasSizePerStepN) * stepN;
     // Tune down loadSize until it is fully loaded in L1
-    // Stage 1: try tunning stepN
+    // Stage 1: try tuning stepN
     TuneDownParam(l1Size, loadSize, stepN, bSizePerStepN + biasSizePerStepN);
-    // Stage 2: stepN has reached 1 yet loadSize's still too big for L1, tune down stepKb
+    // Stage 2: stepN has reached 1 yet loadSize is still too big for L1, tune down stepKb
     const uint64_t bSizePerStepKb = bSizePerStepN / stepKb;
     TuneDownParam(l1Size, loadSize, stepKb, bSizePerStepKb);
     // Stage 3: stepN & stepKb have both reached 1, tune down baseN
@@ -959,10 +959,10 @@ static void BL1FullLoadTiling(const matmul_v3::MatmulV3Args& args, uint64_t l1Si
     const uint64_t biasSize = args.hasBias ? baseN * stepN * ge::GetSizeByDataType(args.biasType) * NUM_TWO : 0UL;
     const uint64_t aSizePerStepM = stepKa * baseK * baseM * ge::GetSizeByDataType(args.aType) * NUM_TWO;
     uint64_t loadSize = bSize + biasSize + aSizePerStepM * stepM;
-    // Tune down loadSize util it is fully loaded in L1
-    // Stage 1: try tunning stepM
+    // Tune down loadSize until it is fully loaded in L1
+    // Stage 1: try tuning stepM
     TuneDownParam(l1Size, loadSize, stepM, aSizePerStepM);
-    // Stage 2: stepM has reached 1 yet loadSize's still too big for L1, tune down stepKa
+    // Stage 2: stepM has reached 1 yet loadSize is still too big for L1, tune down stepKa
     const uint64_t aSizePerStepKa = aSizePerStepM / stepKa;
     TuneDownParam(l1Size, loadSize, stepKa, aSizePerStepKa);
     // Stage 3: stepM & stepKa have both reached 1, tune down baseM
@@ -1341,4 +1341,4 @@ void BatchMatmulV3BaseTiling::DoTilingKeyCustom()
 }
 
 } // namespace optiling
-}
+} // namespace optiling

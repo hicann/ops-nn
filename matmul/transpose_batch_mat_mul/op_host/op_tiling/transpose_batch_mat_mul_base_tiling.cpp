@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file transpose_batch_mat_mul_base_tiling.cc
+ * \file transpose_batch_mat_mul_base_tiling.cpp
  * \brief
  */
 #include "transpose_batch_mat_mul_base_tiling.h"
@@ -237,7 +237,7 @@ static void TuneBaseMKN(matmul_v3::MatmulV3RunInfo& runInfo, const matmul_v3::Ma
 void TransposeBatchMatMulBaseTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
 {
     OP_TILING_CHECK(tempBaseM == 0 && tempBaseN == 0,
-                    OP_LOGW(args_.opName, "tempBaseM == 0 && tempBaseN == 0 is invalid"), return );
+                    OP_LOGW(args_.opName, "tempBaseM == 0 && tempBaseN == 0 is invalid"), return);
     uint64_t baseKAlignNum = (!args_.isATrans && args_.isBTrans) ?
                                  GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) :
                                  BLOCK_CUBE;
@@ -421,7 +421,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::CheckArgs()
     auto* shape_scale = context_->GetOptionalInputShape(SCALE_IDX);
     if (shape_scale != nullptr) {
         OP_TILING_CHECK(shape_scale->GetShape().GetDim(0) >= kSupportedInnerAxis,
-                        CUBE_INNER_ERR_REPORT(args_.opName, "batch mul n should be less than 65536."),
+                        CUBE_INNER_ERR_REPORT(args_.opName, "batch * n should be less than 65536."),
                         return ge::GRAPH_FAILED);
     }
     if (attrs->GetAttrNum() >= ATTR_NUM) {
@@ -643,7 +643,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetArgs()
                     CUBE_INNER_ERR_REPORT(args_.opName, "format and dtype check failed"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         (args_.bFormat == ge::FORMAT_FRACTAL_NZ) && ((transA_ != 213UL) || (transB_ != 123UL) || batchSplitFactor_ > 1),
-        CUBE_INNER_ERR_REPORT(args_.opName, "The current attrs is not support weightNZ."), return ge::GRAPH_FAILED);
+        CUBE_INNER_ERR_REPORT(args_.opName, "The current attrs does not support weightNZ."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
