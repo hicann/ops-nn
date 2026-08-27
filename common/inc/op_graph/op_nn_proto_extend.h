@@ -1735,53 +1735,55 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(scales, ListFloat, {0.0f, 0.0f})
     .OP_END_FACTORY_REG(ResizeNearestNeighborV2)
 
-    /**
-    * @brief Resize the input tensor. \n
-    currently, only support resize image tensor using nearest neighbor and linear interpolation.
+/**
+* @brief Resize the input tensor. \n
+currently, only support resize image tensor using nearest neighbor and linear interpolation.
 
-    * @par Inputs:
-    * Input x must be a 4-D tensor. Inputs include: \n
-    * @li x: A Tensor. Must be one of the following types: uint8, int8, int16, \n
-    int32, int64, float16, float, double. 4-D with shape [batch, height, width, channels] \n
-    or shape [batch, channels, height, width].
-    * @li roi: A 1-D float Tensor. Only takes effect when attr coordinate_transformation_mode \n
-    is "tf_crop_and_resize". Must be one of the following types: float16, float, double.
-    * @li scales: A 1-D float Tensor, the scale array along each dimension, Only one of \n
-    'scales' and 'sizes' can be specified. Must be float type.
-    * @li sizes: A 1-D int64 Tensor, The size of the output tensor. Only one of \n
-    'scales' and 'sizes' can be specified.  If 'size' is specified, then set scales \n
-    to empty data (zero shape) in this operator's input list. Must be one of \n
-    the following types: int32, int64.
+* @par Inputs:
+* Input x must be a 4-D tensor. Inputs include: \n
+* @li x: A Tensor. Must be one of the following types: uint8, int8, int16, \n
+int32, int64, float16, float, double. 4-D with shape [batch, height, width, channels] \n
+or shape [batch, channels, height, width].
+* @li roi: A 1-D float Tensor. Only takes effect when attr coordinate_transformation_mode \n
+is "tf_crop_and_resize". Must be one of the following types: float16, float, double.
+* @li scales: A 1-D float Tensor, the scale array along each dimension, Only one of \n
+'scales' and 'sizes' can be specified. Must be float type.
+* @li sizes: A 1-D int64 Tensor, The size of the output tensor. Only one of \n
+'scales' and 'sizes' can be specified.  If 'size' is specified, then set scales \n
+to empty data (zero shape) in this operator's input list. Must be one of \n
+the following types: int32, int64.
 
-    * @par Attributes:
-    * @li coordinate_transformation_mode: An optional String. how to transform \n
-    the coordinate in the resized tensor to the coordinate in the original tensor. \n
-    options: pytorch_half_pixel, align_corners, asymmetric, \n
-    tf_crop_and_resize.
-    * @li cubic_coeff_a: An optional Float. Defaults to -0.75, only used in cubic interpolation. \n
-    other optional: -0.5
-    * @li exclude_outside: An optional Int. Defaults to 0, If set to 1, the weight of sampling \n
-    locations outside the tensor will be set to 0 and the weight will be renormalized \n
-    so that their sum is 1.0.
-    * @li extrapolation_value: An optional Float. Defaults to 0.0f. When coordinate_transformation_mode \n
-    is "tf_crop_and_resize" and x_original is outside the range [0, length_original - 1], \n
-    this value is used as the corresponding output value.
-    * @li mode: An optional String. Defaults to nearest. Three interpolation modes: nearest (default), \n
-    linear and cubic.
-    * @li nearest_mode: An optional String. Defaults to round_prefer_floor. Four modes: round_prefer_floor, \n
-    round_prefer_ceil, floor, ceil. Only used by nearest interpolation.
+* @par Attributes:
+* @li coordinate_transformation_mode: An optional String. how to transform \n
+the coordinate in the resized tensor to the coordinate in the original tensor. \n
+options: pytorch_half_pixel, align_corners, asymmetric, \n
+tf_crop_and_resize.
+* @li cubic_coeff_a: An optional Float. Defaults to -0.75, only used in cubic interpolation. \n
+other optional: -0.5
+* @li exclude_outside: An optional Int. Defaults to 0, If set to 1, the weight of sampling \n
+locations outside the tensor will be set to 0 and the weight will be renormalized \n
+so that their sum is 1.0.
+* @li extrapolation_value: An optional Float. Defaults to 0.0f. When coordinate_transformation_mode \n
+is "tf_crop_and_resize" and x_original is outside the range [0, length_original - 1], \n
+this value is used as the corresponding output value.
+* @li mode: An optional String. Defaults to nearest. Three interpolation modes: nearest (default), \n
+linear and cubic.
+* @li nearest_mode: An optional String. Defaults to round_prefer_floor. Four modes: round_prefer_floor, \n
+round_prefer_ceil, floor, ceil. Only used by nearest interpolation.
 
-    * @par Outputs:
-    * y: A Tensor. Has the same type as x.
+* @par Outputs:
+* y: A Tensor. Has the same type as x.
 
-    * @attention Constraints: \n
-    * Input x must be a 4-D tensor.
+* @attention Constraints: \n
+* Input x must be a 4-D tensor.
 
-    * @par Third-party framework compatibility
-    * Compatible with tensorflow ResizeNearestNeighborV2 operator.
-    */
+* @par Third-party framework compatibility
+* Compatible with tensorflow ResizeNearestNeighborV2 operator.
+*/
 
-    REG_OP(Resize)
+#ifndef OPS_PROTO_DEF_RESIZE
+#define OPS_PROTO_DEF_RESIZE
+        REG_OP(Resize)
     .INPUT(x, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
     .OPTIONAL_INPUT(roi, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
     .OPTIONAL_INPUT(scales, TensorType({DT_FLOAT}))
@@ -1795,6 +1797,7 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(mode, String, "nearest")
     .ATTR(nearest_mode, String, "round_prefer_floor")
     .OP_END_FACTORY_REG(Resize)
+#endif
 
     /**
     * @brief According to the indices and indices_mask, return the value.
