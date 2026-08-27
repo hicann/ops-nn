@@ -34,6 +34,7 @@ constexpr const uint32_t STREAMK_BATCHDOUT = 1;
 constexpr const uint32_t STREAMK_HWOUT = 2;
 constexpr const uint64_t ONE_DIM = 1;
 constexpr uint32_t L0C_DTYPE_BYTE = 4; // 注意，修改此处值需要联动修改其它cc文件中同名的定义，后续优化，一份定义
+constexpr uint64_t SINGLE_BLOCK_ADD_THRESHOLD = 65536; // 与kernel侧SINGLE_BLOCK_ADD_THRESHOLD保持一致
 
 bool Conv3DBackpropFilterV2StreamKTiling::IsCapable()
 {
@@ -240,6 +241,43 @@ uint64_t Conv3DBackpropFilterV2StreamKTiling::GetSingleShapeKByStreamK()
     return singleShapeK;
 }
 
+uint64_t Conv3DBackpropFilterV2StreamKTiling::CalcMte2CountPerCore(uint64_t batchDoutPerCore, uint64_t singleCoreHo,
+                                                                   uint64_t baseK, uint64_t stepKa, uint64_t stepKb)
+{
+    uint64_t wo = static_cast<uint64_t>(runInfo_.wo);
+    uint64_t woIterateTimes = Ops::Base::CeilDiv(wo, static_cast<uint64_t>(blockTiling_.splitWo));
+    uint64_t segmentsNDH = Ops::Base::CeilDiv(SINGLE_BLOCK_ADD_THRESHOLD, wo);
+    uint64_t reduceSegmentsH = std::min(segmentsNDH, singleCoreHo);
+    uint64_t hoSegs = Ops::Base::CeilDiv(singleCoreHo, reduceSegmentsH);
+    uint64_t kIterPerSeg = Ops::Base::CeilDiv(reduceSegmentsH * wo, baseK);
+    uint64_t stepKaRound = Ops::Base::CeilDiv(kIterPerSeg, stepKa);
+    uint64_t stepKbRound = Ops::Base::CeilDiv(kIterPerSeg, stepKb);
+    return batchDoutPerCore * woIterateTimes * hoSegs * (stepKaRound + stepKbRound);
+}
+
+bool Conv3DBackpropFilterV2StreamKTiling::IsMte2BatchDoutBetter(uint64_t singleShapeBatchDout,
+                                                                uint64_t singleCoreBatchDout, uint64_t singleShapeK)
+{
+    // BatchDout路径：batchDout切分，Ho全量
+    uint64_t bdMte2Count = CalcMte2CountPerCore(singleShapeBatchDout, static_cast<uint64_t>(runInfo_.ho),
+                                                static_cast<uint64_t>(blockTiling_.blockBaseK), blockTiling_.stepKa,
+                                                blockTiling_.stepKb);
+    // HWout路径：batchDout全量，Ho切分
+    uint64_t hwSingleCoreHo = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.ho),
+                                                 static_cast<uint64_t>(blockTiling_.coreStreamK));
+    uint64_t hwBaseK = Ops::Base::CeilAlign(std::min(static_cast<uint64_t>(blockTiling_.blockBaseK), singleShapeK),
+                                            static_cast<uint64_t>(BLOCK_CUBE));
+    uint64_t hwStepKa = std::min(static_cast<uint64_t>(blockTiling_.stepKa), Ops::Base::CeilDiv(singleShapeK, hwBaseK));
+    uint64_t hwStepKb = std::min(static_cast<uint64_t>(blockTiling_.stepKb), Ops::Base::CeilDiv(singleShapeK, hwBaseK));
+    uint64_t hwMte2Count = CalcMte2CountPerCore(singleCoreBatchDout, hwSingleCoreHo, hwBaseK, hwStepKa, hwStepKb);
+    if (bdMte2Count < hwMte2Count) {
+        OP_LOGI(opName_, "StreamK select BatchDout: MTE2 count BatchDout[%lu] <= HWout[%lu].", bdMte2Count,
+                hwMte2Count);
+        return true;
+    }
+    return false;
+}
+
 bool Conv3DBackpropFilterV2StreamKTiling::IsSplitBatchDoutBetter()
 {
     uint64_t singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
@@ -253,6 +291,9 @@ bool Conv3DBackpropFilterV2StreamKTiling::IsSplitBatchDoutBetter()
     // 优先选择切BatchDout或者HWout 分核数多者
     uint64_t streamkHWoutDim = Ops::Base::CeilDiv(blockTiling_.singleCoreK, singleShapeK);
     if (streamkBatchDim < streamkHWoutDim) {
+        if (!blockTiling_.isSplitKernelHW && streamkBatchDim > ONE_DIM) {
+            return IsMte2BatchDoutBetter(singleShapeBatchDout, singleCoreBatchDout, singleShapeK);
+        }
         return false;
     }
 

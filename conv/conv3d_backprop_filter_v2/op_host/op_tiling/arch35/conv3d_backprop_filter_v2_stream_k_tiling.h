@@ -51,6 +51,11 @@ private:
 
     uint64_t GetSingleShapeKByStreamK();
 
+    uint64_t CalcMte2CountPerCore(uint64_t batchDoutPerCore, uint64_t singleCoreHo, uint64_t baseK, uint64_t stepKa,
+                                  uint64_t stepKb);
+
+    bool IsMte2BatchDoutBetter(uint64_t singleShapeBatchDout, uint64_t singleCoreBatchDout, uint64_t singleShapeK);
+
     bool IsSplitBatchDoutBetter();
 
     void DoStreamKTiling();
