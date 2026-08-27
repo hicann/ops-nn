@@ -4000,6 +4000,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_came_part3/README.md">apply_came_part3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算CAME优化器第三阶段的一阶矩更新以及行、列和全局统计量。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/inplace_apply_adadelta/README.md">inplace_apply_adadelta</a></td>
     <td>✓</td>
     <td>✓</td>

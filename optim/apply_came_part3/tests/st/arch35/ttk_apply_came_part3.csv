@@ -1,0 +1,2 @@
+testcase_name,op_name,input_dtypes,input_formats,input_shapes,output_shapes,output_dtypes,output_formats,attributes,input_data_ranges,absolute_precision
+apply_came_part3_fp32_tail,apply_came_part3,"('float32','float32','float32','float32','float32','float32')","('ND','ND','ND','ND','ND','ND')","((65,67),(65,67),(1,),(1,),(1,),(1,))","((65,67),(65,),(67,),(1,))","('float32','float32','float32','float32')","('ND','ND','ND','ND')",{"use_first_moment":false},"((-1,1),(-1,1),(0.001,0.001),(0,1),(1,1),(1,1))",0.01
