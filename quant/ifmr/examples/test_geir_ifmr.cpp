@@ -191,9 +191,10 @@ int CreateOppInGraph(std::vector<ge::Tensor>& input, std::vector<Operator>& inpu
     std::vector<int64_t> data_min = {1};
     std::vector<int64_t> data_max = {1};
     std::vector<int64_t> cumsum = {1024};
+    std::vector<float> search_range_attr = {0.7f, 1.3f};
 
-    std::vector<int64_t> scale = {1};
-    std::vector<int64_t> offset = {1};
+    std::vector<int64_t> scale_out_shape = {1};
+    std::vector<int64_t> offset_out_shape = {1};
 
     // 添加输入（顺序严格匹配 proto.h）
     ADD_INPUT(1, data, DT_FLOAT16, data);
@@ -204,12 +205,12 @@ int CreateOppInGraph(std::vector<ge::Tensor>& input, std::vector<Operator>& inpu
     // 添加必选属性（顺序严格匹配 proto.h）
     ADD_INPUT_ATTR(min_percentile, 0.9);
     ADD_INPUT_ATTR(max_percentile, 0.9);
-    ADD_INPUT_ATTR(search_range, {0.7, 1.3});
+    ADD_INPUT_ATTR(search_range, search_range_attr);
     ADD_INPUT_ATTR(search_step, 0.1);
     ADD_INPUT_ATTR(with_offset, true);
     // 添加输出（顺序严格匹配 proto.h）
-    ADD_OUTPUT(1, scale, DT_FLOAT, var_out_shape);
-    ADD_OUTPUT(2, offset, DT_FLOAT, scale_out_shape);
+    ADD_OUTPUT(1, scale, DT_FLOAT, scale_out_shape);
+    ADD_OUTPUT(2, offset, DT_FLOAT, offset_out_shape);
 
     outputs.push_back(ifmr);
     // 添加完毕
