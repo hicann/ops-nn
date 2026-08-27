@@ -31,6 +31,18 @@
 
 namespace ops {
 
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type FloorDiv(T x, T y);
+
+template <typename T>
+typename std::enable_if<std::is_signed<T>::value, T>::type CeilDiv(T x, T y);
+
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type CeilDiv(T x, T y);
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type CeilAlign(T x, T align);
+
 constexpr int64_t kX1InputIdx = 0;
 constexpr int64_t kX2InputIdx = 1;
 constexpr int64_t kBiasInputIdx = 2;
@@ -69,6 +81,8 @@ std::vector<ge::fusion::PatternUniqPtr> BuildMatMulPatterns(const std::string& p
 std::vector<ge::fusion::PatternUniqPtr> BuildMatMulV2Patterns(const std::string& prefix);
 std::vector<ge::fusion::PatternUniqPtr> BuildBatchMatMulPatterns(const std::string& prefix);
 std::vector<ge::fusion::PatternUniqPtr> BuildBatchMatMulV2Patterns(const std::string& prefix);
+
+bool GetTransposePermFromConst(const ge::GNode& transposeNode, std::vector<int64_t>& permValue);
 
 } // namespace ops
 

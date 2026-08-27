@@ -11,9 +11,11 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
+#include "securec.h"
 #include "common/inc/error_util.h"
 #include "version/ge-compiler_version.h"
 #include "acl/acl_rt.h"
@@ -33,6 +35,7 @@ public:
 } // namespace ge
 
 namespace ops {
+
 namespace {
 
 bool CopyAscendStringAttr(const GNode& matchedNode, GNode& v3Node, const char* attrName, const std::string& passName)
@@ -100,6 +103,49 @@ ge::fusion::PatternUniqPtr BuildPatternWithInputCount(const std::string& pattern
 }
 
 } // namespace
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type FloorDiv(T x, T y)
+{
+    return y == 0 ? x : x / y;
+}
+
+template <typename T>
+typename std::enable_if<std::is_signed<T>::value, T>::type CeilDiv(T x, T y)
+{
+    if (y != 0 && x != 0) {
+        const T quotient = x / y;
+        return (x % y != 0 && ((x ^ y) >= 0)) ? (quotient + 1) : quotient;
+    }
+    return x;
+}
+
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type CeilDiv(T x, T y)
+{
+    if (y != 0 && x != 0) {
+        const T quotient = x / y;
+        return (x % y != 0) ? (quotient + 1) : quotient;
+    }
+    return x;
+}
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type CeilAlign(T x, T align)
+{
+    if (align == 0) {
+        return 0;
+    }
+    T div = CeilDiv(x, align);
+    if (div > std::numeric_limits<T>::max() / align) {
+        return std::numeric_limits<T>::max();
+    }
+    return div * align;
+}
+
+template uint64_t FloorDiv<uint64_t>(uint64_t x, uint64_t y);
+template uint64_t CeilDiv<uint64_t>(uint64_t x, uint64_t y);
+template uint64_t CeilAlign<uint64_t>(uint64_t x, uint64_t align);
 
 bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
 {
@@ -286,6 +332,59 @@ std::vector<ge::fusion::PatternUniqPtr> BuildBatchMatMulV2Patterns(const std::st
     patterns.emplace_back(
         BuildPatternWithInputCount(prefix + "_batchmatmulv2_4in", kOpTypeBatchMatMulV2, kFourInputNum));
     return patterns;
+}
+
+bool GetTransposePermFromConst(const GNode& transposeNode, std::vector<int64_t>& permValue)
+{
+    ge::Tensor permConst;
+    if (transposeNode.GetInputConstData(1, permConst) != GRAPH_SUCCESS) {
+        OPS_LOG_W("GetTransposePerm", "Get perm const data failed.");
+        return false;
+    }
+    TensorDesc permDesc;
+    if (transposeNode.GetInputDesc(1, permDesc) != GRAPH_SUCCESS) {
+        return false;
+    }
+    auto permShape = permDesc.GetShape().GetDims();
+    if (permShape.size() != 1) {
+        OPS_LOG_D("GetTransposePerm", "The perm dim size must be 1, but got %zu.", permShape.size());
+        return false;
+    }
+
+    DataType permDtype = permDesc.GetDataType();
+    const uint8_t* permData = permConst.GetData();
+    if (permData == nullptr) {
+        OPS_LOG_E("GetTransposePerm", "Get perm data failed.");
+        return false;
+    }
+
+    if (permDtype == DT_INT32) {
+        size_t cnt = permConst.GetSize() / sizeof(int32_t);
+        for (size_t i = 0; i < cnt; ++i) {
+            int32_t val = 0;
+            errno_t ret = memcpy_s(&val, sizeof(int32_t), permData + i * sizeof(int32_t), sizeof(int32_t));
+            if (ret != EOK) {
+                OPS_LOG_E("GetTransposePerm", "memcpy_s failed, ret=%d.", ret);
+                return false;
+            }
+            permValue.push_back(static_cast<int64_t>(val));
+        }
+    } else if (permDtype == DT_INT64) {
+        size_t cnt = permConst.GetSize() / sizeof(int64_t);
+        for (size_t i = 0; i < cnt; ++i) {
+            int64_t val = 0;
+            errno_t ret = memcpy_s(&val, sizeof(int64_t), permData + i * sizeof(int64_t), sizeof(int64_t));
+            if (ret != EOK) {
+                OPS_LOG_E("GetTransposePerm", "memcpy_s failed, ret=%d.", ret);
+                return false;
+            }
+            permValue.push_back(val);
+        }
+    } else {
+        OPS_LOG_D("GetTransposePerm", "Perm dtype is not int32 or int64.");
+        return false;
+    }
+    return true;
 }
 
 } // namespace ops
