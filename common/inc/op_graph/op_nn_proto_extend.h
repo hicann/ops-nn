@@ -1891,36 +1891,39 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .OP_END_FACTORY_REG(Gather)
 #endif
 
-    /**
-    * @brief Applies sparse addition to individual values or slices in a Variable .
+/**
+* @brief Applies sparse addition to individual values or slices in a Variable .
 
-    * @par Inputs:
-    * Three inputs, including:
-    * @li x: An ND Tensor. \n
+* @par Inputs:
+* Three inputs, including:
+* @li x: An ND Tensor. \n
 
-    * Must be one of the following types: float16, float32, int32, int8, uint8
-    * @li indices: An ND Tensor. \n
+* Must be one of the following types: float16, float32, int32, int8, uint8
+* @li indices: An ND Tensor. \n
 
-    * Must be one of the following types: int32
-    * @li updates: An ND Tensor. \n
+* Must be one of the following types: int32
+* @li updates: An ND Tensor. \n
 
-    * Must be one of the following types: float16, float32, int32, int8, uint8
+* Must be one of the following types: float16, float32, int32, int8, uint8
 
-    * @par Outputs:
-    * y: A Tensor. Has the same type and format as input "x" . \n
+* @par Outputs:
+* y: A Tensor. Has the same type and format as input "x" . \n
 
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator TensorScatterAdd.
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator TensorScatterAdd.
 
-    * @par Restrictions:
-    * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-    */
-    REG_OP(TensorScatterAdd)
+* @par Restrictions:
+* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+*/
+#ifndef OPS_PROTO_DEF_TENSORSCATTERADD
+#define OPS_PROTO_DEF_TENSORSCATTERADD
+        REG_OP(TensorScatterAdd)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8}))
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8}))
     .OP_END_FACTORY_REG(TensorScatterAdd)
+#endif
 
     /**
     * @brief Choose the value of X with value according to mask.
