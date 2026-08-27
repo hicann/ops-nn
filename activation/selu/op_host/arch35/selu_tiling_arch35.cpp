@@ -17,17 +17,17 @@
  * Tiling strategy:
  *   1. Multi-core: divide total elements evenly across AI Cores
  *   2. UB: divide per-core elements into UB-sized chunks
- *   3. Buffer layout: inputQueue(1 buf) + outputQueue(1 buf) + tmpBuf1 + tmpBuf2
- *      （INT8 额外一个 tmpBuf3：正分支 fp32 中间 + 溢出回绕，共 3 个 tmp buffer）
+ *   3. Buffer layout: inputQueue(1 buf) + outputQueue(1 buf) + tmpBuf1..tmpBuf5
+ *      （INT8 例外：走 half 快速路径，只用 3 个 tmp buffer：tmpBuf1/tmpBuf2/tmpBuf3）
  *
  * 用户约定：所有非 fp32 dtype（FP16/BF16/INT32/INT8）统一走 cast-to-fp32 路径，
  * 因此中间计算 buffer 大小始终 = ubFactor * sizeof(float)。
  *
  * ubDivisor by dtype (in units of sizeof(T)):
- *   FLOAT32:  (2*4 + 2*4) / 4 = 4
- *   FLOAT16:  (2*2 + 2*4) / 2 = 6   ← 由 (2*2+2*2)/2=4 改为 (2*2+2*4)/2=6（FP16 中间走 fp32）
- *   BFLOAT16: (2*2 + 2*4) / 2 = 6
- *   INT32:    (2*4 + 2*4) / 4 = 4
+ *   FLOAT32:  (2*4 + 5*4) / 4 = 7   ← expm1 数值稳定需 5 个 tmp buffer
+ *   FLOAT16:  (2*2 + 5*4) / 2 = 12
+ *   BFLOAT16: (2*2 + 5*4) / 2 = 12
+ *   INT32:    (2*4 + 5*4) / 4 = 7
  *   INT8:     (2*1 + 3*4) / 1 = 14   ← 3 个 tmp buffer
  */
 
@@ -52,8 +52,11 @@ constexpr int64_t BLOCK_ALIGN_BYTES = 32; // UB 32 字节对齐
 constexpr int64_t FP32_BYTE_SIZE = 4;     // cast-to-fp32 中间计算字节宽
 constexpr int64_t FP16_BYTE_SIZE = 2;
 constexpr int64_t INT8_BYTE_SIZE = 1;
-constexpr int64_t IO_BUF_NUM = 2;  // inputQueue + outputQueue
-constexpr int64_t TMP_BUF_NUM = 2; // tmpBuf1 + tmpBuf2
+constexpr int64_t IO_BUF_NUM = 2; // inputQueue + outputQueue
+// 非 int8 dtype 走数值稳定 expm1（泰勒），需要 5 个 fp32 tmp buffer：
+//   tmpBuf1/tmpBuf2 原有 + tmpBuf3/tmpBuf4/tmpBuf5 新增
+constexpr int64_t TMP_BUF_NUM = 5;      // tmpBuf1 + tmpBuf2 + tmpBuf3 + tmpBuf4 + tmpBuf5
+constexpr int64_t TMP_BUF_NUM_INT8 = 3; // int8: tmpBuf1 + tmpBuf2 + tmpBuf3
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -134,8 +137,9 @@ static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingDat
     int64_t blockFactor = CeilDiv(totalElements, coreNum);
     blockFactor = ((blockFactor + ubBlockSize - 1) / ubBlockSize) * ubBlockSize;
     int64_t usedCoreNum = CeilDiv(totalElements, blockFactor);
-    // int8 正分支(fp32 中间)与溢出回绕需额外 1 个 fp32 buffer(tmpBuf3)，共 3 个 tmp buffer
-    int64_t tmpBufNum = (dataType == ge::DT_INT8) ? (TMP_BUF_NUM + 1) : TMP_BUF_NUM;
+    // int8 正分支(fp32 中间)与溢出回绕需额外 1 个 fp32 buffer(tmpBuf3)，共 3 个 tmp buffer；
+    // 其余 dtype 走数值稳定 expm1 需 5 个 tmp buffer
+    int64_t tmpBufNum = (dataType == ge::DT_INT8) ? TMP_BUF_NUM_INT8 : TMP_BUF_NUM;
     int64_t ubDivisor = (IO_BUF_NUM * typeSize + tmpBufNum * computeTypeSize) / typeSize;
     int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
     OP_CHECK_IF(ubFactor <= 0, OP_LOGE(context, "Selu: ubFactor is %ld, UB too small", ubFactor),

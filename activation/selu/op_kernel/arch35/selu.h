@@ -44,9 +44,12 @@
 
 namespace NsSelu {
 
+using AscendC::Abs;
 using AscendC::Add;
 using AscendC::Adds;
 using AscendC::Cast;
+using AscendC::CMPMODE;
+using AscendC::CompareScalar;
 using AscendC::DataCopyPad;
 using AscendC::DataCopyParams;
 using AscendC::Exp;
@@ -55,9 +58,13 @@ using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
 using AscendC::Maxs;
 using AscendC::Mins;
+using AscendC::Mul;
 using AscendC::Muls;
+using AscendC::PipeBarrier;
 using AscendC::QuePosition;
 using AscendC::RoundMode;
+using AscendC::Select;
+using AscendC::SELMODE;
 using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
@@ -65,6 +72,11 @@ using AscendC::TQue;
 // SELU fixed constants
 constexpr float ALPHA_F32 = 1.6732632423543772848170429916717f;
 constexpr float SCALE_F32 = 1.0507009873554804934193349852946f;
+// expm1 数值稳定：|u| < U_TAYLOR 时用泰勒级数 expm1(u)≈u+u²/2+u³/6+u⁴/24+u⁵/120+u⁶/720
+// （绝对误差 < u⁷/5040 ≈ 2e-11 @|u|=0.1，满足 small_value atol=9.3e-10），
+// 避免硬件 Exp 在 u→0 时的消去及固有相对误差（≈2^-14 级）透传。
+// |u| >= U_TAYLOR 时用朴素 e-1：输出量级大，相对误差可控，无需消去保护。
+constexpr float U_TAYLOR = 0.1f;
 // int8 路径使用预乘常量：SCALE_ALPHA_PRODUCT = SCALE * ALPHA
 constexpr float SCALE_ALPHA_PRODUCT = 1.75809934085f;
 // int8 正分支乘数：SCALE 的 fp16 表示（=1.05078125）提升为 fp32；fp32 乘后 CAST_TRUNC 回 fp16，
@@ -92,6 +104,10 @@ private:
 
     // float32 direct computation
     __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat, int64_t alignedNum);
+    // 数值稳定 expm1 负分支：tmp1 = expm1(u) (u = min(x,0))。
+    // tmp3/4/5 为 scratch：泰勒结果、朴素 e-1、|u| 掩码。
+    __aicore__ inline void ComputeExpm1(LocalTensor<float>& tmp1, LocalTensor<float>& tmp3, LocalTensor<float>& tmp4,
+                                        LocalTensor<float>& tmp5, int64_t alignedNum);
     // 非 fp32 dtype（half/bf16/int32）走 cast-to-fp32 路径
     template <typename SrcT>
     __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal, int64_t currentNum,
@@ -106,6 +122,8 @@ private:
     TBuf<QuePosition::VECCALC> tmpBuf1_; // exp/cast intermediate (fp32)
     TBuf<QuePosition::VECCALC> tmpBuf2_; // max(0,x)/calc workspace (fp32)
     TBuf<QuePosition::VECCALC> tmpBuf3_; // int8 正分支 RTZ 后的 fp16 结果
+    TBuf<QuePosition::VECCALC> tmpBuf4_; // expm1 泰勒: 中间量/朴素 e-1
+    TBuf<QuePosition::VECCALC> tmpBuf5_; // expm1 泰勒: |u| 掩码/朴素 e
 
     GlobalTensor<T> xGM_;
     GlobalTensor<T> yGM_;
@@ -149,6 +167,11 @@ __aicore__ inline void Selu<T>::Init(GM_ADDR x, GM_ADDR y, const SeluTilingData*
     pipe.InitBuffer(tmpBuf2_, ubFactor_ * computeTSize);
     if constexpr (std::is_same_v<T, int8_t>) {
         pipe.InitBuffer(tmpBuf3_, ubFactor_ * computeTSize); // int8 正分支/溢出回绕专用第 3 buffer
+    } else {
+        // 非 int8：分配 expm1 泰勒计算 scratch
+        pipe.InitBuffer(tmpBuf3_, ubFactor_ * computeTSize);
+        pipe.InitBuffer(tmpBuf4_, ubFactor_ * computeTSize);
+        pipe.InitBuffer(tmpBuf5_, ubFactor_ * computeTSize);
     }
 }
 
@@ -193,12 +216,14 @@ __aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat, Local
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
+    LocalTensor<float> tmp3 = tmpBuf3_.template Get<float>();
+    LocalTensor<float> tmp4 = tmpBuf4_.template Get<float>();
+    LocalTensor<float> tmp5 = tmpBuf5_.template Get<float>();
 
-    // Step 1: alpha * (exp(min(x, 0)) - 1) -> tmp1
+    // Step 1: tmp1 = expm1(min(x, 0))
     // Clamp exp 输入到 <= 0 防止上溢（SELU 只在 x<=0 区域用 exp）
-    Mins(tmp1, xFloat, 0.0f, alignedNum);
-    Exp(tmp1, tmp1, alignedNum);
-    Adds(tmp1, tmp1, -1.0f, alignedNum);
+    Mins(tmp1, xFloat, 0.0f, alignedNum);             // tmp1 = min(x, 0)
+    ComputeExpm1(tmp1, tmp3, tmp4, tmp5, alignedNum); // tmp1 = expm1(min(x,0))，数值稳定
     Muls(tmp1, tmp1, ALPHA_F32, alignedNum);
     Mins(tmp1, tmp1, 0.0f, alignedNum);
 
@@ -208,6 +233,51 @@ __aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat, Local
     // Step 3: merge and multiply by scale
     Add(yFloat, tmp2, tmp1, alignedNum);
     Muls(yFloat, yFloat, SCALE_F32, alignedNum);
+}
+
+// =============================================================================
+// ComputeExpm1 - 数值稳定 expm1(u)：u 已写入 tmp1，结果回写 tmp1。
+// 分段策略（含 ceil 级分析）：
+//   |u| <  U_TAYLOR: 泰勒级数 expm1(u)≈u+u²/2+u³/6+u⁴/24+u⁵/120+u⁶/720
+//                    绝对误差 < u⁷/5040，|u|=0.1 时约 2e-11，远小于 small_value
+//                    atol(9.3e-10)，完全可以满足 cross_check L1。
+//   |u| >= U_TAYLOR: 朴素 e-1。此时 |expm1(u)| >= ~0.1，恢复硬件 Exp 相对误差
+//                    2^-14 级后相对误差仍远小于 mare=5 阈值，且无消去问题。
+// 该策略只依赖 Exp（大区间）与 Mul/Add 多项式（小区间），不引入 Ln/Div，
+// 避免 Kahan 方案中硬件 Exp/Ln 固有误差透传导致 small_value 区超差。
+// =============================================================================
+template <typename T>
+__aicore__ inline void Selu<T>::ComputeExpm1(LocalTensor<float>& tmp1, LocalTensor<float>& tmp3,
+                                             LocalTensor<float>& tmp4, LocalTensor<float>& tmp5, int64_t alignedNum)
+{
+    // ---- 泰勒支路（小区间，绕开 Exp）----
+    // tmp3 = u * (1 + u*(1/2 + u*(1/6 + u*(1/24 + u*(1/120 + u*(1/720))))))
+    Muls(tmp3, tmp1, (1.0f / 720.0f), alignedNum); // tmp3 = u/720
+    Adds(tmp3, tmp3, (1.0f / 120.0f), alignedNum); //      + 1/120
+    Mul(tmp3, tmp3, tmp1, alignedNum);             // *u
+    Adds(tmp3, tmp3, (1.0f / 24.0f), alignedNum);  // + 1/24
+    Mul(tmp3, tmp3, tmp1, alignedNum);             // *u
+    Adds(tmp3, tmp3, (1.0f / 6.0f), alignedNum);   // + 1/6
+    Mul(tmp3, tmp3, tmp1, alignedNum);             // *u
+    Adds(tmp3, tmp3, 0.5f, alignedNum);            // + 1/2
+    Mul(tmp3, tmp3, tmp1, alignedNum);             // *u
+    Adds(tmp3, tmp3, 1.0f, alignedNum);            // + 1
+    Mul(tmp3, tmp3, tmp1, alignedNum);             // tmp3 = expm1(u) 泰勒
+
+    // ---- 朴素支路（大区间）----
+    Exp(tmp5, tmp1, alignedNum); // tmp5 = e = exp(u)
+    PipeBarrier<PIPE_V>();
+    Adds(tmp4, tmp5, -1.0f, alignedNum); // tmp4 = e - 1 (naive)
+
+    // ---- 分段选择：|u| < U_TAYLOR ? 泰勒 : 朴素 ----
+    PipeBarrier<PIPE_V>();
+    Abs(tmp5, tmp1, alignedNum); // tmp5 = |u|
+    PipeBarrier<PIPE_V>();
+    CompareScalar(tmp5.ReinterpretCast<uint8_t>(), tmp5, U_TAYLOR, CMPMODE::LT, alignedNum);
+    PipeBarrier<PIPE_V>();
+    Select(tmp1, tmp5.ReinterpretCast<uint8_t>(), tmp3, tmp4, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+           alignedNum); // tmp1 = 选支结果
+    PipeBarrier<PIPE_V>();
 }
 
 // =============================================================================
@@ -226,16 +296,18 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, Local
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
+    LocalTensor<float> tmp3 = tmpBuf3_.template Get<float>();
+    LocalTensor<float> tmp4 = tmpBuf4_.template Get<float>();
+    LocalTensor<float> tmp5 = tmpBuf5_.template Get<float>();
 
     // ---- Cast input to fp32 ----
     // half / bfloat16 / int32 -> float (一步)
     Cast(tmp1, xLocal, RoundMode::CAST_NONE, alignedNum);
 
     // ---- Compute SELU in fp32 ----
-    // Step 1: alpha * (exp(min(x, 0)) - 1)
+    // Step 1: expm1(min(x, 0))
     Mins(tmp2, tmp1, 0.0f, alignedNum);
-    Exp(tmp2, tmp2, alignedNum);
-    Adds(tmp2, tmp2, -1.0f, alignedNum);
+    ComputeExpm1(tmp2, tmp3, tmp4, tmp5, alignedNum); // tmp2 = expm1(min(x,0))
     Muls(tmp2, tmp2, ALPHA_F32, alignedNum);
     Mins(tmp2, tmp2, 0.0f, alignedNum);
 

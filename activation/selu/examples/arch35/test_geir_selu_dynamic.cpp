@@ -9,11 +9,12 @@
  */
 
 /**
- * @file test_geir_selu.cpp
- * @brief Selu static GE IR verification.
+ * @file test_geir_selu_dynamic.cpp
+ * @brief Selu dynamic-shape and dynamic-rank GE IR verification.
  *
- * Build one concrete graph (x -> Selu -> y) in one GE Session and run it once.
- * Checks the output shape, dtype and all element values against the CPU golden
+ * Both scenarios reuse one GE Session. Each scenario adds one dynamic graph and
+ * runs that graph three times with distinct concrete shapes. Every run checks
+ * the only output's shape, dtype, and all values against the CPU golden
  * y = scale * (max(0, x) + min(0, alpha * (exp(x) - 1))) computed in double.
  */
 
@@ -47,6 +48,7 @@ constexpr float kAtol = 1.0e-4F;
 constexpr float kRtol = 1.0e-4F;
 
 using ShapeVector = std::vector<int64_t>;
+using ShapeCases = std::vector<ShapeVector>;
 
 std::string ShapeToString(const ShapeVector& shape)
 {
@@ -103,14 +105,14 @@ ge::TensorDesc MakeTensorDesc(const ShapeVector& shape, bool hostPlacement)
     return desc;
 }
 
-struct Feeds {
+struct SeluFeeds {
     std::vector<float> input;
     std::vector<ge::Tensor> tensors;
 };
 
-Feeds MakeFeeds(const ShapeVector& shape)
+SeluFeeds MakeFeeds(const ShapeVector& shape)
 {
-    Feeds feeds;
+    SeluFeeds feeds;
     feeds.input = MakeInput(ElementCount(shape));
     const ge::TensorDesc desc = MakeTensorDesc(shape, true);
     const uint32_t byteSize = static_cast<uint32_t>(feeds.input.size() * sizeof(float));
@@ -118,16 +120,18 @@ Feeds MakeFeeds(const ShapeVector& shape)
     return feeds;
 }
 
-int BuildGraph(const ShapeVector& declaredShape, ge::Graph& graph)
+int BuildGraph(const std::string& scenarioName, const ShapeVector& declaredShape, ge::Graph& graph)
 {
     const ge::TensorDesc inputDesc = MakeTensorDesc(declaredShape, false);
 
-    auto data = ge::op::Data("selu_static_x").set_attr_index(0);
+    const std::string dataName = scenarioName + "_x";
+    auto data = ge::op::Data(dataName.c_str()).set_attr_index(0);
     data.update_input_desc_x(inputDesc);
     data.update_output_desc_y(inputDesc);
     graph.AddOp(data);
 
-    auto selu = ge::op::Selu("selu_static");
+    const std::string opName = "selu_" + scenarioName;
+    auto selu = ge::op::Selu(opName.c_str());
     selu.set_input_x(data);
     selu.update_input_desc_x(inputDesc);
 
@@ -193,6 +197,52 @@ bool VerifyOutput(const std::vector<ge::Tensor>& outputs, const ShapeVector& sha
     return true;
 }
 
+int RunScenario(ge::Session& session, uint32_t graphId, const std::string& scenarioName,
+                const ShapeVector& declaredShape, const ShapeCases& concreteShapes)
+{
+    std::cout << "Scenario " << scenarioName << ", declared shape " << ShapeToString(declaredShape) << std::endl;
+
+    const std::string graphName = "selu_" + scenarioName + "_graph";
+    ge::Graph graph(graphName.c_str());
+    if (BuildGraph(scenarioName, declaredShape, graph) != kSuccess) {
+        std::cerr << "ERROR: unable to build graph for scenario " << scenarioName << std::endl;
+        return kFailed;
+    }
+
+    std::map<ge::AscendString, ge::AscendString> graphOptions;
+    ge::Status status = session.AddGraph(graphId, graph, graphOptions);
+    if (status != kSuccess) {
+        std::cerr << "ERROR: AddGraph failed for scenario " << scenarioName << ": " << ge::GEGetErrorMsgV2().GetString()
+                  << std::endl;
+        return kFailed;
+    }
+
+    size_t passed = 0U;
+    for (const ShapeVector& shape : concreteShapes) {
+        std::cout << "Run concrete shape " << ShapeToString(shape) << std::endl;
+        SeluFeeds feeds = MakeFeeds(shape);
+        std::vector<ge::Tensor> outputs;
+        status = session.RunGraph(graphId, feeds.tensors, outputs);
+        if (status != kSuccess) {
+            std::cerr << "ERROR: RunGraph failed for scenario " << scenarioName << ", shape " << ShapeToString(shape)
+                      << ": " << ge::GEGetErrorMsgV2().GetString() << std::endl;
+            continue;
+        }
+        if (!VerifyOutput(outputs, shape, feeds.input)) {
+            std::cerr << "ERROR: output verification failed for scenario " << scenarioName << ", shape "
+                      << ShapeToString(shape) << std::endl;
+            continue;
+        }
+
+        ++passed;
+        std::cout << "Shape, dtype and values PASSED for " << ShapeToString(shape) << std::endl;
+    }
+
+    std::cout << "Scenario " << scenarioName << " summary: " << passed << "/" << concreteShapes.size() << " passed"
+              << std::endl;
+    return passed == concreteShapes.size() ? kSuccess : kFailed;
+}
+
 } // namespace
 
 int main()
@@ -212,50 +262,22 @@ int main()
         return kFailed;
     }
 
-    const ShapeVector shape = {4, 8};
-    const std::string graphName = "selu_static_graph";
-    ge::Graph graph(graphName.c_str());
-    if (BuildGraph(shape, graph) != kSuccess) {
-        std::cerr << "ERROR: unable to build Selu static graph" << std::endl;
-        delete session;
-        (void)ge::GEFinalize();
-        return kFailed;
-    }
-
-    std::map<ge::AscendString, ge::AscendString> graphOptions;
-    status = session->AddGraph(0U, graph, graphOptions);
-    if (status != kSuccess) {
-        std::cerr << "ERROR: AddGraph failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
-        delete session;
-        (void)ge::GEFinalize();
-        return kFailed;
-    }
-
-    Feeds feeds = MakeFeeds(shape);
-    std::vector<ge::Tensor> outputs;
-    status = session->RunGraph(0U, feeds.tensors, outputs);
-    if (status != kSuccess) {
-        std::cerr << "ERROR: RunGraph failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
-        delete session;
-        (void)ge::GEFinalize();
-        return kFailed;
-    }
-
-    const bool passed = VerifyOutput(outputs, shape, feeds.input);
+    const int dimResult = RunScenario(*session, 0U, "unknown_dim_minus_1", {-1, -1}, {{4, 2}, {1, 8}, {3, 5}});
+    const int rankResult = RunScenario(*session, 1U, "unknown_rank_minus_2", {-2}, {{8}, {4, 2}, {2, 3, 4}});
 
     delete session;
+    session = nullptr;
     status = ge::GEFinalize();
     if (status != kSuccess) {
         std::cerr << "ERROR: GEFinalize failed" << std::endl;
         return kFailed;
     }
 
-    if (!passed) {
-        std::cerr << "ERROR: Selu static GEIR verification failed" << std::endl;
+    if (dimResult != kSuccess || rankResult != kSuccess) {
+        std::cerr << "ERROR: Selu dynamic GEIR verification did not pass all scenarios" << std::endl;
         return kFailed;
     }
 
-    std::cout << "Shape, dtype and values PASSED for [4,8]" << std::endl;
-    std::cout << "Selu static GEIR verification PASSED" << std::endl;
+    std::cout << "Selu dynamic GEIR verification PASSED (-1 and -2)" << std::endl;
     return kSuccess;
 }
