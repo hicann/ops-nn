@@ -74,7 +74,6 @@ class MatmulEmuSplitWeightOpBuilder(OpBuilder):
 
 
 matmul_emu_split_weight_builder = MatmulEmuSplitWeightOpBuilder()
-op_module_matmul = matmul_emu_split_weight_builder.load()
 
 
 @impl(
@@ -95,6 +94,7 @@ def matmul_emu_split_weight(
 
     计算公式: y = X @ W_high + w_low_scale * (X @ W_low)
     """
+    op_module_matmul = matmul_emu_split_weight_builder.load()
     return op_module_matmul.matmul_emu_split_weight(
         x, w_high, w_low, w_low_scale, y_dtype
     )
