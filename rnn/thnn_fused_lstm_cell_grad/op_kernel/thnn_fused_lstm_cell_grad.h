@@ -506,7 +506,7 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeDgates(int64_t calcSizeAlign)
+    __aicore__ inline void ComputeDgatesDC(int64_t calcSizeAlign)
     {
         // tanh
         Tanh(tanhTensor, cTensor, calcSizeAlign);
@@ -533,7 +533,10 @@ private:
 
         // dcPrev
         Mul(dcTensor, dcTensor, fTensor, calcSizeAlign);
+    }
 
+    __aicore__ inline void ComputeDgatesGates(int64_t calcSizeAlign)
+    {
         // di
         Muls(diTensor, iTensor, FLOAT_NEG_ONE, calcSizeAlign);
         PipeBarrier<PIPE_V>();
@@ -572,6 +575,12 @@ private:
         Mul(doTensor, tmpDoTensor, tmpDiTensor, calcSizeAlign);
         PipeBarrier<PIPE_V>();
         Mul(doTensor, doTensor, oTensor, calcSizeAlign);
+    }
+
+    __aicore__ inline void ComputeDgates(int64_t calcSizeAlign)
+    {
+        ComputeDgatesDC(calcSizeAlign);
+        ComputeDgatesGates(calcSizeAlign);
     }
 
     __aicore__ inline void StoreDgatesResults(int64_t nShapeAligned, int64_t calcSizeAlign)

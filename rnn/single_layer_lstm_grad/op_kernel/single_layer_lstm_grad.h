@@ -436,11 +436,7 @@ private:
         pipe->InitBuffer(subDataBuf, tiling.ubSize);
     }
 
-    __aicore__ inline void InitGlobalBuffers(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR initH,
-                                             GM_ADDR initC, GM_ADDR h, GM_ADDR c, GM_ADDR dy, GM_ADDR dh, GM_ADDR dc,
-                                             GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct,
-                                             GM_ADDR seqLength, GM_ADDR dw, GM_ADDR db, GM_ADDR dx, GM_ADDR dhPrev,
-                                             GM_ADDR dcPrev, GM_ADDR workspace)
+    __aicore__ inline void InitGmOffsets()
     {
         CalcGMOffset(dgateMMTiling, dgateOffsets, dgateTail, static_cast<int32_t>(tiling.hiddenSize * LSTM_GATE_SIZE));
         CalcGMDwOffset(dwMMTiling, dwOffsets, dwTail, static_cast<int32_t>(tiling.batch * tiling.timeStep));
@@ -448,7 +444,13 @@ private:
         allCellSize = oneCellSize * LSTM_GATE_SIZE;
         oriDgateOffsets = dgateOffsets;
         oriDwOffsets = dwOffsets;
+    }
 
+    __aicore__ inline void SetInputGmBuffers(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR initH,
+                                             GM_ADDR initC, GM_ADDR h, GM_ADDR c, GM_ADDR dy, GM_ADDR dh, GM_ADDR dc,
+                                             GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct,
+                                             GM_ADDR seqLength)
+    {
         inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x), tiling.timeStep * tiling.batch * tiling.inputSize);
         inputGm.weightGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(weight),
                                          tiling.hiddenSize * LSTM_GATE_SIZE * (tiling.inputSize + tiling.hiddenSize));
@@ -474,7 +476,11 @@ private:
         inputGm.oGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(o), tiling.timeStep * tiling.batch * tiling.hiddenSize);
         inputGm.tanhctGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(tanhct),
                                          tiling.timeStep * tiling.batch * tiling.hiddenSize);
+    }
 
+    __aicore__ inline void SetOutputGmBuffers(GM_ADDR weight, GM_ADDR dw, GM_ADDR db, GM_ADDR dx, GM_ADDR dhPrev,
+                                              GM_ADDR dcPrev, GM_ADDR workspace)
+    {
         outputGm.dwGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dw),
                                       tiling.hiddenSize * LSTM_GATE_SIZE * (tiling.hiddenSize + tiling.inputSize));
         outputGm.dbGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(db), LSTM_GATE_SIZE * tiling.hiddenSize);
@@ -520,6 +526,17 @@ private:
                 reinterpret_cast<__gm__ float*>(dw),
                 LSTM_GATE_SIZE * tiling.hiddenSize * (tiling.hiddenSize + tiling.inputSize));
         }
+    }
+
+    __aicore__ inline void InitGlobalBuffers(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR initH,
+                                             GM_ADDR initC, GM_ADDR h, GM_ADDR c, GM_ADDR dy, GM_ADDR dh, GM_ADDR dc,
+                                             GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct,
+                                             GM_ADDR seqLength, GM_ADDR dw, GM_ADDR db, GM_ADDR dx, GM_ADDR dhPrev,
+                                             GM_ADDR dcPrev, GM_ADDR workspace)
+    {
+        InitGmOffsets();
+        SetInputGmBuffers(x, weight, bias, y, initH, initC, h, c, dy, dh, dc, i, j, f, o, tanhct, seqLength);
+        SetOutputGmBuffers(weight, dw, db, dx, dhPrev, dcPrev, workspace);
     }
 
     __aicore__ inline void GetCoreIndex(TCubeTiling& param, int32_t& subKIndx, tailSize& mmTail, int32_t kSize)
@@ -782,91 +799,101 @@ private:
         }
     }
 
+    __aicore__ inline void LoadDgatesInputDataFloat(int64_t tIdx, bool firstLoop, bool useInitCH)
+    {
+        if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
+            CopyTInput(seqTensor, inputGm.seqLengthGm, tIdx);
+        }
+        CopyTInput<float>(dyTensor, inputGm.dyGm, tIdx);
+        CopyTInput<float>(otTensor, inputGm.oGm, tIdx);
+        CopyTInput<float>(itTensor, inputGm.iGm, tIdx);
+        CopyTInput<float>(jtTensor, inputGm.jGm, tIdx);
+        CopyTInput<float>(ftTensor, inputGm.fGm, tIdx);
+        CopyTInput<float>(ctTensor, inputGm.cGm, tIdx);
+        if (useInitCH) {
+            CopyTInput<float>(ctPreTensor, inputGm.initCGm, 0);
+        } else if (tiling.direction == DIRECTION_FORWARD) {
+            CopyTInput<float>(ctPreTensor, inputGm.cGm, tIdx - 1);
+        } else {
+            CopyTInput<float>(ctPreTensor, inputGm.cGm, tIdx + 1);
+        }
+        CopyTInput<float>(tanhTensor, inputGm.tanhctGm, tIdx);
+        if (firstLoop) {
+            CopyTInput<float>(dhnextTensor, inputGm.dhGm, 0);
+            CopyTInput<float>(dcnextTensor, inputGm.dcGm, 0);
+        } else {
+            CopyTInput<float>(dhnextTensor, outputGm.dhPrevGm, 0);
+            CopyTInput<float>(dcnextTensor, outputGm.dcPrevGm, 0);
+        }
+        MTE2ToVSync();
+    }
+
+    __aicore__ inline void LoadDgatesInputDataNonFloat(int64_t tIdx, bool firstLoop, bool useInitCH,
+                                                       int64_t calcSizeAlign)
+    {
+        if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
+            CopyTInput<T>(seqTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.seqLengthGm, tIdx);
+        }
+        CopyTInput<T>(dyTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dyGm, tIdx);
+        CopyTInput<T>(otTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.oGm, tIdx);
+        CopyTInput<T>(itTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.iGm, tIdx);
+        CopyTInput<T>(jtTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.jGm, tIdx);
+        CopyTInput<T>(ftTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.fGm, tIdx);
+        CopyTInput<T>(ctTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx);
+
+        if (useInitCH) {
+            CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.initCGm, 0);
+        } else if (tiling.direction == DIRECTION_FORWARD) {
+            CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx - 1);
+        } else {
+            CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx + 1);
+        }
+
+        CopyTInput<T>(tanhTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.tanhctGm, tIdx);
+
+        if (firstLoop) {
+            CopyTInput<T>(dhnextTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dhGm, 0);
+            CopyTInput<T>(dcnextTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dcGm, 0);
+            MTE2ToVSync();
+            Cast(dhnextTensor, dhnextTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
+                 calcSizeAlign);
+            Cast(dcnextTensor, dcnextTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
+                 calcSizeAlign);
+            PipeBarrier<PIPE_V>();
+        } else {
+            CopyTInput16Aligned<float>(dhnextTensor, outputGm.dhPrevFp32Gm, 0);
+            CopyTInput16Aligned<float>(dcnextTensor, outputGm.dcPrevFp32Gm, 0);
+        }
+
+        MTE2ToVSync();
+
+        if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
+            Cast(seqTensor, seqTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
+                 calcSizeAlign);
+        }
+        Cast(dyTensor, dyTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(otTensor, otTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(itTensor, itTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(jtTensor, jtTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(ftTensor, ftTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(ctTensor, ctTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+        Cast(ctPreTensor, ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
+             calcSizeAlign);
+        Cast(tanhTensor, tanhTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
+
+        PipeBarrier<PIPE_V>();
+    }
+
     __aicore__ inline void LoadDgatesInputData(int64_t tIdx, bool firstLoop, bool useInitCH, int64_t calcSizeAlign)
     {
         if constexpr (std::is_same<T, float>::value) {
-            if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
-                CopyTInput(seqTensor, inputGm.seqLengthGm, tIdx);
-            }
-            CopyTInput<float>(dyTensor, inputGm.dyGm, tIdx);
-            CopyTInput<float>(otTensor, inputGm.oGm, tIdx);
-            CopyTInput<float>(itTensor, inputGm.iGm, tIdx);
-            CopyTInput<float>(jtTensor, inputGm.jGm, tIdx);
-            CopyTInput<float>(ftTensor, inputGm.fGm, tIdx);
-            CopyTInput<float>(ctTensor, inputGm.cGm, tIdx);
-            if (useInitCH) {
-                CopyTInput<float>(ctPreTensor, inputGm.initCGm, 0);
-            } else if (tiling.direction == DIRECTION_FORWARD) {
-                CopyTInput<float>(ctPreTensor, inputGm.cGm, tIdx - 1);
-            } else {
-                CopyTInput<float>(ctPreTensor, inputGm.cGm, tIdx + 1);
-            }
-            CopyTInput<float>(tanhTensor, inputGm.tanhctGm, tIdx);
-            if (firstLoop) {
-                CopyTInput<float>(dhnextTensor, inputGm.dhGm, 0);
-                CopyTInput<float>(dcnextTensor, inputGm.dcGm, 0);
-            } else {
-                CopyTInput<float>(dhnextTensor, outputGm.dhPrevGm, 0);
-                CopyTInput<float>(dcnextTensor, outputGm.dcPrevGm, 0);
-            }
-            MTE2ToVSync();
+            LoadDgatesInputDataFloat(tIdx, firstLoop, useInitCH);
         } else if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
-            if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
-                CopyTInput<T>(seqTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.seqLengthGm, tIdx);
-            }
-            CopyTInput<T>(dyTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dyGm, tIdx);
-            CopyTInput<T>(otTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.oGm, tIdx);
-            CopyTInput<T>(itTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.iGm, tIdx);
-            CopyTInput<T>(jtTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.jGm, tIdx);
-            CopyTInput<T>(ftTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.fGm, tIdx);
-            CopyTInput<T>(ctTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx);
-
-            if (useInitCH) {
-                CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.initCGm, 0);
-            } else if (tiling.direction == DIRECTION_FORWARD) {
-                CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx - 1);
-            } else {
-                CopyTInput<T>(ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.cGm, tIdx + 1);
-            }
-
-            CopyTInput<T>(tanhTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.tanhctGm, tIdx);
-
-            if (firstLoop) {
-                CopyTInput<T>(dhnextTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dhGm, 0);
-                CopyTInput<T>(dcnextTensor.template ReinterpretCast<T>()[calcSizeAlign], inputGm.dcGm, 0);
-                MTE2ToVSync();
-                Cast(dhnextTensor, dhnextTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
-                     calcSizeAlign);
-                Cast(dcnextTensor, dcnextTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
-                     calcSizeAlign);
-                PipeBarrier<PIPE_V>();
-            } else {
-                CopyTInput16Aligned<float>(dhnextTensor, outputGm.dhPrevFp32Gm, 0);
-                CopyTInput16Aligned<float>(dcnextTensor, outputGm.dcPrevFp32Gm, 0);
-            }
-
-            MTE2ToVSync();
-
-            if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
-                Cast(seqTensor, seqTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
-                     calcSizeAlign);
-            }
-            Cast(dyTensor, dyTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(otTensor, otTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(itTensor, itTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(jtTensor, jtTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(ftTensor, ftTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(ctTensor, ctTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE, calcSizeAlign);
-            Cast(ctPreTensor, ctPreTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
-                 calcSizeAlign);
-            Cast(tanhTensor, tanhTensor.template ReinterpretCast<T>()[calcSizeAlign], RoundMode::CAST_NONE,
-                 calcSizeAlign);
-
-            PipeBarrier<PIPE_V>();
+            LoadDgatesInputDataNonFloat(tIdx, firstLoop, useInitCH, calcSizeAlign);
         }
     }
 
-    __aicore__ inline void ComputeDgates(int64_t calcSizeAlign)
+    __aicore__ inline void ComputeDgatesDH(int64_t calcSizeAlign)
     {
         // dh(t)
         Add(dhtTensor, dyTensor, dhnextTensor, calcSizeAlign);
@@ -880,7 +907,10 @@ private:
         Mul(dctTensor, dctTensor, tmpCTensor, calcSizeAlign);
         PipeBarrier<PIPE_V>();
         Add(dctTensor, dctTensor, dcnextTensor, calcSizeAlign);
+    }
 
+    __aicore__ inline void ComputeDgatesGrads(int64_t calcSizeAlign)
+    {
         // do(t)
         Muls(otTensor, otTensor, FLOAT_NEG_ONE, calcSizeAlign);
         PipeBarrier<PIPE_V>();
@@ -924,7 +954,10 @@ private:
 
         // dc_prev
         Mul(dctTensor, dctTensor, ftTensor, calcSizeAlign);
+    }
 
+    __aicore__ inline void ApplyDgatesSeqLength(int64_t calcSizeAlign)
+    {
         // apply seqlength
         if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
             PipeBarrier<PIPE_V>();
@@ -942,6 +975,13 @@ private:
             PipeBarrier<PIPE_V>();
             Add(dctTensor, dctTensor, dcnextTensor, calcSizeAlign);
         }
+    }
+
+    __aicore__ inline void ComputeDgates(int64_t calcSizeAlign)
+    {
+        ComputeDgatesDH(calcSizeAlign);
+        ComputeDgatesGrads(calcSizeAlign);
+        ApplyDgatesSeqLength(calcSizeAlign);
         VToMTE3Sync();
     }
 
@@ -1104,6 +1144,50 @@ private:
         }
     }
 
+    __aicore__ inline void ProcessDxhSplitTask(int64_t tIdx, bool useInitCH, const LocalTensor<float>& dxhUb,
+                                               int64_t taskIdx)
+    {
+        int64_t curMLines = (taskIdx == dxhInputTiling.taskNum - 1) ? dxhInputTiling.copyMLinesTail :
+                                                                      dxhInputTiling.copyMLines;
+        DataCopyExtParams dataCopyInDxParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
+            static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
+            static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / SRC_STRIDE_OFFSET_DIVISOR), 0};
+        DataCopyExtParams dataCopyInDhParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
+            static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
+            static_cast<uint32_t>((tiling.hiddenSizeAligned - tiling.hiddenSize) / SRC_STRIDE_OFFSET_DIVISOR), 0};
+        DataCopyPad(dxhUb, outputGm.dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines],
+                    dataCopyInDxParams, padInFloatParams);
+        DataCopyPad(
+            dxhUb[curMLines * tiling.inputSizeAligned],
+            outputGm
+                .dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines + tiling.inputSize],
+            dataCopyInDhParams, padInFloatParams);
+        if constexpr (std::is_same<T, half>::value) {
+            MTE2ToVSync();
+            Cast(dxhUb.template ReinterpretCast<T>(), dxhUb, RoundMode::CAST_NONE, tiling.inputSizeAligned * curMLines);
+            VToMTE3Sync();
+        } else if constexpr (std::is_same<T, bfloat16_t>::value) {
+            MTE2ToVSync();
+            Cast(dxhUb.template ReinterpretCast<T>(), dxhUb, RoundMode::CAST_RINT, tiling.inputSizeAligned * curMLines);
+            VToMTE3Sync();
+        } else {
+            MTE2ToMTE3Sync();
+        }
+        // dx copy out
+        DataCopyExtParams dataCopyDxParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.inputSize * paraBytes),
+            static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / calBlockSize), 0, 0};
+        DataCopyPad(
+            outputGm
+                .dxGm[tIdx * tiling.batch * tiling.inputSize + taskIdx * tiling.inputSize * dxhInputTiling.copyMLines],
+            dxhUb.template ReinterpretCast<T>(), dataCopyDxParams);
+        MTE3ToMTE2Sync();
+        // dh copy out
+        CopyOutDh(useInitCH, taskIdx, curMLines, dxhUb);
+    }
+
     __aicore__ inline void ProcessDxhSplit(int64_t tIdx, bool useInitCH)
     {
         auto curBlockIdx = GetBlockIdx();
@@ -1116,47 +1200,7 @@ private:
                                   (dxhInputTiling.splitTaskPerCore + 1) * curBlockIdx :
                                   (dxhInputTiling.splitTaskPerCore * curBlockIdx + dxhInputTiling.splitPreCore);
         for (int64_t taskLoopId = 0; taskLoopId < curCoreTaskNum; taskLoopId++) {
-            int64_t taskIdx = startTaskId + taskLoopId;
-            int64_t curMLines = (taskIdx == dxhInputTiling.taskNum - 1) ? dxhInputTiling.copyMLinesTail :
-                                                                          dxhInputTiling.copyMLines;
-            DataCopyExtParams dataCopyInDxParams{
-                static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
-                static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
-                static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / SRC_STRIDE_OFFSET_DIVISOR), 0};
-            DataCopyExtParams dataCopyInDhParams{
-                static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
-                static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
-                static_cast<uint32_t>((tiling.hiddenSizeAligned - tiling.hiddenSize) / SRC_STRIDE_OFFSET_DIVISOR), 0};
-            DataCopyPad(dxhUb,
-                        outputGm.dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines],
-                        dataCopyInDxParams, padInFloatParams);
-            DataCopyPad(dxhUb[curMLines * tiling.inputSizeAligned],
-                        outputGm.dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines +
-                                       tiling.inputSize],
-                        dataCopyInDhParams, padInFloatParams);
-            if constexpr (std::is_same<T, half>::value) {
-                MTE2ToVSync();
-                Cast(dxhUb.template ReinterpretCast<T>(), dxhUb, RoundMode::CAST_NONE,
-                     tiling.inputSizeAligned * curMLines);
-                VToMTE3Sync();
-            } else if constexpr (std::is_same<T, bfloat16_t>::value) {
-                MTE2ToVSync();
-                Cast(dxhUb.template ReinterpretCast<T>(), dxhUb, RoundMode::CAST_RINT,
-                     tiling.inputSizeAligned * curMLines);
-                VToMTE3Sync();
-            } else {
-                MTE2ToMTE3Sync();
-            }
-            // dx copy out
-            DataCopyExtParams dataCopyDxParams{
-                static_cast<uint16_t>(curMLines), static_cast<uint32_t>(tiling.inputSize * paraBytes),
-                static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / calBlockSize), 0, 0};
-            DataCopyPad(outputGm.dxGm[tIdx * tiling.batch * tiling.inputSize +
-                                      taskIdx * tiling.inputSize * dxhInputTiling.copyMLines],
-                        dxhUb.template ReinterpretCast<T>(), dataCopyDxParams);
-            MTE3ToMTE2Sync();
-            // dh copy out
-            CopyOutDh(useInitCH, taskIdx, curMLines, dxhUb);
+            ProcessDxhSplitTask(tIdx, useInitCH, dxhUb, startTaskId + taskLoopId);
         }
     }
 
@@ -1195,6 +1239,49 @@ private:
         MTE3ToMTE2Sync();
     }
 
+    __aicore__ inline void ProcessDxSplitLargeNLoop(int64_t tIdx, int64_t taskIdx, int64_t curMLines, int64_t nLoopIdx)
+    {
+        int64_t curCopyNLength = (nLoopIdx == dxhInputTiling.nLoop - 1) ? dxhInputTiling.copyNLengthTail :
+                                                                          dxhInputTiling.copyNLength;
+        int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
+        DataCopyExtParams dataCopyInDxParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
+            static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES),
+            static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR), 0};
+        DataCopyPad(dxFp32Ub,
+                    outputGm.dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines +
+                                   dxhInputTiling.copyNLength * nLoopIdx],
+                    dataCopyInDxParams, padInFloatParams);
+
+        if constexpr (std::is_same<T, half>::value) {
+            MTE2ToVSync();
+            Cast(dxUb, dxFp32Ub, RoundMode::CAST_NONE, curCopyNLengthAligned * curMLines);
+            VToMTE3Sync();
+            VToMTE2Sync();
+        } else if constexpr (std::is_same<T, bfloat16_t>::value) {
+            MTE2ToVSync();
+            Cast(dxUb, dxFp32Ub, RoundMode::CAST_RINT, curCopyNLengthAligned * curMLines);
+            VToMTE3Sync();
+            VToMTE2Sync();
+        } else {
+            MTE2ToMTE3Sync();
+        }
+
+        DataCopyExtParams dataCopyDxParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * paraBytes),
+            static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / calBlockSize), 0, 0};
+        DataCopyPad(outputGm.dxGm[tIdx * tiling.batch * tiling.inputSize +
+                                  taskIdx * tiling.inputSize * dxhInputTiling.copyMLines +
+                                  dxhInputTiling.copyNLength * nLoopIdx],
+                    dxUb, dataCopyDxParams);
+
+        if constexpr (std::is_same<T, float>::value) {
+            MTE3ToMTE2Sync();
+        } else {
+            MTE3ToVSync();
+        }
+    }
+
     __aicore__ inline void ProcessDxSplitLarge(int64_t tIdx)
     {
         // Process dx when inputsize and hiddensize is large.
@@ -1221,46 +1308,7 @@ private:
                                                                           dxhInputTiling.copyMLines;
 
             for (int32_t nLoopIdx = 0; nLoopIdx < dxhInputTiling.nLoop; nLoopIdx++) {
-                int64_t curCopyNLength = (nLoopIdx == dxhInputTiling.nLoop - 1) ? dxhInputTiling.copyNLengthTail :
-                                                                                  dxhInputTiling.copyNLength;
-                int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
-                DataCopyExtParams dataCopyInDxParams{
-                    static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
-                    static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES),
-                    static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR), 0};
-                DataCopyPad(
-                    dxFp32Ub,
-                    outputGm.dxhGm[taskIdx * (tiling.hiddenSize + tiling.inputSize) * dxhInputTiling.copyMLines +
-                                   dxhInputTiling.copyNLength * nLoopIdx],
-                    dataCopyInDxParams, padInFloatParams);
-
-                if constexpr (std::is_same<T, half>::value) {
-                    MTE2ToVSync();
-                    Cast(dxUb, dxFp32Ub, RoundMode::CAST_NONE, curCopyNLengthAligned * curMLines);
-                    VToMTE3Sync();
-                    VToMTE2Sync();
-                } else if constexpr (std::is_same<T, bfloat16_t>::value) {
-                    MTE2ToVSync();
-                    Cast(dxUb, dxFp32Ub, RoundMode::CAST_RINT, curCopyNLengthAligned * curMLines);
-                    VToMTE3Sync();
-                    VToMTE2Sync();
-                } else {
-                    MTE2ToMTE3Sync();
-                }
-
-                DataCopyExtParams dataCopyDxParams{
-                    static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * paraBytes),
-                    static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / calBlockSize), 0, 0};
-                DataCopyPad(outputGm.dxGm[tIdx * tiling.batch * tiling.inputSize +
-                                          taskIdx * tiling.inputSize * dxhInputTiling.copyMLines +
-                                          dxhInputTiling.copyNLength * nLoopIdx],
-                            dxUb, dataCopyDxParams);
-
-                if constexpr (std::is_same<T, float>::value) {
-                    MTE3ToMTE2Sync();
-                } else {
-                    MTE3ToVSync();
-                }
+                ProcessDxSplitLargeNLoop(tIdx, taskIdx, curMLines, nLoopIdx);
             }
         }
     }
@@ -1320,17 +1368,8 @@ private:
         Add(dhPrevFp32Ub, dhPrevFp32Ub, dhNextFp32Ub, curCopyNLengthAligned * curMLines);
     }
 
-    __aicore__ inline void ProcessDhSplitLarge(int64_t tIdx, bool firstLoop, bool useInitCH)
+    __aicore__ inline void InitDhSplitLargeBuffers()
     {
-        // Process dh_prev when inputsize and hiddensize is large.
-        auto curBlockIdx = GetBlockIdx();
-
-        int64_t curCoreTaskNumH = curBlockIdx < dxhHiddenTiling.splitPreCore ? (dxhHiddenTiling.splitTaskPerCore + 1) :
-                                                                               dxhHiddenTiling.splitTaskPerCore;
-        int64_t startTaskIdH = curBlockIdx < dxhHiddenTiling.splitPreCore ?
-                                   (curCoreTaskNumH * curBlockIdx) :
-                                   (curCoreTaskNumH * curBlockIdx + dxhHiddenTiling.splitPreCore);
-
         totalUb = subDataBuf.Get<uint8_t>();
         dhPrevUb = totalUb.ReinterpretCast<T>();
         if constexpr (!std::is_same<T, float>::value) {
@@ -1356,6 +1395,20 @@ private:
                            .template ReinterpretCast<T>();
             dhNextFp32Ub = dhNextUb;
         }
+    }
+
+    __aicore__ inline void ProcessDhSplitLarge(int64_t tIdx, bool firstLoop, bool useInitCH)
+    {
+        // Process dh_prev when inputsize and hiddensize is large.
+        auto curBlockIdx = GetBlockIdx();
+
+        int64_t curCoreTaskNumH = curBlockIdx < dxhHiddenTiling.splitPreCore ? (dxhHiddenTiling.splitTaskPerCore + 1) :
+                                                                               dxhHiddenTiling.splitTaskPerCore;
+        int64_t startTaskIdH = curBlockIdx < dxhHiddenTiling.splitPreCore ?
+                                   (curCoreTaskNumH * curBlockIdx) :
+                                   (curCoreTaskNumH * curBlockIdx + dxhHiddenTiling.splitPreCore);
+
+        InitDhSplitLargeBuffers();
 
         for (int64_t taskLoopId = 0; taskLoopId < curCoreTaskNumH; taskLoopId++) {
             int64_t taskIdx = startTaskIdH + taskLoopId;
@@ -1541,6 +1594,40 @@ private:
         ProcessCopyInputXLarge();
         ProcessCopyHiddenHLarge();
     }
+    __aicore__ inline void ProcessCopyInputXLargeNLoop(int64_t taskIdx, int64_t curMLines, int64_t nLoopIdx)
+    {
+        int64_t curCopyNLength = (nLoopIdx == xhInputTiling.nLoop - 1) ? xhInputTiling.copyNLengthTail :
+                                                                         xhInputTiling.copyNLength;
+        int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
+        DataCopyExtParams dataCopyXParams{static_cast<uint16_t>(curMLines),
+                                          static_cast<uint32_t>(curCopyNLength * paraBytes), 0, 0, 0};
+        DataCopyPad(
+            xUb,
+            inputGm.xGm[(taskIdx * xhInputTiling.copyMLines) * tiling.inputSize + xhInputTiling.copyNLength * nLoopIdx],
+            dataCopyXParams, padInTParams);
+        if constexpr (!std::is_same<T, float>::value) {
+            MTE2ToVSync();
+            Cast(xFp32Ub, xUb, RoundMode::CAST_NONE, curMLines * curCopyNLengthAligned);
+            VToMTE3Sync();
+            VToMTE2Sync();
+        } else {
+            MTE2ToMTE3Sync();
+        }
+        DataCopyExtParams dataCopyOutXParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
+            static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR),
+            static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES), 0};
+        DataCopyPad(outputGm.xhGm[(taskIdx * xhInputTiling.copyMLines) * (tiling.inputSize + tiling.hiddenSize) +
+                                  nLoopIdx * xhInputTiling.copyNLength],
+                    outXUb, dataCopyOutXParams);
+
+        if constexpr (!std::is_same<T, float>::value) {
+            MTE3ToVSync();
+        } else {
+            MTE3ToMTE2Sync();
+        }
+    }
+
     __aicore__ inline void ProcessCopyInputXLarge()
     {
         // Concat dx and dh_prev when inputsize and hiddensize is large.
@@ -1564,38 +1651,69 @@ private:
                                                                          xhInputTiling.copyMLines;
 
             for (int64_t nLoopIdx = 0; nLoopIdx < xhInputTiling.nLoop; nLoopIdx++) {
-                int64_t curCopyNLength = (nLoopIdx == xhInputTiling.nLoop - 1) ? xhInputTiling.copyNLengthTail :
-                                                                                 xhInputTiling.copyNLength;
-                int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
-                DataCopyExtParams dataCopyXParams{static_cast<uint16_t>(curMLines),
-                                                  static_cast<uint32_t>(curCopyNLength * paraBytes), 0, 0, 0};
-                DataCopyPad(xUb,
-                            inputGm.xGm[(taskIdx * xhInputTiling.copyMLines) * tiling.inputSize +
-                                        xhInputTiling.copyNLength * nLoopIdx],
-                            dataCopyXParams, padInTParams);
-                if constexpr (!std::is_same<T, float>::value) {
-                    MTE2ToVSync();
-                    Cast(xFp32Ub, xUb, RoundMode::CAST_NONE, curMLines * curCopyNLengthAligned);
-                    VToMTE3Sync();
-                    VToMTE2Sync();
-                } else {
-                    MTE2ToMTE3Sync();
-                }
-                DataCopyExtParams dataCopyOutXParams{
-                    static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
-                    static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR),
-                    static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES), 0};
-                DataCopyPad(
-                    outputGm.xhGm[(taskIdx * xhInputTiling.copyMLines) * (tiling.inputSize + tiling.hiddenSize) +
-                                  nLoopIdx * xhInputTiling.copyNLength],
-                    outXUb, dataCopyOutXParams);
-
-                if constexpr (!std::is_same<T, float>::value) {
-                    MTE3ToVSync();
-                } else {
-                    MTE3ToMTE2Sync();
-                }
+                ProcessCopyInputXLargeNLoop(taskIdx, curMLines, nLoopIdx);
             }
+        }
+    }
+
+    __aicore__ inline void InitCopyHiddenHLargeBuffers()
+    {
+        totalUb = subDataBuf.Get<uint8_t>();
+        hUb = totalUb.ReinterpretCast<T>();
+        if constexpr (!std::is_same<T, float>::value) {
+            hFp32Ub = hUb[xhHiddenTiling.copyNLength * xhHiddenTiling.copyMLines].template ReinterpretCast<float>();
+            outHUb = hFp32Ub;
+        } else {
+            outHUb = hUb;
+        }
+    }
+
+    __aicore__ inline void ProcessCopyHiddenHLargeNLoop(int64_t tIdx, int64_t taskIdx, int64_t curMLines,
+                                                        int64_t nLoopIdx, bool useInitCH)
+    {
+        int64_t curCopyNLength = (nLoopIdx == xhHiddenTiling.nLoop - 1) ? xhHiddenTiling.copyNLengthTail :
+                                                                          xhHiddenTiling.copyNLength;
+        int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
+
+        DataCopyExtParams dataCopyHParams{static_cast<uint16_t>(curMLines),
+                                          static_cast<uint32_t>(curCopyNLength * paraBytes), 0, 0, 0};
+
+        GlobalTensor<T> srcHGm;
+        if (useInitCH) {
+            srcHGm = inputGm.initHGm[taskIdx * tiling.hiddenSize * xhHiddenTiling.copyMLines +
+                                     nLoopIdx * xhHiddenTiling.copyNLength];
+        } else if (tiling.direction == DIRECTION_FORWARD) {
+            srcHGm = inputGm.hGm[((tIdx - 1) * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) * tiling.hiddenSize +
+                                 nLoopIdx * xhHiddenTiling.copyNLength];
+        } else {
+            srcHGm = inputGm.hGm[((tIdx + 1) * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) * tiling.hiddenSize +
+                                 nLoopIdx * xhHiddenTiling.copyNLength];
+        }
+
+        DataCopyPad(hUb, srcHGm, dataCopyHParams, padInTParams);
+
+        if constexpr (!std::is_same<T, float>::value) {
+            MTE2ToVSync();
+            Cast(hFp32Ub, hUb, RoundMode::CAST_NONE, curMLines * curCopyNLengthAligned);
+            VToMTE3Sync();
+            VToMTE2Sync();
+        } else {
+            MTE2ToMTE3Sync();
+        }
+
+        DataCopyExtParams dataCopyOutHParams{
+            static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
+            static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR),
+            static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES), 0};
+        DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) *
+                                      (tiling.inputSize + tiling.hiddenSize) +
+                                  tiling.inputSize + nLoopIdx * xhHiddenTiling.copyNLength],
+                    outHUb, dataCopyOutHParams);
+
+        if constexpr (!std::is_same<T, float>::value) {
+            MTE3ToVSync();
+        } else {
+            MTE3ToMTE2Sync();
         }
     }
 
@@ -1608,14 +1726,7 @@ private:
                                    (curCoreTaskNumH * curBlockIdx) :
                                    (curCoreTaskNumH * curBlockIdx + xhHiddenTiling.splitPreCore);
 
-        totalUb = subDataBuf.Get<uint8_t>();
-        hUb = totalUb.ReinterpretCast<T>();
-        if constexpr (!std::is_same<T, float>::value) {
-            hFp32Ub = hUb[xhHiddenTiling.copyNLength * xhHiddenTiling.copyMLines].template ReinterpretCast<float>();
-            outHUb = hFp32Ub;
-        } else {
-            outHUb = hUb;
-        }
+        InitCopyHiddenHLargeBuffers();
 
         for (int64_t tIdx = 0; tIdx < tiling.timeStep; tIdx++) {
             bool useInitCH = (tIdx == 0 && tiling.direction == DIRECTION_FORWARD) ||
@@ -1627,53 +1738,7 @@ private:
                                                                               xhHiddenTiling.copyMLines;
 
                 for (int64_t nLoopIdx = 0; nLoopIdx < xhHiddenTiling.nLoop; nLoopIdx++) {
-                    int64_t curCopyNLength = (nLoopIdx == xhHiddenTiling.nLoop - 1) ? xhHiddenTiling.copyNLengthTail :
-                                                                                      xhHiddenTiling.copyNLength;
-                    int64_t curCopyNLengthAligned = CeilDiv(curCopyNLength, calBlockSize) * calBlockSize;
-
-                    DataCopyExtParams dataCopyHParams{static_cast<uint16_t>(curMLines),
-                                                      static_cast<uint32_t>(curCopyNLength * paraBytes), 0, 0, 0};
-
-                    GlobalTensor<T> srcHGm;
-                    if (useInitCH) {
-                        srcHGm = inputGm.initHGm[taskIdx * tiling.hiddenSize * xhHiddenTiling.copyMLines +
-                                                 nLoopIdx * xhHiddenTiling.copyNLength];
-                    } else if (tiling.direction == DIRECTION_FORWARD) {
-                        srcHGm = inputGm.hGm[((tIdx - 1) * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) *
-                                                 tiling.hiddenSize +
-                                             nLoopIdx * xhHiddenTiling.copyNLength];
-                    } else {
-                        srcHGm = inputGm.hGm[((tIdx + 1) * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) *
-                                                 tiling.hiddenSize +
-                                             nLoopIdx * xhHiddenTiling.copyNLength];
-                    }
-
-                    DataCopyPad(hUb, srcHGm, dataCopyHParams, padInTParams);
-
-                    if constexpr (!std::is_same<T, float>::value) {
-                        MTE2ToVSync();
-                        Cast(hFp32Ub, hUb, RoundMode::CAST_NONE, curMLines * curCopyNLengthAligned);
-                        VToMTE3Sync();
-                        VToMTE2Sync();
-                    } else {
-                        MTE2ToMTE3Sync();
-                    }
-
-                    DataCopyExtParams dataCopyOutHParams{
-                        static_cast<uint16_t>(curMLines), static_cast<uint32_t>(curCopyNLength * FLOAT_BYTES),
-                        static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / SRC_STRIDE_OFFSET_DIVISOR),
-                        static_cast<uint32_t>((tiling.hiddenSize + tiling.inputSize - curCopyNLength) * FLOAT_BYTES),
-                        0};
-                    DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhHiddenTiling.copyMLines) *
-                                                  (tiling.inputSize + tiling.hiddenSize) +
-                                              tiling.inputSize + nLoopIdx * xhHiddenTiling.copyNLength],
-                                outHUb, dataCopyOutHParams);
-
-                    if constexpr (!std::is_same<T, float>::value) {
-                        MTE3ToVSync();
-                    } else {
-                        MTE3ToMTE2Sync();
-                    }
+                    ProcessCopyHiddenHLargeNLoop(tIdx, taskIdx, curMLines, nLoopIdx, useInitCH);
                 }
             }
         }

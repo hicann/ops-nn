@@ -165,15 +165,12 @@ ge::graphStatus LstmBaseTiling::GetMMTilingData(gert::TilingContext* context, Dy
     return ret;
 }
 
-ge::graphStatus LstmBaseTiling::GetMMTilingDataSplit(const gert::TilingContext* context,
-                                                     DynamicRNNTilingData& dynamicTilingData,
-                                                     DynamicRnnTiling& dynamicRnnParams,
-                                                     matmul_tiling::DataType dataType)
+ge::graphStatus LstmBaseTiling::GetMMInputTiling(const gert::TilingContext* context,
+                                                 DynamicRNNTilingData& dynamicTilingData,
+                                                 DynamicRnnTiling& dynamicRnnParams, matmul_tiling::DataType dataType)
 {
     int32_t hiddenBlock = 4;
-    int64_t aivDouble = 2;
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul1;
-    dynamicRnnParams.usedCoreNum = context->GetPlatformInfo()->GetCoreNumByType("AiCore") * aivDouble;
     auto ret = rnnMatmul1.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm1 SetAType fail."),
                     return ge::GRAPH_FAILED);
@@ -211,8 +208,16 @@ ge::graphStatus LstmBaseTiling::GetMMTilingDataSplit(const gert::TilingContext* 
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm1 GetTiling fail."),
                     return ge::GRAPH_FAILED);
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus LstmBaseTiling::GetMMHiddenTiling(const gert::TilingContext* context,
+                                                  DynamicRNNTilingData& dynamicTilingData,
+                                                  DynamicRnnTiling& dynamicRnnParams, matmul_tiling::DataType dataType)
+{
+    int32_t hiddenBlock = 4;
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul2;
-    ret = rnnMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
+    auto ret = rnnMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm2 SetAType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
@@ -239,6 +244,23 @@ ge::graphStatus LstmBaseTiling::GetMMTilingDataSplit(const gert::TilingContext* 
 
     ret = rnnMatmul2.GetTiling(dynamicTilingData.hiddenMMParam);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm2 GetTiling fail."),
+                    return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus LstmBaseTiling::GetMMTilingDataSplit(const gert::TilingContext* context,
+                                                     DynamicRNNTilingData& dynamicTilingData,
+                                                     DynamicRnnTiling& dynamicRnnParams,
+                                                     matmul_tiling::DataType dataType)
+{
+    int64_t aivDouble = 2;
+    dynamicRnnParams.usedCoreNum = context->GetPlatformInfo()->GetCoreNumByType("AiCore") * aivDouble;
+    OP_TILING_CHECK(GetMMInputTiling(context, dynamicTilingData, dynamicRnnParams, dataType) != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm1 get tiling fail."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetMMHiddenTiling(context, dynamicTilingData, dynamicRnnParams, dataType) != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm2 get tiling fail."),
                     return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

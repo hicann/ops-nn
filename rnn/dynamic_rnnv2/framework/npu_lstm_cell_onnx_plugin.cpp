@@ -54,9 +54,9 @@ static Status ParseParamsNpuLSTMCell(const Message* op_src, ge::Operator& op_des
     return SUCCESS;
 }
 
-static Status ParseOpToGraphNpuLSTMCell(const ge::Operator& op, ge::Graph& graph)
+static Status GetNpuLSTMCellAttrs(const ge::Operator& op, std::string& ori_name, std::string& direction,
+                                  std::string& gate_order, bool& train, bool& flag_bias)
 {
-    std::string ori_name, direction, gate_order;
     if (op.GetAttr("name", ori_name) != SUCCESS) {
         OP_LOGE(GetOpName(op).c_str(), "get name from op failed.");
         return FAILED;
@@ -69,15 +69,33 @@ static Status ParseOpToGraphNpuLSTMCell(const ge::Operator& op, ge::Graph& graph
         OP_LOGE(GetOpName(op).c_str(), "get gate_order from op failed.");
         return FAILED;
     }
-    bool train;
     if (op.GetAttr("is_training", train) != SUCCESS) {
         OP_LOGE(GetOpName(op).c_str(), "get is_training from op failed.");
         return FAILED;
     }
-
-    bool flag_bias;
     if (op.GetAttr("flag_bias", flag_bias) != SUCCESS) {
         OP_LOGE(GetOpName(op).c_str(), "get flag_bias from op failed.");
+        return FAILED;
+    }
+    return SUCCESS;
+}
+
+static Status SetNpuLSTMCellGraphIO(ge::Graph& graph, const ge::op::DynamicRNNV2& dynamic_rnn_v2,
+                                    const std::vector<ge::Operator>& inputs)
+{
+    std::vector<std::pair<ge::Operator, std::vector<size_t>>> output_indexes;
+    for (size_t i = 0; i < OUTPUT_SIZE; i++) {
+        output_indexes.emplace_back(dynamic_rnn_v2, std::vector<size_t>{i});
+    }
+    graph.SetInputs(inputs).SetOutputs(output_indexes);
+    return SUCCESS;
+}
+
+static Status ParseOpToGraphNpuLSTMCell(const ge::Operator& op, ge::Graph& graph)
+{
+    std::string ori_name, direction, gate_order;
+    bool train, flag_bias;
+    if (GetNpuLSTMCellAttrs(op, ori_name, direction, gate_order, train, flag_bias) != SUCCESS) {
         return FAILED;
     }
 
@@ -122,12 +140,7 @@ static Status ParseOpToGraphNpuLSTMCell(const ge::Operator& op, ge::Graph& graph
 
     std::vector<ge::Operator> inputs{data_x, data_weight_input, data_weight_hidden, data_h,
                                      data_c, data_bias_input,   data_bias_hidden};
-    std::vector<std::pair<ge::Operator, std::vector<size_t>>> output_indexes;
-    for (size_t i = 0; i < OUTPUT_SIZE; i++) {
-        output_indexes.emplace_back(dynamic_rnn_v2, std::vector<size_t>{i});
-    }
-    graph.SetInputs(inputs).SetOutputs(output_indexes);
-    return SUCCESS;
+    return SetNpuLSTMCellGraphIO(graph, dynamic_rnn_v2, inputs);
 }
 
 // register npu_lstm op info to GE

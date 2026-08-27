@@ -246,6 +246,17 @@ static std::array<const aclTensor*, OUT_NUM> ExecLstmBackward(
     return result;
 }
 
+static const aclTensor* ConcatWeightBackward(const aclTensorList* params, int64_t layerOffset, int64_t weightStart,
+                                             aclOpExecutor* executor)
+{
+    FVector<const aclTensor*> weightBackwardVector = {(*params)[layerOffset + weightStart + WEIGHT_INPUT_INDEX],
+                                                      (*params)[layerOffset + weightStart + WEIGHT_HIDDEN_INDEX]};
+    const aclTensorList* weightBackwardList = executor->AllocTensorList(weightBackwardVector.data(),
+                                                                        weightBackwardVector.size());
+    CHECK_RET(weightBackwardList != nullptr, nullptr);
+    return l0op::ConcatD(weightBackwardList, REDUCE_DIM, executor);
+}
+
 static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* params, bool hasBias, bool bidirectional,
                                                          int64_t paramNumPerLayer, int64_t layerIdx,
                                                          aclOpExecutor* executor)
@@ -269,13 +280,7 @@ static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* pa
                                      (*params)[layerOffset + BIAS_HIDDEN_INDEX], executor);
         result.emplace_back(biasForward);
         // 后向权重
-        FVector<const aclTensor*> weightBackwardVector = {
-            (*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX],
-            (*params)[layerOffset + NUM_WITH_B_AND_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX]};
-        const aclTensorList* weightBackwardList = executor->AllocTensorList(weightBackwardVector.data(),
-                                                                            weightBackwardVector.size());
-        CHECK_RET(weightBackwardList != nullptr, nullptrRes);
-        auto weightBackward = l0op::ConcatD(weightBackwardList, REDUCE_DIM, executor);
+        auto weightBackward = ConcatWeightBackward(params, layerOffset, NUM_WITH_B_AND_BID / BI_DIRECTION, executor);
         CHECK_RET(weightBackward != nullptr, nullptrRes);
         result.emplace_back(weightBackward);
 
@@ -285,13 +290,7 @@ static FVector<const aclTensor*> GetWeightBiasFromParams(const aclTensorList* pa
         CHECK_RET(biasBackward != nullptr, nullptrRes);
         result.emplace_back(biasBackward);
     } else if (!hasBias && bidirectional) {
-        FVector<const aclTensor*> weightBackwardVector = {
-            (*params)[layerOffset + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_INPUT_INDEX],
-            (*params)[layerOffset + NUM_WITH_B_OR_BID / BI_DIRECTION + WEIGHT_HIDDEN_INDEX]};
-        const aclTensorList* weightBackwardList = executor->AllocTensorList(weightBackwardVector.data(),
-                                                                            weightBackwardVector.size());
-        CHECK_RET(weightBackwardList != nullptr, nullptrRes);
-        auto weightBackward = l0op::ConcatD(weightBackwardList, REDUCE_DIM, executor);
+        auto weightBackward = ConcatWeightBackward(params, layerOffset, NUM_WITH_B_OR_BID / BI_DIRECTION, executor);
         CHECK_RET(weightBackward != nullptr, nullptrRes);
         const aclTensor* emptyTensor = nullptr;
         result.emplace_back(emptyTensor);
@@ -562,6 +561,85 @@ MergeResults(std::array<const aclTensor*, 5> resultForward, std::array<const acl
     return std::make_tuple(dx, dhVector, dcVector, dwVector, dbVector);
 }
 
+static bool GetBidirWeightsBias(const aclTensorList* params, bool hasBias, int64_t paramNumPerLayer, int64_t layerIdx,
+                                aclOpExecutor* executor, const aclTensor*& weightForward,
+                                const aclTensor*& weightBackward, const aclTensor*& biasForward,
+                                const aclTensor*& biasBackward)
+{
+    auto weightBias = GetWeightBiasFromParams(params, hasBias, true, paramNumPerLayer, layerIdx, executor);
+    weightForward = weightBias[0];
+    if (weightForward == nullptr) {
+        return false;
+    }
+    weightBackward = weightBias[INDEX_TWO];
+    if (weightBackward == nullptr) {
+        return false;
+    }
+    biasForward = weightBias[1];
+    biasBackward = weightBias[INDEX_THREE];
+    if (hasBias) {
+        if (biasForward == nullptr || biasBackward == nullptr) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static std::array<const aclTensor*, OUT_NUM> ExecBidirLayerForward(
+    const aclTensor* input, const aclTensor* initHMultiLayer, const aclTensor* initCMultiLayer, const aclTensor* dh,
+    const aclTensor* dc, const aclTensor* dy, int64_t layersTemp, const aclTensor* weightForwardCur,
+    const aclTensor* biasForwardCur, const aclTensor* seqLength, const aclTensorList* i, const aclTensorList* j,
+    const aclTensorList* f, const aclTensorList* o, const aclTensorList* h, const aclTensorList* c,
+    const aclTensorList* tanhc, const aclTensor*& inputCur, aclOpExecutor* executor)
+{
+    std::array<const aclTensor*, OUT_NUM> nullptrRes{nullptr, nullptr, nullptr, nullptr, nullptr};
+    auto forwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp, executor,
+                                                    false);
+    CHECK_RET(forwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHForward
+    CHECK_RET(forwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCForward
+    CHECK_RET(forwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhForward
+    CHECK_RET(forwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcForward
+    CHECK_RET(forwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyForward
+
+    // 创建输入
+    inputCur = CreateInputTensor(input, h, layersTemp, executor);
+    CHECK_RET(inputCur != nullptr, nullptrRes);
+    // 前向LSTM计算
+    return ExecLstmBackward(
+        inputCur, forwardTensors[BIDIR_INIT_H_INDEX], forwardTensors[BIDIR_INIT_C_INDEX], weightForwardCur,
+        biasForwardCur, forwardTensors[BIDIR_DY_INDEX], forwardTensors[BIDIR_DH_INDEX], forwardTensors[BIDIR_DC_INDEX],
+        seqLength, (*i)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*j)[layersTemp * BI_DIRECTION - BI_DIRECTION],
+        (*f)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*o)[layersTemp * BI_DIRECTION - BI_DIRECTION],
+        (*h)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*c)[layersTemp * BI_DIRECTION - BI_DIRECTION],
+        (*tanhc)[layersTemp * BI_DIRECTION - BI_DIRECTION], executor, false);
+}
+
+static std::array<const aclTensor*, OUT_NUM> ExecBidirLayerBackward(
+    const aclTensor* inputCur, const aclTensor* initHMultiLayer, const aclTensor* initCMultiLayer, const aclTensor* dh,
+    const aclTensor* dc, const aclTensor* dy, int64_t layersTemp, const aclTensor* weightBackwardCur,
+    const aclTensor* biasBackwardCur, const aclTensor* seqLength, const aclTensorList* i, const aclTensorList* j,
+    const aclTensorList* f, const aclTensorList* o, const aclTensorList* h, const aclTensorList* c,
+    const aclTensorList* tanhc, aclOpExecutor* executor)
+{
+    std::array<const aclTensor*, OUT_NUM> nullptrRes{nullptr, nullptr, nullptr, nullptr, nullptr};
+    auto backwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp, executor,
+                                                     true);
+    CHECK_RET(backwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHBackward
+    CHECK_RET(backwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCBackward
+    CHECK_RET(backwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhBackward
+    CHECK_RET(backwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcBackward
+    CHECK_RET(backwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyBackward
+
+    // 后向LSTM计算
+    return ExecLstmBackward(inputCur, backwardTensors[BIDIR_INIT_H_INDEX], backwardTensors[BIDIR_INIT_C_INDEX],
+                            weightBackwardCur, biasBackwardCur, backwardTensors[BIDIR_DY_INDEX],
+                            backwardTensors[BIDIR_DH_INDEX], backwardTensors[BIDIR_DC_INDEX], seqLength,
+                            (*i)[layersTemp * BI_DIRECTION - 1], (*j)[layersTemp * BI_DIRECTION - 1],
+                            (*f)[layersTemp * BI_DIRECTION - 1], (*o)[layersTemp * BI_DIRECTION - 1],
+                            (*h)[layersTemp * BI_DIRECTION - 1], (*c)[layersTemp * BI_DIRECTION - 1],
+                            (*tanhc)[layersTemp * BI_DIRECTION - 1], executor, true);
+}
+
 static std::tuple<const aclTensor*, std::vector<const aclTensor*>, std::vector<const aclTensor*>,
                   std::vector<const aclTensor*>, std::vector<const aclTensor*>>
 LstmBackwardSingleLayerBidirec(const aclTensor* input, const aclTensor* initHMultiLayer,
@@ -575,55 +653,24 @@ LstmBackwardSingleLayerBidirec(const aclTensor* input, const aclTensor* initHMul
     auto nullptrRes = std::make_tuple(nullptr, std::vector<const aclTensor*>(), std::vector<const aclTensor*>(),
                                       std::vector<const aclTensor*>(), std::vector<const aclTensor*>());
 
-    const aclTensor* inputCur = nullptr;
-    auto weightBias = GetWeightBiasFromParams(params, hasBias, true, paramNumPerLayer, layersTemp, executor);
-    const aclTensor* weightForwardCur = weightBias[0];
-    CHECK_RET(weightForwardCur != nullptr, nullptrRes);
-    const aclTensor* weightBackwardCur = weightBias[INDEX_TWO];
-    CHECK_RET(weightBackwardCur != nullptr, nullptrRes);
-    const aclTensor* biasForwardCur = weightBias[1];
-    const aclTensor* biasBackwardCur = weightBias[INDEX_THREE];
-    if (hasBias) {
-        CHECK_RET(biasForwardCur != nullptr, nullptrRes);
-        CHECK_RET(biasBackwardCur != nullptr, nullptrRes);
+    const aclTensor* weightForwardCur = nullptr;
+    const aclTensor* weightBackwardCur = nullptr;
+    const aclTensor* biasForwardCur = nullptr;
+    const aclTensor* biasBackwardCur = nullptr;
+    if (!GetBidirWeightsBias(params, hasBias, paramNumPerLayer, layersTemp, executor, weightForwardCur,
+                             weightBackwardCur, biasForwardCur, biasBackwardCur)) {
+        return nullptrRes;
     }
 
-    auto forwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp, executor,
-                                                    false);
-    CHECK_RET(forwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHForward
-    CHECK_RET(forwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCForward
-    CHECK_RET(forwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhForward
-    CHECK_RET(forwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcForward
-    CHECK_RET(forwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyForward
-
-    // 创建输入
-    inputCur = CreateInputTensor(input, h, layersTemp, executor);
-    CHECK_RET(inputCur != nullptr, nullptrRes);
+    const aclTensor* inputCur = nullptr;
     // 前向LSTM计算
-    auto resultForward = ExecLstmBackward(
-        inputCur, forwardTensors[BIDIR_INIT_H_INDEX], forwardTensors[BIDIR_INIT_C_INDEX], weightForwardCur,
-        biasForwardCur, forwardTensors[BIDIR_DY_INDEX], forwardTensors[BIDIR_DH_INDEX], forwardTensors[BIDIR_DC_INDEX],
-        seqLength, (*i)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*j)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*f)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*o)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*h)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*c)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*tanhc)[layersTemp * BI_DIRECTION - BI_DIRECTION], executor, false);
-
-    auto backwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp, executor,
-                                                     true);
-    CHECK_RET(backwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHBackward
-    CHECK_RET(backwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCBackward
-    CHECK_RET(backwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhBackward
-    CHECK_RET(backwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcBackward
-    CHECK_RET(backwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyBackward
-
+    auto resultForward = ExecBidirLayerForward(input, initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp,
+                                               weightForwardCur, biasForwardCur, seqLength, i, j, f, o, h, c, tanhc,
+                                               inputCur, executor);
     // 后向LSTM计算
-    auto resultBackward = ExecLstmBackward(
-        inputCur, backwardTensors[BIDIR_INIT_H_INDEX], backwardTensors[BIDIR_INIT_C_INDEX], weightBackwardCur,
-        biasBackwardCur, backwardTensors[BIDIR_DY_INDEX], backwardTensors[BIDIR_DH_INDEX],
-        backwardTensors[BIDIR_DC_INDEX], seqLength, (*i)[layersTemp * BI_DIRECTION - 1],
-        (*j)[layersTemp * BI_DIRECTION - 1], (*f)[layersTemp * BI_DIRECTION - 1], (*o)[layersTemp * BI_DIRECTION - 1],
-        (*h)[layersTemp * BI_DIRECTION - 1], (*c)[layersTemp * BI_DIRECTION - 1],
-        (*tanhc)[layersTemp * BI_DIRECTION - 1], executor, true);
+    auto resultBackward = ExecBidirLayerBackward(inputCur, initHMultiLayer, initCMultiLayer, dh, dc, dy, layersTemp,
+                                                 weightBackwardCur, biasBackwardCur, seqLength, i, j, f, o, h, c, tanhc,
+                                                 executor);
 
     // 合并结果
     std::vector<const aclTensor*> dwVector{};
@@ -654,8 +701,6 @@ LstmBackwardMultiLayerBidirec(const aclTensor* input, const aclTensor* initHMult
     auto nullptrRes = std::make_tuple(nullptr, std::vector<const aclTensor*>(), std::vector<const aclTensor*>(),
                                       std::vector<const aclTensor*>(), std::vector<const aclTensor*>());
 
-    const aclTensor* inputCur = nullptr;
-
     // 递归终止条件：处理最后一层
     if (layersTemp == numLayers) {
         auto lastLayerOutput = LstmBackwardSingleLayerBidirec(input, initHMultiLayer, initCMultiLayer, params, dy, dh,
@@ -675,56 +720,24 @@ LstmBackwardMultiLayerBidirec(const aclTensor* input, const aclTensor* initHMult
                   nullptrRes);
     }
     // 获取当前层权重和偏置
-    auto weightBias = GetWeightBiasFromParams(params, hasBias, true, paramNumPerLayer, layersTemp, executor);
-    const aclTensor* weightForwardCur = weightBias[0];
-    CHECK_RET(weightForwardCur != nullptr, nullptrRes);
-    const aclTensor* weightBackwardCur = weightBias[INDEX_TWO];
-    CHECK_RET(weightBackwardCur != nullptr, nullptrRes);
-    const aclTensor* biasForwardCur = weightBias[1];
-    const aclTensor* biasBackwardCur = weightBias[INDEX_THREE];
-    if (hasBias) {
-        CHECK_RET(biasForwardCur != nullptr, nullptrRes);
-        CHECK_RET(biasBackwardCur != nullptr, nullptrRes);
+    const aclTensor* weightForwardCur = nullptr;
+    const aclTensor* weightBackwardCur = nullptr;
+    const aclTensor* biasForwardCur = nullptr;
+    const aclTensor* biasBackwardCur = nullptr;
+    if (!GetBidirWeightsBias(params, hasBias, paramNumPerLayer, layersTemp, executor, weightForwardCur,
+                             weightBackwardCur, biasForwardCur, biasBackwardCur)) {
+        return nullptrRes;
     }
 
-    // 创建输入张量
-    inputCur = CreateInputTensor(input, h, layersTemp, executor);
-    CHECK_RET(inputCur != nullptr, nullptrRes);
-
-    // 使用 std::array 接收前向张量
-    auto forwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, lastLayerDy, layersTemp,
-                                                    executor, false);
-    CHECK_RET(forwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHForward
-    CHECK_RET(forwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCForward
-    CHECK_RET(forwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhForward
-    CHECK_RET(forwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcForward
-    CHECK_RET(forwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyForward
-
     // 前向LSTM计算
-    auto resultForward = ExecLstmBackward(
-        inputCur, forwardTensors[BIDIR_INIT_H_INDEX], forwardTensors[BIDIR_INIT_C_INDEX], weightForwardCur,
-        biasForwardCur, forwardTensors[BIDIR_DY_INDEX], forwardTensors[BIDIR_DH_INDEX], forwardTensors[BIDIR_DC_INDEX],
-        seqLength, (*i)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*j)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*f)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*o)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*h)[layersTemp * BI_DIRECTION - BI_DIRECTION], (*c)[layersTemp * BI_DIRECTION - BI_DIRECTION],
-        (*tanhc)[layersTemp * BI_DIRECTION - BI_DIRECTION], executor, false);
-
-    auto backwardTensors = CreateBidDirectionTensors(initHMultiLayer, initCMultiLayer, dh, dc, lastLayerDy, layersTemp,
-                                                     executor, true);
-    CHECK_RET(backwardTensors[BIDIR_INIT_H_INDEX] != nullptr, nullptrRes); // initHBackward
-    CHECK_RET(backwardTensors[BIDIR_INIT_C_INDEX] != nullptr, nullptrRes); // initCBackward
-    CHECK_RET(backwardTensors[BIDIR_DH_INDEX] != nullptr, nullptrRes);     // dhBackward
-    CHECK_RET(backwardTensors[BIDIR_DC_INDEX] != nullptr, nullptrRes);     // dcBackward
-    CHECK_RET(backwardTensors[BIDIR_DY_INDEX] != nullptr, nullptrRes);     // dyBackward
-
+    const aclTensor* inputCur = nullptr;
+    auto resultForward = ExecBidirLayerForward(input, initHMultiLayer, initCMultiLayer, dh, dc, lastLayerDy, layersTemp,
+                                               weightForwardCur, biasForwardCur, seqLength, i, j, f, o, h, c, tanhc,
+                                               inputCur, executor);
     // 后向LSTM计算
-    auto resultBackward = ExecLstmBackward(
-        inputCur, backwardTensors[BIDIR_INIT_H_INDEX], backwardTensors[BIDIR_INIT_C_INDEX], weightBackwardCur,
-        biasBackwardCur, backwardTensors[BIDIR_DY_INDEX], backwardTensors[BIDIR_DH_INDEX],
-        backwardTensors[BIDIR_DC_INDEX], seqLength, (*i)[layersTemp * BI_DIRECTION - 1],
-        (*j)[layersTemp * BI_DIRECTION - 1], (*f)[layersTemp * BI_DIRECTION - 1], (*o)[layersTemp * BI_DIRECTION - 1],
-        (*h)[layersTemp * BI_DIRECTION - 1], (*c)[layersTemp * BI_DIRECTION - 1],
-        (*tanhc)[layersTemp * BI_DIRECTION - 1], executor, true);
+    auto resultBackward = ExecBidirLayerBackward(inputCur, initHMultiLayer, initCMultiLayer, dh, dc, lastLayerDy,
+                                                 layersTemp, weightBackwardCur, biasBackwardCur, seqLength, i, j, f, o,
+                                                 h, c, tanhc, executor);
 
     // 合并结果并更新权重向量
     auto mergedResult = MergeResults(resultForward, resultBackward, lastLayerDhPrevVector, lastLayerDcPrevVector,
@@ -738,6 +751,23 @@ static bool CheckTensorListNotNull(const aclTensorList* tensorList)
         OP_CHECK_NULL((*tensorList)[index], return false);
     }
     return true;
+}
+
+static bool CheckGateListLengths(uint64_t gateLength, const aclTensorList* i, const aclTensorList* j,
+                                 const aclTensorList* f, const aclTensorList* o, const aclTensorList* h,
+                                 const aclTensorList* c, const aclTensorList* tanhc)
+{
+    return gateLength == i->Size() && gateLength == j->Size() && gateLength == f->Size() && gateLength == o->Size() &&
+           gateLength == h->Size() && gateLength == c->Size() && gateLength == tanhc->Size();
+}
+
+static bool CheckParamsListLength(const aclTensorList* params, const aclTensorList* dparams, bool hasBias,
+                                  bool bidirectional, int64_t numLayers)
+{
+    uint64_t paramsLength = hasBias && bidirectional   ? NUM_WITH_B_AND_BID * numLayers :
+                            (hasBias || bidirectional) ? NUM_WITH_B_OR_BID * numLayers :
+                                                         NUM_NO_B_NO_BIDIR * numLayers;
+    return paramsLength == params->Size() && paramsLength == dparams->Size();
 }
 
 static bool CheckNotNull(const aclTensor* input, const aclTensorList* hc, const aclTensorList* params,
@@ -761,9 +791,7 @@ static bool CheckNotNull(const aclTensor* input, const aclTensorList* hc, const 
     OP_CHECK_NULL(dcPrev, return false);
     OP_CHECK_NULL(dparams, return false);
     uint64_t gateLength = bidirectional ? numLayers * BI_DIRECTION : numLayers;
-    bool tensorLengthCheck = gateLength == i->Size() && gateLength == j->Size() && gateLength == f->Size() &&
-                             gateLength == o->Size() && gateLength == h->Size() && gateLength == c->Size() &&
-                             gateLength == tanhc->Size();
+    bool tensorLengthCheck = CheckGateListLengths(gateLength, i, j, f, o, h, c, tanhc);
     if (hc->Size() != HC_TENSOR_COUNT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For inithc tensorlist, the tensor quantities %ld should be %d.", hc->Size(),
                 HC_TENSOR_COUNT);
@@ -774,11 +802,7 @@ static bool CheckNotNull(const aclTensor* input, const aclTensorList* hc, const 
                 "For tensor lists such as the 4 gates, the tensor quantities should follow consistent patterns.");
         return false;
     }
-    uint64_t paramsLength = hasBias && bidirectional   ? NUM_WITH_B_AND_BID * numLayers :
-                            (hasBias || bidirectional) ? NUM_WITH_B_OR_BID * numLayers :
-                                                         NUM_NO_B_NO_BIDIR * numLayers;
-    bool paramsLengthCheck = paramsLength == params->Size() && paramsLength == dparams->Size();
-    if (!paramsLengthCheck) {
+    if (!CheckParamsListLength(params, dparams, hasBias, bidirectional, numLayers)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For tensor lists include params and dparams, the tensor quantities should "
                                          "follow the pattern related to the weigths.");
         return false;
@@ -1071,6 +1095,49 @@ static bool ValidateCoreShapes(int64_t numLayers, const aclTensor* input, const 
     return true;
 }
 
+static bool ValidateLayerShapes(const aclTensorList* params, const aclTensorList* dparams, int64_t numLayers,
+                                bool hasBias, bool bidirectional, int64_t inputSize, int64_t hiddenSize, int64_t bid,
+                                const std::vector<int64_t>& biasDim, const std::vector<int64_t>& weightHiddenDim)
+{
+    int typeIdx = (hasBias ? 2 : 0) + (bidirectional ? 1 : 0);
+    for (int64_t layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
+        int64_t curInputSize = (layerIdx == 0) ? inputSize : bid * hiddenSize;
+        const std::vector<int64_t> weightInputDim = {GATE_COUNT * hiddenSize, curInputSize};
+        bool ok = true;
+        switch (typeIdx) {
+            case LSTM_CONFIG_NO_BIAS_NO_BIDIR:
+                ok = ValidateLayerNoBiasNoBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim);
+                break;
+            case LSTM_CONFIG_BIDIR_ONLY:
+                ok = ValidateLayerWithBidirOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim);
+                break;
+            case LSTM_CONFIG_BIAS_ONLY:
+                ok = ValidateLayerWithBiasOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim);
+                break;
+            case LSTM_CONFIG_BIAS_BIDIR:
+                ok = ValidateLayerWithBiasAndBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim);
+                break;
+        }
+        if (!ok) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool ValidateGateShapes(const aclTensorList* i, const aclTensorList* j, const aclTensorList* f,
+                               const aclTensorList* o, const aclTensorList* h, const aclTensorList* c,
+                               const aclTensorList* tanhc, int64_t numLayers, int64_t bid,
+                               const std::vector<int64_t>& hiddenDim)
+{
+    for (int64_t gateIdx = 0; gateIdx < numLayers * bid; gateIdx++) {
+        if (!CheckGateTensorsForIndex(i, j, f, o, h, c, tanhc, gateIdx, hiddenDim)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool CheckShapeValid(const aclTensor* input, const aclTensorList* hc, const aclTensorList* params,
                             const aclTensor* dy, const aclTensor* dh, const aclTensor* dc, const aclTensorList* i,
                             const aclTensorList* j, const aclTensorList* f, const aclTensorList* o,
@@ -1107,34 +1174,15 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensorList* hc, con
     std::vector<int64_t> inputDim = hasSeqlength ? std::vector<int64_t>{timeStep * batch, inputSize} :
                                     batchFirst   ? std::vector<int64_t>{batch, timeStep, inputSize} :
                                                    std::vector<int64_t>{timeStep, batch, inputSize};
-    if (!ValidateCoreShapes(numLayers, input, inputDim, hc, inithDim, dx, dhPrev, dcPrev, dy, outHiddenDim, dh, dc))
+    if (!ValidateCoreShapes(numLayers, input, inputDim, hc, inithDim, dx, dhPrev, dcPrev, dy, outHiddenDim, dh, dc)) {
         return false;
-    int typeIdx = (hasBias ? 2 : 0) + (bidirectional ? 1 : 0);
-    for (int64_t layerIdx = 0; layerIdx < numLayers; ++layerIdx) {
-        int64_t curInputSize = (layerIdx == 0) ? inputSize : bid * hiddenSize;
-        const std::vector<int64_t> weightInputDim = {GATE_COUNT * hiddenSize, curInputSize};
-        bool ok = true;
-        switch (typeIdx) {
-            case LSTM_CONFIG_NO_BIAS_NO_BIDIR:
-                ok = ValidateLayerNoBiasNoBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim);
-                break;
-            case LSTM_CONFIG_BIDIR_ONLY:
-                ok = ValidateLayerWithBidirOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim);
-                break;
-            case LSTM_CONFIG_BIAS_ONLY:
-                ok = ValidateLayerWithBiasOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim);
-                break;
-            case LSTM_CONFIG_BIAS_BIDIR:
-                ok = ValidateLayerWithBiasAndBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim);
-                break;
-        }
-        if (!ok)
-            return false;
     }
-
-    for (int64_t gateIdx = 0; gateIdx < numLayers * bid; gateIdx++) {
-        if (!CheckGateTensorsForIndex(i, j, f, o, h, c, tanhc, gateIdx, hiddenDim))
-            return false;
+    if (!ValidateLayerShapes(params, dparams, numLayers, hasBias, bidirectional, inputSize, hiddenSize, bid, biasDim,
+                             weightHiddenDim)) {
+        return false;
+    }
+    if (!ValidateGateShapes(i, j, f, o, h, c, tanhc, numLayers, bid, hiddenDim)) {
+        return false;
     }
     return true;
 }
@@ -1209,6 +1257,62 @@ static const aclTensor* GetSliceTensor(const FVector<int64_t> offsetVector, cons
 }
 
 // 抽取处理LSTM梯度输出的函数
+static void ProcessLstmGradLayer(
+    int64_t layerIdx, int64_t numLayers, const std::vector<const aclTensor*>& dwVectorReverse,
+    const std::vector<const aclTensor*>& dbVectorReverse, const std::vector<const aclTensor*>& dhPrevVectorReverse,
+    const std::vector<const aclTensor*>& dcPrevVectorReverse, int64_t inputSize, int64_t hiddenSize, int64_t bid,
+    bool hasBias, bool bidirectional, std::vector<const aclTensor*>& dhPrevVector,
+    std::vector<const aclTensor*>& dcPrevVector, std::vector<const aclTensor*>& dparamsVector, aclOpExecutor* executor)
+{
+    auto dwFCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
+    auto inputSizeCur = layerIdx == 0 ? inputSize : hiddenSize * bid;
+
+    // 前向层的输入权重梯度
+    FVector<int64_t> offsetVectorF{DIM_ZERO, DIM_ZERO};
+    FVector<int64_t> sizeVectorF{GATE_COUNT * hiddenSize, inputSizeCur};
+    auto dwFInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwFCur, executor);
+
+    // 前向层的隐藏状态权重梯度
+    FVector<int64_t> offsetVectorB{DIM_ZERO, inputSizeCur};
+    FVector<int64_t> sizeVectorB{GATE_COUNT * hiddenSize, hiddenSize};
+    auto dwFHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwFCur, executor);
+    dparamsVector.emplace_back(dwFInputCur);
+    dparamsVector.emplace_back(dwFHiddenCur);
+
+    // 处理偏置和双向情况
+    if (hasBias && bidirectional) {
+        auto dwBCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
+        auto dwBInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwBCur, executor);
+        auto dwBHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwBCur, executor);
+        auto dbFCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
+        auto dbBCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
+        dparamsVector.emplace_back(dbFCur);
+        dparamsVector.emplace_back(dbFCur);
+        dparamsVector.emplace_back(dwBInputCur);
+        dparamsVector.emplace_back(dwBHiddenCur);
+        dparamsVector.emplace_back(dbBCur);
+        dparamsVector.emplace_back(dbBCur);
+    } else if (hasBias && !bidirectional) {
+        auto dbFCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
+        dparamsVector.emplace_back(dbFCur);
+        dparamsVector.emplace_back(dbFCur);
+    } else if (!hasBias && bidirectional) {
+        auto dwBCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
+        auto dwBInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwBCur, executor);
+        auto dwBHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwBCur, executor);
+        dparamsVector.emplace_back(dwBInputCur);
+        dparamsVector.emplace_back(dwBHiddenCur);
+    }
+
+    // 处理隐藏状态和细胞状态的梯度
+    dhPrevVector.emplace_back(dhPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 0]);
+    dcPrevVector.emplace_back(dcPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 0]);
+    if (bidirectional) {
+        dhPrevVector.emplace_back(dhPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 1]);
+        dcPrevVector.emplace_back(dcPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 1]);
+    }
+}
+
 static std::tuple<const aclTensor*, const aclTensor*, std::vector<const aclTensor*>> GetLstmGradExceptDx(
     std::tuple<const aclTensor*, std::vector<const aclTensor*>, std::vector<const aclTensor*>,
                std::vector<const aclTensor*>, std::vector<const aclTensor*>>& output,
@@ -1230,53 +1334,9 @@ static std::tuple<const aclTensor*, const aclTensor*, std::vector<const aclTenso
 
     // 处理每一层的梯度
     for (int64_t layerIdx = 0; layerIdx < numLayers; layerIdx++) {
-        auto dwFCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
-        auto inputSizeCur = layerIdx == 0 ? inputSize : hiddenSize * bid;
-
-        // 前向层的输入权重梯度
-        FVector<int64_t> offsetVectorF{DIM_ZERO, DIM_ZERO};
-        FVector<int64_t> sizeVectorF{GATE_COUNT * hiddenSize, inputSizeCur};
-        auto dwFInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwFCur, executor);
-
-        // 前向层的隐藏状态权重梯度
-        FVector<int64_t> offsetVectorB{DIM_ZERO, inputSizeCur};
-        FVector<int64_t> sizeVectorB{GATE_COUNT * hiddenSize, hiddenSize};
-        auto dwFHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwFCur, executor);
-        dparamsVector.emplace_back(dwFInputCur);
-        dparamsVector.emplace_back(dwFHiddenCur);
-
-        // 处理偏置和双向情况
-        if (hasBias && bidirectional) {
-            auto dwBCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
-            auto dwBInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwBCur, executor);
-            auto dwBHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwBCur, executor);
-            auto dbFCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
-            auto dbBCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
-            dparamsVector.emplace_back(dbFCur);
-            dparamsVector.emplace_back(dbFCur);
-            dparamsVector.emplace_back(dwBInputCur);
-            dparamsVector.emplace_back(dwBHiddenCur);
-            dparamsVector.emplace_back(dbBCur);
-            dparamsVector.emplace_back(dbBCur);
-        } else if (hasBias && !bidirectional) {
-            auto dbFCur = dbVectorReverse[(numLayers - layerIdx - 1) * bid + 0];
-            dparamsVector.emplace_back(dbFCur);
-            dparamsVector.emplace_back(dbFCur);
-        } else if (!hasBias && bidirectional) {
-            auto dwBCur = dwVectorReverse[(numLayers - layerIdx - 1) * bid + 1];
-            auto dwBInputCur = GetSliceTensor(offsetVectorF, sizeVectorF, dwBCur, executor);
-            auto dwBHiddenCur = GetSliceTensor(offsetVectorB, sizeVectorB, dwBCur, executor);
-            dparamsVector.emplace_back(dwBInputCur);
-            dparamsVector.emplace_back(dwBHiddenCur);
-        }
-
-        // 处理隐藏状态和细胞状态的梯度
-        dhPrevVector.emplace_back(dhPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 0]);
-        dcPrevVector.emplace_back(dcPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 0]);
-        if (bidirectional) {
-            dhPrevVector.emplace_back(dhPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 1]);
-            dcPrevVector.emplace_back(dcPrevVectorReverse[(numLayers - layerIdx - 1) * bid + 1]);
-        }
+        ProcessLstmGradLayer(layerIdx, numLayers, dwVectorReverse, dbVectorReverse, dhPrevVectorReverse,
+                             dcPrevVectorReverse, inputSize, hiddenSize, bid, hasBias, bidirectional, dhPrevVector,
+                             dcPrevVector, dparamsVector, executor);
     }
 
     // 拼接隐藏状态梯度
@@ -1442,6 +1502,19 @@ static aclnnStatus ExecLstmInputBackward(const LSTMContinuousTensors* allInput, 
                                    numLayers, paramNumPerLayer, executor);
 }
 
+static aclnnStatus ReshapeLstmDataInput(const aclTensor* srcTensor, const aclTensor* batchSizes, int64_t dimTwo,
+                                        const aclTensor*& reshaped, aclOpExecutor* executor)
+{
+    auto batchSizeShape = batchSizes->GetViewShape();
+    auto srcShape = srcTensor->GetViewShape();
+    FVector<int64_t> reshapeVector{batchSizeShape[SEQUENCE_DIM], srcShape[0] / batchSizeShape[SEQUENCE_DIM], dimTwo};
+    aclIntArray* reshapeArray = executor->AllocIntArray(reshapeVector.data(), DIM_THREE);
+    CHECK_RET(reshapeArray != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    reshaped = l0op::Reshape(srcTensor, reshapeArray, executor);
+    CHECK_RET(reshaped != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus ExecLstmDataBackward(const LSTMContinuousTensors* allInput, aclTensor* dxOut, aclTensor* dhPrevOut,
                                         aclTensor* dcPrevOut, aclTensorList* dparamsOut, bool bidirectional,
                                         bool hasBias, int64_t numLayers, aclOpExecutor* executor)
@@ -1449,22 +1522,17 @@ static aclnnStatus ExecLstmDataBackward(const LSTMContinuousTensors* allInput, a
     std::tuple<const aclTensor*, std::vector<const aclTensor*>, std::vector<const aclTensor*>,
                std::vector<const aclTensor*>, std::vector<const aclTensor*>>
         output;
-    auto batchSizeShape = allInput->batchSizesContiguous->GetViewShape();
     auto dataShape = allInput->inputContiguous->GetViewShape();
 
     // 输入reshape为[T, N, D]
-    FVector<int64_t> reshapeInputVector{batchSizeShape[SEQUENCE_DIM], dataShape[0] / batchSizeShape[SEQUENCE_DIM],
-                                        dataShape[1]};
-    aclIntArray* reshapeInputArray = executor->AllocIntArray(reshapeInputVector.data(), DIM_THREE);
-    CHECK_RET(reshapeInputArray != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    auto input = l0op::Reshape(allInput->inputContiguous, reshapeInputArray, executor);
-    CHECK_RET(input != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    FVector<int64_t> reshapeDyVector{batchSizeShape[SEQUENCE_DIM], dataShape[0] / batchSizeShape[SEQUENCE_DIM],
-                                     allInput->dyContiguous->GetViewShape()[1]};
-    aclIntArray* reshapeDyArray = executor->AllocIntArray(reshapeDyVector.data(), DIM_THREE);
-    CHECK_RET(reshapeDyArray != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    auto dyReshape = l0op::Reshape(allInput->dyContiguous, reshapeDyArray, executor);
-    CHECK_RET(dyReshape != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    const aclTensor* input = nullptr;
+    aclnnStatus ret = ReshapeLstmDataInput(allInput->inputContiguous, allInput->batchSizesContiguous, dataShape[1],
+                                           input, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    const aclTensor* dyReshape = nullptr;
+    ret = ReshapeLstmDataInput(allInput->dyContiguous, allInput->batchSizesContiguous,
+                               allInput->dyContiguous->GetViewShape()[1], dyReshape, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // batchSizes转Mask
     const aclTensor* seqLength = GetMask(input, allInput->batchSizesContiguous, allInput->dhContiguous, executor);
     CHECK_RET(seqLength != nullptr, ACLNN_ERR_PARAM_NULLPTR);
@@ -1499,7 +1567,6 @@ static aclnnStatus ExecLstmDataBackward(const LSTMContinuousTensors* allInput, a
     CHECK_RET(dx != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     return CopyLstmBackwardResults(dx, dhPrev, dcPrev, dparamsVector, dxOut, dhPrevOut, dcPrevOut, dparamsOut,
                                    numLayers, paramNumPerLayer, executor);
-    ;
 }
 
 const aclTensor* ResetAndReshapeTensor(const aclTensor* srcTensor, const FVector<int64_t>& shape,

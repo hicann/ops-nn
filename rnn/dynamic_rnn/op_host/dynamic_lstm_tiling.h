@@ -166,6 +166,10 @@ protected:
                                     DynamicRnnTiling& dynamicRnnParams);
     ge::graphStatus GetMMTilingDataSplit(const gert::TilingContext* context, DynamicRNNTilingData& dynamicTilingData,
                                          DynamicRnnTiling& dynamicRnnParams, matmul_tiling::DataType dataType);
+    ge::graphStatus GetMMInputTiling(const gert::TilingContext* context, DynamicRNNTilingData& dynamicTilingData,
+                                     DynamicRnnTiling& dynamicRnnParams, matmul_tiling::DataType dataType);
+    ge::graphStatus GetMMHiddenTiling(const gert::TilingContext* context, DynamicRNNTilingData& dynamicTilingData,
+                                      DynamicRnnTiling& dynamicRnnParams, matmul_tiling::DataType dataType);
     ge::graphStatus CalcTilingKey(DynamicRnnTiling& dynamicRnnParams);
     ge::graphStatus SetTilingData(gert::TilingContext* context, DynamicRNNTilingData& dynamicTilingData,
                                   DynamicRnnTiling& dynamicRnnParams);

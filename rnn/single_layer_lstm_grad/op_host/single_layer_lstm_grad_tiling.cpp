@@ -88,14 +88,24 @@ const std::vector<std::string> SUPPORT_DIRECTION = {"UNIDIRECTIONAL", "REDIRECTI
 
 class SingleLayerLstmGradTiling {
 public:
-    explicit SingleLayerLstmGradTiling(gert::TilingContext* context) : context_(context){};
+    explicit SingleLayerLstmGradTiling(gert::TilingContext* context) : context_(context) {};
     ge::graphStatus Init();
     ge::graphStatus GetMMTilingDataSplit();
+    ge::graphStatus GetMMDgateTiling();
+    ge::graphStatus GetMMDwTiling();
     ge::graphStatus GetMMTilingData();
     void SetTilingData();
+    void SetScalarTilingData();
+    void SetCutBatchTilingData(CutBatchTiling& tiling, const CutBatchTilingParam& param);
 
     bool CheckParamsDtype();
     bool CheckParamsShape();
+    bool CheckXAndInitHShape();
+    bool GetOptionalInputFlags();
+    bool ValidateInputShapes(const std::vector<int64_t>& weightDim, const std::vector<int64_t>& initDim,
+                             const std::vector<int64_t>& hiddenDim);
+    bool ValidateOutputShapes(const std::vector<int64_t>& weightDim, const std::vector<int64_t>& inputDim,
+                              const std::vector<int64_t>& initDim);
     bool CheckAttr();
     ge::graphStatus CheckAttrTiling();
     ge::graphStatus CheckAttrOps();
@@ -124,7 +134,7 @@ private:
     CutBatchTilingParam xhHiddenParam_;
 };
 
-ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
+ge::graphStatus SingleLayerLstmGradTiling::GetMMDgateTiling()
 {
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul1;
     rnnParams_.usedCoreNum = context_->GetPlatformInfo()->GetCoreNum() * AIV_DOUBLE;
@@ -159,9 +169,14 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 GetTiling fail."),
                     return ge::GRAPH_FAILED);
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus SingleLayerLstmGradTiling::GetMMDwTiling()
+{
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul2;
-    ret = rnnMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
-                              matmul_tiling::DataType::DT_FLOAT, true);
+    auto ret = rnnMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
+                                   matmul_tiling::DataType::DT_FLOAT, true);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 SetAType fail."),
                     return ge::GRAPH_FAILED);
     ret = rnnMatmul2.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
@@ -189,6 +204,16 @@ ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
     ret = rnnMatmul2.GetTiling(tilingData_.dwMMParam);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 GetTiling fail."),
                     return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus SingleLayerLstmGradTiling::GetMMTilingDataSplit()
+{
+    OP_TILING_CHECK(GetMMDgateTiling() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 get tiling fail."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetMMDwTiling() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm2 get tiling fail."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -275,7 +300,7 @@ bool SingleLayerLstmGradTiling::ValidateOutputShape(int index, const std::vector
     return true;
 };
 
-bool SingleLayerLstmGradTiling::CheckParamsShape()
+bool SingleLayerLstmGradTiling::CheckXAndInitHShape()
 {
     // get input shape
     auto xInput = context_->GetInputShape(INPUT_X_INDEX);
@@ -303,7 +328,11 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
         VECTOR_INNER_ERR_REPORT_TILIING(nodeName_,
                                         "SingleLayerLstmGrad tensor shape not support 0 or negtive, please check."),
         return false);
+    return true;
+}
 
+bool SingleLayerLstmGradTiling::GetOptionalInputFlags()
+{
     // get optional input
     auto biasShape = context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
     auto biasDesc = context_->GetOptionalInputDesc(INPUT_BIAS_INDEX);
@@ -319,10 +348,36 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
                               seqShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ?
                                  1 :
                                  0;
-    bool isY = (yDesc != nullptr && yShape != nullptr &&
-                yShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG) ?
-                   true :
-                   false;
+    return (yDesc != nullptr && yShape != nullptr && yShape->GetStorageShape().GetDimNum() != ZERO_DIM_TENSOR_FLAG);
+}
+
+bool SingleLayerLstmGradTiling::ValidateInputShapes(const std::vector<int64_t>& weightDim,
+                                                    const std::vector<int64_t>& initDim,
+                                                    const std::vector<int64_t>& hiddenDim)
+{
+    return ValidateInputShape(INPUT_WEIGHT_INDEX, weightDim) && ValidateInputShape(INPUT_INIT_H_INDEX, initDim) &&
+           ValidateInputShape(INPUT_INIT_C_INDEX, initDim) && ValidateInputShape(INPUT_H_INDEX, hiddenDim) &&
+           ValidateInputShape(INPUT_C_INDEX, hiddenDim) && ValidateInputShape(INPUT_DY_INDEX, hiddenDim) &&
+           ValidateInputShape(INPUT_DH_INDEX, initDim) && ValidateInputShape(INPUT_DC_INDEX, initDim) &&
+           ValidateInputShape(INPUT_I_INDEX, hiddenDim) && ValidateInputShape(INPUT_J_INDEX, hiddenDim) &&
+           ValidateInputShape(INPUT_F_INDEX, hiddenDim) && ValidateInputShape(INPUT_O_INDEX, hiddenDim) &&
+           ValidateInputShape(INPUT_TANHC_INDEX, hiddenDim);
+}
+
+bool SingleLayerLstmGradTiling::ValidateOutputShapes(const std::vector<int64_t>& weightDim,
+                                                     const std::vector<int64_t>& inputDim,
+                                                     const std::vector<int64_t>& initDim)
+{
+    return ValidateOutputShape(OUTPUT_DW_INDEX, weightDim) && ValidateOutputShape(OUTPUT_DX_INDEX, inputDim) &&
+           ValidateOutputShape(OUTPUT_DINIT_H_INDEX, initDim) && ValidateOutputShape(OUTPUT_DINIT_C_INDEX, initDim);
+}
+
+bool SingleLayerLstmGradTiling::CheckParamsShape()
+{
+    if (!CheckXAndInitHShape()) {
+        return false;
+    }
+    bool isY = GetOptionalInputFlags();
 
     std::vector<int64_t> biasDim = {GATES_NUM * rnnParams_.hiddenSize};
     std::vector<int64_t> initDim = {1, rnnParams_.batch, rnnParams_.hiddenSize};
@@ -330,15 +385,7 @@ bool SingleLayerLstmGradTiling::CheckParamsShape()
     std::vector<int64_t> weightDim = {GATES_NUM * rnnParams_.hiddenSize, rnnParams_.inputSize + rnnParams_.hiddenSize};
     std::vector<int64_t> inputDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.inputSize};
     std::vector<int64_t> seqDim = {rnnParams_.timeStep, rnnParams_.batch, rnnParams_.hiddenSize};
-    bool ret = ValidateInputShape(INPUT_WEIGHT_INDEX, weightDim) && ValidateInputShape(INPUT_INIT_H_INDEX, initDim) &&
-               ValidateInputShape(INPUT_INIT_C_INDEX, initDim) && ValidateInputShape(INPUT_H_INDEX, hiddenDim) &&
-               ValidateInputShape(INPUT_C_INDEX, hiddenDim) && ValidateInputShape(INPUT_DY_INDEX, hiddenDim) &&
-               ValidateInputShape(INPUT_DH_INDEX, initDim) && ValidateInputShape(INPUT_DC_INDEX, initDim) &&
-               ValidateInputShape(INPUT_I_INDEX, hiddenDim) && ValidateInputShape(INPUT_J_INDEX, hiddenDim) &&
-               ValidateInputShape(INPUT_F_INDEX, hiddenDim) && ValidateInputShape(INPUT_O_INDEX, hiddenDim) &&
-               ValidateInputShape(INPUT_TANHC_INDEX, hiddenDim) && ValidateOutputShape(OUTPUT_DW_INDEX, weightDim) &&
-               ValidateOutputShape(OUTPUT_DX_INDEX, inputDim) && ValidateOutputShape(OUTPUT_DINIT_H_INDEX, initDim) &&
-               ValidateOutputShape(OUTPUT_DINIT_C_INDEX, initDim);
+    bool ret = ValidateInputShapes(weightDim, initDim, hiddenDim) && ValidateOutputShapes(weightDim, inputDim, initDim);
     ret = rnnParams_.isBias ?
               ret && ValidateInputShape(INPUT_BIAS_INDEX, biasDim) && ValidateOutputShape(OUTPUT_DB_INDEX, biasDim) :
               ret;
@@ -576,7 +623,7 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     return ge::GRAPH_SUCCESS;
 }
 
-void SingleLayerLstmGradTiling::SetTilingData()
+void SingleLayerLstmGradTiling::SetScalarTilingData()
 {
     tilingData_.set_ubSize(rnnParams_.ubSize);
     tilingData_.set_timeStep(rnnParams_.timeStep);
@@ -609,41 +656,27 @@ void SingleLayerLstmGradTiling::SetTilingData()
     tilingData_.set_inputSizeAligned(rnnParams_.inputSizeAligned);
     tilingData_.set_hiddenSizeAligned(rnnParams_.hiddenSizeAligned);
     tilingData_.set_oneLineAligned(rnnParams_.oneLineAligned);
-    tilingData_.dxhInputTiling.set_taskNum(dxhInputParam_.taskNum);
-    tilingData_.dxhInputTiling.set_copyMLines(dxhInputParam_.copyMLines);
-    tilingData_.dxhInputTiling.set_copyMLinesTail(dxhInputParam_.copyMLinesTail);
-    tilingData_.dxhInputTiling.set_nLoop(dxhInputParam_.nLoop);
-    tilingData_.dxhInputTiling.set_copyNLength(dxhInputParam_.copyNLength);
-    tilingData_.dxhInputTiling.set_copyNLengthTail(dxhInputParam_.copyNLengthTail);
-    tilingData_.dxhInputTiling.set_splitTaskPerCore(dxhInputParam_.splitTaskPerCore);
-    tilingData_.dxhInputTiling.set_splitPreCore(dxhInputParam_.splitPreCore);
+}
 
-    tilingData_.dxhHiddenTiling.set_taskNum(dxhHiddenParam_.taskNum);
-    tilingData_.dxhHiddenTiling.set_copyMLines(dxhHiddenParam_.copyMLines);
-    tilingData_.dxhHiddenTiling.set_copyMLinesTail(dxhHiddenParam_.copyMLinesTail);
-    tilingData_.dxhHiddenTiling.set_nLoop(dxhHiddenParam_.nLoop);
-    tilingData_.dxhHiddenTiling.set_copyNLength(dxhHiddenParam_.copyNLength);
-    tilingData_.dxhHiddenTiling.set_copyNLengthTail(dxhHiddenParam_.copyNLengthTail);
-    tilingData_.dxhHiddenTiling.set_splitTaskPerCore(dxhHiddenParam_.splitTaskPerCore);
-    tilingData_.dxhHiddenTiling.set_splitPreCore(dxhHiddenParam_.splitPreCore);
+void SingleLayerLstmGradTiling::SetCutBatchTilingData(CutBatchTiling& tiling, const CutBatchTilingParam& param)
+{
+    tiling.set_taskNum(param.taskNum);
+    tiling.set_copyMLines(param.copyMLines);
+    tiling.set_copyMLinesTail(param.copyMLinesTail);
+    tiling.set_nLoop(param.nLoop);
+    tiling.set_copyNLength(param.copyNLength);
+    tiling.set_copyNLengthTail(param.copyNLengthTail);
+    tiling.set_splitTaskPerCore(param.splitTaskPerCore);
+    tiling.set_splitPreCore(param.splitPreCore);
+}
 
-    tilingData_.xhInputTiling.set_taskNum(xhInputParam_.taskNum);
-    tilingData_.xhInputTiling.set_copyMLines(xhInputParam_.copyMLines);
-    tilingData_.xhInputTiling.set_copyMLinesTail(xhInputParam_.copyMLinesTail);
-    tilingData_.xhInputTiling.set_nLoop(xhInputParam_.nLoop);
-    tilingData_.xhInputTiling.set_copyNLength(xhInputParam_.copyNLength);
-    tilingData_.xhInputTiling.set_copyNLengthTail(xhInputParam_.copyNLengthTail);
-    tilingData_.xhInputTiling.set_splitTaskPerCore(xhInputParam_.splitTaskPerCore);
-    tilingData_.xhInputTiling.set_splitPreCore(xhInputParam_.splitPreCore);
-
-    tilingData_.xhHiddenTiling.set_taskNum(xhHiddenParam_.taskNum);
-    tilingData_.xhHiddenTiling.set_copyMLines(xhHiddenParam_.copyMLines);
-    tilingData_.xhHiddenTiling.set_copyMLinesTail(xhHiddenParam_.copyMLinesTail);
-    tilingData_.xhHiddenTiling.set_nLoop(xhHiddenParam_.nLoop);
-    tilingData_.xhHiddenTiling.set_copyNLength(xhHiddenParam_.copyNLength);
-    tilingData_.xhHiddenTiling.set_copyNLengthTail(xhHiddenParam_.copyNLengthTail);
-    tilingData_.xhHiddenTiling.set_splitTaskPerCore(xhHiddenParam_.splitTaskPerCore);
-    tilingData_.xhHiddenTiling.set_splitPreCore(xhHiddenParam_.splitPreCore);
+void SingleLayerLstmGradTiling::SetTilingData()
+{
+    SetScalarTilingData();
+    SetCutBatchTilingData(tilingData_.dxhInputTiling, dxhInputParam_);
+    SetCutBatchTilingData(tilingData_.dxhHiddenTiling, dxhHiddenParam_);
+    SetCutBatchTilingData(tilingData_.xhInputTiling, xhInputParam_);
+    SetCutBatchTilingData(tilingData_.xhHiddenTiling, xhHiddenParam_);
 
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());

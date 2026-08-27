@@ -28,69 +28,103 @@ constexpr int RNN_OUTPUT_INDEX_O = 6;
 constexpr int RNN_OUTPUT_INDEX_TANHC = 7;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
+static ge::graphStatus GetInputShapes(gert::InferShapeContext* context, const gert::Shape** xShape,
+                                      const gert::Shape** wShape)
+{
+    *xShape = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *xShape);
+    *wShape = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *wShape);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus GetOutputShapes(gert::InferShapeContext* context, gert::Shape** yShape,
+                                       gert::Shape** outputhShape, gert::Shape** outputcShape, gert::Shape** iShape,
+                                       gert::Shape** jShape, gert::Shape** fShape, gert::Shape** oShape,
+                                       gert::Shape** tanhcShape)
+{
+    *yShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *yShape);
+    *outputhShape = context->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *outputhShape);
+    *outputcShape = context->GetOutputShape(RNN_OUTPUT_INDEX_C);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *outputcShape);
+    *iShape = context->GetOutputShape(RNN_OUTPUT_INDEX_I);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *iShape);
+    *jShape = context->GetOutputShape(RNN_OUTPUT_INDEX_J);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *jShape);
+    *fShape = context->GetOutputShape(RNN_OUTPUT_INDEX_F);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *fShape);
+    *oShape = context->GetOutputShape(RNN_OUTPUT_INDEX_O);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *oShape);
+    *tanhcShape = context->GetOutputShape(RNN_OUTPUT_INDEX_TANHC);
+    OP_CHECK_NULL_WITH_CONTEXT(context, *tanhcShape);
+    return ge::GRAPH_SUCCESS;
+}
+
+static int64_t GetHiddenSize(const gert::Shape* wShape)
+{
+    if (wShape->GetDim(1) == UNKNOWN_DIM_VALUE) {
+        return UNKNOWN_DIM_VALUE;
+    }
+    return wShape->GetDim(1) / CONSTANT_FOUR;
+}
+
+static void SetOutputShapes(gert::Shape* yShape, gert::Shape* outputhShape, gert::Shape* outputcShape,
+                            gert::Shape* iShape, gert::Shape* jShape, gert::Shape* fShape, gert::Shape* oShape,
+                            gert::Shape* tanhcShape, int64_t num_step, int64_t batch_size, int64_t hidden_size,
+                            bool isBidirectional)
+{
+    const int64_t time_step = isBidirectional ? CONSTANT_TWO * num_step : num_step;
+    const int64_t out_hidden_size = isBidirectional ? CONSTANT_TWO * hidden_size : hidden_size;
+    *yShape = {num_step, batch_size, out_hidden_size};
+    *outputhShape = {num_step, batch_size, out_hidden_size};
+    *outputcShape = {num_step, batch_size, out_hidden_size};
+    *iShape = {time_step, batch_size, hidden_size};
+    *jShape = {time_step, batch_size, hidden_size};
+    *fShape = {time_step, batch_size, hidden_size};
+    *oShape = {time_step, batch_size, hidden_size};
+    *tanhcShape = {time_step, batch_size, hidden_size};
+}
+
 static ge::graphStatus InferShape4DynamicRNN(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferShape4DynamicRNN start");
-    auto x_shape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
-    auto w_shape = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, w_shape);
+    const gert::Shape* xShape = nullptr;
+    const gert::Shape* wShape = nullptr;
+    if (GetInputShapes(context, &xShape, &wShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    auto y_shape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
-    auto outputh_shape = context->GetOutputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputh_shape);
-    auto outputc_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_C);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputc_shape);
-    auto i_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_I);
-    OP_CHECK_NULL_WITH_CONTEXT(context, i_shape);
-    auto j_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_J);
-    OP_CHECK_NULL_WITH_CONTEXT(context, j_shape);
-    auto f_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_F);
-    OP_CHECK_NULL_WITH_CONTEXT(context, f_shape);
-    auto o_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_O);
-    OP_CHECK_NULL_WITH_CONTEXT(context, o_shape);
-    auto tanhc_shape = context->GetOutputShape(RNN_OUTPUT_INDEX_TANHC);
-    OP_CHECK_NULL_WITH_CONTEXT(context, tanhc_shape);
+    gert::Shape* yShape = nullptr;
+    gert::Shape* outputhShape = nullptr;
+    gert::Shape* outputcShape = nullptr;
+    gert::Shape* iShape = nullptr;
+    gert::Shape* jShape = nullptr;
+    gert::Shape* fShape = nullptr;
+    gert::Shape* oShape = nullptr;
+    gert::Shape* tanhcShape = nullptr;
+    if (GetOutputShapes(context, &yShape, &outputhShape, &outputcShape, &iShape, &jShape, &fShape, &oShape,
+                        &tanhcShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    if (x_shape->GetDimNum() != X_SHAPE_SIZE_LIMIT) {
+    if (xShape->GetDimNum() != X_SHAPE_SIZE_LIMIT) {
         OP_LOGE(context->GetNodeName(), "The input x shape dim is not 3, please check!");
         return ge::GRAPH_FAILED;
     }
 
-    int64_t num_step = x_shape->GetDim(0);
-    int64_t batch_size = x_shape->GetDim(1);
-    int64_t hidden_size = 0;
-    if (w_shape->GetDim(1) == UNKNOWN_DIM_VALUE) {
-        hidden_size = UNKNOWN_DIM_VALUE;
-    } else {
-        hidden_size = w_shape->GetDim(1) / CONSTANT_FOUR;
-    }
+    const int64_t num_step = xShape->GetDim(0);
+    const int64_t batch_size = xShape->GetDim(1);
+    const int64_t hidden_size = GetHiddenSize(wShape);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const char* direction = attrs->GetAttrPointer<char>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, direction);
 
-    if (strcmp(direction, "BIDIRECTIONAL") == 0) {
-        *y_shape = {num_step, batch_size, CONSTANT_TWO * hidden_size};
-        *outputh_shape = {num_step, batch_size, CONSTANT_TWO * hidden_size};
-        *outputc_shape = {num_step, batch_size, CONSTANT_TWO * hidden_size};
-        *i_shape = {CONSTANT_TWO * num_step, batch_size, hidden_size};
-        *j_shape = {CONSTANT_TWO * num_step, batch_size, hidden_size};
-        *f_shape = {CONSTANT_TWO * num_step, batch_size, hidden_size};
-        *o_shape = {CONSTANT_TWO * num_step, batch_size, hidden_size};
-        *tanhc_shape = {CONSTANT_TWO * num_step, batch_size, hidden_size};
-    } else {
-        *y_shape = {num_step, batch_size, hidden_size};
-        *outputh_shape = {num_step, batch_size, hidden_size};
-        *outputc_shape = {num_step, batch_size, hidden_size};
-        *i_shape = {num_step, batch_size, hidden_size};
-        *j_shape = {num_step, batch_size, hidden_size};
-        *f_shape = {num_step, batch_size, hidden_size};
-        *o_shape = {num_step, batch_size, hidden_size};
-        *tanhc_shape = {num_step, batch_size, hidden_size};
-    }
+    SetOutputShapes(yShape, outputhShape, outputcShape, iShape, jShape, fShape, oShape, tanhcShape, num_step,
+                    batch_size, hidden_size, strcmp(direction, "BIDIRECTIONAL") == 0);
     return GRAPH_SUCCESS;
 }
 

@@ -264,8 +264,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::CopyOutput(GlobalTensor<T>& gm, L
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx,
-                                                                 GlobalTensor<T>& mixGm)
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::CalcVectorBlockSize(int64_t mIdx, int64_t nIdx)
 {
     this->blockIdx = GetBlockIdx();
     // get n size
@@ -289,18 +288,84 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, i
     // get calc once block size
     this->calcSize = this->calcM * this->calcN;
     this->calcSizeAlign = this->calcM * this->Ceil(this->calcN, this->calBlockSize) * this->calBlockSize;
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessSeqLengthUpdateC(LocalTensor<T>& updateC, int64_t tIdx,
+                                                                       int64_t mIdx, int64_t nIdx)
+{
+    if (this->tiling->isSeqLength == 1) {
+        auto initC = this->ubLocal2;
+        auto seqLength = this->ubLocal4;
+        CopyInHC(initC, this->inputGm.initCGm, 0, mIdx, nIdx);
+        CopyInSeq(seqLength, this->inputGm.seqLengthGm, tIdx, mIdx, nIdx);
+        Mul(updateC, updateC, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Mul(initC, initC, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Add(updateC, updateC, initC, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+    }
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessSeqLengthUpdateH(LocalTensor<T>& updateH, int64_t tIdx,
+                                                                       int64_t mIdx, int64_t nIdx)
+{
+    if (this->tiling->isSeqLength == 1) {
+        PipeBarrier<PIPE_V>();
+        auto updateY = this->ubLocal1;
+        auto initH = this->ubLocal2;
+        auto seqLength = this->ubLocal4;
+        // 现在是反转的mask，先拿到增量initH
+        CopyInHC(initH, this->inputGm.initHGm, 0, mIdx, nIdx);
+        Mul(initH, initH, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        // 反转恢复
+        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Mul(updateY, updateH, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+        Add(updateH, updateY, initH, this->calcSizeAlign);
+        CopyOutput(this->outputGm.outYGm, updateY, tIdx, mIdx, nIdx);
+    } else {
+        CopyOutput(this->outputGm.outYGm, updateH, tIdx, mIdx, nIdx);
+    }
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessTanhC(LocalTensor<T>& updateC, LocalTensor<T>& temp1,
+                                                            int64_t tIdx, int64_t mIdx, int64_t nIdx)
+{
+    // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
+    auto cTanh = this->ubLocal2;
+    Tanh(cTanh, updateC, this->calcSizeAlign); // 这里只有u3可用，还差1块UB，暂且从qidVecIn中取
+    LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
+    this->TanhPartialHighPrecision(updateC, cTanh, temp1, temp2Tensor, this->calcSizeAlign);
+    this->qidVecIn.FreeTensor(temp2Tensor);
+    if (this->tiling->isTraining == 1) {
+        CopyOutput(this->outputGm.outTanhCGm, cTanh, tIdx, mIdx, nIdx);
+    }
+    PipeBarrier<PIPE_V>();
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx,
+                                                                 GlobalTensor<T>& mixGm)
+{
+    this->CalcVectorBlockSize(mIdx, nIdx);
 
     PipeBarrier<PIPE_V>();
 
     // f 1 2 3 4 -> [1] 2 3 4
     auto fSigmoid = this->ubLocal1;
-    LocalTensor<float> ubLocalIn = this->qidVecIn.template AllocTensor<float>();
-    CopyGate(ubLocalIn, mixGm, mIdx, nIdx, this->fOffset);
-    ubLocalIn = this->qidVecIn.template DeQue<float>();
-    Adds(ubLocalIn, ubLocalIn, (float)this->tiling->forgetBias, this->calcSizeAlign);
-    PipeBarrier<PIPE_V>();
-    Sigmoid(fSigmoid, ubLocalIn, this->calcSizeAlign);
-    this->qidVecIn.FreeTensor(ubLocalIn);
+    this->CopyWithSigmoidAddBias(fSigmoid, mixGm, mIdx, nIdx, this->fOffset);
     if (this->tiling->isTraining == 1) {
         CopyOutput(this->outputGm.outFGm, fSigmoid, tIdx, mIdx, nIdx);
     }
@@ -337,22 +402,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, i
     auto updateC = this->ubLocal1;
     Add(updateC, cTmp1, cTmp2, this->calcSizeAlign);
 
-    if (this->tiling->isSeqLength == 1) {
-        auto initC = this->ubLocal2;
-        auto seqLength = this->ubLocal4;
-        CopyInHC(initC, this->inputGm.initCGm, 0, mIdx, nIdx);
-        CopyInSeq(seqLength, this->inputGm.seqLengthGm, tIdx, mIdx, nIdx);
-        Mul(updateC, updateC, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Mul(initC, initC, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Add(updateC, updateC, initC, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-    }
+    this->ProcessSeqLengthUpdateC(updateC, tIdx, mIdx, nIdx);
 
     if (this->tiling->cellClip > 0) {
         PipeBarrier<PIPE_V>();
@@ -362,16 +412,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, i
     CopyOutput(this->outputGm.outCGm, updateC, tIdx, mIdx, nIdx);
     PipeBarrier<PIPE_V>();
 
-    // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
+    this->ProcessTanhC(updateC, this->ubLocal3, tIdx, mIdx, nIdx);
     auto cTanh = this->ubLocal2;
-    Tanh(cTanh, updateC, this->calcSizeAlign); // 这里只有u3可用，还差1块UB，暂且从qidVecIn中取
-    LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
-    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal3, temp2Tensor, this->calcSizeAlign);
-    this->qidVecIn.FreeTensor(temp2Tensor);
-    if (this->tiling->isTraining == 1) {
-        CopyOutput(this->outputGm.outTanhCGm, cTanh, tIdx, mIdx, nIdx);
-    }
-    PipeBarrier<PIPE_V>();
+
     // o 1 [2] 3 4 -> [1] [2] 3 4
     auto oSigmoid = this->ubLocal1;
     CopyWithSigmoid(oSigmoid, mixGm, mIdx, nIdx, this->oOffset);
@@ -384,57 +427,38 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorOnce(int64_t tIdx, i
     auto updateH = this->ubLocal3;
     Mul(updateH, oSigmoid, cTanh, this->calcSizeAlign);
 
-    if (this->tiling->isSeqLength == 1) {
-        PipeBarrier<PIPE_V>();
-        auto updateY = this->ubLocal1;
-        auto initH = this->ubLocal2;
-        auto seqLength = this->ubLocal4;
-        // 现在是反转的mask，先拿到增量initH
-        CopyInHC(initH, this->inputGm.initHGm, 0, mIdx, nIdx);
-        Mul(initH, initH, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        // 反转恢复
-        Muls(seqLength, seqLength, (T)-1.0f, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Adds(seqLength, seqLength, (T)1.0f, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Mul(updateY, updateH, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-        Add(updateH, updateY, initH, this->calcSizeAlign);
-        CopyOutput(this->outputGm.outYGm, updateY, tIdx, mIdx, nIdx);
-    } else {
-        CopyOutput(this->outputGm.outYGm, updateH, tIdx, mIdx, nIdx);
-    }
+    this->ProcessSeqLengthUpdateH(updateH, tIdx, mIdx, nIdx);
 
     CopyOutput(this->outputGm.outHGm, updateH, tIdx, mIdx, nIdx);
 }
 
 template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessInitSeqLengthC(LocalTensor<T>& updateC, int64_t mIdx,
+                                                                     int64_t nIdx)
+{
+    if (this->tiling->isSeqLength == 1) {
+        auto seqLength = this->ubLocal3;
+        this->CopyInSeq(seqLength, this->inputGm.seqLengthGm, 0, mIdx, nIdx);
+        Mul(updateC, updateC, seqLength, this->calcSizeAlign);
+        PipeBarrier<PIPE_V>();
+    }
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessInitSeqLengthH(LocalTensor<T>& updateH, int64_t mIdx,
+                                                                     int64_t nIdx)
+{
+    if (this->tiling->isSeqLength == 1) {
+        auto seqLength = this->ubLocal3;
+        PipeBarrier<PIPE_V>();
+        Mul(updateH, updateH, seqLength, this->calcSizeAlign);
+    }
+}
+
+template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, GlobalTensor<T>& mixGm)
 {
-    this->blockIdx = GetBlockIdx();
-    // get n size
-    if ((this->vectorTailN > 0) && (nIdx == this->vectorSplitN - 1)) {
-        this->calcN = this->vectorTailN;
-    } else {
-        this->calcN = this->vectorBaseN;
-    }
-
-    // get m size
-    this->calcM = this->vectorBaseM;
-    if ((this->blockIdx < this->vectorCoreNum - 1) && (this->vectorBaseTailM > 0) && (mIdx == this->vectorSplitM - 1)) {
-        // Calc block's m_size in the base core last block.
-        this->calcM = this->vectorBaseTailM;
-    }
-    if ((this->blockIdx == this->vectorCoreNum - 1) && (this->vectorTailTailM > 0) &&
-        (mIdx == this->vectorTailSplitM - 1)) {
-        // Calc block's m_size in the last core last block.
-        this->calcM = this->vectorTailTailM;
-    }
-
-    // get calc once block size
-    this->calcSize = this->calcM * this->calcN;
-    this->calcSizeAlign = this->calcM * this->Ceil(this->calcN, this->calBlockSize) * this->calBlockSize;
+    this->CalcVectorBlockSize(mIdx, nIdx);
 
     PipeBarrier<PIPE_V>();
 
@@ -473,12 +497,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
     // i * j + f * c 1 [2] 3 [4] -> [1] 2 3 4
     auto updateC = cTmp2;
 
-    if (this->tiling->isSeqLength == 1) {
-        auto seqLength = this->ubLocal3;
-        this->CopyInSeq(seqLength, this->inputGm.seqLengthGm, 0, mIdx, nIdx);
-        Mul(updateC, updateC, seqLength, this->calcSizeAlign);
-        PipeBarrier<PIPE_V>();
-    }
+    this->ProcessInitSeqLengthC(updateC, mIdx, nIdx);
 
     if (this->tiling->cellClip > 0) {
         PipeBarrier<PIPE_V>();
@@ -488,16 +507,9 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
     this->CopyOutput(this->outputGm.outCGm, updateC, 0, mIdx, nIdx);
     PipeBarrier<PIPE_V>();
 
-    // tanh(c) 1 [2] 3 4 -> 1 [2] 3 4
+    this->ProcessTanhC(updateC, this->ubLocal1, 0, mIdx, nIdx);
     auto cTanh = this->ubLocal2;
-    Tanh(cTanh, updateC, this->calcSizeAlign);
-    LocalTensor<T> temp2Tensor = this->qidVecIn.template AllocTensor<T>();
-    this->TanhPartialHighPrecision(updateC, cTanh, this->ubLocal1, temp2Tensor, this->calcSizeAlign); // u1 + qidVecIn
-    this->qidVecIn.FreeTensor(temp2Tensor);
-    if (this->tiling->isTraining == 1) {
-        this->CopyOutput(this->outputGm.outTanhCGm, cTanh, 0, mIdx, nIdx);
-    }
-    PipeBarrier<PIPE_V>();
+
     // o 1 [2] 3 4 -> [1] [2] 3 4
     auto oSigmoid = this->ubLocal1;
     this->CopyWithSigmoid(oSigmoid, mixGm, mIdx, nIdx, this->oOffset);
@@ -510,11 +522,7 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessVectorInitHC(int64_t mIdx,
     auto updateH = this->ubLocal4;
     Mul(updateH, oSigmoid, cTanh, this->calcSizeAlign);
 
-    if (this->tiling->isSeqLength == 1) {
-        auto seqLength = this->ubLocal3;
-        PipeBarrier<PIPE_V>();
-        Mul(updateH, updateH, seqLength, this->calcSizeAlign);
-    }
+    this->ProcessInitSeqLengthH(updateH, mIdx, nIdx);
 
     this->CopyOutput(this->outputGm.outHGm, updateH, 0, mIdx, nIdx);
     this->CopyOutput(this->outputGm.outYGm, updateH, 0, mIdx, nIdx);

@@ -130,6 +130,14 @@ public:
                                        GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
                                        GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
                                        GM_ADDR workspace);
+    __aicore__ inline void InitBuffersOffsets();
+    __aicore__ inline void SetInputGmBuffers(GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias, GM_ADDR seqLength,
+                                             GM_ADDR initH, GM_ADDR initC);
+    __aicore__ inline void SetInputGmBuffersV2(GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden, GM_ADDR bias,
+                                               GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC);
+    __aicore__ inline void SetOutputGmBuffers(GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
+                                              GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
+                                              GM_ADDR workspace);
     __aicore__ inline void InitVars();
     __aicore__ inline void InitQue();
     __aicore__ inline void Init(GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH,
@@ -284,12 +292,7 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::CalcGMOffset(TCubeTiling& param, 
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffers(GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias,
-                                                           GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC, GM_ADDR wCi,
-                                                           GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask, GM_ADDR outputY,
-                                                           GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
-                                                           GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO,
-                                                           GM_ADDR outputTanhC, GM_ADDR workspace)
+__aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffersOffsets()
 {
     this->CalcGMOffset(this->hiddenMMTiling, this->hiddenOffsets, this->hiddenTail,
                        static_cast<int32_t>(this->tiling->hiddenSize));
@@ -299,7 +302,12 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffers(GM_ADDR inputX, GM_AD
     this->allCellSize = this->oneCellSize * LSTM_GATE_SIZE;
     this->oriHiddenOffsets = this->hiddenOffsets;
     this->oriInputOffsets = this->inputOffsets;
+}
 
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDBase<T>::SetInputGmBuffers(GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias,
+                                                                 GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC)
+{
     this->inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(inputX),
                                       this->tiling->timeStep * this->tiling->batch * this->tiling->inputSize);
     this->inputGm.weightInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(weight),
@@ -323,6 +331,14 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffers(GM_ADDR inputX, GM_AD
         this->inputGm.initCGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(initC),
                                               this->tiling->batch * this->tiling->hiddenSize);
     }
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDBase<T>::SetOutputGmBuffers(GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC,
+                                                                  GM_ADDR outputI, GM_ADDR outputJ, GM_ADDR outputF,
+                                                                  GM_ADDR outputO, GM_ADDR outputTanhC,
+                                                                  GM_ADDR workspace)
+{
     this->outputGm.outYGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputY),
                                           this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
     this->outputGm.outHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputH),
@@ -345,6 +361,19 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffers(GM_ADDR inputX, GM_AD
     this->outputGm.workspace.SetGlobalBuffer(
         reinterpret_cast<__gm__ float*>(workspace),
         this->tiling->timeStep * this->tiling->batch * LSTM_GATE_SIZE * this->tiling->hiddenSize);
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffers(GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias,
+                                                           GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC, GM_ADDR wCi,
+                                                           GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask, GM_ADDR outputY,
+                                                           GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
+                                                           GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO,
+                                                           GM_ADDR outputTanhC, GM_ADDR workspace)
+{
+    this->InitBuffersOffsets();
+    this->SetInputGmBuffers(inputX, weight, bias, seqLength, initH, initC);
+    this->SetOutputGmBuffers(outputY, outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, workspace);
 }
 
 template <typename T>
@@ -428,23 +457,10 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::Init(GM_ADDR inputX, GM_ADDR weig
 }
 
 template <typename T>
-__aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffersV2(GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden,
-                                                             GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH,
-                                                             GM_ADDR initC, GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo,
-                                                             GM_ADDR mask, GM_ADDR outputY, GM_ADDR outputH,
-                                                             GM_ADDR outputC, GM_ADDR outputI, GM_ADDR outputJ,
-                                                             GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
-                                                             GM_ADDR workspace)
+__aicore__ inline void LstmMmSplitNDNDBase<T>::SetInputGmBuffersV2(GM_ADDR inputX, GM_ADDR weightInput,
+                                                                   GM_ADDR weightHidden, GM_ADDR bias,
+                                                                   GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC)
 {
-    this->CalcGMOffset(this->hiddenMMTiling, this->hiddenOffsets, this->hiddenTail,
-                       static_cast<int32_t>(this->tiling->hiddenSize));
-    this->CalcGMOffset(this->inputMMTiling, this->inputOffsets, this->inputTail,
-                       static_cast<int32_t>(this->tiling->inputSize));
-    this->oneCellSize = this->tiling->batch * this->tiling->hiddenSize;
-    this->allCellSize = this->oneCellSize * LSTM_GATE_SIZE;
-    this->oriHiddenOffsets = this->hiddenOffsets;
-    this->oriInputOffsets = this->inputOffsets;
-
     this->inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(inputX),
                                       this->tiling->timeStep * this->tiling->batch * this->tiling->inputSize);
     this->inputGm.weightInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(weightInput),
@@ -467,28 +483,20 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffersV2(GM_ADDR inputX, GM_
         this->inputGm.initCGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(initC),
                                               this->tiling->batch * this->tiling->hiddenSize);
     }
-    this->outputGm.outYGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputY),
-                                          this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-    this->outputGm.outHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputH),
-                                          this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-    this->outputGm.outCGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputC),
-                                          this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-    if (this->tiling->isTraining == 1) {
-        this->outputGm.outIGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputI),
-                                              this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-        this->outputGm.outJGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputJ),
-                                              this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-        this->outputGm.outFGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputF),
-                                              this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-        this->outputGm.outOGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(outputO),
-                                              this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-        this->outputGm.outTanhCGm.SetGlobalBuffer(
-            reinterpret_cast<__gm__ T*>(outputTanhC),
-            this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
-    }
-    this->outputGm.workspace.SetGlobalBuffer(
-        reinterpret_cast<__gm__ float*>(workspace),
-        this->tiling->timeStep * this->tiling->batch * LSTM_GATE_SIZE * this->tiling->hiddenSize);
+}
+
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDBase<T>::InitBuffersV2(GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden,
+                                                             GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH,
+                                                             GM_ADDR initC, GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo,
+                                                             GM_ADDR mask, GM_ADDR outputY, GM_ADDR outputH,
+                                                             GM_ADDR outputC, GM_ADDR outputI, GM_ADDR outputJ,
+                                                             GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
+                                                             GM_ADDR workspace)
+{
+    this->InitBuffersOffsets();
+    this->SetInputGmBuffersV2(inputX, weightInput, weightHidden, bias, seqLength, initH, initC);
+    this->SetOutputGmBuffers(outputY, outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, workspace);
 }
 
 template <typename T>

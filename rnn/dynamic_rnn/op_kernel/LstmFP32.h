@@ -50,6 +50,13 @@ protected:
     __aicore__ inline void CopyWithTanhHighPrecision(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm, int64_t mIdx,
                                                      int64_t nIdx, int64_t gateOffset, LocalTensor<T>& temp1,
                                                      LocalTensor<T>& temp2, int64_t calcSizeAlign);
+    __aicore__ inline void CalcVectorBlockSize(int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void ProcessTanhC(LocalTensor<T>& updateC, LocalTensor<T>& temp1, int64_t tIdx, int64_t mIdx,
+                                        int64_t nIdx);
+    __aicore__ inline void ProcessSeqLengthUpdateC(LocalTensor<T>& updateC, int64_t tIdx, int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void ProcessSeqLengthUpdateH(LocalTensor<T>& updateH, int64_t tIdx, int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void ProcessInitSeqLengthC(LocalTensor<T>& updateC, int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void ProcessInitSeqLengthH(LocalTensor<T>& updateH, int64_t mIdx, int64_t nIdx);
 
 public:
     // describe Matmul input/output dtype&format

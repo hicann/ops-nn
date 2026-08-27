@@ -96,6 +96,13 @@ struct LstmDataInfo {
     const aclTensor* lastResult; // 上一层的推理结果
 };
 
+struct LstmWorkspacePrepared {
+    const aclTensorList* paramsContiguous;
+    const aclTensorList* hxContiguous;
+    const aclTensor* curInput;
+    op::Shape outShape;
+};
+
 } // namespace
 
 #ifdef __cplusplus
@@ -126,6 +133,60 @@ static const std::initializer_list<DataType> INT_DTYPE_SUPPORT_LIST = {DataType:
 auto nullptrInner = std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*,
                                aclTensor*>(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
+const aclTensor* PrepareWeightTrans(const aclTensorList* params, int64_t paramsOffsets, aclOpExecutor* executor)
+{
+    op::FVector<const aclTensor*> weightConcatList;
+    weightConcatList.emplace_back((*params)[paramsOffsets]);
+    weightConcatList.emplace_back((*params)[paramsOffsets + 1]);
+    auto weightListInput = executor->AllocTensorList(weightConcatList.data(), weightConcatList.size());
+    OP_CHECK_NULL(weightListInput, return nullptr);
+    auto weightConcat = l0op::ConcatD(weightListInput, 1, executor);
+    OP_CHECK_NULL(weightConcat, return nullptr);
+
+    std::vector<int64_t> perm = {1, 0};
+    auto valuePerm = executor->AllocIntArray(perm.data(), 2);
+    OP_CHECK_NULL(valuePerm, return nullptr);
+    return l0op::Transpose(weightConcat, valuePerm, executor);
+}
+
+const aclTensor* PrepareBias(const aclTensorList* params, int64_t paramsOffsets, const aclTensor* weightTrans,
+                             bool hasBias, aclOpExecutor* executor)
+{
+    if (hasBias) {
+        auto bias = l0op::Add((*params)[paramsOffsets + 2], (*params)[paramsOffsets + 3], executor);
+        OP_CHECK_NULL(bias, return nullptr);
+        return bias;
+    }
+    op::Shape biasShape = {weightTrans->GetViewShape().GetDim(1)};
+    auto biasTmp = executor->AllocTensor(biasShape, weightTrans->GetDataType(), op::Format::FORMAT_ND);
+    OP_CHECK_NULL(biasTmp, return nullptr);
+    return l0op::ZerosLike(biasTmp, executor);
+}
+
+bool PrepareInitHC(const aclTensorList* hx, const char* direction, bool bidirectional, int64_t numLayers,
+                   aclOpExecutor* executor, const aclTensor*& initH, const aclTensor*& initC)
+{
+    if (hx == nullptr || hx->Size() == 0) {
+        return true;
+    }
+    auto batch = (*hx)[0]->GetViewShape().GetDim(1);
+    auto hidden = (*hx)[0]->GetViewShape().GetDim(2);
+    auto oneLayerInit = bidirectional == true ? 2 : 1;
+    auto initStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
+
+    const int64_t offsetData[] = {oneLayerInit * numLayers + initStart, 0, 0};
+    aclIntArray* offsets = executor->AllocIntArray(offsetData, 3);
+    OP_CHECK_NULL(offsets, return false);
+    const int64_t sizeData[] = {1, batch, hidden};
+    aclIntArray* size = executor->AllocIntArray(sizeData, 3);
+    OP_CHECK_NULL(size, return false);
+    initH = l0op::Slice((*hx)[0], offsets, size, executor);
+    OP_CHECK_NULL(initH, return false);
+    initC = l0op::Slice((*hx)[1], offsets, size, executor);
+    OP_CHECK_NULL(initC, return false);
+    return true;
+}
+
 std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
            const aclTensor*, const aclTensor*>
 LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx, aclTensor* yOutDirec,
@@ -137,50 +198,17 @@ LstmSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const 
     oneLayerParams = hasBias == true ? oneLayerParams * PARAM_MULTIPLIER_BIAS : oneLayerParams;
     auto weightStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : oneLayerParams / 2;
     auto paramsOffsets = oneLayerParams * num_layers + weightStart;
-    op::FVector<const aclTensor*> weightConcatList;
-    weightConcatList.emplace_back((*params)[paramsOffsets]);
-    weightConcatList.emplace_back((*params)[paramsOffsets + 1]);
-    auto weightListInput = executor->AllocTensorList(weightConcatList.data(), weightConcatList.size());
-    OP_CHECK_NULL(weightListInput, return nullptrInner);
-    auto weightConcat = l0op::ConcatD(weightListInput, 1, executor);
-    OP_CHECK_NULL(weightConcat, return nullptrInner);
 
-    std::vector<int64_t> perm = {1, 0};
-    auto valuePerm = executor->AllocIntArray(perm.data(), 2);
-    OP_CHECK_NULL(valuePerm, return nullptrInner);
-    auto weightTrans = l0op::Transpose(weightConcat, valuePerm, executor);
+    auto weightTrans = PrepareWeightTrans(params, paramsOffsets, executor);
     OP_CHECK_NULL(weightTrans, return nullptrInner);
 
-    const aclTensor* bias = nullptr;
-    if (hasBias) {
-        bias = l0op::Add((*params)[paramsOffsets + 2], (*params)[paramsOffsets + 3], executor);
-        OP_CHECK_NULL(bias, return nullptrInner);
-    } else {
-        op::Shape biasShape = {weightTrans->GetViewShape().GetDim(1)};
-        auto biasTmp = executor->AllocTensor(biasShape, weightTrans->GetDataType(), op::Format::FORMAT_ND);
-        OP_CHECK_NULL(biasTmp, return nullptrInner);
-        bias = l0op::ZerosLike(biasTmp, executor);
-        OP_CHECK_NULL(bias, return nullptrInner);
-    }
+    auto bias = PrepareBias(params, paramsOffsets, weightTrans, hasBias, executor);
+    OP_CHECK_NULL(bias, return nullptrInner);
 
     const aclTensor* initH = nullptr;
     const aclTensor* initC = nullptr;
-    if (hx != nullptr && hx->Size() != 0) {
-        auto batch = (*hx)[0]->GetViewShape().GetDim(1);
-        auto hidden = (*hx)[0]->GetViewShape().GetDim(2);
-        auto oneLayerInit = bidirectional == true ? 2 : 1;
-        auto initStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
-
-        const int64_t offsetData[] = {oneLayerInit * num_layers + initStart, 0, 0};
-        aclIntArray* offsets = executor->AllocIntArray(offsetData, 3);
-        OP_CHECK_NULL(offsets, return nullptrInner);
-        const int64_t sizeData[] = {1, batch, hidden};
-        aclIntArray* size = executor->AllocIntArray(sizeData, 3);
-        OP_CHECK_NULL(size, return nullptrInner);
-        initH = l0op::Slice((*hx)[0], offsets, size, executor);
-        OP_CHECK_NULL(initH, return nullptrInner);
-        initC = l0op::Slice((*hx)[1], offsets, size, executor);
-        OP_CHECK_NULL(initC, return nullptrInner);
+    if (!PrepareInitHC(hx, direction, bidirectional, num_layers, executor, initH, initC)) {
+        return nullptrInner;
     }
     auto layerResult = l0op::DynamicRNN(input, weightTrans, bias, initH, initC, nullptr, direction, train, yOutDirec,
                                         iOutDirec, jOutDirec, fOutDirec, oOutDirec, hOutDirec, cOutDirec, tanhCOutDirec,
@@ -339,6 +367,17 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
     return true;
 }
 
+static bool CheckOutputListSize(const aclTensorList* outList, const char* listName, uint64_t expectedSize)
+{
+    if (outList->Size() != expectedSize) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The number of tensors required for the output_%s lists should be %lu, but %lu was obtained.", listName,
+                expectedSize, outList->Size());
+        return false;
+    }
+    return true;
+}
+
 static bool CheckDimsSize(const aclTensorList* params, const aclTensorList* hx, bool hasBias, int64_t numLayers,
                           bool train, bool bidirectional, const aclTensorList* iOut, const aclTensorList* jOut,
                           const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
@@ -361,46 +400,10 @@ static bool CheckDimsSize(const aclTensorList* params, const aclTensorList* hx, 
         return false;
     }
     if (train) {
-        if (iOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_i lists should be %lu, but %lu was obtained.",
-                    output_nums, iOut->Size());
-            return false;
-        }
-        if (jOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_j lists should be %lu, but %lu was obtained.",
-                    output_nums, jOut->Size());
-            return false;
-        }
-        if (fOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_f lists should be %lu, but %lu was obtained.",
-                    output_nums, fOut->Size());
-            return false;
-        }
-        if (oOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_o lists should be %lu, but %lu was obtained.",
-                    output_nums, oOut->Size());
-            return false;
-        }
-        if (hOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_h lists should be %lu, but %lu was obtained.",
-                    output_nums, hOut->Size());
-            return false;
-        }
-        if (cOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_c lists should be %lu, but %lu was obtained.",
-                    output_nums, cOut->Size());
-            return false;
-        }
-        if (tanhCOut->Size() != output_nums) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The number of tensors required for the output_tanhc lists should be %lu, but %lu was obtained.",
-                    output_nums, tanhCOut->Size());
+        if (!CheckOutputListSize(iOut, "i", output_nums) || !CheckOutputListSize(jOut, "j", output_nums) ||
+            !CheckOutputListSize(fOut, "f", output_nums) || !CheckOutputListSize(oOut, "o", output_nums) ||
+            !CheckOutputListSize(hOut, "h", output_nums) || !CheckOutputListSize(cOut, "c", output_nums) ||
+            !CheckOutputListSize(tanhCOut, "tanhc", output_nums)) {
             return false;
         }
     }
@@ -474,17 +477,9 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
     return true;
 }
 
-static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx, bool has_biases,
-                       int64_t numLayers, bool train, bool bidirectional, bool batch_first, const aclTensor* output,
-                       const aclTensor* hy, const aclTensor* cy, const aclTensorList* iOut, const aclTensorList* jOut,
-                       const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
-                       const aclTensorList* cOut, const aclTensorList* tanhCOut)
+static bool CheckWeightShapes(const aclTensorList* params, int64_t numLayers, int64_t hiddenSize,
+                              int64_t curLayerInputSize, bool has_biases, bool bidirectional)
 {
-    auto timeStep = batch_first == true ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
-    auto batchSize = batch_first == true ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
-    auto inputSize = input->GetViewShape().GetDim(2);
-    auto hiddenSize = (*params)[0]->GetViewShape().GetDim(0) / 4;
-    auto curLayerInputSize = inputSize;
     uint64_t dScale = bidirectional == true ? 2 : 1;
     auto bScale = has_biases == true ? 2 : 1;
     uint64_t oneLayerParams = 2 * bScale * dScale;
@@ -503,6 +498,24 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
             }
         }
         curLayerInputSize = dScale * hiddenSize;
+    }
+    return true;
+}
+
+static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx, bool has_biases,
+                       int64_t numLayers, bool train, bool bidirectional, bool batch_first, const aclTensor* output,
+                       const aclTensor* hy, const aclTensor* cy, const aclTensorList* iOut, const aclTensorList* jOut,
+                       const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
+                       const aclTensorList* cOut, const aclTensorList* tanhCOut)
+{
+    auto timeStep = batch_first == true ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
+    auto batchSize = batch_first == true ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
+    auto inputSize = input->GetViewShape().GetDim(2);
+    auto hiddenSize = (*params)[0]->GetViewShape().GetDim(0) / 4;
+    auto curLayerInputSize = inputSize;
+    uint64_t dScale = bidirectional == true ? 2 : 1;
+    if (!CheckWeightShapes(params, numLayers, hiddenSize, curLayerInputSize, has_biases, bidirectional)) {
+        return false;
     }
 
     if (hx != nullptr) {
@@ -777,12 +790,11 @@ static aclnnStatus CheckDimsAndListLength(const LstmDataParamsIn& inputs, const 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataParamsOut& outputs, LstmDataInfo& info)
+static aclnnStatus SetDataInfo(const aclTensor* input, const aclTensor* batchSizes, const aclTensor* output,
+                               bool bidirectional, LstmDataInfo& info)
 {
-    aclnnStatus ret;
-
-    auto data2dShape = inputs.input->GetViewShape();
-    info.T = inputs.batchSizes->Numel();
+    auto data2dShape = input->GetViewShape();
+    info.T = batchSizes->Numel();
     OP_CHECK(info.T != INDEX_0,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes should not be empty when it is a non-null pointer."),
              return ACLNN_ERR_PARAM_INVALID);
@@ -792,24 +804,24 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
                      "input.shape[0] should be a multiple of the time step (i.e., the length of batchSizes)."),
              return ACLNN_ERR_PARAM_INVALID);
     info.I = data2dShape.GetDim(INDEX_1);
-    info.H = outputs.output->GetViewShape().GetDim(INDEX_2);
-    if (inputs.bidirectional) {
+    info.H = output->GetViewShape().GetDim(INDEX_2);
+    if (bidirectional) {
         OP_CHECK(info.H % 2 == INDEX_0,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                          "output.shape[2] (i.e., hidden size * 2) should be even in bidirectional scenarios."),
                  return ACLNN_ERR_PARAM_INVALID);
         info.H = info.H / INDEX_2;
     }
+    return ACLNN_SUCCESS;
+}
 
+static aclnnStatus CheckParamsShapes(const LstmDataParamsIn& inputs, const LstmDataInfo& info)
+{
     // shape关系校验
     op::Shape weightIhFirstLayerShape = {INDEX_4 * info.H, info.I};
     op::Shape weightIhShape = {INDEX_4 * info.H, info.H * info.D};
     op::Shape weightHhShape = {INDEX_4 * info.H, info.H};
     op::Shape biasShape = {INDEX_4 * info.H};
-    op::Shape hxShape = {info.D * info.L, info.B, info.H};
-    op::Shape outShape = {info.T, info.B, info.H};
-    op::Shape outputConcatShape = {info.T, info.B, info.H * info.D};
-    op::Shape hycyShape = {info.LD, info.B, info.H};
 
     for (int64_t group = INDEX_0; group < info.LD; group++) {
         int64_t currOffset = group * info.groupLen;
@@ -825,6 +837,20 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
                                                         return ACLNN_ERR_PARAM_INVALID);
         }
     }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataParamsOut& outputs, LstmDataInfo& info)
+{
+    aclnnStatus ret = SetDataInfo(inputs.input, inputs.batchSizes, outputs.output, inputs.bidirectional, info);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = CheckParamsShapes(inputs, info);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    op::Shape hxShape = {info.D * info.L, info.B, info.H};
+    op::Shape outShape = {info.T, info.B, info.H};
+    op::Shape outputConcatShape = {info.T, info.B, info.H * info.D};
+    op::Shape hycyShape = {info.LD, info.B, info.H};
     if (inputs.hx) {
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.hx)[INDEX_0], hxShape, return ACLNN_ERR_PARAM_INVALID);
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.hx)[INDEX_1], hxShape, return ACLNN_ERR_PARAM_INVALID);
@@ -1117,17 +1143,11 @@ static aclnnStatus LstmDataGetBaseOpOut(const LstmDataParamsIn& inputs, const Ls
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus LstmDataGetParamsOut(const LstmDataParamsIn& inputs, const LstmDataInfo& info,
-                                        const std::vector<BaseOpOutputs>& baseOutVec, LstmDataParamsOut& outputs,
-                                        aclOpExecutor* executor)
+static aclnnStatus ProcessHyCyOutputs(const LstmDataInfo& info, const std::vector<BaseOpOutputs>& baseOutVec,
+                                      LstmDataParamsOut& outputs, aclOpExecutor* executor)
 {
     const aclTensor* res = nullptr;
 
-    // 处理outputs.output
-    res = l0op::ViewCopy(info.lastResult, outputs.output, executor);
-    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 处理hy、cy
     // 准备取最后1个step，正序为T-1，反序为0
     const int64_t offsetUniDirectData[] = {info.T - INDEX_1, INDEX_0, INDEX_0};
     aclIntArray* offsetUniDirect = executor->AllocIntArray(offsetUniDirectData, INDEX_3);
@@ -1163,26 +1183,52 @@ static aclnnStatus LstmDataGetParamsOut(const LstmDataParamsIn& inputs, const Ls
     res = l0op::ViewCopy(cy, outputs.cy, executor);
     CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus ProcessTrainOutputs(const LstmDataInfo& info, const std::vector<BaseOpOutputs>& baseOutVec,
+                                       const LstmDataParamsOut& outputs, aclOpExecutor* executor)
+{
+    const aclTensor* res = nullptr;
+    // 由于输出也是先层后方向排布，因此可以直接按baseOutVec顺序拷贝
+    for (int64_t idx = INDEX_0; idx < info.LD; idx++) {
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_iOut, (*outputs.iOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_jOut, (*outputs.jOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_fOut, (*outputs.fOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_oOut, (*outputs.oOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_hOut, (*outputs.hOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_cOut, (*outputs.cOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        res = l0op::ViewCopy(baseOutVec.at(idx).l0_tanhcOut, (*outputs.tanhCOut)[idx], executor);
+        CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus LstmDataGetParamsOut(const LstmDataParamsIn& inputs, const LstmDataInfo& info,
+                                        const std::vector<BaseOpOutputs>& baseOutVec, LstmDataParamsOut& outputs,
+                                        aclOpExecutor* executor)
+{
+    const aclTensor* res = nullptr;
+
+    // 处理outputs.output
+    res = l0op::ViewCopy(info.lastResult, outputs.output, executor);
+    CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 处理hy、cy
+    aclnnStatus ret = ProcessHyCyOutputs(info, baseOutVec, outputs, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 处理训练模式下其他tensorList
-    /* 由于输出也是先层后方向排布，因此可以直接按baseOutVec顺序拷贝
-     */
     if (inputs.train) {
-        for (int64_t idx = INDEX_0; idx < info.LD; idx++) {
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_iOut, (*outputs.iOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_jOut, (*outputs.jOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_fOut, (*outputs.fOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_oOut, (*outputs.oOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_hOut, (*outputs.hOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_cOut, (*outputs.cOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            res = l0op::ViewCopy(baseOutVec.at(idx).l0_tanhcOut, (*outputs.tanhCOut)[idx], executor);
-            CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
+        ret = ProcessTrainOutputs(info, baseOutVec, outputs, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
 
     return ACLNN_SUCCESS;
@@ -1275,6 +1321,259 @@ static aclnnStatus LstmDataGetWorkspaceSize(LstmDataParamsIn& inputs, LstmDataPa
     return ACLNN_SUCCESS;
 }
 
+const aclTensor* ProcessTrainLayerForward(
+    aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype, const aclTensor* curInput,
+    const aclTensorList* params, const aclTensorList* hx, const aclTensorList* iOut, const aclTensorList* jOut,
+    const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
+    const aclTensorList* tanhCOut, uint64_t layerIdx, bool bidirectional, bool train, int64_t numLayers, bool hasBias,
+    std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
+{
+    auto yOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(yOutForward != nullptr, nullptr);
+    auto iOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(iOutForward != nullptr, nullptr);
+    auto jOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(jOutForward != nullptr, nullptr);
+    auto fOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(fOutForward != nullptr, nullptr);
+    auto oOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(oOutForward != nullptr, nullptr);
+    auto hOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(hOutForward != nullptr, nullptr);
+    auto cOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(cOutForward != nullptr, nullptr);
+    auto tanhCOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(tanhCOutForward != nullptr, nullptr);
+
+    auto layerResultForward = LstmSingleLayerDirec(curInput, params, hx, yOutForward, iOutForward, jOutForward,
+                                                   fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward,
+                                                   "UNIDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
+
+    ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx, bidirectional,
+                    "UNIDIRECTIONAL", executor);
+    ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor);
+    return std::get<0>(layerResultForward);
+}
+
+const aclTensor* ProcessTrainLayerBackward(
+    aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype, const aclTensor* curInput,
+    const aclTensorList* params, const aclTensorList* hx, const aclTensor* forwardY, const aclTensorList* iOut,
+    const aclTensorList* jOut, const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
+    const aclTensorList* cOut, const aclTensorList* tanhCOut, uint64_t layerIdx, bool bidirectional, bool train,
+    int64_t numLayers, bool hasBias, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
+{
+    auto yOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(yOutBackward != nullptr, nullptr);
+    auto iOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(iOutBackward != nullptr, nullptr);
+    auto jOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(jOutBackward != nullptr, nullptr);
+    auto fOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(fOutBackward != nullptr, nullptr);
+    auto oOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(oOutBackward != nullptr, nullptr);
+    auto hOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(hOutBackward != nullptr, nullptr);
+    auto cOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(cOutBackward != nullptr, nullptr);
+    auto tanhCOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(tanhCOutBackward != nullptr, nullptr);
+
+    auto layerResultBackward = LstmSingleLayerDirec(
+        curInput, params, hx, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward,
+        cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
+    // ConcatInput
+    op::FVector<const aclTensor*> inputConcat;
+    inputConcat.emplace_back(forwardY);
+    inputConcat.emplace_back(std::get<0>(layerResultBackward));
+    auto tensorListInput = executor->AllocTensorList(inputConcat.data(), inputConcat.size());
+    auto newInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, executor);
+    ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, layerIdx, bidirectional,
+                    "REDIRECTIONAL", executor);
+    ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor);
+    return newInput;
+}
+
+const aclTensor* ProcessInferLayerForward(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                                          const aclTensor* curInput, const aclTensorList* params,
+                                          const aclTensorList* hx, aclTensor* iOutForward, aclTensor* jOutForward,
+                                          aclTensor* fOutForward, aclTensor* oOutForward, aclTensor* tanhCOutForward,
+                                          uint64_t layerIdx, bool bidirectional, bool train, int64_t numLayers,
+                                          bool hasBias, std::vector<const aclTensor*>& hyVector,
+                                          std::vector<const aclTensor*>& cyVector)
+{
+    auto yOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(yOutForward != nullptr, nullptr);
+    auto hOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(hOutForward != nullptr, nullptr);
+    auto cOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(cOutForward != nullptr, nullptr);
+
+    auto layerResultForward = LstmSingleLayerDirec(curInput, params, hx, yOutForward, iOutForward, jOutForward,
+                                                   fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward,
+                                                   "UNIDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
+    ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", executor);
+    return std::get<0>(layerResultForward);
+}
+
+const aclTensor* ProcessInferLayerBackward(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                                           const aclTensor* curInput, const aclTensorList* params,
+                                           const aclTensorList* hx, const aclTensor* forwardY, aclTensor* iOutBackward,
+                                           aclTensor* jOutBackward, aclTensor* fOutBackward, aclTensor* oOutBackward,
+                                           aclTensor* tanhCOutBackward, uint64_t layerIdx, bool bidirectional,
+                                           bool train, int64_t numLayers, bool hasBias,
+                                           std::vector<const aclTensor*>& hyVector,
+                                           std::vector<const aclTensor*>& cyVector)
+{
+    auto hOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(hOutBackward != nullptr, nullptr);
+    auto cOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(cOutBackward != nullptr, nullptr);
+    auto yOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(yOutBackward != nullptr, nullptr);
+
+    auto layerResultBackward = LstmSingleLayerDirec(
+        curInput, params, hx, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward,
+        cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train, layerIdx, hasBias, executor);
+    // ConcatInput
+    op::FVector<const aclTensor*> inputConcat;
+    inputConcat.emplace_back(forwardY);
+    inputConcat.emplace_back(std::get<0>(layerResultBackward));
+    auto tensorListInput = executor->AllocTensorList(inputConcat.data(), inputConcat.size());
+    auto newInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, executor);
+    ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", executor);
+    return newInput;
+}
+
+bool PrepareLstmWorkspaceInputs(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
+                                bool batchFirst, const aclTensor* output, bool bidirectional, aclOpExecutor* executor,
+                                LstmWorkspacePrepared& prepared)
+{
+    auto inputContiguous = l0op::Contiguous(input, executor);
+    prepared.paramsContiguous = ProcessInputContiguous(params, executor);
+    if (prepared.paramsContiguous == nullptr) {
+        return false;
+    }
+    prepared.hxContiguous = hx;
+    if (hx != nullptr) {
+        prepared.hxContiguous = ProcessInputContiguous(prepared.hxContiguous, executor);
+        if (prepared.hxContiguous == nullptr) {
+            return false;
+        }
+    }
+    auto curInput = inputContiguous;
+    if (batchFirst == true) {
+        std::vector<int64_t> perm = {1, 0, 2};
+        auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        curInput = l0op::Transpose(inputContiguous, valuePerm, executor);
+    }
+    int64_t hiddenSize = output->GetViewShape().GetDim(2);
+    hiddenSize = bidirectional == true ? hiddenSize / BIDIRECTIONAL_NUM : hiddenSize;
+    prepared.curInput = curInput;
+    prepared.outShape = {curInput->GetViewShape().GetDim(0), curInput->GetViewShape().GetDim(1), hiddenSize};
+    return true;
+}
+
+aclnnStatus ProcessTrainLayers(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                               const aclTensor* curInput, const aclTensorList* params, const aclTensorList* hx,
+                               const aclTensorList* iOut, const aclTensorList* jOut, const aclTensorList* fOut,
+                               const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
+                               const aclTensorList* tanhCOut, int64_t numLayers, bool hasBias, bool bidirectional,
+                               bool train, bool batchFirst, aclTensor* output, aclTensor* hy, aclTensor* cy,
+                               std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
+{
+    for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
+        const aclTensor* layerInput = curInput;
+        curInput = ProcessTrainLayerForward(executor, outShape, dtype, layerInput, params, hx, iOut, jOut, fOut, oOut,
+                                            hOut, cOut, tanhCOut, i, bidirectional, train, numLayers, hasBias, hyVector,
+                                            cyVector);
+        if (bidirectional == true) {
+            curInput = ProcessTrainLayerBackward(executor, outShape, dtype, layerInput, params, hx, curInput, iOut,
+                                                 jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, train,
+                                                 numLayers, hasBias, hyVector, cyVector);
+        }
+    }
+    auto outputY = curInput;
+    if (batchFirst) {
+        std::vector<int64_t> perm = {1, 0, 2};
+        auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        outputY = l0op::Transpose(curInput, valuePerm, executor);
+    }
+    auto viewCopyResultInput = l0op::ViewCopy(outputY, output, executor);
+    CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus AllocInferBackwardTensors(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                                      bool bidirectional, aclTensor*& iOutBackward, aclTensor*& jOutBackward,
+                                      aclTensor*& fOutBackward, aclTensor*& oOutBackward, aclTensor*& tanhCOutBackward)
+{
+    if (!bidirectional) {
+        return ACLNN_SUCCESS;
+    }
+    iOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(iOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    jOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(jOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    fOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(fOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    oOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(oOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    tanhCOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(tanhCOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus ProcessInferLayers(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                               const aclTensor* curInput, const aclTensorList* params, const aclTensorList* hx,
+                               int64_t numLayers, bool hasBias, bool bidirectional, bool train, bool batchFirst,
+                               aclTensor* output, aclTensor* hy, aclTensor* cy, std::vector<const aclTensor*>& hyVector,
+                               std::vector<const aclTensor*>& cyVector)
+{
+    auto iOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(iOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto jOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(jOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto fOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(fOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto oOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(oOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto tanhCOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
+    CHECK_RET(tanhCOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    aclTensor* iOutBackward = nullptr;
+    aclTensor* jOutBackward = nullptr;
+    aclTensor* fOutBackward = nullptr;
+    aclTensor* oOutBackward = nullptr;
+    aclTensor* tanhCOutBackward = nullptr;
+    aclnnStatus ret = AllocInferBackwardTensors(executor, outShape, dtype, bidirectional, iOutBackward, jOutBackward,
+                                                fOutBackward, oOutBackward, tanhCOutBackward);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
+        const aclTensor* layerInput = curInput;
+        curInput = ProcessInferLayerForward(executor, outShape, dtype, layerInput, params, hx, iOutForward, jOutForward,
+                                            fOutForward, oOutForward, tanhCOutForward, i, bidirectional, train,
+                                            numLayers, hasBias, hyVector, cyVector);
+        if (bidirectional == true) {
+            curInput = ProcessInferLayerBackward(
+                executor, outShape, dtype, layerInput, params, hx, curInput, iOutBackward, jOutBackward, fOutBackward,
+                oOutBackward, tanhCOutBackward, i, bidirectional, train, numLayers, hasBias, hyVector, cyVector);
+        }
+    }
+    auto outputY = curInput;
+    if (batchFirst) {
+        std::vector<int64_t> perm = {1, 0, 2};
+        auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+        outputY = l0op::Transpose(curInput, valuePerm, executor);
+    }
+    auto viewCopyResultInput = l0op::ViewCopy(outputY, output, executor);
+    CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, executor);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
                                       const aclTensor* batchSizes, bool hasBias, int64_t numLayers, double dropout,
                                       bool train, bool bidirectional, bool batchFirst, aclTensor* output, aclTensor* hy,
@@ -1310,199 +1609,28 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorLis
         return ACLNN_SUCCESS;
     }
 
-    // 先将tensor转为连续性,
-    // input
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-
-    // params
-    auto paramsContiguous = ProcessInputContiguous(params, uniqueExecutor.get());
-    CHECK_RET(paramsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // init_hc
-    auto hxContiguous = hx;
-    if (hx != nullptr) {
-        hxContiguous = ProcessInputContiguous(hxContiguous, uniqueExecutor.get());
-        CHECK_RET(hxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    // 输入batchFirst转换
-    auto curInput = inputContiguous;
-    if (batchFirst == true) {
-        std::vector<int64_t> perm = {1, 0, 2};
-        auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-        curInput = l0op::Transpose(inputContiguous, valuePerm, uniqueExecutor.get());
-    }
-
-    int64_t hiddenSize = output->GetViewShape().GetDim(2);
-    hiddenSize = bidirectional == true ? hiddenSize / BIDIRECTIONAL_NUM : hiddenSize;
-    op::Shape outShape = {curInput->GetViewShape().GetDim(0), curInput->GetViewShape().GetDim(1), hiddenSize};
+    LstmWorkspacePrepared prepared;
+    CHECK_RET(PrepareLstmWorkspaceInputs(input, params, hx, batchFirst, output, bidirectional, uniqueExecutor.get(),
+                                         prepared),
+              ACLNN_ERR_INNER_NULLPTR);
+    auto curInput = prepared.curInput;
+    auto outShape = prepared.outShape;
 
     std::vector<const aclTensor*> hyVector = {};
     std::vector<const aclTensor*> cyVector = {};
 
     // isTraing = True
     if (train == true) {
-        for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
-            auto yOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(yOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto iOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(iOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto jOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(jOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto fOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(fOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto oOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(oOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto hOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(hOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto cOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(cOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto tanhCOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                     op::Format::FORMAT_ND);
-            CHECK_RET(tanhCOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-            auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward,
-                                                           iOutForward, jOutForward, fOutForward, oOutForward,
-                                                           hOutForward, cOutForward, tanhCOutForward, "UNIDIRECTIONAL",
-                                                           bidirectional, train, i, hasBias, uniqueExecutor.get());
-
-            ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional,
-                            "UNIDIRECTIONAL", uniqueExecutor.get());
-            ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
-
-            if (bidirectional == true) {
-                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto iOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(iOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto jOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(jOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto fOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(fOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto oOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(oOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto hOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(hOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto cOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(cOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto tanhCOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                          op::Format::FORMAT_ND);
-                CHECK_RET(tanhCOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-                auto layerResultBackward = LstmSingleLayerDirec(
-                    curInput, paramsContiguous, hxContiguous, yOutBackward, iOutBackward, jOutBackward, fOutBackward,
-                    oOutBackward, hOutBackward, cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train,
-                    i, hasBias, uniqueExecutor.get());
-                // ConcatInput
-                op::FVector<const aclTensor*> inputConcat;
-                inputConcat.emplace_back(std::get<0>(layerResultForward));
-                inputConcat.emplace_back(std::get<0>(layerResultBackward));
-                auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, uniqueExecutor.get());
-                ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional,
-                                "REDIRECTIONAL", uniqueExecutor.get());
-                ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
-            } else {
-                curInput = std::get<0>(layerResultForward);
-            }
-        }
-
-        auto outputY = curInput;
-        if (batchFirst) {
-            std::vector<int64_t> perm = {1, 0, 2};
-            auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-            outputY = l0op::Transpose(curInput, valuePerm, uniqueExecutor.get());
-        }
-        auto viewCopyResultInput = l0op::ViewCopy(outputY, output, uniqueExecutor.get());
-        CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, uniqueExecutor.get());
+        ret = ProcessTrainLayers(uniqueExecutor.get(), outShape, input->GetDataType(), curInput,
+                                 prepared.paramsContiguous, prepared.hxContiguous, iOut, jOut, fOut, oOut, hOut, cOut,
+                                 tanhCOut, numLayers, hasBias, bidirectional, train, batchFirst, output, hy, cy,
+                                 hyVector, cyVector);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     } else {
-        auto iOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-        CHECK_RET(iOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto jOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-        CHECK_RET(jOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto fOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-        CHECK_RET(fOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto oOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-        CHECK_RET(oOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto tanhCOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-        CHECK_RET(tanhCOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        aclTensor* iOutBackward = nullptr;
-        aclTensor* jOutBackward = nullptr;
-        aclTensor* fOutBackward = nullptr;
-        aclTensor* oOutBackward = nullptr;
-        aclTensor* tanhCOutBackward = nullptr;
-
-        if (bidirectional == true) {
-            iOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(iOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            jOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(jOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            fOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(fOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            oOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(oOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            tanhCOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(tanhCOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-
-        for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
-            auto yOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(yOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto hOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(hOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto cOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
-            CHECK_RET(cOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-            auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward,
-                                                           iOutForward, jOutForward, fOutForward, oOutForward,
-                                                           hOutForward, cOutForward, tanhCOutForward, "UNIDIRECTIONAL",
-                                                           bidirectional, train, i, hasBias, uniqueExecutor.get());
-            ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
-
-            if (bidirectional == true) {
-                auto hOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(hOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto cOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(cOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
-                                                                      op::Format::FORMAT_ND);
-                CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-                auto layerResultBackward = LstmSingleLayerDirec(
-                    curInput, paramsContiguous, hxContiguous, yOutBackward, iOutBackward, jOutBackward, fOutBackward,
-                    oOutBackward, hOutBackward, cOutBackward, tanhCOutBackward, "REDIRECTIONAL", bidirectional, train,
-                    i, hasBias, uniqueExecutor.get());
-                // ConcatInput
-                op::FVector<const aclTensor*> inputConcat;
-                inputConcat.emplace_back(std::get<0>(layerResultForward));
-                inputConcat.emplace_back(std::get<0>(layerResultBackward));
-                auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, uniqueExecutor.get());
-                ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
-            } else {
-                curInput = std::get<0>(layerResultForward);
-            }
-        }
-        auto outputY = curInput;
-        if (batchFirst) {
-            std::vector<int64_t> perm = {1, 0, 2};
-            auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-            outputY = l0op::Transpose(curInput, valuePerm, uniqueExecutor.get());
-        }
-        auto viewCopyResultInput = l0op::ViewCopy(outputY, output, uniqueExecutor.get());
-        CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ProcessViewCopyOutputHC(hyVector, cyVector, hy, cy, uniqueExecutor.get());
+        ret = ProcessInferLayers(uniqueExecutor.get(), outShape, input->GetDataType(), curInput,
+                                 prepared.paramsContiguous, prepared.hxContiguous, numLayers, hasBias, bidirectional,
+                                 train, batchFirst, output, hy, cy, hyVector, cyVector);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
