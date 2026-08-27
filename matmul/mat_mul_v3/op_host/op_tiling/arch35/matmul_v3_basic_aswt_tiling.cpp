@@ -60,7 +60,9 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
     // 不支持搬运量无减少
     uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
     uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
-    if (nCnt <= compileInfo_.aicNum) {
+    bool isKInner = !args_.isATrans && args_.isBTrans;
+    bool isKAligned = isKInner && (args_.kValue * args_.aDtypeSize % BASIC_BLOCK_K_512_BYTE == 0);
+    if (!isKAligned && nCnt <= compileInfo_.aicNum) {
         return false;
     }
     // 不支持Fixp Bound多轮场景
@@ -94,7 +96,9 @@ bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
     // 不支持搬运量无减少
     uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
     uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
-    if (mCnt <= compileInfo_.aicNum) {
+    bool isKInner = !args_.isATrans && args_.isBTrans;
+    bool isKAligned = isKInner && (args_.kValue * args_.aDtypeSize % BASIC_BLOCK_K_512_BYTE == 0);
+    if (!isKAligned && mCnt <= compileInfo_.aicNum) {
         return false;
     }
     // 不超L1 Buffer
