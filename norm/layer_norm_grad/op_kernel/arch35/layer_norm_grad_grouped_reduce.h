@@ -47,7 +47,7 @@ private:
 
 private:
     __aicore__ inline void ComputeGamma(const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor,
-                                        const LocalTensor<float>& xTensor, const LocalTensor<float>& varTensor,
+                                        const LocalTensor<float>& xTensor, const LocalTensor<float>& rstdTensor,
                                         const LocalTensor<float>& meanTensor, const int64_t rowSize,
                                         const int64_t colSize);
 
@@ -227,7 +227,7 @@ private:
 
 private:
     __aicore__ inline void ComputeGamma(const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor,
-                                        const LocalTensor<float>& xTensor, const LocalTensor<float>& varTensor,
+                                        const LocalTensor<float>& xTensor, const LocalTensor<float>& rstdTensor,
                                         const LocalTensor<float>& meanTensor, const int64_t rowSize,
                                         const int64_t colSize);
 
@@ -293,7 +293,7 @@ private:
     __aicore__ inline void ComputeDx(const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor,
                                      const LocalTensor<float>& xTensor, const LocalTensor<float>& gammaTensor,
                                      const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
-                                     const LocalTensor<float>& varTensor, const int64_t rowSize, const int64_t colSize,
+                                     const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize,
                                      const int64_t stride);
     __aicore__ inline void Epilogue();
     __aicore__ inline void PostPrologue(const int64_t mi, const int64_t mfactor);

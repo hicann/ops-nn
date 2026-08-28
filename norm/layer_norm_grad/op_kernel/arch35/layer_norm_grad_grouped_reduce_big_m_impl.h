@@ -277,6 +277,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
         CopyIn(var_, varInTensorGM[offset], mfactor);
         inQueueParam.EnQue(var_);
         var_ = inQueueParam.template DeQue<float>();
+        ComputeRstdFromVar(var_, td_->epsilon, mfactor);
 
         mean_ = inQueueParam.template AllocTensor<float>();
         CopyIn(mean_, meanInTensorGM[offset], mfactor);
@@ -336,6 +337,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
         CopyIn(varFold_, varInTensorGM[offset], mfactor);
         inQueueParam.EnQue(varFold_);
         varFold_ = inQueueParam.template DeQue<float>();
+        ComputeRstdFromVar(varFold_, td_->epsilon, mfactor);
 
         LocalTensor<float> meanFold_ = inQueueParam.template AllocTensor<float>();
         CopyIn(meanFold_, meanInTensorGM[offset], mfactor);
@@ -376,7 +378,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
 template <typename T, typename PD_GAMMA_TYPE>
 __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>::ComputeGamma(
     const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-    const LocalTensor<float>& varTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
+    const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
     const int64_t colSize)
 {
     // ComputeGamma
@@ -385,7 +387,6 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
     uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colLength), static_cast<int64_t>(GetVRegSize()));
     uint32_t outerStride = td_->gammaBetaNfactorBlockAligned;
     uint32_t innerStride = static_cast<uint32_t>(GetVRegSize() / sizeof(float));
-    float epsilonTmp = td_->epsilon;
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
         {
@@ -393,17 +394,15 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
             __ubuf__ float* x = (__ubuf__ float*)xTensor.GetPhyAddr();
             __ubuf__ float* dy = (__ubuf__ float*)dyTensor.GetPhyAddr();
             __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
-            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(colSize);
             AscendC::Reg::MaskReg pMask;
             pMask = AscendC::Reg::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 AscendC::Reg::RegTensor<float> meanReg;
-                AscendC::Reg::RegTensor<float> varReg, rstdReg;
+                AscendC::Reg::RegTensor<float> rstdReg;
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
-                AscendC::Reg::MaskReg pregRstdAll1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
 
                 AscendC::Reg::RegTensor<float> xReg;
                 AscendC::Reg::RegTensor<float> dyReg;
@@ -422,15 +421,13 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMGammaBeta<T, PD_GAMMA_TYPE>
             __ubuf__ float* x = (__ubuf__ float*)xTensor.GetPhyAddr();
             __ubuf__ float* dy = (__ubuf__ float*)dyTensor.GetPhyAddr();
             __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
-            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 uint32_t count = static_cast<uint32_t>(colSize);
                 AscendC::Reg::RegTensor<float> meanReg;
-                AscendC::Reg::RegTensor<float> varReg, rstdReg;
+                AscendC::Reg::RegTensor<float> rstdReg;
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
-                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
-                AscendC::Reg::MaskReg pregRstdAll2 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
 
                 AscendC::Reg::RegTensor<float> xReg;
                 AscendC::Reg::RegTensor<float> dyReg;
@@ -634,6 +631,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::Prologue(co
     CopyIn(var_, varInTensorGM[offset], mfactor);
     inQueueParam.EnQue(var_);
     var_ = inQueueParam.template DeQue<float>();
+    ComputeRstdFromVar(var_, td_->epsilon, mfactor);
 }
 
 template <typename T, typename U>
@@ -686,7 +684,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ProcessMain
         sum2Main_ = inQueueX.template DeQue<float>();
         CastToFp32From<T>(sum2Main_, castTempTensor, mfactor, nfactor, NfactorBlockAligned);
     }
-    Normalize(sum2Main_, sum2Main_, mean_, var_, mfactor, NfactorBlockAligned, td_->epsilon);
+    NormalizeWithRstd(sum2Main_, sum2Main_, mean_, var_, mfactor, NfactorBlockAligned);
     VectorMul(sum2Main_, sum2Main_, sum1Main_, mfactor * NfactorBlockAligned);
 }
 
@@ -741,7 +739,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ProcessFold
         xFold_ = inQueueX.template DeQue<float>();
         CastToFp32From<T>(xFold_, castTempTensor, mfactor, nfactor, NfactorBlockAligned);
     }
-    Normalize(xFold_, xFold_, mean_, var_, mfactor, NfactorBlockAligned, td_->epsilon);
+    NormalizeWithRstd(xFold_, xFold_, mean_, var_, mfactor, NfactorBlockAligned);
     VectorMul(xFold_, xFold_, dyFold_, mfactor * NfactorBlockAligned);
 
     VectorAdd(sum1Main_, sum1Main_, dyFold_, mfactor, nfactor, NfactorBlockAligned);
@@ -785,7 +783,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ProcessX(co
         x_ = inQueueX.template DeQue<float>();
         CastToFp32From<T>(x_, castTempTensor, mfactor, nfactor, NfactorBlockAligned);
     }
-    Normalize(x_, x_, mean_, var_, mfactor, NfactorBlockAligned, td_->epsilon);
+    NormalizeWithRstd(x_, x_, mean_, var_, mfactor, NfactorBlockAligned);
 
     LocalTensor<float> dy_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
@@ -829,7 +827,7 @@ template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
     const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
     const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
-    const LocalTensor<float>& varTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride)
+    const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride)
 {
     // Compute Dx
     constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
@@ -840,7 +838,6 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
     uint32_t innerLoopStride = VL;
     float floatN = static_cast<float>(N);
     float reciprocalN = static_cast<float>(1) / floatN;
-    float epsilonTmp = td_->epsilon;
 
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
@@ -851,11 +848,11 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
             __ubuf__ float* gamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
             __ubuf__ float* sum1 = (__ubuf__ float*)sum1Tensor.GetPhyAddr();
             __ubuf__ float* sum2 = (__ubuf__ float*)sum2Tensor.GetPhyAddr();
-            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
 
             AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, varReg, rstdReg;
+            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
             AscendC::Reg::RegTensor<float> gammaReg;
             AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
             AscendC::Reg::MaskReg pMask;
@@ -864,9 +861,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
-                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
-                AscendC::Reg::MaskReg pregRstdAll3 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll3, epsilonTmp);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
                 LoadAlign(gammaReg, (__ubuf__ float*)gamma + 0 * innerLoopStride);
@@ -889,11 +884,11 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
             __ubuf__ float* gamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
             __ubuf__ float* sum1 = (__ubuf__ float*)sum1Tensor.GetPhyAddr();
             __ubuf__ float* sum2 = (__ubuf__ float*)sum2Tensor.GetPhyAddr();
-            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
             uint32_t count;
 
             AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, varReg, rstdReg;
+            AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
             AscendC::Reg::RegTensor<float> gammaReg;
             AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
             AscendC::Reg::MaskReg pMask;
@@ -901,9 +896,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::ComputeDx(
                 count = static_cast<uint32_t>(colSize);
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
                 LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
-                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
-                AscendC::Reg::MaskReg pregRstdAll4 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll4, epsilonTmp);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::Reg::UpdateMask<float>(count);
                     LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerLoopStride);

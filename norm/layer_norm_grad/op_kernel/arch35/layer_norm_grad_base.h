@@ -125,6 +125,12 @@ public:
     __aicore__ inline static void Normalize(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                             const LocalTensor<float>& meanTensor, const LocalTensor<float>& varTensor,
                                             const int64_t rowSize, const int64_t colSize, const float epsilon);
+    __aicore__ inline static void NormalizeWithRstd(const LocalTensor<float>& dstTensor,
+                                                    const LocalTensor<float>& srcTensor,
+                                                    const LocalTensor<float>& meanTensor,
+                                                    const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+                                                    const int64_t colSize);
+    __aicore__ inline static void ComputeRstdFromVar(LocalTensor<float>& rstdTensor, float epsilon, int64_t countIn);
     template <typename T>
     __aicore__ inline static void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
                                                        AscendC::Reg::MaskReg& preg, uint32_t offset);
@@ -880,6 +886,86 @@ __aicore__ inline void LayerNormGradBase::Normalize(const LocalTensor<float>& ds
                     StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
                 }
             }
+        }
+    }
+}
+
+__aicore__ inline void LayerNormGradBase::NormalizeWithRstd(const LocalTensor<float>& dstTensor,
+                                                            const LocalTensor<float>& srcTensor,
+                                                            const LocalTensor<float>& meanTensor,
+                                                            const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+                                                            const int64_t colSize)
+{
+    uint16_t outerLoopTimes = rowSize;
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
+    uint32_t outerLoopStride = colSize;
+    uint32_t innerLoopStride = static_cast<uint32_t>(VL_FP32);
+    if (innerLoopTimes == 1) {
+        __VEC_SCOPE__
+        {
+            __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+            __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
+            __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+            uint32_t count = static_cast<uint32_t>(colSize);
+            AscendC::Reg::MaskReg pMask = AscendC::Reg::UpdateMask<float>(count);
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + 0 * innerLoopStride);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
+                StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, cReg, pMask);
+            }
+        }
+    } else {
+        __VEC_SCOPE__
+        {
+            __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+            __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
+            __ubuf__ float* mean = (__ubuf__ float*)meanTensor.GetPhyAddr();
+            __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+            AscendC::Reg::MaskReg pMask;
+            AscendC::Reg::RegTensor<float> aReg, bReg, cReg;
+            AscendC::Reg::RegTensor<float> meanReg, rstdReg;
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                uint32_t count = static_cast<uint32_t>(colSize);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(meanReg, (__ubuf__ float*)mean + i);
+                LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(rstdReg, (__ubuf__ float*)rstd + i);
+                for (uint16_t j = 0; j < innerLoopTimes; ++j) {
+                    pMask = AscendC::Reg::UpdateMask<float>(count);
+                    LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride + j * innerLoopStride);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
+                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
+                    StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
+                }
+            }
+        }
+    }
+}
+
+__aicore__ inline void LayerNormGradBase::ComputeRstdFromVar(LocalTensor<float>& rstdTensor, float epsilon,
+                                                             int64_t countIn)
+{
+    if (countIn <= 0) {
+        return;
+    }
+    uint16_t loopTimes = CeilDiv(static_cast<int64_t>(countIn * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint32_t stride = static_cast<uint32_t>(VL_FP32);
+    uint32_t count = static_cast<uint32_t>(countIn);
+    __VEC_SCOPE__
+    {
+        __ubuf__ float* rstd = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        AscendC::Reg::RegTensor<float> varReg, rstdReg;
+        AscendC::Reg::MaskReg pMask;
+        for (uint16_t i = 0; i < loopTimes; ++i) {
+            pMask = AscendC::Reg::UpdateMask<float>(count);
+            LoadAlign(varReg, rstd + i * stride);
+            NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pMask, epsilon);
+            StoreAlign(rstd + i * stride, rstdReg, pMask);
         }
     }
 }
