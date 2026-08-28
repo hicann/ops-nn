@@ -107,6 +107,10 @@ static ge::graphStatus CheckPermForTransposeBatchMatMul(const TypedContinuousVec
                                                         const TypedContinuousVector<int64_t>& perm_x2,
                                                         const TypedContinuousVector<int64_t>& perm_y)
 {
+    constexpr size_t PERM_DIM_NUM = 3;
+    CHECK(perm_x1.GetSize() != PERM_DIM_NUM || perm_x2.GetSize() != PERM_DIM_NUM || perm_y.GetSize() != PERM_DIM_NUM,
+          CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] The dims of perm should be 3"), return ge::GRAPH_FAILED);
+
     const auto perm_x1_attr = perm_x1.GetData();
     auto check_perm_x1 = (*perm_x1_attr == 1 && *(perm_x1_attr + 1) == 0 && *(perm_x1_attr + 2) == 2) ||
                          (*perm_x1_attr == 0 && *(perm_x1_attr + 1) == 1 && *(perm_x1_attr + 2) == 2);
@@ -181,6 +185,8 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
               return ge::GRAPH_FAILED);
         auto tensor_x1 = context->GetInputDesc(0);
         auto tensor_x2 = context->GetInputDesc(1);
+        CHECK(tensor_x1 == nullptr || tensor_x2 == nullptr, CUBE_INNER_ERR_REPORT(name_op, "x1 or x2 desc is null."),
+              return ge::GRAPH_FAILED);
         ge::DataType dtype_x1 = tensor_x1->GetDataType();
         ge::DataType dtype_x2 = tensor_x2->GetDataType();
         CHECK(dtype_x1 != ge::DT_FLOAT16,

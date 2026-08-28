@@ -215,9 +215,12 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
                                 Ops::Base::ToString(shapeX2Transposed).c_str()),
           return ge::GRAPH_FAILED);
 
+    // batchSplitFactor should not be null
+    CHECK(batchSplitFactor == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] batchSplitFactor is null."),
+          return ge::GRAPH_FAILED);
     // batchSplitFactor only support 1
-    CHECK(batchSplitFactor != nullptr && *batchSplitFactor != VALID_BATCH_SPLIT_FACTOR,
-          CUBE_INNER_ERR_REPORT(nameOp, "batchSplitFactor should be 1."), return ge::GRAPH_FAILED);
+    CHECK(*batchSplitFactor != VALID_BATCH_SPLIT_FACTOR, CUBE_INNER_ERR_REPORT(nameOp, "batchSplitFactor should be 1."),
+          return ge::GRAPH_FAILED);
 
     // Set shapeY
     ge::graphStatus ret = SetShapeY(*shapeY, shapeX1Transposed, shapeX2Transposed, *permY, *batchSplitFactor);

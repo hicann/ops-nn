@@ -29,6 +29,10 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
     static const int32_t INPUT1_INDEX = 1;
     static const int32_t BIAS_INDEX = 2;
     static const int32_t SCALE_INDEX = 3;
+    if (context == nullptr) {
+        CUBE_INNER_ERR_REPORT("TransposeBatchMatMul", "context is null in GenSimplifiedKey");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGI(context->GetNodeName(), "Enter genSimplifiedKey.");
     OP_TILING_CHECK(simplifiedKey == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "simplifiedKey is null"),
                     return ge::GRAPH_FAILED);
