@@ -21,6 +21,7 @@
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
+#include "../../../op_host/op_tiling/arch35/transpose_batch_mat_mul_tiling_advanced.h"
 
 using namespace std;
 using namespace ge;
@@ -604,5 +605,98 @@ INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul910B, TransposeBatchMatMulTilingRunt
                         testing::ValuesIn(ascend910B_cases_params));
 INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul950, TransposeBatchMatMulTilingRuntime,
                         testing::ValuesIn(ascend950_cases_params));
+
+// ================== CheckScale unit tests ==================
+// CheckScale is a protected method of TransposeBatchMatMulTiling, made accessible
+// via the `protected public` macro in kernel_run_context_facker.h.
+using optiling::transpose_batch_mat_mul_advanced::TransposeBatchMatMulTiling;
+
+namespace {
+
+// Build a TilingContext for TransposeBatchMatMul with given shapes, dtypes and batchSplitFactor.
+// Returns the context via holder (holder must outlive the context).
+struct CheckScaleContext {
+    gert::KernelRunContextHolder holder;
+    gert::TilingContext* ctx = nullptr;
+    std::vector<gert::StorageShape> outShapes;
+    optiling::MatmulV3CompileInfo compileInfo;
+    std::unique_ptr<unsigned char[]> tilingData;
+    std::unique_ptr<unsigned char[]> wsSize;
+
+    CheckScaleContext(const std::initializer_list<int64_t>& x1Shape, const std::initializer_list<int64_t>& x2Shape,
+                      const std::initializer_list<int64_t>& yShape, ge::DataType dtype = DT_FLOAT16,
+                      int64_t batchSplitFactor = 1)
+        : tilingData(gert::TilingData::CreateCap(2048)), wsSize(gert::ContinuousVector::Create<size_t>(4096))
+    {
+        gert::StorageShape x1ShapeSs = {x1Shape, x1Shape};
+        gert::StorageShape x2ShapeSs = {x2Shape, x2Shape};
+        outShapes.emplace_back(yShape, yShape);
+        std::vector<void*> outShapeRefs = {static_cast<void*>(&outShapes[0])};
+
+        fe::PlatFormInfos platformInfo;
+        platformInfo.Init();
+
+        holder = gert::TilingContextFaker()
+                     .SetOpType("TransposeBatchMatMul")
+                     .NodeIoNum(2, 1)
+                     .IrInstanceNum({1, 1})
+                     .InputShapes({&x1ShapeSs, &x2ShapeSs})
+                     .OutputShapes(outShapeRefs)
+                     .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2})},
+                                 {"perm_x2", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 1, 2})},
+                                 {"perm_y", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2})},
+                                 {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(batchSplitFactor)}})
+                     .NodeInputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeInputTd(1, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeOutputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .CompileInfo(&compileInfo)
+                     .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                     .TilingData(tilingData.get())
+                     .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsSize.get()))
+                     .Build();
+        ctx = holder.GetContext<gert::TilingContext>();
+    }
+};
+
+} // namespace
+
+TEST(TransposeBatchMatMulCheckScaleTest, ScalePassFp16)
+{
+    CheckScaleContext c({2, 128, 256}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16, 1);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    tiling.args_.opName = "TransposeBatchMatMul";
+    // bPerm = [0,1,2], so b = bShape[0] = 2, n = bShape[2] = 256, b*n = 512
+    gert::Shape scaleShape{512, 1};
+    EXPECT_EQ(tiling.CheckScale(scaleShape), ge::GRAPH_SUCCESS);
+}
+
+TEST(TransposeBatchMatMulCheckScaleTest, ScaleBatchSplitFactorNotOne)
+{
+    CheckScaleContext c({2, 128, 256}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16, 2);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    tiling.args_.opName = "TransposeBatchMatMul";
+    gert::Shape scaleShape{512, 1};
+    EXPECT_EQ(tiling.CheckScale(scaleShape), ge::GRAPH_FAILED);
+}
+
+TEST(TransposeBatchMatMulCheckScaleTest, ScaleShapeMismatch)
+{
+    CheckScaleContext c({2, 128, 256}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16, 1);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    tiling.args_.opName = "TransposeBatchMatMul";
+    // b*n = 512, but scale dim0 = 256 -> mismatch
+    gert::Shape scaleShape{256, 1};
+    EXPECT_EQ(tiling.CheckScale(scaleShape), ge::GRAPH_FAILED);
+}
+
+TEST(TransposeBatchMatMulCheckScaleTest, ScaleNonFp16)
+{
+    CheckScaleContext c({2, 128, 256}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT, 1);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    tiling.args_.opName = "TransposeBatchMatMul";
+    gert::Shape scaleShape{512, 1};
+    EXPECT_EQ(tiling.CheckScale(scaleShape), ge::GRAPH_FAILED);
+}
 
 } // namespace
