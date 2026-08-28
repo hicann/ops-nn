@@ -695,7 +695,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>Softplus激活函数，当beta与x的乘积不超过threshold时输出(1/beta)×log(1+exp(beta×x))，否则直接输出x。</td>
   </tr>
   <tr>
     <td>activation</td>
