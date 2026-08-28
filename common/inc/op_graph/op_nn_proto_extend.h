@@ -1189,111 +1189,113 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv3D)
 
-    /**
-    *@brief Computes the transpose of convolution 2d with respect to the input.
-    *@par Inputs:
-        * Five inputs:
-        * @li input_size: A Tensor of type int32 or int64. An integer vector
-        * representing the shape of input, where input is a 4-D tensor
-        * [batch, height, width, channels] or [batch, channels, height, width].
-        * @li x: A Tensor of type int8, float16, bfloat16. 4-D with shape [batch,
-        * out_height, out_width, out_channels] or [batch, out_channels, out_height,
-        * out_width].
-        * @li filter: A Tensor of type int8, float16, bfloat16. Must have the same
-        * type as "x".
-        * 4-D with shape [filter_height, filter_width, in_channels, out_channels].
-        * or [out_channels, filter_height, filter_width, in_channels].
-        * or [out_channels, in_channel, filter_height, filter_width].
-        * @li bias: An optional 1D tensor of type float16, float32, int32.
-        *  Format is "ND".
-        * @li offset_w: An optional 1D tensor of type int8 for quantized inference. Reserved.
-        *\n
-        *\n
-        * The following are the supported data types and data formats:\n
-        *\n
-        *\n
-        | Tensor    | x       | filter  | bias    | y      |\n
-        |-----------|---------|---------|---------|--------|\n
-        | Data Type | float16 | float16 | float16 | float16 |\n
-        |           | bfloat16| bfloat16| float32 | bfloat16|\n
-        |           | float16 | float16 | float32 | float32 |\n
-        |           | float32 | float32 | float32 | float32 |\n
-        |           | int8    | int8    | int32    | int32   |\n
-        | Format    | NCHW    | NCHW    | ND      | NCHW    |\n
-        |           | NHWC    | HWCN    | ND      | NHWC    |\n
-        *\n
-        * int8 for x and filter is not supported in 1971.
-        * When input x and filter is int8, a dequant or requant operator must be followed.
-        *
-    *@par Attributes:
-        * @li strides: A required tuple/list of 4 integers. The stride of the sliding
-        * window for H/W dimension. The index of H/W is the same as data_format.
-        * @li pads: A required tuple/list of 4 integers, [top, bottom, left, right]
-        * pads on feature map.
-        * @li groups: An optional integer of blocked connections from input channels to output
-        * channels. Defaults to "1".
-        * @li dilations: An optional tuple/list of 4 integers, The dilation factor for each
-        * dimension of input. The value of N/C dimensions must be 1. Must be with shape
-        * [1, 1, dilation_height, dilation_width] or [1, dilation_height, dilation_width, 1].
-        * Defaults to [1, 1, 1, 1].
-        * @li data_format: An optional string from: "NHWC", "NCHW".
-        * Defaults to "NHWC". Specify the data format of the input and output data.
-        * @li output_padding: An optional tuple/list of integers. The size will be added
-        * in the output shape. The value of N/C dimensions must be 1. Defaults to [0, 0, 0, 0].
-        * @li offset_x: An optional int. Input offset, used for quantized inference.
-        * The negative offset added to the input image for int8 type. Ensure offset_x
-        * within the effective range of int8 [-128, 127]. Defaults to "0".
-        *\n
-        *\n
-        * The following value range restrictions must be met:\n
-        *\n
-        *\n
-        | Name             | Field    | Scope        |\n
-        |------------------|----------|--------------|\n
-        | input_size       | H        | [1, 4096]    |\n
-        |                  | W        | [1, 4096]    |\n
-        | x (out_backprop) | H*strideH| [1, 4096]    |\n
-        |                  | W*strideW| [1, 4096]    |\n
-        | filter           | H        | [1, 255]     |\n
-        |                  | W        | [1, 255]     |\n
-        | y (fmap)         | H        | [1, 4096]    |\n
-        |                  | W        | [1, 4096]    |\n
-        | strides          | H        | [1, 63]      |\n
-        |                  | W        | [1, 63]      |\n
-        | pads             | Top      | [0, 255]     |\n
-        |                  | Bottom   | [0, 255]     |\n
-        |                  | Left     | [0, 255]     |\n
-        |                  | Right    | [0, 255]     |\n
-        | groups           |          | [1, 65535]   |\n
-        | dilations        | H        | [1, 255]     |\n
-        |                  | W        | [1, 255]     |\n
-        | output_padding   | N        | [0, 0]       |\n
-        |                  | C        | [0, 0]       |\n
-        |                  | H        | [0, 4096]    |\n
-        |                  | W        | [0, 4096]    |\n
-        | Offset_x         |          | [-128, 127]  |\n
-        *\n
-        * In Atlas Training Series Product, fmap or out_backprop's H and W not support 1 when\n
-        * fmap_h + pad_top + pad_bottom != (filter_height - 1) * dilation_h + 1
-        * and filter_width > fmap_width.
-        * If filter_h = 1 and filter_w = 1, out_backprop_w * stride_h * stride_w
-        *  < 4096. \n
-        *
-    *@par Outputs:
-        * y: A Tensor. A Tensor of type float16, bfloat16, float32, int32, and has
-        *  same format as input_size.
-        *\n
-        *     out_backprop_height = (fmap_height + pad_top + pad_bottom -
-        *                           (dilation_h * (filter_height - 1) + 1) - output_padding_height)
-        *                           / stride_h + 1
-        *\n
-        *     out_backprop_width = (fmap_width + pad_left + pad_right -
-        *                          (dilation_w * (filter_width - 1) + 1) - output_padding_width)
-        *                          / stride_w + 1
-        *\n
-        *
-    */
-    REG_OP(Conv2DTranspose)
+/**
+*@brief Computes the transpose of convolution 2d with respect to the input.
+*@par Inputs:
+    * Five inputs:
+    * @li input_size: A Tensor of type int32 or int64. An integer vector
+    * representing the shape of input, where input is a 4-D tensor
+    * [batch, height, width, channels] or [batch, channels, height, width].
+    * @li x: A Tensor of type int8, float16, bfloat16. 4-D with shape [batch,
+    * out_height, out_width, out_channels] or [batch, out_channels, out_height,
+    * out_width].
+    * @li filter: A Tensor of type int8, float16, bfloat16. Must have the same
+    * type as "x".
+    * 4-D with shape [filter_height, filter_width, in_channels, out_channels].
+    * or [out_channels, filter_height, filter_width, in_channels].
+    * or [out_channels, in_channel, filter_height, filter_width].
+    * @li bias: An optional 1D tensor of type float16, float32, int32.
+    *  Format is "ND".
+    * @li offset_w: An optional 1D tensor of type int8 for quantized inference. Reserved.
+    *\n
+    *\n
+    * The following are the supported data types and data formats:\n
+    *\n
+    *\n
+    | Tensor    | x       | filter  | bias    | y      |\n
+    |-----------|---------|---------|---------|--------|\n
+    | Data Type | float16 | float16 | float16 | float16 |\n
+    |           | bfloat16| bfloat16| float32 | bfloat16|\n
+    |           | float16 | float16 | float32 | float32 |\n
+    |           | float32 | float32 | float32 | float32 |\n
+    |           | int8    | int8    | int32    | int32   |\n
+    | Format    | NCHW    | NCHW    | ND      | NCHW    |\n
+    |           | NHWC    | HWCN    | ND      | NHWC    |\n
+    *\n
+    * int8 for x and filter is not supported in 1971.
+    * When input x and filter is int8, a dequant or requant operator must be followed.
+    *
+*@par Attributes:
+    * @li strides: A required tuple/list of 4 integers. The stride of the sliding
+    * window for H/W dimension. The index of H/W is the same as data_format.
+    * @li pads: A required tuple/list of 4 integers, [top, bottom, left, right]
+    * pads on feature map.
+    * @li groups: An optional integer of blocked connections from input channels to output
+    * channels. Defaults to "1".
+    * @li dilations: An optional tuple/list of 4 integers, The dilation factor for each
+    * dimension of input. The value of N/C dimensions must be 1. Must be with shape
+    * [1, 1, dilation_height, dilation_width] or [1, dilation_height, dilation_width, 1].
+    * Defaults to [1, 1, 1, 1].
+    * @li data_format: An optional string from: "NHWC", "NCHW".
+    * Defaults to "NHWC". Specify the data format of the input and output data.
+    * @li output_padding: An optional tuple/list of integers. The size will be added
+    * in the output shape. The value of N/C dimensions must be 1. Defaults to [0, 0, 0, 0].
+    * @li offset_x: An optional int. Input offset, used for quantized inference.
+    * The negative offset added to the input image for int8 type. Ensure offset_x
+    * within the effective range of int8 [-128, 127]. Defaults to "0".
+    *\n
+    *\n
+    * The following value range restrictions must be met:\n
+    *\n
+    *\n
+    | Name             | Field    | Scope        |\n
+    |------------------|----------|--------------|\n
+    | input_size       | H        | [1, 4096]    |\n
+    |                  | W        | [1, 4096]    |\n
+    | x (out_backprop) | H*strideH| [1, 4096]    |\n
+    |                  | W*strideW| [1, 4096]    |\n
+    | filter           | H        | [1, 255]     |\n
+    |                  | W        | [1, 255]     |\n
+    | y (fmap)         | H        | [1, 4096]    |\n
+    |                  | W        | [1, 4096]    |\n
+    | strides          | H        | [1, 63]      |\n
+    |                  | W        | [1, 63]      |\n
+    | pads             | Top      | [0, 255]     |\n
+    |                  | Bottom   | [0, 255]     |\n
+    |                  | Left     | [0, 255]     |\n
+    |                  | Right    | [0, 255]     |\n
+    | groups           |          | [1, 65535]   |\n
+    | dilations        | H        | [1, 255]     |\n
+    |                  | W        | [1, 255]     |\n
+    | output_padding   | N        | [0, 0]       |\n
+    |                  | C        | [0, 0]       |\n
+    |                  | H        | [0, 4096]    |\n
+    |                  | W        | [0, 4096]    |\n
+    | Offset_x         |          | [-128, 127]  |\n
+    *\n
+    * In Atlas Training Series Product, fmap or out_backprop's H and W not support 1 when\n
+    * fmap_h + pad_top + pad_bottom != (filter_height - 1) * dilation_h + 1
+    * and filter_width > fmap_width.
+    * If filter_h = 1 and filter_w = 1, out_backprop_w * stride_h * stride_w
+    *  < 4096. \n
+    *
+*@par Outputs:
+    * y: A Tensor. A Tensor of type float16, bfloat16, float32, int32, and has
+    *  same format as input_size.
+    *\n
+    *     out_backprop_height = (fmap_height + pad_top + pad_bottom -
+    *                           (dilation_h * (filter_height - 1) + 1) - output_padding_height)
+    *                           / stride_h + 1
+    *\n
+    *     out_backprop_width = (fmap_width + pad_left + pad_right -
+    *                          (dilation_w * (filter_width - 1) + 1) - output_padding_width)
+    *                          / stride_w + 1
+    *\n
+    *
+*/
+#ifndef OPS_PROTO_DEF_CONV2DTRANSPOSE
+#define OPS_PROTO_DEF_CONV2DTRANSPOSE
+        REG_OP(Conv2DTranspose)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_INT8, DT_BF16}))
     .INPUT(filter, TensorType({DT_FLOAT16, DT_INT8, DT_BF16}))
@@ -1308,72 +1310,75 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(output_padding, ListInt, {0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv2DTranspose)
+#endif
 
-    /**
-    *@brief Computes the transpose of convolution 3d with respect to the input.
+/**
+*@brief Computes the transpose of convolution 3d with respect to the input.
 
-    *@par Inputs:
-        * @li input_size: A Tensor of type int32 or int64. An integer vector
-        * representing the shape of input.
-        * Any value of input_size must be in [1, 2147483647].
-        * @li x: A Tensor of type float16 or bfloat16. The format
-        * is NDHWC or NCDHW.
-        * @li filter: A Tensor of type float16 or bfloat16, currently does not support int8.
-        * The format is NDHWC, NCDHW or DHWCN.
-        * height (H) and width (W) dimensions must be in [1, 511].
-        * The other dimensions of filter shape must be in [1, 2147483647].
-        * @li bias: Optional. An optional 1D tensor of type float16 and float32. When x
-        * is float16, bias is float16. When x is bfloat16, bias is float32.
-        * Currently bias is not supported on Atlas 200/500 A2 Inference Product and
-        * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
-    Reserved.
-        * @li offset_w: Optional. An optional 1D tensor for quantized deconvolution.
-        * Currently offset_w is not supported on Atlas 200/500 A2 Inference Product and
-        * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
-    Reserved.
+*@par Inputs:
+    * @li input_size: A Tensor of type int32 or int64. An integer vector
+    * representing the shape of input.
+    * Any value of input_size must be in [1, 2147483647].
+    * @li x: A Tensor of type float16 or bfloat16. The format
+    * is NDHWC or NCDHW.
+    * @li filter: A Tensor of type float16 or bfloat16, currently does not support int8.
+    * The format is NDHWC, NCDHW or DHWCN.
+    * height (H) and width (W) dimensions must be in [1, 511].
+    * The other dimensions of filter shape must be in [1, 2147483647].
+    * @li bias: Optional. An optional 1D tensor of type float16 and float32. When x
+    * is float16, bias is float16. When x is bfloat16, bias is float32.
+    * Currently bias is not supported on Atlas 200/500 A2 Inference Product and
+    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+Reserved.
+    * @li offset_w: Optional. An optional 1D tensor for quantized deconvolution.
+    * Currently offset_w is not supported on Atlas 200/500 A2 Inference Product and
+    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+Reserved.
 
-    *@par Attributes:
-        * @li strides: Required. A tuple/list of 5 integers. Specifies the stride of
-        * the sliding window for each dimension of "x".
-        * Has the same format as "x".
-        * The batch(N) and channels(C) must be 1.
-        * The other values of strides must be in [1, 2147483647].
-        * @li pads: Required. A tuple/list of 6 integers.
-        * [front, back, top, bottom, left, right] pads on feature map.
-        * The top, bottom, left and right must be in [0, 255].
-        * The front and back must be in [0, 2147483647].
-        * @li dilations: Optional. A tuple/list of 5 integers,
-        * The dilation factor for each dimension of input.
-        * Has the same format as "x".
-        * The batch(N) and channel(C) must be 1.
-        * The depth(D), height(H) and width(W) must be in [1, 255].
-        * In graph mode, only configuration to [1, 1, 1, 1, 1] is supported.
-        * @li groups: Optional. Number of blocked connections from input channels to
-        *  output channels. Defaults to 1.
-        * The value of groups must be in [1, 65535].
-        * @li data_format: Optional. A string from: "NDHWC", "NCDHW".
-        * Defaults to "NDHWC". Specify the data format of the input and output data.
-        * @li output_padding: Optional. The size will be added in the output shape.
-        * Defaults to [0, 0, 0, 0, 0].
-        * Currently output_padding is not supported on Atlas 200/500 A2 Inference Product and
-        * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
-        * In graph mode, only configuration to [0, 0, 0, 0, 0] is supported.
-        * @li offset_x: Optional. Input offset_x value. Defaults to 0.
-        * Currently offset_x is not supported on Atlas 200/500 A2 Inference Product and
-        * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
-    Reserved.
+*@par Attributes:
+    * @li strides: Required. A tuple/list of 5 integers. Specifies the stride of
+    * the sliding window for each dimension of "x".
+    * Has the same format as "x".
+    * The batch(N) and channels(C) must be 1.
+    * The other values of strides must be in [1, 2147483647].
+    * @li pads: Required. A tuple/list of 6 integers.
+    * [front, back, top, bottom, left, right] pads on feature map.
+    * The top, bottom, left and right must be in [0, 255].
+    * The front and back must be in [0, 2147483647].
+    * @li dilations: Optional. A tuple/list of 5 integers,
+    * The dilation factor for each dimension of input.
+    * Has the same format as "x".
+    * The batch(N) and channel(C) must be 1.
+    * The depth(D), height(H) and width(W) must be in [1, 255].
+    * In graph mode, only configuration to [1, 1, 1, 1, 1] is supported.
+    * @li groups: Optional. Number of blocked connections from input channels to
+    *  output channels. Defaults to 1.
+    * The value of groups must be in [1, 65535].
+    * @li data_format: Optional. A string from: "NDHWC", "NCDHW".
+    * Defaults to "NDHWC". Specify the data format of the input and output data.
+    * @li output_padding: Optional. The size will be added in the output shape.
+    * Defaults to [0, 0, 0, 0, 0].
+    * Currently output_padding is not supported on Atlas 200/500 A2 Inference Product and
+    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+    * In graph mode, only configuration to [0, 0, 0, 0, 0] is supported.
+    * @li offset_x: Optional. Input offset_x value. Defaults to 0.
+    * Currently offset_x is not supported on Atlas 200/500 A2 Inference Product and
+    * Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component.
+Reserved.
 
-    *@par Outputs:
-        * y: A Tensor. Has the same format as "x", has the type float16, float32, bfloat16.
-        * Any dimension of y shape must be in [1, 2147483647].
+*@par Outputs:
+    * y: A Tensor. Has the same format as "x", has the type float16, float32, bfloat16.
+    * Any dimension of y shape must be in [1, 2147483647].
 
-    *@attention Constraints:\n
-        * Due to hardware resource restrictions,
-        * the operator fails to be executed in scenarios of some parameter value combinations.
-        * Analyze and rectify the fault based on the log information.
-        * If the fault persists, visit https://www.hiascend.com/support for technical support.
-    */
-    REG_OP(Conv3DTranspose)
+*@attention Constraints:\n
+    * Due to hardware resource restrictions,
+    * the operator fails to be executed in scenarios of some parameter value combinations.
+    * Analyze and rectify the fault based on the log information.
+    * If the fault persists, visit https://www.hiascend.com/support for technical support.
+*/
+#ifndef OPS_PROTO_DEF_CONV3DTRANSPOSE
+#define OPS_PROTO_DEF_CONV3DTRANSPOSE
+        REG_OP(Conv3DTranspose)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(filter, TensorType({DT_FLOAT16, DT_BF16}))
@@ -1388,6 +1393,7 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(output_padding, ListInt, {0, 0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv3DTranspose)
+#endif
 
     /**
     *@brief Computes reciprocal of square root of "x" element-wise: y = 1/sqrt{x}.
