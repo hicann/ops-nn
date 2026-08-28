@@ -1203,23 +1203,47 @@ Conv3DBpFilterV2TilingTestParam milan_binary_params[] =
          "16 16 16 1 1 4 4 1 16384 0 1 1 256 16 1 0 16 0 1 20 256 64 256 0 2 4 "},
 };
 
-static void ThreadFunc(const Conv3DBpFilterV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
-                       size_t thread_num)
+static std::string GetPlatformConfigKey(const std::string& compile_info)
 {
-    for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
-        TestOneParamCase(params[idx]);
+    try {
+        auto j = nlohmann::json::parse(compile_info);
+        std::string key;
+        if (j.contains("hardware_info")) {
+            key += j["hardware_info"].dump();
+        }
+        if (j.contains("block_dim")) {
+            key += j["block_dim"].dump();
+        }
+        return key;
+    } catch (...) {
+        return compile_info;
     }
 }
 
 static void TestMultiThread(const Conv3DBpFilterV2TilingTestParam* params, size_t testcase_num, size_t thread_num)
 {
-    std::thread threads[thread_num];
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num);
+    if (thread_num == 0) {
+        return;
+    }
+    std::map<std::string, std::vector<size_t>> config_groups;
+    for (size_t i = 0; i < testcase_num; ++i) {
+        config_groups[GetPlatformConfigKey(params[i].compile_info)].push_back(i);
     }
 
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx].join();
+    for (const auto& kv : config_groups) {
+        const auto& indices = kv.second;
+        std::vector<std::thread> threads;
+        threads.reserve(thread_num);
+        for (size_t t = 0; t < thread_num; ++t) {
+            threads.emplace_back([&indices, params, t, thread_num]() {
+                for (size_t i = t; i < indices.size(); i += thread_num) {
+                    TestOneParamCase(params[indices[i]]);
+                }
+            });
+        }
+        for (auto& thread : threads) {
+            thread.join();
+        }
     }
 }
 

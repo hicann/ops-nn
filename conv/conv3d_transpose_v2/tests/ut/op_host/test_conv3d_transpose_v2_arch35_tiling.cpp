@@ -658,23 +658,30 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      ""},
 };
 
-static void ThreadFunc(const Conv3DTransposeV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
-                       size_t thread_num)
-{
-    for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
-        TestOneParamCase(params[idx]);
-    }
-}
-
 static void TestMultiThread(const Conv3DTransposeV2TilingTestParam* params, size_t testcase_num, size_t thread_num)
 {
-    std::thread threads[thread_num];
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num);
+    if (thread_num == 0) {
+        return;
+    }
+    std::map<std::string, std::vector<size_t>> config_groups;
+    for (size_t i = 0; i < testcase_num; ++i) {
+        config_groups[params[i].soc_version + "|" + params[i].short_soc_version].push_back(i);
     }
 
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx].join();
+    for (const auto& kv : config_groups) {
+        const auto& indices = kv.second;
+        std::vector<std::thread> threads;
+        threads.reserve(thread_num);
+        for (size_t t = 0; t < thread_num; ++t) {
+            threads.emplace_back([&indices, params, t, thread_num]() {
+                for (size_t i = t; i < indices.size(); i += thread_num) {
+                    TestOneParamCase(params[indices[i]]);
+                }
+            });
+        }
+        for (auto& thread : threads) {
+            thread.join();
+        }
     }
 }
 

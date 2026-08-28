@@ -292,24 +292,53 @@ static WeightQuantBatchMatmulV2TilingMsdGroupTestParam casesParams2448[] = {
 
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatchMatmulV2TilingMsdGroup, testing::ValuesIn(casesParams2448));
 
-static void ThreadFunc(const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num,
-                       size_t thread_idx, size_t thread_num)
+static std::string GetPlatformConfigKey(const WeightQuantBatchMatmulV2TilingMsdGroupTestParam& param)
 {
-    for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
-        TestOneParamCase(params[idx]);
+    std::vector<string> testParam;
+    SplitStr2Vec(param.caseName.substr(param.caseName.find_first_of('_') + 1), "_", testParam);
+    uint32_t aicNum = 24;
+    uint32_t aivNum = 48;
+    if (testParam.size() >= 16) {
+        try {
+            aicNum = stoul(testParam[14]);
+            aivNum = stoul(testParam[15]);
+        } catch (const std::exception&) {
+            aicNum = 24;
+            aivNum = 48;
+        }
     }
+    std::string key = std::to_string(aicNum) + "_" + std::to_string(aivNum);
+    if (testParam.size() >= 17) {
+        key += "_" + testParam[16];
+    }
+    return key;
 }
 
 static void TestMultiThread(const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num,
                             size_t thread_num)
 {
-    std::thread threads[thread_num];
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num);
+    if (thread_num == 0) {
+        return;
+    }
+    std::map<std::string, std::vector<size_t>> config_groups;
+    for (size_t i = 0; i < testcase_num; ++i) {
+        config_groups[GetPlatformConfigKey(params[i])].push_back(i);
     }
 
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx].join();
+    for (const auto& kv : config_groups) {
+        const auto& indices = kv.second;
+        std::vector<std::thread> threads;
+        threads.reserve(thread_num);
+        for (size_t t = 0; t < thread_num; ++t) {
+            threads.emplace_back([&indices, params, t, thread_num]() {
+                for (size_t i = t; i < indices.size(); i += thread_num) {
+                    TestOneParamCase(params[indices[i]]);
+                }
+            });
+        }
+        for (auto& thread : threads) {
+            thread.join();
+        }
     }
 }
 
