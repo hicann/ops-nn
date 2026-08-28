@@ -53,6 +53,18 @@ TEST(BNTrainingReduceInferShapeTest, SupportsNchw)
     EXPECT_EQ(squareSumShape.GetDim(0), 3);
 }
 
+TEST(BNTrainingReduceInferShapeTest, SupportsNchwRank2)
+{
+    gert::Shape inputShape = {4, 3};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 1U);
+    EXPECT_EQ(sumShape.GetDim(0), 3);
+    EXPECT_EQ(squareSumShape.GetDim(0), 3);
+}
+
 TEST(BNTrainingReduceInferShapeTest, SupportsNhwc)
 {
     gert::Shape inputShape = {2, 4, 5, 3};
@@ -65,6 +77,18 @@ TEST(BNTrainingReduceInferShapeTest, SupportsNhwc)
     EXPECT_EQ(squareSumShape.GetDim(0), 3);
 }
 
+TEST(BNTrainingReduceInferShapeTest, SupportsNcdhw)
+{
+    gert::Shape inputShape = {2, 3, 4, 5, 6};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCDHW, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 1U);
+    EXPECT_EQ(sumShape.GetDim(0), 3);
+    EXPECT_EQ(squareSumShape.GetDim(0), 3);
+}
+
 TEST(BNTrainingReduceInferShapeTest, RejectsNd)
 {
     gert::Shape inputShape = {2, 3, 4, 5};
@@ -72,6 +96,33 @@ TEST(BNTrainingReduceInferShapeTest, RejectsNd)
     gert::Shape squareSumShape;
 
     EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_ND, sumShape, squareSumShape), ge::GRAPH_FAILED);
+}
+
+TEST(BNTrainingReduceInferShapeTest, RejectsNdc1hwc0OnAscend950)
+{
+    gert::Shape inputShape = {2, 1, 3, 4, 5, 16};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NDC1HWC0, sumShape, squareSumShape), ge::GRAPH_FAILED);
+}
+
+TEST(BNTrainingReduceInferShapeTest, RejectsWrongRankForNhwc)
+{
+    gert::Shape inputShape = {2, 4, 3};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NHWC, sumShape, squareSumShape), ge::GRAPH_FAILED);
+}
+
+TEST(BNTrainingReduceInferShapeTest, RejectsWrongRankForNcdhw)
+{
+    gert::Shape inputShape = {2, 3, 4, 5};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NCDHW, sumShape, squareSumShape), ge::GRAPH_FAILED);
 }
 
 } // namespace

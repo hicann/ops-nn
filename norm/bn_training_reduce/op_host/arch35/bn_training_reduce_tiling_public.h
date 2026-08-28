@@ -32,6 +32,7 @@ enum class BNTrainingReducePublicStatus : int32_t {
 enum class BNTrainingReducePublicFormat : int32_t {
     NCHW = 0,
     NHWC,
+    NCDHW,
 };
 
 enum class BNTrainingReducePublicDType : int32_t {
@@ -61,7 +62,7 @@ enum class BNTrainingReduceTilingKey : int64_t {
 struct BNTrainingReducePublicInputs {
     bool inputPresent = true;
     int32_t rank = 4;
-    std::array<int64_t, 4> shape = {1, 1, 1, 1};
+    std::array<int64_t, 5> shape = {1, 1, 1, 1, 1};
     BNTrainingReducePublicFormat format = BNTrainingReducePublicFormat::NCHW;
     BNTrainingReducePublicDType inputDtype = BNTrainingReducePublicDType::FLOAT32;
 
@@ -89,6 +90,8 @@ struct BNTrainingReducePublicResult {
     int32_t scheduleMode = -1;
     BNTrainingReduceTilingData tilingData = {};
 };
+
+BNTrainingReducePublicStatus ValidateBNTrainingReducePublicInputs(const BNTrainingReducePublicInputs& inputs);
 
 // Side-effect-free Host Tiling implementation used by the runtime glue.
 BNTrainingReducePublicResult ComputeBNTrainingReducePublicTiling(const BNTrainingReducePublicInputs& inputs);

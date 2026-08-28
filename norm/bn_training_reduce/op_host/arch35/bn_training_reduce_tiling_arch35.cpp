@@ -137,7 +137,7 @@ BNTrainingReducePublicDType ConvertDType(ge::DataType dtype)
     }
 }
 
-bool NormalizeOutputShape(const gert::Shape& outputShape, BNTrainingReducePublicFormat format, int32_t& rank,
+bool NormalizeOutputShape(const gert::Shape& outputShape, const BNTrainingReducePublicInputs& inputs, int32_t& rank,
                           int64_t& channel)
 {
     const size_t outputRank = outputShape.GetDimNum();
@@ -147,16 +147,20 @@ bool NormalizeOutputShape(const gert::Shape& outputShape, BNTrainingReducePublic
 
     rank = static_cast<int32_t>(outputRank);
     channel = rank == 1 ? outputShape.GetDim(0) : 0;
-    // ACLNN expands the public one-dimensional output to the input layout
-    // before the AICore launch and squeezes it back afterwards.
-    const bool isNchwOutput = format == BNTrainingReducePublicFormat::NCHW && rank == 4 && outputShape.GetDim(0) == 1 &&
-                              outputShape.GetDim(2) == 1 && outputShape.GetDim(3) == 1;
-    const bool isNhwcOutput = format == BNTrainingReducePublicFormat::NHWC && rank == 4 && outputShape.GetDim(0) == 1 &&
-                              outputShape.GetDim(1) == 1 && outputShape.GetDim(2) == 1;
-    if (isNchwOutput || isNhwcOutput) {
-        rank = 1;
-        channel = outputShape.GetDim(format == BNTrainingReducePublicFormat::NCHW ? 1 : 3);
+    if (rank == 1 || rank != inputs.rank) {
+        return true;
     }
+
+    // ACLNN expands its one-dimensional NCHW output before the AICore launch.
+    // GE may likewise retain the input format metadata on an expanded output.
+    const size_t channelIndex = inputs.format == BNTrainingReducePublicFormat::NHWC ? 3U : 1U;
+    for (size_t i = 0; i < outputRank; ++i) {
+        if (i != channelIndex && outputShape.GetDim(i) != 1) {
+            return true;
+        }
+    }
+    rank = 1;
+    channel = outputShape.GetDim(channelIndex);
     return true;
 }
 
@@ -175,18 +179,23 @@ bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePubli
         return false;
     }
     inputs.rank = static_cast<int32_t>(inputRank);
-    if (inputs.rank == 4) {
-        for (size_t i = 0; i < inputs.shape.size(); ++i) {
-            inputs.shape[i] = xShape.GetDim(i);
-        }
+    if (inputRank > inputs.shape.size()) {
+        OP_LOGE(context, "BNTrainingReduce input rank must not exceed %zu, but got %zu.", inputs.shape.size(),
+                inputRank);
+        return false;
+    }
+    for (size_t i = 0; i < inputRank; ++i) {
+        inputs.shape[i] = xShape.GetDim(i);
     }
     const ge::Format storageFormat = inputDesc->GetStorageFormat();
     if (storageFormat == ge::FORMAT_NCHW) {
         inputs.format = BNTrainingReducePublicFormat::NCHW;
     } else if (storageFormat == ge::FORMAT_NHWC) {
         inputs.format = BNTrainingReducePublicFormat::NHWC;
+    } else if (storageFormat == ge::FORMAT_NCDHW) {
+        inputs.format = BNTrainingReducePublicFormat::NCDHW;
     } else {
-        OP_LOGE(context, "BNTrainingReduce only supports NCHW and NHWC, but got format %d.",
+        OP_LOGE(context, "BNTrainingReduce on Ascend 950 only supports NCHW, NHWC and NCDHW, but got format %d.",
                 static_cast<int32_t>(storageFormat));
         return false;
     }
@@ -199,14 +208,18 @@ bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePubli
     if (sumShape == nullptr || squareSumShape == nullptr || sumDesc == nullptr || squareSumDesc == nullptr) {
         return false;
     }
+    if (sumDesc->GetStorageFormat() != storageFormat || squareSumDesc->GetStorageFormat() != storageFormat) {
+        OP_LOGE(context, "BNTrainingReduce GE outputs must use the same format as x.");
+        return false;
+    }
 
     const auto& sumStorageShape = sumShape->GetStorageShape();
-    if (!NormalizeOutputShape(sumStorageShape, inputs.format, inputs.sumRank, inputs.sumDim0)) {
+    if (!NormalizeOutputShape(sumStorageShape, inputs, inputs.sumRank, inputs.sumDim0)) {
         return false;
     }
     inputs.sumDtype = ConvertDType(sumDesc->GetDataType());
     const auto& squareSumStorageShape = squareSumShape->GetStorageShape();
-    if (!NormalizeOutputShape(squareSumStorageShape, inputs.format, inputs.squareSumRank, inputs.squareSumDim0)) {
+    if (!NormalizeOutputShape(squareSumStorageShape, inputs, inputs.squareSumRank, inputs.squareSumDim0)) {
         return false;
     }
     inputs.squareSumDtype = ConvertDType(squareSumDesc->GetDataType());
@@ -256,6 +269,11 @@ ge::graphStatus TilingFunc(gert::TilingContext* context)
         OP_LOGE(context, "Failed to populate BNTrainingReduce tiling inputs.");
         return ge::GRAPH_FAILED;
     }
+    if (ValidateBNTrainingReducePublicInputs(inputs) != BNTrainingReducePublicStatus::SUCCESS) {
+        OP_LOGE(context, "BNTrainingReduce input/output validation failed before route selection.");
+        return ge::GRAPH_FAILED;
+    }
+
     BNTrainingReducePublicResult result;
     if (!TryBuildSmallRConfig(inputs, result)) {
         result = ComputeBNTrainingReducePublicTiling(inputs);

@@ -8,6 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <initializer_list>
+
 #include <gtest/gtest.h>
 
 #include "../../../../op_host/arch35/bn_training_reduce_tiling_public.h"
@@ -17,15 +19,19 @@ namespace {
 
 constexpr int64_t kTestUbSizeBytes = 256 * 1024;
 
-BNTrainingReducePublicInputs MakeInputs(const std::array<int64_t, 4>& shape, BNTrainingReducePublicFormat format)
+BNTrainingReducePublicInputs MakeInputs(std::initializer_list<int64_t> shape, BNTrainingReducePublicFormat format)
 {
     BNTrainingReducePublicInputs inputs;
-    inputs.shape = shape;
+    inputs.rank = static_cast<int32_t>(shape.size());
+    size_t index = 0;
+    for (const int64_t dim : shape) {
+        inputs.shape[index++] = dim;
+    }
     inputs.format = format;
     inputs.ubSize = kTestUbSizeBytes;
-    const size_t channelIndex = format == BNTrainingReducePublicFormat::NCHW ? 1 : 3;
-    inputs.sumDim0 = shape[channelIndex];
-    inputs.squareSumDim0 = shape[channelIndex];
+    const size_t channelIndex = format == BNTrainingReducePublicFormat::NHWC ? 3U : 1U;
+    inputs.sumDim0 = inputs.shape[channelIndex];
+    inputs.squareSumDim0 = inputs.shape[channelIndex];
     return inputs;
 }
 
@@ -77,6 +83,57 @@ TEST(BNTrainingReduceTilingTest, SupportsNhwcEmptyReduceAxis)
     EXPECT_EQ(result.tilingKey, static_cast<int64_t>(BNTrainingReduceTilingKey::EMPTY));
     EXPECT_EQ(result.tilingData.axisShape[0], 3);
     EXPECT_GT(result.tilingData.usedCoreNum, 0);
+}
+
+TEST(BNTrainingReduceTilingTest, SupportsNchwRank2)
+{
+    const auto inputs = MakeInputs({32, 8}, BNTrainingReducePublicFormat::NCHW);
+    const auto result = ComputeBNTrainingReducePublicTiling(inputs);
+
+    EXPECT_EQ(result.status, BNTrainingReducePublicStatus::SUCCESS);
+    EXPECT_GT(result.blockDim, 0U);
+}
+
+TEST(BNTrainingReduceTilingTest, SupportsNcdhw)
+{
+    const auto inputs = MakeInputs({2, 3, 4, 5, 6}, BNTrainingReducePublicFormat::NCDHW);
+    const auto result = ComputeBNTrainingReducePublicTiling(inputs);
+
+    EXPECT_EQ(result.status, BNTrainingReducePublicStatus::SUCCESS);
+    EXPECT_GT(result.blockDim, 0U);
+}
+
+TEST(BNTrainingReduceTilingTest, RejectsUnsupportedFormat)
+{
+    auto inputs = MakeInputs({2, 3, 4, 5}, BNTrainingReducePublicFormat::NCHW);
+    inputs.format = static_cast<BNTrainingReducePublicFormat>(99);
+    const auto result = ComputeBNTrainingReducePublicTiling(inputs);
+
+    EXPECT_EQ(result.status, BNTrainingReducePublicStatus::SHAPE_MISMATCH);
+}
+
+TEST(BNTrainingReduceTilingTest, RejectsWrongRankForNhwc)
+{
+    const auto inputs = MakeInputs({2, 4, 3}, BNTrainingReducePublicFormat::NHWC);
+    const auto result = ComputeBNTrainingReducePublicTiling(inputs);
+
+    EXPECT_EQ(result.status, BNTrainingReducePublicStatus::SHAPE_MISMATCH);
+}
+
+TEST(BNTrainingReduceTilingTest, RejectsWrongRankForNcdhw)
+{
+    const auto inputs = MakeInputs({2, 3, 4, 5}, BNTrainingReducePublicFormat::NCDHW);
+    const auto result = ComputeBNTrainingReducePublicTiling(inputs);
+
+    EXPECT_EQ(result.status, BNTrainingReducePublicStatus::SHAPE_MISMATCH);
+}
+
+TEST(BNTrainingReduceTilingTest, SharedValidationRejectsInvalidSmallROutputs)
+{
+    auto inputs = MakeInputs({1, 64, 1, 3}, BNTrainingReducePublicFormat::NCHW);
+    inputs.sumRank = 2;
+
+    EXPECT_EQ(ValidateBNTrainingReducePublicInputs(inputs), BNTrainingReducePublicStatus::SHAPE_MISMATCH);
 }
 
 } // namespace

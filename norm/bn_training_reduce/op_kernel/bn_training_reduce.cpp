@@ -44,7 +44,11 @@ __global__ __aicore__ void bn_training_reduce(GM_ADDR x, GM_ADDR sum, GM_ADDR sq
         }
     } else if constexpr (templateType) {
         NsBNTrainingReduce::BNTrainingReduceKernel<DTYPE_X, isTailR, isDeterministic> op;
-        op.InitGroup(x, sum, squareSum, workspace, &tilingData);
+        GM_ADDR userWorkspace = workspace;
+        if constexpr (isDeterministic) {
+            userWorkspace = AscendC::GetUserWorkspace(workspace);
+        }
+        op.InitGroup(x, sum, squareSum, userWorkspace, &tilingData);
         for (int32_t outputIdx = 0; outputIdx < 2; ++outputIdx) {
             op.ProcessGroup(outputIdx);
             AscendC::SyncAll();

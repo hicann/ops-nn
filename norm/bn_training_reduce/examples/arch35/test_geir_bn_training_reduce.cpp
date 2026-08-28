@@ -214,7 +214,16 @@ const char* DtypeName(ge::DataType dtype)
     }
 }
 
-ge::Format ParseFormat(const std::string& format) { return format == "NHWC" ? ge::FORMAT_NHWC : ge::FORMAT_NCHW; }
+ge::Format ParseFormat(const std::string& format)
+{
+    if (format == "NHWC") {
+        return ge::FORMAT_NHWC;
+    }
+    if (format == "NCDHW") {
+        return ge::FORMAT_NCDHW;
+    }
+    return ge::FORMAT_NCHW;
+}
 
 const char* FormatName(ge::Format format)
 {
@@ -226,6 +235,9 @@ const char* FormatName(ge::Format format)
     }
     if (format == ge::FORMAT_NHWC) {
         return "NHWC";
+    }
+    if (format == ge::FORMAT_NCDHW) {
+        return "NCDHW";
     }
     return "OTHER";
 }
@@ -570,7 +582,7 @@ GraphBundle BuildGraph(const CaseDef& test)
     bundle.node = test.id == "route-target" ? "bn_training_reduce_route" : "bn_training_reduce_" + test.id;
     bundle.graph = ge::Graph((bundle.node + "_graph").c_str());
     auto reduce = ge::op::BNTrainingReduce(bundle.node.c_str());
-    const ge::TensorDesc outDesc(ge::Shape(ge::UNKNOWN_RANK), ge::FORMAT_ND, ge::DT_FLOAT);
+    const ge::TensorDesc outDesc(ge::Shape(ge::UNKNOWN_RANK), ParseFormat(test.inputFormat), ge::DT_FLOAT);
     reduce.update_output_desc_sum(outDesc);
     reduce.update_output_desc_square_sum(outDesc);
 

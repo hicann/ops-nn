@@ -68,7 +68,7 @@ int64_t DTypeSize(BNTrainingReducePublicDType dtype)
 
 size_t ChannelIndex(BNTrainingReducePublicFormat format)
 {
-    return format == BNTrainingReducePublicFormat::NCHW ? 1U : 3U;
+    return format == BNTrainingReducePublicFormat::NHWC ? 3U : 1U;
 }
 
 int64_t ChannelSize(const BNTrainingReducePublicInputs& inputs) { return inputs.shape[ChannelIndex(inputs.format)]; }
@@ -135,16 +135,30 @@ struct TilingContext {
     bool arithmeticOverflow = false;
 };
 
-BNTrainingReducePublicStatus ValidateInputs(const BNTrainingReducePublicInputs& inputs)
+bool IsSupportedFormatAndRank(const BNTrainingReducePublicInputs& inputs)
+{
+    switch (inputs.format) {
+        case BNTrainingReducePublicFormat::NCHW:
+            return inputs.rank >= 2 && inputs.rank <= 4;
+        case BNTrainingReducePublicFormat::NHWC:
+            return inputs.rank == 4;
+        case BNTrainingReducePublicFormat::NCDHW:
+            return inputs.rank == 5;
+        default:
+            return false;
+    }
+}
+
+BNTrainingReducePublicStatus ValidateInputsImpl(const BNTrainingReducePublicInputs& inputs)
 {
     if (!inputs.inputPresent) {
         return BNTrainingReducePublicStatus::NULL_INPUT;
     }
-    if (inputs.rank != 4 ||
-        (inputs.format != BNTrainingReducePublicFormat::NCHW && inputs.format != BNTrainingReducePublicFormat::NHWC)) {
+    if (!IsSupportedFormatAndRank(inputs)) {
         return BNTrainingReducePublicStatus::SHAPE_MISMATCH;
     }
-    if (std::any_of(inputs.shape.begin(), inputs.shape.end(), [](int64_t dim) { return dim < 0; })) {
+    const auto shapeEnd = inputs.shape.begin() + inputs.rank;
+    if (std::any_of(inputs.shape.begin(), shapeEnd, [](int64_t dim) { return dim < 0; })) {
         return BNTrainingReducePublicStatus::SHAPE_MISMATCH;
     }
     if (DTypeSize(inputs.inputDtype) == 0) {
@@ -173,7 +187,7 @@ BNTrainingReduceEmptyKind ClassifyEmpty(const BNTrainingReducePublicInputs& inpu
     if (inputs.shape[channelIndex] == 0) {
         return BNTrainingReduceEmptyKind::EMPTY_A;
     }
-    for (size_t i = 0; i < inputs.shape.size(); ++i) {
+    for (size_t i = 0; i < static_cast<size_t>(inputs.rank); ++i) {
         if (i != channelIndex && inputs.shape[i] == 0) {
             return BNTrainingReduceEmptyKind::EMPTY_R;
         }
@@ -189,9 +203,9 @@ bool NormalizePattern(const BNTrainingReducePublicInputs& inputs, TilingContext&
     ctx.cacheLineSize = inputs.cacheLineSize;
     ctx.dtypeSize = DTypeSize(inputs.inputDtype);
 
-    std::array<bool, 4> initialTypes = {true, true, true, true};
+    std::array<bool, 5> initialTypes = {true, true, true, true, true};
     initialTypes[ChannelIndex(inputs.format)] = false;
-    for (size_t i = 0; i < inputs.shape.size(); ++i) {
+    for (size_t i = 0; i < static_cast<size_t>(inputs.rank); ++i) {
         if (inputs.shape[i] != 1) {
             ctx.axisShape.push_back(inputs.shape[i]);
             ctx.isReduce.push_back(initialTypes[i]);
@@ -775,7 +789,7 @@ BNTrainingReducePublicResult ComputeEmptyTiling(const BNTrainingReducePublicInpu
 BNTrainingReducePublicResult ComputeAllRoutes(const BNTrainingReducePublicInputs& inputs)
 {
     BNTrainingReducePublicResult result;
-    result.status = ValidateInputs(inputs);
+    result.status = ValidateInputsImpl(inputs);
     if (result.status != BNTrainingReducePublicStatus::SUCCESS) {
         return result;
     }
@@ -833,6 +847,11 @@ BNTrainingReducePublicResult ComputeAllRoutes(const BNTrainingReducePublicInputs
 }
 
 } // namespace
+
+BNTrainingReducePublicStatus ValidateBNTrainingReducePublicInputs(const BNTrainingReducePublicInputs& inputs)
+{
+    return ValidateInputsImpl(inputs);
+}
 
 BNTrainingReducePublicResult ComputeBNTrainingReducePublicTiling(const BNTrainingReducePublicInputs& inputs)
 {

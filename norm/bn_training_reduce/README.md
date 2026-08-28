@@ -13,7 +13,8 @@
 
 ## 功能说明
 
-- 算子功能：对四维NCHW或NHWC输入的N、H、W轴执行归约，输出每个通道的元素和与平方和。
+- 算子功能：保留输入的C轴并归约其余所有轴，输出每个通道的元素和与平方和。Ascend 950 支持
+  NCHW 2~4维、NHWC 4维和NCDHW 5维。
 - 计算公式：
 
   $$
@@ -45,30 +46,30 @@
   <tr>
     <td>x</td>
     <td>输入</td>
-    <td>待统计的四维训练激活。</td>
+    <td>待统计的训练激活。</td>
     <td>FLOAT16、BFLOAT16、FLOAT</td>
-    <td>NCHW、NHWC</td>
+    <td>NCHW、NHWC、NCDHW</td>
   </tr>
   <tr>
     <td>sum</td>
     <td>输出</td>
     <td>沿N、H、W轴归约得到的每通道元素和。</td>
     <td>FLOAT</td>
-    <td>ND</td>
+    <td>与x相同</td>
   </tr>
   <tr>
     <td>square_sum</td>
     <td>输出</td>
     <td>沿N、H、W轴归约得到的每通道平方和。</td>
     <td>FLOAT</td>
-    <td>ND</td>
+    <td>与x相同</td>
   </tr>
 </tbody></table>
 
 ## 约束说明
 
-- x必须为四维NCHW或NHWC张量，通道轴分别为第1维或第3维。
-- sum和square_sum必须为一维ND张量，长度等于x的C维，数据类型固定为FLOAT。
+- Ascend 950 支持NCHW 2~4维、NHWC 4维和NCDHW 5维，不支持NDC1HWC0；输出格式与x相同。
+- sum和square_sum的逻辑shape均为一维[C]，长度等于x的C维，数据类型固定为FLOAT。
 - FLOAT16和BFLOAT16输入按FLOAT精度执行平方与累加。
 - 算子无属性，支持空Tensor；归约集合为空时输出为零或空向量。
 
