@@ -46,9 +46,7 @@ constexpr int64_t DIM_ONE = 1;
 constexpr int64_t DIM_TWO = 2;
 constexpr int64_t DIM_THREE = 3;
 constexpr int64_t GATE_COUNT = 3; // GRU: reset, update, new
-constexpr int64_t GATE_LIST_COUNT = 5;
 
-// 参数列表中每层的参数个数
 constexpr int64_t PARAMS_PER_LAYER_NO_BIAS_NO_BIDI = 2; // w_ih, w_hh
 constexpr int64_t PARAMS_PER_LAYER_BIAS_OR_BIDI = 4;    // w_ih, w_hh, b_ih, b_hh
 constexpr int64_t PARAMS_PER_LAYER_BIAS_AND_BIDI = 8; // w_ih, w_hh, b_ih, b_hh, w_ih_rev, w_hh_rev, b_ih_rev, b_hh_rev
@@ -113,12 +111,12 @@ static bool CheckTensorListDtype(const aclTensorList* list, const char* name, ge
         OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
         if (tensor->GetDataType() != baseDtype) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] dtype inconsistent, expected %s, actual %s.", name,
-                    static_cast<unsigned long long>(i), op::ToString(baseDtype).GetString(),
+                    (unsigned long long)i, op::ToString(baseDtype).GetString(),
                     op::ToString(tensor->GetDataType()).GetString());
             return false;
         }
         if (!IsFormatSupported(tensor, name)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, static_cast<unsigned long long>(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, (unsigned long long)i);
             return false;
         }
     }
@@ -132,6 +130,7 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
                             aclTensorList* dparamsOut)
 {
     ge::DataType baseDtype = input->GetDataType();
+
     if (!CheckDtypeConsistent(input, "input", baseDtype))
         return false;
     if (!CheckDtypeConsistent(hx, "hx", baseDtype))
@@ -161,8 +160,10 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
         return false;
 
     if (batchSizes != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes only accepts an empty tensor as input currently.");
-        return false;
+        if (batchSizes->GetStorageFormat() != Format::FORMAT_ND) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes format only support ND");
+            return false;
+        }
     }
     return true;
 }
@@ -170,8 +171,8 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
 static bool ValidateShape(const aclTensor* tensor, const std::vector<int64_t>& expected, const char* name)
 {
     auto shape = tensor->GetViewShape();
-    if (shape.GetDimNum() != expected.size()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s has wrong dimension count, expected %zu, actual %zu.", name,
+    if (shape.GetDimNum() != static_cast<int64_t>(expected.size())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s has wrong dimension count, expected %zu, actual %u.", name,
                 expected.size(), shape.GetDimNum());
         return false;
     }
@@ -185,27 +186,36 @@ static bool ValidateShape(const aclTensor* tensor, const std::vector<int64_t>& e
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const aclTensorList* params,
-                            const aclTensor* dy, const aclTensor* dh, const aclTensorList* r, const aclTensorList* z,
-                            const aclTensorList* n, const aclTensorList* hn, const aclTensorList* h, bool hasBias,
-                            int64_t numLayers, bool bidirection, bool batchFirst, const aclTensor* dxOut,
-                            const aclTensor* dhPrevOut, const aclTensorList* dparamsOut)
+static bool CheckInputHxShape(const aclTensor* input, const aclTensor* hx, const aclTensor* batchSizes, bool batchFirst,
+                              int64_t numLayers, bool bidirection, int64_t& T, int64_t& B, int64_t& I, int64_t& H)
 {
-    // 从 input 推断 T, B, I
     auto xShape = input->GetViewShape();
-    OP_CHECK_WRONG_DIMENSION(input, DIM_THREE, return false);
-    int64_t T = xShape[batchFirst ? DIM_ONE : DIM_ZERO];
-    int64_t B = xShape[batchFirst ? DIM_ZERO : DIM_ONE];
-    int64_t I = xShape[DIM_TWO];
+    bool isPacked = (batchSizes != nullptr);
+    if (isPacked) {
+        OP_CHECK_WRONG_DIMENSION(input, DIM_TWO, return false);
+        auto bsShape = batchSizes->GetViewShape();
+        T = bsShape.GetDim(DIM_ZERO);
+        auto hxShape = hx->GetViewShape();
+        B = hxShape.GetDim(DIM_ONE);
+        I = xShape.GetDim(DIM_ONE);
+    } else {
+        OP_CHECK_WRONG_DIMENSION(input, DIM_THREE, return false);
+        T = xShape[batchFirst ? DIM_ONE : DIM_ZERO];
+        B = xShape[batchFirst ? DIM_ZERO : DIM_ONE];
+        I = xShape[DIM_TWO];
+    }
     CHECK_RET(T > 0 && B > 0 && I > 0, false);
 
     int64_t D = bidirection ? 2 : 1;
-
     auto hxShape = hx->GetViewShape();
-    int64_t H = hxShape[hxShape.GetDimNum() - 1];
+    H = hxShape[hxShape.GetDimNum() - 1];
     CHECK_RET(H > 0, false);
 
-    if (batchFirst) {
+    if (isPacked) {
+        std::vector<int64_t> expected = {xShape.GetDim(DIM_ZERO), I};
+        if (!ValidateShape(input, expected, "input"))
+            return false;
+    } else if (batchFirst) {
         std::vector<int64_t> expected = {B, T, I};
         if (!ValidateShape(input, expected, "input"))
             return false;
@@ -218,9 +228,20 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
     std::vector<int64_t> hxExpected = {D * numLayers, B, H};
     if (!ValidateShape(hx, hxExpected, "hx"))
         return false;
+    return true;
+}
+
+static bool CheckDyDhShape(const aclTensor* dy, const aclTensor* dh, const aclTensor* batchSizes, bool batchFirst,
+                           int64_t numLayers, bool bidirection, int64_t T, int64_t B, int64_t H)
+{
+    int64_t D = bidirection ? 2 : 1;
+    auto xShape = dy->GetViewShape();
+    bool isPacked = (batchSizes != nullptr);
 
     std::vector<int64_t> dyExpected;
-    if (batchFirst) {
+    if (isPacked) {
+        dyExpected = {xShape.GetDim(DIM_ZERO), H * D};
+    } else if (batchFirst) {
         dyExpected = {B, T, H * D};
     } else {
         dyExpected = {T, B, H * D};
@@ -231,33 +252,48 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
     std::vector<int64_t> dhExpected = {numLayers * D, B, H};
     if (!ValidateShape(dh, dhExpected, "dh"))
         return false;
+    return true;
+}
 
+static bool CheckGateLists(const aclTensorList* r, const aclTensorList* z, const aclTensorList* n,
+                           const aclTensorList* hn, const aclTensorList* h, const aclTensor* batchSizes,
+                           int64_t numLayers, bool bidirection, int64_t T, int64_t B, int64_t H, int64_t totalSteps)
+{
+    int64_t D = bidirection ? 2 : 1;
+    bool isPacked = (batchSizes != nullptr);
     uint64_t expectedGateLen = static_cast<uint64_t>(D * numLayers);
+    std::vector<int64_t> gateExpected = isPacked ? std::vector<int64_t>{totalSteps, H} : std::vector<int64_t>{T, B, H};
     const char* gateNames[] = {"r", "z", "n", "hn", "h"};
     const aclTensorList* gateLists[] = {r, z, n, hn, h};
-    for (int g = 0; g < GATE_LIST_COUNT; ++g) {
+    for (int g = 0; g < 5; ++g) {
         if (gateLists[g]->Size() != expectedGateLen) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s list size mismatch, expected %llu, actual %llu.", gateNames[g],
-                    static_cast<unsigned long long>(expectedGateLen),
-                    static_cast<unsigned long long>(gateLists[g]->Size()));
+                    (unsigned long long)expectedGateLen, (unsigned long long)gateLists[g]->Size());
             return false;
         }
-        std::vector<int64_t> gateExpected = {T, B, H};
         for (uint64_t i = 0; i < gateLists[g]->Size(); ++i) {
             if (!ValidateShape((*gateLists[g])[i], gateExpected, gateNames[g]))
                 return false;
         }
     }
+    return true;
+}
 
+static bool CheckOutputsShape(const aclTensor* input, const aclTensorList* params, const aclTensor* dxOut,
+                              const aclTensor* dhPrevOut, const aclTensorList* dparamsOut, int64_t numLayers,
+                              bool bidirection, bool hasBias, int64_t B, int64_t H)
+{
+    int64_t D = bidirection ? 2 : 1;
     int64_t paramsPerLayer = hasBias ? (bidirection ? PARAMS_PER_LAYER_BIAS_AND_BIDI : PARAMS_PER_LAYER_BIAS_OR_BIDI) :
                                        (bidirection ? PARAMS_PER_LAYER_BIAS_OR_BIDI : PARAMS_PER_LAYER_NO_BIAS_NO_BIDI);
     uint64_t expectedParamsLen = static_cast<uint64_t>(paramsPerLayer * numLayers);
     if (params->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "params list size mismatch, expected %llu, actual %llu.",
-                static_cast<unsigned long long>(expectedParamsLen), static_cast<unsigned long long>(params->Size()));
+                (unsigned long long)expectedParamsLen, (unsigned long long)params->Size());
         return false;
     }
 
+    auto xShape = input->GetViewShape();
     std::vector<int64_t> xShapeVec(xShape.GetDimNum());
     for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
         xShapeVec[i] = xShape.GetDim(i);
@@ -271,11 +307,33 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
 
     if (dparamsOut->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dparamsOut list size mismatch, expected %llu, actual %llu.",
-                static_cast<unsigned long long>(expectedParamsLen),
-                static_cast<unsigned long long>(dparamsOut->Size()));
+                (unsigned long long)expectedParamsLen, (unsigned long long)dparamsOut->Size());
         return false;
     }
+    return true;
+}
 
+static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const aclTensorList* params,
+                            const aclTensor* dy, const aclTensor* dh, const aclTensorList* r, const aclTensorList* z,
+                            const aclTensorList* n, const aclTensorList* hn, const aclTensorList* h,
+                            const aclTensor* batchSizes, bool hasBias, int64_t numLayers, bool bidirection,
+                            bool batchFirst, aclTensor* dxOut, aclTensor* dhPrevOut, aclTensorList* dparamsOut)
+{
+    int64_t T = 0, B = 0, I = 0, H = 0;
+    if (!CheckInputHxShape(input, hx, batchSizes, batchFirst, numLayers, bidirection, T, B, I, H))
+        return false;
+    if (!CheckDyDhShape(dy, dh, batchSizes, batchFirst, numLayers, bidirection, T, B, H))
+        return false;
+    // packed 时 totalSteps = input 的 dim0（2D compact [totalSteps, I]）
+    int64_t totalSteps = T;
+    if (batchSizes != nullptr) {
+        auto xShape = input->GetViewShape();
+        totalSteps = xShape.GetDim(DIM_ZERO);
+    }
+    if (!CheckGateLists(r, z, n, hn, h, batchSizes, numLayers, bidirection, T, B, H, totalSteps))
+        return false;
+    if (!CheckOutputsShape(input, params, dxOut, dhPrevOut, dparamsOut, numLayers, bidirection, hasBias, B, H))
+        return false;
     return true;
 }
 
@@ -291,8 +349,8 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* hx, cons
     CHECK_RET(CheckDtypeValid(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, dxOut, dhPrevOut, dparamsOut),
               ACLNN_ERR_PARAM_INVALID);
 
-    CHECK_RET(CheckShapeValid(input, hx, params, dy, dh, r, z, n, hn, h, hasBias, numLayers, bidirection, batchFirst,
-                              dxOut, dhPrevOut, dparamsOut),
+    CHECK_RET(CheckShapeValid(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, hasBias, numLayers, bidirection,
+                              batchFirst, dxOut, dhPrevOut, dparamsOut),
               ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
@@ -320,7 +378,6 @@ static const aclTensorList* CastListElements(const aclTensorList* list, op::Data
     return executor->AllocTensorList(castTensors.data(), castTensors.size());
 }
 
-// 单层单向 L0 输出
 struct GruGradLayerOut {
     const aclTensor* dx{nullptr};     // [T, B, inputSize_l]
     const aclTensor* dhPrev{nullptr}; // [1, B, H]
@@ -330,7 +387,6 @@ struct GruGradLayerOut {
     const aclTensor* dbHidden{nullptr};
 };
 
-// 从 [N, B, H] 第 i 行切出 [1, B, H]
 static const aclTensor* SliceRowAt(const aclTensor* t, int64_t i, int64_t B, int64_t H, aclOpExecutor* executor)
 {
     const int64_t offData[] = {i, 0, 0};
@@ -391,6 +447,206 @@ static aclnnStatus GruBackwardSingleLayerDirec(int64_t layerIdx, int64_t directI
     return ACLNN_SUCCESS;
 }
 
+struct GruBackwardPreparedInputs {
+    const aclTensor* input{nullptr};
+    const aclTensor* hx{nullptr};
+    const aclTensorList* params{nullptr};
+    const aclTensor* dy{nullptr};
+    const aclTensor* dh{nullptr};
+    const aclTensorList* r{nullptr};
+    const aclTensorList* z{nullptr};
+    const aclTensorList* n{nullptr};
+    const aclTensorList* hn{nullptr};
+    const aclTensorList* h{nullptr};
+    const aclTensor* batchSizes{nullptr};
+    bool needCast{false};
+};
+
+static const aclTensor* TransposeBatchFirstIfNeeded(const aclTensor* t, bool batchFirst, const aclTensor* batchSizes,
+                                                    aclOpExecutor* executor)
+{
+    if (!(batchFirst && batchSizes == nullptr)) {
+        return t;
+    }
+    std::vector<int64_t> perm = {1, 0, 2};
+    auto valuePerm = executor->AllocIntArray(perm.data(), 3);
+    return l0op::Transpose(t, valuePerm, executor);
+}
+
+static aclnnStatus PrepareGruBackwardInputs(const aclTensor* input, const aclTensor* hx, const aclTensorList* params,
+                                            const aclTensor* dy, const aclTensor* dh, const aclTensorList* r,
+                                            const aclTensorList* z, const aclTensorList* n, const aclTensorList* hn,
+                                            const aclTensorList* h, const aclTensor* batchSizes, bool batchFirst,
+                                            GruBackwardPreparedInputs& out, aclOpExecutor* executor)
+{
+    out.input = TransposeBatchFirstIfNeeded(l0op::Contiguous(input, executor), batchFirst, batchSizes, executor);
+    CHECK_RET(out.input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.hx = l0op::Contiguous(hx, executor);
+    CHECK_RET(out.hx != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.params = MakeContiguousList(params, executor);
+    CHECK_RET(out.params != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.dy = TransposeBatchFirstIfNeeded(l0op::Contiguous(dy, executor), batchFirst, batchSizes, executor);
+    CHECK_RET(out.dy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.dh = l0op::Contiguous(dh, executor);
+    CHECK_RET(out.dh != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.r = MakeContiguousList(r, executor);
+    CHECK_RET(out.r != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.z = MakeContiguousList(z, executor);
+    CHECK_RET(out.z != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.n = MakeContiguousList(n, executor);
+    CHECK_RET(out.n != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.hn = MakeContiguousList(hn, executor);
+    CHECK_RET(out.hn != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    out.h = MakeContiguousList(h, executor);
+    CHECK_RET(out.h != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (batchSizes != nullptr) {
+        out.batchSizes = l0op::Contiguous(batchSizes, executor);
+        CHECK_RET(out.batchSizes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CastInputsToFloat(const aclTensor* input, GruBackwardPreparedInputs& in, aclOpExecutor* executor)
+{
+    in.needCast = (input->GetDataType() == op::DataType::DT_FLOAT16);
+    if (!in.needCast) {
+        return ACLNN_SUCCESS;
+    }
+    in.input = l0op::Cast(in.input, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.hx = l0op::Cast(in.hx, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.hx != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.dy = l0op::Cast(in.dy, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.dy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.dh = l0op::Cast(in.dh, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.dh != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.params = CastListElements(in.params, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.params != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.r = CastListElements(in.r, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.r != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.z = CastListElements(in.z, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.z != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.n = CastListElements(in.n, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.n != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.hn = CastListElements(in.hn, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.hn != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    in.h = CastListElements(in.h, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(in.h != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static const aclTensor* GetLayerInput(const aclTensor* inputContiguous, const aclTensorList* h, int64_t l, int64_t D,
+                                      const aclTensor* batchSizes, aclOpExecutor* executor)
+{
+    if (l == 0) {
+        return inputContiguous;
+    }
+    std::vector<const aclTensor*> xv;
+    for (int64_t d = 0; d < D; ++d) {
+        xv.push_back((*h)[(l - 1) * D + d]);
+    }
+    if (D == 1) {
+        return xv[0];
+    }
+    auto tl = executor->AllocTensorList(xv.data(), xv.size());
+    int64_t concatDim = (batchSizes != nullptr) ? DIM_ONE : DIM_TWO;
+    return l0op::ConcatD(tl, concatDim, executor);
+}
+
+static const aclTensor* SliceDyDirection(const aclTensor* curDy, int64_t d, int64_t H, int64_t D,
+                                         const aclTensor* batchSizes, int64_t B, aclOpExecutor* executor)
+{
+    if (D == 1) {
+        return curDy;
+    }
+    if (batchSizes != nullptr) {
+        // 不定长: dy 2D [totalSteps, H*D], 按特征维切方向
+        int64_t TS = curDy->GetViewShape().GetDim(DIM_ZERO);
+        const int64_t offData[] = {0, d * H};
+        aclIntArray* offs = executor->AllocIntArray(offData, DIM_TWO);
+        const int64_t sizeData[] = {TS, H};
+        aclIntArray* size = executor->AllocIntArray(sizeData, DIM_TWO);
+        return l0op::Slice(curDy, offs, size, executor);
+    }
+    int64_t T = curDy->GetViewShape().GetDim(DIM_ZERO);
+    const int64_t offData[] = {0, 0, d * H};
+    aclIntArray* offs = executor->AllocIntArray(offData, DIM_THREE);
+    const int64_t sizeData[] = {T, B, H};
+    aclIntArray* size = executor->AllocIntArray(sizeData, DIM_THREE);
+    return l0op::Slice(curDy, offs, size, executor);
+}
+
+static aclnnStatus WriteDparamsOneDirection(const GruGradLayerOut& gout, const aclTensorList* dparamsOut, int64_t pOff,
+                                            bool hasBias, bool needCast, aclOpExecutor* executor)
+{
+    auto dwInputOut = needCast ? l0op::Cast(gout.dwInput, op::DataType::DT_FLOAT16, executor) : gout.dwInput;
+    auto dwHiddenOut = needCast ? l0op::Cast(gout.dwHidden, op::DataType::DT_FLOAT16, executor) : gout.dwHidden;
+    CHECK_RET(dwInputOut != nullptr && dwHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(l0op::ViewCopy(dwInputOut, (*dparamsOut)[pOff + 0], executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(l0op::ViewCopy(dwHiddenOut, (*dparamsOut)[pOff + 1], executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (hasBias) {
+        auto dbInputOut = needCast ? l0op::Cast(gout.dbInput, op::DataType::DT_FLOAT16, executor) : gout.dbInput;
+        auto dbHiddenOut = needCast ? l0op::Cast(gout.dbHidden, op::DataType::DT_FLOAT16, executor) : gout.dbHidden;
+        CHECK_RET(dbInputOut != nullptr && dbHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(l0op::ViewCopy(dbInputOut, (*dparamsOut)[pOff + 2], executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(l0op::ViewCopy(dbHiddenOut, (*dparamsOut)[pOff + 3], executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus BackwardAllLayers(const GruBackwardPreparedInputs& in, int64_t D, int64_t H, int64_t B,
+                                     int64_t groupLen, bool hasBias, int64_t numLayers, const aclTensorList* dparamsOut,
+                                     const aclTensor*& finalDx, std::vector<const aclTensor*>& dhPrevVec,
+                                     aclOpExecutor* executor)
+{
+    const aclTensor* curDy = in.dy;
+    for (int64_t l = numLayers - 1; l >= 0; --l) {
+        const aclTensor* xL = GetLayerInput(in.input, in.h, l, D, in.batchSizes, executor);
+        CHECK_RET(xL != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* dxLayer = nullptr;
+        for (int64_t d = 0; d < D; ++d) {
+            const aclTensor* dyDir = SliceDyDirection(curDy, d, H, D, in.batchSizes, B, executor);
+            CHECK_RET(dyDir != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            GruGradLayerOut gout;
+            auto ret = GruBackwardSingleLayerDirec(l, d, D, hasBias, xL, dyDir, in.dh, in.hx, in.params, in.r, in.z,
+                                                   in.n, in.hn, in.h, in.batchSizes, gout, executor);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            dhPrevVec[static_cast<size_t>(l * D + d)] = gout.dhPrev;
+            ret = WriteDparamsOneDirection(gout, dparamsOut, (l * D + d) * groupLen, hasBias, in.needCast, executor);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            dxLayer = (dxLayer == nullptr) ? gout.dx : l0op::Add(dxLayer, gout.dx, executor);
+            CHECK_RET(dxLayer != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        curDy = dxLayer;
+    }
+    finalDx = curDy;
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus WriteBackwardResults(const aclTensor* dx, const std::vector<const aclTensor*>& dhPrevVec,
+                                        bool needCast, bool batchFirst, const aclTensor* batchSizes, aclTensor* dxOut,
+                                        aclTensor* dhPrevOut, aclOpExecutor* executor)
+{
+    const aclTensor* curDy = TransposeBatchFirstIfNeeded(dx, batchFirst, batchSizes, executor);
+    CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (needCast) {
+        curDy = l0op::Cast(curDy, op::DataType::DT_FLOAT16, executor);
+        CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    CHECK_RET(l0op::ViewCopy(curDy, dxOut, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto dhPrevList = executor->AllocTensorList(dhPrevVec.data(), dhPrevVec.size());
+    CHECK_RET(dhPrevList != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* dhPrevConcat = l0op::ConcatD(dhPrevList, DIM_ZERO, executor);
+    CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (needCast) {
+        dhPrevConcat = l0op::Cast(dhPrevConcat, op::DataType::DT_FLOAT16, executor);
+        CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    CHECK_RET(l0op::ViewCopy(dhPrevConcat, dhPrevOut, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 } // namespace
 aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTensorList* params, const aclTensor* hx,
                                              const aclTensor* dy, const aclTensor* dh, const aclTensorList* r,
@@ -408,184 +664,31 @@ aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTe
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 参数校验
     auto ret = CheckParams(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, hasBias, numLayers, bidirection,
                            batchFirst, dxOut, dhPrevOut, dparamsOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // Contiguous 所有输入
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    GruBackwardPreparedInputs in;
+    ret = PrepareGruBackwardInputs(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, batchFirst, in,
+                                   uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if (batchFirst) {
-        std::vector<int64_t> perm = {1, 0, 2};
-        auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-        inputContiguous = l0op::Transpose(inputContiguous, valuePerm, uniqueExecutor.get());
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    auto hxContiguous = l0op::Contiguous(hx, uniqueExecutor.get());
-    CHECK_RET(hxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto paramsContiguous = MakeContiguousList(params, uniqueExecutor.get());
-    CHECK_RET(paramsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto dyContiguous = l0op::Contiguous(dy, uniqueExecutor.get());
-    CHECK_RET(dyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    if (batchFirst) {
-        std::vector<int64_t> perm = {1, 0, 2};
-        auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-        dyContiguous = l0op::Transpose(dyContiguous, valuePerm, uniqueExecutor.get());
-        CHECK_RET(dyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    auto dhContiguous = l0op::Contiguous(dh, uniqueExecutor.get());
-    CHECK_RET(dhContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto rContiguous = MakeContiguousList(r, uniqueExecutor.get());
-    CHECK_RET(rContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto zContiguous = MakeContiguousList(z, uniqueExecutor.get());
-    CHECK_RET(zContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto nContiguous = MakeContiguousList(n, uniqueExecutor.get());
-    CHECK_RET(nContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto hnContiguous = MakeContiguousList(hn, uniqueExecutor.get());
-    CHECK_RET(hnContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto hContiguous = MakeContiguousList(h, uniqueExecutor.get());
-    CHECK_RET(hContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    const aclTensor* batchSizesContiguous = nullptr;
-    if (batchSizes != nullptr) {
-        batchSizesContiguous = l0op::Contiguous(batchSizes, uniqueExecutor.get());
-        CHECK_RET(batchSizesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    bool needCast = (input->GetDataType() == op::DataType::DT_FLOAT16);
-    if (needCast) {
-        inputContiguous = l0op::Cast(inputContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        hxContiguous = l0op::Cast(hxContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(hxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        dyContiguous = l0op::Cast(dyContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(dyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        dhContiguous = l0op::Cast(dhContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(dhContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        paramsContiguous = CastListElements(paramsContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(paramsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        rContiguous = CastListElements(rContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(rContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        zContiguous = CastListElements(zContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(zContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        nContiguous = CastListElements(nContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(nContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        hnContiguous = CastListElements(hnContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(hnContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        hContiguous = CastListElements(hContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(hContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
+    ret = CastInputsToFloat(input, in, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     int64_t D = bidirection ? 2 : 1;
-    int64_t H = hxContiguous->GetViewShape().GetDim(DIM_TWO);
-    int64_t B = hxContiguous->GetViewShape().GetDim(DIM_ONE);
+    int64_t H = in.hx->GetViewShape().GetDim(DIM_TWO);
+    int64_t B = in.hx->GetViewShape().GetDim(DIM_ONE);
     int64_t groupLen = hasBias ? 4 : 2;
-    const aclTensor* curDy = dyContiguous; // [T, B, H*D]; 逐层被本层 dx 覆盖
     std::vector<const aclTensor*> dhPrevVec(static_cast<size_t>(D * numLayers), nullptr);
 
-    for (int64_t l = numLayers - 1; l >= 0; --l) {
-        const aclTensor* xL = nullptr;
-        if (l == 0) {
-            xL = inputContiguous;
-        } else {
-            std::vector<const aclTensor*> xv;
-            for (int64_t d = 0; d < D; ++d) {
-                xv.push_back((*hContiguous)[(l - 1) * D + d]);
-            }
-            if (D == 1) {
-                xL = xv[0];
-            } else {
-                auto tl = uniqueExecutor->AllocTensorList(xv.data(), xv.size());
-                xL = l0op::ConcatD(tl, DIM_TWO, uniqueExecutor.get());
-                CHECK_RET(xL != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            }
-        }
-        const aclTensor* dxLayer = nullptr;
-        for (int64_t d = 0; d < D; ++d) {
-            const aclTensor* dyDir = nullptr;
-            if (D == 1) {
-                dyDir = curDy;
-            } else {
-                int64_t T = curDy->GetViewShape().GetDim(DIM_ZERO);
-                const int64_t offData[] = {0, 0, d * H};
-                aclIntArray* offs = uniqueExecutor->AllocIntArray(offData, DIM_THREE);
-                const int64_t sizeData[] = {T, B, H};
-                aclIntArray* size = uniqueExecutor->AllocIntArray(sizeData, DIM_THREE);
-                dyDir = l0op::Slice(curDy, offs, size, uniqueExecutor.get());
-                CHECK_RET(dyDir != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            }
+    const aclTensor* dx = nullptr;
+    ret = BackwardAllLayers(in, D, H, B, groupLen, hasBias, numLayers, dparamsOut, dx, dhPrevVec, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-            GruGradLayerOut gout;
-            ret = GruBackwardSingleLayerDirec(l, d, D, hasBias, xL, dyDir, dhContiguous, hxContiguous, paramsContiguous,
-                                              rContiguous, zContiguous, nContiguous, hnContiguous, hContiguous,
-                                              batchSizesContiguous, gout, uniqueExecutor.get());
-            CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
-            dhPrevVec[static_cast<size_t>(l * D + d)] = gout.dhPrev;
-
-            int64_t pOff = (l * D + d) * groupLen;
-            auto dwInputOut = needCast ? l0op::Cast(gout.dwInput, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
-                                         gout.dwInput;
-            auto dwHiddenOut = needCast ? l0op::Cast(gout.dwHidden, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
-                                          gout.dwHidden;
-            CHECK_RET(dwInputOut != nullptr && dwHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            CHECK_RET(l0op::ViewCopy(dwInputOut, (*dparamsOut)[pOff + 0], uniqueExecutor.get()) != nullptr,
-                      ACLNN_ERR_INNER_NULLPTR);
-            CHECK_RET(l0op::ViewCopy(dwHiddenOut, (*dparamsOut)[pOff + 1], uniqueExecutor.get()) != nullptr,
-                      ACLNN_ERR_INNER_NULLPTR);
-            if (hasBias) {
-                auto dbInputOut = needCast ? l0op::Cast(gout.dbInput, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
-                                             gout.dbInput;
-                auto dbHiddenOut = needCast ?
-                                       l0op::Cast(gout.dbHidden, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
-                                       gout.dbHidden;
-                CHECK_RET(dbInputOut != nullptr && dbHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                CHECK_RET(l0op::ViewCopy(dbInputOut, (*dparamsOut)[pOff + 2], uniqueExecutor.get()) != nullptr,
-                          ACLNN_ERR_INNER_NULLPTR);
-                CHECK_RET(l0op::ViewCopy(dbHiddenOut, (*dparamsOut)[pOff + 3], uniqueExecutor.get()) != nullptr,
-                          ACLNN_ERR_INNER_NULLPTR);
-            }
-
-            dxLayer = (dxLayer == nullptr) ? gout.dx : l0op::Add(dxLayer, gout.dx, uniqueExecutor.get());
-            CHECK_RET(dxLayer != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-        curDy = dxLayer;
-    }
-
-    if (batchFirst) {
-        std::vector<int64_t> perm = {1, 0, 2};
-        auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
-        curDy = l0op::Transpose(curDy, valuePerm, uniqueExecutor.get());
-        CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    if (needCast) {
-        curDy = l0op::Cast(curDy, op::DataType::DT_FLOAT16, uniqueExecutor.get());
-        CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-    CHECK_RET(l0op::ViewCopy(curDy, dxOut, uniqueExecutor.get()) != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto dhPrevList = uniqueExecutor->AllocTensorList(dhPrevVec.data(), dhPrevVec.size());
-    CHECK_RET(dhPrevList != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const aclTensor* dhPrevConcat = l0op::ConcatD(dhPrevList, DIM_ZERO, uniqueExecutor.get());
-    CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (needCast) {
-        dhPrevConcat = l0op::Cast(dhPrevConcat, op::DataType::DT_FLOAT16, uniqueExecutor.get());
-        CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-    CHECK_RET(l0op::ViewCopy(dhPrevConcat, dhPrevOut, uniqueExecutor.get()) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    ret = WriteBackwardResults(dx, dhPrevVec, in.needCast, batchFirst, in.batchSizes, dxOut, dhPrevOut,
+                               uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);

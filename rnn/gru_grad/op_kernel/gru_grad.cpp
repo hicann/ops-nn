@@ -25,7 +25,6 @@ extern "C" __global__ __aicore__ void gru_grad(GM_ADDR x, GM_ADDR w_input, GM_AD
                                                GM_ADDR dw_hidden, GM_ADDR db_input, GM_ADDR db_hidden,
                                                GM_ADDR workspace, GM_ADDR gruGradTiling)
 {
-    // gru_grad 不区分 dtype, 统一用一份 tiling; 直接从 buffer 还原 GruGradTilingData
     REGISTER_TILING_DEFAULT(GruGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(GruGradTilingData, tilingData, gruGradTiling);
 

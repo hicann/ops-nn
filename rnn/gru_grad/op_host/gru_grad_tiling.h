@@ -30,7 +30,6 @@ struct GruGradCompileInfo {
     int64_t ubSizePlatForm{0};
 };
 
-// ==== Tiling类 (继承自 TilingBaseClass) ====
 class GruGradTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit GruGradTiling(gert::TilingContext* context) : TilingBaseClass(context), context_(context) {}
@@ -38,7 +37,6 @@ public:
 
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
-    // gru_grad 不按 dtype 区分 tilingKey, 统一返回 GRU_GRAD_TILING_KEY
     [[nodiscard]] uint64_t GetTilingKey() const override { return GRU_GRAD_TILING_KEY; }
     ge::graphStatus PostTiling() override;
 
@@ -53,15 +51,21 @@ private:
     bool CheckAttr();
 
     void GetMatmulTiling();
+    void GetDgateMMTiling(matmul_tiling::DataType mmDataType);
+    void GetDwIhMMTiling(matmul_tiling::DataType mmDataType);
+    void GetDwHhMMTiling(matmul_tiling::DataType mmDataType);
+    void GetDxMMTiling(matmul_tiling::DataType mmDataType);
     void ReduceBlockCalculate();
     void SplitDxhBlockCalculate();
     void ConcatXhBlockCalculate();
     void SetTilingData();
 
-    CutBatchTiling CalculateCutBatchTiling(int64_t ub, int64_t al, int64_t act, int64_t ml, int64_t b);
+    CutBatchTiling CalculateCutBatchTiling(int64_t ubParaNum, int64_t alignedSize, int64_t actualSize,
+                                           int64_t copyMLinesMax, int64_t batch);
 
     bool ValidateInputShape(int index, const std::vector<int64_t>& expected_dims);
     bool ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims);
+    void LogShapeCheck(bool isInput, int index, const std::vector<int64_t>& expected, const char* name, bool ok);
 
 private:
     GruGradTilingData tilingData_;

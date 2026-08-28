@@ -28,6 +28,10 @@ constexpr int64_t ALIGN_32B_FP32_MASK = 7;
 constexpr int64_t ALIGN_32B_FP32 = 8;
 constexpr int64_t GATE_IDX_NEW = 2;
 constexpr int64_t AIV_PER_AIC = 2;
+// 跨核事件同步: mode 2 = sub-block (AIC↔AIV 配对), flag 为硬件事件 ID
+constexpr uint8_t SYNC_MODE2 = 2;
+constexpr uint16_t SYNC_AIV_AIC_FLAG = 6;
+constexpr uint16_t SYNC_AIC_AIV_FLAG = 8;
 
 struct GRnnOffsets {
     int64_t AOffset{0};
@@ -74,29 +78,31 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (GetBlockIdx() < this->dgateMMTiling.usedCoreNum) {
+            this->dgateMM.SetTensorB(this->inputGm.wHiddenGm[this->dgateOffsets.BOffset], false);
+            if (!this->tiling->isSeqLength) {
+                this->ApplyTail(this->dgateMM, this->dgateMMTiling, this->dgateTail);
+            }
+        }
+
+        this->InitDhPrev();
+
         for (int64_t tIdx = this->T - 1; tIdx >= 0; tIdx--) {
-            SyncAll();
             this->ProcessVector(tIdx);
             SyncAll();
             this->ProcessDgateMM(tIdx);
             SyncAll();
-            this->AccumulateDhPrev();
+            this->AccumulateDhPrev(tIdx);
         }
-        SyncAll();
         this->StoreDhPrev();
-        SyncAll();
         this->ProcessDwIhMM();
-        SyncAll();
         this->ProcessDwHhMM();
-        SyncAll();
         this->ProcessDxMM();
-        SyncAll();
         if (this->tiling->isBias == 1) {
-            int64_t TB = this->T * this->B;
+            int64_t rows = this->totalSteps_;
             int64_t cols = this->H * GRU_GATE_SIZE;
-            this->ProcessBiasReduce(this->workGm.dGiGm, this->outputGm.dbInputGm, TB, cols);
-            SyncAll();
-            this->ProcessBiasReduce(this->workGm.dGhGm, this->outputGm.dbHiddenGm, TB, cols);
+            this->ProcessBiasReduce(this->workGm.dGiGm, this->outputGm.dbInputGm, rows, cols);
+            this->ProcessBiasReduce(this->workGm.dGhGm, this->outputGm.dbHiddenGm, rows, cols);
         }
     }
 
@@ -120,7 +126,7 @@ public:
                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>
         dwHhMM;
 
-    // MM3: dx = d_gi × w_input^T  [T*B,3H]×[3H,I]=[T*B,I]  -> 直接写回 dx 输出
+    // MM3: dx = d_gi × w_input^T  [T*B,3H]×[3H,I]=[T*B,I]
     matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
@@ -141,6 +147,7 @@ private:
         GlobalTensor<DTYPE> updateGateGm;
         GlobalTensor<DTYPE> newGateGm;
         GlobalTensor<DTYPE> hNGm;
+        GlobalTensor<int64_t> batchSizesGm;
     };
     struct OutputGm {
         __aicore__ inline OutputGm() = default;
@@ -194,7 +201,17 @@ private:
     int64_t vecHTile_{0};
     int64_t allocLength{DEFAULT_UB_BUF_ELEMENTS};
     int64_t hAligned{0};
+    int64_t totalSteps_{0};
     __aicore__ inline int64_t Ceil(int64_t x, int64_t y) { return (y == 0) ? x : (x + y - 1) / y; }
+
+    __aicore__ inline int64_t GetCompactRowOffset(int64_t seqIdx)
+    {
+        int64_t offset = 0;
+        for (int64_t i = 0; i < seqIdx; i++) {
+            offset += this->inputGm.batchSizesGm.GetValue(i);
+        }
+        return offset;
+    }
 
     __aicore__ inline void CalcGMOffsetForTransA(TCubeTiling& param, GRnnOffsets& off, GRnnTail& t, int64_t kSize)
     {
@@ -264,6 +281,23 @@ private:
         }
     }
 
+    __aicore__ inline void InitWorkBuffers(__gm__ DTYPE* ws)
+    {
+        int64_t off = 0;
+        int64_t TS = totalSteps_;
+        this->workGm.dGhGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE);
+        off += TS * H * GRU_GATE_SIZE;
+        this->workGm.dGiGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE);
+        off += TS * H * GRU_GATE_SIZE;
+        this->workGm.hPrevWsGm.SetGlobalBuffer(ws + off, TS * H);
+        off += TS * H;
+        this->workGm.xRevWsGm.SetGlobalBuffer(ws + off, TS * I);
+        off += TS * I;
+        this->workGm.dhPrevWsGm.SetGlobalBuffer(ws + off, B * H);
+        off += B * H;
+        this->workGm.dhFromHGm.SetGlobalBuffer(ws + off, B * H);
+    }
+
     __aicore__ inline void InitGlobalBuffers(GM_ADDR x, GM_ADDR w_input, GM_ADDR w_hidden, GM_ADDR init_h,
                                              GM_ADDR output_h, GM_ADDR reset_gate, GM_ADDR update_gate,
                                              GM_ADDR new_gate, GM_ADDR h_n, GM_ADDR dy, GM_ADDR dh, GM_ADDR batch_sizes,
@@ -276,24 +310,26 @@ private:
         this->vecBTile_ = this->tiling->singleCoreM;
         this->vecHTile_ = this->tiling->singleCoreN;
 
+        this->totalSteps_ = this->tiling->totalSteps;
+
         this->CalcGMOffset(this->dgateMMTiling, this->dgateOffsets, this->dgateTail, H * GRU_GATE_SIZE);
-        this->CalcGMOffsetForTransA(this->dwIhMMTiling, this->dwIhOffsets, this->dwIhTail, T * B);
-        this->CalcGMOffsetForTransA(this->dwHhMMTiling, this->dwHhOffsets, this->dwHhTail, T * B);
+        this->CalcGMOffsetForTransA(this->dwIhMMTiling, this->dwIhOffsets, this->dwIhTail, totalSteps_);
+        this->CalcGMOffsetForTransA(this->dwHhMMTiling, this->dwHhOffsets, this->dwHhTail, totalSteps_);
         this->CalcGMOffset(this->dxMMTiling, this->dxOffsets, this->dxTail, H * GRU_GATE_SIZE);
 
-        this->inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(x), T * B * I);
+        this->inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(x), totalSteps_ * I);
         this->inputGm.wInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(w_input), I * H * GRU_GATE_SIZE);
         this->inputGm.wHiddenGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(w_hidden), H * H * GRU_GATE_SIZE);
-        this->inputGm.outputHGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(output_h), T * B * H);
-        this->inputGm.dyGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dy), T * B * H);
+        this->inputGm.outputHGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(output_h), totalSteps_ * H);
+        this->inputGm.dyGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dy), totalSteps_ * H);
         this->inputGm.dhGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dh), B * H);
         this->inputGm.initHGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(init_h), B * H);
-        this->inputGm.resetGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(reset_gate), T * B * H);
-        this->inputGm.updateGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(update_gate), T * B * H);
-        this->inputGm.newGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(new_gate), T * B * H);
-        this->inputGm.hNGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(h_n), T * B * H);
+        this->inputGm.resetGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(reset_gate), totalSteps_ * H);
+        this->inputGm.updateGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(update_gate), totalSteps_ * H);
+        this->inputGm.newGateGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(new_gate), totalSteps_ * H);
+        this->inputGm.hNGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(h_n), totalSteps_ * H);
 
-        this->outputGm.dxGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dx), T * B * I);
+        this->outputGm.dxGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dx), totalSteps_ * I);
         this->outputGm.dhPrevGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dh_prev), B * H);
         this->outputGm.dwInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dw_input), I * H * GRU_GATE_SIZE);
         this->outputGm.dwHiddenGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(dw_hidden), H * H * GRU_GATE_SIZE);
@@ -302,23 +338,15 @@ private:
             this->outputGm.dbHiddenGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(db_hidden), H * GRU_GATE_SIZE);
         }
 
+        if (this->tiling->isSeqLength) {
+            this->inputGm.batchSizesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(batch_sizes), T);
+        }
+
         auto ws = reinterpret_cast<__gm__ DTYPE*>(workspace);
-        int64_t off = 0;
-        int64_t TB = T * B;
-        this->workGm.dGhGm.SetGlobalBuffer(ws + off, TB * H * GRU_GATE_SIZE);
-        off += TB * H * GRU_GATE_SIZE;
-        this->workGm.dGiGm.SetGlobalBuffer(ws + off, TB * H * GRU_GATE_SIZE);
-        off += TB * H * GRU_GATE_SIZE;
-        this->workGm.hPrevWsGm.SetGlobalBuffer(ws + off, TB * H);
-        off += TB * H;
-        this->workGm.xRevWsGm.SetGlobalBuffer(ws + off, TB * I);
-        off += TB * I;
-        this->workGm.dhPrevWsGm.SetGlobalBuffer(ws + off, B * H);
-        off += B * H;
-        this->workGm.dhFromHGm.SetGlobalBuffer(ws + off, B * H);
+        this->InitWorkBuffers(ws);
     }
 
-    // MM1: grad_h_prev = d_gh × w_hh  [B,3H]×[3H,H]=[B,H]
+    // MM1: grad_h_prev = d_gh × w_hh  [curBatch,3H]×[3H,H]=[curBatch,H]
     __aicore__ inline void ProcessDgateMM(int64_t tIdx)
     {
         if (GetBlockIdx() >= this->dgateMMTiling.usedCoreNum) {
@@ -327,11 +355,32 @@ private:
 
         bool isReverse = (this->tiling->direction != 0);
         int64_t gateIdx = isReverse ? (this->T - 1 - tIdx) : tIdx;
-        int64_t tAOff = gateIdx * this->B * this->H * GRU_GATE_SIZE;
+        int64_t tAOff = 0;
+
+        if (this->tiling->isSeqLength) {
+            int64_t compactRow = this->GetCompactRowOffset(gateIdx);
+            tAOff = compactRow * this->H * GRU_GATE_SIZE;
+        } else {
+            tAOff = gateIdx * this->B * this->H * GRU_GATE_SIZE;
+        }
 
         this->dgateMM.SetTensorA(this->workGm.dGhGm[tAOff + this->dgateOffsets.AOffset], false);
-        this->dgateMM.SetTensorB(this->inputGm.wHiddenGm[this->dgateOffsets.BOffset], false);
-        this->ApplyTail(this->dgateMM, this->dgateMMTiling, this->dgateTail);
+
+        if (this->tiling->isSeqLength) {
+            int64_t curBatch = this->inputGm.batchSizesGm.GetValue(gateIdx);
+            int64_t coreStartM = this->dgateTail.mCoreIndx * this->dgateMMTiling.singleCoreM;
+            if (coreStartM >= curBatch) {
+                return; // 该核完全越界, 直接退出
+            }
+            int64_t actualM = this->dgateMMTiling.singleCoreM;
+            if (coreStartM + actualM > curBatch) {
+                actualM = curBatch - coreStartM;
+            }
+            int64_t tailN = (this->dgateTail.nCoreIndx == this->dgateTail.notTailNCoreCount) ?
+                                this->dgateTail.tailSingleCoreN :
+                                this->dgateMMTiling.singleCoreN;
+            this->dgateMM.SetTail(actualM, tailN);
+        }
 
         this->dgateMM.IterateAll(this->workGm.dhPrevWsGm[this->dgateOffsets.COffset], false);
     }
@@ -418,305 +467,7 @@ private:
         return (mCnt > 0 && mStart < this->B);
     }
 
-    template <typename T>
-    __aicore__ inline void CopyInRow(GlobalTensor<T>& gm, LocalTensor<float>& ub, int64_t gmOffset, int64_t ubOffset,
-                                     int64_t rows, int64_t length, int64_t alignedLen, int64_t gmStride)
-    {
-        if constexpr (sizeof(T) == 2) {
-            auto tmpUb = ub.template ReinterpretCast<T>();
-            DataCopyExtParams cp(static_cast<uint16_t>(rows), static_cast<uint32_t>(length * sizeof(T)),
-                                 static_cast<uint32_t>(gmStride * sizeof(T)), static_cast<uint32_t>(0), 0);
-            DataCopyPadExtParams<T> pp(true, 0, 0, 0);
-            DataCopyPad(tmpUb[allocLength], gm[gmOffset], cp, pp);
-            PipeBarrier<PIPE_ALL>();
-            AscendC::Cast(ub, tmpUb[allocLength], AscendC::RoundMode::CAST_NONE, allocLength);
-            PipeBarrier<PIPE_ALL>();
-        } else {
-            DataCopyExtParams cp(static_cast<uint16_t>(rows), static_cast<uint32_t>(length * sizeof(T)),
-                                 static_cast<uint32_t>(gmStride * sizeof(T)), static_cast<uint32_t>(0), 0);
-            DataCopyPadExtParams<T> pp(true, 0, 0, 0);
-            DataCopyPad(ub, gm[gmOffset], cp, pp);
-        }
-    }
-
-    template <typename T>
-    __aicore__ inline void CopyOutRow(GlobalTensor<T>& gm, LocalTensor<float>& ub, int64_t gmOffset, int64_t ubOffset,
-                                      int64_t rows, int64_t length, int64_t gmStride, int64_t ubRowStride)
-    {
-        if constexpr (sizeof(T) == 2) {
-            auto tmpUb = this->ubTmp2.template ReinterpretCast<T>();
-            AscendC::Cast(tmpUb, ub, AscendC::RoundMode::CAST_RINT, allocLength);
-            PipeBarrier<PIPE_ALL>();
-            DataCopyExtParams cp(static_cast<uint16_t>(rows), static_cast<uint32_t>(length * sizeof(T)),
-                                 static_cast<uint32_t>(0), static_cast<uint32_t>(gmStride * sizeof(T)),
-                                 static_cast<uint32_t>(ubOffset * sizeof(T)));
-            DataCopyPad(gm[gmOffset], tmpUb, cp);
-        } else {
-            int64_t ubGapBytes = (ubRowStride - length) * static_cast<int64_t>(sizeof(float));
-            DataCopyExtParams cp(static_cast<uint16_t>(rows), static_cast<uint32_t>(length * sizeof(T)),
-                                 static_cast<uint32_t>(0), static_cast<uint32_t>(gmStride * sizeof(T)),
-                                 static_cast<uint32_t>(ubOffset * sizeof(T)));
-            DataCopyPad(gm[gmOffset], ub, cp);
-        }
-    }
-
-    // grad_h_t  = dy[t] + dh_next
-    // dn(d_new) = grad_h_t * (1 - z)
-    // dz_raw    = grad_h_t * (hp - n)
-    // dh_prev_from_h = grad_h_t * z
-    // d_i_new   = dn * (1 - n^2)
-    // d_reset   = (d_i_new * h_n) * r * (1-r)
-    // d_update  = dz_raw * z * (1 - z)
-    // d_gi = [d_reset, d_update, d_i_new]
-    // d_gh = [d_reset, d_update, d_i_new*r]
-    __aicore__ inline void ProcessVector(int64_t tIdx)
-    {
-        const int64_t bTile = this->vecBTile_, hTile = this->vecHTile_;
-
-        const bool isReverse = (this->tiling->direction != 0);
-        const int64_t gateIdx = isReverse ? (this->T - 1 - tIdx) : tIdx;
-        const int64_t revT = this->T - 1 - tIdx;
-        const int64_t gm3H = this->H * GRU_GATE_SIZE;
-        const int64_t gmGateStride = this->H * GATE_IDX_NEW;
-
-        int64_t mStart = 0, mCnt = 0;
-        if (!this->GetCoreRows(mStart, mCnt)) {
-            return;
-        }
-        int64_t bTiles = (mCnt + bTile - 1) / bTile;
-        int64_t hTiles = (H + hTile - 1) / hTile;
-        int64_t bOff = 0, hOff = 0, iOff = 0;
-        for (int64_t bt = 0; bt < bTiles; bt++) {
-            int64_t bRows = bTile;
-            bOff = bt * bTile;
-            if (bt == bTiles - 1)
-                bRows = mCnt - bOff;
-
-            for (int64_t ht = 0; ht < hTiles; ht++) {
-                int64_t hLen = hTile;
-                hOff = ht * hTile;
-                if (ht == hTiles - 1)
-                    hLen = H - hOff;
-                int64_t hAligned = ((hLen + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-                int64_t blkAligned = bRows * hAligned;
-                int64_t ghOff = gateIdx * B * H + (mStart + bOff) * H + hOff;
-                int64_t gmOffGi = gateIdx * B * gm3H + (mStart + bOff) * gm3H + hOff;
-
-                CopyInRow(this->inputGm.dyGm, this->ubGradH, ghOff, 0, bRows, hLen, blkAligned, 0);
-                if (tIdx == T - 1) {
-                    CopyInRow(this->inputGm.dhGm, this->ubTmp, (mStart + bOff) * H + hOff, 0, bRows, hLen, blkAligned,
-                              0);
-                } else {
-                    CopyInRow(this->workGm.dhPrevWsGm, this->ubTmp, (mStart + bOff) * H + hOff, 0, bRows, hLen,
-                              blkAligned, 0);
-                }
-
-                PipeBarrier<PIPE_ALL>();
-                Add(this->ubGradH, this->ubGradH, this->ubTmp, blkAligned);
-
-                CopyInRow(this->inputGm.updateGateGm, this->ubUpdate, ghOff, 0, bRows, hLen, blkAligned, 0);
-
-                CopyInRow(this->inputGm.newGateGm, this->ubNew, ghOff, 0, bRows, hLen, blkAligned, 0);
-
-                CopyInRow(this->inputGm.resetGateGm, this->ubReset, ghOff, 0, bRows, hLen, blkAligned, 0);
-
-                CopyInRow(this->inputGm.hNGm, this->ubHN, ghOff, 0, bRows, hLen, blkAligned, 0);
-
-                if (tIdx == 0) {
-                    CopyInRow(this->inputGm.initHGm, this->ubHPrev, (mStart + bOff) * H + hOff, 0, bRows, hLen,
-                              blkAligned, 0);
-                } else {
-                    int64_t prevIdx = isReverse ? (this->T - tIdx) : (tIdx - 1);
-                    CopyInRow(this->inputGm.outputHGm, this->ubHPrev, prevIdx * B * H + (mStart + bOff) * H + hOff, 0,
-                              bRows, hLen, blkAligned, 0);
-                }
-
-                PipeBarrier<PIPE_ALL>();
-                Duplicate(this->ubGate, 1.0f, blkAligned);
-                Sub(this->ubTmp, this->ubGate, this->ubUpdate, blkAligned);
-
-                Mul(this->ubTmp2, this->ubGradH, this->ubTmp, blkAligned);
-
-                Mul(this->ubTmp, this->ubNew, this->ubNew, blkAligned);
-
-                Sub(this->ubTmp, this->ubGate, this->ubTmp, blkAligned);
-
-                Mul(this->ubDHPrevFromH, this->ubTmp2, this->ubTmp, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-
-                CopyOutRow(this->workGm.dGiGm, this->ubDHPrevFromH, gmOffGi + GATE_IDX_NEW * H, 0, bRows, hLen,
-                           gmGateStride, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-
-                Mul(this->ubTmp, this->ubDHPrevFromH, this->ubHN, blkAligned);
-
-                Mul(this->ubTmp2, this->ubTmp, this->ubReset, blkAligned);
-
-                Sub(this->ubTmp, this->ubGate, this->ubReset, blkAligned);
-
-                Mul(this->ubTmp3, this->ubTmp2, this->ubTmp, blkAligned);
-
-                PipeBarrier<PIPE_ALL>();
-
-                CopyOutRow(this->workGm.dGiGm, this->ubTmp3, gmOffGi, 0, bRows, hLen, gmGateStride, blkAligned);
-
-                CopyOutRow(this->workGm.dGhGm, this->ubTmp3, gmOffGi, 0, bRows, hLen, gmGateStride, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-
-                Sub(this->ubTmp, this->ubHPrev, this->ubNew, blkAligned);
-
-                Mul(this->ubTmp2, this->ubGradH, this->ubTmp, blkAligned);
-
-                Mul(this->ubTmp, this->ubTmp2, this->ubUpdate, blkAligned);
-
-                Sub(this->ubTmp2, this->ubGate, this->ubUpdate, blkAligned);
-
-                Mul(this->ubTmp3, this->ubTmp, this->ubTmp2, blkAligned);
-
-                PipeBarrier<PIPE_ALL>();
-
-                CopyOutRow(this->workGm.dGiGm, this->ubTmp3, gmOffGi + H, 0, bRows, hLen, gmGateStride, blkAligned);
-
-                CopyOutRow(this->workGm.dGhGm, this->ubTmp3, gmOffGi + H, 0, bRows, hLen, gmGateStride, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-
-                Mul(this->ubTmp3, this->ubDHPrevFromH, this->ubReset, blkAligned);
-
-                PipeBarrier<PIPE_ALL>();
-
-                CopyOutRow(this->workGm.dGhGm, this->ubTmp3, gmOffGi + GATE_IDX_NEW * H, 0, bRows, hLen, gmGateStride,
-                           blkAligned);
-                PipeBarrier<PIPE_ALL>();
-
-                Mul(this->ubDHPrevFromH, this->ubGradH, this->ubUpdate, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-                CopyOutRow(this->workGm.dhFromHGm, this->ubDHPrevFromH, (mStart + bOff) * H + hOff, 0, bRows, hLen, 0,
-                           blkAligned);
-                PipeBarrier<PIPE_ALL>();
-            }
-
-            for (int64_t ht = 0; ht < hTiles; ht++) {
-                int64_t hLen = hTile;
-                hOff = ht * hTile;
-                if (ht == hTiles - 1)
-                    hLen = H - hOff;
-                int64_t hAligned = ((hLen + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-                int64_t blkAligned = bRows * hAligned;
-
-                Duplicate(this->ubTmp2, 0.0f, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-                if (tIdx == 0) {
-                    CopyInRow(this->inputGm.initHGm, this->ubTmp2, (mStart + bOff) * H + hOff, 0, bRows, hLen,
-                              blkAligned, 0);
-                } else {
-                    int64_t prevIdx = isReverse ? (this->T - tIdx) : (tIdx - 1);
-                    CopyInRow(this->inputGm.outputHGm, this->ubTmp2, prevIdx * B * H + (mStart + bOff) * H + hOff, 0,
-                              bRows, hLen, blkAligned, 0);
-                }
-
-                PipeBarrier<PIPE_ALL>();
-                CopyOutRow(this->workGm.hPrevWsGm, this->ubTmp2, (gateIdx * B + mStart + bOff) * H + hOff, 0, bRows,
-                           hLen, 0, blkAligned);
-                PipeBarrier<PIPE_ALL>();
-            }
-        }
-    }
-
-    // grad_h_prev = dgateMM_result + dh_prev_from_h
-    __aicore__ inline void AccumulateDhPrev()
-    {
-        const int64_t bTile = this->vecBTile_, hTile = this->vecHTile_;
-        int64_t mStart = 0, mCnt = 0;
-        if (!this->GetCoreRows(mStart, mCnt)) {
-            return;
-        }
-        int64_t bTiles = (mCnt + bTile - 1) / bTile;
-        int64_t hTiles = (H + hTile - 1) / hTile;
-        for (int64_t bT = 0; bT < bTiles; bT++) {
-            int64_t bOff = bT * bTile, bRows = bTile;
-            if (bT == bTiles - 1)
-                bRows = mCnt - bOff;
-            for (int64_t hT = 0; hT < hTiles; hT++) {
-                int64_t hOff = hT * hTile, hLen = hTile;
-                if (hT == hTiles - 1)
-                    hLen = H - hOff;
-                hAligned = ((hLen + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-                PipeBarrier<PIPE_ALL>();
-                CopyInRow(this->workGm.dhPrevWsGm, this->ubTmp, (mStart + bOff) * H + hOff, 0, bRows, hLen, hAligned,
-                          0);
-                CopyInRow(this->workGm.dhFromHGm, this->ubTmp2, (mStart + bOff) * H + hOff, 0, bRows, hLen, hAligned,
-                          0);
-                PipeBarrier<PIPE_ALL>();
-                Add(this->ubTmp3, this->ubTmp, this->ubTmp2, bRows * hAligned);
-                PipeBarrier<PIPE_ALL>();
-                CopyOutRow(this->workGm.dhPrevWsGm, this->ubTmp3, (mStart + bOff) * H + hOff, 0, bRows, hLen, 0,
-                           hAligned);
-                PipeBarrier<PIPE_ALL>();
-            }
-        }
-    }
-    __aicore__ inline void StoreDhPrev()
-    {
-        const int64_t bTile = this->vecBTile_, hTile = this->vecHTile_;
-        int64_t mStart = 0, mCnt = 0;
-        if (!this->GetCoreRows(mStart, mCnt)) {
-            return;
-        }
-        int64_t bTiles = (mCnt + bTile - 1) / bTile;
-        int64_t hTiles = (H + hTile - 1) / hTile;
-        for (int64_t bT = 0; bT < bTiles; bT++) {
-            int64_t bOff = bT * bTile, bRows = bTile;
-            if (bT == bTiles - 1)
-                bRows = mCnt - bOff;
-            for (int64_t hT = 0; hT < hTiles; hT++) {
-                int64_t hOff = hT * hTile, hLen = hTile;
-                if (hT == hTiles - 1)
-                    hLen = H - hOff;
-
-                CopyInRow(this->workGm.dhPrevWsGm, this->ubTmp, (mStart + bOff) * H + hOff, 0, bRows, hLen, hAligned,
-                          0);
-                PipeBarrier<PIPE_ALL>();
-                CopyOutRow(this->outputGm.dhPrevGm, this->ubTmp, (mStart + bOff) * H + hOff, 0, bRows, hLen, 0,
-                           hAligned);
-                PipeBarrier<PIPE_ALL>();
-            }
-        }
-    }
-
-    __aicore__ inline void ProcessBiasReduce(GlobalTensor<DTYPE>& srcGm, GlobalTensor<DTYPE>& dstGm, int64_t rows,
-                                             int64_t cols)
-    {
-        int64_t nReduceCnt = this->tiling->nReduceCnt;
-        int64_t singleCoreReduceN = this->tiling->singleCoreReduceN;
-        if (nReduceCnt <= 0)
-            return;
-        if (GetBlockIdx() >= nReduceCnt)
-            return;
-        int64_t nIdx = GetBlockIdx();
-        int64_t nStart = nIdx * singleCoreReduceN;
-        int64_t nCnt = (nIdx == nReduceCnt - 1) ? this->tiling->singleCoreReduceNTail : singleCoreReduceN;
-        if (nStart >= cols || nCnt <= 0)
-            return;
-        if (nStart + nCnt > cols)
-            nCnt = cols - nStart;
-
-        int64_t maxNOnce = allocLength;
-
-        for (int64_t cStart = 0; cStart < nCnt; cStart += maxNOnce) {
-            int64_t cCnt = (cStart + maxNOnce > nCnt) ? (nCnt - cStart) : maxNOnce;
-            int64_t cAligned = ((cCnt + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-            int64_t cGlobalOff = nStart + cStart;
-            Duplicate(this->ubTmp, 0.0f, cAligned);
-            for (int64_t r = 0; r < rows; ++r) {
-                CopyInRow(srcGm, this->ubTmp2, r * cols + cGlobalOff, 0, 1, cCnt, cAligned, 0);
-                PipeBarrier<PIPE_ALL>();
-                Add(this->ubTmp, this->ubTmp, this->ubTmp2, cAligned);
-                PipeBarrier<PIPE_ALL>();
-            }
-            CopyOutRow(dstGm, this->ubTmp, cGlobalOff, 0, 1, cCnt, 0, cAligned);
-            PipeBarrier<PIPE_ALL>();
-        }
-    }
+#include "gru_grad_vector.h"
 };
 
 #endif

@@ -17,7 +17,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-// 切batch参数
 struct CutBatchTiling {
     int64_t taskNum = 0;
     int64_t copyMLines = 0;
@@ -29,18 +28,16 @@ struct CutBatchTiling {
     int64_t splitPreCore = 0;
 };
 
-// GRU Grad 主Tiling数据
 struct GruGradTilingData {
     int64_t ubSize = 0;
-    // RNN 输入维度
     int64_t timeStep = 0;
     int64_t batch = 0;
     int64_t inputSize = 0;
     int64_t hiddenSize = 0;
     int64_t isBias = 0;
     int64_t isSeqLength = 0;
+    int64_t totalSteps = 0; // sum(batch_sizes) 当不定长; = timeStep * batch 当定长
 
-    // vector 分块参数
     int64_t singleCoreM = 0;
     int64_t singleCoreMTail = 0;
     int64_t singleCoreN = 0;
@@ -50,7 +47,6 @@ struct GruGradTilingData {
     int64_t mCnt = 0;
     int64_t nCnt = 0;
 
-    // reduce 分块参数
     int64_t singleCoreReduceN = 0;
     int64_t singleCoreReduceNTail = 0;
     int64_t baseReduceN = 0;
@@ -58,10 +54,8 @@ struct GruGradTilingData {
     int64_t maxReduceNumOnce = 0;
     int64_t reduceBlockSize = 0;
 
-    // RNN 属性
     int64_t direction = 0;
 
-    // split/concat 参数
     int64_t inputSizeAligned = 0;
     int64_t hiddenSizeAligned = 0;
     int64_t oneLineAligned = 0;
@@ -70,7 +64,6 @@ struct GruGradTilingData {
     CutBatchTiling xhInputTiling;
     CutBatchTiling xhHiddenTiling;
 
-    // matmul 参数
     TCubeTiling dwIhMMParam;
     TCubeTiling dwHhMMParam;
     TCubeTiling dgateMMParam;

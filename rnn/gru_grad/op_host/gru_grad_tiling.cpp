@@ -29,6 +29,7 @@ const int64_t GATES_NUM = 3;
 const int64_t AIV_DOUBLE = 2;
 const int64_t FP32_BYTES = 4;
 const int64_t INPUT_DIM_NUM = 3;
+const int64_t INPUT_DIM_NUM_COMPACT = 2;
 const int64_t DEFAULT_UB_RESERVE_SIZE = 1024;
 const int64_t DEFAULT_ALIGNED_FP16 = 16;
 const int64_t DEFAULT_ALIGNED_FP32 = 8;
@@ -71,7 +72,6 @@ ge::graphStatus GruGradTiling::GetShapeAttrsInfo()
     auto xIn = context_->GetInputShape(INPUT_X);
     OP_CHECK_IF(xIn == nullptr, OP_LOGE(nodeName_, "x nullptr"), return ge::GRAPH_FAILED);
     auto xS = xIn->GetStorageShape();
-    OP_CHECK_IF(xS.GetDimNum() != INPUT_DIM_NUM, OP_LOGE(nodeName_, "x must 3D"), return ge::GRAPH_FAILED);
 
     auto h0In = context_->GetInputShape(INPUT_H0);
     OP_CHECK_IF(h0In == nullptr, OP_LOGE(nodeName_, "h0 nullptr"), return ge::GRAPH_FAILED);
@@ -83,18 +83,31 @@ ge::graphStatus GruGradTiling::GetShapeAttrsInfo()
     auto whIn = context_->GetInputShape(INPUT_WH);
     OP_CHECK_IF(whIn == nullptr, OP_LOGE(nodeName_, "wh nullptr"), return ge::GRAPH_FAILED);
 
-    tilingData_.timeStep = xS.GetDim(T_IDX);
-    tilingData_.batch = xS.GetDim(B_IDX);
-    tilingData_.inputSize = xS.GetDim(S_IDX);
-    tilingData_.hiddenSize = h0S.GetDim(S_IDX);
+    auto bsS = context_->GetOptionalInputShape(INPUT_BS);
+    auto bsD = context_->GetOptionalInputDesc(INPUT_BS);
+    tilingData_.isSeqLength = (bsD && bsS && bsS->GetStorageShape().GetDimNum() != 0) ? 1 : 0;
+
+    if (tilingData_.isSeqLength) {
+        OP_CHECK_IF(xS.GetDimNum() != INPUT_DIM_NUM_COMPACT, OP_LOGE(nodeName_, "x must 2D for seq_length mode"),
+                    return ge::GRAPH_FAILED);
+        tilingData_.totalSteps = xS.GetDim(T_IDX);  // dim 0
+        tilingData_.inputSize = xS.GetDim(B_IDX);   // dim 1 = I (2D: [totalSteps, I])
+        tilingData_.hiddenSize = h0S.GetDim(S_IDX); // h0 is [1, B, H]
+        tilingData_.batch = h0S.GetDim(B_IDX);      // from init_h dim 1
+        tilingData_.timeStep = bsS->GetStorageShape().GetDim(0);
+    } else {
+        OP_CHECK_IF(xS.GetDimNum() != INPUT_DIM_NUM, OP_LOGE(nodeName_, "x must 3D for fixed-length mode"),
+                    return ge::GRAPH_FAILED);
+        tilingData_.timeStep = xS.GetDim(T_IDX);
+        tilingData_.batch = xS.GetDim(B_IDX);
+        tilingData_.inputSize = xS.GetDim(S_IDX);
+        tilingData_.hiddenSize = h0S.GetDim(S_IDX);
+        tilingData_.totalSteps = tilingData_.timeStep * tilingData_.batch;
+    }
 
     OP_TILING_CHECK(tilingData_.inputSize <= 0 || tilingData_.hiddenSize <= 0 || tilingData_.timeStep <= 0 ||
                         tilingData_.batch <= 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "shape<=0"), return ge::GRAPH_FAILED);
-
-    auto bsS = context_->GetOptionalInputShape(INPUT_BS);
-    auto bsD = context_->GetOptionalInputDesc(INPUT_BS);
-    tilingData_.isSeqLength = (bsD && bsS && bsS->GetStorageShape().GetDimNum() != 0) ? 1 : 0;
 
     OP_TILING_CHECK(!CheckParamsShape(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "shape fail"),
                     return ge::GRAPH_FAILED);
@@ -164,14 +177,15 @@ ge::graphStatus GruGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus GruGradTiling::GetWorkspaceSize()
 {
-    int64_t TB = tilingData_.timeStep * tilingData_.batch;
+    int64_t TS = tilingData_.totalSteps; // 不定长 = sum(batch_sizes), 定长 = T*B
     int64_t H = tilingData_.hiddenSize;
-    int64_t r1 = TB * GATES_NUM * H;
-    int64_t r2 = TB * GATES_NUM * H;
-    int64_t r3 = TB * H;
-    int64_t r4 = TB * tilingData_.inputSize;
-    int64_t r5 = tilingData_.batch * H;
-    int64_t r6 = tilingData_.batch * H;
+    int64_t B = tilingData_.batch;
+    int64_t r1 = TS * GATES_NUM * H;         // dGhGm
+    int64_t r2 = TS * GATES_NUM * H;         // dGiGm
+    int64_t r3 = TS * H;                     // hPrevWsGm
+    int64_t r4 = TS * tilingData_.inputSize; // xRevWsGm
+    int64_t r5 = B * H;                      // dhPrevWsGm (per-batch, independent of time)
+    int64_t r6 = B * H;                      // dhFromHGm
     int64_t ws1 = (r1 + r2 + r3 + r4 + r5 + r6) * inputDSize_;
 
     size_t* ws = context_->GetWorkspaceSizes(1);
@@ -179,82 +193,82 @@ ge::graphStatus GruGradTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-bool GruGradTiling::ValidateInputShape(int index, const std::vector<int64_t>& expected_dims)
+bool GruGradTiling::ValidateInputShape(int idx, const std::vector<int64_t>& e)
 {
-    auto in = context_->GetInputShape(index);
+    auto in = context_->GetInputShape(idx);
     if (!in)
         return false;
     auto s = in->GetStorageShape();
-    if (s.GetDimNum() != static_cast<int64_t>(expected_dims.size()))
+    if (s.GetDimNum() != (int64_t)e.size())
         return false;
-    for (size_t i = 0; i < expected_dims.size(); i++)
-        if (expected_dims[i] != s.GetDim(i))
+    for (size_t i = 0; i < e.size(); i++)
+        if (e[i] != s.GetDim(i))
             return false;
     return true;
 }
 
-bool GruGradTiling::ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims)
+bool GruGradTiling::ValidateOutputShape(int idx, const std::vector<int64_t>& e)
 {
-    auto out = context_->GetOutputShape(index);
+    auto out = context_->GetOutputShape(idx);
     if (!out)
         return false;
     auto s = out->GetStorageShape();
-    if (s.GetDimNum() != static_cast<int64_t>(expected_dims.size()))
+    if (s.GetDimNum() != (int64_t)e.size())
         return false;
-    for (size_t i = 0; i < expected_dims.size(); i++)
-        if (expected_dims[i] != s.GetDim(i))
+    for (size_t i = 0; i < e.size(); i++)
+        if (e[i] != s.GetDim(i))
             return false;
     return true;
+}
+
+void GruGradTiling::LogShapeCheck(bool isInput, int index, const std::vector<int64_t>& expected, const char* name,
+                                  bool ok)
+{
+    auto shape = isInput ? context_->GetInputShape(index) : context_->GetOutputShape(index);
+    if (shape) {
+        auto s = shape->GetStorageShape();
+        std::string actual;
+        for (size_t d = 0; d < s.GetDimNum(); d++)
+            actual += std::to_string(s.GetDim(d)) + (d + 1 < s.GetDimNum() ? "," : "");
+        std::string exp;
+        for (size_t d = 0; d < expected.size(); d++)
+            exp += std::to_string(expected[d]) + (d + 1 < expected.size() ? "," : "");
+        OP_LOGI(nodeName_, "Check%s[%d] %s expected=[%s] actual=[%s] %s", isInput ? "Input" : "Output", index, name,
+                exp.c_str(), actual.c_str(), ok ? "PASS" : "FAIL");
+    } else {
+        OP_LOGI(nodeName_, "Check%s[%d] %s shape is nullptr, FAIL", isInput ? "Input" : "Output", index, name);
+    }
 }
 
 bool GruGradTiling::CheckParamsShape()
 {
-    std::vector<int64_t> inD = {tilingData_.timeStep, tilingData_.batch, tilingData_.inputSize};
-    std::vector<int64_t> ihD = {1, tilingData_.batch, tilingData_.hiddenSize};
-    std::vector<int64_t> hidD = {tilingData_.timeStep, tilingData_.batch, tilingData_.hiddenSize};
-    std::vector<int64_t> wiD = {GATES_NUM * tilingData_.hiddenSize, tilingData_.inputSize};
-    std::vector<int64_t> whD = {GATES_NUM * tilingData_.hiddenSize, tilingData_.hiddenSize};
-    std::vector<int64_t> biD = {GATES_NUM * tilingData_.hiddenSize};
-    std::vector<int64_t> bhD = {GATES_NUM * tilingData_.hiddenSize};
+    int64_t TS = tilingData_.totalSteps;
+    int64_t B = tilingData_.batch;
+    int64_t H = tilingData_.hiddenSize;
+    int64_t I = tilingData_.inputSize;
 
-    OP_LOGI(nodeName_, "CheckParamsShape: T=%ld B=%ld I=%ld H=%ld", tilingData_.timeStep, tilingData_.batch,
-            tilingData_.inputSize, tilingData_.hiddenSize);
+    std::vector<int64_t> dxD = tilingData_.isSeqLength ? std::vector<int64_t>{TS, I} :
+                                                         std::vector<int64_t>{tilingData_.timeStep, B, I};
+    std::vector<int64_t> ihD = {1, B, H};
+    std::vector<int64_t> hidD = tilingData_.isSeqLength ? std::vector<int64_t>{TS, H} :
+                                                          std::vector<int64_t>{tilingData_.timeStep, B, H};
+    std::vector<int64_t> wiD = {GATES_NUM * H, I};
+    std::vector<int64_t> whD = {GATES_NUM * H, H};
+    std::vector<int64_t> biD = {GATES_NUM * H};
+    std::vector<int64_t> bhD = {GATES_NUM * H};
+
+    OP_LOGI(nodeName_, "CheckParamsShape: T=%ld B=%ld I=%ld H=%ld totalSteps=%ld isSeqLength=%ld", tilingData_.timeStep,
+            B, I, H, TS, tilingData_.isSeqLength);
 
     bool ret = true;
-    auto ci = [this](int i, auto& e, const char* n) {
+    auto ci = [&](int i, auto& e, const char* n) {
         bool ok = ValidateInputShape(i, e);
-        auto in = context_->GetInputShape(i);
-        if (in) {
-            auto s = in->GetStorageShape();
-            std::string actual;
-            for (size_t d = 0; d < s.GetDimNum(); d++)
-                actual += std::to_string(s.GetDim(d)) + (d + 1 < s.GetDimNum() ? "," : "");
-            std::string exp;
-            for (size_t d = 0; d < e.size(); d++)
-                exp += std::to_string(e[d]) + (d + 1 < e.size() ? "," : "");
-            OP_LOGI(nodeName_, "CheckInput[%d] %s expected=[%s] actual=[%s] %s", i, n, exp.c_str(), actual.c_str(),
-                    ok ? "PASS" : "FAIL");
-        } else {
-            OP_LOGI(nodeName_, "CheckInput[%d] %s shape is nullptr, FAIL", i, n);
-        }
+        LogShapeCheck(true, i, e, n, ok);
         return ok;
     };
-    auto co = [this](int i, auto& e, const char* n) {
+    auto co = [&](int i, auto& e, const char* n) {
         bool ok = ValidateOutputShape(i, e);
-        auto out = context_->GetOutputShape(i);
-        if (out) {
-            auto s = out->GetStorageShape();
-            std::string actual;
-            for (size_t d = 0; d < s.GetDimNum(); d++)
-                actual += std::to_string(s.GetDim(d)) + (d + 1 < s.GetDimNum() ? "," : "");
-            std::string exp;
-            for (size_t d = 0; d < e.size(); d++)
-                exp += std::to_string(e[d]) + (d + 1 < e.size() ? "," : "");
-            OP_LOGI(nodeName_, "CheckOutput[%d] %s expected=[%s] actual=[%s] %s", i, n, exp.c_str(), actual.c_str(),
-                    ok ? "PASS" : "FAIL");
-        } else {
-            OP_LOGI(nodeName_, "CheckOutput[%d] %s shape is nullptr, FAIL", i, n);
-        }
+        LogShapeCheck(false, i, e, n, ok);
         return ok;
     };
 
@@ -268,7 +282,7 @@ bool GruGradTiling::CheckParamsShape()
     ret = ci(INPUT_HN, hidD, "hn") && ret;
     ret = ci(INPUT_DY, hidD, "dy") && ret;
     ret = ci(INPUT_DH, ihD, "dh") && ret;
-    ret = co(OUT_DX, inD, "dx") && ret;
+    ret = co(OUT_DX, dxD, "dx") && ret;
     ret = co(OUT_DHP, ihD, "dh_prev") && ret;
     ret = co(OUT_DWI, wiD, "dw_input") && ret;
     ret = co(OUT_DWH, whD, "dw_hidden") && ret;
@@ -299,108 +313,104 @@ void GruGradTiling::GetMatmulTiling()
 {
     auto geDataType = context_->GetInputDesc(INPUT_X)->GetDataType();
     auto mmDataType = static_cast<matmul_tiling::DataType>(geDataType);
+    GetDgateMMTiling(mmDataType);
+    GetDwIhMMTiling(mmDataType);
+    GetDwHhMMTiling(mmDataType);
+    GetDxMMTiling(mmDataType);
+}
 
-    // ========== MM1: dgateMM — 计算 grad_h_prev = d_gh × w_hh ==========
-    // A: d_gh      [B, 3H]
-    // B: w_hh      [3H, H]
-    // C: grad_h_prev [B, H]
-    {
-        matmul_tiling::MultiCoreMatmulTiling dgateMM;
-        auto ret = dgateMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetAType fail."), return);
-        ret = dgateMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetBType fail."), return);
-        ret = dgateMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetCType fail."), return);
+void GruGradTiling::GetDgateMMTiling(matmul_tiling::DataType mmDataType)
+{
+    // ========== MM1: dgateMM — grad_h_prev = d_gh × w_hh ==========
+    // A: d_gh [B, 3H], B: w_hh [3H, H], C: grad_h_prev [B, H]
+    matmul_tiling::MultiCoreMatmulTiling dgateMM;
+    auto ret = dgateMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetAType fail."), return);
+    ret = dgateMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetBType fail."), return);
+    ret = dgateMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetCType fail."), return);
+    ret = dgateMM.SetDim(sysAicCoreNum_);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetDim fail."), return);
+    // M=B (最大batch), N=H, K=3H
+    ret = dgateMM.SetOrgShape(tilingData_.batch, tilingData_.hiddenSize, tilingData_.hiddenSize * GATES_NUM);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetOrgShape fail."), return);
+    ret = dgateMM.SetShape(tilingData_.batch, tilingData_.hiddenSize, tilingData_.hiddenSize * GATES_NUM);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetShape fail."), return);
+    ret = dgateMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetBufferSpace fail."), return);
+    ret = dgateMM.GetTiling(tilingData_.dgateMMParam);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM GetTiling fail."), return);
+}
 
-        ret = dgateMM.SetDim(sysAicCoreNum_);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetDim fail."), return);
-        // M=B, N=H, K=3H
-        ret = dgateMM.SetOrgShape(tilingData_.batch, tilingData_.hiddenSize, tilingData_.hiddenSize * GATES_NUM);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetOrgShape fail."), return);
-        ret = dgateMM.SetShape(tilingData_.batch, tilingData_.hiddenSize, tilingData_.hiddenSize * GATES_NUM);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetShape fail."), return);
-        ret = dgateMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM SetBufferSpace fail."), return);
+void GruGradTiling::GetDwIhMMTiling(matmul_tiling::DataType mmDataType)
+{
+    // ========== MM2a: dwIhMM — dw_ih = d_gi^T × x [3H,TS]×[TS,I]=[3H,I] ==========
+    int64_t TS = tilingData_.totalSteps; // 不定长 = sum(batch_sizes), 定长 = T*B
+    matmul_tiling::MultiCoreMatmulTiling dwIhMM;
+    auto ret = dwIhMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType, true);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetAType fail."), return);
+    ret = dwIhMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetBType fail."), return);
+    ret = dwIhMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetCType fail."), return);
+    ret = dwIhMM.SetDim(sysAicCoreNum_);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetDim fail."), return);
+    ret = dwIhMM.SetOrgShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.inputSize, TS);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetOrgShape fail."), return);
+    ret = dwIhMM.SetShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.inputSize, TS);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetShape fail."), return);
+    ret = dwIhMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetBufferSpace fail."), return);
+    ret = dwIhMM.GetTiling(tilingData_.dwIhMMParam);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM GetTiling fail."), return);
+}
 
-        ret = dgateMM.GetTiling(tilingData_.dgateMMParam);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dgateMM GetTiling fail."), return);
-    }
+void GruGradTiling::GetDwHhMMTiling(matmul_tiling::DataType mmDataType)
+{
+    // ========== MM2b: dwHhMM — dw_hh = h^T × d_gh [H,TS]×[TS,3H]=[H,3H] ==========
+    int64_t TS = tilingData_.totalSteps; // 不定长 = sum(batch_sizes), 定长 = T*B
+    matmul_tiling::MultiCoreMatmulTiling dwHhMM;
+    auto ret = dwHhMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType, true);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetAType fail."), return);
+    ret = dwHhMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetBType fail."), return);
+    ret = dwHhMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetCType fail."), return);
+    ret = dwHhMM.SetDim(sysAicCoreNum_);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetDim fail."), return);
+    ret = dwHhMM.SetOrgShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.hiddenSize, TS);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetOrgShape fail."), return);
+    ret = dwHhMM.SetShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.hiddenSize, TS);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetShape fail."), return);
+    ret = dwHhMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetBufferSpace fail."), return);
+    ret = dwHhMM.GetTiling(tilingData_.dwHhMMParam);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM GetTiling fail."), return);
+}
 
-    // ========== MM2a: dwIhMM — dw_ih = d_gi^T × x  [3H,T*B]×[T*B, I]=[3H,I] ==========
-    {
-        matmul_tiling::MultiCoreMatmulTiling dwIhMM;
-        auto ret = dwIhMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType, true);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetAType fail."), return);
-        ret = dwIhMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetBType fail."), return);
-        ret = dwIhMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetCType fail."), return);
-        ret = dwIhMM.SetDim(sysAicCoreNum_);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetDim fail."), return);
-        ret = dwIhMM.SetOrgShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.inputSize,
-                                 tilingData_.batch * tilingData_.timeStep); // M=I, N=3H, K=T*B (x^T @ d_gi)
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetOrgShape fail."), return);
-        ret = dwIhMM.SetShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.inputSize,
-                              tilingData_.batch * tilingData_.timeStep);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetShape fail."), return);
-        ret = dwIhMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM SetBufferSpace fail."), return);
-        ret = dwIhMM.GetTiling(tilingData_.dwIhMMParam);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwIhMM GetTiling fail."), return);
-    }
-
-    // ========== MM2b: dwHhMM — dw_hh = h^T × d_gh  [H,T*B]×[T*B,3H]=[H,3H] ==========
-    {
-        matmul_tiling::MultiCoreMatmulTiling dwHhMM;
-        auto ret = dwHhMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType, true);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetAType fail."), return);
-        ret = dwHhMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetBType fail."), return);
-        ret = dwHhMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetCType fail."), return);
-        ret = dwHhMM.SetDim(sysAicCoreNum_);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetDim fail."), return);
-        ret = dwHhMM.SetOrgShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.hiddenSize,
-                                 tilingData_.batch * tilingData_.timeStep);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetOrgShape fail."), return);
-        ret = dwHhMM.SetShape(tilingData_.hiddenSize * GATES_NUM, tilingData_.hiddenSize,
-                              tilingData_.batch * tilingData_.timeStep);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetShape fail."), return);
-        ret = dwHhMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM SetBufferSpace fail."), return);
-        ret = dwHhMM.GetTiling(tilingData_.dwHhMMParam);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dwHhMM GetTiling fail."), return);
-    }
-
+void GruGradTiling::GetDxMMTiling(matmul_tiling::DataType mmDataType)
+{
     // ========== MM3: dxMM — dx = d_gi × w_input ==========
-    // A: d_gi_all [T*B, 3H]
-    // B: w_input  [3H, I]
-    // C: dx       [T*B, I]
-    {
-        matmul_tiling::MultiCoreMatmulTiling dxMM;
-        auto ret = dxMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetAType fail."), return);
-        ret = dxMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetBType fail."), return);
-        ret = dxMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetCType fail."), return);
-
-        ret = dxMM.SetDim(sysAicCoreNum_);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetDim fail."), return);
-        // M=T*B, N=I, K=3H
-        ret = dxMM.SetOrgShape(tilingData_.batch * tilingData_.timeStep, tilingData_.inputSize,
-                               tilingData_.hiddenSize * GATES_NUM);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetOrgShape fail."), return);
-        ret = dxMM.SetShape(tilingData_.batch * tilingData_.timeStep, tilingData_.inputSize,
-                            tilingData_.hiddenSize * GATES_NUM);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetShape fail."), return);
-        ret = dxMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetBufferSpace fail."), return);
-
-        ret = dxMM.GetTiling(tilingData_.dxMMParam);
-        OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM GetTiling fail."), return);
-    }
+    int64_t TS = tilingData_.totalSteps; // 不定长 = sum(batch_sizes), 定长 = T*B
+    matmul_tiling::MultiCoreMatmulTiling dxMM;
+    auto ret = dxMM.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetAType fail."), return);
+    ret = dxMM.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetBType fail."), return);
+    ret = dxMM.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetCType fail."), return);
+    ret = dxMM.SetDim(sysAicCoreNum_);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetDim fail."), return);
+    // M=TS, N=I, K=3H
+    ret = dxMM.SetOrgShape(TS, tilingData_.inputSize, tilingData_.hiddenSize * GATES_NUM);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetOrgShape fail."), return);
+    ret = dxMM.SetShape(TS, tilingData_.inputSize, tilingData_.hiddenSize * GATES_NUM);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetShape fail."), return);
+    ret = dxMM.SetBufferSpace(DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE, DEFAULT_BUFFER_SPACE);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM SetBufferSpace fail."), return);
+    ret = dxMM.GetTiling(tilingData_.dxMMParam);
+    OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "dxMM GetTiling fail."), return);
 }
 
 void GruGradTiling::ReduceBlockCalculate()
@@ -412,7 +422,7 @@ void GruGradTiling::ReduceBlockCalculate()
                                                                                  tilingData_.baseReduceN;
     tilingData_.maxReduceNumOnce = (tilingData_.ubSize - DEFAULT_UB_RESERVE_SIZE) / FP32_BYTES /
                                    tilingData_.baseReduceN;
-    tilingData_.reduceBlockSize = tilingData_.timeStep * tilingData_.batch;
+    tilingData_.reduceBlockSize = tilingData_.totalSteps;
     int64_t bn = Ops::Base::CeilDiv(tilingData_.hiddenSize * GATES_NUM, tilingData_.baseReduceN);
     tilingData_.nReduceCnt = sysAivCoreNum_ < bn ? sysAivCoreNum_ : bn;
     int64_t pc = Ops::Base::CeilDiv(bn, tilingData_.nReduceCnt);
