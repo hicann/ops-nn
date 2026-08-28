@@ -38,6 +38,51 @@ constexpr int IDX_4 = 4;
 constexpr int OUTPUT_MASK_LEN = 2;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 
+static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE = {
+    op::DataType::DT_INT8, op::DataType::DT_INT4, op::DataType::DT_INT32};
+
+static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {op::DataType::DT_FLOAT16,
+                                                                                          op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE = {
+    op::DataType::DT_INT8,          op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2,
+    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_INT4,     op::DataType::DT_INT32};
+
+static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                            const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
+                            const aclTensor* betaOptional, const aclTensor* y1Out, const aclTensor* y2Out,
+                            const aclTensor* xOut, const aclTensor* scale1Out, const aclTensor* scale2Out)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(gamma, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    if (nullptr != betaOptional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(betaOptional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false); // 校验可选beta
+    }
+
+    if (nullptr != smoothScale1Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale1Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+
+    if (nullptr != smoothScale2Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale2Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE, return false); // Mandatory output
+        OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE, return false); // Mandatory output
+        OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE, return false);
+    }
+    OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
+
+    OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+
+    OP_CHECK_DTYPE_NOT_MATCH(scale1Out, op::DataType::DT_FLOAT, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(scale2Out, op::DataType::DT_FLOAT, return false);
+    return true;
+}
+
 static bool CheckFlag(const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
                       const aclBoolArray* outputMask)
 {
@@ -244,6 +289,11 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // CheckDtype: validate dtype
+    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckDtypeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
+                                                             betaOptional, y1Out, y2Out, xOut, scale1Out, scale2Out),
+              ACLNN_ERR_PARAM_INVALID);
 
     // CheckFlag: validate outputMask parameter
     CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckFlag(smoothScale1Optional, smoothScale2Optional, outputMask),
