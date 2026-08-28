@@ -42,7 +42,6 @@ constexpr uint64_t ASCEND_WORKSPACE = 16777216;
 
 ge::graphStatus ReluGradV2Tiling::CalcInputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "ReluGradV2Tiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
@@ -58,7 +57,6 @@ ge::graphStatus ReluGradV2Tiling::CalcInputDtype()
 
 ge::graphStatus ReluGradV2Tiling::CheckShape()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "ReluGradV2Tiling CheckShape enter.");
     auto gradientsStorageShape = tilingContext->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradientsStorageShape);
     const gert::Shape& inputGradientsShape = EnsureNotScalar(gradientsStorageShape->GetStorageShape());
@@ -96,7 +94,6 @@ ge::graphStatus ReluGradV2Tiling::CheckShape()
 
 ge::graphStatus ReluGradV2Tiling::CalcOutputDtype()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "ReluGradV2Tiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
@@ -111,14 +108,13 @@ ge::graphStatus ReluGradV2Tiling::CalcOutputDtype()
 
 ge::graphStatus ReluGradV2Tiling::RunTiling()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "ReluGradV2Tiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
 
-    OP_CHECK_IF(CalcInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "Get input dtype failed."),
+    OP_CHECK_IF(CalcInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext->GetNodeName(), "Get input dtype failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcOutputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "Get output dtype failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "Check shape failed."),
+    OP_CHECK_IF(CalcOutputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext->GetNodeName(), "Get output dtype failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext->GetNodeName(), "Check shape failed."),
                 return ge::GRAPH_FAILED);
 
     auto tiling = tilingContext->GetTilingData<EleBaseTilingDataV2>();
@@ -152,8 +148,8 @@ ge::graphStatus ReluGradV2Tiling::RunTiling()
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(baseTilingResult != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "ElewiseBaseTiling failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext->GetNodeName(), "ElewiseBaseTiling failed."), return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
@@ -169,7 +165,6 @@ ge::graphStatus ReluGradV2Tiling::RunTiling()
 
 static ge::graphStatus TilingForReluGradV2(gert::TilingContext* tilingContextGen)
 {
-    OP_LOGD("ReluGradV2", "Enter TilingForReluGradV2");
     if (tilingContextGen == nullptr) {
         OP_LOGE("ReluGradV2", "Tiling context is null");
         return ge::GRAPH_FAILED;
@@ -177,7 +172,6 @@ static ge::graphStatus TilingForReluGradV2(gert::TilingContext* tilingContextGen
     auto compileInfo = tilingContextGen->GetCompileInfo<ReluGradV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
 
-    OP_LOGD("ReluGradV2", "Enter new ReluGradV2Tiling");
     ReluGradV2Tiling baseOpTiling(tilingContextGen);
     return baseOpTiling.RunTiling();
 }

@@ -72,33 +72,32 @@ bool SparseSliceTiling::UseSIMT()
 
 ge::graphStatus SparseSliceTiling::GetShapeAttrsInfo()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling GetShapeAttrsInfo.");
     OP_TILING_CHECK(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check datatype failed. "),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check shape failed. "),
                     return ge::GRAPH_FAILED);
-    OP_LOGD(context_->GetNodeName(), "End SparseSliceTiling GetShapeAttrsInfo.");
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SparseSliceTiling::GetPlatformInfo()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling GetPlatformInfo.");
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_TILING_CHECK((tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (tilingParams.totalCoreNum <= 0),
+        OP_LOGE(context_->GetNodeName(), "Failed to get core num, coreNum: %ld.", tilingParams.totalCoreNum),
+        return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParams.ubSize = static_cast<int64_t>(ubSize) - RESERVED_UB_SIZE;
-    OP_TILING_CHECK((tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+    OP_TILING_CHECK((tilingParams.ubSize <= 0),
+                    OP_LOGE(context_->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParams.ubSize),
                     return ge::GRAPH_FAILED);
     tilingParams.vfLen = Ops::Base::GetVRegSize(context_);
     tilingParams.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_LOGD(context_->GetNodeName(), "End SparseSliceTiling GetPlatformInfo.");
 
     return ge::GRAPH_SUCCESS;
 }
@@ -107,7 +106,6 @@ bool SparseSliceTiling::IsCapable() { return true; }
 
 ge::graphStatus SparseSliceTiling::DoOpTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling DoOpTiling.");
     ge::graphStatus res = SetTilingParams();
     OP_TILING_CHECK(res != ge::GRAPH_SUCCESS,
                     OP_LOGE(context_->GetNodeName(), "SparseSliceTiling SetTilingParams Failed"), return res);
@@ -275,7 +273,6 @@ ge::graphStatus SparseSliceTiling::CheckShape()
 
 ge::graphStatus SparseSliceTiling::SetTilingParams()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling SetTilingParams.");
     auto indicesPtr = context_->GetInputShape(0);
     auto indicesShape = indicesPtr->GetStorageShape();
     tilingParams.valueNumbers = static_cast<int64_t>(indicesShape.GetDim(0));
@@ -349,7 +346,6 @@ void SparseSliceTiling::PrintTilingData()
 
 ge::graphStatus SparseSliceTiling::CalcYShape()
 {
-    OP_LOGD(context_->GetNodeName(), "Begin calculate y_shape. ");
     const gert::Tensor* shapeTensor = context_->GetInputTensor(DIGIT_TWO);
     const gert::Tensor* startTensor = context_->GetInputTensor(DIGIT_THREE);
     const gert::Tensor* sizeTensor = context_->GetInputTensor(DIGIT_FOUR);
@@ -394,7 +390,6 @@ ge::graphStatus SparseSliceTiling::CalcYShape()
     tilingData.set_sliceStart(tilingParams.sliceStart);
     tilingData.set_sliceEnd(tilingParams.sliceEnd);
     OP_LOGD(context_->GetNodeName(), "Print Y shape is empty: %d. ", tilingParams.IsEmptyYShape);
-    OP_LOGD(context_->GetNodeName(), "End Calculate Y shape. ");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -426,8 +421,6 @@ static ge::graphStatus Tiling4SparseSlice(gert::TilingContext* context_)
 
 ge::graphStatus TilingPrepare4SparseSlice(gert::TilingParseContext* context_)
 {
-    OP_LOGD(context_->GetNodeName(), "TilingPrepare4SparseSlice entering.");
-
     auto compileInfo = GetCompileInfoPtr<SparseSliceCompileInfo>(context_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     auto platformInfo = context_->GetPlatformInfo();

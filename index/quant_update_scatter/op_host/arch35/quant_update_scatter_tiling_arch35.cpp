@@ -94,7 +94,6 @@ string QuantUpdateScatterRegbaseTiling::GetErrMsg(ge::DataType type) const
 
 void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLargeQuant()
 {
-    OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeBatchLargeQuant");
     tilingData_.set_innerLoopEle(maxUpdatesSize_ / BYTES_ONE_BLOCK * BYTES_ONE_BLOCK / updateDtypeSize_ / BUFFER_NUM);
     tilingData_.set_innerLoopFullRpt(0);
     if (tilingData_.get_innerLoopEle() == 0) {
@@ -114,7 +113,6 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLargeQuant()
 
 void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLittleQuant()
 {
-    OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeBatchLittleQuant");
     int64_t updateDim3Align = tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() *
                               tilingData_.get_updateOriLastDimAlign();
     int64_t innerLoopEle = maxUpdatesSize_ / BYTES_ONE_BLOCK * BYTES_ONE_BLOCK / updateDtypeSize_ / BUFFER_NUM /
@@ -139,7 +137,6 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLittleQuant()
 
 void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLargeQuant()
 {
-    OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeEleLargeQuant");
     int64_t innerLoopEle = maxUpdatesSize_ / BYTES_ONE_BLOCK * BYTES_ONE_BLOCK / updateDtypeSize_ / BUFFER_NUM;
     tilingData_.set_innerLoopEle(innerLoopEle);
     tilingData_.set_innerLoopFullRpt(0);
@@ -160,7 +157,6 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLargeQuant()
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLittleQuant()
 {
-    OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeEleLittleQuant");
     int64_t updateDim3Align = tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() *
                               tilingData_.get_updateOriLastDimAlign();
     int64_t innerLoopEle = maxUpdatesSize_ / updateDtypeSize_ / BUFFER_NUM / updateDim3Align *
@@ -316,7 +312,9 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::GetTilingParam()
     }
     OP_LOGD(context_->GetNodeName(), "maxUpdatesSize_: %ld", maxUpdatesSize_);
 
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != GetTilingNeg2(), OP_LOGE(context_->GetNodeName(), "some case not support."),
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != GetTilingNeg2(),
+                OP_LOGE(context_->GetNodeName(), "GetTilingNeg2 failed, updateDim2: %ld, updateDim3: %ld.",
+                        updateNewShape_.GetDim(DIM_2), updateNewShape_.GetDim(DIM_3)),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -651,7 +649,6 @@ void QuantUpdateScatterRegbaseTiling::PrintDebugInfo()
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
 {
-    OP_LOGD(context_->GetNodeName(), "Enter quant_update_scatter_regbase dotiling!");
     OP_CHECK_IF(PrepareTilingParams() != ge::GRAPH_SUCCESS,
                 OP_LOGE(context_->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(VerifyNullTenosr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "VerifyNullTenosr failed!"),
@@ -693,7 +690,6 @@ static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context)
 {
     auto compileInfo = context->GetCompileInfo<QuantUpdateScatterCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    OP_LOGD(context->GetNodeName(), "Enter new QuantUpdateScatterTiling");
     QuantUpdateScatterRegbaseTiling tiling(context);
     return tiling.DoTiling();
 }

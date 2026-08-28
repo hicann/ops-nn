@@ -49,7 +49,6 @@ T inline CeilDivide(T num1, T num2)
 
 static ge::graphStatus CheckDtype(const gert::TilingContext* context, MapIndexTilingParam& tilingParam)
 {
-    OP_LOGD(context->GetNodeName(), "CheckDtype begin.");
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto xDtype = inputXPtr->GetDataType();
@@ -94,7 +93,6 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context, MapIndexTi
 
 static ge::graphStatus CheckShape(const gert::TilingContext* context, MapIndexTilingParam& tilingParam)
 {
-    OP_LOGD(context->GetNodeName(), "CheckShape begin.");
     auto xShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
@@ -162,8 +160,6 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, MapIndexTi
 
 static ge::graphStatus CheckAttr(const gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "checkAttr begin.");
-
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
@@ -177,17 +173,18 @@ static ge::graphStatus CheckAttr(const gert::TilingContext* context)
 
 static ge::graphStatus GetPlatInfo(const gert::TilingContext* context, MapIndexTilingParam& tilingParam)
 {
-    OP_LOGD(context->GetNodeName(), "GetPlatInfo begin.");
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParam.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((tilingParam.totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+    OP_CHECK_IF((tilingParam.totalCoreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get core num, coreNum: %ld.", tilingParam.totalCoreNum),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParam.ubSize = static_cast<int64_t>(ubSize) - RESERVED_UB_SIZE;
-    OP_CHECK_IF((tilingParam.ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+    OP_CHECK_IF((tilingParam.ubSize <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get ub size, ubSize: %ld.", tilingParam.ubSize),
                 return ge::GRAPH_FAILED);
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
     tilingParam.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -196,7 +193,6 @@ static ge::graphStatus GetPlatInfo(const gert::TilingContext* context, MapIndexT
 
 static ge::graphStatus DoTiling(const gert::TilingContext* context, MapIndexTilingParam& tilingParam)
 {
-    OP_LOGD(context->GetNodeName(), "DoTiling begin.");
     tilingParam.normalCoreProcessNum = CeilDivide(tilingParam.Dim0Size, tilingParam.totalCoreNum);
     tilingParam.usedCoreNum = CeilDivide(tilingParam.Dim0Size, tilingParam.normalCoreProcessNum);
     tilingParam.tailCoreProcessNum = tilingParam.Dim0Size -
@@ -229,7 +225,6 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, MapIndexTili
 inline static ge::graphStatus SetTilingData(gert::TilingContext* context, const MapIndexTilingParam& tilingParam,
                                             MapIndexTilingData& tilingData)
 {
-    OP_LOGD(context->GetNodeName(), "SetTilingData begin.");
     tilingData.set_totalCoreNum(tilingParam.totalCoreNum);
     tilingData.set_usedCoreNum(tilingParam.usedCoreNum);
     tilingData.set_normalCoreProcessNum(tilingParam.normalCoreProcessNum);
@@ -268,8 +263,6 @@ inline static void PrintTilingData(const gert::TilingContext* context, MapIndexT
 
 ge::graphStatus Tiling4MapIndex(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4MapIndex running begin.");
-
     MapIndexTilingParam tilingParam;
 
     OP_CHECK_IF(CheckDtype(context, tilingParam) != ge::GRAPH_SUCCESS,
@@ -295,11 +288,7 @@ ge::graphStatus Tiling4MapIndex(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4MapIndex(gert::TilingParseContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "TilingPrepare4MapIndex entering.");
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4MapIndex(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 IMPL_OP_OPTILING(MapIndex).Tiling(Tiling4MapIndex).TilingParse<MapIndexCompileInfo>(TilingPrepare4MapIndex);
 } // namespace optiling
