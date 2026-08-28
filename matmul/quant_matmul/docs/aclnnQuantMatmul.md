@@ -376,7 +376,7 @@ int aclnnQuantMatmulTest(int32_t deviceId, aclrtStream &stream) {
   std::unique_ptr<void, aclError (*)(void *)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
   float deqScale = 1.0f;
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnQuantMatmul第一段接口

@@ -566,7 +566,7 @@ int main()
     ret = CreateAclTensor<int16_t>(weightGradOutData, weightGradOutShape, &weightGradOutDeviceAddr, aclDataType::ACL_BF16, &weightGradOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor *executor;
     // 调用aclnnFusedLinearCrossEntropyLossGrad第一段接口

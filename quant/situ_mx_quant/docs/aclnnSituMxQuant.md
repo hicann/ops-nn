@@ -451,7 +451,7 @@ int main()
     int64_t axis = -1;
     int64_t dstType = 36;
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnSituMxQuant第一段接口

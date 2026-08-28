@@ -362,12 +362,12 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - K-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。x1/x2输入支持FLOAT8_E5M2、FLOAT8_E4M3FN两种类型，x1Scale/x2Scale仅支持FLOAT32类型。
-    - MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，支持MXFP8和MXFP4两种数据类型。K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。x1/x2输入支持FLOAT8_E4M3FN、FLOAT4_E2M1数据类型，x1Scale/x2Scale仅支持FLOAT8_E8M0类型。
-    - T-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，仅支持静态量化，x1Scale支持配置为空或(1,)，x2Scale要求shape为(N,)，group_size配置不生效。x2Scale需经过[trans_quant_param](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)预处理转换为UINT64/INT64类型，x1/x2仅支持HIFLOAT8类型。
-    - groupSize相关约束：
-      - 仅在MX量化场景中生效。
-      - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
+  - K-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，groupSize仅支持配置为0，其他取值不生效。x1/x2输入支持FLOAT8_E5M2、FLOAT8_E4M3FN两种类型，x1Scale/x2Scale仅支持FLOAT32类型。
+  - MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，支持MXFP8和MXFP4两种数据类型。K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。groupSize的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。x1/x2输入支持FLOAT8_E4M3FN、FLOAT4_E2M1数据类型，x1Scale/x2Scale仅支持FLOAT8_E8M0类型。
+  - T-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，仅支持静态量化，x1Scale支持配置为空或(1,)，x2Scale要求shape为(N,)，groupSize配置不生效。x2Scale需经过[trans_quant_param](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)预处理转换为UINT64/INT64类型，x1/x2仅支持HIFLOAT8类型。
+  - groupSize相关约束：
+    - 仅在MX量化场景中生效。
+    - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
 
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32

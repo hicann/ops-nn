@@ -437,7 +437,7 @@ aclnnStatus aclnnMatmulWeightNz(
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     int8_t cubeMathType = 1;
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
@@ -665,7 +665,7 @@ aclnnStatus aclnnMatmulWeightNz(
       ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       int8_t cubeMathType = 1;
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
@@ -888,7 +888,7 @@ aclnnStatus aclnnMatmulWeightNz(
       ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, srcDtype, &out);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       int8_t cubeMathType = 1;
       aclOpExecutor* executor = nullptr;
 

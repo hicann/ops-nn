@@ -453,7 +453,7 @@ int aclnnGeluQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 调用CANN算子库API，需要修改为具体的Api名称
+    // 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 

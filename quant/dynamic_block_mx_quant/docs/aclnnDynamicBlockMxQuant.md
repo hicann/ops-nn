@@ -60,7 +60,7 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-    - 引入新的属性dst_type_max。dst_type_max类型为float，默认值为0。默认输出时代表max_type为目标数据类型的最大值，如果传入其他数值，则需要按照传入的数值计算scale，有效值当前支持0.0、6.0和7.0，只支持在FLOAT4_E2M1场景设置该值。
+    - 引入新的属性dstTypeMax，类型为double，默认为0（代表dstType为目标数据类型的最大值），如果传入其他数值，则需要按照传入的数值计算scale，有效值当前支持0.0、6.0和7.0，只支持在FLOAT4_E2M1场景设置该值。
     - 将FP32映射到目标数据类型FLOAT4_E2M1可表示的范围内。
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{dst\_type\_max}
@@ -458,7 +458,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       std::unique_ptr<void, aclError (*)(void*)> scale2OutDeviceAddrPtr(scale2OutDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 调用CANN算子库API，需要修改为具体的Api名称
+      // 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
 

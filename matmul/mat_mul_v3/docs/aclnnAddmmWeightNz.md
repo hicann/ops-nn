@@ -496,7 +496,7 @@ aclnnStatus aclnnAddmmWeightNz(
     CHECK_RET(beta != nullptr, return ret);
 
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名
+    // 3. 调用CANN算子库API，需要修改为具体的API名
     int8_t cubeMathType = 1;
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;

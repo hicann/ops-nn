@@ -551,7 +551,7 @@ int main() {
   bool includeLastOffset = false;
   int64_t paddingIdx = 1;
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnEmbeddingBag第一段接口

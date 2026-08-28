@@ -361,19 +361,19 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 
 <!-- npu="A3,910b" id7 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
-    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
-    - x2的NZ格式对应的ND格式中，第二维和第三维都必须被16整除。
-    - x2的StorageFormat必须为NZ格式。
-    - x1和x2的dtype必须相同。
-    - permX2仅支持输入[0, 1, 2]。
-    - 当scale不为空时，B与N的乘积小于65536,且仅支持输入为FLOAT16和输出为INT8的类型推导。
+  - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
+  - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
+  - x2的NZ格式对应的ND格式中，第二维和第三维都必须被16整除。
+  - x2的StorageFormat必须为NZ格式。
+  - x1和x2的dtype必须相同。
+  - permX2仅支持输入[0, 1, 2]。
+  - 当scale不为空时，B与N的乘积小于65536，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
-    - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
+  - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+  - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 <!-- end id8 -->
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。

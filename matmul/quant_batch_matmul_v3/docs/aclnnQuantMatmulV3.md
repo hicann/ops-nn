@@ -568,7 +568,7 @@ aclnnStatus aclnnQuantMatmulV3(
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
 
@@ -831,7 +831,7 @@ aclnnStatus aclnnQuantMatmulV3(
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
       void *workspaceAddr = nullptr;
@@ -1087,7 +1087,7 @@ aclnnStatus aclnnQuantMatmulV3(
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
 
@@ -1380,7 +1380,7 @@ aclnnStatus aclnnQuantMatmulV3(
       bool transposeX1 = false;
       bool transposeX2 = true;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
       void *workspaceAddr = nullptr;

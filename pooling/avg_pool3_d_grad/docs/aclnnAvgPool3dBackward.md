@@ -422,7 +422,7 @@ int main() {
   // 创建paddings aclIntArray
   aclIntArray *padding = aclCreateIntArray(paddingDims.data(), 3);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnAvgPool3dBackward第一段接口

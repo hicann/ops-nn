@@ -426,7 +426,7 @@ int main() {
   ret = CreateAclTensor(storageHostData, gatesShape, &storageDeviceAddr, aclDataType::ACL_FLOAT, &storage);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用aclnn API，需要修改为具体的Api名称
+  // 3. 调用aclnn API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnThnnFusedLstmCell第一段接口

@@ -110,13 +110,13 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     aclTensor* groupedIndex = nullptr;
     aclTensor* yOut = nullptr;
     aclTensor* mxscaleOut = nullptr;
-    //对应BF16的值(0, 8, 64, 512)
+    // 对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
 
     std::vector<uint32_t> groupedIndexHostData = {4, 8};
-    //对应float8_e4m3的值(0, 4, 32, 256)
+    // 对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
-    //对应float8_e8m0的值(2)
+    // 对应float8_e8m0的值(2)
     std::vector<std::vector<uint8_t>> mxscaleOutHostData = {{{128, 0}}, {{128, 0}}};
     const char* roundModeOptional = "rint";
     int64_t dstType = 36;
@@ -128,7 +128,7 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> xDeviceAddrPtr(xDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建groudedIndex aclTensor
+    // 创建groupedIndex aclTensor
     ret = CreateAclTensor(groupedIndexHostData, groupedIndexShape, &groupedIndexDeviceAddr, aclDataType::ACL_INT32,
                           &groupedIndex);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupedIndexTensorPtr(groupedIndex, aclDestroyTensor);
@@ -167,7 +167,7 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     ret = aclnnGroupedDynamicMxQuantV2(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2 failed. ERROR: %d\n", ret); return ret);
 
-    //（固定写法）同步等待任务执行结束
+    // （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

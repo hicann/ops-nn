@@ -439,7 +439,7 @@ int main() {
   ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT16, &y);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   int8_t cubeMathType = 0;
   const char* fusedOpType = "add";
   uint64_t workspaceSize = 0;

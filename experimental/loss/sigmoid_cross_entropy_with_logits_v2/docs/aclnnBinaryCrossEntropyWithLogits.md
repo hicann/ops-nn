@@ -372,7 +372,7 @@ int main() {
   ret = CreateAclTensor(outHostData, commonShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor = nullptr;
   int64_t reduction = 0; // 0:none, 1:mean, 2:sum

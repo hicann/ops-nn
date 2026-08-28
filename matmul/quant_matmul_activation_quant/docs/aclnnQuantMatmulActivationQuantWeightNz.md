@@ -802,7 +802,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（NZ格式），x1Scale为FLOAT8_E8M0，
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outScaleTensorPtr(outScale, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> outScaleDeviceAddrPtr(outScaleDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
       // x2转Nz

@@ -25,9 +25,9 @@
 
 ## 功能说明
 
-  - 接口功能：算子repeatInterleave的反向,将yGrad tensor的axis维度按repeats进行ReduceSum。
+- 接口功能：算子repeatInterleave的反向,将yGrad tensor的axis维度按repeats进行ReduceSum。
 
-  - 示例：
+- 示例：
     假设tensor yGrad是([[a<sub>1</sub>, b<sub>1</sub>, c<sub>1</sub>, d<sub>1</sub>, e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub>, c<sub>2</sub>, d<sub>2</sub>, e<sub>2</sub>, f<sub>2</sub>]]), repeats为([1, 2, 2, 1])，axis为1。
     那么最后生成的tensor为tensor([[a<sub>1</sub>, b<sub>1</sub> + c<sub>1</sub>, d<sub>1</sub> + e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub> + c<sub>2</sub>, d<sub>2</sub> + e<sub>2</sub>, f<sub>2</sub>]])。将tensor yGrad的axis轴按照repeats做ReduceSum。
 
@@ -233,16 +233,15 @@
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnRepeatInterleaveGrad默认确定性实现。
+- 确定性计算：aclnnRepeatInterleaveGrad默认确定性实现。
 
 在计算时需要满足以下要求：
 
-  - 如果repeats为0D tensor或者size为1的1D tensor，那么repeats的元素值必须为yGrad在axis上维数的约数。
+- 如果repeats为0D tensor或者size为1的1D tensor，那么repeats的元素值必须为yGrad在axis上维数的约数。
     如果为1D tensor且size大于1，那么repeats的元素之和必须为yGrad在axis上的维数。
     repeats tensor中的值必须为自然数。
-  - out的shape大小满足yGrad的axis轴ReduceSum后的shape大小。
-    例如，yGrad的shape为[64]、repeat为[2]、axis为0，out的shape可以为[32]、[2, 16]、[2, 4, 4]等，只需满足out的shape大小为32即可。
+- out的shape大小满足yGrad的axis轴ReduceSum后的shape大小。
+    例如，yGrad的shape为[64]、repeats为[2]、axis为0，out的shape可以为[32]、[2, 16]、[2, 4, 4]等，只需满足out的shape大小为32即可。
 
 ## 调用示例
 
@@ -341,7 +340,7 @@ int main() {
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnRepeatInterleaveGrad第一段接口

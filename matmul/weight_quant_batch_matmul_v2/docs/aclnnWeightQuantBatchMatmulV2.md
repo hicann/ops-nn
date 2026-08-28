@@ -675,7 +675,7 @@ A16W8调用示例：
       std::unique_ptr<void, aclError (*)(void*)> yFp16deviceAddrPtr(yFp16DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
       void* workspaceAddr = nullptr;
@@ -970,7 +970,7 @@ A16MxFp4调用示例，需要调用`aclnnConvertWeightToINT4Pack`接口辅助完
       std::unique_ptr<void, aclError (*)(void*)> yFp16DeviceAddrPtr(yFp16DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       aclFormat weightFormat = aclFormat::ACL_FORMAT_ND;
       aclTensor* weightPacked = nullptr;
 

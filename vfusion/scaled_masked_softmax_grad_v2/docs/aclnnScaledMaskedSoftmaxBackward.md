@@ -357,7 +357,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   // aclnnScaledMaskedSoftmaxBackward
   ret = aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(gradOutput, y, mask, scale, fixTriuMask, out, &workspaceSize, &executor);
   CHECK_RET(

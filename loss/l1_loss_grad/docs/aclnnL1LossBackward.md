@@ -349,7 +349,7 @@ int main() {
   // 创建reduction
   int64_t reduction = 1;
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnL1LossBackward第一段接口

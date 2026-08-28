@@ -379,7 +379,7 @@ int main()
     // weightOptional与groupIndexOptional为可选输入，此处传入nullptr表示不使用
     double clampLimit = -1.0;
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     // 调用aclnnSwigluGroup第一段接口

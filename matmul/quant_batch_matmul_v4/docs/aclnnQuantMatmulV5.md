@@ -1166,7 +1166,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       bool transposeX2 = true;
       int64_t groupSize = 32;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
 
@@ -1391,7 +1391,7 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，bias为INT32。
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
       // 调用aclnnQuantMatmulV5第一段接口
@@ -1598,7 +1598,7 @@ x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
       // 调用aclnnQuantMatmulV5第一段接口
@@ -1806,7 +1806,7 @@ x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64。
       bool transposeX2 = false;
       int64_t groupSize = 256;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
 

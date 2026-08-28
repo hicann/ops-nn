@@ -519,7 +519,7 @@ int main() {
   ret = CreateAclTensor(outHostData, outShape, &outFp16DeviceAddr, aclDataType::ACL_FLOAT16, &outFp16);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   // aclnnWeightQuantBatchMatmul接口调用示例
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;

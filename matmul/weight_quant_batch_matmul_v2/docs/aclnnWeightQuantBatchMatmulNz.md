@@ -583,7 +583,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       std::unique_ptr<void, aclError (*)(void*)> yFp16DeviceAddrPtr(yFp16DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       aclFormat weightFormat = aclFormat::ACL_FORMAT_FRACTAL_NZ; // 可选：ACL_FORMAT_ND
       aclTensor* weightPacked = nullptr;
 
@@ -897,7 +897,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       std::unique_ptr<void, aclError (*)(void*)> yDeviceAddrPtr(yDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       // 调用aclnnWeightQuantBatchMatmulNz第一段接口
       ret = aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
           x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0, y, &workspaceSize, &executor);
@@ -1154,7 +1154,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       std::unique_ptr<void, aclError (*)(void*)> yFp16DeviceAddrPtr(yFp16DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       // 调用aclnnWeightQuantBatchMatmulNz第一段接口
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;

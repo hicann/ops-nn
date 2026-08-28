@@ -1124,7 +1124,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor;
       void *workspaceAddr = nullptr;
@@ -1418,7 +1418,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       bool transposeX1 = false;
       bool transposeX2 = true;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor;
       void *workspaceAddr = nullptr;
@@ -1765,7 +1765,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
       // x2已经是fp4_e2m1 ND格式，用NpuFormatCast转为fp4 NZ格式

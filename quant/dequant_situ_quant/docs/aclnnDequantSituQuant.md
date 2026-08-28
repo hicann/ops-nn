@@ -517,7 +517,7 @@ int main()
     float linearBeta = 25.0;
     bool activateLeft = true;
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnDequantSituQuant第一段接口

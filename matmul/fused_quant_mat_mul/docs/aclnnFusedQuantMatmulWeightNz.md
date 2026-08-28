@@ -586,7 +586,7 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。
       int64_t groupSize = 0;
       const char fusedOpType[] = "gelu_tanh";
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
       void* workspaceAddr = nullptr;

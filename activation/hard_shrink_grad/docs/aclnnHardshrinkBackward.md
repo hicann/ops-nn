@@ -337,7 +337,7 @@ int main() {
   lambda = aclCreateScalar(&lambdaValue, aclDataType::ACL_FLOAT);
   CHECK_RET(lambda != nullptr, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnHardshrinkBackward第一段接口

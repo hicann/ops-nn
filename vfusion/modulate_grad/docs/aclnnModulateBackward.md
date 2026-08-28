@@ -440,7 +440,7 @@ int main()
     // 创建grad_shift aclTensor
     ret = CreateAclTensor(grad_shiftHostData, grad_shiftShape, &grad_shiftDeviceAddr, aclDataType::ACL_FLOAT, &grad_shift);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     // 调用aclnnModulate第一段接口

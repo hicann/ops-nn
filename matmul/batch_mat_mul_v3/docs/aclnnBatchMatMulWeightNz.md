@@ -403,7 +403,7 @@ self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如�
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     int8_t cubeMathType = 0;
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;

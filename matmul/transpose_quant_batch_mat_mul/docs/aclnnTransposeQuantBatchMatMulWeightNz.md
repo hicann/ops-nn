@@ -351,7 +351,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - x1只支持3维, x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
-  - K仅支持64的倍数。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
+  - K仅支持64的倍数。groupSize的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
   - groupSize相关约束：
     - 仅在MX量化场景中生效。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
