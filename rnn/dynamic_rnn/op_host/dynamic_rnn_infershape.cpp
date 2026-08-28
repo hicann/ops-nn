@@ -28,7 +28,7 @@ constexpr int RNN_OUTPUT_INDEX_O = 6;
 constexpr int RNN_OUTPUT_INDEX_TANHC = 7;
 constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
-static ge::graphStatus GetInputShapes(gert::InferShapeContext* context, const gert::Shape** xShape,
+static ge::graphStatus GetInputShapes(const gert::InferShapeContext* context, const gert::Shape** xShape,
                                       const gert::Shape** wShape)
 {
     *xShape = context->GetInputShape(0);

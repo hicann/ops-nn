@@ -114,7 +114,6 @@ static const int64_t WEIGHT_DIMS = 2;
 static const int64_t BIAS_DIMS = 1;
 static const int64_t INIT_DIMS = 3;
 static const int64_t OUTPUT_DIMS = 3;
-static const int64_t OUTPUT_DIMS_INFER = 2;
 static const int64_t INDEX_0 = 0;
 static const int64_t INDEX_1 = 1;
 static const int64_t INDEX_2 = 2;
@@ -1325,12 +1324,14 @@ static aclnnStatus LstmDataGetWorkspaceSize(LstmDataParamsIn& inputs, LstmDataPa
     return ACLNN_SUCCESS;
 }
 
-const aclTensor* ProcessTrainLayerForward(
-    aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype, const aclTensor* curInput,
-    const aclTensorList* params, const aclTensorList* hx, const aclTensorList* iOut, const aclTensorList* jOut,
-    const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
-    const aclTensorList* tanhCOut, uint64_t layerIdx, bool bidirectional, bool train, int64_t numLayers, bool hasBias,
-    std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
+const aclTensor* ProcessTrainLayerForward(aclOpExecutor* executor, const op::Shape& outShape, ge::DataType dtype,
+                                          const aclTensor* curInput, const aclTensorList* params,
+                                          const aclTensorList* hx, const aclTensorList* iOut, const aclTensorList* jOut,
+                                          const aclTensorList* fOut, const aclTensorList* oOut,
+                                          const aclTensorList* hOut, const aclTensorList* cOut,
+                                          const aclTensorList* tanhCOut, uint64_t layerIdx, bool bidirectional,
+                                          bool train, bool hasBias, std::vector<const aclTensor*>& hyVector,
+                                          std::vector<const aclTensor*>& cyVector)
 {
     auto yOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
     CHECK_RET(yOutForward != nullptr, nullptr);
@@ -1364,7 +1365,7 @@ const aclTensor* ProcessTrainLayerBackward(
     const aclTensorList* params, const aclTensorList* hx, const aclTensor* forwardY, const aclTensorList* iOut,
     const aclTensorList* jOut, const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
     const aclTensorList* cOut, const aclTensorList* tanhCOut, uint64_t layerIdx, bool bidirectional, bool train,
-    int64_t numLayers, bool hasBias, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
+    bool hasBias, std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
 {
     auto yOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
     CHECK_RET(yOutBackward != nullptr, nullptr);
@@ -1402,8 +1403,8 @@ const aclTensor* ProcessInferLayerForward(aclOpExecutor* executor, const op::Sha
                                           const aclTensor* curInput, const aclTensorList* params,
                                           const aclTensorList* hx, aclTensor* iOutForward, aclTensor* jOutForward,
                                           aclTensor* fOutForward, aclTensor* oOutForward, aclTensor* tanhCOutForward,
-                                          uint64_t layerIdx, bool bidirectional, bool train, int64_t numLayers,
-                                          bool hasBias, std::vector<const aclTensor*>& hyVector,
+                                          uint64_t layerIdx, bool bidirectional, bool train, bool hasBias,
+                                          std::vector<const aclTensor*>& hyVector,
                                           std::vector<const aclTensor*>& cyVector)
 {
     auto yOutForward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
@@ -1425,8 +1426,7 @@ const aclTensor* ProcessInferLayerBackward(aclOpExecutor* executor, const op::Sh
                                            const aclTensorList* hx, const aclTensor* forwardY, aclTensor* iOutBackward,
                                            aclTensor* jOutBackward, aclTensor* fOutBackward, aclTensor* oOutBackward,
                                            aclTensor* tanhCOutBackward, uint64_t layerIdx, bool bidirectional,
-                                           bool train, int64_t numLayers, bool hasBias,
-                                           std::vector<const aclTensor*>& hyVector,
+                                           bool train, bool hasBias, std::vector<const aclTensor*>& hyVector,
                                            std::vector<const aclTensor*>& cyVector)
 {
     auto hOutBackward = executor->AllocTensor(outShape, dtype, op::Format::FORMAT_ND);
@@ -1489,12 +1489,11 @@ aclnnStatus ProcessTrainLayers(aclOpExecutor* executor, const op::Shape& outShap
     for (int64_t i = 0; i < numLayers; ++i) {
         const aclTensor* layerInput = curInput;
         curInput = ProcessTrainLayerForward(executor, outShape, dtype, layerInput, params, hx, iOut, jOut, fOut, oOut,
-                                            hOut, cOut, tanhCOut, i, bidirectional, train, numLayers, hasBias, hyVector,
-                                            cyVector);
+                                            hOut, cOut, tanhCOut, i, bidirectional, train, hasBias, hyVector, cyVector);
         if (bidirectional == true) {
             curInput = ProcessTrainLayerBackward(executor, outShape, dtype, layerInput, params, hx, curInput, iOut,
                                                  jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, train,
-                                                 numLayers, hasBias, hyVector, cyVector);
+                                                 hasBias, hyVector, cyVector);
         }
     }
     auto outputY = curInput;
@@ -1558,12 +1557,12 @@ aclnnStatus ProcessInferLayers(aclOpExecutor* executor, const op::Shape& outShap
     for (int64_t i = 0; i < numLayers; ++i) {
         const aclTensor* layerInput = curInput;
         curInput = ProcessInferLayerForward(executor, outShape, dtype, layerInput, params, hx, iOutForward, jOutForward,
-                                            fOutForward, oOutForward, tanhCOutForward, i, bidirectional, train,
-                                            numLayers, hasBias, hyVector, cyVector);
+                                            fOutForward, oOutForward, tanhCOutForward, i, bidirectional, train, hasBias,
+                                            hyVector, cyVector);
         if (bidirectional == true) {
             curInput = ProcessInferLayerBackward(
                 executor, outShape, dtype, layerInput, params, hx, curInput, iOutBackward, jOutBackward, fOutBackward,
-                oOutBackward, tanhCOutBackward, i, bidirectional, train, numLayers, hasBias, hyVector, cyVector);
+                oOutBackward, tanhCOutBackward, i, bidirectional, train, hasBias, hyVector, cyVector);
         }
     }
     auto outputY = curInput;

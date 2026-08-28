@@ -33,8 +33,6 @@ extern "C" {
 #endif
 
 namespace {
-constexpr int64_t DIM_ZERO = 0;
-constexpr int64_t DIM_ONE = 1;
 constexpr int64_t DIM_TWO = 2;
 constexpr int64_t GATE_COUNT = 4; // i, f, j, o 四个门
 constexpr int64_t BATCH_DIM = 0;
