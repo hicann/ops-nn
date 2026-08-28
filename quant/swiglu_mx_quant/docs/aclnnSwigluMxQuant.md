@@ -60,6 +60,54 @@
 
   其中，x\_glu表示x<sub>i</sub>的偶数索引部分，x\_linear表示x<sub>i</sub>的奇数索引部分。
 
+- swigluMode为2时的计算公式：
+
+  $$
+  x\_glu = x\_glu.clamp(min=None, max=clampLimit)
+  $$
+
+  $$
+  x\_linear = x\_linear.clamp(min=-clampLimit, max=clampLimit)
+  $$
+
+  $$
+  out\_glu = x\_glu * sigmoid(gluAlpha * x\_glu)
+  $$
+
+  $$
+  swigluOut_i = out\_glu * (x\_linear + gluBias)
+  $$
+
+  $$
+  y, mxscale = DynamicMxQuant(swigluOut_i)
+  $$
+
+  其中，x\_glu和x\_linear由x<sub>i</sub>沿activateDim轴前后分半得到（非交错分块），当activateLeft为true时x\_glu为前半部分，否则为后半部分。此模式下axis必须为-1。
+
+- swigluMode为3时的计算公式：
+
+  $$
+  x\_glu = x\_glu * sigmoid(x\_glu)
+  $$
+
+  $$
+  x\_glu = x\_glu.clamp(min=None, max=clampLimit)
+  $$
+
+  $$
+  x\_linear = x\_linear.clamp(min=-clampLimit, max=clampLimit)
+  $$
+
+  $$
+  swigluOut_i = x\_glu * x\_linear
+  $$
+
+  $$
+  y, mxscale = DynamicMxQuant(swigluOut_i)
+  $$
+
+  其中，x\_glu和x\_linear由x<sub>i</sub>沿activateDim轴前后分半得到（非交错分块）。此模式下忽略gluAlpha和gluBias参数（sigmoid固定使用alpha=1，不添加bias），axis必须为-1。
+
 - 场景1，当scaleAlg为0时，DynamicMxQuant计算逻辑：
     - 将输入x在axis维度上按k = blocksize = 32个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize
 
@@ -204,7 +252,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>swigluMode（int64_t）</td>
       <td>输入</td>
       <td>表示swiglu的计算模式。</td>
-      <td><ul><li>取值范围为：[0, 1]。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种，使用奇偶分块方式，并支持clampLimit、激活系数以及偏差。</li></ul></td>
+      <td><ul><li>取值范围为：[0, 3]。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种，使用奇偶分块方式，并支持clampLimit、激活系数以及偏差。</li><li>2：表示swiglu的变种，使用前后分半方式，先clamp再sigmoid(alpha)激活，并支持偏差。此模式要求axis=-1。</li><li>3：表示swiglu的变种，使用前后分半方式，先sigmoid激活（alpha固定为1）再clamp，不支持偏差。此模式要求axis=-1。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -396,6 +444,9 @@ aclnnStatus aclnnSwigluMxQuant(
     <tr>
       <td>scaleAlg不在指定的取值范围内。</td>
     </tr>
+    <tr>
+      <td>swigluMode为2或3时axis不为-1。</td>
+    </tr>
   </tbody></table>
 
 ## aclnnSwigluMxQuant
@@ -446,7 +497,8 @@ aclnnStatus aclnnSwigluMxQuant(
   - aclnnSwigluMxQuant默认确定性实现。
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
-- activateDim为非last轴，swigluMode必须为0。
+- activateDim为非last轴，swigluMode必须为0或1。
+- swigluMode为2或3时，axis必须为-1（仅支持尾轴量化）。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
 - groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积，groupIndexOptional的每个元素需要大于0。

@@ -21,6 +21,7 @@
 #include <sstream>
 #include "platform/platform_info.h"
 #include "op_host/tiling_util.h"
+#include "error_util.h"
 #include "util/math_util.h"
 
 using namespace std;
@@ -145,17 +146,20 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     // Get swiglu_mode (int64 type)
     auto* attrSwigluMode = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SWIGLU_MODE);
     attrParam_.swigluMode = (attrSwigluMode != nullptr) ? static_cast<int64_t>(*attrSwigluMode) : 0;
-    OP_CHECK_IF(attrParam_.swigluMode < 0 || attrParam_.swigluMode > 3,
-                OP_LOGE(context_->GetNodeName(), "swigluMode must be in [0, 3], but is %ld", attrParam_.swigluMode),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        attrParam_.swigluMode < 0 || attrParam_.swigluMode > 3,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "swiglu_mode",
+                                              std::to_string(attrParam_.swigluMode), "swiglu_mode must be in [0, 3]"),
+        return ge::GRAPH_FAILED);
 
     // Get clamp_limit (float type)
     auto* attrClampLimit = attrs->GetAttrPointer<float>(INDEX_ATTR_CLAMP_LIMIT);
     attrParam_.clampLimit = (attrClampLimit != nullptr) ? *attrClampLimit : 7.0f;
     OP_CHECK_IF((attrParam_.swigluMode == 1 || attrParam_.swigluMode == 2 || attrParam_.swigluMode == 3) &&
                     (attrParam_.clampLimit <= 0.0f),
-                OP_LOGE(context_->GetNodeName(), "swigluMode == %ld, clampLimit must > 0, but is %f",
-                        attrParam_.swigluMode, attrParam_.clampLimit),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "clamp_limit",
+                                                      std::to_string(attrParam_.clampLimit),
+                                                      "clamp_limit must be > 0 when swiglu_mode is 1, 2, or 3"),
                 return ge::GRAPH_FAILED);
     // Get glu_alpha (float type)
     auto* attrGluAlpha = attrs->GetAttrPointer<float>(INDEX_ATTR_GLU_ALPHA);
@@ -168,9 +172,6 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     // Get axis (int64 type)
     auto* attrAxis = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_AXIS);
     attrParam_.axis = (attrAxis != nullptr) ? static_cast<int64_t>(*attrAxis) : -1;
-    OP_CHECK_IF((attrParam_.axis != -1) && (attrParam_.swigluMode == 2 || attrParam_.swigluMode == 3),
-                OP_LOGE(context_->GetNodeName(), "swigluMode 2/3 requires axis=-1, but axis=%ld", attrParam_.axis),
-                return ge::GRAPH_FAILED);
 
     // Get dst_type (int type)
     auto* attrDstType = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DST_TYPE);
@@ -240,6 +241,12 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
 
     OP_CHECK_IF((attrParam_.axis != -1 && attrParam_.axis != -2),
                 OP_LOGE(context_->GetNodeName(), "axis must be -1 or -2, but got %ld.", attrParam_.axis),
+                return ge::GRAPH_FAILED);
+
+    // swigluMode 2/3 only support axis=-1 (last axis)
+    OP_CHECK_IF((attrParam_.axis != -1) && (attrParam_.swigluMode == 2 || attrParam_.swigluMode == 3),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(attrParam_.axis),
+                                                      "axis must be -1 when swiglu_mode is 2 or 3"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
