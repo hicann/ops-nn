@@ -1270,9 +1270,9 @@ ge::graphStatus DequantSwigluQuantV35NlastTiling::GetShapeAttrsInfo()
                                                           "quant_mode only support [dynamic] or [static]"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(quantModeIt->second != QUANT_MODE_DYNAMIC,
-                    OP_LOGE(context_->GetNodeName(),
-                            "DequantSwigluQuant does not support static quant_mode when activate_dim is not the last "
-                            "dim, please use dynamic quant_mode or set activate_dim to the last dim."),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_mode", quantMode.c_str(),
+                                                          "quant_mode only support [dynamic] when activate_dim is not "
+                                                          "the last dim"),
                     return ge::GRAPH_FAILED);
     }
 
