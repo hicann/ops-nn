@@ -2275,6 +2275,8 @@ VC6@ops-nn:
         - ops/ops-nn/index/index/op_host/
         - ops/ops-nn/index/index_put_v2/op_kernel/
         - ops/ops-nn/index/index_put_v2/op_host/
+        - ops/ops-nn/pooling/max_pool3d_grad/op_host/
+        - ops/ops-nn/pooling/max_pool3d_grad/op_kernel/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -2300,9 +2302,6 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/op_host/
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/op_kernel/
         - ops/ops-nn/pooling/avg_pool3_d/op_host/avg_pool3_d_def.cpp
-        - ops/ops-nn/pooling/avg_pool3_d/op_host/avg_pool3_d_infershape.cpp
-        - ops/ops-nn/pooling/avg_pool3_d/op_host/avg_pool3_d_tiling.cpp
-        - ops/ops-nn/pooling/avg_pool3_d/op_host/avg_pool3_d_tiling.h
         - ops/ops-nn/pooling/avg_pool3_d/op_kernel/avg_pool3_d_apt.cpp
         - ops/ops-nn/pooling/max_pool3_d/op_host/
         - ops/ops-nn/pooling/max_pool3_d/op_kernel/
@@ -2311,24 +2310,30 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool_v2/op_kernel/
         - ops/ops-nn/pooling/max_pool_v3/op_host/
         - ops/ops-nn/pooling/max_pool_v3/op_kernel/
-        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_kernel/
-        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_gather_tiling.cpp
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_gather_tiling.h
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_infershape.cpp
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_ksize_one_tiling.cpp
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_ksize_one_tiling.h
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_simt_tiling.cpp
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_simt_tiling.h
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_tiling_big_kernel_regbase.cpp
+        - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_tiling_big_kernel_regbase.h
         - ops/ops-nn/pooling/max_pool_grad_with_argmax/op_kernel/
         - ops/ops-nn/pooling/max_pool_grad_with_argmax/op_host/
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_common/op_kernel/
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_common/op_host/
         - ops/ops-nn/index/masked_scatter_with_position/op_kernel/
         - ops/ops-nn/index/masked_scatter_with_position/op_host/
-        - ops/ops-nn/pooling/avg_pool3_d_grad/op_host/
-        - ops/ops-nn/pooling/avg_pool3_d_grad/op_kernel/
         - ops/ops-nn/pooling/pool_3d_common/op_host/arch35/
         - ops/ops-nn/pooling/pool_3d_common/op_kernel/arch35/
         - ops/ops-nn/pooling/adaptive_max_pool3d/op_host/adaptive_max_pool3d_infershape.cpp
         - ops/ops-nn/pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_apt.cpp
         - ops/ops-nn/pooling/adaptive_max_pool3d_grad/op_host/
         - ops/ops-nn/pooling/adaptive_max_pool3d_grad/op_kernel/
-        - ops/ops-nn/pooling/adaptive_avg_pool3d/op_host/
-        - ops/ops-nn/pooling/adaptive_avg_pool3d/op_kernel/
+        - ops/ops-nn/pooling/adaptive_avg_pool3d/op_host/adaptive_avg_pool3d_infershape.cpp
+        - ops/ops-nn/pooling/adaptive_avg_pool3d/op_kernel/adaptive_avg_pool3d_apt.cpp
         - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/op_host/
         - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/op_kernel/
         - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/op_host/
@@ -2337,8 +2342,6 @@ VC7@ops-nn:
         - ops/ops-nn/index/embedding_dense_grad_v2/op_host/
         - ops/ops-nn/index/embedding_bag/op_host/
         - ops/ops-nn/index/embedding_bag/op_kernel/arch35/
-        - ops/ops-nn/pooling/max_pool_with_argmax/op_kernel/
-        - ops/ops-nn/pooling/max_pool_with_argmax/op_host/
         - ops/ops-nn/pooling/avg_pool_v2_grad/op_host/
         - ops/ops-nn/pooling/avg_pool_v2_grad/op_kernel/
         - ops/ops-nn/pooling/pool_grad_common/op_host/
@@ -2347,8 +2350,6 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/adaptive_pool3d_common/op_kernel/
         - ops/ops-nn/pooling/adaptive_avg_pool2d/op_kernel/
         - ops/ops-nn/pooling/adaptive_avg_pool2d/op_host/
-        - ops/ops-nn/pooling/max_pool3d_grad/op_host/
-        - ops/ops-nn/pooling/max_pool3d_grad/op_kernel/
         - ops/ops-nn/pooling/max_pool_grad/op_host/
         - ops/ops-nn/pooling/max_pool_grad/op_kernel/
         - ops/ops-nn/pooling/max_pool_with_argmax_v3/op_graph/fusion_pass/
