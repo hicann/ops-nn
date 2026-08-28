@@ -4680,6 +4680,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/avg_pool_update/README.md">avg_pool_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算平均池化的更新值，将求和池化结果除以池化窗口实际覆盖的有效元素个数得到平均值。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/psroi_pooling_v2/README.md">psroi_pooling_v2</a></td>
     <td>✓</td>
     <td>✓</td>
