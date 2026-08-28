@@ -420,7 +420,7 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
     uint64_t bScale = hasBias == true ? 2 : 1;
     uint64_t dScale = bidirectional == true ? 2 : 1;
     uint64_t oneLayerParams = 2 * bScale * dScale;
-    for (uint64_t i = 0; i < (uint64_t)numLayers; i++) {
+    for (int64_t i = 0; i < numLayers; i++) {
         for (uint64_t j = 0; j < dScale; j++) {
             uint64_t offsets = i * oneLayerParams + j * oneLayerParams / 2;
             OP_CHECK_WRONG_DIMENSION((*params)[offsets], WEIGHT_DIMS, return false);
@@ -484,7 +484,7 @@ static bool CheckWeightShapes(const aclTensorList* params, int64_t numLayers, in
     auto bScale = has_biases == true ? 2 : 1;
     uint64_t oneLayerParams = 2 * bScale * dScale;
 
-    for (uint64_t i = 0; i < (uint64_t)numLayers; i++) {
+    for (int64_t i = 0; i < numLayers; i++) {
         op::Shape expWiShape = {4 * hiddenSize, curLayerInputSize};
         op::Shape expWhShape = {4 * hiddenSize, hiddenSize};
         op::Shape expBShape = {4 * hiddenSize};
@@ -618,6 +618,10 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* para
     CHECK_RET(CheckNotNull(input, params, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
               ACLNN_ERR_PARAM_NULLPTR);
 
+    OP_CHECK(
+        numLayers > 0,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLayers should be a positive integer, but %lld was obtained.", numLayers),
+        return ACLNN_ERR_PARAM_INVALID);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(input, params, hx, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
               ACLNN_ERR_PARAM_INVALID);
@@ -1482,7 +1486,7 @@ aclnnStatus ProcessTrainLayers(aclOpExecutor* executor, const op::Shape& outShap
                                bool train, bool batchFirst, aclTensor* output, aclTensor* hy, aclTensor* cy,
                                std::vector<const aclTensor*>& hyVector, std::vector<const aclTensor*>& cyVector)
 {
-    for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
+    for (int64_t i = 0; i < numLayers; ++i) {
         const aclTensor* layerInput = curInput;
         curInput = ProcessTrainLayerForward(executor, outShape, dtype, layerInput, params, hx, iOut, jOut, fOut, oOut,
                                             hOut, cOut, tanhCOut, i, bidirectional, train, numLayers, hasBias, hyVector,
@@ -1551,7 +1555,7 @@ aclnnStatus ProcessInferLayers(aclOpExecutor* executor, const op::Shape& outShap
                                                 fOutBackward, oOutBackward, tanhCOutBackward);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
+    for (int64_t i = 0; i < numLayers; ++i) {
         const aclTensor* layerInput = curInput;
         curInput = ProcessInferLayerForward(executor, outShape, dtype, layerInput, params, hx, iOutForward, jOutForward,
                                             fOutForward, oOutForward, tanhCOutForward, i, bidirectional, train,
