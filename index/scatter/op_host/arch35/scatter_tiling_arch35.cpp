@@ -189,8 +189,11 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo()
 
     const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(AXIS_INDEX);
     axis = (axisPtr == nullptr) ? 0 : *axisPtr;
-    if (axis == 0) {
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis", "0", "non-zero");
+    int32_t inputDims = Ops::Base::EnsureNotScalar(context_->GetInputShape(INPUT_INDEX)->GetOriginShape()).GetDimNum();
+    axis = axis < 0 ? inputDims + axis : axis;
+    if (axis <= 0 || axis >= inputDims) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis).c_str(),
+                                              "The value of axis must be non-zero and less than input dims");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -271,16 +274,7 @@ ge::graphStatus ScatterTiling::CheckNullTensor()
 
 ge::graphStatus ScatterTiling::MergeDims()
 {
-    int32_t oldDims = inputOriginShape.GetDimNum();
-    int32_t tmpAbsAxis = axis < 0 ? oldDims + axis : axis;
-
-    if (tmpAbsAxis < 0 || tmpAbsAxis >= oldDims) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(tmpAbsAxis).c_str(),
-                                              "The value of axis must less than the shape dims of x");
-        return ge::GRAPH_FAILED;
-    }
-
-    size_t absAxis = size_t(tmpAbsAxis);
+    size_t absAxis = size_t(axis);
     inputNewShape.SetDimNum(0);
     updatesNewShape.SetDimNum(0);
 
