@@ -93,17 +93,17 @@ __aicore__ inline void RoundTripFp32(RegTensor<float>& value, MaskReg& mask)
 
 template <typename T>
 __aicore__ inline void LoadUnalignedToFp32(__ubuf__ T*& src, RegTensor<float>& dst,
-                                           AscendC::MicroAPI::UnalignReg& state, MaskReg& mask,
+                                           AscendC::MicroAPI::UnalignRegForLoad& state, MaskReg& mask,
                                            uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, state, src,
-                                                                                                    postUpdateStride);
+        AscendC::MicroAPI::LoadUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, state, src,
+                                                                                                postUpdateStride);
     } else {
         RegTensor<T> b16;
         RegTensor<T> unpacked;
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(b16, state, src,
-                                                                                                postUpdateStride);
+        AscendC::MicroAPI::LoadUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(b16, state, src,
+                                                                                            postUpdateStride);
         AscendC::MicroAPI::UnPack((RegTensor<uint32_t>&)unpacked, (RegTensor<uint16_t>&)b16);
         AscendC::Reg::Cast<float, T, CAST_B16_TO_FP32>(dst, unpacked, mask);
     }
@@ -111,38 +111,38 @@ __aicore__ inline void LoadUnalignedToFp32(__ubuf__ T*& src, RegTensor<float>& d
 
 template <typename T>
 __aicore__ inline void StoreUnalignedFromFp32(__ubuf__ T*& dst, RegTensor<float>& src,
-                                              AscendC::MicroAPI::UnalignReg& state, MaskReg& mask,
+                                              AscendC::MicroAPI::UnalignRegForStore& state, MaskReg& mask,
                                               uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, src, state,
-                                                                                                    postUpdateStride);
+        AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, src, state,
+                                                                                                 postUpdateStride);
     } else {
         RegTensor<T> b16;
         RegTensor<T> packed;
         AscendC::Reg::Cast<T, float, CAST_FP32_TO_B16>(b16, src, mask);
         AscendC::MicroAPI::Pack((RegTensor<uint16_t>&)packed, (RegTensor<uint32_t>&)b16);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, packed, state,
-                                                                                                postUpdateStride);
+        AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, packed, state,
+                                                                                             postUpdateStride);
     }
 }
 
 template <typename T>
 __aicore__ inline void LoadUnalignedOnce(__ubuf__ T* src, RegTensor<float>& dst, MaskReg& mask, uint32_t count)
 {
-    AscendC::MicroAPI::UnalignReg state;
+    AscendC::MicroAPI::UnalignRegForLoad state;
     __ubuf__ T* current = src;
-    AscendC::MicroAPI::DataCopyUnAlignPre(state, current);
+    AscendC::MicroAPI::LoadUnAlignPre(state, current);
     LoadUnalignedToFp32(current, dst, state, mask, count);
 }
 
 __aicore__ inline void LoadOffsetUnaligned(__ubuf__ uint32_t* src, RegTensor<uint32_t>& dst, uint32_t count)
 {
-    AscendC::MicroAPI::UnalignReg state;
+    AscendC::MicroAPI::UnalignRegForLoad state;
     __ubuf__ uint32_t* current = src;
-    AscendC::MicroAPI::DataCopyUnAlignPre(state, current);
-    AscendC::MicroAPI::DataCopyUnAlign<uint32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, state, current,
-                                                                                                   count);
+    AscendC::MicroAPI::LoadUnAlignPre(state, current);
+    AscendC::MicroAPI::LoadUnAlign<uint32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, state, current,
+                                                                                               count);
 }
 
 template <typename T>

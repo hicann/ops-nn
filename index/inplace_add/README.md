@@ -15,15 +15,7 @@
 
 - 算子功能：根据`indices`指定的第0维位置，将`v`中的切片加到`x`的对应切片，并将更新结果输出到`y`。接口不声明`x`与`y`共享存储。
 - 使用场景：兼容TensorFlow的`InplaceAdd`图算子，用于按行执行索引更新；本算子不是普通的逐元素或Broadcast Add。
-- 计算公式：设`x`的shape为$[N, d_1, \dots, d_{D-1}]$，`indices`的shape为$[K]$，`v`的shape为$[K, d_1, \dots, d_{D-1}]$。<term>Ascend 950PR/Ascend 950DT</term>先把索引按第0维大小`N`做数学模归一：
-
-  $$
-  row_j = ((indices_j \bmod N) + N) \bmod N , \quad j = 0, 1, \dots, K-1
-  $$
-
-  其他产品要求输入索引位于$[0, N)$范围内，此时$row_j = indices_j$。
-
-  再在$row_j$对应的行上累加，未被索引命中的行原样透传：
+- 计算公式：设`x`的shape为$[N, d_1, \dots, d_{D-1}]$，`indices`的shape为$[K]$，`v`的shape为$[K, d_1, \dots, d_{D-1}]$。记$row_j$为第$j$个更新对应的实际目标行，其确定规则见“产品差异说明”。在目标行互不重复的前提下，计算公式如下：
 
   $$
   y_{i} =
@@ -33,7 +25,7 @@
   \end{cases}
   $$
 
-  其中$i$遍历第0维，$x_i$、$y_i$、$v_j$均表示对应下标上的整个尾部切片。上述数值定义要求归一化后的目标行互不重复，如果多个索引归一化到同一行，输出内容未定义。
+  其中$i$遍历第0维，$x_i$、$y_i$、$v_j$均表示对应下标上的整个尾部切片。如果多个索引对应同一目标行，输出内容未定义。
 
 - 示例：
 
@@ -65,7 +57,7 @@
       <th>参数名</th>
       <th>输入/输出/属性</th>
       <th>描述</th>
-      <th>Shape/支持维度</th>
+      <th>shape/支持维度</th>
       <th>数据类型</th>
       <th>数据格式</th>
     </tr>
@@ -74,7 +66,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>作为更新基值的输入张量。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：第0维为0，或任一尾维为0；第0维为0时要求indices与v的第0维同时为0。</td>
+      <td>公式中的输入<code>x</code>，作为更新基值。</td>
       <td>[N, d1, ..., d(D-1)]，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -82,7 +74,7 @@
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>指定x第0维上需要更新位置的索引张量。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：长度为0时不执行更新，y与x一致。</td>
+      <td>公式中的输入<code>indices</code>，指定<code>x</code>第0维上需要更新的位置。</td>
       <td>[K]，仅支持1维。</td>
       <td>INT32</td>
       <td>ND</td>
@@ -90,7 +82,7 @@
     <tr>
       <td>v</td>
       <td>输入</td>
-      <td>更新值张量，数据类型必须与x相同。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：第0维随indices长度，尾维随x。</td>
+      <td>公式中的输入<code>v</code>，表示加到目标行上的更新值，数据类型必须与<code>x</code>相同。</td>
       <td>[K, d1, ..., d(D-1)]，支持1～8维，维度数必须与x相同。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -98,7 +90,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>更新后的张量，数据类型与x相同；接口不声明与x共享存储。<term>Ascend 950PR/Ascend 950DT</term>支持空Tensor：x为空Tensor时y为空Tensor，不执行计算。</td>
+      <td>公式中的输出<code>y</code>，shape和数据类型与<code>x</code>相同；接口不声明与<code>x</code>共享存储。</td>
       <td>与x相同，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -106,25 +98,23 @@
   </tbody>
 </table>
 
-不同产品的`x`、`v`和`y`支持的数据类型如下：
+### 产品差异说明
 
-- <term>Ascend 950PR/Ascend 950DT</term>：FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>：FLOAT16、FLOAT、INT32。
-- <term>Atlas 训练系列产品</term>：FLOAT、INT32。
+各支持产品的输入和输出均使用ND格式，`indices`的数据类型均为INT32。不同产品的能力子集如下：
+
+| 产品 | 参数或场景 | `x`、`v`、`y`数据类型 | 静态shape能力 | 动态shape能力 | 索引、空Tensor及规模限制 |
+| :--- | :----------- | :-------------------- | :------------ | :------------ | :----------------------- |
+| <term>Ascend 950PR/Ascend 950DT</term> | `indices`为运行期输入或编译期常量 | FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 当$N>0$时，按$row_j=((indices_j \bmod N)+N)\bmod N$确定目标行。支持$K=0$；当$N=0$时要求$K=0$，当任一尾维为0时输出为空。$N$和$K$不超过INT32最大值；尾维大小、张量元素数、合计处理规模及字节大小必须在INT64可表示范围内。 |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term><br><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term><br><term>Atlas 200I/500 A2 推理产品</term><br><term>Atlas 推理系列产品</term> | `indices`为运行期输入或编译期常量 | FLOAT16、FLOAT、INT32 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
+| <term>Atlas 训练系列产品</term> | `x`、`v`、`y`为FLOAT或INT32，`indices`为运行期输入或编译期常量 | FLOAT、INT32 | 输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 输入ND->输出ND；支持动态shape和动态Rank。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
+| <term>Atlas 训练系列产品</term> | `x`、`v`、`y`为FLOAT16，且`indices`在编译期为常量 | FLOAT16 | 仅支持静态shape，输入ND->输出ND；`x`、`v`、`y`支持1～8维，`indices`仅支持1维。 | 不支持。 | 要求$0\leq indices_j<N$；不支持空Tensor。 |
 
 ## 约束说明
 
-- `x`、`v`、`y`支持1～8维，`indices`仅支持一维；`v`的维度数必须与`x`相同。
 - `v.shape[0]`必须等于`indices.shape[0]`；`v.shape[1:]`必须等于`x.shape[1:]`。
 - `x`、`v`、`y`的数据类型必须一致，`indices`的数据类型必须为INT32。
-- <term>Ascend 950PR/Ascend 950DT</term>：当`x.shape[0] > 0`时，索引先扩展为INT64，再按`x`的第0维大小进行数学模归一，因此支持负索引和超范围正索引。其他产品要求索引满足$0 \leq indices_j < x.shape[0]$。
-- 当归一化后的索引存在重复值时，输出内容未定义，不保证累加顺序、确定性或具体数值。
-- <term>Ascend 950PR/Ascend 950DT</term>：当`indices`为空时，不执行更新，输出保持与`x`一致。
-- <term>Ascend 950PR/Ascend 950DT</term>：当`x.shape[0] == 0`时，`indices`和`v`的第0维必须同时为0。
-- <term>Ascend 950PR/Ascend 950DT</term>：当`x`的任一尾维为0时，输出为空，不执行索引取模或数据读写。
-- <term>Ascend 950PR/Ascend 950DT</term>：`x.shape[0]`与`indices`长度不超过INT32最大值（2147483647）；尾维大小、各张量元素数、合计处理规模及字节大小必须在INT64可表示范围内，任一相关乘加溢出时返回错误。
+- 当多个索引对应同一目标行时，输出内容未定义，不保证累加顺序、确定性或具体数值。
 - 整数加法不提供饱和运算保证，调用方不应依赖整数溢出后的结果。
-- 支持静态Shape、动态Shape和动态Rank；实际shape必须满足上述约束。
 - 本算子不提供aclnn单算子接口，仅支持GE图模式调用。现有同名`aclnnInplaceAdd`执行的是逐元素或Broadcast计算`self += alpha * other`，与本算子的按索引行更新语义不同，不能混用。
 
 ## 调用说明

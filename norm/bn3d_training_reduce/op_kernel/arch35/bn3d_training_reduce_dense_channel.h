@@ -32,7 +32,7 @@
  *   INTrainingReduceV2 输出 per-(n,c)，每行都要做一次水平 ReduceSum；
  *   本算子不保留 N，因此用一对 VL 宽的 fp32 向量累加器跨 R1 和 R0 累加，
  *   整个通道结束后才收尾一次。累加器跨 tile 存活在 UB（RegTensor 出了
- *   __VEC_SCOPE__ 就失效），进出 scope 用 DataCopy<float, DIST_NORM> 全宽读写。
+ *   __VEC_SCOPE__ 就失效），进出 scope 用 LoadAlign/StoreAlign 全宽读写。
  *
  * Σx 折叠原始 x，Σx² 先逐元素平方再折叠——(a+b)² ≠ a²+b²，两者必须各自持有独立累加器。
  * fp16 / bf16 输入先提升 fp32 再平方，禁止低精度下先平方。
@@ -538,10 +538,10 @@ private:
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
 
             Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
-            DataCopy<float, LoadDist::DIST_NORM>(accSum, accUb);
-            DataCopy<float, LoadDist::DIST_NORM>(accSq, accUb + VL_FP32);
-            DataCopy<float, LoadDist::DIST_NORM>(cSum, compUb);
-            DataCopy<float, LoadDist::DIST_NORM>(cSq, compUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(accSum, accUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(accSq, accUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(cSum, compUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(cSq, compUb + VL_FP32);
 
             for (uint16_t i = 0; i < rows; ++i) {
                 const uint32_t baseOffset = i * rowStride;
@@ -659,10 +659,10 @@ private:
                 }
             }
 
-            DataCopy<float, StoreDist::DIST_NORM>(accUb, accSum, pregFull);
-            DataCopy<float, StoreDist::DIST_NORM>(accUb + VL_FP32, accSq, pregFull);
-            DataCopy<float, StoreDist::DIST_NORM>(compUb, cSum, pregFull);
-            DataCopy<float, StoreDist::DIST_NORM>(compUb + VL_FP32, cSq, pregFull);
+            StoreAlign<float, StoreDist::DIST_NORM>(accUb, accSum, pregFull);
+            StoreAlign<float, StoreDist::DIST_NORM>(accUb + VL_FP32, accSq, pregFull);
+            StoreAlign<float, StoreDist::DIST_NORM>(compUb, cSum, pregFull);
+            StoreAlign<float, StoreDist::DIST_NORM>(compUb + VL_FP32, cSq, pregFull);
         }
     }
 
@@ -1013,7 +1013,7 @@ private:
             //"读未初始化 UB"本身会被内存检查工具判为非法读，故一并清零。
             // 归纳变量必须是 uint16_t（VF 约束），槽数远小于 uint16 上限。
             for (uint16_t s = 0; s < slotNum; ++s) {
-                DataCopy<float, StoreDist::DIST_NORM>(accUb + static_cast<uint64_t>(s) * VL_FP32, zero, pregFull);
+                StoreAlign<float, StoreDist::DIST_NORM>(accUb + static_cast<uint64_t>(s) * VL_FP32, zero, pregFull);
             }
         }
     }
@@ -1086,13 +1086,14 @@ private:
                     // 新 comp = lhsComp + rhsComp - err。
                     for (uint16_t component = 0; component < ACC_SLOT_NUM; ++component) {
                         const uint64_t componentOffset = static_cast<uint64_t>(component) * VL_FP32;
-                        DataCopy<float, LoadDist::DIST_NORM>(lhs, accUb + lo + componentOffset);
-                        DataCopy<float, LoadDist::DIST_NORM>(rhs, accUb + hi + componentOffset);
-                        DataCopy<float, LoadDist::DIST_NORM>(comp, accUb + compBase + lo + componentOffset);
-                        DataCopy<float, LoadDist::DIST_NORM>(rhsComp, accUb + compBase + hi + componentOffset);
+                        LoadAlign<float, LoadDist::DIST_NORM>(lhs, accUb + lo + componentOffset);
+                        LoadAlign<float, LoadDist::DIST_NORM>(rhs, accUb + hi + componentOffset);
+                        LoadAlign<float, LoadDist::DIST_NORM>(comp, accUb + compBase + lo + componentOffset);
+                        LoadAlign<float, LoadDist::DIST_NORM>(rhsComp, accUb + compBase + hi + componentOffset);
                         MergeAccRegisters(lhs, rhs, comp, rhsComp, t, bb, err, tmp, zeroReg, pregFull);
-                        DataCopy<float, StoreDist::DIST_NORM>(accUb + lo + componentOffset, lhs, pregFull);
-                        DataCopy<float, StoreDist::DIST_NORM>(accUb + compBase + lo + componentOffset, comp, pregFull);
+                        StoreAlign<float, StoreDist::DIST_NORM>(accUb + lo + componentOffset, lhs, pregFull);
+                        StoreAlign<float, StoreDist::DIST_NORM>(accUb + compBase + lo + componentOffset, comp,
+                                                                pregFull);
                     }
                 }
                 // 本趟的 store 必须先于下一趟的 load 生效。
@@ -1177,13 +1178,13 @@ private:
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
             Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
-            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb);
-            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(acc, accUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(comp, compUb);
             CompensatedReduceSum(result, acc, comp, zeroReg, pregFull);
             StoreOneFp32(sumUb, result, pregOne, slot);
 
-            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb + VL_FP32);
-            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(acc, accUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(comp, compUb + VL_FP32);
             CompensatedReduceSum(result, acc, comp, zeroReg, pregFull);
             StoreOneFp32(squareSumUb, result, pregOne, slot);
         }
@@ -1218,27 +1219,27 @@ private:
 
             // 累加器与补偿量组成 value = acc - comp 的双分量数。C0 折叠时必须成对
             // 归并，否则分别普通求和会在 BF16 大规约的临界舍入点丢失 1 ULP。
-            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb);
-            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(acc, accUb);
+            LoadAlign<float, LoadDist::DIST_NORM>(comp, compUb);
             for (uint16_t k = 1; k < folds; ++k) {
                 const uint32_t foldOffset = static_cast<uint32_t>(k) * c0;
-                DataCopy<float, LoadDist::DIST_NORM>(partAcc, accUb + foldOffset);
-                DataCopy<float, LoadDist::DIST_NORM>(partComp, compUb + foldOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(partAcc, accUb + foldOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(partComp, compUb + foldOffset);
                 MergeAccRegisters<false>(acc, partAcc, comp, partComp, t, bb, err, tmp, zeroReg, pregC0);
             }
             Sub(acc, acc, comp, pregC0);
-            DataCopy<float, StoreDist::DIST_NORM>(sumUb + dstOffset, acc, pregC0);
+            StoreAlign<float, StoreDist::DIST_NORM>(sumUb + dstOffset, acc, pregC0);
 
-            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb + VL_FP32);
-            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(acc, accUb + VL_FP32);
+            LoadAlign<float, LoadDist::DIST_NORM>(comp, compUb + VL_FP32);
             for (uint16_t k = 1; k < folds; ++k) {
                 const uint32_t foldOffset = static_cast<uint32_t>(k) * c0;
-                DataCopy<float, LoadDist::DIST_NORM>(partAcc, accUb + VL_FP32 + foldOffset);
-                DataCopy<float, LoadDist::DIST_NORM>(partComp, compUb + VL_FP32 + foldOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(partAcc, accUb + VL_FP32 + foldOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(partComp, compUb + VL_FP32 + foldOffset);
                 MergeAccRegisters<false>(acc, partAcc, comp, partComp, t, bb, err, tmp, zeroReg, pregC0);
             }
             Sub(acc, acc, comp, pregC0);
-            DataCopy<float, StoreDist::DIST_NORM>(squareSumUb + dstOffset, acc, pregC0);
+            StoreAlign<float, StoreDist::DIST_NORM>(squareSumUb + dstOffset, acc, pregC0);
         }
     }
 

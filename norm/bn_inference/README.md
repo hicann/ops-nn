@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 | 产品 | 是否支持 |
-|:---|:---:|
+| :--- | :---: |
 | <term>Ascend 950PR/Ascend 950DT</term> | √ |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
@@ -14,176 +14,139 @@
 ## 功能说明
 
 - 算子功能：对输入特征图执行推理态批归一化，输出`y`的shape、数据类型和数据格式均与`x`一致。
-- `mode`为非0整数（默认值为1）时，执行完整推理态批归一化语义。
-- 在上述完整BN模式下，`scale`和`offset`均缺失（4输入）时，计算公式为：
+- 以下公式中，`i`表示元素索引，`c`表示该元素所在的通道，`momentum_0`表示`momentum`的首个元素。
+- 完整批归一化语义下，`scale`和`offset`均缺失时，计算公式为：
 
   $$
   factor = momentum_0 == 0 ? 0 : 1 / momentum_0
   $$
 
   $$
-  alpha_c = -factor * mean_c
+  alpha_c = -factor \times mean_c
   $$
 
   $$
-  beta_c = 1 / \sqrt{factor * variance_c + epsilon}
+  beta_c = \frac{1}{\sqrt{factor \times variance_c+epsilon}}
   $$
 
   $$
-  y_i = (x_i + alpha_c) * beta_c
+  y_i = (x_i+alpha_c) \times beta_c
   $$
 
-- 在完整BN模式下，`scale`和`offset`均存在（6输入）时，`momentum`的数值不参与计算，计算公式为：
+- 完整批归一化语义下，`scale`和`offset`均存在时，`momentum`的数值不参与计算，计算公式为：
 
   $$
-  s_c = \sqrt{variance_c + epsilon},\quad inv\_s_c = 1 / s_c
-  $$
-
-  $$
-  beta_c = scale_c * inv\_s_c
+  s_c = \sqrt{variance_c+epsilon}
   $$
 
   $$
-  alpha_c = (offset_c / scale_c) * s_c - mean_c
+  inv\_s_c = \frac{1}{s_c}
   $$
 
   $$
-  y_i = (x_i + alpha_c) * beta_c
+  beta_c = scale_c \times inv\_s_c
   $$
 
-- 在完整BN模式下，<term>Ascend 950PR/Ascend 950DT</term>支持仅有`scale`或仅有`offset`的5输入组合。此时按标准推理态BatchNorm计算，缺失的`scale`按1、缺失的`offset`按0，`momentum`数值不参与计算。
-
-- 在<term>Ascend 950PR/Ascend 950DT</term>上，`mode=0`时，`mean`和`variance`分别表示预折叠系数`alpha`和`beta`，`momentum`、`epsilon`和`use_global_stats`不参与数值计算：
-
   $$
-  base_i = (x_i + mean_c) * variance_c
+  alpha_c = \frac{offset_c}{scale_c} \times s_c-mean_c
   $$
 
-  - `scale/offset`均缺失：$y_i = base_i$。
-  - 仅`scale`存在：$y_i = base_i * scale_c$。
-  - `scale/offset`均存在：$y_i = base_i * scale_c + offset_c$。
-  - 仅`offset`存在：接口报错。
+  $$
+  y_i = (x_i+alpha_c) \times beta_c
+  $$
+
+  可选输入的合法组合以及缺省值见[产品差异说明](#产品差异说明)。
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-  <col style="width: 110px">
-  <col style="width: 130px">
-  <col style="width: 430px">
-  <col style="width: 210px">
-  <col style="width: 120px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出/属性</th>
-      <th>描述</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>x</td>
-      <td>输入</td>
-      <td>待归一化的4D或5D特征图。在<term>Ascend 950PR/Ascend 950DT</term>上，NCHW、NHWC支持4D，NCDHW、NDHWC支持5D，ND支持4D或5D。NCHW/NCDHW的逻辑通道轴为第1轴，NHWC/NDHWC为末轴；storage format为ND时，origin format为NCHW/NCDHW取第1轴，为NHWC/NDHWC取末轴，origin format仍为ND时沿用第1轴。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td><term>Ascend 950PR/Ascend 950DT</term>：NCHW、NHWC、NCDHW、NDHWC、ND</td>
-    </tr>
-    <tr>
-      <td>mean</td>
-      <td>输入</td>
-      <td>shape为[C]，其中C与x的逻辑通道数相同，表示逐通道均值。在<term>Ascend 950PR/Ascend 950DT</term>的预折叠语义下表示预折叠系数alpha。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>variance</td>
-      <td>输入</td>
-      <td>shape为[C]，其中C与x的逻辑通道数相同，表示逐通道方差。在<term>Ascend 950PR/Ascend 950DT</term>的预折叠语义下表示预折叠系数beta。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>momentum</td>
-      <td>输入</td>
-      <td>动量参数。在<term>Ascend 950PR/Ascend 950DT</term>上，shape支持rank=0（shape为[]）、[1]或[C]。非空x在完整BN语义的4输入组合中只读取展平后的首元素并据此计算factor，因此该组合的momentum必须至少有1个元素；[C]的其余元素不参与计算。其他完整BN组合、预折叠语义及空Tensor场景均不读取其数值；C=0的空Tensor允许momentum为[0]。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>scale</td>
-      <td>可选输入</td>
-      <td>逐通道缩放参数，存在时shape为[C]。在<term>Ascend 950PR/Ascend 950DT</term>的预折叠语义下对预折叠结果执行逐通道缩放。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>offset</td>
-      <td>可选输入</td>
-      <td>逐通道偏移参数，存在时shape为[C]。在<term>Ascend 950PR/Ascend 950DT</term>的预折叠语义下必须与scale同时存在，并添加到缩放后的结果。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>epsilon</td>
-      <td>可选属性</td>
-      <td>完整BN语义下加到variance上的数值，默认值为1e-5；在<term>Ascend 950PR/Ascend 950DT</term>的预折叠语义下不参与计算。</td>
-      <td>FLOAT</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>use_global_stats</td>
-      <td>可选属性</td>
-      <td>兼容属性，默认值为true。在<term>Ascend 950PR/Ascend 950DT</term>上，其取值不改变y的计算。</td>
-      <td>BOOL</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>mode</td>
-      <td>可选属性</td>
-      <td>默认值为1。<term>Ascend 950PR/Ascend 950DT</term>上，mode=0选择预折叠语义，任意非0整数选择完整BN语义。</td>
-      <td>INT</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>y</td>
-      <td>输出</td>
-      <td>归一化结果，shape、数据类型和数据格式均与x一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td><term>Ascend 950PR/Ascend 950DT</term>：NCHW、NHWC、NCDHW、NDHWC、ND</td>
-    </tr>
-  </tbody>
-</table>
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| :--- | :--- | :--- | :--- | :--- |
+| x | 输入 | 待归一化的特征图。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、NCHW、NHWC、NCDHW、NDHWC、ND |
+| mean | 输入 | 第一个逐通道参数；具体数学含义由计算模式确定，见公式和[产品差异说明](#产品差异说明)。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、ND |
+| variance | 输入 | 第二个逐通道参数；具体数学含义由计算模式确定，见公式和[产品差异说明](#产品差异说明)。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、ND |
+| momentum | 输入 | 均值和方差的缩放参数；参与计算的条件见公式和[产品差异说明](#产品差异说明)。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、ND |
+| scale | 可选输入 | 逐通道缩放参数，对应公式中的`scale`；缺省行为见[产品差异说明](#产品差异说明)。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、ND |
+| offset | 可选输入 | 逐通道偏移参数，对应公式中的`offset`；缺省行为见[产品差异说明](#产品差异说明)。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、ND |
+| epsilon | 可选属性 | 完整批归一化语义下加到`variance`上的数值，默认值为`1e-5`。 | FLOAT | - |
+| use_global_stats | 可选属性 | 是否使用全局统计量，默认值为`true`；有效取值见[产品差异说明](#产品差异说明)。 | BOOL | - |
+| mode | 可选属性 | 计算模式，默认值为`1`；各产品的取值语义见[产品差异说明](#产品差异说明)。 | INT | - |
+| y | 输出 | 批归一化结果，shape、数据类型和数据格式均与`x`一致。 | FLOAT、FLOAT16、BFLOAT16 | NC1HWC0、NCHW、NHWC、NCDHW、NDHWC、ND |
 
-在<term>Ascend 950PR/Ascend 950DT</term>上，输入数据类型仅支持下表中的组合；`scale`和`offset`存在时使用“仿射参数”列的数据类型，缺失时不要求对应Tensor。
+### 产品差异说明
 
-| x | mean/variance | momentum | 仿射参数 | y |
-|:---:|:---:|:---:|:---:|:---:|
-| FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 |
-| FLOAT16 | FLOAT32 | FLOAT32 | FLOAT16 | FLOAT16 |
-| BFLOAT16 | FLOAT32 | FLOAT32 | BFLOAT16 | BFLOAT16 |
+#### 数据类型
+
+| 产品 | 支持的数据类型组合 |
+| :--- | :--- |
+| <term>Ascend 950PR/Ascend 950DT</term> | 支持下表列出的11种数据类型组合。 |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | 所有输入和输出使用相同的数据类型，支持FLOAT、FLOAT16、BFLOAT16。 |
+| <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> | 所有输入和输出使用相同的数据类型，支持FLOAT、FLOAT16。 |
+
+<term>Ascend 950PR/Ascend 950DT</term>数据类型组合：
+
+| x | mean、variance | momentum | scale、offset | y |
+| :---: | :---: | :---: | :---: | :---: |
+| FLOAT | FLOAT | FLOAT | FLOAT | FLOAT |
+| FLOAT16 | FLOAT | FLOAT | FLOAT16 | FLOAT16 |
+| BFLOAT16 | FLOAT | FLOAT | BFLOAT16 | BFLOAT16 |
 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 |
-| FLOAT16 | FLOAT16 | FLOAT32 | FLOAT16 | FLOAT16 |
+| FLOAT16 | FLOAT16 | FLOAT | FLOAT16 | FLOAT16 |
 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |
-| BFLOAT16 | BFLOAT16 | FLOAT32 | BFLOAT16 | BFLOAT16 |
-| FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT16 |
-| BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | BFLOAT16 |
+| BFLOAT16 | BFLOAT16 | FLOAT | BFLOAT16 | BFLOAT16 |
+| FLOAT16 | FLOAT | FLOAT | FLOAT | FLOAT16 |
+| BFLOAT16 | FLOAT | FLOAT | FLOAT | BFLOAT16 |
 | BFLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | BFLOAT16 |
-| FLOAT32 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 |
+| FLOAT | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT |
+
+`scale`或`offset`缺失时，不要求缺失Tensor的数据类型；二者均存在时必须使用表中同一行的数据类型。
+
+#### 数据格式与shape
+
+| 产品 | 参数或场景 | 静态shape能力 | 动态shape能力 | shape、rank及格式组合限制 |
+| :--- | :--- | :--- | :--- | :--- |
+| <term>Ascend 950PR/Ascend 950DT</term> | `x`、`y` | NCHW→NCHW、NHWC→NHWC、NCDHW→NCDHW、NDHWC→NDHWC、ND→ND | NCHW→NCHW、NHWC→NHWC、NCDHW→NCDHW、NDHWC→NDHWC、ND→ND | NCHW、NHWC为4D，NCDHW、NDHWC为5D，ND为4D或5D。NCHW、NCDHW的通道轴为第1轴，NHWC、NDHWC的通道轴为末轴。ND按原始格式（origin format）确定通道轴；原始格式为ND时，通道轴为第1轴。支持空Tensor，shape和元素数使用64位整数，具体限制见[约束说明](#约束说明)。 |
+| <term>Ascend 950PR/Ascend 950DT</term> | `mean`、`variance`、`momentum`、`scale`、`offset` | ND | ND | `mean`、`variance`以及存在的`scale`、`offset`的shape为[C]；`momentum`的shape为[]、[1]或[C]。 |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> | `x`、`y` | NC1HWC0→NC1HWC0、ND→ND | NC1HWC0→NC1HWC0、ND→ND | `x`为逻辑4D或5D特征图；`y`与`x`的shape和格式一致。NC1HWC0为这些产品的私有数据格式。 |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> | `mean`、`variance`、`momentum`、`scale`、`offset` | NC1HWC0、ND | NC1HWC0、ND | 各参数表示逐通道数据，逻辑shape为[C]。参数格式与`x`相同：`x`为NC1HWC0时均为NC1HWC0，`x`为ND时均为ND。 |
+
+#### mode与可选输入
+
+在<term>Ascend 950PR/Ascend 950DT</term>的完整批归一化语义下，仅有`scale`或仅有`offset`时，
+`momentum`的数值不参与计算：
+
+$$
+rstd_c = \frac{1}{\sqrt{variance_c+epsilon}}
+$$
+
+$$
+\begin{aligned}
+\text{仅有scale时：}\quad &y_i = ((x_i-mean_c) \times rstd_c) \times scale_c \\
+\text{仅有offset时：}\quad &y_i = (x_i-mean_c) \times rstd_c+offset_c
+\end{aligned}
+$$
+
+在<term>Ascend 950PR/Ascend 950DT</term>上，`mode=0`时，`mean`和`variance`分别表示预折叠系数`alpha`和`beta`：
+
+$$
+base_i = (x_i+mean_c) \times variance_c
+$$
+
+| 产品 | mode语义 | scale、offset组合 | use_global_stats |
+| :--- | :--- | :--- | :--- |
+| <term>Ascend 950PR/Ascend 950DT</term> | `mode=0`使用预折叠语义，`momentum`和`epsilon`不参与计算；任意非0整数使用完整批归一化语义。 | 完整批归一化支持均缺失、仅`scale`、仅`offset`和均存在；缺失的`scale`按1、缺失的`offset`按0。预折叠语义支持均缺失、仅`scale`和均存在，不支持仅`offset`。预折叠结果依次为`base`、`base*scale`和`base*scale+offset`。 | `true`和`false`均可使用，取值不改变计算结果。 |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> | 任意整数均使用完整批归一化语义。 | 仅支持`scale`和`offset`均缺失或均存在。 | `true`和`false`均可使用，取值不改变计算结果。 |
 
 ## 约束说明
 
-- `mean`和`variance`的shape必须为[C]；存在的`scale`和`offset`的shape也必须为[C]。
-- <term>Ascend 950PR/Ascend 950DT</term>上，`mode=0`时不支持仅有`offset`而没有`scale`；该约束在空Tensor路径上也会校验。
-- 产品形态差异：<term>Ascend 950PR/Ascend 950DT</term>上，`mode=0`选择预折叠语义，任意非0整数选择完整BN语义；其他产品形态上，`mode`取值不改变完整BN语义。跨产品形态迁移显式使用`mode=0`的完整BN调用时，需将`mode`修改为非0值。
-- <term>Ascend 950PR/Ascend 950DT</term>：`x`和`y`仅支持NCHW、NHWC、NCDHW、NDHWC、ND格式。storage format为ND时保留origin format语义：NCHW/NHWC用于4D，NCDHW/NDHWC用于5D。
+- 参数表中的数据类型和数据格式为各支持产品能力的并集，调用时必须使用“产品差异说明”中的合法组合，不能将数据类型和数据格式任意组合。
 - <term>Ascend 950PR/Ascend 950DT</term>支持空Tensor。`x`的任意维可以为0，输出为同shape的空Tensor；所有输入仍须满足参数约束。C=0时，逐通道参数的shape须为[0]。
-- <term>Ascend 950PR/Ascend 950DT</term>上，shape和元素数按64位处理；实际可分配大小仍受运行环境可用内存限制。
-- 本算子不提供aclnn单算子接口，仅支持GE图模式调用。
+- <term>Ascend 950PR/Ascend 950DT</term>上，shape和元素数按64位处理；实际可分配大小受运行环境可用内存限制。
+- 跨产品迁移时，若完整批归一化调用显式设置了`mode=0`，在<term>Ascend 950PR/Ascend 950DT</term>上须将`mode`改为非0值。
 
 ## 调用说明
 
+本算子不提供aclnn单算子接口，仅支持GE图模式调用。
+
 | 调用方式 | 调用样例 | 说明 |
-|:---|:---|:---|
-| 图模式调用 | [test_geir_bn_inference](./examples/arch35/test_geir_bn_inference.cpp) | 在<term>Ascend 950PR/Ascend 950DT</term>上，通过[算子IR](./op_graph/bn_inference_proto.h)构图并调用BNInference算子，可选择NCHW、NHWC、NCDHW、NDHWC或4D/5D ND storage format，并覆盖四种可选输入组合。ND storage下的通道轴遵循公开origin format。 |
+| :--- | :--- | :--- |
+| GE图模式 | [test_geir_bn_inference](./examples/arch35/test_geir_bn_inference.cpp) | 通过[算子IR](./op_graph/bn_inference_proto.h)构图并调用BNInference算子；样例展示<term>Ascend 950PR/Ascend 950DT</term>支持的数据格式和可选输入组合。 |

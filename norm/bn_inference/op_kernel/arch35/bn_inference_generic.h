@@ -289,11 +289,11 @@ private:
             } else {
                 AscendC::Reg::Duplicate(offsetReg, 0.0f, allMask);
             }
-            AscendC::MicroAPI::UnalignReg xState;
-            AscendC::MicroAPI::UnalignReg yState;
+            AscendC::MicroAPI::UnalignRegForLoad xState;
+            AscendC::MicroAPI::UnalignRegForStore yState;
             __ubuf__ T_X* xCurrent = x;
             __ubuf__ T_X* yCurrent = y;
-            AscendC::MicroAPI::DataCopyUnAlignPre(xState, xCurrent);
+            AscendC::MicroAPI::LoadUnAlignPre(xState, xCurrent);
             const uint16_t loopCount = (count + VL_FP32 - 1) / VL_FP32;
             for (uint16_t i = 0; i < loopCount; ++i) {
                 const uint16_t processed = i * VL_FP32;
@@ -311,7 +311,7 @@ private:
                 }
                 StoreUnalignedFromFp32(yCurrent, yReg, yState, mask, active);
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(yCurrent, yState, 0);
+            AscendC::MicroAPI::StoreUnAlignPost(yCurrent, yState, 0);
         }
     }
 
@@ -344,9 +344,9 @@ private:
             for (uint16_t row = 0; row < rows; ++row) {
                 __ubuf__ T_X* xCurrent = x + row * cLen;
                 __ubuf__ T_X* yCurrent = y + row * cLen;
-                AscendC::MicroAPI::UnalignReg xState;
-                AscendC::MicroAPI::UnalignReg yState;
-                AscendC::MicroAPI::DataCopyUnAlignPre(xState, xCurrent);
+                AscendC::MicroAPI::UnalignRegForLoad xState;
+                AscendC::MicroAPI::UnalignRegForStore yState;
+                AscendC::MicroAPI::LoadUnAlignPre(xState, xCurrent);
                 const uint16_t loopCount = (cLen + VL_FP32 - 1) / VL_FP32;
                 for (uint16_t i = 0; i < loopCount; ++i) {
                     const uint16_t processed = i * VL_FP32;
@@ -377,7 +377,7 @@ private:
                     }
                     StoreUnalignedFromFp32(yCurrent, yReg, yState, mask, active);
                 }
-                AscendC::MicroAPI::DataCopyUnAlignPost(yCurrent, yState, 0);
+                AscendC::MicroAPI::StoreUnAlignPost(yCurrent, yState, 0);
             }
         }
     }

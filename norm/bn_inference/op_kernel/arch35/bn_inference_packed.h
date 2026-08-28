@@ -269,11 +269,11 @@ private:
                 AscendC::Reg::Duplicate(offsetReg, 0.0f, cacheMask);
             }
 
-            AscendC::MicroAPI::UnalignReg xState;
-            AscendC::MicroAPI::UnalignReg yState;
+            AscendC::MicroAPI::UnalignRegForLoad xState;
+            AscendC::MicroAPI::UnalignRegForStore yState;
             __ubuf__ T_X* xCurrent = x;
             __ubuf__ T_X* yCurrent = y;
-            AscendC::MicroAPI::DataCopyUnAlignPre(xState, xCurrent);
+            AscendC::MicroAPI::LoadUnAlignPre(xState, xCurrent);
             const uint16_t loopCount = (count + cacheLen - 1) / cacheLen;
             for (uint16_t i = 0; i < loopCount; ++i) {
                 const uint16_t processed = i * cacheLen;
@@ -291,7 +291,7 @@ private:
                 }
                 StoreUnalignedFromFp32(yCurrent, yReg, yState, mask, active);
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(yCurrent, yState, 0);
+            AscendC::MicroAPI::StoreUnAlignPost(yCurrent, yState, 0);
         }
     }
 

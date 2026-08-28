@@ -55,10 +55,10 @@ template <typename T_IN>
 __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
-        DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+        LoadAlign<float, LoadDist::DIST_NORM>(dst, src + offset);
     } else {
         RegTensor<T_IN> xIn;
-        DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
+        LoadAlign<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
         Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
     }
 }
@@ -66,7 +66,7 @@ __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float
 // 把 fp32 寄存器的首元素（水平归约结果）写回 UB 的第 offset 个 fp32 槽位。
 __aicore__ inline void StoreOneFp32(__ubuf__ float* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
 {
-    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + offset, src, preg);
+    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + offset, src, preg);
 }
 } // namespace BN3DTrainingReduceOps
 #endif // BN3D_TRAINING_REDUCE_COMMON_H_
