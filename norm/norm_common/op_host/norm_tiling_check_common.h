@@ -31,7 +31,7 @@ inline bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::Stor
     size_t src2DimNum = src2Shape->GetStorageShape().GetDimNum();
 
     OP_TILING_CHECK((src1DimNum != src2DimNum),
-                    OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.",
+                    OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu, %s is %lu, not equal.",
                             src1Name.c_str(), src1DimNum, src2Name.c_str(), src2DimNum),
                     return false);
     for (size_t i = 0; i < src1DimNum; i++) {
@@ -88,10 +88,11 @@ inline bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::Stora
     size_t srcBcDimNum = srcBcShape->GetStorageShape().GetDimNum();
     size_t srcDimNum = srcShape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK((srcBcDimNum < srcDimNum),
-                    OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.",
-                            srcBcName.c_str(), srcBcDimNum, srcName.c_str(), srcDimNum),
-                    return false);
+    OP_TILING_CHECK(
+        (srcBcDimNum < srcDimNum),
+        OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu, %s is %lu, %s should not be smaller than %s.",
+                srcBcName.c_str(), srcBcDimNum, srcName.c_str(), srcDimNum, srcBcName.c_str(), srcName.c_str()),
+        return false);
     for (size_t i = 0; i < srcDimNum; i++) {
         uint64_t srcBcDimValue;
         if (isBcHeader) {
@@ -115,11 +116,11 @@ inline bool CheckDimBiggerZero(const gert::StorageShape* srcShape, const uint32_
     // Support zero shape.
     for (uint32_t i = 0; i < shapeLen; i++) {
         OP_TILING_CHECK(srcShape->GetStorageShape().GetDim(i) < 0,
-                        OP_LOGE(nodeName.c_str(), "Input %s shape should bigger or equal than zero.", srcName.c_str()),
+                        OP_LOGE(nodeName.c_str(), "Input %s shape should not be less than zero.", srcName.c_str()),
                         return false);
     }
     return true;
 }
 } // namespace NormCheck
 
-#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_NORM_COMMON_NORM_TILING_CHECK_COMMON_H_
+#endif // NORM_COMMON_NORM_TILING_CHECK_COMMON_H_

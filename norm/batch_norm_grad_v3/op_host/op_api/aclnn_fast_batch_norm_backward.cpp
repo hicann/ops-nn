@@ -91,7 +91,7 @@ static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradWe
     // fast batch norm backward: check output mask validity
     OP_CHECK_NULL(outputMask, return false);
     if (outputMask->Size() < GRAD_WEIGHT_INDEX) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not less than 1.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not be less than 1.");
         return false;
     }
     if ((*outputMask)[0]) {

@@ -363,7 +363,7 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::GetWorkspaceSize()
 ge::graphStatus BatchNormGradV3RARSplitCoreR1::PostTiling()
 {
     context_->SetBlockDim(usedCoreNums_);
-    context_->SetScheduleMode(CONST_ONE); // Set to batch mode, all cores start simutaneously
+    context_->SetScheduleMode(CONST_ONE); // Set to batch mode, all cores start simultaneously
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;

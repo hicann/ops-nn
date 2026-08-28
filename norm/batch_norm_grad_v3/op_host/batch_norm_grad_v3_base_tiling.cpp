@@ -68,7 +68,7 @@ void BatchNormGradV3Base::CalcBasicInfo()
         bytesPerRunningVar_ = FLOAT16_BYTES;
     }
 
-    OP_LOGD(context_->GetNodeName(), "bytesPerDy_: %ld, bytesPerWeight_: %ld,bytesPerRunningVar_: %ld.", bytesPerDy_,
+    OP_LOGD(context_->GetNodeName(), "bytesPerDy_: %ld, bytesPerWeight_: %ld, bytesPerRunningVar_: %ld.", bytesPerDy_,
             bytesPerWeight_, bytesPerRunningVar_);
 }
 
@@ -257,7 +257,7 @@ ge::graphStatus BatchNormGradV3Base::CheckInputValid()
             context_->GetNodeName(), "weight, running_var and dy",
             (std::to_string(weightDimNum_) + ", " + std::to_string(dxDimNum_) + " and " + std::to_string(dyDimNum_))
                 .c_str(),
-            "The number of elements of weight and running_var must be the same as the C-dimension of paremeter dy, "
+            "The number of elements of weight and running_var must be the same as the C-dimension of parameter dy, "
             "where C is the 1st axis of dy"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

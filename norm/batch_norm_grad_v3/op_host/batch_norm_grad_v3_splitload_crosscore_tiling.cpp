@@ -54,7 +54,7 @@ protected:
         }
 
         OP_LOGD(context_->GetNodeName(),
-                "BatchNormGradV3SplitLoadCrossCoreTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)",
+                "BatchNormGradV3SplitLoadCrossCoreTiling BAB template is capable, fused shape: (%ld, %ld, %ld)",
                 fusedB0Len_, fusedALen_, fusedB1Len_);
         return true;
     }

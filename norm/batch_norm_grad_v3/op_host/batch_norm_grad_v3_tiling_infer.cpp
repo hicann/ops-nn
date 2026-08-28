@@ -39,7 +39,7 @@ protected:
         CalcBasicInfo();
 
         OP_LOGD(context_->GetNodeName(),
-                "BatchNormGradV3InferTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
+                "BatchNormGradV3InferTiling BAB template is capable, fused shape: (%ld, %ld, %ld)", fusedB0Len_,
                 fusedALen_, fusedB1Len_);
         return true;
     }

@@ -45,7 +45,7 @@ protected:
         }
 
         OP_LOGD(context_->GetNodeName(),
-                "BatchNormGradV3FullLoadTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
+                "BatchNormGradV3FullLoadTiling BAB template is capable, fused shape: (%ld, %ld, %ld)", fusedB0Len_,
                 fusedALen_, fusedB1Len_);
         return true;
     }
