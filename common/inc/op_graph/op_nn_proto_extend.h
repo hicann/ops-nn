@@ -2275,35 +2275,37 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(indices_mask, ListInt, {})
     .OP_END_FACTORY_REG(IndexByTensor)
 
-    /**
-    * @brief Gather slices from "params" according to "indices"."indices" must be
-        an integer tensor of any dimension(usually 0-D or 1-D).
-        Produces an output tensor with shape "indices.shape + params.shape[1:]" .
+/**
+* @brief Gather slices from "params" according to "indices"."indices" must be
+    an integer tensor of any dimension(usually 0-D or 1-D).
+    Produces an output tensor with shape "indices.shape + params.shape[1:]" .
 
-    * @par Inputs:
-    * Two inputs, including:
-    * @li x: A Tensor. Must be one of the following types: complex128, complex64, float64, float32, float16,
-    *     int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8, uint16, uint32, uint64, uint8,
-    *     bool, bfloat16.
-    * @li indices: A Tensor of type int32 or int64 .
+* @par Inputs:
+* Two inputs, including:
+* @li x: A Tensor. Must be one of the following types: complex128, complex64, float64, float32, float16,
+*     int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8, uint16, uint32, uint64, uint8,
+*     bool, bfloat16.
+* @li indices: A Tensor of type int32 or int64 .
 
-    * @par Attributes:
-    * @li validate_indices: Whether to verify the values of indices, not enabled currently.
-    * @li batch_dims: An optional int. Defaults to 0.
-    * @li is_preprocessed: An optional bool. Whether to preprocess. Defaults to false.
-    * @li negative_index_support: An optional bool. Defaults to false.
+* @par Attributes:
+* @li validate_indices: Whether to verify the values of indices, not enabled currently.
+* @li batch_dims: An optional int. Defaults to 0.
+* @li is_preprocessed: An optional bool. Whether to preprocess. Defaults to false.
+* @li negative_index_support: An optional bool. Defaults to false.
 
-    * @par Outputs:
-    * y: A Tensor. Has the same type as "x" .
+* @par Outputs:
+* y: A Tensor. Has the same type as "x" .
 
-    * @attention Constraints:
-    * "indices" is in the range [0, x.shape[0]) .
+* @attention Constraints:
+* "indices" is in the range [0, x.shape[0]) .
 
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator Gather .
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator Gather .
 
-    */
-    REG_OP(Gather)
+*/
+#ifndef OPS_PROTO_DEF_GATHER
+#define OPS_PROTO_DEF_GATHER
+        REG_OP(Gather)
     .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT,  DT_FLOAT16, DT_INT16,   DT_INT32,
                           DT_INT64,      DT_INT8,      DT_QINT16, DT_QINT32, DT_QINT8,   DT_QUINT16, DT_QUINT8,
                           DT_UINT16,     DT_UINT32,    DT_UINT64, DT_UINT8,  DT_BOOL,    DT_BF16}))
@@ -2316,6 +2318,7 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(is_preprocessed, Bool, false)
     .ATTR(negative_index_support, Bool, false)
     .OP_END_FACTORY_REG(Gather)
+#endif
 
     /**
     * @brief Applies sparse addition to individual values or slices in a Variable .
