@@ -148,7 +148,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>INT8、INT32、BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>weightScaleOptional（aclTensor*）</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>activationScaleOptional（aclTensor*）</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>biasOptional（aclTensor*）</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>quantScaleOptional（aclTensor*）</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>quantOffsetOptional（aclTensor*）</td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>groupIndexOptional（aclTensor*）</td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>beta（float）</td>
@@ -258,7 +258,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>INT8</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>yScaleOut（aclTensor*）</td>
@@ -268,7 +268,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>x</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
