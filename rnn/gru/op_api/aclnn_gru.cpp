@@ -1007,9 +1007,9 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
 
     //  判断是否进入PackedSequence模式
     if (batchSizes != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GRU PackedSequence(variable-length) mode is not supported yet, please use "
-                                         "fixed-length 3D input with batchSizes=nullptr.");
-        return ACLNN_ERR_PARAM_INVALID;
+        GruDataParamsIn inputs = {input, params, hx, batchSizes, numLayers, hasBias, train, bidirection};
+        GruDataParamsOut outputs = {output, hy, rOut, zOut, nOut, hnOut, hOut};
+        return GruDataGetWorkspaceSize(inputs, outputs, workspaceSize, executor);
     }
 
     //  定长模式

@@ -67,14 +67,13 @@ public:
 
     __aicore__ inline void Process()
     {
+        this->PrefillInitHGmOut();
+
         //  计算input的matmul
         this->ProcessInputMM();
         SyncAll();
         //  如果没有初始隐藏态，初始化状态
         if (this->tiling->isInith == 0) {
-            //  确保matmul完成
-            SyncAll();
-
             //  执行一次T,生成初始隐藏态
             this->ProcessInitHZero();
             //  根据方向，更新下一时刻隐藏态
@@ -89,11 +88,11 @@ public:
             } else {
                 this->inputGm.initHGm = this->outputGm.outHGm;
             }
+            SyncAll();
         }
 
         int64_t tIdx = this->tiling->isInith == 0 ? 1 : 0;
         for (; tIdx < this->tiling->timeStep; tIdx++) {
-            SyncAll();
             //  计算hidden的matmul
             this->ProcessHiddenMM(tIdx);
 
@@ -189,6 +188,49 @@ private:
     TCubeTiling inputMMTiling;
     TCubeTiling hiddenMMTiling;
 
+    __aicore__ inline void SyncM2toV()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventId);
+        WaitFlag<HardEvent::MTE2_V>(eventId);
+    }
+
+    __aicore__ inline void SyncVtoM3()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventId);
+        WaitFlag<HardEvent::V_MTE3>(eventId);
+    }
+    __aicore__ inline void SyncVtoM2()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(eventId);
+        WaitFlag<HardEvent::V_MTE2>(eventId);
+    }
+    __aicore__ inline void SyncM3toV()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventId);
+        WaitFlag<HardEvent::MTE3_V>(eventId);
+    }
+    __aicore__ inline void SyncM3toM2()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE3_MTE2));
+        SetFlag<HardEvent::MTE3_MTE2>(eventId);
+        WaitFlag<HardEvent::MTE3_MTE2>(eventId);
+    }
+    __aicore__ inline void SyncVtoS()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventId);
+        WaitFlag<HardEvent::V_S>(eventId);
+    }
+    __aicore__ inline void SyncM2toS()
+    {
+        event_t eventId = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE2_S));
+        SetFlag<HardEvent::MTE2_S>(eventId);
+        WaitFlag<HardEvent::MTE2_S>(eventId);
+    }
     __aicore__ inline int64_t Ceil(int64_t x, int64_t y)
     {
         if (y == 0) {
@@ -321,6 +363,49 @@ private:
         }
     }
 
+    __aicore__ inline void PrefillInitHGmOut()
+    {
+        if (this->tiling->direction != 1 || this->tiling->isSeqLength == 0) {
+            return;
+        }
+        int64_t rows = this->tiling->batch;
+        int64_t launchCore = (this->tiling->usedCoreNum + 1) / 2;
+        if (launchCore <= 0) {
+            return;
+        }
+        int64_t rowsPerCore = this->Ceil(rows, launchCore);
+        int64_t startRow = GetBlockIdx() * rowsPerCore;
+        if (startRow >= rows) {
+            return;
+        }
+        int64_t endRow = (startRow + rowsPerCore > rows) ? rows : startRow + rowsPerCore;
+
+        int64_t nBlk = this->Ceil(this->tiling->hiddenSize, this->tiling->baseN);
+        //  initHGm [numDir*layer, batch, hidden] -> 单层单向下，batch步长 batch*hiddenSize
+        int64_t initHGmBatchStride = this->tiling->batch * this->tiling->hiddenSize;
+        for (int64_t r = startRow; r < endRow; ++r) {
+            for (int64_t nb = 0; nb < nBlk; ++nb) {
+                int64_t allStartN = nb * this->tiling->baseN;
+                int64_t calcN = (allStartN + this->tiling->baseN > this->tiling->hiddenSize) ?
+                                    (this->tiling->hiddenSize - allStartN) :
+                                    this->tiling->baseN;
+                int64_t offset = r * this->tiling->hiddenSize + allStartN;
+                if (this->tiling->isInith == 1) {
+                    //  有初始隐态：从init_h拷贝到outHGm
+                    this->CopyFormHGm(this->ubLocal1, this->inputGm.initHGm, offset, 1, calcN, initHGmBatchStride);
+                    PipeBarrier<PIPE_ALL>();
+                } else {
+                    //  无初始隐态：置0
+                    int64_t alignedCalcN = this->Ceil(calcN, this->calBlockSize) * this->calBlockSize;
+                    Duplicate(this->ubLocal1, 0.0f, alignedCalcN);
+                    PipeBarrier<PIPE_V>();
+                }
+
+                this->CopyToOutput(this->outputGm.outHGm, this->ubLocal1, offset, 1, calcN, this->tiling->hiddenSize);
+                PipeBarrier<PIPE_ALL>();
+            }
+        }
+    }
     __aicore__ inline void ProcessInputMM()
     {
         if (GetBlockIdx() < this->inputMMTiling.usedCoreNum) {
@@ -460,11 +545,11 @@ private:
 
             auto ubH = this->ubFp16;
             DataCopyPad(ubH, gm[offset], dataCopyParams, padParams);
-            PipeBarrier<PIPE_ALL>();
+            SyncM2toV();
             for (int i = 0; i < calcM; i++) {
                 Cast(ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i],
                      ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i], RoundMode::CAST_NONE, calcN);
-                PipeBarrier<PIPE_ALL>();
+                SyncVtoS();
             }
         } else {
             DataCopyParams dataCopyParams;
@@ -491,7 +576,7 @@ private:
             for (int i = 0; i < calcM; i++) {
                 Cast(ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i],
                      ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i], RoundMode::CAST_RINT, calcN);
-                PipeBarrier<PIPE_ALL>();
+                SyncVtoS();
             }
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = calcM;
@@ -500,7 +585,6 @@ private:
             dataCopyParams.dstStride = (rowLen - calcN) * sizeof(half);
 
             DataCopyPad(gm[offset], ubH, dataCopyParams);
-            PipeBarrier<PIPE_ALL>();
         } else {
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = calcM;
@@ -535,9 +619,9 @@ private:
             for (int64_t i = 0; i < calcM; i++) {
                 DataCopyPad(ubH[i * alignedCalcN], gm[offset], dataCopyParams, padParams);
             }
-            PipeBarrier<PIPE_ALL>();
+            SyncM2toV();
             Cast(ub, ubH, RoundMode::CAST_NONE, calcSizeAlign);
-            PipeBarrier<PIPE_V>();
+            SyncVtoM3();
         } else {
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = 1;
@@ -650,14 +734,15 @@ private:
 
         CopyGateFromWorkspace(ubInputR, this->outputGm.inputMMWorkspace, inputGateR, calcM, calcN, workspaceRowLen);
         CopyGateFromWorkspace(ubHiddenR, this->outputGm.hiddenMMWorkspace, hiddenGateR, calcM, calcN, workspaceRowLen);
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toV();
 
         Add(ubResetGate, ubInputR, ubHiddenR, calcSizeAlign);
         Sigmoid(ubResetGate, ubResetGate, calcSizeAlign); //  r = sigmoid(i_r + h_r)  Ub3
-        PipeBarrier<PIPE_ALL>();
+        SyncVtoM3();
+        SyncVtoM2();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outRGm, ubResetGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toM2();
         }
 
         //  更新门 z
@@ -667,14 +752,15 @@ private:
 
         CopyGateFromWorkspace(ubInputZ, this->outputGm.inputMMWorkspace, inputGateZ, calcM, calcN, workspaceRowLen);
         CopyGateFromWorkspace(ubHiddenZ, this->outputGm.hiddenMMWorkspace, hiddenGateZ, calcM, calcN, workspaceRowLen);
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toV();
 
         Add(ubUpdateGate, ubInputZ, ubHiddenZ, calcSizeAlign);
         Sigmoid(ubUpdateGate, ubUpdateGate, calcSizeAlign); // z = sigmoid(i_z + h_z)  Ub4
-        PipeBarrier<PIPE_ALL>();
+        SyncVtoM3();
+        SyncVtoM2();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outZGm, ubUpdateGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toM2();
         }
 
         //  new_gate
@@ -685,25 +771,26 @@ private:
         CopyGateFromWorkspace(ubInputN, this->outputGm.inputMMWorkspace, inputGateN, calcM, calcN, workspaceRowLen);
         CopyGateFromWorkspace(ubHiddenN, this->outputGm.hiddenMMWorkspace, hiddenGateN, calcM, calcN, workspaceRowLen);
         PipeBarrier<PIPE_ALL>();
+
         //  反向输出h_n 存疑？
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNHGm, ubHiddenN, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toV();
         }
 
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
         Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
         Tanh(ubNewGate, ubNewGate, calcSizeAlign); //  n = tanh(i_n + r * h_n) Ub5
-        PipeBarrier<PIPE_ALL>();
+        SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNGm, ubNewGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toM2();
         }
 
         //  h_t
         auto ubHPrev = this->ubLocal3;
         CopyFormHGm(ubHPrev, this->inputGm.initHGm, hPrevAddr, calcM, calcN, outputRowLen);
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toV();
 
         auto ubHt = this->ubLocal1;
         auto ubBufTemp = this->ubLocal2;
@@ -717,9 +804,8 @@ private:
         Mul(ubHt, ubUpdateGate, ubHPrev, calcSizeAlign);
         //  (1 - z) * new_gate + z * h_t
         Add(ubHt, ubHt, ubBufTemp, calcSizeAlign);
-        PipeBarrier<PIPE_ALL>();
+        SyncVtoM3();
         CopyToOutput(this->outputGm.outHGm, ubHt, baseOut, calcM, calcN, outputRowLen);
-        PipeBarrier<PIPE_ALL>();
         CopyToOutput(this->outputGm.outYGm, ubHt, compactBaseOut, calcM, calcN, outputRowLen);
         PipeBarrier<PIPE_ALL>();
     }
@@ -806,14 +892,14 @@ private:
         } else {
             Duplicate(ubHiddenR, 0.0f, calcSizeAlign);
         }
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toV();
 
         Add(ubResetGate, ubInputR, ubHiddenR, calcSizeAlign);
         Sigmoid(ubResetGate, ubResetGate, calcSizeAlign);
-        PipeBarrier<PIPE_V>();
+        SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outRGm, ubResetGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toM2();
         }
 
         //  sigmoid(input_z + bh)
@@ -827,14 +913,14 @@ private:
         } else {
             Duplicate(ubHiddenZ, 0.0f, calcSizeAlign);
         }
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toV();
 
         Add(ubUpdateGate, ubInputZ, ubHiddenZ, calcSizeAlign);
         Sigmoid(ubUpdateGate, ubUpdateGate, calcSizeAlign);
-        PipeBarrier<PIPE_V>();
+        SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outZGm, ubUpdateGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toM2();
         }
 
         //  tanh(input_n)
@@ -848,20 +934,20 @@ private:
         } else {
             Duplicate(ubHiddenN, 0.0f, calcSizeAlign);
         }
-        PipeBarrier<PIPE_ALL>();
+        SyncM2toS();
 
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNHGm, ubHiddenN, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toV();
         }
 
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
         Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
         Tanh(ubNewGate, ubNewGate, calcSizeAlign);
-        PipeBarrier<PIPE_V>();
+        SyncVtoS();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNGm, ubNewGate, compactBaseOut, calcM, calcN, outputRowLen);
-            PipeBarrier<PIPE_ALL>();
+            SyncM3toV();
         }
 
         //  h_t = (1-z) * n
@@ -871,10 +957,9 @@ private:
         Duplicate(ubBufTemp, 1.0f, calcSizeAlign);
         Sub(ubBufTemp, ubBufTemp, ubUpdateGate, calcSizeAlign);
         Mul(ubHt, ubBufTemp, ubNewGate, calcSizeAlign);
-        PipeBarrier<PIPE_V>();
+        SyncVtoS();
 
         CopyToOutput(this->outputGm.outHGm, ubHt, baseOut, calcM, calcN, outputRowLen);
-        PipeBarrier<PIPE_ALL>();
         CopyToOutput(this->outputGm.outYGm, ubHt, compactBaseOut, calcM, calcN, outputRowLen);
     }
 
