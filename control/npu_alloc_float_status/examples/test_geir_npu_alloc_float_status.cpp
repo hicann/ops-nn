@@ -31,7 +31,6 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/npu_alloc_float_status_proto.h"
 
@@ -134,7 +133,26 @@ int CreateOppInGraph(RunMode mode, DataType inDtype, const std::vector<int64_t>&
 {
     Status ret = SUCCESS;
 
+    // NPUAllocFloatStatus 无任何输入，但 GE IR 构图要求图至少有一个输入节点
+    // （Graph::SetInputs 不允许空 inputs），且不与图输入连通的节点会在建图时被裁剪掉，
+    // 因此添加一个不参与计算的 Data 占位输入，并通过控制边将其挂到算子上，
+    // RunGraph 时传入 dummy 数据即可。
+    vector<int64_t> placeholder_shape = {1};
+    auto placeholder = op::Data("placeholder0").set_attr_index(0);
+    TensorDesc placeholder_desc = TensorDesc(ge::Shape(placeholder_shape), FORMAT_ND, DT_FLOAT);
+    placeholder_desc.SetPlacement(ge::kPlacementHost);
+    placeholder_desc.SetFormat(FORMAT_ND);
+    Tensor tensor_placeholder;
+    ret = GenOnesData(placeholder_shape, tensor_placeholder, placeholder_desc, DT_FLOAT, 1);
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    input.push_back(tensor_placeholder);
+    inputs.push_back(placeholder);
+
     auto add1 = op::NPUAllocFloatStatus("add1");
+    add1.AddControlInput(placeholder);
 
     ADD_OUTPUT_MODE(1, data, inDtype, xShape, mode);
 
@@ -164,8 +182,8 @@ CaseResult RunOneCase(ge::Session* session, uint32_t graph_id, RunMode mode, Dat
         r.err_msg = "CreateOppInGraph failed";
         return r;
     }
-    if (!outputs.empty()) {
-        graph.SetOutputs(outputs);
+    if (!inputs.empty() && !outputs.empty()) {
+        graph.SetInputs(inputs).SetOutputs(outputs);
     }
 
     std::map<AscendString, AscendString> graph_options = {};
