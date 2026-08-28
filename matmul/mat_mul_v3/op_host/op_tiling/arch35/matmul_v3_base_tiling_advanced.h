@@ -557,6 +557,7 @@ private:
         {ge::DT_FLOAT8_E5M2, matmul_tiling::DataType::DT_FLOAT8_E5M2},
         {ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN},
         {ge::DT_HIFLOAT8, matmul_tiling::DataType::DT_HIFLOAT8},
+        {ge::DT_FLOAT4_E2M1, matmul_tiling::DataType::DT_FLOAT4_E2M1},
         {ge::DT_INT8, matmul_tiling::DataType::DT_INT8}};
 };
 } // namespace matmul_v3_advanced

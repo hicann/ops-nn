@@ -29,8 +29,17 @@ MM_REGISTER_TILING_TEMPLATE(TransposeQuantBatchMatMul, TransposeQuantBatchMatMul
 ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
-    if (IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
+    isMXFP4_ = IsMXFP4(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
+                       context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX));
+    if (isMXFP4_) {
+        runInfo_.baseK = BASIC_BLOCK_K_128_BYTE;
+        precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP4;
+        apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
+        CalL1Tiling();
+    } else if (IsMxFp8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
+                       context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP8;
+        apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
         CalL1Tiling();
     } else if (IsHIFP8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_HIFP8;
@@ -89,24 +98,26 @@ void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
     if (args_.hasBias) {
         leftL1Size -= runInfo_.baseN * ge::GetSizeByDataType(args_.biasType);
     }
-    uint64_t baseASize = runInfo_.baseM * runInfo_.baseK * args_.aDtypeSize;
-    uint64_t baseBSize = runInfo_.baseN * runInfo_.baseK * args_.bDtypeSize;
-    bool isMXFP8 = IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX),
-                                  context_->GetOptionalInputDesc(SCALE_X2_IDX));
-    uint64_t baseScaleASize = !isMXFP8 ?
+    uint64_t baseASize = isMXFP4_ ? ((runInfo_.baseM * runInfo_.baseK + 1) >> 1) :
+                                    runInfo_.baseM * runInfo_.baseK * args_.aDtypeSize;
+    uint64_t baseBSize = isMXFP4_ ? ((runInfo_.baseN * runInfo_.baseK + 1) >> 1) :
+                                    runInfo_.baseN * runInfo_.baseK * args_.bDtypeSize;
+    bool hasMXScale = IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX),
+                                     context_->GetOptionalInputDesc(SCALE_X2_IDX));
+    uint64_t baseScaleASize = !hasMXScale ?
                                   0 :
                                   ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE),
                                                  MXFP_MULTI_BASE_SIZE) *
                                       runInfo_.baseM *
                                       ge::GetSizeByDataType(
                                           context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
-    uint64_t baseScaleBSize = !isMXFP8 ?
+    uint64_t baseScaleBSize = !hasMXScale ?
                                   0 :
                                   ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE),
                                                  MXFP_MULTI_BASE_SIZE) *
                                       runInfo_.baseN *
                                       ge::GetSizeByDataType(
-                                          context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
+                                          context_->GetOptionalInputDesc(SCALE_X2_IDX)->GetDataType());
     uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
     uint64_t depthInit = GetDepthA1B1(leftL1Size, baseL1Size, 1UL);
     uint64_t leftL1SizeByDepthInit = leftL1Size - depthInit * (baseL1Size);
@@ -119,7 +130,7 @@ void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
         runInfo_.depthB1 = depthASec < depthBSec ? depthBSec : depthInit;
     }
     CalStepKs();
-    if (isMXFP8) {
+    if (hasMXScale) {
         CalScaleFactors(baseASize, baseBSize, baseScaleASize, baseScaleBSize);
     }
     runInfo_.singleCoreM = runInfo_.baseM;
@@ -201,7 +212,8 @@ uint64_t TransposeQuantBatchMatMulAswTiling::GetDepthA1B1(uint64_t leftSize, uin
     }
     uint64_t depthScale = ops::FloorDiv(leftSize, perDepthSize);
     if (depthInit > 1UL) {
-        uint64_t baseKSize = static_cast<uint64_t>(runInfo_.baseK) * args_.aDtypeSize;
+        uint64_t baseKSize = isMXFP4_ ? ((static_cast<uint64_t>(runInfo_.baseK) + 1) >> 1) :
+                                        static_cast<uint64_t>(runInfo_.baseK) * args_.aDtypeSize;
         while ((depthScale * baseKSize) % BASIC_BLOCK_SIZE_512 != 0UL &&
                (depthScale * baseKSize) > BASIC_BLOCK_SIZE_512) {
             depthScale -= 1UL;
@@ -225,7 +237,8 @@ uint64_t TransposeQuantBatchMatMulAswTiling::GetDepthA1B1(uint64_t leftSize, uin
 uint64_t TransposeQuantBatchMatMulAswTiling::GetTilingKey() const
 {
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(permX1_), static_cast<uint64_t>(permX2_),
-                              static_cast<uint64_t>(batchSplitMode_), static_cast<uint64_t>(precisionMode_));
+                              static_cast<uint64_t>(batchSplitMode_), static_cast<uint64_t>(precisionMode_),
+                              static_cast<uint64_t>(apiLevel_));
 }
 
 uint64_t TransposeQuantBatchMatMulAswTiling::GetNumBlocks() const { return compileInfo_.aicNum; }

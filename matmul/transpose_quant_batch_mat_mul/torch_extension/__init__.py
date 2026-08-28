@@ -8,13 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-from .quant_matmul_activation_quant import quant_matmul_activation_quant
-from .flat_quant import flat_quant
+__all__ = ["transpose_quant_batch_mat_mul"]
+
 from .transpose_quant_batch_mat_mul import transpose_quant_batch_mat_mul
-
-
-__all__ = [
-    "quant_matmul_activation_quant",
-    "flat_quant",
-    "transpose_quant_batch_mat_mul",
-]

@@ -233,7 +233,8 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      1UL,
      "32 71 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 32768 4096 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 80 128 512 16843264 256 1 0 1 1 4 4 ",
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 80 128 512 16843264 256 1 0 1 1 4 "
+     "4 ",
      1,
      0,
      {1, 0, 2},
@@ -267,7 +268,8 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      1UL,
      "32 71 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 32768 4096 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 80 128 512 16843264 256 1 0 1 1 4 4 ",
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 21 21 21 1 1 1 1 1 1 1 1 1 1 21 21 21 0 1 1 80 128 512 16843264 256 1 0 1 1 4 "
+     "4 ",
      1,
      0,
      {1, 0, 2},
@@ -301,7 +303,8 @@ static TilingTestParam ascend950_cases_params[] = {
      32,
      1UL,
      "32 777 128 512 512 256 256 512 256 256 128 8 8 1 1 0 0 0 0 131072 14336 0 1 1 1 1 4 4 0 0 2 2 1 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 512 16843264 256 1 0 1 1 4 4 ",
+     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 512 16843264 256 "
+     "1 0 1 1 4 4 ",
      1,
      0,
      {1, 0, 2},
@@ -333,9 +336,10 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     1041UL,
-     "32 35 744 192 192 256 256 192 256 256 128 4 4 1 1 0 0 0 0 18432 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 16843009 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 48 256 256 16843264 256 1 0 1 1 4 4 ",
+     135185UL,
+     "32 35 744 192 192 256 256 192 256 256 128 4 4 1 1 0 0 0 0 18432 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 0 16843009 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 48 256 256 16843264 "
+     "256 1 0 1 1 4 4 ",
      1,
      32,
      {1, 0, 2},
@@ -367,9 +371,10 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     2049UL,
+     8193UL,
      "32 777 128 512 512 256 256 512 256 256 128 4 4 1 1 0 0 0 0 131072 14336 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 256 16843264 256 1 0 1 1 4 4 ",
+     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 256 16843264 256 "
+     "1 0 1 1 4 4 ",
      1,
      0,
      {1, 0, 2},
@@ -401,9 +406,10 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     2049UL,
+     8193UL,
      "32 777 128 512 512 256 256 512 256 256 128 4 4 1 1 0 0 0 0 131072 14336 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 256 16843264 256 1 0 1 1 4 4 ",
+     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 118 118 118 1 1 1 1 1 1 1 1 1 1 118 118 118 0 1 1 256 128 256 16843264 256 "
+     "1 0 1 1 4 4 ",
      34,
      0,
      {1, 0, 2},
@@ -412,7 +418,42 @@ static TilingTestParam ascend950_cases_params[] = {
      1,
      DT_HIFLOAT8,
      DT_UINT64,
-     DT_HIFLOAT8}};
+     DT_HIFLOAT8},
+    {"TransposeQuantBatchMatMul_950_test_7_mxfp4_fp16",
+     "TransposeQuantBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {35, 32, 192},
+     {32, 744, 192},
+     {35, 32, 3, 2},
+     {32, 744, 3, 2},
+     {35, 32, 192},
+     false,
+     0,
+     0,
+     32,
+     143377UL,
+     "32 35 744 192 192 256 256 192 256 256 128 4 4 1 1 0 0 0 0 9216 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 0 16843009 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 48 256 256 16843264 "
+     "256 1 0 1 1 4 4 ",
+     1,
+     32,
+     {1, 0, 2},
+     {0, 2, 1},
+     {1, 0, 2},
+     1,
+     DT_FLOAT4_E2M1,
+     DT_FLOAT8_E8M0,
+     DT_FLOAT16}};
 
 INSTANTIATE_TEST_CASE_P(TransposeQuantBatchMatMulascend950, TransposeQuantBatchMatMulTilingRuntime,
                         testing::ValuesIn(ascend950_cases_params));
@@ -491,10 +532,10 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
     ASSERT_EQ(opImpl->tiling(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    string golden_tiling_data =
-        "32 425 64 640 640 256 256 640 256 256 128 4 4 1 1 0 0 0 0 98304 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
-        "0 0 0 0 0 0 0 0 16843266 1 1 1 1 1 0 0 0 4 1 2057 2057 2057 1 1 1 1 1 1 1 1 1 1 2057 2057 2057 0 1 1 256 64 256 16843264 256 1 0 1 1 4 4 ";
-    ASSERT_EQ(tiling_key, 1025);
+    string golden_tiling_data = "32 425 64 640 640 256 256 640 256 256 128 4 4 1 1 0 0 0 0 98304 8192 0 1 1 1 1 2 2 0 "
+                                "0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16843266 1 1 1 1 1 0 0 0 4 1 2057 2057 2057 1 "
+                                "1 1 1 1 1 1 1 1 1 2057 2057 2057 0 1 1 256 64 256 16843264 256 1 0 1 1 4 4 ";
+    ASSERT_EQ(tiling_key, 135169);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
 
@@ -572,10 +613,11 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_1)
     ASSERT_EQ(opImpl->tiling(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    string golden_tiling_data =
-        "32 284 192 1472 1472 256 256 1472 256 256 128 4 4 1 1 0 0 0 0 172032 12288 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 "
-        "0 0 0 0 0 0 0 0 0 0 0 16844037 1 1 1 1 1 0 0 0 4 0 1172 1172 1172 1 1 1 1 1 1 1 1 1 1 1172 1172 1172 0 1 1 256 192 256 16843264 256 1 0 1 1 4 4 ";
-    ASSERT_EQ(tiling_key, 1041);
+    string golden_tiling_data = "32 284 192 1472 1472 256 256 1472 256 256 128 4 4 1 1 0 0 0 0 172032 12288 0 1 1 1 "
+                                "1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16844037 1 1 1 1 1 0 0 0 4 0 1172 "
+                                "1172 1172 1 1 1 1 1 1 1 1 1 1 1172 1172 1172 0 1 1 256 192 256 16843264 256 1 0 1 1 4 "
+                                "4 ";
+    ASSERT_EQ(tiling_key, 135185);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
 

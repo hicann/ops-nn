@@ -163,9 +163,10 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
 
     auto transpose_quant_batch_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
                                                     GM_ADDR x2_scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::transpose_quant_batch_mat_mul<
-            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2, TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
-            TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE, TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8>(
+        ::transpose_quant_batch_mat_mul<TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2,
+                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
+                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE,
+                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8, TRANSPOSE_QUANT_BATCH_MAT_MUL_HIGH_LEVEL>(
             x1, x2, bias, x1_scale, x2_scale, y, workspace, tiling);
     };
     ICPU_RUN_KF(transpose_quant_batch_mat_mul_wrapper, 4, x1GM, x2GM, nullptr, x1_scaleGM, x2_scaleGM, outputGM,

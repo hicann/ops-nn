@@ -14,6 +14,34 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 
+namespace AscendC {
+namespace Te {
+struct NDExtLayoutPtn {};
+struct DNExtLayoutPtn {};
+struct ZNLayoutPtn {};
+struct NZLayoutPtn {};
+} // namespace Te
+} // namespace AscendC
+
+namespace Blaze {
+namespace Gemm {
+enum class NoContiguousType { NON_CONTIGUOUS_TYPE_PERM_X1 = 0 };
+} // namespace Gemm
+} // namespace Blaze
+
+template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
+          class cLayout, uint64_t = 0, uint64_t = 0, uint64_t = 0>
+inline void TqbmmMxTensorApiKernel(int, int, int, int, int, int, int)
+{}
+
+#ifndef POS_LOWEST
+constexpr int32_t POS_LOWEST = 0;
+#endif
+
+#ifndef POS_HIGHEST
+constexpr int32_t POS_HIGHEST = 1;
+#endif
+
 inline void InitTqbmmTilingData(void* tiling, void* const_data)
 {
     memcpy(const_data, tiling, sizeof(BatchMatMulV3TilingData));

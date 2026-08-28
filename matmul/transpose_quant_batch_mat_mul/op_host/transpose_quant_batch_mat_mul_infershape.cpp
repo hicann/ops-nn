@@ -56,10 +56,14 @@ static inline bool IsHIFP8(const ge::DataType& dtypeX1, const ge::DataType& dtyp
 static bool CheckDtypeValid(const ge::DataType& dtypeX1, const ge::DataType& dtypeX2, const ge::DataType& dtypeX1Scale,
                             const ge::DataType& dtypeX2Scale)
 {
-    // MXFP8
+    // MXFP8 / MXFP4
     if (IsMicroScaling(dtypeX1Scale, dtypeX2Scale)) {
-        CHECK(dtypeX1 != ge::DT_FLOAT8_E4M3FN || dtypeX2 != ge::DT_FLOAT8_E4M3FN,
-              CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input only supports FLOAT8_E4M3FN."), return false);
+        bool isMxFp4 = (dtypeX1 == ge::DT_FLOAT4_E2M1 && dtypeX2 == ge::DT_FLOAT4_E2M1);
+        bool isMxFp8 = (dtypeX1 == ge::DT_FLOAT8_E4M3FN && dtypeX2 == ge::DT_FLOAT8_E4M3FN);
+        CHECK(!isMxFp4 && !isMxFp8,
+              CUBE_INNER_ERR_REPORT("TQBMM",
+                                    "the dtype of input is only supported FLOAT8_E4M3FN or FLOAT4_E2M1 in MX mode."),
+              return false);
         // FP8
     } else if (!IsHIFP8(dtypeX1, dtypeX2)) {
         CHECK((dtypeX1 != ge::DT_FLOAT8_E4M3FN && dtypeX1 != ge::DT_FLOAT8_E5M2) ||

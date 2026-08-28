@@ -240,6 +240,8 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16},
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT16},
         {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_BF16},
+        {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT16},
+        {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_BF16},
         {ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_UINT64, ge::DT_UINT64, ge::DT_FLOAT16},
         {ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_UINT64, ge::DT_UINT64, ge::DT_BF16},
         {ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_UINT64, ge::DT_UINT64, ge::DT_HIFLOAT8}};

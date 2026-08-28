@@ -42,6 +42,7 @@ static const std::initializer_list<op::DataType> X1_SUPPORT_LIST_FP8 = {DataType
 static const std::initializer_list<op::DataType> X2_SUPPORT_LIST_FP8 = {DataType::DT_FLOAT8_E5M2,
                                                                         DataType::DT_FLOAT8_E4M3FN};
 static const std::initializer_list<op::DataType> X_SUPPORT_LIST_MXFP8 = {DataType::DT_FLOAT8_E4M3FN};
+static const std::initializer_list<op::DataType> X_SUPPORT_LIST_MXFP4 = {DataType::DT_FLOAT4_E2M1};
 static const std::initializer_list<op::DataType> X_SUPPORT_LIST_HIFP8 = {DataType::DT_HIFLOAT8};
 static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST_FP8 = {DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST_FP8 = {DataType::DT_FLOAT};
@@ -79,6 +80,11 @@ static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2S
 static inline bool IsHIFP8(const aclTensor* x1, const aclTensor* x2)
 {
     return x1->GetDataType() == op::DataType::DT_HIFLOAT8 && x2->GetDataType() == op::DataType::DT_HIFLOAT8;
+}
+
+static inline bool IsMXFP4(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1;
 }
 
 inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,
@@ -215,20 +221,41 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
             }
         }
     } else {
-        // MXFP8 场景
-        if (!CheckType(x1->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
-                                                  Ops::NN::FormatString("The dtype of %s must be in %s", "x1",
-                                                                        op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
-                                                      .c_str());
-            return false;
-        }
-        if (!CheckType(x2->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
-                                                  Ops::NN::FormatString("The dtype of %s must be in %s", "x2",
-                                                                        op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
-                                                      .c_str());
-            return false;
+        // MXFP8 / MXFP4 场景
+        if (IsMXFP4(x1, x2)) {
+            if (!CheckType(x1->GetDataType(), X_SUPPORT_LIST_MXFP4)) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x1",
+                                          op::ToString(X_SUPPORT_LIST_MXFP4).GetString())
+                        .c_str());
+                return false;
+            }
+            if (!CheckType(x2->GetDataType(), X_SUPPORT_LIST_MXFP4)) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x2",
+                                          op::ToString(X_SUPPORT_LIST_MXFP4).GetString())
+                        .c_str());
+                return false;
+            }
+        } else {
+            if (!CheckType(x1->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x1",
+                                          op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
+                        .c_str());
+                return false;
+            }
+            if (!CheckType(x2->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x2",
+                                          op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
+                        .c_str());
+                return false;
+            }
         }
         if (!CheckType(x1Scale->GetDataType(), X1_SCALE_SUPPORT_LIST_MXFP8)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(

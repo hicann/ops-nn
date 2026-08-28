@@ -10,7 +10,7 @@
 
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    DEPENDENCIES batch_mat_mul_v3 mat_mul_v3
+    DEPENDENCIES batch_mat_mul_v3 mat_mul_v3 quant_batch_matmul_v3
 )
 
 add_kernel_sources(
@@ -27,7 +27,14 @@ add_kernel_sources(
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(
         "ascend950pr_9599"
-        "-DKFC_L1_RESERVER_SIZE=0 -DDTYPE_X1=float8_e4m3_t -DDTYPE_X2=float8_e4m3_t -DDTYPE_X1_SCALE=float -DDTYPE_X2_SCALE=float  -DDTYPE_Y=half"
-        mat_mul_v3 batch_mat_mul_v3
+        "-DKFC_L1_RESERVER_SIZE=0 -D__fp8e4m3=float8_e4m3_t -D__fp4e2m1x2=int8_t -D__fp8e8m0=float8_e8m0_t -DDTYPE_X1=float8_e4m3_t -DDTYPE_X2=float8_e4m3_t -DDTYPE_X1_SCALE=float -DDTYPE_X2_SCALE=float  -DDTYPE_Y=half"
+        mat_mul_v3 batch_mat_mul_v3 quant_batch_matmul_v3
     )
+    add_custom_target(tqbmm_stub_mx_h
+        COMMAND ${CMAKE_COMMAND} -E echo "// stub for UT host compile" > ${CMAKE_BINARY_DIR}/tbe/ascendc/transpose_quant_batch_mat_mul/arch35/transpose_quant_batch_mat_mul_mx.h
+        DEPENDS ascendc_kernel_ut_src_copy_transpose_quant_batch_mat_mul
+    )
+    if (TARGET opkernel_transpose_quant_batch_mat_mul)
+        add_dependencies(opkernel_transpose_quant_batch_mat_mul tqbmm_stub_mx_h)
+    endif()
 endif()

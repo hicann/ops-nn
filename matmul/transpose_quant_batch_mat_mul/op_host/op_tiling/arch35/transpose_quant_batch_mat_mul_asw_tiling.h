@@ -16,13 +16,14 @@
 #pragma once
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key_public.h"
+#include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
 
 namespace optiling {
 namespace transpose_quant_batch_mat_mul_advanced {
 class TransposeQuantBatchMatMulAswTiling : public MatMulV3BaseTiling {
 public:
     TransposeQuantBatchMatMulAswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BaseTiling(context, cfg){};
+        : MatMulV3BaseTiling(context, cfg) {};
     ~TransposeQuantBatchMatMulAswTiling() override = default;
 
 protected:
@@ -49,10 +50,12 @@ private:
     TQBMMPermX1 permX1_ = TQBMMPermX1::PERM_X1_1_0_2;
     TQBMMPermX2 permX2_ = TQBMMPermX2::PERM_X2_0_1_2;
     TQBMMBatchSplit batchSplitMode_ = TQBMMBatchSplit::BATCH_SPLIT_FALSE;
+    TQBMMApiLevel apiLevel_ = TQBMMApiLevel::HIGH_LEVEL;
     TQBMMPrecisionMode precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;
     uint32_t batchSplitFactor_ = 1;
     uint32_t scaleFactorA_ = 1;
     uint32_t scaleFactorB_ = 1;
+    bool isMXFP4_ = false;
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

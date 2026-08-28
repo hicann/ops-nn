@@ -79,9 +79,32 @@ bool inline IsMicroScaling(const gert::CompileTimeTensorDesc* x1Scale, const ger
     return x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
 }
 
+bool inline IsMxFp8(const gert::CompileTimeTensorDesc* x1, const gert::CompileTimeTensorDesc* x2,
+                    const gert::CompileTimeTensorDesc* x1Scale, const gert::CompileTimeTensorDesc* x2Scale)
+{
+    if (x1 == nullptr || x2 == nullptr || x1Scale == nullptr || x2Scale == nullptr) {
+        return false;
+    }
+    bool isFp8Data = (x1->GetDataType() == ge::DT_FLOAT8_E4M3FN || x1->GetDataType() == ge::DT_FLOAT8_E5M2) &&
+                     (x2->GetDataType() == ge::DT_FLOAT8_E4M3FN || x2->GetDataType() == ge::DT_FLOAT8_E5M2);
+    bool isE8M0Scale = x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
+    return isFp8Data && isE8M0Scale;
+}
+
 bool inline IsHIFP8(const gert::CompileTimeTensorDesc* x1, const gert::CompileTimeTensorDesc* x2)
 {
     return x1->GetDataType() == ge::DT_HIFLOAT8 && x2->GetDataType() == ge::DT_HIFLOAT8;
+}
+
+bool inline IsMXFP4(const gert::CompileTimeTensorDesc* x1, const gert::CompileTimeTensorDesc* x2,
+                    const gert::CompileTimeTensorDesc* x1Scale, const gert::CompileTimeTensorDesc* x2Scale)
+{
+    if (x1 == nullptr || x2 == nullptr || x1Scale == nullptr || x2Scale == nullptr) {
+        return false;
+    }
+    bool isFp4Data = x1->GetDataType() == ge::DT_FLOAT4_E2M1 && x2->GetDataType() == ge::DT_FLOAT4_E2M1;
+    bool isE8M0Scale = x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
+    return isFp4Data && isE8M0Scale;
 }
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
