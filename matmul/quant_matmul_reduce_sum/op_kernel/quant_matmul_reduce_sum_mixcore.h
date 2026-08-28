@@ -16,7 +16,7 @@
 #define ASCENDC_QUANT_MATMUL_REDUCE_SUM_QUANT_MIXCORE_H
 
 #include "quant_matmul_reduce_sum_utils.h"
-#include "quant_matmul_reduce_sum.h"
+#include "quant_matmul_reduce_sum_common.h"
 
 namespace QUANT_MATMUL_REDUCE_SUM {
 /*@brief store variables for core split configuration

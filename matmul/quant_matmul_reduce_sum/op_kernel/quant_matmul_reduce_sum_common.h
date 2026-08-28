@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file quant_matmul_reduce_sum.h
+ * \file quant_matmul_reduce_sum_common.h
  * \brief
  */
-#ifndef ASCENDC_QUANT_MATMUL_REDUCE_SUM_H
-#define ASCENDC_QUANT_MATMUL_REDUCE_SUM_H
+#ifndef ASCENDC_QUANT_MATMUL_REDUCE_SUM_COMMON_H
+#define ASCENDC_QUANT_MATMUL_REDUCE_SUM_COMMON_H
 
 #include "quant_matmul_reduce_sum_utils.h"
 #include "quant_matmul_reduce_sum_tiling_data.h"

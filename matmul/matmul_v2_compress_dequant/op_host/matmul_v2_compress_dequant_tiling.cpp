@@ -18,8 +18,8 @@
 #include "log/log.h"
 #include <algorithm>
 #include <cmath>
-#include "pp_matmul_default.h"
-#include "pp_matmul_info.h"
+#include "matmul_v2_compress_dequant_default.h"
+#include "matmul_v2_compress_dequant_info.h"
 
 namespace optiling {
 namespace {

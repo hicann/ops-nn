@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file pp_matmul_info.h
+ * \file matmul_v2_compress_dequant_info.h
  * \brief
  */
-#ifndef __OP_HOST_PP_MATMUL_INFO_H__
-#define __OP_HOST_PP_MATMUL_INFO_H__
+#ifndef __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_INFO_H__
+#define __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_INFO_H__
 
 #include <array>
 #include <iostream>

@@ -9,16 +9,16 @@
  */
 
 /*!
- * \file pp_matmul_default.h
+ * \file matmul_v2_compress_dequant_default.h
  * \brief
  */
-#ifndef __OP_HOST_PP_MATMUL_DEFAULT_H__
-#define __OP_HOST_PP_MATMUL_DEFAULT_H__
+#ifndef __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_DEFAULT_H__
+#define __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_DEFAULT_H__
 
 #include "register/op_def_registry.h"
-#include "pp_matmul_info.h"
-#include "pp_matmul_default.h"
-#include "pp_matmul_common_tiling.h"
+#include "matmul_v2_compress_dequant_info.h"
+#include "matmul_v2_compress_dequant_default.h"
+#include "matmul_v2_compress_dequant_common_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "platform/platform_infos_def.h"

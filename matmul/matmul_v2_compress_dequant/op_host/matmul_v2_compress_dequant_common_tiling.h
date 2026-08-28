@@ -9,15 +9,15 @@
  */
 
 /*!
- * \file pp_matmul_common_tiling.h
+ * \file matmul_v2_compress_dequant_common_tiling
  * \brief
  */
 
-#ifndef __OP_HOST_PPMAT_MUL_COMMMON_TILING_H__
-#define __OP_HOST_PPMAT_MUL_COMMMON_TILING_H__
+#ifndef __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_COMMMON_TILING_H__
+#define __OP_HOST_MATMUL_V2_COMPRESS_DEQUANT_COMMMON_TILING_H__
 
 #include <cmath>
-#include "pp_matmul_info.h"
+#include "matmul_v2_compress_dequant_info.h"
 #include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
