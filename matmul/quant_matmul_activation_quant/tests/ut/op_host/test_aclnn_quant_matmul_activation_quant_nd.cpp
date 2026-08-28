@@ -12,7 +12,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-#include "../../../op_api/aclnn_quant_matmul_activation_quant_weight_nz.h"
+#include "../../../op_api/aclnn_quant_matmul_activation_quant.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -23,7 +23,7 @@ using namespace std;
 using namespace ut_str;
 using namespace op;
 
-struct QuantMatmulActivationQuantTestParam {
+struct QuantMatmulActivationQuantNdTestParam {
     string caseName;
     string x1ShapeStr;
     string x1DtypeStr;
@@ -77,12 +77,12 @@ static TensorDesc BuildTensorDesc(const string& shapeStr, const string& dtypeStr
     return TensorDesc(shape, dtype, format);
 }
 
-static vector<QuantMatmulActivationQuantTestParam> GetParams()
+static vector<QuantMatmulActivationQuantNdTestParam> GetParams()
 {
-    vector<QuantMatmulActivationQuantTestParam> params;
+    vector<QuantMatmulActivationQuantNdTestParam> params;
     string rootPath(ut_str::GetExeDirPath() + "../../../../");
     string casePath(rootPath + "matmul/quant_matmul_activation_quant/tests/ut/op_host/"
-                               "test_aclnn_quant_matmul_activation_quant.csv");
+                               "test_aclnn_quant_matmul_activation_quant_nd.csv");
     ifstream csvData(casePath, ios::in);
     if (!csvData.is_open()) {
         return params;
@@ -105,7 +105,7 @@ static vector<QuantMatmulActivationQuantTestParam> GetParams()
             continue;
         }
 
-        QuantMatmulActivationQuantTestParam param;
+        QuantMatmulActivationQuantNdTestParam param;
         size_t idx = 0UL;
         param.caseName = Trim(cols[idx++]);
         param.x1ShapeStr = Trim(cols[idx++]);
@@ -147,13 +147,13 @@ static vector<QuantMatmulActivationQuantTestParam> GetParams()
     return params;
 }
 
-class QuantMatmulActivationQuantAclnnTest : public testing::TestWithParam<QuantMatmulActivationQuantTestParam> {
+class QuantMatmulActivationQuantNdAclnnTest : public testing::TestWithParam<QuantMatmulActivationQuantNdTestParam> {
 protected:
     static void SetUpTestCase() {}
     static void TearDownTestCase() {}
 };
 
-TEST_P(QuantMatmulActivationQuantAclnnTest, CsvTest)
+TEST_P(QuantMatmulActivationQuantNdAclnnTest, CsvTest)
 {
     const auto& param = GetParam();
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
@@ -187,14 +187,14 @@ TEST_P(QuantMatmulActivationQuantAclnnTest, CsvTest)
 
     if (hasBias) {
         auto ut = OP_API_UT(
-            aclnnQuantMatmulActivationQuantWeightNz,
+            aclnnQuantMatmulActivationQuant,
             INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasDesc, transposeX1, transposeX2, groupSize,
                   param.activationType.c_str(), param.quantMode.c_str(), param.roundMode.c_str(), scaleAlg, dstTypeMax),
             OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
         aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     } else {
         auto ut = OP_API_UT(
-            aclnnQuantMatmulActivationQuantWeightNz,
+            aclnnQuantMatmulActivationQuant,
             INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, transposeX1, transposeX2, groupSize,
                   param.activationType.c_str(), param.quantMode.c_str(), param.roundMode.c_str(), scaleAlg, dstTypeMax),
             OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
@@ -204,5 +204,5 @@ TEST_P(QuantMatmulActivationQuantAclnnTest, CsvTest)
     EXPECT_EQ(aclRet, expectRet) << "caseName=" << param.caseName;
 }
 
-INSTANTIATE_TEST_SUITE_P(QuantMatmulActivationQuantAclnn, QuantMatmulActivationQuantAclnnTest,
+INSTANTIATE_TEST_SUITE_P(QuantMatmulActivationQuantNdAclnn, QuantMatmulActivationQuantNdAclnnTest,
                          testing::ValuesIn(GetParams()));

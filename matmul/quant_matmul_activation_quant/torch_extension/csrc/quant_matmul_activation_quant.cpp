@@ -52,6 +52,30 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
                                   (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
     return groups;
 }
+
+bool static is_transpose_last_two_dims(const at::Tensor& tensor)
+{
+    if (tensor.dim() < 2 || tensor.dim() > 6) {
+        return false;
+    }
+    int64_t dim1 = tensor.dim() - 1;
+    int64_t dim2 = tensor.dim() - 2;
+    if (tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2)) {
+        int64_t tmpNxD = tensor.size(dim1) * tensor.size(dim2);
+        for (int64_t batchDim = tensor.dim() - 3; batchDim >= 0; batchDim--) {
+            if (tensor.stride(batchDim) != tmpNxD) {
+                return false;
+            }
+            tmpNxD *= tensor.size(batchDim);
+        }
+        if (tensor.size(dim1) == 1 && tensor.size(dim2) == 1) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
 namespace cann_ops_nn {
@@ -77,21 +101,20 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     bool transposeX1 = false;
     bool transposeX2 = false;
 
-    if (x1_b == x2_a) {
-        m = x1_a;
-        n = x2_b;
-    } else if (x1_b == x2_b) {
-        m = x1_a;
-        n = x2_a;
-    } else if (x1_a == x2_a) {
-        m = x1_b;
-        n = x2_b;
-    } else if (x1_a == x2_b) {
-        m = x1_b;
-        n = x2_a;
+    constexpr int64_t DTYPE_FLOAT4_E2M1 = static_cast<int64_t>(DType::FLOAT4_E2M1);
+
+    int64_t x1_dtype_val = x1_dtype.value_or(0);
+    int64_t x2_dtype_val = x2_dtype.value_or(0);
+    bool isMXFP4 = x1_dtype_val == DTYPE_FLOAT4_E2M1 && x2_dtype_val == DTYPE_FLOAT4_E2M1;
+
+    if (isMXFP4) {
+        bool transX1 = is_transpose_last_two_dims(x1);
+        bool transX2 = is_transpose_last_two_dims(x2);
+        m = !transX1 ? x1_a : x1_a * FP4_IN_INT8;
+        n = transX2 ? x2_b : x2_b * FP4_IN_INT8;
     } else {
-        TORCH_CHECK(false, "cannot infer m/n: no matching k dimension between x1 last two dims [", x1_a, ", ", x1_b,
-                    "] and x2 last two dims [", x2_a, ", ", x2_b, "]");
+        m = x1_a;
+        n = x2_b;
     }
 
     c10::SmallVector<int64_t, op_infer::SIZE> output_size;
@@ -121,10 +144,7 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     int64_t output_dtype_val = output_dtype.value_or(0);
     bool special_output_type = false;
 
-    constexpr int64_t DTYPE_FLOAT4_E2M1 = 30;
-    constexpr int64_t DTYPE_FLOAT4_E1M2 = 31;
-
-    if (output_dtype_val == DTYPE_FLOAT4_E2M1 || output_dtype_val == DTYPE_FLOAT4_E1M2) {
+    if (output_dtype_val == DTYPE_FLOAT4_E2M1) {
         special_output_type = true;
     }
 
@@ -132,7 +152,7 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     if (special_output_type) {
         int64_t last_dim_val = output_size[output_size.size() - 1];
         TORCH_CHECK(last_dim_val % 2 == 0, "The last dim output shape must be divisible by 2 if "
-                                           "output dtype is FLOAT4_E2M1 or FLOAT4_E1M2");
+                                           "output dtype is FLOAT4_E2M1");
         output_size[output_size.size() - 1] = last_dim_val / 2;
         output = at::empty(output_size, at::TensorOptions().dtype(c10::ScalarType::Byte).device(at::kPrivateUse1));
         output_acltype = GetAclDataType(output_dtype_val);
@@ -145,7 +165,7 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
             scalar_dtype = at::ScalarType::Float8_e4m3fn;
         } else {
             TORCH_CHECK(false,
-                        "unsupport output_dtype, only support output_dtype torch.float8_e5m2 or torch.float8_e4m3fn");
+                        "unsupport output_dtype, only support output_dtype FLOAT8_E5M2, FLOAT8_E4M3FN or FLOAT4_E2M1");
         }
         output = at::empty(output_size, at::TensorOptions().dtype(scalar_dtype).device(at::kPrivateUse1));
     } else {
@@ -186,9 +206,16 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     char* quant_mode_ptr = const_cast<char*>(quant_mode.data());
     char* round_mode_ptr = const_cast<char*>(round_mode.data());
 
-    ACLNN_CMD(aclnnQuantMatmulActivationQuantWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, bias,
-              transposeX1, transposeX2, group_size, activation_type_ptr, quant_mode_ptr, round_mode_ptr,
-              scale_alg_optional, dst_type_max, output_wrapper, scale_wrapper);
+    bool isX2Nz = at_npu::native::get_npu_format(x2) == static_cast<int64_t>(ACL_FORMAT_FRACTAL_NZ);
+    if (isX2Nz) {
+        ACLNN_CMD(aclnnQuantMatmulActivationQuantWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper,
+                  bias, transposeX1, transposeX2, group_size, activation_type_ptr, quant_mode_ptr, round_mode_ptr,
+                  scale_alg_optional, dst_type_max, output_wrapper, scale_wrapper);
+    } else {
+        ACLNN_CMD(aclnnQuantMatmulActivationQuant, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, bias,
+                  transposeX1, transposeX2, group_size, activation_type_ptr, quant_mode_ptr, round_mode_ptr,
+                  scale_alg_optional, dst_type_max, output_wrapper, scale_wrapper);
+    }
 
     return std::make_tuple(output, scale);
 }

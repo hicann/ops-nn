@@ -24,7 +24,7 @@
 #endif
 using namespace AscendC;
 
-template <int8_t A_TRANS, int8_t B_TRANS, uint64_t FULL_LOAD_MODE = 0>
+template <int8_t A_TRANS, int8_t B_TRANS, uint64_t FULL_LOAD_MODE = 0, int8_t B_FORMAT = 1>
 __global__ __aicore__ void quant_matmul_activation_quant(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
                                                          GM_ADDR x2_scale, GM_ADDR y, GM_ADDR y_scale,
                                                          GM_ADDR workspace, GM_ADDR tilingGM)
@@ -34,8 +34,11 @@ __global__ __aicore__ void quant_matmul_activation_quant(GM_ADDR x1, GM_ADDR x2,
 
     constexpr bool aTran = (A_TRANS == 1);
     constexpr bool bTran = (B_TRANS == 1);
+    constexpr bool bIsNz = (B_FORMAT == 1);
     using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
-    using layoutB = AscendC::Std::conditional_t<bTran, AscendC::Te::ZNLayoutPtn, AscendC::Te::NZLayoutPtn>;
+    using layoutB_NZ = AscendC::Std::conditional_t<bTran, AscendC::Te::ZNLayoutPtn, AscendC::Te::NZLayoutPtn>;
+    using layoutB_ND = AscendC::Std::conditional_t<bTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutB = AscendC::Std::conditional_t<bIsNz, layoutB_NZ, layoutB_ND>;
 
     QuantMatmulActivationQuantKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, layoutA, layoutB, AscendC::Te::NDExtLayoutPtn,
                                      FULL_LOAD_MODE>(x1, x2, bias, x1_scale, x2_scale, y, y_scale, workspace,

@@ -13,7 +13,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
-#include "aclnn_quant_matmul_activation_quant_weight_nz.h"
+#include "aclnn_quant_matmul_activation_quant.h"
 #include "quant_matmul_activation_quant_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include <dlfcn.h>
@@ -38,8 +38,7 @@ using Ops::NN::SwapLastTwoDimValue;
 namespace {
 
 constexpr int IDX_0 = 0;
-constexpr int IDX_1 = 1;
-constexpr const char* API_NAME = "aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize";
+constexpr const char* API_NAME = "aclnnQuantMatmulActivationQuantGetWorkspaceSize";
 
 static aclnnStatus CheckFormat(const QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params)
 {
@@ -48,9 +47,9 @@ static aclnnStatus CheckFormat(const QBMMActivationQuant::QuantMatmulActivationQ
                                                 "the format of x1 must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (params.x2->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
+    if (params.x2->GetStorageFormat() != Format::FORMAT_ND) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(API_NAME, "x2", op::ToString(params.x2->GetStorageFormat()).GetString(),
-                                                "the format of x2 must be FORMAT_FRACTAL_NZ");
+                                                "the format of x2 must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x1Scale->GetStorageFormat() != Format::FORMAT_ND) {
@@ -77,27 +76,25 @@ static aclnnStatus CheckFormat(const QBMMActivationQuant::QuantMatmulActivationQ
 static aclnnStatus CheckInputOutDims(const QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params)
 {
     auto x1DimNum = params.x1->GetViewShape().GetDimNum();
-    auto x2DimNum = params.x2->GetStorageShape().GetDimNum();
+    auto x2DimNum = params.x2->GetViewShape().GetDimNum();
     if (x1DimNum < MX_X1_DIM_MIN || x1DimNum > MX_X1_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(API_NAME, "x1", FormatString("%zuD", x1DimNum).c_str(),
                                                  FormatString("the shape dim of x1 must be in the range of 2 to 6"));
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (x2DimNum < MX_X2_DIM_MIN || x2DimNum > MX_X2_DIM_MAX) {
+    if (x2DimNum < MX_X1_DIM_MIN || x2DimNum > MX_X1_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(API_NAME, "x2", FormatString("%zuD", x2DimNum).c_str(),
-                                                 FormatString("the shape dim of x2 must be in the range of 4 to 8"));
+                                                 FormatString("the shape dim of x2 must be in the range of 2 to 6"));
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTensor* x2)
+static aclnnStatus CheckWeightNdParamsDAV3510(const aclTensor* x1, const aclTensor* x2)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        SocVersion socVersion = op::GetCurrentPlatformInfo().GetSocVersion();
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
-        return ACLNN_ERR_RUNTIME_ERROR;
+        return ACLNN_SUCCESS;
     }
 
     if (x1 == nullptr) {
@@ -109,31 +106,7 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTens
         return ACLNN_ERR_PARAM_NULLPTR;
     }
 
-    if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(API_NAME, "x2", op::ToString(x2->GetStorageFormat()).GetString(),
-                                               "the format of x2 must be FRACTAL_NZ");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    if (x2->GetDataType() == op::DataType::DT_FLOAT8_E5M2) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(API_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
-                                              "the dtype of x2 can not be FLOAT8_E5M2 in WeightNz interface, "
-                                              "FLOAT8_E5M2 only supports ND format");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    // NZ情况下，x2的k和n不能为1
-    int64_t dim1 = x2->GetViewShape().GetDimNum() - 1;
-    int64_t dim2 = x2->GetViewShape().GetDimNum() - QuantMatmulActivationQuantAclnnCheck::PENULTIMATE_DIM;
-    if (x2->GetViewShape().GetDim(dim2) == 1 || x2->GetViewShape().GetDim(dim1) == 1) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            API_NAME, "x2 K, x2 N",
-            FormatString("%ld, %ld", x2->GetViewShape().GetDim(dim2), x2->GetViewShape().GetDim(dim1)).c_str(),
-            "when the format of x2 is FRACTAL_NZ, the k dimension and n dimension of x2 can not be 1");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    OP_LOGD("QuantMatmulWeightNz check params success.");
+    OP_LOGD("QuantMatmulWeightNd check params success.");
     return ACLNN_SUCCESS;
 }
 
@@ -149,12 +122,6 @@ static aclnnStatus CheckShape(const QBMMActivationQuant::QuantMatmulActivationQu
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (IsMxFp4Input(params.x1, params.x2, params.y, params.yScale)) {
-        if (params.transposeX1) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                API_NAME, "transposeX1", "true",
-                "when the format of x2 is FRACTAL_NZ and the dtypes of x1, x2 and y are FP4, x1 can not be transposed");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
         if (shapeInfo.kDim <= 2) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 API_NAME, "K", std::to_string(shapeInfo.kDim).c_str(),
@@ -233,12 +200,17 @@ static aclnnStatus CheckParams(const QBMMActivationQuant::QuantMatmulActivationQ
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PreProcessOriginalShape(const aclTensor* x1, const aclTensor* x1Scale, const aclTensor* x2Scale)
+static aclnnStatus PreProcessOriginalShape(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                           const aclTensor* x2Scale)
 {
-    // original shape must be set before contiguous
     if (x1 != nullptr) {
         x1->SetOriginalShape(x1->GetViewShape());
         OP_LOGD("x1 original shape set to view shape.");
+    }
+
+    if (x2 != nullptr) {
+        x2->SetOriginalShape(x2->GetViewShape());
+        OP_LOGD("x2 original shape set to view shape.");
     }
 
     if (x1Scale != nullptr) {
@@ -254,7 +226,7 @@ static aclnnStatus PreProcessOriginalShape(const aclTensor* x1, const aclTensor*
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon(
+static aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSizeCommon(
     QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams& params, aclOpExecutor* executor)
 {
     auto x2ScaleNd = QuantMatmulActivationQuantAclnnCheck::SetTensorToNDFormat(params.x2Scale);
@@ -281,13 +253,13 @@ static aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon
             QuantMatmulActivationQuantAclnnCheck::TensorContiguousProcess(params.bias, biasTransposeValue, executor),
             ACLNN_ERR_INNER_NULLPTR);
     }
+    auto reformatedX2 = QuantMatmulActivationQuantAclnnCheck::SetTensorToNDFormat(params.x2);
+    CHECK_RET(reformatedX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    params.x2 = reformatedX2;
+    CHECK_RET(QuantMatmulActivationQuantAclnnCheck::TensorContiguousProcess(params.x2, params.transposeX2, executor),
+              ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(MxScaleContiguousProcess(params.x1Scale, params.transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(MxScaleContiguousProcess(params.x2Scale, params.transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
-
-    // 设置x2的OriginalShape为它的ViewShape
-    auto retNZProcess = QuantMatmulActivationQuantAclnnCheck::WeightNZCaseProcess(params.x2, params.transposeX2,
-                                                                                  executor);
-    CHECK_RET(retNZProcess == ACLNN_SUCCESS, retNZProcess);
 
     GetTranspose(params, params.transposeX1, params.transposeX2);
 
@@ -296,6 +268,7 @@ static aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon
     // 固定写法，参数检查
     auto ret = CheckParams(params);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+
     // Invoke l0 operator QuantMatmulActivationQuant for calculation.
     auto quantMatmulActivationQuantResults = l0op::QuantMatmulActivationQuant(
         params.x1, params.x2, params.bias, params.x1Scale, params.x2Scale, params.transposeX1, params.transposeX2,
@@ -303,13 +276,11 @@ static aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon
         params.dstTypeMax, executor);
 
     auto yComputeOut = std::get<IDX_0>(quantMatmulActivationQuantResults);
-    auto yScaleComputeOut = std::get<IDX_1>(quantMatmulActivationQuantResults);
+    auto yScaleComputeOut = std::get<1>(quantMatmulActivationQuantResults);
 
-    // 校验输出不为空
     CHECK_RET(yComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(yScaleComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 将结果拷贝到输出tensor
     auto viewCopyYResult = l0op::ViewCopy(yComputeOut, params.y, executor);
     CHECK_RET(viewCopyYResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -324,25 +295,26 @@ static aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon
 #ifdef __cplusplus
 extern "C" {
 #endif
-aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
+
+aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
     const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, const char* activationType,
-    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* y, aclTensor* yScale,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut,
+    aclTensor* yScaleOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnQuantMatmulActivationQuantWeightNz,
+    L2_DFX_PHASE_1(aclnnQuantMatmulActivationQuant,
                    DFX_IN(x1, x2, x1ScaleOptional, x2Scale, biasOptional, transposeX1, transposeX2, groupSize,
                           activationType, quantMode, roundMode, scaleAlg, dstTypeMax),
-                   DFX_OUT(y, yScale));
+                   DFX_OUT(yOut, yScaleOut));
 
-    auto ret = CheckWeightNzParamsDAV3510(x1, x2);
+    auto ret = CheckWeightNdParamsDAV3510(x1, x2);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     CHECK_RET(x1 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     auto y_dtype = x1->GetDataType();
     QBMMActivationQuant::QuantMatmulActivationQuantWeightNzParams params{
-        x1,          x2,        x1ScaleOptional, x2Scale, biasOptional, y,         yScale,   transposeX1,
-        transposeX2, groupSize, activationType,  y_dtype, quantMode,    roundMode, scaleAlg, dstTypeMax};
+        x1,          x2,        x1ScaleOptional, x2Scale, biasOptional, yOut,      yScaleOut, transposeX1,
+        transposeX2, groupSize, activationType,  y_dtype, quantMode,    roundMode, scaleAlg,  dstTypeMax};
 
     CHECK_RET(CheckNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
 
@@ -367,32 +339,17 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
     }
 
     // Step 1: 设置original_shape（必须在Contiguous之前）
-    ret = PreProcessOriginalShape(params.x1, params.x1Scale, params.x2Scale);
+    ret = PreProcessOriginalShape(params.x1, params.x2, params.x1Scale, params.x2Scale);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     CHECK_COND(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check CheckInputOutDims failed.");
-
-    CHECK_RET(x2 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    params.transposeX2 = GetTransposeAttrValue(x2, transposeX2, false);
-
-    op::Shape weightNzShape = QuantMatmulActivationQuantAclnnCheck::GetWeightNzShape(x2, params.transposeX2);
-    if (!QuantMatmulActivationQuantAclnnCheck::CheckWeightNzStorageShape(weightNzShape, x2->GetStorageShape())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x2'format only support NZ, but now x2's format is not NZ(Ascend affinity format). \
-            aclnnCalculateMatmulWeightSizeV2 and aclnnTransMatmulWeight can be used to convert the input format from ND to Ascend \
-            affinity format.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     auto executorPtr = uniqueExecutor.get();
     CHECK_RET(executorPtr != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    x2 = QuantMatmulActivationQuantAclnnCheck::SetTensorToNZFormat(x2, weightNzShape, executorPtr);
-    CHECK_RET(x2 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    params.x2 = x2;
 
-    ret = aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSizeCommon(params, executorPtr);
+    ret = aclnnQuantMatmulActivationQuantGetWorkspaceSizeCommon(params, executorPtr);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // Standard syntax, get the size of workspace needed during computation.
@@ -404,12 +361,12 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                                    aclrtStream stream)
+aclnnStatus aclnnQuantMatmulActivationQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                            aclrtStream stream)
 {
-    L2_DFX_PHASE_2(aclnnQuantMatmulActivationQuantWeightNz);
+    L2_DFX_PHASE_2(aclnnQuantMatmulActivationQuant);
     CHECK_COND(CommonOpExecutorRun(workspace, workspaceSize, executor, stream) == ACLNN_SUCCESS, ACLNN_ERR_INNER,
-               "This is an error in QuantMatmulActivationQuantWeightNz launch aicore.");
+               "This is an error in QuantMatmulActivationQuant launch aicore.");
     return ACLNN_SUCCESS;
 }
 

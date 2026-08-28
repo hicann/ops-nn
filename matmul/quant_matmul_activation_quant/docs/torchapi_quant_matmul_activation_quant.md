@@ -97,6 +97,11 @@
       - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
       - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是 $\left(S^b, [d^i]_{i=1}^k\right)$，其中 $S^b$ 代表块的缩放因子，这里指 $S_{ue8m0}^b$，$[d^i]_{i=1}^k$ 代表块内量化后的数据。
 
+    - **场景3，当scale_alg为2时，只涉及FP4类型**：
+      - 当scale_alg为2时，通过`dst_type_max`参数指定目标数据类型的最大值$Amax(DType)$，用于控制量化范围。
+      - `dst_type_max`取值为0.0时表示使用目标类型的默认最大值；取值范围为[6.0, 12.0]时，使用指定值作为$Amax(DType)$。
+      - 量化过程与场景1类似，区别在于使用`dst_type_max`指定的$Amax(DType)$进行量化范围控制。
+
 ## 函数原型
 
 ```python
@@ -110,12 +115,12 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为ND。最后两维为`(M, K)`或`(K, M)`，由与`x2`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2 | 2-6维，`(..., M, K)`或`(..., K, M)` |
-| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为FRACTAL_NZ。最后两维为`(K, N)`或`(N, K)`，由与`x1`的维度匹配自动推导。 | torch.float8_e4m3fn | 2-6维，`(..., K, N)`或`(..., N, K)` |
-| `x2_scale` | Tensor | 必选 | 矩阵乘计算时x2的MX量化缩放因子。数据格式为ND。batch维须与`x2`一致。 | torch.float8_e8m0fnu | `(..., K//64, N, 2)`或`(..., N, K//64, 2)`（随`x2 方向） |
+| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为ND。最后两维为`(M, K)`或`(K, M)`，由与`x2`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | 2-6维，`(..., M, K)`或`(..., K, M)` |
+| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为ND或FRACTAL_NZ。最后两维为`(K, N)`或`(N, K)`，由与`x1`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | 2-6维，`(..., K, N)`或`(..., N, K)` |
+| `x2_scale` | Tensor | 必选 | 矩阵乘计算时x2的MX量化缩放因子。数据格式为ND。batch维须与`x2`一致。 | torch.float8_e8m0fnu | `(..., K//64, N, 2)`或`(..., N, K//64, 2)`（随`x2`方向） |
 | `x1_scale` | Tensor | 可选 | 矩阵乘计算时x1的MX量化缩放因子。数据格式为ND。batch维须与`x1`一致。 | torch.float8_e8m0fnu | `(..., M, K//64, 2)`或`(..., K//64, M, 2)`（随`x1`方向） |
 | `bias` | Tensor | 可选 | 矩阵乘运算后累加的偏置。数据格式为ND。 | float32 | `(N,)` |
-| `output_dtype` | int | 可选 | 输出`y`的数据类型枚举值。支持torch.float8_e4m3fn、torch.float8_e5m2等。默认值None（等价于 0，表示与`x1`同类型）。 | int | - |
+| `output_dtype` | int | 可选 | 输出`y`的数据类型枚举值。支持torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2等。默认值None（等价于 0，表示与`x1`同类型）。 | int | - |
 | `x1_dtype` | int | 可选 | `x1`的数据类型枚举值。不传入时根据`x1`的scalar_type自动推导。 | int | - |
 | `x2_dtype` | int | 可选 | `x2`的数据类型枚举值。不传入时根据`x2`的scalar_type自动推导。 | int | - |
 | `x1scale_dtype` | int | 可选 | `x1_scale`的数据类型枚举值。不传入时根据`x1_scale`的scalar_type自动推导。 | int | - |
@@ -123,15 +128,15 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 | `group_sizes` | List[int] | 可选 | 分组量化大小 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]。 | list | `(3,)` |
 | `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`，默认值`"gelu_tanh"`。 | string | - |
 | `quant_mode` | str | 可选 | 量化模式，当前支持`"mx"`，默认值`"mx"`。 | string | - |
-| `round_mode` | str | 可选 | 舍入模式，支持`"rint"`、`"floor"`、`"round"`，当前仅支持`"rint"`。 | string | - |
-| `scale_alg` | int | 可选 | 缩放算法。0 表示MX动态量化（场景 1），1表示FP8块缩放量化（场景 2），默认值0。 | int | - |
-| `dst_type_max` | float | 可选 | 目标数据类型最大值，用于量化范围控制，默认值0.0（表示使用目标类型的默认最大值）。 | float32 | - |
+| `round_mode` | str | 可选 | 舍入模式。当`output_dtype`为FLOAT4_E2M1时，支持`"rint"`、`"floor"`、`"round"`；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持`"rint"`。默认值`"rint"`。 | string | - |
+| `scale_alg` | int | 可选 | 缩放算法。当`output_dtype`为FLOAT4_E2M1时，支持取值0和2，0表示场景1，2表示场景3（使能`dst_type_max`）；当`output_dtype`为FLOAT8_E4M3FN/FLOAT8_E5M2时，支持取值0和1，0表示场景1，1表示场景2。默认值0。 | int | - |
+| `dst_type_max` | float | 可选 | 目标数据类型最大值，用于量化范围控制。当`scale_alg`为0或1时不生效，传入0.0即可；当`scale_alg`为2时，支持取值0.0和6.0-12.0，0.0表示使用目标类型的默认最大值。默认值0.0。 | float32 | - |
 
 ## 返回值说明
 
 | 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `y` | Tensor | 必选 | 动态量化后的矩阵乘及激活计算结果。 | torch.float8_e4m3fn、torch.float8_e5m2 | `(..., M, N)`； |
+| `y` | Tensor | 必选 | 动态量化后的矩阵乘及激活计算结果。 | torch.float8_e4m3fn、torch.float8_e5m2、torch.float4_e2m1fn_x2 | `(..., M, N)`； |
 | `y_scale` | Tensor | 必选 | 动态量化后每个分组对应的量化尺度，最后一维固定为2。 | torch.float8_e8m0fnu | `(..., M, CeilDiv(N, 64), 2)` |
 
 ## 约束说明
@@ -140,19 +145,30 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 - 该接口支持单算子模式调用。
 - 不支持空Tensor。
 - 支持连续Tensor，非连续Tensor仅支持最后两根轴转置场景。
-- `x1`支持2-6维，`x2`仅支持NZ 4-8 维。
+- `x1`支持 2-6 维，`x2`为NZ时支持 4-8 维，`x2`为ND时支持 2-6 维。
+- `x2`为NZ时仅支持数据类型为torch.float8_e4m3fn。
 - 当`K`或`N`为1时，无法使用weightNz特性，本接口不支持此种场景。
 - M/N/K维度及`transpose_x1`、`transpose_x2`由`x1`、`x2`最后两维自动匹配推导：取`x1`最后两维和`x2`最后两维共四个值中相等的一对作为K，`x1`中剩余的为M，`x2`中剩余的为N。若四组组合中无相等维度则报错。
 - `x1`、`x2`的batch维度（除最后两维外的维度）支持广播（右对齐），如`x1=(1,M,K)`、`x2=(8,K,N)`输出`(8,M,N)`。
 - `x1_scale`、`x2_scale`若传入，其batch维度（除最后三维外的维度）的数量和每一维的值必须与对应的`x1`、`x2`完全一致；若`x1`无 batch维度（2D），则`x1_scale`、`x2_scale`须为3D。
 - `x1_scale`、`x2_scale`最后一维必须为2。
 - `group_sizes`若传入，必须包含三个元素`[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]，当前MX场景仅支持[1, 1, 32]。
+- `y`的数据类型由`x1`的数据类型决定，两者必须保持一致。
 - 输入和输出支持以下数据类型组合：
 
   | x1            | x2            | x1_scale   |  x2_scale    | bias             | y                         | y_scale      |
   |---------------|---------------|-------------|-------------|------------------|---------------------------|-------------|
-  | torch.float8_e4m3fn | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn2 | torch.float8_e8m0fnu |
+  | torch.float8_e4m3fn | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn | torch.float8_e8m0fnu |
   | torch.float8_e5m2   | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
+  | torch.float8_e5m2   | torch.float8_e5m2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
+  | torch.float8_e4m3fn | torch.float8_e5m2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn | torch.float8_e8m0fnu |
+  | torch.float4_e2m1fn_x2 | torch.float4_e2m1fn_x2 | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float4_e2m1fn_x2 | torch.float8_e8m0fnu |
+
+- MXFP4场景约束（`x1`、`x2`、`y`数据类型均为`torch.float4_e2m1fn_x2`）：
+  - 当`x2`为NZ格式时，`x1`不支持转置。
+  - `scale_alg`仅支持取值0和2。
+  - 当`scale_alg`为2时，`dst_type_max`支持取值0.0和6.0-12.0。
+  - `round_mode`支持`"rint"`、`"floor"`、`"round"`。
 
 ## 确定性计算
 
@@ -161,6 +177,8 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 ## 调用示例
 
 - 单算子模式调用
+
+  - FP8场景示例：
 
     ```python
     import torch
@@ -178,6 +196,33 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
     y, y_scale = torch.ops.cann_ops_nn.quant_matmul_activation_quant(
         x1, x2_nz, x2_scale, x1_scale=x1_scale, bias=None,
+        activation_type="gelu_tanh", quant_mode="mx", round_mode="rint",
+        scale_alg=0, dst_type_max=0.0)
+    print("y: ", y.cpu())
+    print("y_scale: ", y_scale.cpu())
+    ```
+
+  - FP4场景示例：
+
+    ```python
+    import torch
+    import torch_npu
+    import cann_ops_nn
+
+    m, k, n = 5, 64, 128
+    group_size = 32
+    # x1 物理形状 (M, K//2)；x2 物理形状 (K, N//2)，FP4双nibble打包末维减半
+    x1 = torch.randn(m, k // 2, dtype=torch.float32).to(torch.float8_e4m3fn).npu()
+    x2 = torch.randn(k, n // 2, dtype=torch.float32).to(torch.float8_e4m3fn).npu()
+    x2_nz = torch_npu.npu_format_cast(x2, 29) # 29为NZ格式
+    x1_scale = torch.ones(m, k // group_size // 2, 2, dtype=torch.float8_e8m0fnu).npu()
+    x2_scale = torch.ones(k // group_size // 2, n, 2, dtype=torch.float8_e8m0fnu).npu()
+
+    y, y_scale = torch.ops.cann_ops_nn.quant_matmul_activation_quant(
+        x1, x2_nz, x2_scale, x1_scale=x1_scale, bias=None,
+        output_dtype=torch_npu.float4_e2m1fn_x2,
+        x1_dtype=torch_npu.float4_e2m1fn_x2,
+        x2_dtype=torch_npu.float4_e2m1fn_x2,
         activation_type="gelu_tanh", quant_mode="mx", round_mode="rint",
         scale_alg=0, dst_type_max=0.0)
     print("y: ", y.cpu())

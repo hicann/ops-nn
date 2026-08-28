@@ -22,14 +22,15 @@ namespace ge {
 * @brief The fusion operator of QuantBatchMatmul, Gelu and mxQuant.
 
 * @par Inputs:
-* @li x1: A matrix tensor. Must be one of the following types: float8_e5m2, float8_e4m3fn \n
-          when the data type is float8_e5m2, float8_e4m3fn, the format only supports ND format. \n
-          - In ND format, the shape ranges from 2D to 6D. When transpose_x1 is false, the shape is (batch,m,k), where
-          batch is optional. \n
-* @li x2: A matrix tensor. Must be float8_e4m3fn. \n
-          when the data type is float8_e4m3fn, the format only supports NZ formats. \n
-          - In ND format, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (batch,k,n), where
-          batch is optional. \n
+ * @li x1: A matrix tensor. Must be one of the following types: float8_e5m2, float8_e4m3fn, float4_e2m1 \n
+           when the data type is float8_e5m2, float8_e4m3fn, float4_e2m1, the format only supports ND format. \n
+           - In ND format, the shape ranges from 2D to 6D. When transpose_x2 is false, \n
+            the shape is (batch,k,n), where batch is optional. \n
+ * @li x2: A matrix tensor. Must be one of the following types: float8_e4m3fn, float8_e5m2, float4_e2m1. \n
+           when the data type is float8_e4m3fn or float4_e2m1, the format supports NZ and ND format. \n
+           when the data type is float8_e5m2, the format only supports ND format. \n
+          - In ND format, the shape ranges from 2D to 6D. When transpose_x2 is false, \n
+            the shape is (batch,k,n), where batch is optional. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. \n
               - When transpose_x2 is true, the shape is (batch,x2_k1,x2_n1,x2_n0,x2_k0), where batch is optional, x2_k0
 = 32, and x2_n0 = 16. \n
@@ -78,8 +79,9 @@ value.Defaults to 0.
 
 
 * @par Outputs:
-* @li y: A matrix tensor. The data type is float8_e5m2, float8_e4m3fn. The format supports ND. \n
-* @li y_scale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
+ * @li y: A matrix tensor. The data type is float8_e5m2, float8_e4m3fn, float4_e2m1. The format supports ND. \n
+* @li
+y_scale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * - rank(mxscale) = rank(x) + 1.
 * - axis_change = -1.
 * - mxscale.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2.
@@ -97,17 +99,32 @@ value.Defaults to 0.
 float8_e8m0:
 *      - x1 and x2 inner axis (the last dimension of view shape, independent of transpose_x1/transpose_x2) must be even.
 *      - k must be greater than 2.
-*      - supported final [group_size_m, group_size_n, group_size_k] is [1, 1, 32].
-* @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support ND
+ *      - supported final [group_size_m, group_size_n, group_size_k] is [1, 1, 32].
+ * @li In mx quantification, when x1 type and x2 type are both float4_e2m1 and x1_scale/x2_scale types are
+ * float8_e8m0 (MXFP4 scenario):
+ *      - x1 and x2 inner axis (the last dimension of view shape, independent of transpose_x1/transpose_x2) must be
+even.
+ *      - k must be greater than 2.
+ *      - y's N dimension must be even.
+ *      - supported final [group_size_m, group_size_n, group_size_k] is [1, 1, 32].
+ *      - scale_alg only supports 0 and 2. When scale_alg is 2, dst_type_max supports 0.0 and 6.0-12.0.
+ *      - round_mode supports "rint", "floor", "round".
+ *      - When x2 is NZ format, x1 does not support transpose, i.e. transpose_x1 cannot be true.
+ * @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support
+ND
 format.
 * @li The following are the supported data type combinations by platform.
 
 * - Ascend 950 AI Processor:
 *\n
-| x1                        | x2                        | bias            | x1_scale               | x2_scale    | out
-| y_scale     | | :-----------------------: | :-----------------------: | :------------ : | :------------------:   |
-:---------: | :------------------------ -: | :---------: | | float8_e4m3fn/float8_e5m2 | float8_e4m3fn             |
-null/float32    | float8_e8m0            | float8_e8m0 | float8_e4m3fn/float8_e5m2    | float8_e8m0 |
+| x1                        | x2            | bias         | x1_scale   | x2_scale   | out                       |
+y_scale    | | :-----------------------: | :-----------: | :----------: | :---------: | :---------: |
+:-----------------------: | :---------: | | float8_e4m3fn             | float8_e4m3fn | null/float32 | float8_e8m0 |
+float8_e8m0 | float8_e4m3fn             | float8_e8m0 | | float8_e5m2               | float8_e5m2   | null/float32 |
+float8_e8m0 | float8_e8m0 | float8_e5m2               | float8_e8m0 | | float8_e4m3fn             | float8_e5m2   |
+null/float32 | float8_e8m0 | float8_e8m0 | float8_e4m3fn             | float8_e8m0 | | float8_e5m2               |
+float8_e4m3fn | null/float32 | float8_e8m0 | float8_e8m0 | float8_e5m2               | float8_e8m0 | | float4_e2m1 |
+float4_e2m1   | null/float32 | float8_e8m0 | float8_e8m0 | float4_e2m1               | float8_e8m0 |
 *\n
 
 * - Ascend 950 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
@@ -122,16 +139,20 @@ float8_e4m3fn/float8_e5m2          | float8_e8m0    | (batch, m, k) | (batch, k,
 (batch, k, m) | (batch, k, n) | (ceil(k / 64), n, 2)                     | (ceil(k / 64), m, 2)                  | [1,
 1, 32]      | | mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0    | (batch, k, m) | (batch, n, k)
 | (n, ceil(k / 64), 2)                     | (ceil(k / 64), m, 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                       | float8_e8m0    | (batch, m, k) | (batch, k, n) | (ceil(k /
+64), n, 2)                     | (m, ceil(k / 64), 2)                  | [1, 1, 32]      | | mx                |
+float4_e2m1                       | float8_e8m0    | (batch, m, k) | (batch, n, k) | (n, ceil(k /
+64), 2)                     | (m, ceil(k / 64), 2)                  | [1, 1, 32]      |
 
 *\n
 */
 REG_OP(QuantMatmulActivationQuant)
-    .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
-    .INPUT(x2, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
+    .INPUT(x2, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT32}))
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT8_E8M0}))
     .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT8_E8M0}))
-    .OUTPUT(y, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .OUTPUT(y, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .OUTPUT(y_scale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(transpose_x1, Bool, false)
     .ATTR(transpose_x2, Bool, false)

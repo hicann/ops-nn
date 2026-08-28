@@ -37,6 +37,7 @@ enum class BasicQuantMode : uint32_t {
 enum class QuantAlg : uint8_t {
     OCP = 0,
     BLAS = 1,
+    DYN_DTYPE_RANGE = 2,
 };
 
 enum class GeluAlg : uint8_t {

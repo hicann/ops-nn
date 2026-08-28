@@ -111,8 +111,11 @@ uint64_t QuantMatmulActivationQuantMXBasicAPITiling::GetKernelType() const
 
 uint64_t QuantMatmulActivationQuantMXBasicAPITiling::GetTilingKey() const
 {
+    uint64_t bFormat = static_cast<ge::Format>(GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat())) ?
+                           TPL_B_FORMAT_NZ :
+                           TPL_B_FORMAT_ND;
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
-                              GetKernelType());
+                              GetKernelType(), bFormat);
 }
 
 // 为算子QuantMatmulActivationQuant注册Tiling类QuantMatmulActivationQuantMXBasicAPITiling，唯一Tiling实现

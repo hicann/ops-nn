@@ -337,6 +337,7 @@
 - [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md)
 - [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md)
 - [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)
+- [aclnnQuantMatmulActivationQuant](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuant.md)
 - [aclnnQuantMatmulActivationQuantWeightNz](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantWeightNz.md)
 - [aclnnQuantMatmulDequant](../../matmul/quant_matmul_dequant/docs/aclnnQuantMatmulDequant.md)
 - [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md)

@@ -68,6 +68,7 @@ struct QuantMatmulActivationQuantTilingParam {
     bool hasBias = false;
     gert::Shape yShape;
     gert::Shape yScaleShape;
+    bool x2IsNz = true;
     bool transposeX1 = false;
     bool transposeX2 = false;
     ge::DataType x1Dtype = ge::DT_FLOAT8_E4M3FN;
@@ -105,7 +106,7 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
 
     std::string line;
     bool skipHeader = true;
-    constexpr size_t kExpectedCols = 28UL;
+    constexpr size_t kExpectedCols = 29UL;
     size_t lineNo = 0UL;
     while (std::getline(csvData, line)) {
         ++lineNo;
@@ -143,6 +144,7 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
             }
             param.yShape = ParseShape(cols[idx++]);
             param.yScaleShape = ParseShape(cols[idx++]);
+            param.x2IsNz = (strcasecmp(Trim(cols[idx++]).c_str(), "NZ") == 0);
             param.hasBias = (strcasecmp(Trim(cols[idx++]).c_str(), "true") == 0);
             param.transposeX1 = (strcasecmp(Trim(cols[idx++]).c_str(), "true") == 0);
             param.transposeX2 = (strcasecmp(Trim(cols[idx++]).c_str(), "true") == 0);
@@ -300,7 +302,11 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
 
     gert::StorageShape x2Shape;
     x2Shape.MutableOriginShape() = param.x2OriginShape;
-    x2Shape.MutableStorageShape() = param.x2StorageShape;
+    if (param.x2IsNz) {
+        x2Shape.MutableStorageShape() = param.x2StorageShape;
+    } else {
+        x2Shape.MutableStorageShape() = param.x2OriginShape;
+    }
 
     gert::StorageShape x1ScaleShape;
     x1ScaleShape.MutableOriginShape() = param.x1ScaleShape;
@@ -348,7 +354,8 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, param.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, param.x2Dtype, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(1, param.x2Dtype, param.x2IsNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND,
+                                   param.x2IsNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
                       .NodeInputTd(2, param.biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, param.x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(4, param.x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)

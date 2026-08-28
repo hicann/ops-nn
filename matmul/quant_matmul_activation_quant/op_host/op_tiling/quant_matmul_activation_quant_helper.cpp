@@ -317,9 +317,10 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
                                                       "scaleAlg can not be null"),
                 return false);
     OP_CHECK_IF(!(static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::OCP ||
-                  static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::BLAS),
+                  static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::BLAS ||
+                  static_cast<QMMAQ::QuantAlg>(*scaleAlg) == QMMAQ::QuantAlg::DYN_DTYPE_RANGE),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "scaleAlg", std::to_string(*scaleAlg),
-                                                      "scaleAlg optional values are 0/1"),
+                                                      "scaleAlg optional values are 0/1/2"),
                 return false);
     scaleAlg_ = static_cast<QMMAQ::QuantAlg>(*scaleAlg);
 
@@ -378,9 +379,16 @@ bool QuantMatmulActivationQuantHelper<BaseT>::IsFp8Dtype(const ge::DataType dtyp
 }
 
 template <typename BaseT>
+bool QuantMatmulActivationQuantHelper<BaseT>::IsFp4Dtype(const ge::DataType dtype) const
+{
+    return dtype == ge::DT_FLOAT4_E2M1;
+}
+
+template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::IsMxQuant() const
 {
-    return IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype) &&
+    return ((IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype)) ||
+            (IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype))) &&
            this->inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 &&
            this->inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0 && this->inputParams_.isMxPerGroup;
 }
@@ -393,41 +401,49 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
     auto yDtype = outDesc->GetDataType();
     auto yScaleDtype = outScaleDesc->GetDataType();
 
-    // 校验y的Dtype
-    OP_CHECK_IF(yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2,
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(this->inputParams_.opName, "y",
-                                                      ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
-                                                      "the dtype of output y must be FLOAT8_E4M3FN/FLOAT8_E5M2"),
-                return false);
-    // 校验yScale的Dtype
-    OP_CHECK_IF(yScaleDtype != ge::DT_FLOAT8_E8M0,
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(this->inputParams_.opName, "yScale",
-                                                      ge::TypeUtils::DataTypeToSerialString(yScaleDtype).c_str(),
-                                                      "the dtype of output yScale must be FLOAT8_E8M0"),
-                return false);
     bool isFp8 = IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype);
+    bool isFp4 = IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype);
+
+    // 校验y的Dtype
     if (isFp8) {
-        OP_CHECK_IF(
-            this->inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0 ||
-                this->inputParams_.perTokenScaleDtype != ge::DT_FLOAT8_E8M0,
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                this->inputParams_.opName, "x1Scale, x2Scale",
-                FormatString("%s, %s",
-                             ge::TypeUtils::DataTypeToSerialString(this->inputParams_.perTokenScaleDtype).c_str(),
-                             ge::TypeUtils::DataTypeToSerialString(this->inputParams_.scaleDtype).c_str())
-                    .c_str(),
-                "when the dtype of x1 and x2 is FLOAT8_E4M3FN/FLOAT8_E5M2, the dtype of x1Scale and x2Scale must be "
-                "FLOAT8_E8M0"),
-            return false);
+        OP_CHECK_IF(yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(this->inputParams_.opName, "y",
+                                                          ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
+                                                          "the dtype of output y must be FLOAT8_E4M3FN/FLOAT8_E5M2 "
+                                                          "when x1 and x2 are FLOAT8"),
+                    return false);
+    } else if (isFp4) {
+        OP_CHECK_IF(yDtype != ge::DT_FLOAT4_E2M1,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(this->inputParams_.opName, "y",
+                                                          ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
+                                                          "the dtype of output y must be FLOAT4_E2M1 "
+                                                          "when x1 and x2 are FLOAT4_E2M1"),
+                    return false);
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             this->inputParams_.opName, "x1, x2",
             FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(this->inputParams_.aDtype).c_str(),
                          ge::TypeUtils::DataTypeToSerialString(this->inputParams_.bDtype).c_str())
                 .c_str(),
-            "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2");
+            "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2 or both be FLOAT4_E2M1");
         return false;
     }
+    // 校验yScale的Dtype
+    OP_CHECK_IF(yScaleDtype != ge::DT_FLOAT8_E8M0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(this->inputParams_.opName, "yScale",
+                                                      ge::TypeUtils::DataTypeToSerialString(yScaleDtype).c_str(),
+                                                      "the dtype of output yScale must be FLOAT8_E8M0"),
+                return false);
+    OP_CHECK_IF(
+        this->inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0 ||
+            this->inputParams_.perTokenScaleDtype != ge::DT_FLOAT8_E8M0,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            this->inputParams_.opName, "x1Scale, x2Scale",
+            FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(this->inputParams_.perTokenScaleDtype).c_str(),
+                         ge::TypeUtils::DataTypeToSerialString(this->inputParams_.scaleDtype).c_str())
+                .c_str(),
+            "when the quantization mode is mx, the dtype of x1Scale and x2Scale must be FLOAT8_E8M0"),
+        return false);
 
     auto attrs = this->context_->GetAttrs();
     OP_CHECK_IF(

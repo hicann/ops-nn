@@ -49,6 +49,7 @@ protected:
     const char* GetDefaultOpName() const override;
     bool CalcBasicBlock() override;
     bool IsFp8Dtype(const ge::DataType dtype) const;
+    bool IsFp4Dtype(const ge::DataType dtype) const;
 
     bool IsMxQuant() const;
 
