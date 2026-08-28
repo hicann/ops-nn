@@ -12,10 +12,13 @@ __all__ = [
     "situ_glu",
     "situ_glu_grad",
     "swiglu_group",
+    "swiglu_group_backward",
+    "swiglu_group_grad",
     "swiglu_group_quant",
 ]
 
 from .situ_glu import situ_glu
 from .situ_glu_grad import situ_glu_grad
 from .swiglu_group import swiglu_group
+from .swiglu_group_grad import swiglu_group_backward, swiglu_group_grad
 from .swiglu_group_quant import swiglu_group_quant

@@ -37,7 +37,8 @@ _REQUIRED_SCHEMA_FRAGMENTS = (
     "Tensor? weight=None",
     "Tensor? y_origin=None",
     "Tensor? group_index=None",
-    "float clamp_limit=-1.0",
+    # Matches both "-1." and "-1.0" default renderings across torch versions.
+    "float clamp_limit=-1.",
     "(Tensor, Tensor?)",
 )
 
@@ -60,10 +61,10 @@ def test_dispatcher_schema_matches_contract():
     )
 
 
-def test_public_quant_export_preserves_backward_name():
-    from cann_ops_nn.ops import quant
+def test_public_activation_export_preserves_backward_name():
+    from cann_ops_nn.ops import activation
 
-    assert "swiglu_group_backward" in quant.__all__
+    assert "swiglu_group_backward" in activation.__all__
     assert not hasattr(torch.ops.cann_ops_nn, "swiglu_group_grad"), (
         "the operator-local package alias must not create a second dispatcher schema"
     )

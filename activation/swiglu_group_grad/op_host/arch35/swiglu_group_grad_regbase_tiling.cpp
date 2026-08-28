@@ -537,27 +537,23 @@ ge::graphStatus SwigluGroupGradArch35Tiling::GetShapeAttrsInfo()
 
 bool SwigluGroupGradArch35Tiling::IsCapable()
 {
-    // T<=8/H>=256K with weight+y_origin is handled by the dedicated fixed-tree
-    // RegBase path. Admit it before the generic vector-lane heuristic so these
-    // shapes no longer fall through to SIMT.
     bool useUltraWideSimd = totalRows_ > 0 && totalRows_ <= SIMD_ULTRAWIDE_MAX_ROWS_HOST &&
                             hiddenSize_ >= SIMD_ULTRAWIDE_MIN_H_HOST && isWeight_ == 1 && isYOrigin_ == 1;
-    if (useUltraWideSimd) {
-        return true;
+    if (!useUltraWideSimd) {
+        bool vectorLaneUsable = hiddenSize_ >= VL_FP32_ARCH35 / 2;
+        if (!vectorLaneUsable || totalRows_ <= 0) {
+            return false;
+        }
+
+        int64_t usefulCoreTarget = std::max<int64_t>(1, CeilDivHost(coreNumAll_, 2));
+        int64_t hiddenVectorTileNum = CeilDivHost(hiddenSize_, VEC_ALIGN_HOST);
+        int64_t hiddenTilesNeededPerRow = CeilDivHost(usefulCoreTarget, totalRows_);
+        if (hiddenVectorTileNum < hiddenTilesNeededPerRow) {
+            return false;
+        }
     }
 
-    // Short rows are better handled by SIMT: each thread owns one row and the
-    // scalar lanes are not wasted. H == 1 also has a dedicated SIMT fast path.
-    bool vectorLaneUsable = hiddenSize_ >= VL_FP32_ARCH35 / 2;
-    if (!vectorLaneUsable || totalRows_ <= 0) {
-        return false;
-    }
-
-    int64_t usefulCoreTarget = std::max<int64_t>(1, CeilDivHost(coreNumAll_, 2));
-    int64_t hiddenVectorTileNum = CeilDivHost(hiddenSize_, VEC_ALIGN_HOST);
-    int64_t hiddenTilesNeededPerRow = CeilDivHost(usefulCoreTarget, totalRows_);
-
-    return hiddenVectorTileNum >= hiddenTilesNeededPerRow;
+    return CalcTilingStrategy() == ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SwigluGroupGradArch35Tiling::DoOpTiling()

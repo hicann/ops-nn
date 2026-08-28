@@ -6,7 +6,7 @@
 - [swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)
 - [clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)
 - [clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)
-- [swiglu_group_backward](../../quant/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)
+- [swiglu_group_backward](../../activation/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)
 - [swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)
 - [rms_norm_dynamic_quant](../../norm/rms_norm_dynamic_quant/docs/torchapi_rms_norm_dynamic_quant.md)
 - [grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)

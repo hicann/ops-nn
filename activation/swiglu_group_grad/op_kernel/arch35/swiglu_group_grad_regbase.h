@@ -584,7 +584,6 @@ __simd_vf__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
     for (uint32_t group = 0; group < GROUP_COUNT; group++) {
         __ubuf__ float* groupAddress = dataAddr + group * LEAVES_PER_GROUP * NUMPY_PAIRWISE_LEAF_SIZE;
         LoadAlign<float, DataCopyMode::DATA_BLOCK_COPY>(accumulator, groupAddress, LEAF_STRIDE_BLOCKS, mask64);
-#pragma unroll
         for (uint32_t block = 1; block < BLOCK_COUNT; block++) {
             LoadAlign<float, DataCopyMode::DATA_BLOCK_COPY>(currentValues, groupAddress + block * LANE_COUNT,
                                                             LEAF_STRIDE_BLOCKS, mask64);

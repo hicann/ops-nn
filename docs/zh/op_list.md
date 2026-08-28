@@ -789,6 +789,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_group_grad/README.md">swiglu_group_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成ClampedSwiglu激活函数的反向梯度计算，从上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight，支持MoE场景的group_index动态分组和weight权重梯度计算。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5117,16 +5127,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>在SwiGlu激活的反向梯度计算函数后添加group_mx_quant操作，实现输入x的Swiglu反向梯度操作后-1轴和-2轴同时量化计算，支持FP8量化输出。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/swiglu_group_grad/README.md">swiglu_group_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>完成ClampedSwiglu激活函数的反向梯度计算，从上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight，支持MoE场景的group_index动态分组和weight权重梯度计算。</td>
   </tr>
   <tr>
     <td>quant</td>
