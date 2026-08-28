@@ -159,6 +159,7 @@ static ge::graphStatus FastGeluV2TilingFunc(gert::TilingContext* context)
         tiling->blockFactor = 1;
         tiling->ubFactor = 1;
         context->SetBlockDim(1);
+        ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType), 0U);
         return ge::GRAPH_SUCCESS;
     }
 

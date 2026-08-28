@@ -23,6 +23,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def_nn.h"
+#include "op_api/aclnn_util.h"
 #include "loss/common/level2_base_loss.h"
 
 using namespace op;
@@ -80,13 +81,28 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, const acl
     return true;
 }
 
-static void CheckFormat(const aclTensor* self)
+static bool CheckFormat(const aclTensor* self, const aclTensor* target, const aclTensor* out)
 {
-    // 检查format，若是NZ格式，则添加警告
+    // Preserve the existing warning behavior on every device.
     if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
                 op::ToString(self->GetStorageFormat()).GetString());
     }
+
+    const auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return true;
+    }
+
+    if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(target->GetStorageFormat()) ||
+        op::IsPrivateFormat(out->GetStorageFormat())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format is not supported, self [%s], target [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(target->GetStorageFormat()).GetString(),
+                op::ToString(out->GetStorageFormat()).GetString());
+        return false;
+    }
+    return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, int64_t reduction, const aclTensor* out)
@@ -100,8 +116,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
     // 3. 检查输出shape
     CHECK_RET(CheckShape(self, target, out, reduction), ACLNN_ERR_PARAM_INVALID);
 
-    // 检查format，若是NZ格式，则添加警告
-    CheckFormat(self);
+    // Ascend 950 rejects private formats; other devices retain the original behavior.
+    CHECK_RET(CheckFormat(self, target, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

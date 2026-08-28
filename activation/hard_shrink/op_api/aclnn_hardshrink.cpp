@@ -21,6 +21,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "op_api/op_api_def_nn.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -79,6 +80,20 @@ static inline bool CheckShape(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
+static bool CheckFormat(const aclTensor* self, const aclTensor* out)
+{
+    const auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return true;
+    }
+    if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(out->GetStorageFormat())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format is not supported, self [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
@@ -87,6 +102,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, co
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查输入的数据的值是否合理
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
+    // 4. Check private format.
+    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

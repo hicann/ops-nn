@@ -98,6 +98,20 @@ static inline bool CheckAttributeValue(const aclScalar* alpha)
     return true;
 }
 
+static bool CheckFormat(const aclTensor* self, const aclTensor* out)
+{
+    const auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return true;
+    }
+    if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(out->GetStorageFormat())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format is not supported, self [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* alpha, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
@@ -111,6 +125,9 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* alpha, co
 
     // 4. 检查alpha的取值是否满足要求
     CHECK_RET(CheckAttributeValue(alpha), ACLNN_ERR_PARAM_INVALID);
+
+    // 5. Check private format.
+    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
