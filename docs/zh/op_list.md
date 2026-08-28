@@ -2280,6 +2280,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/segment_sum/README.md">segment_sum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据有序的segment_ids对输入张量按分段求和，输出每个分段内所有行对应元素的累加结果。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/sparse_segment_mean/README.md">sparse_segment_mean</a></td>
     <td>✓</td>
     <td>✓</td>
