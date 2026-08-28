@@ -39,8 +39,8 @@ using namespace optiling;
 
 class ThresholdV2TilingTestParam {
 public:
-    void Prepare(ThresholdCompileInfo& compileInfo) const;
-    void InvokeTilingFunc(ThresholdCompileInfo& compileInfo) const;
+    void Prepare(ThresholdV2CompileInfo& compileInfo) const;
+    void InvokeTilingFunc(ThresholdV2CompileInfo& compileInfo) const;
     void Test() const;
     std::string socVersion;
     std::string caseName;
@@ -200,7 +200,7 @@ static gert::Shape BuildShape(const std::vector<int64_t>& shapeVec)
     return shape;
 }
 
-void ThresholdV2TilingTestParam::Prepare(ThresholdCompileInfo& compileInfo) const
+void ThresholdV2TilingTestParam::Prepare(ThresholdV2CompileInfo& compileInfo) const
 {
     compileInfo.coreNum = coreNum > 0 ? coreNum : 64;
     compileInfo.ubSize = 262144;
@@ -251,7 +251,7 @@ void ThresholdV2TilingTestParam::Prepare(ThresholdCompileInfo& compileInfo) cons
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr);
 }
 
-void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdCompileInfo& compileInfo) const
+void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdV2CompileInfo& compileInfo) const
 {
     gert::StorageShape xShape;
     gert::StorageShape thresholdShape;
@@ -318,7 +318,7 @@ void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdCompileInfo& compileI
 
 void ThresholdV2TilingTestParam::Test() const
 {
-    ThresholdCompileInfo compileInfo;
+    ThresholdV2CompileInfo compileInfo;
     Prepare(compileInfo);
     InvokeTilingFunc(compileInfo);
 }

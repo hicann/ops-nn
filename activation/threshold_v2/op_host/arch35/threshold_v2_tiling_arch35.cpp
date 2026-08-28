@@ -180,7 +180,7 @@ ge::graphStatus ThresholdTiling::RunTiling()
 ge::graphStatus TilingForThreshold(gert::TilingContext* tilingContext)
 {
     OP_LOGD(tilingContext->GetNodeName(), "TilingForThreshold arch35 is running");
-    auto compileInfo = tilingContext->GetCompileInfo<ThresholdCompileInfo>();
+    auto compileInfo = tilingContext->GetCompileInfo<ThresholdV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     ThresholdTiling baseOpTiling(tilingContext);
     OP_LOGD(tilingContext->GetNodeName(), "ThresholdV2Tiling RunTiling start.");
@@ -189,7 +189,7 @@ ge::graphStatus TilingForThreshold(gert::TilingContext* tilingContext)
 
 ge::graphStatus TilingPrepareForThreshold(gert::TilingParseContext* context)
 {
-    auto compileInfoPtr = context->GetCompiledInfo<ThresholdCompileInfo>();
+    auto compileInfoPtr = context->GetCompiledInfo<ThresholdV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
@@ -199,6 +199,6 @@ ge::graphStatus TilingPrepareForThreshold(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ThresholdV2).Tiling(TilingForThreshold).TilingParse<ThresholdCompileInfo>(TilingPrepareForThreshold);
+IMPL_OP_OPTILING(ThresholdV2).Tiling(TilingForThreshold).TilingParse<ThresholdV2CompileInfo>(TilingPrepareForThreshold);
 
 } // namespace optiling

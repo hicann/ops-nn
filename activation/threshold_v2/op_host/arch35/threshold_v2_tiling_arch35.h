@@ -21,14 +21,14 @@
 namespace optiling {
 using namespace Ops::NN::Optiling;
 
-struct ThresholdCompileInfo {
+struct ThresholdV2CompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;
 };
 
 class ThresholdTiling {
 public:
-    explicit ThresholdTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ThresholdTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
 
 protected:
