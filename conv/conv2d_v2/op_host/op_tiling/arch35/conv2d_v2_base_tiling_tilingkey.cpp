@@ -199,9 +199,8 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     }
 
     // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16 or INT8*INT8.
-    // This template requires singleCoreBatch == 1. Keep the guard local so other small-kernel paths can support
-    // multiple batches per core.
-    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk && tilingData_.get_singleCoreBatch() == 1;
+    // Multiple batches per core use four FM buffers when L1 permits, otherwise the kernel serializes them.
+    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk;
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
