@@ -173,7 +173,7 @@ aclnnStatus aclnnApplyAdamWQuant(
     <tr>
       <td class="tg-0pky">absmaxMRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
-      <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
+      <td class="tg-0pky">每blockSize(256)个mRef对应一个最大值，用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
       <td class="tg-0pky">shape要求为“absmaxMRef.size = ceil(mRef.size/blockSize)”。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>

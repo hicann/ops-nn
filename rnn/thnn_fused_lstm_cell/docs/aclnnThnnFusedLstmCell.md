@@ -136,7 +136,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
       <tr>
         <td>cx（aclTensor*）</td>
         <td>输入</td>
-        <td>上一时的刻细胞状态。</td>
+        <td>上一时刻的细胞状态。</td>
         <td>无。</td>
         <td>FLOAT、FLOAT16</td>
         <td>ND</td>

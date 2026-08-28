@@ -191,7 +191,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
-        <td>表示伪量化per_group算法模式下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法模式不为per_group时传入0；当伪量化算法模式为per_group时传入值的范围为[32, k-1]且值要求是32的倍数。</td>
+        <td>表示伪量化per_group算法模式下，对输入`weight`进行反量化计算的groupSize，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法模式不为per_group时传入0；当伪量化算法模式为per_group时传入值的范围为[32, k-1]且值要求是32的倍数。</td>
         <td>-</td>
         <td>INT</td>
         <td>-</td>

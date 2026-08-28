@@ -105,7 +105,7 @@ aclnnStatus aclnnGlu(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算出参。</td>
-      <td>数据类型必须可以由self cast得到，shape为(*_1,M,*_2)，其中*表示self中对应维度，M = N /2。</td>
+      <td>数据类型必须可以由self cast得到，shape为(*_1,M,*_2)，其中*表示self中对应维度的大小，M = N /2。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
