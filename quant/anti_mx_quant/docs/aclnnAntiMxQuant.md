@@ -33,7 +33,7 @@
   X_{dq} = X_q \times 2^{sf - bias}
   $$
 
-  - 其中$sf$是缩放因子，由输入mxscale提供；$bias$是指数位的偏移，对于FLOAT8_E8M0格式，$bias=127$；$X_q$是量化得到的FLOAT4/FLOAT8张量；$X_{dq}$是反量化得到的FLOAT16/BFLOAT16/FLOAT32张量。
+  - 其中 $sf$ 是缩放因子，由输入mxscale提供；$bias$ 是指数位的偏移，对于FLOAT8_E8M0格式，$bias = 127$ ；$X_q$ 是量化得到的FLOAT4/FLOAT8张量；$X_{dq}$ 是反量化得到的FLOAT16/BFLOAT16/FLOAT32张量。
 
 ## 函数原型
 
@@ -131,7 +131,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>FLOAT8支持非连续，FLOAT4不支持非连续</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnAntiMxQuant(
     <td>y的数据类型和dstType不符合对应关系。</td>
   </tr>
   <tr>
-    <td rowspan="1">ACLNN_ERR_PARAM_NULLPTR</td>
+    <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
     <td rowspan="1">361001</td>
     <td>当前平台不在支持的平台范围内。</td>
   </tr>
@@ -254,7 +254,7 @@ aclnnStatus aclnnAntiMxQuant(
 - 关于x、mxscale的shape约束说明如下：
   - 如果输入x的数据类型是float4_e2m1或float4_e1m2，x.shape[-1]必须是偶数。
   - axis_change = axis if axis >= 0 else axis + rank(x)。
-  - mxscale.shape[axis_change] = (ceil(x.shape[axis], 32) + 2 - 1) / 2。
+  - mxscale.shape[axis_change] = (ceil(x.shape[axis] / 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。
   - rank(mxscale) = rank(x) + 1。
   - 其它维度与输入x一致。

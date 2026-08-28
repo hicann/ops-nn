@@ -37,7 +37,7 @@
   \end{aligned}
   $$
 
-  - 其中$mxscale_{fp4\_block}$是输入mxscale提供的FP8_E8M0缩放系数；$MAX\_OFFSET$是输入和输出数据类型之间的最大偏移量；$x_{fp4}$是量化得到的FLOAT4张量；$x_{fp8}$是转换得到的FLOAT8张量。
+  - 其中 $mxscale_{fp4\_block}$ 是输入mxscale提供的FP8_E8M0缩放系数；$MAX\_OFFSET$ 是输入和输出数据类型之间的最大偏移量；$x_{fp4}$ 是量化得到的FLOAT4张量；$x_{fp8}$ 是转换得到的FLOAT8张量。
 
   - MAX_OFFSET对照表：
 
@@ -222,7 +222,7 @@ aclnnStatus aclnnMxToBlockMxQuant(
     <td>y的数据类型和dstType不符合对应关系。</td>
   </tr>
   <tr>
-    <td rowspan="1">ACLNN_ERR_PARAM_NULLPTR</td>
+    <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
     <td rowspan="1">361001</td>
     <td>当前平台不在支持的平台范围内。</td>
   </tr>
