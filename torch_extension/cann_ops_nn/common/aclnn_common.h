@@ -583,6 +583,15 @@ inline aclIntArray* ConvertType(const at::IntArrayRef& at_array)
     return array;
 }
 
+inline aclFloatArray* ConvertType(const std::vector<float>& value)
+{
+    static const auto aclCreateFloatArray = GET_OP_API_FUNC(CreateFloatArray);
+    if (aclCreateFloatArray == nullptr) {
+        return nullptr;
+    }
+    return aclCreateFloatArray(value.data(), value.size());
+}
+
 template <std::size_t N>
 inline aclBoolArray* ConvertType(const std::array<bool, N>& value)
 {
@@ -748,53 +757,24 @@ auto ConvertToOpApiFunc(const Tuple& params, void* opApiAddr)
     return ConvertToOpApiFunc(params, opApiAddr, std::make_index_sequence<size>{});
 }
 
-inline void Release(aclTensor* p)
-{
-    static const auto aclDestroyTensor = GET_OP_API_FUNC(DestroyTensor);
-    if (aclDestroyTensor == nullptr) {
-        return;
-    }
-    aclDestroyTensor(p);
-}
-
-inline void Release(aclScalar* p)
-{
-    static const auto aclDestroyScalar = GET_OP_API_FUNC(DestroyScalar);
-    if (aclDestroyScalar == nullptr) {
-        return;
-    }
-    aclDestroyScalar(p);
-}
-
-inline void Release(aclIntArray* p)
-{
-    static const auto aclDestroyIntArray = GET_OP_API_FUNC(DestroyIntArray);
-    if (aclDestroyIntArray == nullptr) {
-        return;
+#define DEFINE_RELEASE(Type, ApiName)                      \
+    inline void Release(Type* p)                           \
+    {                                                      \
+        static const auto func = GET_OP_API_FUNC(ApiName); \
+        if (func == nullptr) {                             \
+            return;                                        \
+        }                                                  \
+        func(p);                                           \
     }
 
-    aclDestroyIntArray(p);
-}
+DEFINE_RELEASE(aclTensor, DestroyTensor)
+DEFINE_RELEASE(aclScalar, DestroyScalar)
+DEFINE_RELEASE(aclIntArray, DestroyIntArray)
+DEFINE_RELEASE(aclFloatArray, DestroyFloatArray)
+DEFINE_RELEASE(aclBoolArray, DestroyBoolArray)
+DEFINE_RELEASE(aclTensorList, DestroyTensorList)
 
-inline void Release(aclBoolArray* p)
-{
-    static const auto aclDestroyBoolArray = GET_OP_API_FUNC(DestroyBoolArray);
-    if (aclDestroyBoolArray == nullptr) {
-        return;
-    }
-
-    aclDestroyBoolArray(p);
-}
-
-inline void Release(aclTensorList* p)
-{
-    static const auto aclDestroyTensorList = GET_OP_API_FUNC(DestroyTensorList);
-    if (aclDestroyTensorList == nullptr) {
-        return;
-    }
-
-    aclDestroyTensorList(p);
-}
+#undef DEFINE_RELEASE
 
 inline const c10::optional<at::Tensor> get_valid_tensor(const c10::optional<at::Tensor>& tensor_opt, at::Device device)
 {
@@ -1016,6 +996,52 @@ auto DecodeDevice(Ts&... args) -> at::Device
     return ft.device();
 }
 
+// 弱符号签名须与 torch_npu >= 2.9.0.post3 一致，返回类型不参与名字修饰，修改前请核对对应版本头文件：
+//   uint32_t c10_npu::GetDeterministicLevel();                                    (NPUFunctions.h)
+//   void at_npu::native::ApplyDeterministicLevel(int64_t, bool, bool);            (op_plugin 内部导出符号)
+namespace at_npu {
+namespace native {
+__attribute__((weak)) void ApplyDeterministicLevel(int64_t level, bool deterministicAlgorithmsStatus, bool isOpapi);
+} // namespace native
+} // namespace at_npu
+
+namespace c10_npu {
+__attribute__((weak)) uint32_t GetDeterministicLevel();
+} // namespace c10_npu
+
+inline void ApplyDeterministicConfig()
+{
+    constexpr bool kUseOpApiPath = true; // isOpapi=true: 走 opapi 路径下发，aclnn_common.h 全场景均为 opapi
+    auto deterministicAlgorithmsStatus = at::globalContext().deterministicAlgorithms();
+    auto applyLevelFn = at_npu::native::ApplyDeterministicLevel;
+    auto getLevelFn = c10_npu::GetDeterministicLevel;
+    if (applyLevelFn != nullptr && getLevelFn != nullptr) {
+        int64_t level = static_cast<int64_t>(getLevelFn());
+        applyLevelFn(level, deterministicAlgorithmsStatus, kUseOpApiPath);
+        return;
+    }
+    static bool fallbackWarned = false;
+    if (!fallbackWarned) {
+        fallbackWarned = true;
+        if (applyLevelFn == nullptr && getLevelFn == nullptr) {
+            ASCEND_LOGW("ApplyDeterministicLevel and GetDeterministicLevel are both missing in torch_npu, "
+                        "fallback to ACL_OPT_DETERMINISTIC binary switch, deterministic_level will be ignored.");
+        } else if (applyLevelFn == nullptr) {
+            ASCEND_LOGW("ApplyDeterministicLevel is missing in torch_npu, "
+                        "fallback to ACL_OPT_DETERMINISTIC binary switch, deterministic_level will be ignored.");
+        } else {
+            ASCEND_LOGW("GetDeterministicLevel is missing in torch_npu, "
+                        "fallback to ACL_OPT_DETERMINISTIC binary switch, deterministic_level will be ignored.");
+        }
+    }
+    aclError ret = aclrtCtxSetSysParamOpt(aclSysParamOpt::ACL_OPT_DETERMINISTIC, deterministicAlgorithmsStatus ? 1 : 0);
+    if (ret != ACL_SUCCESS) {
+        ASCEND_LOGW("aclrtCtxSetSysParamOpt(ACL_OPT_DETERMINISTIC) failed, ret=%d, "
+                    "deterministic config may be incorrect.",
+                    static_cast<int>(ret));
+    }
+}
+
 #define ACLNN_CMD(aclnn_api, ...)                                                                                 \
     do {                                                                                                          \
         auto device = DecodeDevice(__VA_ARGS__);                                                                  \
@@ -1029,6 +1055,9 @@ auto DecodeDevice(Ts&... args) -> at::Device
                     #aclnn_api "GetWorkspaceSize", " not found in ", GetCustOpApiLibName(), " or ",               \
                     GetNnOpApiLibName(), ".");                                                                    \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                           \
+        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                        \
+            aclrtUseStreamResInCurrentThread(acl_stream);                                                         \
+        }                                                                                                         \
         uint64_t workspace_size = 0;                                                                              \
         uint64_t* workspace_size_addr = &workspace_size;                                                          \
         aclOpExecutor* executor = nullptr;                                                                        \
@@ -1038,13 +1067,14 @@ auto DecodeDevice(Ts&... args) -> at::Device
         if (init_mem_func) {                                                                                      \
             init_mem_func(nullptr, false);                                                                        \
         }                                                                                                         \
-        auto deterministic = at::globalContext().deterministicAlgorithms();                                       \
-        auto sys_ret = aclrtCtxSetSysParamOpt(aclSysParamOpt::ACL_OPT_DETERMINISTIC, deterministic ? 1 : 0);      \
-        TORCH_CHECK(sys_ret == 0, "set ACL_OPT_DETERMINISTIC failed, ret=", sys_ret);                             \
+        ApplyDeterministicConfig();                                                                               \
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                    \
         static auto get_workspace_size_func = ConvertToOpApiFunc(converted_params, get_workspace_size_func_addr); \
         auto workspace_status = call(get_workspace_size_func, converted_params);                                  \
-        TORCH_CHECK(workspace_status == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg());          \
+        if (workspace_status != 0) {                                                                              \
+            ReleaseConvertTypes(converted_params);                                                                \
+            TORCH_CHECK(false, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg());                      \
+        }                                                                                                         \
         void* workspace_addr = nullptr;                                                                           \
         at::Tensor workspace_tensor;                                                                              \
         if (workspace_size != 0) {                                                                                \
@@ -1053,15 +1083,18 @@ auto DecodeDevice(Ts&... args) -> at::Device
             workspace_addr = const_cast<void*>(workspace_tensor.storage().data());                                \
         }                                                                                                         \
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]() -> int {       \
+            if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                    \
+                aclrtUseStreamResInCurrentThread(acl_stream);                                                     \
+            }                                                                                                     \
             typedef int (*OpApiFunc)(void*, uint64_t, aclOpExecutor*, const aclrtStream);                         \
             OpApiFunc op_api_func = reinterpret_cast<OpApiFunc>(op_api_func_addr);                                \
             auto api_ret = op_api_func(workspace_addr, workspace_size, executor, acl_stream);                     \
-            TORCH_CHECK(api_ret == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg());               \
             ReleaseConvertTypes(converted_params);                                                                \
             ReleaseHugeMem release_mem_func = reinterpret_cast<ReleaseHugeMem>(release_mem_addr);                 \
             if (release_mem_func) {                                                                               \
                 release_mem_func(nullptr, false);                                                                 \
             }                                                                                                     \
+            TORCH_CHECK(api_ret == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg());               \
             return api_ret;                                                                                       \
         };                                                                                                        \
         at_npu::native::OpCommand cmd;                                                                            \
