@@ -39,6 +39,7 @@ constexpr int64_t GM_ALIGN = 512;
 constexpr int64_t USE_UB_MAX_SIZE = 65536; // 64K
 constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t MAX_INT32_NUM = 2147483647;
+constexpr int64_t MAX_INT16_NUM = 32767;              // int16 key 上限(keySize 分档阈值)
 constexpr int64_t DCACHE_SIZE = 131072;               // 128K
 constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
 constexpr int64_t DETERM_DB_BUFFER = 2;
@@ -47,6 +48,14 @@ constexpr int64_t BASE_S_MAX = 256;
 constexpr int64_t UB_MIN_FACTOR = 1024;
 constexpr int64_t SIMT_UB_RES_SIZE = 640;
 constexpr uint32_t MAX_SORT_SPACE = 10240;
+constexpr int64_t PHASE_THREAD_NUM = 1024;  // Phase1/Phase3 每核 stride-loop 粒度（按索引总数切核）
+constexpr int64_t STATIC_UB_ESTIMATE = 512; // WithSorted SIMT strides/参数缓冲（SortLib tiling 预算扣除）
+// 排序模板准入门槛
+constexpr int64_t SORT_ADMIT_MID_OUTER_RATIO = 50; // 索引轴主导门槛：midAxis/RATIO 不小于 outerAxisNum 才准入
+constexpr int64_t SORT_ADMIT_HALF_CORE_RATIO = 2; // float 半核判定：A 轴分核数*RATIO 需小于总核数
+// tilingKey 前缀（与 apt.cpp 的 TILING_KEY_IS 宏对表）
+constexpr uint64_t SCAC_ELE_DETERM_KEY_BASE = 1000000; // 确定性模板前缀基值（1xxxxxx）
+constexpr uint64_t SCAC_ELE_SORT_KEY_PREFIX = 1000000; // 排序模板前缀提升步长（1xxxxxx → 2xxxxxx）
 
 static const std::set<ge::DataType> SCAT_ELE_NONE_DTYPE = {ge::DT_FLOAT,  ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT64,
                                                            ge::DT_INT32,  ge::DT_INT16,   ge::DT_INT8, ge::DT_UINT8,
@@ -55,6 +64,10 @@ static const std::set<ge::DataType> SCAT_ELE_ADD_DTYPE = {ge::DT_FLOAT, ge::DT_F
                                                           ge::DT_INT64, ge::DT_INT32,   ge::DT_INT16,
                                                           ge::DT_INT8,  ge::DT_UINT8,   ge::DT_BOOL};
 static const std::set<ge::DataType> SCAT_ELE_ADD_DETERM_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+// 排序模板（WithSorted / tilingKey 前缀 2xxxxxx）add 的 dtype 白名单：在 FP16/FP32/BF16 基础上
+// 放宽到 int8/int16/int32
+static const std::set<ge::DataType> SCAT_ELE_SORT_DETERM_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                                                                  ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32};
 static const std::set<ge::DataType> SCAT_ELE_MUL_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT64,
                                                           ge::DT_INT32, ge::DT_INT16,   ge::DT_INT8, ge::DT_UINT8};
 
@@ -69,6 +82,13 @@ static std::string ToString(const T* value, size_t size)
     }
     r = r + "]";
     return r;
+}
+
+// WithSorted workspace 分段 128B 对齐
+static int64_t WithSortedAlignUp128(int64_t value)
+{
+    constexpr int64_t align = 128;
+    return (value + align - 1) / align * align;
 }
 
 bool ScatterElementsV2AscTiling::IsCapable() { return true; }
@@ -134,11 +154,34 @@ ge::graphStatus ScatterElementsV2AscTiling::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    bool isDetermType = reduction_ == 0 ||
-                        (reduction_ == 1 && SCAT_ELE_ADD_DETERM_DTYPE.find(dtype_) != SCAT_ELE_ADD_DETERM_DTYPE.end());
-    if (context_->GetDeterministic() && isDetermType) {
+    bool isDetermDtype = (reduction_ == REDUCTION_NONE) ||
+                         (reduction_ == REDUCTION_ADD &&
+                          SCAT_ELE_ADD_DETERM_DTYPE.find(dtype_) != SCAT_ELE_ADD_DETERM_DTYPE.end());
+    if (context_->GetDeterministic() && isDetermDtype) {
         isDeterministic_ = 1;
     }
+
+    // 排序模板 dtype 准入（仅决定 isSortDeterministic_，即是否具备进入排序模板的 dtype 资格）：
+    //   add —— FP16/FP32/BF16 + int8/int16/int32（SCAT_ELE_SORT_DETERM_DTYPE）；
+    //   none —— 仅 int 类型。
+    bool isSortDetermDtype = (reduction_ == REDUCTION_ADD &&
+                              SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end()) ||
+                             (reduction_ == REDUCTION_NONE &&
+                              (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                               dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
+    if (context_->GetDeterministic() && isSortDetermDtype) {
+        isSortDeterministic_ = 1;
+    }
+
+    // === 排序模板预计算（linear_index/srcPos 统一按 max(data, updates) 元素数定 key 宽）===
+    indicesTotalNum_ = allAxis_;
+    int64_t maxElem = dataAxis_ > updatesAxis_ ? dataAxis_ : updatesAxis_;
+    keySize_ = (maxElem <= MAX_INT16_NUM) ? 2 : (maxElem <= MAX_INT32_NUM) ? 4 : 8;
+    keyDtype_ = (keySize_ == 2) ? ge::DT_INT16 : (keySize_ == 4) ? ge::DT_INT32 : ge::DT_INT64;
+    countMode_ = SortLib::IsInt32Safe(indicesTotalNum_) ? 0 : 1;
+    // perm（排序索引）位宽跟随计数模式：countMode_=0 即元素数 <= 2^30，int32 可安全表示 [0, N)；
+    // 否则用 int64 perm，避免索引截断。
+    permSize_ = (countMode_ == 0) ? 4 : 8;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -343,6 +386,15 @@ ge::graphStatus ScatterElementsV2AscTiling::CheckInputShape()
 
     ComputeShape(dataShape, indicesShape, updatesShape);
     ComputeStride();
+
+    // shapeMode：逐维比较原始 storage shape，任一维 data != indices → SUBSET(1)
+    shapeMode_ = 0;
+    for (int16_t i = 0; i < rank_; ++i) {
+        if (dataShape.GetDim(i) != indicesShape.GetDim(i)) {
+            shapeMode_ = 1;
+            break;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -395,6 +447,58 @@ int64_t ScatterElementsV2AscTiling::CalBestBaseSize(int64_t baseXoStart, int64_t
     return baseXoStart;
 }
 
+// 排序模板准入 —— 整型分支。
+// int8/uint8：放宽至多维（rank_ <= 8），int16/int32/int64：仍仅一维（rank_ == 1）准入。
+bool ScatterElementsV2AscTiling::IsSortAdmittedInt() const
+{
+    if (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8) {
+        return rank_ <= 8;
+    }
+    return rank_ == 1;
+}
+
+// 排序模板准入 —— 浮点分支（fp32/fp16/bf16）。
+// 只有当原确定性模板明显吃不满核（A 轴分核数 < 总核数一半）时，排序模板才接管。
+bool ScatterElementsV2AscTiling::IsSortAdmittedFloat(int64_t aAxisCoreNum) const
+{
+    return aAxisCoreNum * SORT_ADMIT_HALF_CORE_RATIO < totalCoreNum_; // 乘比例比较避免整除截断
+}
+
+bool ScatterElementsV2AscTiling::IsSortTemplateAdmitted(int64_t aAxisCoreNum) const
+{
+    // 排序模板 dtype 白名单：add 走 SCAT_ELE_SORT_DETERM_DTYPE（FP + int8/16/32）；none 仅 int 类型。
+    bool sortDtypeOk = SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end() ||
+                       (reduction_ == REDUCTION_NONE &&
+                        (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                         dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
+    if (!sortDtypeOk) {
+        return false;
+    }
+    int64_t outerAxisNum = preAxis_ * afterAxis_;
+    if (midAxis_ / SORT_ADMIT_MID_OUTER_RATIO < outerAxisNum) {
+        return false;
+    }
+    bool isIntDtype = dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT16 ||
+                      dtype_ == ge::DT_INT32 || dtype_ == ge::DT_INT64;
+    bool isFloatDtype = dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16;
+    if (isIntDtype) {
+        if (!IsSortAdmittedInt()) {
+            return false;
+        }
+    } else if (isFloatDtype) {
+        if (!IsSortAdmittedFloat(aAxisCoreNum)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    // index-count 切核收益判定：按索引总数切核的核数须多于原确定性模板 A 轴切核的核数
+    int64_t normBlockData = std::max(Ops::Base::CeilDiv(indicesTotalNum_, totalCoreNum_),
+                                     static_cast<int64_t>(UB_MIN_FACTOR));
+    int64_t idxNumCoreNum = Ops::Base::CeilDiv(indicesTotalNum_, normBlockData);
+    return idxNumCoreNum > aAxisCoreNum;
+}
+
 ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
 {
     int64_t usedCoreNumAlignTotal = Ops::Base::CeilDiv(allAxis_, MAX_THREAD_NUM);
@@ -417,7 +521,8 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
     }
     int64_t oneBlockNum = Ops::Base::GetUbBlockSize(context_) / typeSize_;
     loopLength_ = Ops::Base::FloorAlign(ubLength, oneBlockNum);
-    if (isDeterministic_) {
+    // 公共基础：原确定性模板与排序模板都要 pre/mid/afterAxis 与 indices 基础字段。
+    if (isDeterministic_ || isSortDeterministic_) {
         CombineIndicesAxis();
         indicesTypeSize_ = ge::GetSizeByDataType(indicesDtype_);
         if (indicesTypeSize_ <= 0) {
@@ -426,6 +531,10 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
                                                   "the size of indices dtype is invalid");
             return ge::GRAPH_FAILED;
         }
+    }
+
+    // === 原确定性模板：A 轴切核 ===
+    if (isDeterministic_ || isSortDeterministic_) {
         ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
         baseS_ = std::min(midAxis_, static_cast<int64_t>(BASE_S_MAX / indicesTypeSize_));
         int64_t aSplitDim = afterAxis_;
@@ -459,6 +568,38 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
         sortSharedBufSize_ = GetMaxSortTmpBuf(sortDim);
     }
 
+    // === 排序模板：独立、优先准入
+    if (isSortDeterministic_ && IsSortTemplateAdmitted(indicesUsedCoreNum_)) {
+        isSortDeterm_ = true;
+        // SortLib 单核/多核自动切换：总元素数小且能塞下则 isSingleCore，否则多核 radix。
+        sortR_ = SortLib::SortTilingCompute(
+            indicesTotalNum_, totalCoreNum_, static_cast<uint64_t>(ubSize_ - STATIC_UB_ESTIMATE),
+            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_), countMode_ == 0, keyDtype_);
+        if (sortR_.errCode != SortLib::SORT_TILING_OK) {
+            // 库报错（UB 不足最小内核）时回落原确定性模板（1xxxxxx 前缀），
+            // 避免无效核数/workspace 泄漏。
+            isSortDeterm_ = false;
+            sortR_ = SortLib::SortTilingResult{};
+        }
+    }
+    if (isSortDeterm_) {
+        multiSortWsBytes_ = sortR_.workspaceBytes;
+        sortUsedCoreNum_ = (sortR_.coreNumNeed > 0) ? static_cast<int64_t>(sortR_.coreNumNeed) : 1;
+
+        // workspace 布局（各段 128B 对齐，与 kernel Init 严格对应）
+        int64_t n = indicesTotalNum_;
+        wsLinearIdxOff_ = WithSortedAlignUp128(multiSortWsBytes_);
+        wsSortedOff_ = WithSortedAlignUp128(wsLinearIdxOff_ + n * keySize_);
+        wsPermOff_ = WithSortedAlignUp128(wsSortedOff_ + n * keySize_);
+        wsUserSize_ = wsPermOff_ + n * permSize_; // linearIdx + sorted + perm 基准
+        if (shapeMode_ == 1) {
+            wsSrcPosOff_ = WithSortedAlignUp128(wsUserSize_);
+            wsUserSize_ = wsSrcPosOff_ + n * keySize_;
+        } else {
+            wsSrcPosOff_ = 0;
+        }
+    }
+
     tilingData_.set_dim(dim_);
     tilingData_.set_rank(rank_);
     tilingData_.set_loopLength(loopLength_);
@@ -486,7 +627,7 @@ ge::graphStatus ScatterElementsV2AscTiling::DoLibApiTiling() { return ge::GRAPH_
 
 uint64_t ScatterElementsV2AscTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = 1000000;
+    uint64_t tilingKey = SCAC_ELE_DETERM_KEY_BASE;
     uint64_t factorStart = 100;
     uint64_t factor = 10;
 
@@ -507,17 +648,21 @@ uint64_t ScatterElementsV2AscTiling::GetTilingKey() const
     }
 
     tilingKey += factorStart * factor * factor * wanDigit;
+    // 排序模板前缀提升：1xxxxxx → 2xxxxxx，触发 KernelScatterElementsWithSorted 模板路径。
+    if (isSortDeterm_) {
+        tilingKey += SCAC_ELE_SORT_KEY_PREFIX;
+    }
     return tilingKey;
 }
 
 ge::graphStatus ScatterElementsV2AscTiling::GetWorkspaceSize()
 {
     workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
-    int64_t dataWsSize = 0;
-    int64_t updatesWsSize = 0;
-    if (castTypeSize_ != 0) {
-        dataWsSize = Ops::Base::CeilAlign(dataAxis_ * castTypeSize_, GM_ALIGN);
-        updatesWsSize = Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
+    if (isSortDeterm_) {
+        workspaceSize_ += wsUserSize_; // 排序模板 userWs（SortLib ws + linearIdx/sorted/perm[+srcPos]）
+    } else if (castTypeSize_ != 0) {
+        int64_t dataWsSize = Ops::Base::CeilAlign(dataAxis_ * castTypeSize_, GM_ALIGN);
+        int64_t updatesWsSize = Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
         workspaceSize_ += dataWsSize + updatesWsSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -530,13 +675,48 @@ ge::graphStatus ScatterElementsV2AscTiling::PostTiling()
     workspaces[0] = workspaceSize_;
     tilingKey_ = GetTilingKey();
     context_->SetTilingKey(tilingKey_);
-    context_->SetBlockDim(usedCoreNum_);
+    if (isSortDeterm_) {
+        // 各阶段核数：Phase1/Phase3 按索引总数（每核至少 PHASE_THREAD_NUM），Sort 用 sortR.coreNumNeed
+        int64_t phaseCores = Ops::Base::CeilDiv(indicesTotalNum_, PHASE_THREAD_NUM);
+        phaseCores = std::min(phaseCores, totalCoreNum_);
+        if (phaseCores < 1) {
+            phaseCores = 1;
+        }
+        int64_t blockDim = std::max(phaseCores, sortUsedCoreNum_);
+        if (blockDim < 1) {
+            blockDim = 1;
+        }
+        context_->SetBlockDim(blockDim);
+    } else {
+        context_->SetBlockDim(usedCoreNum_);
+    }
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_ + SIMT_UB_RES_SIZE);
     if (res != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_", std::to_string(ubSize_).c_str(),
                                               "SetLocalMemorySize failed");
     }
+    // 仅排序模板启用时写入：sortTiling 只被 _WS 前缀内核读取，非排序案例保持默认全 0，
+    // 避免无条件写入无效数据（该嵌套 struct 经 sortTiling{nullptr} 默认初始化，无脏值）。
+    if (isSortDeterm_) {
+        tilingData_.sortTiling.set_indicesTotalNum(indicesTotalNum_);
+        tilingData_.sortTiling.set_keySize(keySize_);
+        tilingData_.sortTiling.set_permSize(permSize_);
+        tilingData_.sortTiling.set_countMode(countMode_);
+        tilingData_.sortTiling.set_shapeMode(shapeMode_);
+        tilingData_.sortTiling.set_dimNormalized(dim_);
+        tilingData_.sortTiling.set_sortUsedCoreNum(static_cast<uint32_t>(sortUsedCoreNum_));
+        tilingData_.sortTiling.set_numTileData(sortR_.numTileData);
+        tilingData_.sortTiling.set_tileCount(sortR_.tileCount);
+        tilingData_.sortTiling.set_activeCores(sortR_.activeCores);
+        tilingData_.sortTiling.set_tmpUbSize(sortR_.tmpUbSize);
+        tilingData_.sortTiling.set_isSingleCore(sortR_.isSingleCore);
+        tilingData_.sortTiling.set_wsLinearIdxOff(wsLinearIdxOff_);
+        tilingData_.sortTiling.set_wsSortedOff(wsSortedOff_);
+        tilingData_.sortTiling.set_wsPermOff(wsPermOff_);
+        tilingData_.sortTiling.set_wsSrcPosOff(wsSrcPosOff_);
+    }
+
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -565,6 +745,14 @@ void ScatterElementsV2AscTiling::DumpTilingInfo()
     info << ", baseA: " << tilingData_.get_baseA();
     info << ", sortSharedBufSize: " << tilingData_.get_sortSharedBufSize();
     info << ", isDeterministic: " << tilingData_.get_isDeterministic();
+    info << ", isSortDeterministic: " << isSortDeterministic_;
+    info << ", isSortDeterm: " << isSortDeterm_;
+    info << ", sortUsedCoreNum: " << sortUsedCoreNum_;
+    info << ", shapeMode: " << shapeMode_;
+    info << ", keySize: " << keySize_;
+    info << ", permSize: " << permSize_;
+    info << ", indicesTotalNum: " << indicesTotalNum_;
+    info << ", wsUserSize: " << wsUserSize_;
     info << ", tilingKey_: " << tilingKey_;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
