@@ -709,7 +709,7 @@ static inline bool CheckA8W4KDim(const TupleInput& inputTensors, const TupleQuan
         bool isPerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
         size_t kAlign = isPerChannel ? SUPPORTED_K_ALIGN_NUM_INT4 : SUPPORTED_GROUP_SIZE_A8W4_INT;
         if (kDim % kAlign != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, kDim);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be aligned to %ld, which is %ld", kAlign, kDim);
             return false;
         }
     } else if (isA8W4FloatTCG(x1, x2, x1Scale)) {
@@ -727,7 +727,7 @@ static inline bool CheckA8W4KDim(const TupleInput& inputTensors, const TupleQuan
         }
     } else {
         if (kDim % SUPPORTED_K_ALIGN_NUM != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM,
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be aligned to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM,
                     kDim);
             return false;
         }
@@ -742,7 +742,7 @@ static inline bool CheckKDimAndBasicShape(const TupleInput& inputTensors, const 
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_2201) { // A8W4INT A2 A3
         if (x1KDim <= 0 || x1KDim > MAX_SHAPE_SIZE_A8W4_INT) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE_A8W4_INT,
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must be in [1, %ld], which is %ld", MAX_SHAPE_SIZE_A8W4_INT,
                     x1KDim);
             return false;
         }
@@ -806,7 +806,7 @@ static inline bool CheckShape(const TupleInput& inputTensors, const TupleQuant& 
     int64_t x2KDim = transposeX2 ? x2Shape[x2DimNum - 1] : x2Shape[x2DimNum - PENULTIMATE_DIM];
     int64_t x2NDim = transposeX2 ? x2Shape[x2DimNum - PENULTIMATE_DIM] : x2Shape[x2DimNum - 1];
     if (x1MDim <= 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the m-dim must > 0, which is %ld", x1MDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the m-dim must be > 0, which is %ld", x1MDim);
         return false;
     }
     CHECK_RET(CheckX1X2Shape(inputTensors, quantTensors, x1KDim, x2KDim, x2NDim), false);
@@ -1117,7 +1117,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
         ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         if (x1Scale != nullptr && !x1Scale->IsEmpty()) {
-            OP_LOGD("Npu_Arch = 2002 pertoken mode need transData x1");
+            OP_LOGD("ASCEND310P pertoken mode need transData x1");
             reformatedX1 = l0op::TransData(reformatedX1, Format::FORMAT_FRACTAL_NZ, 0, executor);
             CHECK_RET(reformatedX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
@@ -1175,7 +1175,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && x1Scale != nullptr &&
         !x1Scale->IsEmpty()) {
-        OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
+        OP_LOGD("ASCEND310P pertoken mode need transData out");
         matmulRet = l0op::TransData(matmulRet, Format::FORMAT_ND, 0, executor);
     }
 

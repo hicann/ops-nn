@@ -68,6 +68,7 @@ const int64_t N_ALIGN_VALUE = 64;
 const uint64_t INPUT_DIM_WITHOUT_BATCH = 2;
 
 static constexpr const char* kOpName = "aclnnWeightQuantBatchMatmulV2GetWorkspaceSize";
+static constexpr const char* kOpNzName = "aclnnWeightQuantBatchMatmulNzGetWorkspaceSize";
 
 static const std::initializer_list<DataType> ASCEND910B_AQSCALE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_UINT64, DataType::DT_INT64};
@@ -220,7 +221,7 @@ static bool CheckShapeValid(const aclTensor* x, const aclTensor* weight, const a
     for (size_t i = 0; i < outDimNum; i++) {
         OP_CHECK(outBroadcastShape.GetDim(i) == broadcastShape.GetDim(i),
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "Output dim %ld is not equal to infered output dim %ld at shape index %zu.",
+                         "Output dim %ld is not equal to inferred output dim %ld at shape index %zu.",
                          outBroadcastShape.GetDim(i), broadcastShape.GetDim(i), i),
                  return false);
     }
@@ -1855,7 +1856,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK(IsNzFormat(weight),
-             OP_LOGE_FOR_INVALID_FORMAT(kOpName, "weight", op::ToString(weight->GetStorageFormat()).GetString(),
+             OP_LOGE_FOR_INVALID_FORMAT(kOpNzName, "weight", op::ToString(weight->GetStorageFormat()).GetString(),
                                         "FORMAT_FRACTAL_NZ"),
              return ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;

@@ -74,7 +74,7 @@ bool WeightQuantBatchMatmulV2TransposeFusionPass::CheckPlatForm()
     bool supportL0c2out = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2out") !=
                           platformInfo.ai_core_intrinsic_dtype_map.end();
     if (!supportL0c2out) {
-        OP_LOGW(kFusedOpType, "The pattern need support l0c2out");
+        OP_LOGW(kFusedOpType, "The pattern needs to support l0c2out");
         return false;
     }
     return true;
@@ -92,7 +92,7 @@ bool WeightQuantBatchMatmulV2TransposeNZFusionPass::CheckPlatForm()
     bool supportL0c2out = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2out") !=
                           platformInfo.ai_core_intrinsic_dtype_map.end();
     if (supportL0c2out) {
-        OP_LOGW(kFusedOpTypeNZ, "The pattern need not support l0c2out");
+        OP_LOGW(kFusedOpTypeNZ, "The pattern does not need to support l0c2out");
         return false;
     }
     return true;
@@ -234,7 +234,7 @@ static bool IsTarget(const ge::GNode& n)
     ge::AscendString wType;
     bool hasWeightTranspose = wNode->GetType(wType) == ge::GRAPH_SUCCESS && IsTrans(wType);
     if (!hasXTranspose && !hasWeightTranspose) {
-        OP_LOGW(kFusedOpType, "there is not transpose before input x and weight");
+        OP_LOGW(kFusedOpType, "there is no transpose before input x and weight");
         return false;
     }
 
