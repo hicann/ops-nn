@@ -31,6 +31,7 @@ struct RotateQuantAptCompileInfo {
     uint64_t l0BSize{0};
     uint64_t l0CSize{0};
     uint64_t aicNum{0};
+    uint64_t aivNum{0};
 };
 
 struct RotateQuantAptInfo {
@@ -62,7 +63,7 @@ public:
     ~RotateQuantAptTiling() override = default;
 
 protected:
-    bool IsCapable() override { return true; }
+    bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;

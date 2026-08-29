@@ -157,7 +157,21 @@ static const string COMPILE_INFO_950 = R"({
     "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend950"}
+    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "core_type_list": "CubeCore,VectorCore",
+    "cube_core_cnt": 32, "vector_core_cnt": 64}
+})";
+
+// Ascend950 with non-1:2 aic:aiv ratio (cube=32, vector=48), used to verify the 控核 restriction
+static const string COMPILE_INFO_950_BAD_RATIO = R"({
+    "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
+    "CORE_NUM": 32, "socVersion": "Ascend950",
+    "core_type_list": "CubeCore,VectorCore",
+    "cube_core_cnt": 32, "vector_core_cnt": 48}
 })";
 
 static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
@@ -287,6 +301,20 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      false,
      0,
      ge::GRAPH_FAILED},
+    // 9: aicNum:aivNum not 1:2 (cube=32, vector=48) -> 控核校验失败 (IsCapable returns false)
+    {"core_ratio_not_1to2_fail",
+     COMPILE_INFO_950_BAD_RATIO,
+     {{128, 256}, {128, 256}},
+     {{256, 128}, {256, 128}},
+     {{256, 128}, {256, 128}},
+     {{128, 128}, {128, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_PARAM_INVALID},
 };
 
 INSTANTIATE_TEST_SUITE_P(MatmulEmuSplitWeightTilingCases, TilingMatmulEmuSplitWeight, testing::ValuesIn(tiling_cases));

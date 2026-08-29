@@ -63,6 +63,7 @@ private:
     bool transW_{false};
     int32_t yDtype_{0};
     uint64_t aicNum_{0};
+    uint64_t aivNum_{0};
     uint64_t l1Size_{0};
     uint64_t l0aSize_{0};
     uint64_t l0bSize_{0};

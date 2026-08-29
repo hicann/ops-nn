@@ -38,7 +38,16 @@ static constexpr float EXPECTED_SCALE = 0.00390625f;
 namespace optiling {
 namespace matmul_emu_split_weight {
 
-bool MatmulEmuSplitWeightTiling::IsCapable() { return true; }
+bool MatmulEmuSplitWeightTiling::IsCapable()
+{
+    if (aicNum_ == 0 || aivNum_ != aicNum_ * 2) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
+                              "MatmulEmuSplitWeight is only supported for aicNum:aivNum=1:2, aicNum=%lu, aivNum=%lu",
+                              aicNum_, aivNum_);
+        return false;
+    }
+    return true;
+}
 
 ge::graphStatus MatmulEmuSplitWeightTiling::GetPlatformInfo()
 {
@@ -53,6 +62,7 @@ ge::graphStatus MatmulEmuSplitWeightTiling::GetPlatformInfo()
                                           static_cast<int32_t>(socVersion)),
                     return ge::GRAPH_FAILED);
     aicNum_ = ascendcPlatform.GetCoreNumAic();
+    aivNum_ = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1Size_);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, l0aSize_);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, l0bSize_);

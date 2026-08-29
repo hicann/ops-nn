@@ -104,6 +104,16 @@ namespace RotateQuant {
 
 ge::graphStatus RotateQuantAptTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
+bool RotateQuantAptTiling::IsCapable()
+{
+    if (compileInfo_.aicNum == 0 || compileInfo_.aivNum != compileInfo_.aicNum * 2) {
+        OP_LOGE(context_->GetNodeName(), "RotateQuant is only supported for aicNum:aivNum=1:2, aicNum=%lu, aivNum=%lu",
+                compileInfo_.aicNum, compileInfo_.aivNum);
+        return false;
+    }
+    return true;
+}
+
 void RotateQuantAptTiling::InitCompileInfo()
 {
     if (context_ == nullptr) {
@@ -123,6 +133,7 @@ void RotateQuantAptTiling::InitCompileInfo()
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfo_.l0BSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfo_.l0CSize);
     compileInfo_.aicNum = ascendcPlatform.GetCoreNumAic();
+    compileInfo_.aivNum = ascendcPlatform.GetCoreNumAiv();
 
     if (compileInfo_.aicNum <= 0) {
         OP_LOGE(context_->GetNodeName(), "aicNum <= 0");
