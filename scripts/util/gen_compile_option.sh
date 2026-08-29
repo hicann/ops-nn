@@ -1,11 +1,11 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ call_write_scripts() {
   if [ ${#inner_properties[@]} -eq 0 ]; then
     op_compile_option="{\"$op_type\": {}}"
   fi
-  
+
   local op_cfg_path="${topdir}/build/tbe/config"
   local op_cfg_name="aic-${soc_version_lower}-ops-info.ini"
   local op_cfg_file="${op_cfg_path}/${op_cfg_name}"
@@ -114,7 +114,7 @@ function get_kernel_option_config_file() {
 }
 
 main() {
-  echo "[INFO]excute file: $0 $*"
+  echo "[INFO]execute file: $0 $*"
   local all_pairs=("$@")
   if [ ${#all_pairs[@]} -eq 0 ]; then
     echo "[WARNING] No op pairs provided"
@@ -125,7 +125,7 @@ main() {
   local binary_param_dir=${topdir}/build/tbe
   for pair in "${all_pairs[@]}"; do
     if [[ "$pair" != *:* ]]; then
-      echo "[ERROR] Invaild format: '$pair'. Expected: op_type:compute_unit"
+      echo "[ERROR] Invalid format: '$pair'. Expected: op_type:compute_unit"
       continue
     fi
     local op_type="${pair%%:*}"
@@ -184,10 +184,7 @@ main() {
     fi
 
     if [ -z "$compile_options" ]; then
-      compile_options=$(echo "$json_line" | awk '
-      match($0, /"compile_options"[[:space:]]*:[[:space:]]*(\{[^}]*\})/, arr) {
-        print arr[1]
-      }')
+      compile_options=$(echo "$json_line" | grep -oE '"compile_options"[[:space:]]*:[[:space:]]*\{[^}]*\}' | sed 's/"compile_options"[[:space:]]*:[[:space:]]*//')
     fi
 
     call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compile_options"

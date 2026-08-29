@@ -349,7 +349,6 @@ function(prepare_compile_from_config)
   if(CCACHE_PROGRAM)
     list(APPEND _ASCENDC_ENV_VAR export ASCENDC_CCACHE_EXECUTABLE=${CCACHE_PROGRAM} &&)
   endif()
-  message(STATUS "_ASCENDC_ENV_VAR: ${_ASCENDC_ENV_VAR}")
   if(EXISTS ${CONFCMP_BINARY_JSON})
     # copy binary config file to tbe/config
     binary_config_copy(

@@ -15,7 +15,7 @@ SCRIPT_NAME_OF_GEN_OPCINFO="gen_opcinfo_from_opinfo.py"
 FILE_NAME="$(basename $0)"
 
 main() {
-  echo "[INFO] excute file: $0"
+  echo "[INFO] execute file: $0"
   if [ $# -ne 2 ]; then
     echo "[ERROR] ${FILE_NAME}: input error"
     echo "[ERROR] bash $0 soc_version out_opcinfo_csv_file"

@@ -108,7 +108,7 @@ function get_simplified_key_config_file() {
 }
 
 main() {
-  echo "[INFO] excute file: $0"
+  echo "[INFO] execute file: $0"
   if [ $# -lt 8 ]; then
     echo "[ERROR] input error"
     echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {cmake_build_type} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags} kernel_template_input={kernel_template_input}"
@@ -236,7 +236,7 @@ main() {
       impl_list=$(echo "${impl_list}" | sed 's/,optional$//')
     fi
   fi
-  
+
   if [ -z "$key_mode" ]; then
     local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
     local key_mode_default=0

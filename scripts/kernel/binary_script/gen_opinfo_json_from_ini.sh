@@ -13,7 +13,7 @@ set -e
 FILE_NAME="$(basename $0)"
 
 main() {
-  echo "[INFO] excute file: $0"
+  echo "[INFO] execute file: $0"
   if [ $# != 2 ]; then
     echo "[ERROR] ${FILE_NAME}:input error"
     echo "[ERROR] bash $0 soc_version output_json_file"
