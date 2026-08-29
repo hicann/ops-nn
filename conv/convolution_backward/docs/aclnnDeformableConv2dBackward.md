@@ -29,7 +29,7 @@
 
 - 计算公式：
 
-  输入input($N,C_{in},H_{in},W_{in}$)、输出out($N,C_{out},H_{out},W_{out}$)和卷积步长($stride$)、卷积核大小($kernelSize，K_H,K_W$)、膨胀参数($dilation$)、填充($padding$)的关系是：
+  输入input($N,C_{in},H_{in},W_{in}$)、输出out($N,C_{out},H_{out},W_{out}$)和卷积步长($stride$)、卷积核大小($kernelSize,K_H,K_W$)、膨胀参数($dilation$)、填充($padding$)的关系是：
 
   $$
     H_{out}=\lfloor \frac{H_{in}+padding[0]+padding[1]-((K_H - 1) * dilation[2] + 1)}{stride[2]}+1 \rfloor
@@ -642,7 +642,7 @@ int aclnnDeformableConv2dBackwardTest(int32_t deviceId, aclrtStream& stream)
         size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, gradOffsetShape[i]);
+        LOG_PRINT("result[%ld] is: %f\n", i, gradOffsetShapeData[i]);
     }
 
     size = GetShapeSize(gradBiasShape);
