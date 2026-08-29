@@ -90,6 +90,10 @@ static graphStatus InferShapeForAvg(InferShapeContext* context, size_t const_ten
         }
         return ge::GRAPH_SUCCESS;
     }
+    if (Ops::Base::IsUnknownRank(*first_input_shape)) {
+        Ops::Base::SetUnknownRank(*y_shape);
+        return ge::GRAPH_SUCCESS;
+    }
 
     auto datatype = const_tensor->GetDataType();
     if (datatype == ge::DT_INT32) {

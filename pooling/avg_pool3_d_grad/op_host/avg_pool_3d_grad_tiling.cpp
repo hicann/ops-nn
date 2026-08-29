@@ -22,6 +22,7 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 #include "avg_pool_3d_grad_tiling.h"
 
@@ -32,6 +33,7 @@ constexpr int32_t kAvgPool3DGradDedyInputIdx = 1;
 
 namespace optiling {
 using namespace avgPool3DTilingCompileInfo;
+using Ops::NN::Optiling::TilingRegistry;
 // AvgPool3DGrad for vector
 constexpr int64_t GRAD_SHAPE = 5;
 constexpr int64_t ATTR_SIZE = 3;
@@ -880,6 +882,10 @@ ge::graphStatus TilingPrepareForAvgPool3dGradVec(gert::TilingParseContext* conte
 ge::graphStatus TilingForAvgPool3DGrad(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3DGrad", "context is null"), return ge::GRAPH_FAILED);
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        // arch35 (ascend950): dispatch to tiling templates registered via REGISTER_OPS_TILING_TEMPLATE
+        return TilingRegistry::GetInstance().DoTilingImpl(context);
+    }
     auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     if (compileInfo->is_ascend_c) {

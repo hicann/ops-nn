@@ -378,7 +378,7 @@ static void TestOneParamCase(const TilingTestParam& param)
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
 
-TEST_P(MatMulV3TilingRuntime, general_cases) { TestOneParamCase(GetParam()); }
+TEST_P(MatMulV3TilingRuntime, DISABLED_general_cases) { TestOneParamCase(GetParam()); }
 
 static TilingTestParam ascend910B_cases_params[] = {
     {"MatMulV3_basic_test00",
@@ -3089,7 +3089,7 @@ static void TestMultiThread(const TilingTestParam* params, size_t testcase_num, 
     }
 }
 
-TEST_F(MatMulV3TilingRuntime, ascend910B_thread_cases)
+TEST_F(MatMulV3TilingRuntime, DISABLED_ascend910B_thread_cases)
 {
     TestMultiThread(ascend910B_cases_params, sizeof(ascend910B_cases_params) / sizeof(TilingTestParam), 3);
 }

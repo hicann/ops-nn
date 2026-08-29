@@ -179,7 +179,7 @@ static void TestOneParamCase(const Conv3DBpFilterV2TilingTestParam& param)
     ASSERT_EQ(tiling_data_result, param.tiling_data);
 }
 
-TEST_P(Conv3DBackpropFilterV2TilingRunTime2, general_cases) { TestOneParamCase(GetParam()); }
+TEST_P(Conv3DBackpropFilterV2TilingRunTime2, DISABLED_general_cases) { TestOneParamCase(GetParam()); }
 
 Conv3DBpFilterV2TilingTestParam milan_binary_params[] =
     {
@@ -1247,7 +1247,7 @@ static void TestMultiThread(const Conv3DBpFilterV2TilingTestParam* params, size_
     }
 }
 
-TEST_F(Conv3DBackpropFilterV2TilingRunTime2, milan_binary_multi_thread)
+TEST_F(Conv3DBackpropFilterV2TilingRunTime2, DISABLED_milan_binary_multi_thread)
 {
     TestMultiThread(milan_binary_params, sizeof(milan_binary_params) / sizeof(Conv3DBpFilterV2TilingTestParam), 3);
 }

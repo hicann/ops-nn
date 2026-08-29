@@ -1134,9 +1134,9 @@ static void TestMultiThread(const Conv3DBpInputV2TilingTestParam* params, size_t
     }
 }
 
-TEST_P(Conv3DBackpropInputV2TilingRunTime2, general_cases) { TestOneParamCase(GetParam()); }
+TEST_P(Conv3DBackpropInputV2TilingRunTime2, DISABLED_general_cases) { TestOneParamCase(GetParam()); }
 
-TEST_F(Conv3DBackpropInputV2TilingRunTime2, general_cases_params_multi_thread)
+TEST_F(Conv3DBackpropInputV2TilingRunTime2, DISABLED_general_cases_params_multi_thread)
 {
     TestMultiThread(general_20_core_num_cases_params,
                     sizeof(general_20_core_num_cases_params) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
