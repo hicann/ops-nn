@@ -286,6 +286,13 @@ protected:
 
 static void TestOneParamCase(const QuantBatchMatmulV4TestParam& param)
 {
+    SocVersion socVersion = SocVersion::ASCEND950;
+    if (param.socVersion == "Ascend310P3") {
+        socVersion = SocVersion::ASCEND310P;
+    } else if (param.socVersion == "Ascend910B2") {
+        socVersion = SocVersion::ASCEND910B;
+    }
+    op::SocVersionManager socVersionManager(socVersion);
     TensorDesc x1_desc = TensorDesc(param.x1, ACL_INT8, ACL_FORMAT_ND, param.x1_stride);
     TensorDesc x2_desc = TensorDesc(param.x2, ACL_INT8, ACL_FORMAT_ND, param.x2_stride);
     TensorDesc scale_desc = TensorDesc(param.scale, param.scaleType, ACL_FORMAT_ND);
