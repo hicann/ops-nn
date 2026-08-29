@@ -25,6 +25,9 @@
  *   case2：x{4,64,7,7} 全 2.0；sum=4*49*2=392、square_sum=784、scale=1.0、offset=0.25，
  *          epsilon=1e-3 => save_mean = 2.0；save_variance = 4-4 = 0.0；batch_variance = 0.0；
  *             y = 1/sqrt(1e-3)*2 + (0.25-2/sqrt(1e-3)) = 0.25
+ *   case3：NHWC（origin format NHWC，C=末维=3，num=numel/C=40），x{2,4,5,3} 全 1.0；
+ *          sum=square_sum=40、scale=2.0、offset=0.5，epsilon=1e-5
+ *          => save_mean = 1.0；save_variance = 0.0；batch_variance = 0.0；y ≈ 0.5
  * 校验图模式全链路：proto 注册 / OpDef(ascend950) / infershape+inferDataType / tiling / kernel。
  */
 
@@ -93,9 +96,10 @@ int32_t GenConstDataFloat32(const vector<int64_t>& shape, Tensor& tensor, Tensor
 }
 
 // 构造并运行一张仅含 BNTrainingUpdateV3 节点的图，校验五路输出。
+// xFmt：x/y 的 origin format（ND 或 NHWC；NHWC 时 C=xShape 末维，统计量仍 [C] ND）
 int32_t RunGraphCase(const char* graphName, const vector<int64_t>& xShape, int64_t c, float xValue, float sumValue,
                      float squareSumValue, float scaleValue, float offsetValue, float epsilon, float expectY,
-                     float expectMean, float expectVar, float expectBatchVar)
+                     float expectMean, float expectVar, float expectBatchVar, ge::Format xFmt = ge::FORMAT_ND)
 {
     Graph graph(graphName);
     std::vector<ge::Tensor> input;
@@ -118,9 +122,10 @@ int32_t RunGraphCase(const char* graphName, const vector<int64_t>& xShape, int64
     float inValues[5] = {xValue, sumValue, squareSumValue, scaleValue, offsetValue};
     for (int i = 0; i < 5; i++) {
         auto data = op::Data("placeholder" + std::to_string(i)).set_attr_index(0);
-        TensorDesc desc = TensorDesc(ge::Shape(*inShapes[i]), FORMAT_ND, DT_FLOAT);
+        ge::Format inFmt = (i == 0) ? xFmt : ge::FORMAT_ND;
+        TensorDesc desc = TensorDesc(ge::Shape(*inShapes[i]), inFmt, DT_FLOAT);
         desc.SetPlacement(ge::kPlacementHost);
-        desc.SetFormat(FORMAT_ND);
+        desc.SetFormat(inFmt);
         Tensor tensor;
         ret = GenConstDataFloat32(*inShapes[i], tensor, desc, inValues[i], allocBufs);
         if (ret != SUCCESS) {
@@ -150,8 +155,8 @@ int32_t RunGraphCase(const char* graphName, const vector<int64_t>& xShape, int64
         }
         inputs.push_back(data);
     }
-    // y / batch_mean / batch_variance / reserve_1 / reserve_2：声明输出 desc
-    TensorDesc yDesc = TensorDesc(ge::Shape(xShape), FORMAT_ND, DT_FLOAT);
+    // y / batch_mean / batch_variance / reserve_1 / reserve_2：声明输出 desc（y 格式随 x）
+    TensorDesc yDesc = TensorDesc(ge::Shape(xShape), xFmt, DT_FLOAT);
     iniOp.update_output_desc_y(yDesc);
     TensorDesc bmDesc = TensorDesc(ge::Shape(statShape), FORMAT_ND, DT_FLOAT);
     iniOp.update_output_desc_batch_mean(bmDesc);
@@ -248,6 +253,10 @@ int main()
     // case2：多 channel、R 非对齐，save_mean=2.0、save_var=0.0、batch_variance=0.0、y=0.25
     failCnt += (RunGraphCase("bn_training_update_v3_geir_case2", {4, 64, 7, 7}, 64, 2.0f, 392.0f, 784.0f, 1.0f, 0.25f,
                              1e-3f, 0.25f, 2.0f, 0.0f, 0.0f) != SUCCESS);
+    // case3：NHWC（C=末维=3，num=numel/C=40），x 全 1.0：save_mean=1.0、save_var=0.0、
+    // batch_variance=0.0、multiplier=scale/sqrt(eps)、addend=offset-mult*1.0 → y=0.5
+    failCnt += (RunGraphCase("bn_training_update_v3_geir_case3", {2, 4, 5, 3}, 3, 1.0f, 40.0f, 40.0f, 2.0f, 0.5f, 1e-5f,
+                             0.5f, 1.0f, 0.0f, 0.0f, ge::FORMAT_NHWC) != SUCCESS);
 
     LOG_PRINT("[CHECK] total fail: %d, %s\n", failCnt, failCnt == 0 ? "PASS" : "FAIL");
     ge::GEFinalize();

@@ -85,13 +85,36 @@ def _reference_dtype(*tensors):
     return dtype
 
 
+def _infer_grads_format(grads, batch_mean, input_formats):
+    """ND by default; prefer TTK's authoritative input_formats declaration."""
+    if input_formats:
+        return (
+            input_formats[0]
+            if isinstance(input_formats, (list, tuple))
+            else input_formats
+        )
+    # Fallback heuristic (remote third-party provider sends tensors only):
+    # last dim matches the statistics length and dim1 does not -> NHWC.  Rank-2
+    # [rows, C] is layout-identical under ND and NHWC, so the ambiguity is moot.
+    stat_len = (
+        int(np.asarray(batch_mean).size)
+        if not isinstance(batch_mean, torch.Tensor)
+        else batch_mean.numel()
+    )
+    if stat_len > 0:
+        shape = tuple(grads.shape)
+        if shape[-1] == stat_len and shape[1] != stat_len:
+            return "NHWC"
+    return "ND"
+
+
 def _stat_vector(tensor, c, name):
     if tensor.numel() != c:
         raise ValueError(f"{name} must contain C={c} elements, got {tensor.numel()}")
     return torch.reshape(tensor, (c,))
 
 
-def _compute(grads, x, batch_mean, batch_variance, epsilon):
+def _compute(grads, x, batch_mean, batch_variance, epsilon, grads_format="ND"):
     """Sole Torch true-value core; return outputs in def.cpp order."""
     grads_tensor = _as_tensor(grads)
     x_tensor = _as_tensor(x)
@@ -100,7 +123,16 @@ def _compute(grads, x, batch_mean, batch_variance, epsilon):
 
     if grads_tensor.ndim < 2:
         raise ValueError(f"grads rank must be at least 2, got {grads_tensor.ndim}")
-    c = grads_tensor.shape[1]
+    is_nhwc = str(grads_format).upper() == "NHWC"
+    if is_nhwc:
+        # NHWC: C=last dim, reduce over all leading axes (A2 dynamic axis=[0,1,2]).
+        c = grads_tensor.shape[-1]
+        broadcast_shape = (1,) * (grads_tensor.ndim - 1) + (c,)
+        reduce_dims = tuple(range(0, grads_tensor.ndim - 1))
+    else:
+        c = grads_tensor.shape[1]
+        broadcast_shape = (1, c) + (1,) * (grads_tensor.ndim - 2)
+        reduce_dims = (0,) + tuple(range(2, grads_tensor.ndim))
 
     compute_dtype = _reference_dtype(grads_tensor, x_tensor, mean_tensor, var_tensor)
     grads_compute = grads_tensor.to(dtype=compute_dtype)
@@ -115,14 +147,12 @@ def _compute(grads, x, batch_mean, batch_variance, epsilon):
     rstd = torch.div(
         torch.ones_like(var_compute), torch.sqrt(torch.add(var_compute, epsilon_tensor))
     )
-    broadcast_shape = (1, c) + (1,) * (grads_tensor.ndim - 2)
     mean_bcast = torch.reshape(mean_compute, broadcast_shape)
     rstd_bcast = torch.reshape(rstd, broadcast_shape)
 
     x_norm = torch.mul(torch.sub(x_compute, mean_bcast), rstd_bcast)
     scale_mul = torch.mul(grads_compute, x_norm)
 
-    reduce_dims = (0,) + tuple(range(2, grads_tensor.ndim))
     diff_scale = torch.sum(scale_mul, dim=reduce_dims)
     diff_offset = torch.sum(grads_compute, dim=reduce_dims)
     return [diff_scale, diff_offset]
@@ -167,7 +197,10 @@ def _kernel_golden(
 ):
     """Kernel/GEIR adapter: NumPy inputs and a NumPy output list."""
     epsilon_value = _resolve_epsilon(epsilon, kwargs)
-    outputs = _compute(grads, x, batch_mean, batch_variance, epsilon_value)
+    grads_format = _infer_grads_format(grads, batch_mean, kwargs.get("input_formats"))
+    outputs = _compute(
+        grads, x, batch_mean, batch_variance, epsilon_value, grads_format
+    )
     output_dtypes = kwargs.get("output_dtypes")
     if not output_dtypes:
         output_dtypes = ("float32", "float32")  # 两路输出恒 fp32
@@ -187,14 +220,21 @@ class _BNTrainingUpdateGradCompose:
         self.epsilon = float(torch.tensor(epsilon_value, dtype=torch.float32).item())
         self._compiled = None
 
-    def _impl(self, grads, x, batch_mean, batch_variance):
+    def _impl(self, grads, x, batch_mean, batch_variance, grads_format="ND"):
         if grads.dtype not in (torch.float16, torch.float32, torch.bfloat16):
             raise TypeError(
                 f"BNTrainingUpdateGrad supports only float16/float32/bfloat16 grads, got {grads.dtype}"
             )
 
-        c = grads.shape[1]
-        broadcast_shape = (1, c) + (1,) * (grads.ndim - 2)
+        is_nhwc = str(grads_format).upper() == "NHWC"
+        if is_nhwc:
+            c = grads.shape[-1]
+            broadcast_shape = (1,) * (grads.ndim - 1) + (c,)
+            reduce_dims = tuple(range(0, grads.ndim - 1))
+        else:
+            c = grads.shape[1]
+            broadcast_shape = (1, c) + (1,) * (grads.ndim - 2)
+            reduce_dims = (0,) + tuple(range(2, grads.ndim))
 
         # BNTrainingUpdateGradKernel converts every arithmetic operand to fp32.
         grads_f32 = grads.to(dtype=torch.float32)
@@ -216,23 +256,24 @@ class _BNTrainingUpdateGradCompose:
         )
         scale_mul = torch.mul(grads_f32, x_norm)
 
-        reduce_dims = (0,) + tuple(range(2, grads.ndim))
         diff_scale = torch.sum(scale_mul, dim=reduce_dims)
         diff_offset = torch.sum(grads_f32, dim=reduce_dims)
         return [diff_scale, diff_offset]  # 两路输出恒 fp32
 
     def __call__(self, grads, x, batch_mean, batch_variance, **kwargs):
-        del kwargs
+        grads_format = _infer_grads_format(
+            grads, batch_mean, kwargs.get("input_formats")
+        )
         if self._compiled is None:
             try:
                 self._compiled = torch.compile(self._impl, dynamic=True)
             except Exception:
                 self._compiled = self._impl
         try:
-            return self._compiled(grads, x, batch_mean, batch_variance)
+            return self._compiled(grads, x, batch_mean, batch_variance, grads_format)
         except Exception:
             self._compiled = self._impl
-            return self._impl(grads, x, batch_mean, batch_variance)
+            return self._impl(grads, x, batch_mean, batch_variance, grads_format)
 
 
 class BNTrainingUpdateGradKernelSpec:

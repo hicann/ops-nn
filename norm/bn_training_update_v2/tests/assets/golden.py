@@ -298,5 +298,8 @@ def bn_training_update_v2_golden(
 # the repository provides neither op_api files nor an aclnn interface document.
 # 【不存在】e2e 通路：strings libtorch_npu.so | grep -c aclnnBNTrainingUpdateV2 = 0
 # (torch_npu 2.7.1 实测), torch_npu never invokes this operator's aclnn.
-# 【不存在】tf/onnx 端到端通路：framework/ 仅逐字 mirror canndev 的 tf plugin 注册源,
-# tf 端到端验证本次产品规格不涉及;canndev 无 onnx 插件。
+# 【tf 通路存在且已实证】framework/bn_training_update_v2_tf_plugin.cpp 注册
+# REGISTER_CUSTOM_OP("BNTrainingUpdateV2").FrameworkType(TENSORFLOW)（逐字 mirror
+# canndev 同名插件）;aclgrphParseTensorFlow 预生成 .pb 实测 18/18 PASS
+# (2026-08-26,见交付件 05_test_result/harness/tf_pathway/)。
+# 【不存在】onnx 插件：canndev 无 onnx 通路。

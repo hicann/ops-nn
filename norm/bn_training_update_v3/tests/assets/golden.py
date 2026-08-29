@@ -11,8 +11,9 @@
 
 """BNTrainingUpdateV3 kernel/GEIR golden in the TestSpec multi-path format.
 
-For an ND input laid out as ``[N, C, R...]`` with ``num = N * R`` the operator
-computes per channel ``c``::
+For an ND input laid out as ``[N, C, R...]`` (or an NHWC input of any rank >= 2
+with ``C`` as the last dim) and ``num = numel / C`` the operator computes per
+channel ``c``::
 
     save_mean[c]      = sum[c] / num
     save_variance[c]  = square_sum[c] / num - save_mean[c] ** 2
@@ -22,7 +23,11 @@ computes per channel ``c``::
     reserve_2[c]      = save_variance[c]
     multiplier[c]     = scale[c] / sqrt(save_variance[c] + epsilon)
     addend[c]         = offset[c] - multiplier[c] * save_mean[c]
-    y[n, c, r]        = multiplier[c] * x[n, c, r] + addend[c]
+    y[..., c, ...]    = multiplier[c] * x[..., c, ...] + addend[c]
+
+The x format is taken from TTK's ``input_formats`` kwarg when present (the
+authoritative origin-format declaration); otherwise a heuristic keeps ND
+unless the last dim matches the statistics length and dim1 does not.
 
 The CPU true-value path is a Torch competitor composition.  It lifts fp16/bf16
 to at least fp32 and preserves fp64 inputs supplied by TTK Promote; promoted
@@ -92,14 +97,23 @@ def _reference_dtype(*tensors):
 
 def _num_recip_f32(n, r):
     """fp64 reciprocal of N*R rounded to fp32, mirroring the host tiling."""
+    return _num_recip_f32_num(n * r)
+
+
+def _num_recip_f32_num(num):
+    """fp64 reciprocal of num rounded to fp32 (ND num=N*R, NHWC num=numel/C)."""
     return float(
-        torch.tensor(1.0 / float(n * r), dtype=torch.float64).to(torch.float32).item()
+        torch.tensor(1.0 / float(num), dtype=torch.float64).to(torch.float32).item()
     )
 
 
 def _batch_var_scaler_f32(n, r):
     """fp64 num/(num-1) rounded to fp32 (0.0 when num == 1), mirroring the host."""
-    num = n * r
+    return _batch_var_scaler_f32_num(n * r)
+
+
+def _batch_var_scaler_f32_num(num):
+    """fp64 num/(num-1) rounded to fp32 (0.0 when num == 1)."""
     if num == 1:
         return 0.0
     return float(
@@ -109,13 +123,34 @@ def _batch_var_scaler_f32(n, r):
     )
 
 
+def _infer_x_format(x, sum, input_formats):
+    """ND by default; prefer TTK's authoritative input_formats declaration."""
+    if input_formats:
+        return (
+            input_formats[0]
+            if isinstance(input_formats, (list, tuple))
+            else input_formats
+        )
+    # Fallback heuristic (remote third-party provider sends tensors only):
+    # last dim matches the statistics length and dim1 does not -> NHWC.  Rank-2
+    # [rows, C] is layout-identical under ND and NHWC, so the ambiguity is moot.
+    stat_len = (
+        int(np.asarray(sum).size) if not isinstance(sum, torch.Tensor) else sum.numel()
+    )
+    if stat_len > 0:
+        shape = tuple(x.shape)
+        if shape[-1] == stat_len and shape[1] != stat_len:
+            return "NHWC"
+    return "ND"
+
+
 def _stat_vector(tensor, c, name):
     if tensor.numel() != c:
         raise ValueError(f"{name} must contain C={c} elements, got {tensor.numel()}")
     return torch.reshape(tensor, (c,))
 
 
-def _compute(x, sum, square_sum, scale, offset, epsilon):
+def _compute(x, sum, square_sum, scale, offset, epsilon, x_format="ND"):
     """Sole Torch true-value core; return outputs in def.cpp order."""
     x_tensor = _as_tensor(x)
     sum_tensor = _as_tensor(sum)
@@ -125,10 +160,14 @@ def _compute(x, sum, square_sum, scale, offset, epsilon):
 
     if x_tensor.ndim < 2:
         raise ValueError(f"x rank must be at least 2, got {x_tensor.ndim}")
-    n, c = x_tensor.shape[:2]
-    r = 1
-    for dim in x_tensor.shape[2:]:
-        r *= dim
+    is_nhwc = str(x_format).upper() == "NHWC"
+    if is_nhwc:
+        c = x_tensor.shape[-1]
+        broadcast_shape = (1,) * (x_tensor.ndim - 1) + (c,)
+    else:
+        c = x_tensor.shape[1]
+        broadcast_shape = (1, c) + (1,) * (x_tensor.ndim - 2)
+    num = x_tensor.numel() // c  # ND: N*R；NHWC: numel/C，数值一致
 
     compute_dtype = _reference_dtype(
         x_tensor, sum_tensor, square_sum_tensor, scale_tensor, offset_tensor
@@ -143,11 +182,11 @@ def _compute(x, sum, square_sum, scale, offset, epsilon):
 
     # The host stores numRecip/batchVarScaler/epsilon as fp32 before kernel
     # launch; keep that fp32 quantization even when Promote lifts to fp64.
-    num_recip = torch.tensor(_num_recip_f32(n, r), dtype=torch.float32).to(
+    num_recip = torch.tensor(_num_recip_f32_num(num), dtype=torch.float32).to(
         compute_dtype
     )
     batch_var_scaler = torch.tensor(
-        _batch_var_scaler_f32(n, r), dtype=torch.float32
+        _batch_var_scaler_f32_num(num), dtype=torch.float32
     ).to(compute_dtype)
     epsilon_tensor = torch.tensor(float(epsilon), dtype=torch.float32).to(compute_dtype)
 
@@ -161,7 +200,6 @@ def _compute(x, sum, square_sum, scale, offset, epsilon):
     )
     addend = torch.sub(offset_compute, torch.mul(multiplier, save_mean))
 
-    broadcast_shape = (1, c) + (1,) * (x_tensor.ndim - 2)
     y = torch.add(
         torch.mul(x_compute, torch.reshape(multiplier, broadcast_shape)),
         torch.reshape(addend, broadcast_shape),
@@ -213,7 +251,8 @@ def _numpy_outputs(outputs, output_dtypes):
 def _kernel_golden(x, sum, square_sum, scale, offset, epsilon=1e-5, **kwargs):
     """Kernel/GEIR adapter: NumPy inputs and a NumPy output list."""
     epsilon_value = _resolve_epsilon(epsilon, kwargs)
-    outputs = _compute(x, sum, square_sum, scale, offset, epsilon_value)
+    x_format = _infer_x_format(x, sum, kwargs.get("input_formats"))
+    outputs = _compute(x, sum, square_sum, scale, offset, epsilon_value, x_format)
     output_dtypes = kwargs.get("output_dtypes")
     if not output_dtypes:
         stat_dtype = _input_dtype_name(scale)
@@ -240,17 +279,20 @@ class _BNTrainingUpdateV3Compose:
         self.epsilon = float(torch.tensor(epsilon_value, dtype=torch.float32).item())
         self._compiled = None
 
-    def _impl(self, x, sum, square_sum, scale, offset):
+    def _impl(self, x, sum, square_sum, scale, offset, x_format="ND"):
         if x.dtype not in (torch.float16, torch.float32, torch.bfloat16):
             raise TypeError(
                 f"BNTrainingUpdateV3 supports only float16/float32/bfloat16 x, got {x.dtype}"
             )
 
-        n, c = x.shape[:2]
-        r = 1
-        for dim in x.shape[2:]:
-            r *= dim
-        broadcast_shape = (1, c) + (1,) * (x.ndim - 2)
+        is_nhwc = str(x_format).upper() == "NHWC"
+        if is_nhwc:
+            c = x.shape[-1]
+            broadcast_shape = (1,) * (x.ndim - 1) + (c,)
+        else:
+            c = x.shape[1]
+            broadcast_shape = (1, c) + (1,) * (x.ndim - 2)
+        num = x.numel() // c  # ND: N*R；NHWC: numel/C
 
         # BNTrainingUpdateV3Kernel::Process converts every arithmetic operand to fp32.
         x_f32 = x.to(dtype=torch.float32)
@@ -261,10 +303,10 @@ class _BNTrainingUpdateV3Compose:
         scale_f32 = _stat_vector(scale.to(dtype=torch.float32), c, "scale")
         offset_f32 = _stat_vector(offset.to(dtype=torch.float32), c, "offset")
         num_recip = torch.tensor(
-            _num_recip_f32(n, r), dtype=torch.float32, device=x.device
+            _num_recip_f32_num(num), dtype=torch.float32, device=x.device
         )
         batch_var_scaler = torch.tensor(
-            _batch_var_scaler_f32(n, r), dtype=torch.float32, device=x.device
+            _batch_var_scaler_f32_num(num), dtype=torch.float32, device=x.device
         )
         epsilon_f32 = torch.tensor(self.epsilon, dtype=torch.float32, device=x.device)
 
@@ -292,6 +334,8 @@ class _BNTrainingUpdateV3Compose:
         ]
 
     def __call__(self, x, sum, square_sum, scale, offset, **kwargs):
+        # 在丢弃 kwargs 前抓取 TTK 注入的 x 格式声明（缺省 ND）
+        x_format = _infer_x_format(x, sum, kwargs.get("input_formats"))
         del kwargs
         if self._compiled is None:
             try:
@@ -299,10 +343,10 @@ class _BNTrainingUpdateV3Compose:
             except Exception:
                 self._compiled = self._impl
         try:
-            return self._compiled(x, sum, square_sum, scale, offset)
+            return self._compiled(x, sum, square_sum, scale, offset, x_format)
         except Exception:
             self._compiled = self._impl
-            return self._impl(x, sum, square_sum, scale, offset)
+            return self._impl(x, sum, square_sum, scale, offset, x_format)
 
 
 class BNTrainingUpdateV3KernelSpec:

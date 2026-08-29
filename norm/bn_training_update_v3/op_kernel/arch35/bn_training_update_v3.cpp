@@ -11,7 +11,7 @@
 /*!
  * \file bn_training_update_v3.cpp
  * \brief BNTrainingUpdateV3 arch35 kernel entry（fp16/bf16/fp32 三二进制，DTYPE_X 编译期分发；
- *        仅 ND 单路径，tilingKey=0）
+ *        ND 与 NHWC 双路径共用 tilingKey=0，kernel 按 tiling data 的 isNhwc 运行时分发）
  */
 
 #include "bn_training_update_v3.h"

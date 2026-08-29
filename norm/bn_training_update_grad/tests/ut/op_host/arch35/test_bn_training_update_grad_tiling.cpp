@@ -12,7 +12,9 @@
  * \brief Tiling UT for BNTrainingUpdateGrad (arch35)。
  *        单路径 tilingKey=0；覆盖正向切分（channel 均分 / N 维 nGroups 再切）、dtype 三态、
  *        epsilon 缺省（OPTIONAL，缺省 0.0001 须放行）、
- *        反向校验（dtype/format/rank/空 tensor/统计量元素数/grads≠x shape）。
+ *        反向校验（dtype/format/rank/空 tensor/统计量元素数/grads≠x shape）；
+ *        NHWC（C=末维）：channelSplit/rowSplit 两切分、窗口化大 C、
+ *        ND C==1 大规模与 R==1 巨 C 两条 reroute、grads/x 格式一致性、统计量≠末维。
  */
 
 #include <iostream>
@@ -53,11 +55,13 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 
 // 四输入(grads/x/batch_mean/batch_variance) 两输出(diff_scale/diff_offset)，format 固定 ND。
 // hasEpsilon=false 时不下发 epsilon 属性（OPTIONAL 缺省 0.0001，须放行）。
+// xFmt 独立于 gradsFmt（grads/x 格式一致性校验用）；td 非空时回填 tiling data 快照。
 ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint64_t& tilingKey,
                           int64_t* blockDim = nullptr, size_t* workspaceSize = nullptr,
                           ge::DataType gradsDt = ge::DT_FLOAT, ge::DataType xDt = ge::DT_FLOAT,
                           ge::DataType statDt = ge::DT_FLOAT, ge::Format fmt = ge::FORMAT_ND, bool hasEpsilon = true,
-                          const std::vector<int64_t>* xDims = nullptr)
+                          const std::vector<int64_t>* xDims = nullptr, ge::Format xFmt = ge::FORMAT_ND,
+                          BNTrainingUpdateGradTilingData* td = nullptr)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -125,7 +129,7 @@ ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, gradsDt, fmt, fmt)
-                      .NodeInputTd(1, xDt, fmt, fmt)
+                      .NodeInputTd(1, xDt, xFmt, xFmt)
                       .NodeInputTd(2, statDt, fmt, fmt)
                       .NodeInputTd(3, statDt, fmt, fmt)
                       .NodeOutputTd(0, statDt, fmt, fmt)
@@ -152,6 +156,13 @@ ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint
         }
         if (workspaceSize != nullptr) {
             *workspaceSize = *reinterpret_cast<const size_t*>(ws_size->GetData());
+        }
+        if (td != nullptr) {
+            auto* tdSnap = tiling_context->GetTilingData<BNTrainingUpdateGradTilingData>();
+            if (tdSnap == nullptr) {
+                return ge::GRAPH_FAILED;
+            }
+            *td = *tdSnap;
         }
     }
     return ret;
@@ -275,12 +286,12 @@ TEST_F(BNTrainingUpdateGradTilingUT, reject_invalid_stat_dtype)
               ge::GRAPH_FAILED);
 }
 
-// format 非 ND/NCHW
+// format 非白名单（NC1HWC0：A2 支持但 A5 未实现，A5 侧须拒收）
 TEST_F(BNTrainingUpdateGradTilingUT, reject_invalid_format)
 {
     uint64_t key = 0;
     EXPECT_EQ(
-        RunTiling({2, 3, 4, 5}, 3, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC),
+        RunTiling({2, 3, 4, 5}, 3, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NC1HWC0),
         ge::GRAPH_FAILED);
 }
 
@@ -315,5 +326,206 @@ TEST_F(BNTrainingUpdateGradTilingUT, reject_x_shape_mismatch)
     std::vector<int64_t> xDims = {2, 3, 4, 6};
     EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_ND,
                         true, &xDims),
+              ge::GRAPH_FAILED);
+}
+
+// ---------------- NHWC 正向 ----------------
+
+// NHWC 基本形态（C=3=末维，rows=40）：rows<核数 → channelSplit 兜底，零 workspace
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_channel_split_small)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({2, 4, 5, 3}, 3, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
+                        true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0U);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcSplitMode, 1); // rows=40 < 64 → channelSplit
+    EXPECT_EQ(td.numC, 3);          // C=末维
+    EXPECT_EQ(blockDim, 3);         // channelCores=min(3,64)
+    EXPECT_EQ(ws, 0U);
+}
+
+// NHWC rowSplit（rows=200≥64、C=7）：原子加直写输出（零 ws），mode=2
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({200, 7}, 7, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
+                        true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcSplitMode, 2);
+    EXPECT_EQ(td.numC, 7);
+    EXPECT_EQ(td.cLenCap, 64); // W=ceil64(7)=64
+    EXPECT_EQ(blockDim, 64);   // rowSplit 恒满核
+    EXPECT_EQ(ws, 0U);         // 原子加直写：零 workspace
+}
+
+// NHWC rowSplit 大 C（C=4096 在窗预算内，单窗全 C）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split_c4096_cap)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({100, 4096}, 4096, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.nhwcSplitMode, 2);
+    EXPECT_EQ(td.cLenCap, 4096); // W=ceil64(4096)=4096（单窗全 C）
+    EXPECT_EQ(ws, 0U);
+}
+
+// NHWC rows<核数回退 channelSplit（{10,7}：rows=10<64）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_rows_lt_cores_fallback)
+{
+    uint64_t key = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({10, 7}, 7, key, nullptr, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true,
+                        nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.nhwcSplitMode, 1);
+    EXPECT_EQ(ws, 0U);
+}
+
+// NHWC 大 C 超 ws cap → channelSplit（{5000,10000}：pitchC*64*2*4>2MB）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_channel_split_large_c)
+{
+    uint64_t key = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({5000, 10000}, 10000, key, nullptr, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.nhwcSplitMode, 1);
+    EXPECT_EQ(td.numC, 10000);
+    EXPECT_EQ(ws, 0U);
+}
+
+// NHWC channelSplit 窗口化（{2,400000}：段长 6250 超 Wmax → W<W 且 64 对齐）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_windowed_channel_split)
+{
+    uint64_t key = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({2, 400000}, 400000, key, nullptr, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcSplitMode, 1);
+    EXPECT_GT(td.cLenCap, 0);
+    EXPECT_LT(td.cLenCap, 400000); // 窗口化（段长 6250 > Wmax≈4864）
+    EXPECT_EQ(td.cLenCap % 64, 0); // 64 对齐
+    EXPECT_GE(td.sliceR, 1);       // tileRows≥1
+    EXPECT_EQ(ws, 0U);
+}
+
+// ND C==1 大规模 reroute（G22 0135 同构：55M 元素）：isNhwc=1、mode=2、ws>0
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nd_c1_reroute_g22)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    size_t ws = 0;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({32, 1, 224, 16, 5, 96}, 1, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_ND, true, nullptr, ge::FORMAT_ND, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcSplitMode, 2);
+    EXPECT_EQ(td.numC, 1);
+    EXPECT_EQ(ws, 0U); // 原子加直写：零 workspace
+    EXPECT_EQ(blockDim, 64);
+}
+
+// ND C==1 小规模不 reroute（{1,1,65}=65 元素 < 1M：仍走原快路）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nd_c1_small_stays_fast)
+{
+    uint64_t key = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({1, 1, 65}, 1, key, nullptr, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_ND, true,
+                        nullptr, ge::FORMAT_ND, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 0); // 未 reroute：原 ND 快路
+    EXPECT_EQ(ws, 0U);
+}
+
+// NHWC C==1 小行数退化形状（rows<64：C1 分支不做 64 取整，小行数段放行——核数<64 SKU 的误拒防御）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_c1_small_rows)
+{
+    uint64_t key = 0;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({50, 1}, 1, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
+                        true, nullptr, ge::FORMAT_NHWC, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.numC, 1);
+    EXPECT_GE(td.sliceR, 1); // C1 chunk 段长 ≥1（<64 也放行）
+}
+
+// ND R==1 巨 C reroute（{256,230000}：ND 慢路 rowsPerTile<1 拒收 → NHWC channelSplit 转正）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nd_r1_huge_c_reroute)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    size_t ws = 1;
+    BNTrainingUpdateGradTilingData td = {};
+    EXPECT_EQ(RunTiling({256, 230000}, 230000, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_ND, true, nullptr, ge::FORMAT_ND, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcSplitMode, 1); // C 巨大 → channelSplit
+    EXPECT_EQ(td.numC, 230000);
+    EXPECT_EQ(td.cLenCap % 64, 0); // 窗口 64 对齐
+    EXPECT_EQ(ws, 0U);
+    EXPECT_GT(blockDim, 0);
+}
+
+// NHWC 格式标签放行（原 reject_invalid_format 用 NHWC 拒收，移植后反转）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_format)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 3, 4, 5}, 5, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0U);
+}
+
+// NHWC fp16/bf16
+TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_fp16_bf16)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({200, 7}, 7, key, nullptr, nullptr, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(RunTiling({200, 7}, 7, key, nullptr, nullptr, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::FORMAT_NHWC,
+                        true, nullptr, ge::FORMAT_NHWC),
+              ge::GRAPH_SUCCESS);
+}
+
+// ---------------- NHWC 反向 ----------------
+
+// grads NHWC + x ND（布局族不一致）必须拒收
+TEST_F(BNTrainingUpdateGradTilingUT, reject_grads_x_format_mismatch)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({200, 7}, 7, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
+                        true, nullptr, ge::FORMAT_ND),
+              ge::GRAPH_FAILED);
+}
+
+// NHWC 统计量元素数必须等于末维 C
+TEST_F(BNTrainingUpdateGradTilingUT, reject_nhwc_stat_numel_mismatch)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 4, 5, 3}, 4, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC),
               ge::GRAPH_FAILED);
 }

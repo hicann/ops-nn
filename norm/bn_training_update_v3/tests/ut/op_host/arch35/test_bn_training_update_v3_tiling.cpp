@@ -10,8 +10,9 @@
 /*!
  * \file test_bn_training_update_v3_tiling.cpp
  * \brief Tiling UT for BNTrainingUpdateV3 (arch35)。
- *        单路径 tilingKey=0；覆盖正向切分（plane 均分 / inner 再切）、dtype 三态、
- *        反向校验（dtype/format/rank/空 tensor/统计量元素数/epsilon 缺失）。
+ *        单路径 tilingKey=0（ND/NHWC 运行时按 isNhwc 分发）；覆盖正向切分（plane 均分 / inner 再切）、
+ *        dtype 三态、NHWC 三路径（Flat/Stream/Rows）、反向校验（dtype/format/rank/空 tensor/
+ *        统计量元素数/epsilon 缺失/Rows 行预算超 UB）。
  */
 
 #include <iostream>
@@ -50,11 +51,12 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
     return s;
 }
 
-// 五输入(x/sum/square_sum/scale/offset) 五输出(y/batch_mean/batch_variance/reserve_1/reserve_2)，format 固定 ND。
-// hasEpsilon=false 时不下发 epsilon 属性（REQUIRED 缺失须被拒）。
+// 五输入(x/sum/square_sum/scale/offset) 五输出(y/batch_mean/batch_variance/reserve_1/reserve_2)。
+// hasEpsilon=false 时不下发 epsilon 属性（REQUIRED 缺失须被拒）；outTd 非空时回填 tiling data 快照。
 ge::graphStatus RunTiling(const std::vector<int64_t>& xDims, int64_t c, uint64_t& tilingKey,
                           int64_t* blockDim = nullptr, ge::DataType xDt = ge::DT_FLOAT,
-                          ge::DataType statDt = ge::DT_FLOAT, ge::Format fmt = ge::FORMAT_ND, bool hasEpsilon = true)
+                          ge::DataType statDt = ge::DT_FLOAT, ge::Format fmt = ge::FORMAT_ND, bool hasEpsilon = true,
+                          BNTrainingUpdateV3TilingData* outTd = nullptr)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -151,6 +153,13 @@ ge::graphStatus RunTiling(const std::vector<int64_t>& xDims, int64_t c, uint64_t
         if (blockDim != nullptr) {
             *blockDim = static_cast<int64_t>(tiling_context->GetBlockDim());
         }
+        if (outTd != nullptr) {
+            auto* td = tiling_context->GetTilingData<BNTrainingUpdateV3TilingData>();
+            if (td == nullptr) {
+                return ge::GRAPH_FAILED;
+            }
+            *outTd = *td;
+        }
     }
     return ret;
 }
@@ -217,6 +226,99 @@ TEST_F(BNTrainingUpdateV3TilingUT, accept_nchw_tag)
     EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NCHW), ge::GRAPH_SUCCESS);
 }
 
+// ---------------- NHWC 正向：三路径（Flat/Stream/Rows） ----------------
+
+// NHWC 基本（Rows）：C=末维=3（C%64!=0 → Rows 路径），units=rows=40
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_basic_c3_rows)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({2, 4, 5, 3}, 3, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0U);
+    EXPECT_EQ(blockDim, 40);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 3);
+    EXPECT_EQ(td.numC, 3);
+    EXPECT_EQ(td.numN, 40); // rows=N*H*W=2*4*5
+    EXPECT_EQ(td.units, 40);
+    EXPECT_EQ(td.innerSize, 1);
+}
+
+// NHWC C%64==0 且 C≤12288（Flat，pattern=coeff 周期=C）：C=256
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_flat_aligned_c)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({2, 16, 256}, 256, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 1);
+    EXPECT_EQ(td.numC, 256);
+    EXPECT_EQ(td.units, 8192 / 64); // numel=2*16*256=8192 → 128 个向量块
+    EXPECT_EQ(blockDim, 64);
+}
+
+// NHWC Stream：C%64==0 且 C>12288（pattern 放不下 UB，退化为驻留 12288 chunk 环）：C=16384
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_stream)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({2, 16384}, 16384, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 2);
+    EXPECT_EQ(td.numC, 16384);
+    EXPECT_EQ(td.units, 32768 / 64); // numel=2*16384 → 512 个向量块
+    EXPECT_EQ(blockDim, 64);
+}
+
+// NHWC Rows 大 C：C%64!=0 且 C>192（如 C=4097）：plane=一行，units=rows
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({3, 4097}, 4097, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 3);
+    EXPECT_EQ(td.numC, 4097);
+    EXPECT_EQ(td.units, 3); // rows=3
+    EXPECT_EQ(td.innerSize, 1);
+    EXPECT_TRUE(td.ubTileSize >= 1); // tileRows ≥ 1
+    EXPECT_EQ(blockDim, 3);
+}
+
+// NHWC rank2 最小形态：C=8（C%64!=0 → Rows）
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rank2)
+{
+    uint64_t key = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({4, 8}, 8, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 3);
+    EXPECT_EQ(td.numC, 8);
+    EXPECT_EQ(td.numN, 4); // rows=4
+}
+
+// NHWC num==1（rows=1，即 shape 退化为单行）：batchVarScaler=0.0 特判路径，须放行
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_num_equals_one)
+{
+    uint64_t key = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({1, 1, 16}, 16, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 3); // C=16 % 64 != 0 → Rows
+    EXPECT_EQ(td.numN, 1);     // rows=1
+    EXPECT_EQ(td.batchVarScaler, 0.0f);
+}
+
 // ---------------- 反向：非法输入必须被拦截 ----------------
 
 // x dtype 非法（int32）
@@ -233,11 +335,12 @@ TEST_F(BNTrainingUpdateV3TilingUT, reject_invalid_stat_dtype)
     EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT16), ge::GRAPH_FAILED);
 }
 
-// format 非 ND/NCHW
+// format 非 ND/NCHW/NHWC（5HD 物理布局 ascend950 不承接）
 TEST_F(BNTrainingUpdateV3TilingUT, reject_invalid_format)
 {
     uint64_t key = 0;
-    EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC), ge::GRAPH_FAILED);
+    EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NC1HWC0),
+              ge::GRAPH_FAILED);
 }
 
 // rank < 2
@@ -262,6 +365,43 @@ TEST_F(BNTrainingUpdateV3TilingUT, reject_stat_numel_mismatch)
 {
     uint64_t key = 0;
     EXPECT_EQ(RunTiling({2, 3, 4, 5}, 4, key), ge::GRAPH_FAILED);
+}
+
+// NHWC 统计量元素数必须等于 C（末维）
+TEST_F(BNTrainingUpdateV3TilingUT, reject_nhwc_stat_numel_mismatch)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 4, 5, 3}, 4, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC), ge::GRAPH_FAILED);
+}
+
+// NHWC Rows 整行预算超 UB 时切窗口流式（nhwcPath=4，odd-C 无上限）：fp32 C=30000，
+// 整行需 4×120064+系数 240128 > UB → 窗口 W=min(ceil64(30000)=30016, (245760-13632-15360+2048)/24
+// =9013→64 对齐 9024... 取 64 对齐下限) 逐窗流式，ubTileSize=W≥64
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows_windowed_huge_c)
+{
+    uint64_t key = 0;
+    int64_t blockDim = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({2, 30000}, 30000, key, &blockDim, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.isNhwc, 1);
+    EXPECT_EQ(td.nhwcPath, 4);
+    EXPECT_EQ(td.numC, 30000);
+    EXPECT_EQ(td.units, 2);                                      // rows=2
+    EXPECT_TRUE(td.ubTileSize >= 64 && td.ubTileSize % 64 == 0); // 窗口宽 W
+    EXPECT_EQ(blockDim, 2);
+}
+
+// NHWC Rows 窗口流式第二档：fp16 大 odd-C（整行预算 4×pitch×2+系数远超 UB）
+TEST_F(BNTrainingUpdateV3TilingUT, accept_nhwc_rows_windowed_huge_c_f16)
+{
+    uint64_t key = 0;
+    BNTrainingUpdateV3TilingData td = {};
+    EXPECT_EQ(RunTiling({7, 15608}, 15608, key, nullptr, ge::DT_FLOAT16, ge::DT_FLOAT, ge::FORMAT_NHWC, true, &td),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(td.nhwcPath, 4);
+    EXPECT_EQ(td.numC, 15608);
+    EXPECT_TRUE(td.ubTileSize >= 64 && td.ubTileSize % 64 == 0);
 }
 
 // epsilon 为 REQUIRED 属性，缺失须拒

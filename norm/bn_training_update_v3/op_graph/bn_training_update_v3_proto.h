@@ -60,6 +60,12 @@ format as "x".
 * @li This operator is used in conjunction with BNTrainingReduce.
 * @li For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to
 * the square root instruction.
+* @li The 4D NHWC/NCHW description above applies to the A2-series products. For Ascend 950PR/
+* Ascend 950DT: "x" supports ND (or NCHW tag, layout-normalized) with rank 2~8 ([N, C, R...],
+* dim0=N, dim1=C); NHWC/NC1HWC0/NDC1HWC0 origin formats are rejected by tiling. The statistics
+* inputs/outputs hold element count C (recommended shape [C]; output shapes follow "scale").
+* Optional A2 attributes before_split_ori_shape/before_split_ori_format (BN FFTS scenario) are
+* not registered on Ascend 950PR/Ascend 950DT and have no effect there.
 */
 #ifndef OPS_PROTO_DEF_BNTRAININGUPDATEV3
 #define OPS_PROTO_DEF_BNTRAININGUPDATEV3

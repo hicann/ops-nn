@@ -17,11 +17,14 @@
  *           diff_offset[c] = sum_{n,r} grads
  *           其中归约轴为 N 维与后导维 R（R 为 grads 后导维展平长度）
  *
- * 本示例构造两张仅含 op::BNTrainingUpdateGrad 节点的计算图并在 ascend950 上执行：
+ * 本示例构造三张仅含 op::BNTrainingUpdateGrad 节点的计算图并在 ascend950 上执行：
  *   case1：grads{2,3,4,5} 全 1.0；x{2,3,4,5} 全 2.0；batch_mean{3}=1.0、batch_variance{3}=1.0，
  *          epsilon=1e-5 => rstd=1/sqrt(1+1e-5)；diff_offset = 40；diff_scale = 40*rstd ≈ 39.9998
  *   case2：grads{4,64,7,7} 全 0.5；x{4,64,7,7} 全 2.0；batch_mean{64}=1.5、batch_variance{64}=0.25，
  *          epsilon=1e-3 => rstd=1/sqrt(0.251)；diff_offset = 98；diff_scale = 49*rstd ≈ 97.805
+ *   case3：NHWC（origin format NHWC，C=末维=3，rows=numel/C=40），grads{2,4,5,3} 全 1.0、
+ *          x{2,4,5,3} 全 2.0；batch_mean{3}=1.0、batch_variance{3}=1.0，epsilon=1e-5
+ *          => rstd=1/sqrt(1+1e-5)；diff_offset = 40；diff_scale = 40*rstd ≈ 39.9998
  * 校验图模式全链路：proto 注册 / OpDef(ascend950) / infershape+inferDataType / tiling / kernel。
  */
 
@@ -90,9 +93,10 @@ int32_t GenConstDataFloat32(const vector<int64_t>& shape, Tensor& tensor, Tensor
 }
 
 // 构造并运行一张仅含 BNTrainingUpdateGrad 节点的图，校验两路输出。
+// gxFmt：grads/x 的 origin format（ND 或 NHWC；NHWC 时 C=gradsShape 末维，统计量仍 [C] ND）
 int32_t RunGraphCase(const char* graphName, const vector<int64_t>& gradsShape, int64_t c, float gradsValue,
                      float xValue, float meanValue, float varValue, float epsilon, float expectDiffScale,
-                     float expectDiffOffset)
+                     float expectDiffOffset, ge::Format gxFmt = ge::FORMAT_ND)
 {
     Graph graph(graphName);
     std::vector<ge::Tensor> input;
@@ -115,9 +119,10 @@ int32_t RunGraphCase(const char* graphName, const vector<int64_t>& gradsShape, i
     float inValues[4] = {gradsValue, xValue, meanValue, varValue};
     for (int i = 0; i < 4; i++) {
         auto data = op::Data("placeholder" + std::to_string(i)).set_attr_index(0);
-        TensorDesc desc = TensorDesc(ge::Shape(*inShapes[i]), FORMAT_ND, DT_FLOAT);
+        ge::Format inFmt = (i < 2) ? gxFmt : FORMAT_ND; // 仅 grads/x 用 gxFmt，统计量恒 ND
+        TensorDesc desc = TensorDesc(ge::Shape(*inShapes[i]), inFmt, DT_FLOAT);
         desc.SetPlacement(ge::kPlacementHost);
-        desc.SetFormat(FORMAT_ND);
+        desc.SetFormat(inFmt);
         Tensor tensor;
         ret = GenConstDataFloat32(*inShapes[i], tensor, desc, inValues[i], allocBufs);
         if (ret != SUCCESS) {
@@ -225,6 +230,9 @@ int main()
     // case2：多 channel、R 非对齐，rstd=1/sqrt(0.251)，diff_offset=98、diff_scale=49*rstd
     failCnt += (RunGraphCase("bn_training_update_grad_geir_case2", {4, 64, 7, 7}, 64, 0.5f, 2.0f, 1.5f, 0.25f, 1e-3f,
                              49.0f / sqrtf(0.25f + 1e-3f), 98.0f) != SUCCESS);
+    // case3：NHWC（C=末维=3，rows=numel/C=40 在 N·H·W 上归约），数值同 case1
+    failCnt += (RunGraphCase("bn_training_update_grad_geir_case3", {2, 4, 5, 3}, 3, 1.0f, 2.0f, 1.0f, 1.0f, 1e-5f,
+                             40.0f / sqrtf(1.0f + 1e-5f), 40.0f, ge::FORMAT_NHWC) != SUCCESS);
 
     LOG_PRINT("[CHECK] total fail: %d, %s\n", failCnt, failCnt == 0 ? "PASS" : "FAIL");
     ge::GEFinalize();

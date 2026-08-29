@@ -43,6 +43,19 @@
  *          rIdx==0 者）对相交 channel 段重 staging sum/square_sum、向量化计算后一次性 VL 批量写出
  *          （batch_mean 与 reserve_1 同源 save_mean 写两路 GM；reserve_2 为 save_variance，
  *          batch_variance 为 save_variance * batchVarScaler），全程恰好一次，零核间通信。无 workspace。
+ *
+ *        NHWC 路径（isNhwc=1，x 任意 rank≥2、C=最后一维、rows=numel/C=num，tilingKey 恒 0
+ *        运行时分发；统计量路径零改动，blockIdx==0 核全量写出）三路径（向量访存 32B 对齐
+ *        约束 ⇒ 系数切片仅能取 64 对齐整块）：
+ *        - Flat（nhwcPath=1，C%64==0 且 C≤12288）/Stream（nhwcPath=2，C%64==0 且 C>12288）：
+ *          循环体同构。flat 连续 DMA，逐 64 向量按 (v mod C/64) 取 pattern 向量做 per-element
+ *          Mul→Add；pattern[j]=coeff[j%C] 周期恰为 C，chunk 落址恒 64 对齐。系数按窗口惰性
+ *          驻留（min(320 向量, C, 本核剩余跨度)）——每核只构建实际用到的 chunk，大 C 下避免
+ *          全量 C×sqrt/div 的重复热点。
+ *        - Rows（nhwcPath=3，C%64!=0 任意 C）：行距 pitch（64 元素对齐，行尾向量读不越界）
+ *          的 UB tile，逐行 1D DataCopyPad；外层 C 64-chunk staging 系数、内层行循环
+ *          （bn_infer VFNormalize 模式）——行内 64-chunk 是 coeff 的无旋转连续段，天然对齐。
+ *          纯 elementwise 无累加，免疫软流水丢累加器坑。
  */
 
 #ifndef BN_TRAINING_UPDATE_V3_H
@@ -138,11 +151,22 @@ public:
         batchC0_ = planeStart_;
         batchC1_ = (planeStart_ + planeNum_ < tl_->numC) ? (planeStart_ + planeNum_) : tl_->numC;
         writeBatch_ = (rIdx_ == 0 && planeStart_ < tl_->numC && batchC1_ > batchC0_);
+        if (tl_->isNhwc != 0) {
+            // NHWC：plane 语义随路径变化（Flat/Stream=64 元向量块、Rows=一行），不再与 channel
+            // 对应——统计量写出固定由 0 号核全量负责（纯 [C] 向量运算，一遍 chunk 循环）
+            writeBatch_ = (blockIdx == 0);
+            batchC0_ = 0;
+            batchC1_ = tl_->numC;
+            patternVecs_ = tl_->numC / static_cast<int64_t>(VL_FP32); // M=C/64（Flat/Stream 仅承接 C%64==0）
+            // Rows 行距：64 元素对齐（行尾向量读不越界），与 tiling CalcNhwcRowsUbTile 的 rowBytes 同口径
+            int64_t vl = static_cast<int64_t>(VL_FP32);
+            pitchElems_ = (tl_->numC + vl - 1) / vl * vl;
+        }
         epsilon_ = tl_->epsilon;
         numRecip_ = tl_->numRecip;
         batchVarScaler_ = tl_->batchVarScaler;
 
-        int64_t gmLen = tl_->units * tl_->innerSize;
+        int64_t gmLen = (tl_->isNhwc != 0) ? (tl_->numN * tl_->numC) : (tl_->units * tl_->innerSize);
         xGm_.SetGlobalBuffer((__gm__ T*)x, gmLen);
         yGm_.SetGlobalBuffer((__gm__ T*)y, gmLen);
         sumGm_.SetGlobalBuffer((__gm__ float*)sum, tl_->numC);
@@ -154,23 +178,78 @@ public:
         reserve1Gm_.SetGlobalBuffer((__gm__ float*)reserve1, tl_->numC);
         reserve2Gm_.SetGlobalBuffer((__gm__ float*)reserve2, tl_->numC);
 
-        pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
-        pipe_->InitBuffer(yQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
-        pipe_->InitBuffer(sumQue_, 1, CHUNK_CHANNELS * sizeof(float));
-        pipe_->InitBuffer(squareSumQue_, 1, CHUNK_CHANNELS * sizeof(float));
-        pipe_->InitBuffer(scaleQue_, 1, CHUNK_CHANNELS * sizeof(float));
-        pipe_->InitBuffer(offsetQue_, 1, CHUNK_CHANNELS * sizeof(float));
-        pipe_->InitBuffer(multiplierBuf_, MERGE_CHANNELS * sizeof(float));
-        pipe_->InitBuffer(addendBuf_, MERGE_CHANNELS * sizeof(float));
+        if (tl_->isNhwc != 0 && tl_->nhwcPath == 3) {
+            // Rows：统计量 staging 用 bulk 粒度（同 Flat/Stream）；x/y 为 tileRows × pitch 行 tile
+            // （ubTileSize 复用为 tileRows）；y 队列兼作统计量写出的 VECOUT 暂存（≥256B 恒成立）
+            pipe_->InitBuffer(sumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(squareSumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(scaleQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(offsetQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, tl_->ubTileSize * pitchElems_ * sizeof(T));
+            pipe_->InitBuffer(yQue_, DOUBLE_BUFFER, tl_->ubTileSize * pitchElems_ * sizeof(T));
+            // Rows 系数 buffer 驻留 2×ceil64(C)（一次构建，tile 循环只搬 x/y）
+            pipe_->InitBuffer(multiplierBuf_, pitchElems_ * sizeof(float));
+            pipe_->InitBuffer(addendBuf_, pitchElems_ * sizeof(float));
+        } else if (tl_->isNhwc != 0 && tl_->nhwcPath == 4) {
+            // RowsWindowed：统计量 bulk staging；x/y 为 c 窗口段 tile（ubTileSize 复用为窗口宽 W）；
+            // multiplier/addend 为 W 元系数窗（每窗从任意通道偏移 64 对齐直算重建）
+            pipe_->InitBuffer(sumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(squareSumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(scaleQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(offsetQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(yQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(multiplierBuf_, tl_->ubTileSize * sizeof(float));
+            pipe_->InitBuffer(addendBuf_, tl_->ubTileSize * sizeof(float));
+        } else if (tl_->isNhwc != 0) {
+            // Flat/Stream：统计量 staging 用 bulk 粒度（4 × 1024 × 4B，大 C 时替代 256B 小 DMA）；
+            // multiplier/addend 复用为 pattern 缓冲（双 pattern 各 min(M,320) 向量；M≤320 即
+            // 全驻留一次装载，Stream 更大才滑动窗），UB 预算由 tiling 扣除
+            pipe_->InitBuffer(sumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(squareSumQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(scaleQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            pipe_->InitBuffer(offsetQue_, 1, NHWC_STAT_BULK_ELEMS * sizeof(float));
+            int64_t ringVecs = (patternVecs_ < NHWC_RESIDENT_VECS) ? patternVecs_ : NHWC_RESIDENT_VECS;
+            pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(yQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(multiplierBuf_, ringVecs * VL_FP32 * sizeof(float));
+            pipe_->InitBuffer(addendBuf_, ringVecs * VL_FP32 * sizeof(float));
+        } else {
+            // ND：统计量 staging 逐 64-chunk（4 × 64 × 4B）
+            pipe_->InitBuffer(sumQue_, 1, CHUNK_CHANNELS * sizeof(float));
+            pipe_->InitBuffer(squareSumQue_, 1, CHUNK_CHANNELS * sizeof(float));
+            pipe_->InitBuffer(scaleQue_, 1, CHUNK_CHANNELS * sizeof(float));
+            pipe_->InitBuffer(offsetQue_, 1, CHUNK_CHANNELS * sizeof(float));
+            pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(yQue_, DOUBLE_BUFFER, tl_->ubTileSize * sizeof(T));
+            pipe_->InitBuffer(multiplierBuf_, MERGE_CHANNELS * sizeof(float));
+            pipe_->InitBuffer(addendBuf_, MERGE_CHANNELS * sizeof(float));
+        }
     }
 
     __aicore__ inline void Process()
     {
-        // 四路统计量输出计算写出：归属核（rIdx==0 且持有 n=0 带 plane）对相交
+        // 四路统计量输出计算写出：ND 由 channel 归属核（rIdx==0 且持有 n=0 带 plane）对相交
         // channel 段 [batchC0_, batchC1_) 分 chunk staging sum/square_sum，向量化算出
-        // save_mean/save_var 后批量写出（避免逐 channel 4B 小 DMA），零核间通信
+        // save_mean/save_var 后批量写出（避免逐 channel 4B 小 DMA），零核间通信；
+        // NHWC 下 batchC0_/batchC1_ = [0, C)，固定 0 号核全量负责
         if (writeBatch_) {
-            ComputeAndStoreBatchStats();
+            if (tl_->isNhwc != 0) {
+                ComputeAndStoreBatchStatsNhwc();
+            } else {
+                ComputeAndStoreBatchStats();
+            }
+        }
+
+        if (tl_->isNhwc != 0) {
+            if (tl_->nhwcPath == 3) {
+                ProcessNhwcRows();
+            } else if (tl_->nhwcPath == 4) {
+                ProcessNhwcRowsWindowed();
+            } else {
+                ProcessNhwcFlatStream();
+            }
+            return;
         }
 
         // plane 主循环：按 channel 回绕边界切 segment（段内 channel 连续），段内按
@@ -214,8 +293,9 @@ private:
                 LocalTensor<float> scaleUb = StageStat(scaleQue_, scaleGm_, c0 + off + sub, cnt);
                 LocalTensor<float> offsetUb = StageStat(offsetQue_, offsetGm_, c0 + off + sub, cnt);
                 PrecomputeAffine((__ubuf__ float*)sumUb.GetPhyAddr(), (__ubuf__ float*)squareSumUb.GetPhyAddr(),
-                                 (__ubuf__ float*)scaleUb.GetPhyAddr(), (__ubuf__ float*)offsetUb.GetPhyAddr(), cnt,
-                                 static_cast<uint32_t>(sub));
+                                 (__ubuf__ float*)scaleUb.GetPhyAddr(), (__ubuf__ float*)offsetUb.GetPhyAddr(),
+                                 (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr() + sub,
+                                 (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr() + sub, cnt);
                 sumQue_.FreeTensor(sumUb);
                 squareSumQue_.FreeTensor(squareSumUb);
                 scaleQue_.FreeTensor(scaleUb);
@@ -239,7 +319,9 @@ private:
             // 关键优化：multiplier/addend 按 chunk 一次向量化预计算（64 lane 全利用），
             // 替代原每 tile 前导重复的单 lane 广播计算；结果位级一致（同样的 IEEE 除法/开方）
             PrecomputeAffine((__ubuf__ float*)sumUb.GetPhyAddr(), (__ubuf__ float*)squareSumUb.GetPhyAddr(),
-                             (__ubuf__ float*)scaleUb.GetPhyAddr(), (__ubuf__ float*)offsetUb.GetPhyAddr(), cnt, 0);
+                             (__ubuf__ float*)scaleUb.GetPhyAddr(), (__ubuf__ float*)offsetUb.GetPhyAddr(),
+                             (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr(),
+                             (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr(), cnt);
 
             __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
             __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
@@ -272,14 +354,15 @@ private:
 
     // 每 chunk 一次：mean=sum*numRecip、var=square_sum*numRecip-mean^2、
     // multiplier=scale/sqrt(var+eps)、addend=offset-multiplier*mean
-    // 向量化预计算到 multiplierBuf_/addendBuf_ 的 dstOffset 槽位（TBuf，同 V pipe 程序序，
-    // 无需事件；R==1 合并路径下最多 4 个 chunk 连续写入 256 项缓冲）；tile 前导仅 2 次广播 load
+    // 向量化预计算到 multDst/addDst 指定槽位（ND 传 multiplierBuf_/addendBuf_ 基址+dstOffset，
+    // R==1 合并路径下最多 4 个 chunk 连续写入 256 项缓冲；NHWC 传 pattern/系数缓冲）；
+    // TBuf 同 V pipe 程序序，无需事件；tile 前导仅 2 次广播 load
     __aicore__ inline void PrecomputeAffine(__ubuf__ float* sumAddr, __ubuf__ float* squareSumAddr,
-                                            __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr, int64_t cnt,
-                                            uint32_t dstOffset)
+                                            __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr,
+                                            __ubuf__ float* multDst, __ubuf__ float* addDst, int64_t cnt)
     {
-        __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr() + dstOffset;
-        __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr() + dstOffset;
+        __ubuf__ float* multiplierAddr = multDst;
+        __ubuf__ float* addendAddr = addDst;
         __VEC_SCOPE__
         {
             RegTensor<float> sumReg, sqrReg, scaleReg, offsetReg, meanReg, varReg, mulReg, addReg, tmpReg;
@@ -341,6 +424,67 @@ private:
             // save_mean→save_var→vmuls(scaler)，与第二趟共享同一份输入 staging）
             LocalTensor<float> bvarOutUb = yQue_.AllocTensor<float>();
             ComputeBatchVarUnbiased(sumAddr, squareSumAddr, (__ubuf__ float*)bvarOutUb.GetPhyAddr(), cnt);
+            yQue_.EnQue(bvarOutUb);
+            bvarOutUb = yQue_.DeQue<float>();
+            DataCopyPad(batchVarGm_[off], bvarOutUb, cpOut);
+            yQue_.FreeTensor(bvarOutUb);
+
+            sumQue_.FreeTensor(sumUb);
+            squareSumQue_.FreeTensor(squareSumUb);
+        }
+    }
+
+    // NHWC 版统计量写出：C 可达 2 万级，逐 64-chunk 的"staging 2 次 + VECOUT 3 趟 + 256B 小写 ×5"
+    // 结构在大 C 下是延迟主导（C=16384 实测 ~100µs）——改为 bulk 粒度（min(1024, y 缓冲容量)）：
+    // 每 bulk staging 2 次 + 趟内逐 64-chunk 填 scratch + 每 bulk 4KB 级写出；运算序与 ND 版逐位一致
+    __aicore__ inline void ComputeAndStoreBatchStatsNhwc()
+    {
+        int64_t yElems = (tl_->nhwcPath == 3) ? (tl_->ubTileSize * pitchElems_) : tl_->ubTileSize;
+        int64_t bulkCap = (yElems * static_cast<int64_t>(sizeof(T))) / static_cast<int64_t>(sizeof(float));
+        bulkCap = (bulkCap / CHUNK_CHANNELS) * CHUNK_CHANNELS; // 64 对齐
+        if (bulkCap < CHUNK_CHANNELS) {
+            ComputeAndStoreBatchStats(); // 防御：y 缓冲容不下 64 fp32（实际不可达，UB 预算保证）
+            return;
+        }
+        int64_t bulk = (NHWC_STAT_BULK_ELEMS < bulkCap) ? NHWC_STAT_BULK_ELEMS : bulkCap;
+        for (int64_t off = batchC0_; off < batchC1_; off += bulk) {
+            int64_t cnt = (batchC1_ - off) < bulk ? (batchC1_ - off) : bulk;
+            LocalTensor<float> sumUb = StageStat(sumQue_, sumGm_, off, cnt);
+            LocalTensor<float> squareSumUb = StageStat(squareSumQue_, squareSumGm_, off, cnt);
+            __ubuf__ float* sumAddr = (__ubuf__ float*)sumUb.GetPhyAddr();
+            __ubuf__ float* squareSumAddr = (__ubuf__ float*)squareSumUb.GetPhyAddr();
+            DataCopyExtParams cpOut{1, static_cast<uint32_t>(cnt * sizeof(float)), 0, 0, 0};
+
+            // 第一趟：save_mean，同源写 batch_mean 与 reserve_1
+            LocalTensor<float> meanOutUb = yQue_.AllocTensor<float>();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanOutUb.GetPhyAddr();
+            for (int64_t cc = 0; cc < cnt; cc += CHUNK_CHANNELS) {
+                int64_t n = (cnt - cc) < CHUNK_CHANNELS ? (cnt - cc) : CHUNK_CHANNELS;
+                ComputeBatchMean(sumAddr + cc, meanAddr + cc, n);
+            }
+            yQue_.EnQue(meanOutUb);
+            meanOutUb = yQue_.DeQue<float>();
+            DataCopyPad(batchMeanGm_[off], meanOutUb, cpOut);
+            DataCopyPad(reserve1Gm_[off], meanOutUb, cpOut);
+            yQue_.FreeTensor(meanOutUb);
+            // 第二趟：reserve_2 = save_variance（有偏）
+            LocalTensor<float> varOutUb = yQue_.AllocTensor<float>();
+            __ubuf__ float* varAddr = (__ubuf__ float*)varOutUb.GetPhyAddr();
+            for (int64_t cc = 0; cc < cnt; cc += CHUNK_CHANNELS) {
+                int64_t n = (cnt - cc) < CHUNK_CHANNELS ? (cnt - cc) : CHUNK_CHANNELS;
+                ComputeBatchVar(sumAddr + cc, squareSumAddr + cc, varAddr + cc, n);
+            }
+            yQue_.EnQue(varOutUb);
+            varOutUb = yQue_.DeQue<float>();
+            DataCopyPad(reserve2Gm_[off], varOutUb, cpOut);
+            yQue_.FreeTensor(varOutUb);
+            // 第三趟：batch_variance = save_variance * batchVarScaler（无偏）
+            LocalTensor<float> bvarOutUb = yQue_.AllocTensor<float>();
+            __ubuf__ float* bvarAddr = (__ubuf__ float*)bvarOutUb.GetPhyAddr();
+            for (int64_t cc = 0; cc < cnt; cc += CHUNK_CHANNELS) {
+                int64_t n = (cnt - cc) < CHUNK_CHANNELS ? (cnt - cc) : CHUNK_CHANNELS;
+                ComputeBatchVarUnbiased(sumAddr + cc, squareSumAddr + cc, bvarAddr + cc, n);
+            }
             yQue_.EnQue(bvarOutUb);
             bvarOutUb = yQue_.DeQue<float>();
             DataCopyPad(batchVarGm_[off], bvarOutUb, cpOut);
@@ -581,8 +725,234 @@ private:
     }
 
 private:
+    // ================= NHWC 路径（isNhwc=1，C=最后一维） =================
+
+    // Flat/Stream：本核负责的连续向量块区间 [planeStart_, planeStart_+planeNum_) 以元素计，
+    // flat 连续 DMA 分 tile 流式处理；逐 64 向量按全局向量号 v 从 pattern 取仿射系数向量。
+    // 系数按窗口惰性驻留（EnsureNhwcRing）：只构建本核向量跨度实际用到的 chunk 窗——每核
+    // 独立构建全量 C 份系数在大 C 下是重复热点（C=16384×64 核×sqrt/div），窗口化后每核仅
+    // 构建 min(驻留上限, 剩余跨度) 个 chunk；跨度跨 C/64 回绕时按需重载
+    __aicore__ inline void ProcessNhwcFlatStream()
+    {
+        __ubuf__ float* multPat = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
+        __ubuf__ float* addPat = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
+        ringK0_ = -1; // 无驻留，首个向量触发窗口装载
+        ringLoaded_ = 0;
+        const int64_t vl = static_cast<int64_t>(VL_FP32);
+        int64_t numel = tl_->numN * tl_->numC;
+        int64_t e0 = planeStart_ * vl;
+        int64_t e1 = (planeStart_ + planeNum_) * vl;
+        if (e1 > numel) {
+            e1 = numel;
+        }
+        vecEnd_ = e1 / vl; // 本核全局向量末（开区间），窗口装载按剩余跨度收窄
+        for (int64_t base = e0; base < e1; base += tl_->ubTileSize) {
+            int64_t extent = (e1 - base) < tl_->ubTileSize ? (e1 - base) : tl_->ubTileSize;
+            LocalTensor<T> xUb = xQue_.AllocTensor<T>();
+            DataCopyExtParams cpIn{1, static_cast<uint32_t>(extent * sizeof(T)), 0, 0, 0};
+            DataCopyPadExtParams<T> padIn{false, 0, 0, 0};
+            DataCopyPad(xUb, xGm_[base], cpIn, padIn);
+            xQue_.EnQue(xUb);
+            xUb = xQue_.DeQue<T>();
+
+            LocalTensor<T> yUb = yQue_.AllocTensor<T>();
+            ComputeNhwcTile((__ubuf__ T*)xUb.GetPhyAddr(), (__ubuf__ T*)yUb.GetPhyAddr(), extent, base / vl, multPat,
+                            addPat);
+
+            yQue_.EnQue(yUb);
+            yUb = yQue_.DeQue<T>();
+            DataCopyPad(yGm_[base], yUb, cpIn);
+            yQue_.FreeTensor(yUb);
+            xQue_.FreeTensor(xUb);
+        }
+    }
+
+    // pattern/驻留环构建体：channels [c0, c0+chan) 按 NHWC_STAT_BULK_ELEMS 大粒度 staging
+    // 统计量（单 bulk 4 次 DMA 替代逐 chunk 4×C/64 次 256B 小 DMA——大 C 时小 DMA 延迟主导，
+    // C=16384 实测 768 次小 DMA 拖到 ~120µs），staged UB 内再逐 64-chunk 预计算仿射系数
+    // 直写 pattern dstOff（落址 64 对齐）
+    __aicore__ inline void BuildNhwcPatternBulk(__ubuf__ float* multPat, __ubuf__ float* addPat, int64_t c0,
+                                                int64_t chan, int64_t dstOff)
+    {
+        for (int64_t b = 0; b < chan; b += NHWC_STAT_BULK_ELEMS) {
+            int64_t bulk = (chan - b) < NHWC_STAT_BULK_ELEMS ? (chan - b) : NHWC_STAT_BULK_ELEMS;
+            LocalTensor<float> sumUb = StageStat(sumQue_, sumGm_, c0 + b, bulk);
+            LocalTensor<float> squareSumUb = StageStat(squareSumQue_, squareSumGm_, c0 + b, bulk);
+            LocalTensor<float> scaleUb = StageStat(scaleQue_, scaleGm_, c0 + b, bulk);
+            LocalTensor<float> offsetUb = StageStat(offsetQue_, offsetGm_, c0 + b, bulk);
+            __ubuf__ float* sumAddr = (__ubuf__ float*)sumUb.GetPhyAddr();
+            __ubuf__ float* squareSumAddr = (__ubuf__ float*)squareSumUb.GetPhyAddr();
+            __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleUb.GetPhyAddr();
+            __ubuf__ float* offsetAddr = (__ubuf__ float*)offsetUb.GetPhyAddr();
+            for (int64_t cc = 0; cc < bulk; cc += CHUNK_CHANNELS) {
+                int64_t cnt = (bulk - cc) < CHUNK_CHANNELS ? (bulk - cc) : CHUNK_CHANNELS;
+                PrecomputeAffine(sumAddr + cc, squareSumAddr + cc, scaleAddr + cc, offsetAddr + cc,
+                                 multPat + dstOff + b + cc, addPat + dstOff + b + cc, cnt);
+            }
+            sumQue_.FreeTensor(sumUb);
+            squareSumQue_.FreeTensor(squareSumUb);
+            scaleQue_.FreeTensor(scaleUb);
+            offsetQue_.FreeTensor(offsetUb);
+        }
+    }
+
+    // 系数驻留窗：pattern 向量 k（恰为通道 chunk k mod M，M=C/64）不在驻留窗
+    // [ringK0_, ringK0_+ringLoaded_) 时重载——从 k 起连续装 min(驻留上限, M-k, 本核剩余跨度)
+    // 个 chunk（不跨 M 回绕；跨度跨 M 回绕或窗走尽时按需重载）。窗口按剩余跨度收窄：大 C 下
+    // 每核只构建自己实际用到的系数，避免全量 C×sqrt/div 的重复热点。
+    // 返回 pattern 内偏移（元素计）
+    __aicore__ inline int64_t EnsureNhwcRing(int64_t k, int64_t vGlobal)
+    {
+        if (k < ringK0_ || k >= ringK0_ + ringLoaded_) {
+            __ubuf__ float* multPat = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
+            __ubuf__ float* addPat = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
+            ringK0_ = k;
+            int64_t span = vecEnd_ - vGlobal;
+            int64_t byM = patternVecs_ - k;
+            int64_t cap = (byM < NHWC_RESIDENT_VECS) ? byM : NHWC_RESIDENT_VECS;
+            ringLoaded_ = (span < cap) ? span : cap;
+            BuildNhwcPatternBulk(multPat, addPat, k * static_cast<int64_t>(VL_FP32),
+                                 ringLoaded_ * static_cast<int64_t>(VL_FP32), 0);
+        }
+        return (k - ringK0_) * static_cast<int64_t>(VL_FP32);
+    }
+
+    // Flat/Stream tile 主计算：tile 内逐 64 向量，按全局向量号取驻留窗内 pattern 向量做
+    // per-element Mul→Add（与 ND 路径同运算序、同一 PrecomputeAffine 系数，位级一致）；部分
+    // 尾向量经 mask 屏蔽（pattern 整行加载读取的是缓冲内陈旧/越 channel lane，不进输出）
+    __aicore__ inline void ComputeNhwcTile(__ubuf__ T* xAddr, __ubuf__ T* yAddr, int64_t extent, int64_t baseVec,
+                                           __ubuf__ float* multPat, __ubuf__ float* addPat)
+    {
+        const int64_t vl = static_cast<int64_t>(VL_FP32);
+        int64_t totalVecs = (extent + vl - 1) / vl;
+        for (int64_t v = 0; v < totalVecs; v++) {
+            int64_t cnt = (extent - v * vl) < vl ? (extent - v * vl) : vl;
+            int64_t patOff = EnsureNhwcRing((baseVec + v) % patternVecs_, baseVec + v);
+            __VEC_SCOPE__
+            {
+                RegTensor<float> mulReg, addReg, xReg, yReg;
+                uint32_t maskCnt = static_cast<uint32_t>(cnt);
+                MaskReg mask = UpdateMask<float>(maskCnt);
+                DataCopy<float, LoadDist::DIST_NORM>(mulReg, multPat + patOff);
+                DataCopy<float, LoadDist::DIST_NORM>(addReg, addPat + patOff);
+                LoadXToFp32(xAddr, xReg, mask, static_cast<uint32_t>(v * vl));
+                Mul(yReg, xReg, mulReg, mask);
+                Add(yReg, yReg, addReg, mask);
+                StoreYFromFp32(yAddr, yReg, mask, static_cast<uint32_t>(v * vl));
+            }
+        }
+    }
+
+    // Rows：行距 pitch 的 UB tile。系数先一次构建驻留（2×ceil64(C)，bulk staging——tile 循环内
+    // 不再重复 staging/预计算，大 C 多 tile 时避免每 tile 4×C/64 次小 DMA）；tile 内逐行 1D
+    // DataCopyPad 搬入（GM 行起点任意字节、UB 行基址 pitch*sizeof(T) 32B 对齐），外层 C 64-chunk、
+    // 内层行循环计算（bn_infer VFNormalize 模式），最后逐行写回
+    __aicore__ inline void ProcessNhwcRows()
+    {
+        int64_t rowEnd = planeStart_ + planeNum_;
+        __ubuf__ float* multAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
+        __ubuf__ float* addAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
+        BuildNhwcCoeffs(multAddr, addAddr);
+        DataCopyExtParams cpRow{1, static_cast<uint32_t>(tl_->numC * sizeof(T)), 0, 0, 0};
+        DataCopyPadExtParams<T> padIn{false, 0, 0, 0};
+        for (int64_t r0 = planeStart_; r0 < rowEnd; r0 += tl_->ubTileSize) {
+            int64_t rows = (rowEnd - r0) < tl_->ubTileSize ? (rowEnd - r0) : tl_->ubTileSize;
+            LocalTensor<T> xUb = xQue_.AllocTensor<T>();
+            for (int64_t i = 0; i < rows; i++) {
+                DataCopyPad(xUb[i * pitchElems_], xGm_[(r0 + i) * tl_->numC], cpRow, padIn);
+            }
+            xQue_.EnQue(xUb);
+            xUb = xQue_.DeQue<T>();
+
+            LocalTensor<T> yUb = yQue_.AllocTensor<T>();
+            __ubuf__ T* xBase = (__ubuf__ T*)xUb.GetPhyAddr();
+            __ubuf__ T* yBase = (__ubuf__ T*)yUb.GetPhyAddr();
+            for (int64_t c = 0; c < tl_->numC; c += CHUNK_CHANNELS) {
+                int64_t cnt = (tl_->numC - c) < CHUNK_CHANNELS ? (tl_->numC - c) : CHUNK_CHANNELS;
+                for (int64_t i = 0; i < rows; i++) {
+                    ComputeNhwcRowTile(xBase + i * pitchElems_, yBase + i * pitchElems_, c, cnt, multAddr + c,
+                                       addAddr + c);
+                }
+            }
+
+            yQue_.EnQue(yUb);
+            yUb = yQue_.DeQue<T>();
+            for (int64_t i = 0; i < rows; i++) {
+                DataCopyPad(yGm_[(r0 + i) * tl_->numC], yUb[i * pitchElems_], cpRow);
+            }
+            yQue_.FreeTensor(yUb);
+            xQue_.FreeTensor(xUb);
+        }
+    }
+
+    // Rows 系数一次构建：bulk staging + 逐 64-chunk 预计算进驻留 buffer（mult[c]/add[c]，落址对齐）
+    __aicore__ inline void BuildNhwcCoeffs(__ubuf__ float* multAddr, __ubuf__ float* addAddr)
+    {
+        BuildNhwcPatternBulk(multAddr, addAddr, 0, tl_->numC, 0);
+    }
+
+    // RowsWindowed（nhwcPath=4，odd-C 无上限）：c 窗口外层 × 行内层。每窗 [c0, c0+cnt) 先从任意
+    // 通道偏移按 64 对齐直算重建系数窗（BuildNhwcPatternBulk：staged 统计量切片 + 直写窗内 64
+    // 对齐落址——无拷贝拼接，规避 VEC 340），再流式处理本核全部行的对应段（W 元大块 DMA，逐行
+    // 双缓冲）。每核系数计算总量 C/64（每通道恰好一次，与快路径同量）；UB 全部占用与 C 无关
+    __aicore__ inline void ProcessNhwcRowsWindowed()
+    {
+        int64_t rowEnd = planeStart_ + planeNum_;
+        int64_t window = tl_->ubTileSize; // c 窗口宽度（tiling 已按 UB 预算取 min(ceil64(C), W_MAX)）
+        __ubuf__ float* multAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
+        __ubuf__ float* addAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
+        for (int64_t c0 = 0; c0 < tl_->numC; c0 += window) {
+            int64_t cnt = (tl_->numC - c0) < window ? (tl_->numC - c0) : window;
+            BuildNhwcPatternBulk(multAddr, addAddr, c0, cnt, 0);
+            DataCopyExtParams cpSeg{1, static_cast<uint32_t>(cnt * sizeof(T)), 0, 0, 0};
+            DataCopyPadExtParams<T> padIn{false, 0, 0, 0};
+            for (int64_t r = planeStart_; r < rowEnd; r++) {
+                LocalTensor<T> xUb = xQue_.AllocTensor<T>();
+                DataCopyPad(xUb, xGm_[r * tl_->numC + c0], cpSeg, padIn);
+                xQue_.EnQue(xUb);
+                xUb = xQue_.DeQue<T>();
+                LocalTensor<T> yUb = yQue_.AllocTensor<T>();
+                __ubuf__ T* xSeg = (__ubuf__ T*)xUb.GetPhyAddr();
+                __ubuf__ T* ySeg = (__ubuf__ T*)yUb.GetPhyAddr();
+                for (int64_t c = 0; c < cnt; c += CHUNK_CHANNELS) {
+                    int64_t n = (cnt - c) < CHUNK_CHANNELS ? (cnt - c) : CHUNK_CHANNELS;
+                    ComputeNhwcRowTile(xSeg, ySeg, c, n, multAddr + c, addAddr + c);
+                }
+                yQue_.EnQue(yUb);
+                yUb = yQue_.DeQue<T>();
+                DataCopyPad(yGm_[r * tl_->numC + c0], yUb, cpSeg);
+                yQue_.FreeTensor(yUb);
+                xQue_.FreeTensor(xUb);
+            }
+        }
+    }
+
+    // Rows 单行 chunk 计算：行内通道 [c, c+cnt) 的 per-element Mul→Add。系数 DIST_NORM 整行
+    // 加载（尾 chunk [cnt,64) 为陈旧 lane，经 mask 屏蔽不进输出，同 ComputeTileMergedR1 口径）；
+    // x 行尾向量无掩码读最多到 c+64 ≤ pitch，行距 64 元素对齐保证不越过 tile 缓冲
+    __aicore__ inline void ComputeNhwcRowTile(__ubuf__ T* xRow, __ubuf__ T* yRow, int64_t c, int64_t cnt,
+                                              __ubuf__ float* multAddr, __ubuf__ float* addAddr)
+    {
+        __VEC_SCOPE__
+        {
+            RegTensor<float> mulReg, addReg, xReg, yReg;
+            uint32_t maskCnt = static_cast<uint32_t>(cnt);
+            MaskReg mask = UpdateMask<float>(maskCnt);
+            DataCopy<float, LoadDist::DIST_NORM>(mulReg, multAddr);
+            DataCopy<float, LoadDist::DIST_NORM>(addReg, addAddr);
+            LoadXToFp32(xRow, xReg, mask, static_cast<uint32_t>(c));
+            Mul(yReg, xReg, mulReg, mask);
+            Add(yReg, yReg, addReg, mask);
+            StoreYFromFp32(yRow, yReg, mask, static_cast<uint32_t>(c));
+        }
+    }
+
+private:
     static constexpr int64_t CHUNK_CHANNELS = 64; // 统计量 staging 粒度（4 队列 × 64 × 4B = 1KB）
     static constexpr int64_t MERGE_CHANNELS = 4 * CHUNK_CHANNELS; // R==1 合并 tile 的系数缓冲槽位（256 项）
+    static constexpr int64_t NHWC_RESIDENT_VECS = 320; // Stream 驻留上限向量数（20480 元素，与 tiling 预算一致；
+                                                       // C/64≤此值即全驻留一次装载，更大才滑动重载）
+    static constexpr int64_t NHWC_STAT_BULK_ELEMS = 1024; // Flat/Stream 统计量 bulk staging 粒度（与 tiling 预算一致）
     static constexpr uint32_t DOUBLE_BUFFER = 2;
 
     TPipe* pipe_ = nullptr;
@@ -592,6 +962,11 @@ private:
     int64_t planeNum_ = 0;
     int64_t rStart_ = 0;
     int64_t myR_ = 0;
+    int64_t patternVecs_ = 0; // NHWC：pattern 周期向量数 M = C/64（C%64==0；ND 恒 0）
+    int64_t pitchElems_ = 0;  // NHWC-Rows：行距（64 元素对齐）
+    int64_t ringK0_ = -1;     // NHWC Flat/Stream：驻留窗首向量号（-1=无驻留）
+    int64_t ringLoaded_ = 0;  // NHWC Flat/Stream：驻留窗已装向量数
+    int64_t vecEnd_ = 0;      // NHWC Flat/Stream：本核全局向量末（开区间），窗口按剩余跨度收窄
     bool writeBatch_ = false;
     int64_t batchC0_ = 0;
     int64_t batchC1_ = 0;

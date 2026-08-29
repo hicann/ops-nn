@@ -46,8 +46,22 @@
  *          SetValue 写全 64 槽(值+显式补零) + MTE2_S/S_V 事件对 + ReduceSum [1,64]，
  *          全程无掩码无隐式填充——修掉慢路每片 ~19us 固定开销(BuildExpanded/ZeroBuf/
  *          每片归约)在小 C 深 R 形态把单核带宽压到 ~1.7GB/s 的问题。
+ *
+ *        NHWC 路径（isNhwc=1，含 ND C==1 大规模/ND R==1 巨 C 两条 reroute，布局同构）：
+ *        - [rows, C] 行主序（C=最后一维）；每核 (行范围/通道段, c 窗口) 二维职责；
+ *        - channelSplit（mode=1，C 大）：每核独占通道段扫全部行，零通信零 workspace；
+ *          段长 > 窗预算时 c 窗口化（窗口外层 × 行 tile 内层，元素恰读一次，C 无上限）；
+ *        - rowSplit（mode=2，C 小）：每核独占行段×全部 C，0 号核覆盖写输出 + SyncAll +
+ *          其余核浮点原子加直写（零 workspace——TTK bin 模式实测 ws 段 DataCopyPad 写入
+ *          触发 VECTOR_CORE_EXCEPTION，故弃 ws 两段归约；原子和顺序不定，误差 O(eps)）
+ *          ——并行度恒=核数（G22 C==1 单核 DMA-bound 的解法）；
+ *        - 计算体与慢路 ComputeTile 同构（VL 块外层 × 行内层 + 块内寄存器累加器，每
+ *          tile 每块仅一次 acc UB RMW——实测安全的唯一累加器结构），mean/rstd 按 64
+ *          chunk 驻留 UB 直加载（免展开）；Kahan 向量化（寄存器源变体）保深 rows 精度；
+ *        - 窗口宽 W 恒 64 对齐：UB 行基址 32B 对齐 + 行尾 64 元向量无掩码读不越 pitch；
+ *          尾窗 cnt<W 的死 lane 垃圾随 tile 驻留残渣进入 acc 死 lane，最终只写 [cnt]
+ *          元素（WritePartials 的 blockLen=cnt*4 原样复用），全程无掩码 load/累加。
  */
-
 #ifndef BN_TRAINING_UPDATE_GRAD_H
 #define BN_TRAINING_UPDATE_GRAD_H
 
@@ -114,10 +128,10 @@ public:
                                 GM_ADDR diffOffset, GM_ADDR workspace, const BNTrainingUpdateGradTilingData* tilingData,
                                 TPipe* pipe)
     {
-        (void)workspace; // 无 workspace（channel 归属唯一，零核间通信）
         pipe_ = pipe;
         tl_ = tilingData;
-        // blockIdx 即 channel 块号：每 channel 的完整归约由唯一归属核完成（零核间通信）
+        // blockIdx 即切分维块号（ND/NHWC-channelSplit=通道段；NHWC-rowSplit=行段）：
+        // ND/NHWC-channelSplit 下每 channel 的完整归约由唯一归属核完成（零核间通信）
         int64_t cRangeIdx = static_cast<int64_t>(GetBlockIdx());
         if (cRangeIdx < tl_->cFormerCoreNum) {
             cRangeLen_ = tl_->cFormerLen;
@@ -133,13 +147,21 @@ public:
         cLenPad_ = (tl_->cLenCap + 7) / 8 * 8; // 归约 dst 行距上限（32B 对齐）
 
         int64_t gmLen = tl_->numN * tl_->numC * tl_->innerSize;
+        if (tl_->isNhwc != 0) {
+            gmLen = tl_->numN * tl_->numC; // NHWC：numN 即 rows，innerSize 恒 1
+        }
         gradsGm_.SetGlobalBuffer((__gm__ T*)grads, gmLen);
         xGm_.SetGlobalBuffer((__gm__ T*)x, gmLen);
         meanGm_.SetGlobalBuffer((__gm__ float*)batchMean, tl_->numC);
         varGm_.SetGlobalBuffer((__gm__ float*)batchVar, tl_->numC);
         diffScaleGm_.SetGlobalBuffer((__gm__ float*)diffScale, tl_->numC);
         diffOffsetGm_.SetGlobalBuffer((__gm__ float*)diffOffset, tl_->numC);
+        (void)workspace; // rowSplit 原子加直写输出：零 workspace（ws 段写实测 VECTOR_CORE_EXCEPTION）
 
+        if (tl_->isNhwc != 0) {
+            InitNhwcBuffer();
+            return;
+        }
         // 全部 VF 读缓冲统一 +VL_FP32 槽位：非对齐尾块的前整 VL load 允许越入槽位（mask 屏蔽，不越界）；
         // 缓冲尺寸与 host tiling 的 perRowBytes/fixedBytes 预算公式严格一致
         int64_t rowPitch = tl_->rowsPerTile * pitchElems_ + VL_FP32;
@@ -173,6 +195,10 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (tl_->isNhwc != 0) {
+            ProcessNhwc();
+            return;
+        }
         if (tl_->cLenCap == 1) {
             ProcessFast(); // 小 C 深归约快路(单 channel chunk,1D 连续段 + 位置化 scratch)
         } else {
@@ -254,6 +280,237 @@ private:
             }
             WritePartials(cPos, 1);
         }
+    }
+
+    // ===================== NHWC 路径（isNhwc=1） =====================
+
+    // NHWC 专属 buffer：g/x 双队列(tileRows×W×dsize×2) + fp32 常驻 8 条 (W+VL)
+    // （statMean/statVar/rstd/accOff/accScale/kahanOff/kahanScale/out，与 host
+    // SolveNhwcWindowMax/SolveNhwcTileRows 预算公式严格一致）+ rowSplit ws 读 tile
+    __aicore__ inline void InitNhwcBuffer()
+    {
+        int64_t window = tl_->cLenCap;                  // W（64 对齐）
+        int64_t tileRows = tl_->sliceR;                 // 行 tile 行数
+        int64_t rowPitch = tileRows * window + VL_FP32; // +VL 槽位（尾块前整 VL load 越入）
+        if (tl_->numC == 1) {
+            // C==1 reroute：sliceR 语义为 1D chunk 元素数，g/x 为连续段缓冲（无行距 W）
+            rowPitch = tileRows + VL_FP32;
+        }
+        pipe_->InitBuffer(gQue_, DOUBLE_BUFFER, rowPitch * sizeof(T));
+        pipe_->InitBuffer(xQue_, DOUBLE_BUFFER, rowPitch * sizeof(T));
+        pipe_->InitBuffer(statMeanQue_, 1, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(statVarQue_, 1, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(outQue_, 1, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(accOff_, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(accScale_, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(rstdBuf_, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(kahanOff_, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(kahanScale_, (window + VL_FP32) * sizeof(float));
+        pipe_->InitBuffer(reduceTmp_, REDUCE_TMP_BYTES);
+        if (tl_->numC == 1) {
+            // C==1 reroute：AccumChunk 的 scratch/尾槽/归约 dst（ND 快路同款尺寸口径）
+            pipe_->InitBuffer(accRowG_, (tileRows + 2 * VL_FP32) * sizeof(float));
+            pipe_->InitBuffer(accRowP_, (tileRows + 2 * VL_FP32) * sizeof(float));
+            pipe_->InitBuffer(expMean_, 2 * VL_FP32 * sizeof(float));
+            pipe_->InitBuffer(expRstd_, 2 * VL_FP32 * sizeof(float));
+            pipe_->InitBuffer(dstG_, (8 + VL_FP32) * sizeof(float));
+            pipe_->InitBuffer(dstP_, (8 + VL_FP32) * sizeof(float));
+        }
+    }
+
+    __aicore__ inline void ProcessNhwc()
+    {
+        if (tl_->nhwcSplitMode == 2) {
+            ProcessNhwcRowSplit();
+        } else {
+            ProcessNhwcChannelSplit();
+        }
+    }
+
+    // channelSplit：本核通道段 [cStart_, cStart_+cRangeLen_) 扫全部行；段长 > 窗预算时
+    // c 窗口化（元素恰读一次，C 无上限）；acc 即逐通道结果，直写 GM（零核间通信）
+    __aicore__ inline void ProcessNhwcChannelSplit()
+    {
+        int64_t cEnd = cStart_ + cRangeLen_;
+        for (int64_t cw0 = cStart_; cw0 < cEnd; cw0 += tl_->cLenCap) {
+            int64_t cnt = (cEnd - cw0 < tl_->cLenCap) ? (cEnd - cw0) : tl_->cLenCap;
+            ProcessNhwcWindow(cw0, cnt, 0, tl_->numN);
+            WritePartials(cw0, cnt);
+        }
+    }
+
+    // rowSplit：本核行段 [cStart_, cStart_+cRangeLen_)×全部 C（单窗）；部分和原子加直写
+    // 输出 GM（bn_training_reduce 同款已验证形态：SetAtomicAdd + DataCopyPad + SetAtomicNone），
+    // 零 workspace、零 SyncAll、零两段归约——TTK bin 模式实测 ws 段 DataCopyPad 写入触发
+    // VECTOR_CORE_EXCEPTION（ws 段走 HUGE_PAGE_ONLY 分配），原子加直写输出 GM 无此问题。
+    // 输出为各核部分和的浮点原子和：顺序不定但误差 O(eps)（部分和数量 = 核数 ≤64）。
+    __aicore__ inline void ProcessNhwcRowSplit()
+    {
+        ProcessNhwcWindow(0, tl_->numC, cStart_, cStart_ + cRangeLen_);
+        if (GetBlockIdx() == 0) {
+            // 0 号核覆盖写（初值无关）→ 全核栅障 → 其余核原子加：总和等价于"清零后全
+            // 原子加"，输出对调用方的初始内容零依赖（TTK 输出预填全 1 亦正确）。
+            // SyncAll 裸调用（clipped_swiglu_grad/foreach_norm 同款先例，零 ws 零 flag）。
+            WriteAccToGm(diffOffsetGm_, (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr(), tl_->numC);
+            WriteAccToGm(diffScaleGm_, (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr(), tl_->numC);
+            SyncAll();
+            return;
+        }
+        SyncAll();
+        SetAtomicAdd<float>();
+        WriteAccToGm(diffOffsetGm_, (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr(), tl_->numC);
+        WriteAccToGm(diffScaleGm_, (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr(), tl_->numC);
+        SetAtomicNone();
+    }
+
+    // 一个 (c 窗口, 行范围)：staging 窗口统计量 + 清 acc/kahan + 行 tile 循环（2D
+    // DataCopyPad + ComputeNhwcTile）；行 tile 数由 tiling 的 sliceR=tileRows 下发
+    __aicore__ inline void ProcessNhwcWindow(int64_t cw0, int64_t cnt, int64_t r0, int64_t r1)
+    {
+        if (tl_->numC == 1) {
+            // C==1：mean/rstd 标量化 + 整段 1D 连续 DMA（ND 快路形态），行段即元素段
+            LocalTensor<float> meanUb = StageStat(statMeanQue_, meanGm_, cw0, 1);
+            LocalTensor<float> varUb = StageStat(statVarQue_, varGm_, cw0, 1);
+            ComputeRstd((__ubuf__ float*)varUb.GetPhyAddr(), 1);
+            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventVS);
+            WaitFlag<HardEvent::V_S>(eventVS);
+            float meanVal = meanUb.GetValue(0);
+            float rstdVal = rstdBuf_.Get<float>().GetValue(0);
+            ZeroBuf(accOff_, 1);
+            ZeroBuf(accScale_, 1);
+            ZeroBuf(kahanOff_, VL_FP32);
+            ZeroBuf(kahanScale_, VL_FP32);
+            ProcessNhwcWindowC1(r0, r1, meanVal, rstdVal);
+            statMeanQue_.FreeTensor(meanUb);
+            statVarQue_.FreeTensor(varUb);
+            return;
+        }
+        LocalTensor<float> meanUb = StageStat(statMeanQue_, meanGm_, cw0, cnt);
+        LocalTensor<float> varUb = StageStat(statVarQue_, varGm_, cw0, cnt);
+        ComputeRstd((__ubuf__ float*)varUb.GetPhyAddr(), cnt);
+        // 清零扩到窗口整宽 W（而非 cnt）：acc/kahan 死 lane 从 0 起算，rowSplit 整 pitch
+        // 写 ws + reduce 核整 64 宽列段求和时死 lane 恒 0（tile pad 零 × 任何 = 0 的
+        // 不变式之外再兜一层——不依赖上一窗的驻留残渣）
+        ZeroBuf(accOff_, tl_->cLenCap);
+        ZeroBuf(accScale_, tl_->cLenCap);
+        ZeroBuf(kahanOff_, tl_->cLenCap);
+        ZeroBuf(kahanScale_, tl_->cLenCap);
+        for (int64_t r = r0; r < r1; r += tl_->sliceR) {
+            int64_t nr = (r1 - r < tl_->sliceR) ? (r1 - r) : tl_->sliceR;
+            LocalTensor<T> gUb = gQue_.AllocTensor<T>();
+            LocalTensor<T> xUb = xQue_.AllocTensor<T>();
+            NhwcCopyRowTile(gUb, xUb, cw0, cnt, r, nr);
+            gQue_.EnQue(gUb);
+            gUb = gQue_.DeQue<T>();
+            xQue_.EnQue(xUb);
+            xUb = xQue_.DeQue<T>();
+            ComputeNhwcTile((__ubuf__ T*)gUb.GetPhyAddr(), (__ubuf__ T*)xUb.GetPhyAddr(), nr, cnt,
+                            (__ubuf__ float*)meanUb.GetPhyAddr());
+            gQue_.FreeTensor(gUb);
+            xQue_.FreeTensor(xUb);
+        }
+        statMeanQue_.FreeTensor(meanUb);
+        statVarQue_.FreeTensor(varUb);
+    }
+
+    // C==1 特化（ND C==1 reroute 场景）：行宽 1 元素逐行 DMA 效率 1/64；改为整段连续 1D
+    // 大块 DMA + 位置化 scratch + 两发 ReduceSum（ND 快路 AccumChunk 同款已验证形态——
+    // mean/rstd 为标量，免展开系数；fp32 精度由调用方 Kahan 缓冲承接）
+    __aicore__ inline void ProcessNhwcWindowC1(int64_t r0, int64_t r1, float meanVal, float rstdVal)
+    {
+        for (int64_t r = r0; r < r1; r += tl_->sliceR) {
+            int64_t eff = (r1 - r < tl_->sliceR) ? (r1 - r) : tl_->sliceR;
+            AccumChunk(r, eff, meanVal, rstdVal);
+        }
+    }
+
+    // 行 tile 搬运：逐行 1D DataCopyPad 写 UB 行基址 row*W（V3 ProcessNhwcRows 同款已验证
+    // 形态——GM 行起点任意字节、UB 行基址 W*T 恒 32B 对齐；避免 2D dstStride 的平台语义
+    // 风险）。行数 nr 小（UB 反推的 tileRows），逐行 DMA 的条数开销可忽略。
+    // C==1 特化（ND C==1 reroute 场景）：行宽 1 元素逐行 DMA 效率 1/64，且行段在 GM 连续
+    // （行 i 基址 = i），改为整段一发 1D 大块 DMA（tile 容量 nr 元素按 UB 预算另行收窄——
+    // 见 host tiling 对 rowSplit C==1 的 tileRows 钳制），UB 侧布局不变（W=64 行距）。
+    __aicore__ inline void NhwcCopyRowTile(LocalTensor<T>& gUb, LocalTensor<T>& xUb, int64_t cw0, int64_t cnt,
+                                           int64_t r0, int64_t nr)
+    {
+        DataCopyExtParams cpRow{1, static_cast<uint32_t>(cnt * sizeof(T)), 0, 0, 0};
+        DataCopyPadExtParams<T> padRow{false, 0, 0, 0};
+        int64_t window = tl_->cLenCap;
+        for (int64_t i = 0; i < nr; i++) {
+            int64_t gmBase = (r0 + i) * tl_->numC + cw0;
+            DataCopyPad(gUb[i * window], gradsGm_[gmBase], cpRow, padRow);
+            DataCopyPad(xUb[i * window], xGm_[gmBase], cpRow, padRow);
+        }
+    }
+
+    // NHWC 单 tile 主计算：VL 块外层 × 行内层 + 块内寄存器累加器（慢路 ComputeTile 已验证
+    // 结构），mean/rstd 从驻留 UB 直加载（免展开系数）；每 tile 每块一次 KahanAddReg 落
+    // acc（UB RMW 频次 = 行 tile 数 × 块数，比逐行 RMW 低 3 个数量级）。尾窗 cnt<W 的死
+    // lane：mean/rstd 驻留残渣 × tile pad 零 → 垃圾进 acc 死 lane，最终只写 [cnt] 元素。
+    __aicore__ inline void ComputeNhwcTile(__ubuf__ T* gAddr, __ubuf__ T* xAddr, int64_t nr, int64_t cnt,
+                                           __ubuf__ float* meanAddr)
+    {
+        int64_t window = tl_->cLenCap;
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdBuf_.Get<float>().GetPhyAddr();
+        __ubuf__ float* accOffAddr = (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* accScaleAddr = (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanOffAddr = (__ubuf__ float*)kahanOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanScaleAddr = (__ubuf__ float*)kahanScale_.Get<float>().GetPhyAddr();
+        uint16_t blocks = static_cast<uint16_t>((cnt + VL_FP32 - 1) / VL_FP32); // 含尾块（死 lane 全 mask）
+        uint16_t nrU = static_cast<uint16_t>(nr);
+        __VEC_SCOPE__
+        {
+            RegTensor<float> gReg, xReg, mReg, sReg, tReg, accGReg, accPReg;
+            MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
+            for (uint16_t b = 0; b < blocks; b++) {
+                uint32_t offset = b * VL_FP32;
+                DataCopy<float, LoadDist::DIST_NORM>(mReg, meanAddr + offset);
+                DataCopy<float, LoadDist::DIST_NORM>(sReg, rstdAddr + offset);
+                Duplicate(accGReg, 0.0f);
+                Duplicate(accPReg, 0.0f);
+                for (uint16_t row = 0; row < nrU; row++) {
+                    LoadToFp32(gAddr + row * window, gReg, fullMask, offset);
+                    LoadToFp32(xAddr + row * window, xReg, fullMask, offset);
+                    Sub(tReg, xReg, mReg, fullMask);
+                    Mul(tReg, tReg, sReg, fullMask);
+                    Mul(tReg, gReg, tReg, fullMask); // 运算序 sub→mul rstd→mul grads 对齐 golden/A2
+                    Add(accGReg, accGReg, gReg, fullMask);
+                    Add(accPReg, accPReg, tReg, fullMask);
+                }
+                KahanAddReg(accOffAddr + offset, kahanOffAddr + offset, accGReg, fullMask);
+                KahanAddReg(accScaleAddr + offset, kahanScaleAddr + offset, accPReg, fullMask);
+            }
+        }
+    }
+
+    // Kahan 补偿累加（寄存器源变体）：tileSumReg → acc，comp 为补偿位。KahanAdd（UB 源）
+    // 保留供快路；深 rows 部分和上万次顺序累加的 fp32 截断由 Kahan 压到 O(eps)。
+    __aicore__ inline void KahanAddReg(__ubuf__ float* accAddr, __ubuf__ float* compAddr, RegTensor<float>& srcReg,
+                                       MaskReg& mask)
+    {
+        RegTensor<float> sumReg, cReg, yReg, tReg;
+        DataCopy<float, LoadDist::DIST_NORM>(sumReg, accAddr);
+        DataCopy<float, LoadDist::DIST_NORM>(cReg, compAddr);
+        Sub(yReg, srcReg, cReg, mask); // y = src - c
+        Add(tReg, sumReg, yReg, mask); // t = sum + y
+        Sub(cReg, tReg, sumReg, mask); // (t - sum)
+        Sub(cReg, cReg, yReg, mask);   // c = (t - sum) - y
+        DataCopy<float, StoreDist::DIST_NORM>(accAddr, tReg, mask);
+        DataCopy<float, StoreDist::DIST_NORM>(compAddr, cReg, mask);
+    }
+
+    // acc → GM 直写（rowSplit 写 ws 用；WritePartials 的单趟抽取，整 pitch 拷出，
+    // 死 lane 垃圾入 ws 垫不出输出；经 outQue EnQue/DeQue 完成 V→MTE3 同步）
+    __aicore__ inline void WriteAccToGm(GlobalTensor<float> dstGm, __ubuf__ float* accAddr, int64_t cnt)
+    {
+        DataCopyExtParams cpOut{1, static_cast<uint32_t>(cnt * sizeof(float)), 0, 0, 0};
+        LocalTensor<float> outUb = outQue_.AllocTensor<float>();
+        CopyAccToOut(accAddr, (__ubuf__ float*)outUb.GetPhyAddr(), cnt);
+        outQue_.EnQue(outUb);
+        outUb = outQue_.DeQue<float>();
+        DataCopyPad(dstGm, outUb, cpOut);
+        outQue_.FreeTensor(outUb);
     }
 
     // 标量读 T 并升 fp32(bf16 标量 cast 后端不支持,按位 <<16 提升,位精确)

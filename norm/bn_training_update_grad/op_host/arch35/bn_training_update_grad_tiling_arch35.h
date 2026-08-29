@@ -10,7 +10,7 @@
 
 /*!
  * \file bn_training_update_grad_tiling_arch35.h
- * \brief BNTrainingUpdateGrad arch35 tiling（ND-only；GE 可能下发 NCHW 标签）
+ * \brief BNTrainingUpdateGrad arch35 tiling（ND/NCHW + NHWC；GE 可能下发 NCHW/NHWC 标签）
  */
 
 #ifndef BN_TRAINING_UPDATE_GRAD_TILING_ARCH35_H
@@ -38,8 +38,14 @@ private:
     ge::graphStatus GetShapeAndDtype();
     ge::graphStatus CheckGradsXDescAndShape();
     ge::graphStatus CheckStatInputs();
+    ge::graphStatus ParseNhwcShape(const gert::Shape& gradsStorageShape, size_t dimNum);
     ge::graphStatus CalcCoreSplit();
+    ge::graphStatus CalcNhwcSplit();
+    int64_t SolveNhwcWindowMax() const;
+    int64_t SolveNhwcTileRows(int64_t window) const;
+    void SplitRangeAcrossCores(int64_t total);
     ge::graphStatus FillTilingData();
+    void ConvertNdToNhwcLayout();
 
     gert::TilingContext* context_ = nullptr;
     int64_t coreNum_ = 0;
@@ -47,10 +53,16 @@ private:
 
     // shape 信息
     int64_t numN_ = 0;
-    int64_t numC_ = 0;      // C（dim1）
-    int64_t innerSize_ = 0; // R = prod(d2:)
+    int64_t numC_ = 0;      // ND: C（dim1）；NHWC: C（最后一维）
+    int64_t innerSize_ = 0; // ND: R = prod(d2:)；NHWC: 恒 1
     int64_t xDtypeSize_ = 4;
     float epsilon_ = 0.0001f;
+
+    // NHWC 信息
+    bool isNhwc_ = false;
+    int64_t nhwcSplitMode_ = 0; // 1=channelSplit；2=rowSplit
+    int64_t rows_ = 0;          // NHWC 总行数 = numel/C
+    int64_t wsBytes_ = 0;       // rowSplit workspace 字节数（channelSplit/ND 恒 0）
 
     // 切分结果
     int64_t channelCores_ = 1;

@@ -10,7 +10,7 @@
 
 /*!
  * \file bn_training_update_v3_tiling_arch35.h
- * \brief BNTrainingUpdateV3 arch35 tiling（ND-only；GE 可能下发 NCHW 标签）
+ * \brief BNTrainingUpdateV3 arch35 tiling（ND/NHWC 双路径；GE 可能下发 NCHW 标签，布局同 ND）
  */
 
 #ifndef BN_TRAINING_UPDATE_V3_TILING_ARCH35_H
@@ -39,6 +39,12 @@ private:
     ge::graphStatus CheckXDescAndShape();
     ge::graphStatus CheckStatInputs();
     ge::graphStatus CalcCoreSplit();
+    ge::graphStatus SelectNhwcPath();
+    ge::graphStatus ParseNhwcShape(const gert::Shape& xStorageShape, size_t dimNum);
+    ge::graphStatus CalcNhwcSplit();
+    void SplitPlanesAcrossCores();
+    ge::graphStatus CalcNhwcRowsUbTile();
+    ge::graphStatus CalcNhwcPatternUbTile();
     ge::graphStatus FillTilingData();
 
     gert::TilingContext* context_ = nullptr;
@@ -46,9 +52,12 @@ private:
     int64_t ubSize_ = 0;
 
     // shape 信息
-    int64_t numN_ = 0;
-    int64_t numC_ = 0;      // C（dim1）
-    int64_t innerSize_ = 0; // R = prod(d2:)
+    bool isNhwc_ = false;   // x origin format 为 NHWC（C=最后一维）
+    int64_t numN_ = 0;      // ND：dim0；NHWC：rows（前导维乘积，语义 N*H*W）
+    int64_t numC_ = 0;      // C（ND：dim1；NHWC：最后一维）
+    int64_t rows_ = 0;      // NHWC：numel / C（= num，numRecip/batchVarScaler 分母）
+    int64_t nhwcPath_ = 0;  // NHWC 内部分派：1=Flat 2=Stream 3=Rows
+    int64_t innerSize_ = 0; // R = prod(d2:)（ND）；NHWC：Flat/Stream=64、Rows=1（CalcNhwcSplit 填）
     int64_t units_ = 0;
     int64_t xDtypeSize_ = 4;
     float epsilon_ = 0.0f;
