@@ -16,15 +16,15 @@
 #include "unsorted_segment_simt_tiling.h"
 
 namespace optiling {
+using namespace UnsortedSegmentMax;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
-static constexpr uint64_t TEMPLATE_SIMT = 1000;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
 
 bool UnsortedSegmentSimtTiling::IsCapable() { return true; }
 
 uint64_t UnsortedSegmentSimtTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMT, USS_CAST_NONE);
     return tilingKey;
 }
 

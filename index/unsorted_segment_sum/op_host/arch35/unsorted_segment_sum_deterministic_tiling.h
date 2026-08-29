@@ -20,24 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumDetermTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint32_t, tmpBufferSize);
-TILING_DATA_FIELD_DEF(uint32_t, rowsNumInUB);
-TILING_DATA_FIELD_DEF(uint32_t, normalCoreProcessNum);
-TILING_DATA_FIELD_DEF(uint32_t, tailCoreProcessNum);
-TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3100, UnsortedSegmentSumDetermTilingData);
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3101, UnsortedSegmentSumDetermTilingData);
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3102, UnsortedSegmentSumDetermTilingData);
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3200, UnsortedSegmentSumDetermTilingData);
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3201, UnsortedSegmentSumDetermTilingData);
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3202, UnsortedSegmentSumDetermTilingData);
-
 class UnsortedSegmentSumDetermTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumDetermTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
@@ -62,7 +44,6 @@ private:
     uint32_t row32BAlign_;
     uint64_t normalCoreProcessNum_;
     uint64_t tailCoreProcessNum_;
-    UnsortedSegmentSumDetermTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_DETERMINISTIC_TILING_H

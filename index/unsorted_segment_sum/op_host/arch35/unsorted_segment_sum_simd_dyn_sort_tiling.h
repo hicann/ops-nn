@@ -20,25 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSimdDynSortTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim); // segmentNum_
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, sTileNum);
-TILING_DATA_FIELD_DEF(uint64_t, aTileNum);
-TILING_DATA_FIELD_DEF(uint64_t, normBlockS);
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockS);
-TILING_DATA_FIELD_DEF(uint64_t, normBlockA);
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockA);
-TILING_DATA_FIELD_DEF(uint64_t, baseS);
-TILING_DATA_FIELD_DEF(uint64_t, baseA);
-TILING_DATA_FIELD_DEF(uint64_t, sortBaseS);
-TILING_DATA_FIELD_DEF(uint64_t, sortBaseA);
-TILING_DATA_FIELD_DEF(uint64_t, sortSharedBufSize);
-TILING_DATA_FIELD_DEF(uint64_t, indicesCastMode);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_7000, UnsortedSegmentSumSimdDynSortTilingData);
-
 class UnsortedSegmentSumSimdDynSortTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
@@ -66,7 +47,6 @@ private:
     uint64_t sortBaseS_ = 1;
     uint64_t sortBaseA_ = 1;
     uint32_t sortSharedBufSize_ = 0;
-    UnsortedSegmentSumSimdDynSortTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SIMD_DYN_SORT_TILING_H

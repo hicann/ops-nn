@@ -59,11 +59,11 @@ IMPL_OP_OPTILING(UnsortedSegmentMax)
     .Tiling(Tiling4UnsortedSegmentMax)
     .TilingParse<UnsortedSegmentCompileInfo>(TilingPrepare4UnsortedSegmentMax);
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxOutFlTiling, 1);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimdSplitColTiling, 20);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimdNonSortTiling, 30);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimdDynSortTiling, 50);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSortSimtTiling, 60);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMax, UnsortedSegmentMaxSimtTiling, 100);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxOutFlTiling, 1);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxSimdSplitColTiling, 20);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxSimdNonSortTiling, 30);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxSimdDynSortTiling, 50);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxSortSimtTiling, 60);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMax", UnsortedSegmentMaxSimtTiling, 100);
 
 } // namespace optiling

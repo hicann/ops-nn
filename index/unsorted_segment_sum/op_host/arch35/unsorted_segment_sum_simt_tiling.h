@@ -20,15 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSimtTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);  // totalSampleNum_
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim); // segmentNum_
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, maxThread);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_1000, UnsortedSegmentSumSimtTilingData);
-
 class UnsortedSegmentSumSimtTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimtTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
@@ -41,8 +32,6 @@ private:
     uint64_t GetTilingKey() const override;
     void DumpTilingInfo() override;
     void SetTilingData();
-
-    UnsortedSegmentSumSimtTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SIMT_TILING_H

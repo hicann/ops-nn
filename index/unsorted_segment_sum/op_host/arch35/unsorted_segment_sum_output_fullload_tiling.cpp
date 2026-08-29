@@ -19,9 +19,9 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
+using namespace UnsortedSegmentSum;
 static constexpr uint32_t ROW_NUM = 16;
 static constexpr uint32_t MAX_LAST_DIM_RANG = 1024;
-static constexpr uint64_t TEMPLATE_UBADD = 4000;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint64_t BUFFER_ADD_NUM = 2;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
@@ -91,46 +91,44 @@ ge::graphStatus UnsortedSegmentSumOutFlTiling::UbAddBranch()
 
 uint64_t UnsortedSegmentSumOutFlTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_UBADD;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_OUT_FL, USS_CAST_NONE);
     return tilingKey;
 }
 
 void UnsortedSegmentSumOutFlTiling::SetTilingData()
 {
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_maxIndexNum(maxIndexNum_);
-    tilingData_.set_oneCoreUbLoopTimes(oneCoreUbLoopTimes_);
-    tilingData_.set_rowNumUb(rowNumUb_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumOutFlTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->maxIndexNum = maxIndexNum_;
+    tilingData->oneCoreUbLoopTimes = oneCoreUbLoopTimes_;
+    tilingData->rowNumUb = rowNumUb_;
 }
 
 ge::graphStatus UnsortedSegmentSumOutFlTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
     context_->SetLocalMemorySize(ubSize_);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumOutFlTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumOutFlTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", maxIndexNum: " << tilingData_.get_maxIndexNum();
-    info << ", oneCoreUbLoopTimes: " << tilingData_.get_oneCoreUbLoopTimes();
-    info << ", rowNumUb: " << tilingData_.get_rowNumUb();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", maxIndexNum: " << tilingData->maxIndexNum;
+    info << ", oneCoreUbLoopTimes: " << tilingData->oneCoreUbLoopTimes;
+    info << ", rowNumUb: " << tilingData->rowNumUb;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumOutFlTiling, 10);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumOutFlTiling, 10);
 } // namespace optiling

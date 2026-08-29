@@ -13,11 +13,8 @@
  * \brief unsorted_segment_sum kernel
  */
 
-/*!
- * \file unsorted_segment_sum_apt.cpp
- * \brief
- */
-
+#include "arch35/unsorted_segment_sum_tiling_data.h"
+#include "arch35/unsorted_segment_sum_tiling_key.h"
 #include "arch35/unsorted_segment_sum.h"
 #include "arch35/uss_deterministic.h"
 #include "arch35/uss_simd_dyn_sort.h"
@@ -31,37 +28,24 @@
 using namespace AscendC;
 using namespace UnsortedSegmentSum;
 
-#define TEMPLATE_SIMT_TILING_KEY 1000
-#define TEMPLATE_ADD_TILING_KEY 4000
-#define BF16_INT32_TILING_KEY 3102
-#define FP16_INT32_TILING_KEY 3101
-#define FP32_INT32_TILING_KEY 3100
-#define BF16_INT64_TILING_KEY 3202
-#define FP16_INT64_TILING_KEY 3201
-#define FP32_INT64_TILING_KEY 3200
-#define TEMPLATE_SIMD_SPLIT_COL 5000
-#define TEMPLATE_SIMD_NON_SORT 6000
-#define TEMPLATE_SIMD_DYN_SORT 7000
-#define TEMPLATE_SORT_SIMT 4100
-#define TEMPLATE_DETERMINISTIC_BIG_INNERDIM 8000
-#define TEMPLATE_DETERMINISTIC_SMALL_INNERDIM 9000
-
-extern "C" __global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments,
-                                                           GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t TEMPLATE_MODE, uint32_t CAST_MODE>
+__global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output,
+                                                GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
+    REGISTER_TILING_DEFAULT(UnsortedSegmentSumSimtTilingData);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-    if (TILING_KEY_IS(TEMPLATE_SIMT_TILING_KEY)) {
+    if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SIMT) {
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSimtTilingData, tilingData, tiling);
         UnsortedSegmentSum::KernelUnsortedSegmentSum<DTYPE_X, DTYPE_SEGMENT_IDS> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (TILING_KEY_IS(TEMPLATE_SIMD_SPLIT_COL)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SIMD_SPLIT_COL) {
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSimdSplitColTilingData, tilingData, tiling);
         UnsortedSegmentSum::USSKernelSimdSplitCol<DTYPE_X, DTYPE_SEGMENT_IDS> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (TILING_KEY_IS(TEMPLATE_SIMD_NON_SORT)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SIMD_NON_SORT) {
         if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
                       std::is_same<int64_t, DTYPE_X>::value) {
             return;
@@ -71,75 +55,50 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR se
             op.Init(x, segment_ids, output);
             op.Process();
         }
-    } else if (TILING_KEY_IS(TEMPLATE_SIMD_DYN_SORT)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SIMD_DYN_SORT) {
         if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
                       std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSimdDynSortTilingData, tilingData, tiling);
-            if (tilingData.indicesCastMode == CAST_NO) {
+            if constexpr (CAST_MODE == USS_CAST_NONE) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, DTYPE_SEGMENT_IDS, CAST_NO> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
-            } else if (tilingData.indicesCastMode == CAST_INT32_2_INT16) {
+            } else if constexpr (CAST_MODE == USS_CAST_INT32_TO_INT16) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, int16_t, CAST_INT32_2_INT16> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
-            } else if (tilingData.indicesCastMode == CAST_INT64_2_INT32) {
+            } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_INT32) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, int32_t, CAST_INT64_2_INT32> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
-            } else if (tilingData.indicesCastMode == CAST_INT64_2_INT16) {
+            } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_INT16) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, int16_t, CAST_INT64_2_INT16> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
-            } else if (tilingData.indicesCastMode == CAST_INT32_2_UINT8) {
+            } else if constexpr (CAST_MODE == USS_CAST_INT32_TO_UINT8) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, uint8_t, CAST_INT32_2_UINT8> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
-            } else if (tilingData.indicesCastMode == CAST_INT64_2_UINT8) {
+            } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_UINT8) {
                 UnsortedSegmentSum::USSKernelSimdDynSort<DTYPE_X, DTYPE_SEGMENT_IDS, uint8_t, CAST_INT64_2_UINT8> op(
                     &tilingData, &pipe);
                 op.Init(x, segment_ids, output);
                 op.Process();
             }
         }
-    } else if (TILING_KEY_IS(FP32_INT32_TILING_KEY)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_DETERM) {
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<float, int32_t> op(tilingData, pipe);
+        KernelUSSDeterministic<DTYPE_X, DTYPE_SEGMENT_IDS> op(tilingData, pipe);
         op.Init(x, segment_ids, output, workspace);
         op.Process();
-    } else if (TILING_KEY_IS(FP16_INT32_TILING_KEY)) {
-        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<half, int32_t> op(tilingData, pipe);
-        op.Init(x, segment_ids, output, workspace);
-        op.Process();
-    } else if (TILING_KEY_IS(BF16_INT32_TILING_KEY)) {
-        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<bfloat16_t, int32_t> op(tilingData, pipe);
-        op.Init(x, segment_ids, output, workspace);
-        op.Process();
-    } else if (TILING_KEY_IS(FP32_INT64_TILING_KEY)) {
-        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<float, int64_t> op(tilingData, pipe);
-        op.Init(x, segment_ids, output, workspace);
-        op.Process();
-    } else if (TILING_KEY_IS(FP16_INT64_TILING_KEY)) {
-        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<half, int64_t> op(tilingData, pipe);
-        op.Init(x, segment_ids, output, workspace);
-        op.Process();
-    } else if (TILING_KEY_IS(BF16_INT64_TILING_KEY)) {
-        GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermTilingData, tilingData, tiling);
-        KernelUSSDeterministic<bfloat16_t, int64_t> op(tilingData, pipe);
-        op.Init(x, segment_ids, output, workspace);
-        op.Process();
-    } else if (TILING_KEY_IS(TEMPLATE_ADD_TILING_KEY)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_OUT_FL) {
         if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
                       std::is_same<int64_t, DTYPE_X>::value) {
             return;
@@ -149,40 +108,40 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR se
             op.Init(x, segment_ids, output, &tilingData);
             op.Process();
         }
-    } else if (TILING_KEY_IS(TEMPLATE_SORT_SIMT)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SORT_SIMT) {
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSortSimtTilingData, tilingData, tiling);
-        if (tilingData.indicesCastMode == CAST_NO) {
+        if constexpr (CAST_MODE == USS_CAST_NONE) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, DTYPE_SEGMENT_IDS, CAST_NO>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
-        } else if (tilingData.indicesCastMode == CAST_INT32_2_INT16) {
+        } else if constexpr (CAST_MODE == USS_CAST_INT32_TO_INT16) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, int16_t, CAST_INT32_2_INT16>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
-        } else if (tilingData.indicesCastMode == CAST_INT64_2_INT32) {
+        } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_INT32) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, int32_t, CAST_INT64_2_INT32>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
-        } else if (tilingData.indicesCastMode == CAST_INT64_2_INT16) {
+        } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_INT16) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, int16_t, CAST_INT64_2_INT16>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
-        } else if (tilingData.indicesCastMode == CAST_INT32_2_UINT8) {
+        } else if constexpr (CAST_MODE == USS_CAST_INT32_TO_UINT8) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, uint8_t, CAST_INT32_2_UINT8>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
-        } else if (tilingData.indicesCastMode == CAST_INT64_2_UINT8) {
+        } else if constexpr (CAST_MODE == USS_CAST_INT64_TO_UINT8) {
             UnsortedSegmentSum::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, uint8_t, CAST_INT64_2_UINT8>
                 op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
         }
-    } else if (TILING_KEY_IS(TEMPLATE_DETERMINISTIC_BIG_INNERDIM)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_DETERMINISTIC_BIG_INNERDIM) {
         if constexpr (std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
                       std::is_same<bfloat16_t, DTYPE_X>::value) {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDeterministicBigInnerDimTilingData, tilingData, tiling);
@@ -190,7 +149,7 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR se
             op.Init(x, segment_ids, output);
             op.Process();
         }
-    } else if (TILING_KEY_IS(TEMPLATE_DETERMINISTIC_SMALL_INNERDIM)) {
+    } else if constexpr (TEMPLATE_MODE == USS_TEMPLATE_DETERMINISTIC_SMALL_INNERDIM) {
         if constexpr (std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
                       std::is_same<bfloat16_t, DTYPE_X>::value) {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermSmallInnerDimTilingData, tilingData, tiling);

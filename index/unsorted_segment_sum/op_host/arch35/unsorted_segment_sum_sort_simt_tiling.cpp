@@ -22,12 +22,12 @@
 #include "unsorted_segment_sum_sort_simt_tiling.h"
 
 namespace optiling {
+using namespace UnsortedSegmentSum;
 static constexpr uint32_t IN_OUT_RATE_THRESHOLD = 5;
 static constexpr uint32_t INNER_DIM_THRESHOLD = 128;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint32_t MAX_INDEX_NUM = 1024;
 static constexpr int64_t DOUBLE = 2;
-static constexpr uint64_t TEMPLATE_SORT_SIMT = 4100;
 static constexpr uint32_t ALIGN_SIZE = 128;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 
@@ -113,56 +113,53 @@ ge::graphStatus UnsortedSegmentSumSortSimtTiling::CalcTiling()
                        rowUb * eachCoreLoop * (static_cast<int64_t>(usedCoreNum_) - 1) - rowUb * (tailCoreLoop - 1);
     }
 
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_maxIndexNum(rowUb);
-    tilingData_.set_oneCoreUbLoopTimes(eachCoreLoop);
-    tilingData_.set_tailCoreUbLoopTimes(tailCoreLoop);
-    tilingData_.set_maxThread(maxThread_);
-    tilingData_.set_usedCoreNum(usedCoreNum_);
-    tilingData_.set_sortTmpSize(sortTmpSize);
-    tilingData_.set_tailIndexNum(tailIndexNum);
-    tilingData_.set_indicesCastMode(indicesCastMode_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSortSimtTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->maxIndexNum = static_cast<uint64_t>(rowUb);
+    tilingData->oneCoreUbLoopTimes = static_cast<uint64_t>(eachCoreLoop);
+    tilingData->tailCoreUbLoopTimes = static_cast<uint64_t>(tailCoreLoop);
+    tilingData->maxThread = maxThread_;
+    tilingData->usedCoreNum = usedCoreNum_;
+    tilingData->sortTmpSize = static_cast<uint64_t>(sortTmpSize);
+    tilingData->tailIndexNum = static_cast<uint64_t>(tailIndexNum);
+    tilingData->indicesCastMode = indicesCastMode_;
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t UnsortedSegmentSumSortSimtTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SORT_SIMT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SORT_SIMT, indicesCastMode_);
     return tilingKey;
 }
 
 ge::graphStatus UnsortedSegmentSumSortSimtTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
     context_->SetLocalMemorySize(ubSize_);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumSortSimtTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSortSimtTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", maxIndexNum: " << tilingData_.get_maxIndexNum();
-    info << ", oneCoreUbLoopTimes: " << tilingData_.get_oneCoreUbLoopTimes();
-    info << ", tailCoreUbLoopTimes: " << tilingData_.get_tailCoreUbLoopTimes();
-    info << ", maxThread: " << tilingData_.get_maxThread();
-    info << ", usedCoreNum: " << tilingData_.get_usedCoreNum();
-    info << ", sortTmpSize: " << tilingData_.get_sortTmpSize();
-    info << ", tailIndexNum: " << tilingData_.get_tailIndexNum();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", maxIndexNum: " << tilingData->maxIndexNum;
+    info << ", oneCoreUbLoopTimes: " << tilingData->oneCoreUbLoopTimes;
+    info << ", tailCoreUbLoopTimes: " << tilingData->tailCoreUbLoopTimes;
+    info << ", maxThread: " << tilingData->maxThread;
+    info << ", usedCoreNum: " << tilingData->usedCoreNum;
+    info << ", sortTmpSize: " << tilingData->sortTmpSize;
+    info << ", tailIndexNum: " << tilingData->tailIndexNum;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSortSimtTiling, 60);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumSortSimtTiling, 60);
 } // namespace optiling

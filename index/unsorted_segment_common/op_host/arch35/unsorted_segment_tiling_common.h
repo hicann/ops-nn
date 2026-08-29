@@ -33,6 +33,7 @@
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "util/const_util.h"
 #include "../op_kernel/arch35/unsorted_segment_struct.h"
+#include "../op_kernel/arch35/unsorted_segment_max_tiling_key.h"
 
 namespace optiling {
 

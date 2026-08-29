@@ -59,11 +59,11 @@ IMPL_OP_OPTILING(UnsortedSegmentMin)
     .Tiling(Tiling4UnsortedSegmentMin)
     .TilingParse<UnsortedSegmentCompileInfo>(TilingPrepare4UnsortedSegmentMin);
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinOutFlTiling, 1);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinSimdSplitColTiling, 20);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinSimdNonSortTiling, 30);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinSimdDynSortTiling, 50);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinSortSimtTiling, 60);
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentMin, UnsortedSegmentMinSimtTiling, 100);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinOutFlTiling, 1);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinSimdSplitColTiling, 20);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinSimdNonSortTiling, 30);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinSimdDynSortTiling, 50);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinSortSimtTiling, 60);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentMin", UnsortedSegmentMinSimtTiling, 100);
 
 } // namespace optiling

@@ -16,7 +16,7 @@
 #include "unsorted_segment_simd_dyn_sort_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_DYN_SORT = 7000;
+using namespace UnsortedSegmentMax;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
 static constexpr uint64_t BUFFER_NUM = 1;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
@@ -39,7 +39,7 @@ bool UnsortedSegmentSimdDynSortTiling::IsCapable()
 
 uint64_t UnsortedSegmentSimdDynSortTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_DYN_SORT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_DYN_SORT, idCastMode_);
     return tilingKey;
 }
 

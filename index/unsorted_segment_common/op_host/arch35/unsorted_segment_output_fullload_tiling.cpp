@@ -15,9 +15,9 @@
 #include "unsorted_segment_output_fullload_tiling.h"
 
 namespace optiling {
+using namespace UnsortedSegmentMax;
 static constexpr uint32_t ROW_NUM = 16;
 static constexpr uint32_t MAX_LAST_DIM_RANG = 1024;
-static constexpr uint64_t TEMPLATE_UBADD = 4000;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint64_t BUFFER_ADD_NUM = 2;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
@@ -86,7 +86,7 @@ ge::graphStatus UnsortedSegmentOutFlTiling::UbAddBranch()
 
 uint64_t UnsortedSegmentOutFlTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_UBADD;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_OUT_FL, USS_CAST_NONE);
     return tilingKey;
 }
 

@@ -21,7 +21,7 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_NON_SORT = 6000;
+using namespace UnsortedSegmentSum;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t RATIO_BY_SORT = 5;
@@ -41,23 +41,24 @@ bool UnsortedSegmentSumSimdNonSortTiling::IsCapable()
 
 uint64_t UnsortedSegmentSumSimdNonSortTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_NON_SORT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_NON_SORT, USS_CAST_NONE);
     return tilingKey;
 }
 
 void UnsortedSegmentSumSimdNonSortTiling::SetTilingData()
 {
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_sTileNum(sTileNum_);
-    tilingData_.set_aTileNum(aTileNum_);
-    tilingData_.set_normBlockS(normBlockS_);
-    tilingData_.set_tailBlockS(tailBlockS_);
-    tilingData_.set_normBlockA(normBlockA_);
-    tilingData_.set_tailBlockA(tailBlockA_);
-    tilingData_.set_baseS(baseS_);
-    tilingData_.set_baseA(baseA_);
-    tilingData_.set_usedCoreNum(usedCoreNum_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdNonSortTilingData>();
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->sTileNum = sTileNum_;
+    tilingData->aTileNum = aTileNum_;
+    tilingData->normBlockS = normBlockS_;
+    tilingData->tailBlockS = tailBlockS_;
+    tilingData->normBlockA = normBlockA_;
+    tilingData->tailBlockA = tailBlockA_;
+    tilingData->baseS = baseS_;
+    tilingData->baseA = baseA_;
+    tilingData->usedCoreNum = usedCoreNum_;
 }
 
 ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
@@ -101,36 +102,33 @@ ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
 
 ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(std::max(usedCoreNum_, initUsedCore_));
     context_->SetScheduleMode(1);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumSimdNonSortTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdNonSortTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
     info << ", initUsedCore: " << initUsedCore_;
     info << ", inputOuterDim: " << inputOuterDim_;
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", sTileNum: " << tilingData_.get_sTileNum();
-    info << ", aTileNum: " << tilingData_.get_aTileNum();
-    info << ", normBlockS: " << tilingData_.get_normBlockS();
-    info << ", tailBlockS: " << tilingData_.get_tailBlockS();
-    info << ", normBlockA: " << tilingData_.get_normBlockA();
-    info << ", tailBlockA: " << tilingData_.get_tailBlockA();
-    info << ", baseS: " << tilingData_.get_baseS();
-    info << ", baseA: " << tilingData_.get_baseA();
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", sTileNum: " << tilingData->sTileNum;
+    info << ", aTileNum: " << tilingData->aTileNum;
+    info << ", normBlockS: " << tilingData->normBlockS;
+    info << ", tailBlockS: " << tilingData->tailBlockS;
+    info << ", normBlockA: " << tilingData->normBlockA;
+    info << ", tailBlockA: " << tilingData->tailBlockA;
+    info << ", baseS: " << tilingData->baseS;
+    info << ", baseA: " << tilingData->baseA;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSimdNonSortTiling, 30);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumSimdNonSortTiling, 30);
 
 } // namespace optiling

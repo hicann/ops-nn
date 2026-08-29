@@ -15,12 +15,12 @@
 #include "unsorted_segment_sort_simt_tiling.h"
 
 namespace optiling {
+using namespace UnsortedSegmentMax;
 static constexpr uint32_t IN_OUT_RATE_THRESHOLD = 5;
 static constexpr uint32_t INNER_DIM_THRESHOLD = 512;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint32_t MAX_INDEX_NUM = 1024;
 static constexpr int64_t DOUBLE = 2;
-static constexpr uint64_t TEMPLATE_SORT_SIMT = 4100;
 static constexpr uint32_t ALIGN_SIZE = 128;
 
 bool UnsortedSegmentSortSimtTiling::IsCapable()
@@ -97,7 +97,7 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
 
 uint64_t UnsortedSegmentSortSimtTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SORT_SIMT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SORT_SIMT, USS_CAST_NONE);
     return tilingKey;
 }
 

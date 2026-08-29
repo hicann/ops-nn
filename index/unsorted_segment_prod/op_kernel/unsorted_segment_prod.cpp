@@ -14,21 +14,20 @@
  */
 
 #include "../unsorted_segment_common/arch35/unsorted_segment_struct.h"
+#include "../unsorted_segment_common/arch35/unsorted_segment_prod_tiling_key.h"
 #include "./unsorted_segment_prod.h"
 
 using namespace AscendC;
 
-#define TEMPLATE_SIMT_TILING_KEY 1000
-
-extern "C" __global__ __aicore__ void unsorted_segment_prod(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments,
-                                                            GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t TEMPLATE_MODE, uint32_t CAST_MODE>
+__global__ __aicore__ void unsorted_segment_prod(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output,
+                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     REGISTER_TILING_DEFAULT(UnsortedSegment::UnsortedSegmentSimtTilingData);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
-    if (TILING_KEY_IS(TEMPLATE_SIMT_TILING_KEY)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 1000", UnsortedSegment::UnsortedSegmentSimtTilingData);
+    if constexpr (TEMPLATE_MODE == USS_TEMPLATE_SIMT) {
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegment::UnsortedSegmentSimtTilingData, tilingData, tiling);
         UnsortedSegmentProd::KernelUnsortedSegmentProd<DTYPE_X, DTYPE_SEGMENT_IDS> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);

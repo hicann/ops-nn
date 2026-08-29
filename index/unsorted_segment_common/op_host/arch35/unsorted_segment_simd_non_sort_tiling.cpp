@@ -16,7 +16,7 @@
 #include "unsorted_segment_simd_non_sort_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_NON_SORT = 6000;
+using namespace UnsortedSegmentMax;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t RATIO_BY_SORT = 5;
@@ -35,7 +35,7 @@ bool UnsortedSegmentSimdNonSortTiling::IsCapable()
 
 uint64_t UnsortedSegmentSimdNonSortTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_NON_SORT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_NON_SORT, USS_CAST_NONE);
     return tilingKey;
 }
 

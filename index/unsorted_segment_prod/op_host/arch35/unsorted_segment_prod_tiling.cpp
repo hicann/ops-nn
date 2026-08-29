@@ -59,6 +59,6 @@ IMPL_OP_OPTILING(UnsortedSegmentProd)
     .Tiling(Tiling4UnsortedSegmentProd)
     .TilingParse<UnsortedSegmentCompileInfo>(TilingPrepare4UnsortedSegmentProd);
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentProd, UnsortedSegmentProdSimtTiling, 100);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentProd", UnsortedSegmentProdSimtTiling, 100);
 
 } // namespace optiling

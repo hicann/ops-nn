@@ -28,16 +28,12 @@
 #include "platform/platform_info.h"
 #include "exe_graph/runtime/kernel_run_context.h"
 #include "exe_graph/runtime/tiling_context.h"
+#include "../op_kernel/arch35/unsorted_segment_sum_tiling_data.h"
+#include "../op_kernel/arch35/unsorted_segment_sum_tiling_key.h"
 
 using namespace Ops::NN::Optiling;
 
 namespace optiling {
-
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim); // totalSampleNum_
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum, UnsortedSegmentSumTilingData);
 
 ge::graphStatus Tiling4UnsortedSegmentSumForAscendC(gert::TilingContext* context);
 

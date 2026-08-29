@@ -20,7 +20,7 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_SPLIT_COL = 5000;
+using namespace UnsortedSegmentSum;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
@@ -36,19 +36,19 @@ bool UnsortedSegmentSumSimdSplitColTiling::IsCapable()
 
 uint64_t UnsortedSegmentSumSimdSplitColTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_SPLIT_COL;
-    return tilingKey;
+    return GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_SPLIT_COL, USS_CAST_NONE);
 }
 
 void UnsortedSegmentSumSimdSplitColTiling::SetTilingData()
 {
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_normBlockData(normBlockData_);
-    tilingData_.set_tailBlockData(tailBlockData_);
-    tilingData_.set_baseS(baseS_);
-    tilingData_.set_baseA(baseA_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdSplitColTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->normBlockData = normBlockData_;
+    tilingData->tailBlockData = tailBlockData_;
+    tilingData->baseS = baseS_;
+    tilingData->baseA = baseA_;
 }
 
 bool UnsortedSegmentSumSimdSplitColTiling::IsFullLoad()
@@ -81,30 +81,27 @@ ge::graphStatus UnsortedSegmentSumSimdSplitColTiling::DoOpTiling()
 
 ge::graphStatus UnsortedSegmentSumSimdSplitColTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumSimdSplitColTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdSplitColTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", normBlockData: " << tilingData_.get_normBlockData();
-    info << ", tailBlockData: " << tilingData_.get_tailBlockData();
-    info << ", baseS: " << tilingData_.get_baseS();
-    info << ", baseA: " << tilingData_.get_baseA();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", normBlockData: " << tilingData->normBlockData;
+    info << ", tailBlockData: " << tilingData->tailBlockData;
+    info << ", baseS: " << tilingData->baseS;
+    info << ", baseA: " << tilingData->baseA;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSimdSplitColTiling, 20);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumSimdSplitColTiling, 20);
 
 } // namespace optiling

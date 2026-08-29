@@ -20,17 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumDetermSmallInnerDimTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint32_t, rowsNumInUB);
-TILING_DATA_FIELD_DEF(uint32_t, sortSharedBufSize);
-TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_9000, UnsortedSegmentSumDetermSmallInnerDimTilingData);
-
 class UnsortedSegmentSumDetermSmallInnerDimTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumDetermSmallInnerDimTiling(gert::TilingContext* context)
@@ -51,8 +40,6 @@ private:
     uint32_t rowsNumInUB_ = 0;
     uint32_t sortSharedBufSize_ = 0;
     uint32_t usedCoreNum_ = 1;
-
-    UnsortedSegmentSumDetermSmallInnerDimTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_DETERMINISTIC_SMALL_INNERDIM_TILING_H

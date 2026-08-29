@@ -22,7 +22,7 @@
 #include "unsorted_segment_sum_deterministic_small_innerdim_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_DETERMINISTIC_SMALL_INNERDIM = 9000;
+using namespace UnsortedSegmentSum;
 static constexpr uint32_t DCACHE_SIZE = 32 * 1024;
 static constexpr uint32_t NUMBER_THREE = 3;
 static constexpr uint32_t DOUBLE = 2;
@@ -85,12 +85,13 @@ int64_t UnsortedSegmentSumDetermSmallInnerDimTiling::GetSortTmpSize(int64_t rows
 
 void UnsortedSegmentSumDetermSmallInnerDimTiling::SetTilingData()
 {
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_rowsNumInUB(rowsNumInUB_);
-    tilingData_.set_sortSharedBufSize(sortSharedBufSize_);
-    tilingData_.set_usedCoreNum(usedCoreNum_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDetermSmallInnerDimTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->rowsNumInUB = rowsNumInUB_;
+    tilingData->sortSharedBufSize = sortSharedBufSize_;
+    tilingData->usedCoreNum = usedCoreNum_;
 }
 
 ge::graphStatus UnsortedSegmentSumDetermSmallInnerDimTiling::DoOpTiling()
@@ -115,39 +116,35 @@ ge::graphStatus UnsortedSegmentSumDetermSmallInnerDimTiling::DoOpTiling()
 
 uint64_t UnsortedSegmentSumDetermSmallInnerDimTiling::GetTilingKey() const
 {
-    return TEMPLATE_DETERMINISTIC_SMALL_INNERDIM;
+    return GET_TPL_TILING_KEY(USS_TEMPLATE_DETERMINISTIC_SMALL_INNERDIM, USS_CAST_NONE);
 }
 
 ge::graphStatus UnsortedSegmentSumDetermSmallInnerDimTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
                 OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
                 return ge::GRAPH_FAILED);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumDetermSmallInnerDimTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDetermSmallInnerDimTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", rowsNumInUB: " << tilingData_.get_rowsNumInUB();
-    info << ", sortSharedBufSize: " << tilingData_.get_sortSharedBufSize();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", rowsNumInUB: " << tilingData->rowsNumInUB;
+    info << ", sortSharedBufSize: " << tilingData->sortSharedBufSize;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumDetermSmallInnerDimTiling, 1);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumDetermSmallInnerDimTiling, 1);
 
 } // namespace optiling

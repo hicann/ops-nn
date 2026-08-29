@@ -20,23 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSimdNonSortTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim); // segmentNum_
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, sTileNum);
-TILING_DATA_FIELD_DEF(uint64_t, aTileNum);
-TILING_DATA_FIELD_DEF(uint64_t, normBlockS);
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockS);
-TILING_DATA_FIELD_DEF(uint64_t, normBlockA);
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockA);
-TILING_DATA_FIELD_DEF(uint64_t, baseS);
-TILING_DATA_FIELD_DEF(uint64_t, baseA);
-TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_6000, UnsortedSegmentSumSimdNonSortTilingData);
-
 class UnsortedSegmentSumSimdNonSortTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimdNonSortTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
@@ -60,7 +43,6 @@ private:
     uint64_t baseS_ = 1;
     uint64_t baseA_ = 1;
     uint64_t initUsedCore_ = 0;
-    UnsortedSegmentSumSimdNonSortTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SIMD_NON_SORT_TILING_H

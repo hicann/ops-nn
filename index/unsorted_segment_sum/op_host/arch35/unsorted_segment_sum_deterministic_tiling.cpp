@@ -22,23 +22,14 @@
 #include "unsorted_segment_sum_deterministic_tiling.h"
 
 namespace optiling {
+using namespace UnsortedSegmentSum;
 static constexpr uint32_t DCACHE_SIZE = 32 * 1024;
-static constexpr uint64_t TEMPLATE_DETERM = 3000;
 static constexpr uint32_t FLOAT_BYTES = 4;
 static constexpr uint32_t DOUBLE = 2;
 static constexpr uint32_t NUMBER_THREE = 3;
 static constexpr uint32_t NUMBER_KB = 1024;
 static constexpr uint32_t BIG_INNERDIM_THRESHOLD = 30;
 static constexpr uint32_t SMALL_INNERDIM_THRESHOLD = 10000;
-
-static const std::map<ge::DataType, uint32_t> dataTypeMap = {{ge::DT_FLOAT, 0}, {ge::DT_FLOAT16, 1}, {ge::DT_BF16, 2},
-                                                             {ge::DT_INT32, 3}, {ge::DT_INT64, 4},   {ge::DT_UINT32, 5},
-                                                             {ge::DT_UINT64, 6}};
-
-static const std::map<ge::DataType, uint32_t> indexTypeMap = {
-    {ge::DT_INT32, 100},
-    {ge::DT_INT64, 200},
-};
 
 static const std::set<ge::DataType> determinsiticSupportType = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 
@@ -55,20 +46,21 @@ bool UnsortedSegmentSumDetermTiling::IsCapable()
 
 uint64_t UnsortedSegmentSumDetermTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_DETERM + indexTypeMap.find(idType_)->second + dataTypeMap.find(dataType_)->second;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_DETERM, USS_CAST_NONE);
     return tilingKey;
 }
 
 void UnsortedSegmentSumDetermTiling::SetTilingData()
 {
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_tmpBufferSize(sortSharedBufSize_);
-    tilingData_.set_rowsNumInUB(rowsNumInUB_);
-    tilingData_.set_normalCoreProcessNum(normalCoreProcessNum_);
-    tilingData_.set_tailCoreProcessNum(tailCoreProcessNum_);
-    tilingData_.set_usedCoreNum(usedCoreNum_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDetermTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->tmpBufferSize = sortSharedBufSize_;
+    tilingData->rowsNumInUB = rowsNumInUB_;
+    tilingData->normalCoreProcessNum = normalCoreProcessNum_;
+    tilingData->tailCoreProcessNum = tailCoreProcessNum_;
+    tilingData->usedCoreNum = usedCoreNum_;
 }
 
 int64_t UnsortedSegmentSumDetermTiling::FindMaxRowsInUb()
@@ -143,37 +135,33 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
 
 ge::graphStatus UnsortedSegmentSumDetermTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(static_cast<uint32_t>(totalCoreNum_));
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
                 OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
                 return ge::GRAPH_FAILED);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumDetermTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDetermTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", tmpBufferSize: " << tilingData_.get_tmpBufferSize();
-    info << ", rowsNumInUB: " << tilingData_.get_rowsNumInUB();
-    info << ", normalCoreProcessNum: " << tilingData_.get_normalCoreProcessNum();
-    info << ", tailCoreProcessNum: " << tilingData_.get_tailCoreProcessNum();
-    info << ", usedCoreNum: " << tilingData_.get_usedCoreNum();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", tmpBufferSize: " << tilingData->tmpBufferSize;
+    info << ", rowsNumInUB: " << tilingData->rowsNumInUB;
+    info << ", normalCoreProcessNum: " << tilingData->normalCoreProcessNum;
+    info << ", tailCoreProcessNum: " << tilingData->tailCoreProcessNum;
+    info << ", usedCoreNum: " << tilingData->usedCoreNum;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumDetermTiling, 0);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumDetermTiling, 0);
 
 } // namespace optiling

@@ -19,22 +19,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSortSimtTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, maxIndexNum);
-TILING_DATA_FIELD_DEF(uint64_t, oneCoreUbLoopTimes);
-TILING_DATA_FIELD_DEF(uint64_t, tailCoreUbLoopTimes);
-TILING_DATA_FIELD_DEF(uint64_t, maxThread);
-TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(uint64_t, sortTmpSize);
-TILING_DATA_FIELD_DEF(uint64_t, tailIndexNum);
-TILING_DATA_FIELD_DEF(uint64_t, indicesCastMode);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_4100, UnsortedSegmentSumSortSimtTilingData);
-
 class UnsortedSegmentSumSortSimtTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
@@ -48,9 +32,6 @@ private:
     void DumpTilingInfo() override;
     ge::graphStatus CalcTiling();
     int64_t GetSortBufferSize(ge::DataType dataType, int64_t indexSize);
-
-private:
-    UnsortedSegmentSumSortSimtTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SORT_SIMT_TILING_H

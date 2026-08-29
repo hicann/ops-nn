@@ -20,19 +20,6 @@
 
 namespace optiling {
 
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSimdSplitColTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);  // totalSampleNum_
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim); // segmentNum_
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, normBlockData);
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockData);
-TILING_DATA_FIELD_DEF(uint64_t, baseS);
-TILING_DATA_FIELD_DEF(uint64_t, baseA);
-
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_5000, UnsortedSegmentSumSimdSplitColTilingData);
-
 class UnsortedSegmentSumSimdSplitColTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimdSplitColTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
@@ -53,7 +40,6 @@ private:
     uint64_t baseS_ = 1;
     uint64_t baseA_ = 1;
     uint64_t outUbsize_ = 0;
-    UnsortedSegmentSumSimdSplitColTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SIMD_SPLIT_COL_TILING_H

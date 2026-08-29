@@ -22,7 +22,7 @@
 #include "unsorted_segment_sum_deterministic_big_innerdim_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_DETERMINISTIC_BIG_INNERDIM = 8000;
+using namespace UnsortedSegmentSum;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BASE_A_SIZE = 1024;
 static constexpr uint32_t DCACHE_SIZE = 32 * 1024;
@@ -72,14 +72,15 @@ int64_t UnsortedSegmentSumDeterministicBigInnerDimTiling::FindMaxColsInUb()
 
 void UnsortedSegmentSumDeterministicBigInnerDimTiling::SetTilingData()
 {
-    tilingData_.set_inputOuterDim(inputOuterDim_);
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_normalCoreProcessCols(normalCoreProcessCols_);
-    tilingData_.set_tailCoreProcessCols(tailCoreProcessCols_);
-    tilingData_.set_baseS(baseS_);
-    tilingData_.set_baseA(baseA_);
-    tilingData_.set_sortSharedBufSize(sortSharedBufSize_);
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDeterministicBigInnerDimTilingData>();
+    tilingData->inputOuterDim = inputOuterDim_;
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->normalCoreProcessCols = normalCoreProcessCols_;
+    tilingData->tailCoreProcessCols = tailCoreProcessCols_;
+    tilingData->baseS = baseS_;
+    tilingData->baseA = baseA_;
+    tilingData->sortSharedBufSize = sortSharedBufSize_;
 }
 
 int64_t UnsortedSegmentSumDeterministicBigInnerDimTiling::GetSortTmpSize(int64_t rowsNum)
@@ -119,38 +120,34 @@ ge::graphStatus UnsortedSegmentSumDeterministicBigInnerDimTiling::DoOpTiling()
 
 uint64_t UnsortedSegmentSumDeterministicBigInnerDimTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_DETERMINISTIC_BIG_INNERDIM;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_DETERMINISTIC_BIG_INNERDIM, USS_CAST_NONE);
     return tilingKey;
 }
 
 ge::graphStatus UnsortedSegmentSumDeterministicBigInnerDimTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumDeterministicBigInnerDimTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumDeterministicBigInnerDimTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
-    info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", normalCoreProcessCols: " << tilingData_.get_normalCoreProcessCols();
-    info << ", tailCoreProcessCols: " << tilingData_.get_tailCoreProcessCols();
-    info << ", baseS: " << tilingData_.get_baseS();
-    info << ", baseA: " << tilingData_.get_baseA();
-    info << ", sortSharedBufSize: " << tilingData_.get_sortSharedBufSize();
+    info << ", inputOuterDim: " << tilingData->inputOuterDim;
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", normalCoreProcessCols: " << tilingData->normalCoreProcessCols;
+    info << ", tailCoreProcessCols: " << tilingData->tailCoreProcessCols;
+    info << ", baseS: " << tilingData->baseS;
+    info << ", baseA: " << tilingData->baseA;
+    info << ", sortSharedBufSize: " << tilingData->sortSharedBufSize;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumDeterministicBigInnerDimTiling, 5);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumDeterministicBigInnerDimTiling, 5);
 } // namespace optiling

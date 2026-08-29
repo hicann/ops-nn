@@ -16,7 +16,7 @@
 #include "unsorted_segment_simd_spilt_col_tiling.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_SPLIT_COL = 5000;
+using namespace UnsortedSegmentMax;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t BASE_A_SIZE = 1024;
@@ -32,7 +32,7 @@ bool UnsortedSegmentSimdSplitColTiling::IsCapable()
 
 uint64_t UnsortedSegmentSimdSplitColTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_SPLIT_COL;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_SPLIT_COL, USS_CAST_NONE);
     return tilingKey;
 }
 

@@ -20,7 +20,7 @@
 #include "register/tilingdata_base.h"
 
 namespace optiling {
-static constexpr uint64_t TEMPLATE_SIMD_DYN_SORT = 7000;
+using namespace UnsortedSegmentSum;
 static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
 static constexpr uint64_t BUFFER_NUM = 1;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
@@ -46,26 +46,27 @@ bool UnsortedSegmentSumSimdDynSortTiling::IsCapable()
 
 uint64_t UnsortedSegmentSumSimdDynSortTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TEMPLATE_SIMD_DYN_SORT;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(USS_TEMPLATE_SIMD_DYN_SORT, indicesCastMode_);
     return tilingKey;
 }
 
 void UnsortedSegmentSumSimdDynSortTiling::SetTilingData()
 {
-    tilingData_.set_outputOuterDim(outputOuterDim_);
-    tilingData_.set_innerDim(innerDim_);
-    tilingData_.set_sTileNum(sTileNum_);
-    tilingData_.set_aTileNum(aTileNum_);
-    tilingData_.set_normBlockS(normBlockS_);
-    tilingData_.set_tailBlockS(tailBlockS_);
-    tilingData_.set_normBlockA(normBlockA_);
-    tilingData_.set_tailBlockA(tailBlockA_);
-    tilingData_.set_baseS(baseS_);
-    tilingData_.set_baseA(baseA_);
-    tilingData_.set_sortBaseS(sortBaseS_);
-    tilingData_.set_sortBaseA(sortBaseA_);
-    tilingData_.set_sortSharedBufSize(static_cast<uint64_t>(sortSharedBufSize_));
-    tilingData_.set_indicesCastMode(static_cast<uint64_t>(indicesCastMode_));
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdDynSortTilingData>();
+    tilingData->outputOuterDim = outputOuterDim_;
+    tilingData->innerDim = innerDim_;
+    tilingData->sTileNum = sTileNum_;
+    tilingData->aTileNum = aTileNum_;
+    tilingData->normBlockS = normBlockS_;
+    tilingData->tailBlockS = tailBlockS_;
+    tilingData->normBlockA = normBlockA_;
+    tilingData->tailBlockA = tailBlockA_;
+    tilingData->baseS = baseS_;
+    tilingData->baseA = baseA_;
+    tilingData->sortBaseS = sortBaseS_;
+    tilingData->sortBaseA = sortBaseA_;
+    tilingData->sortSharedBufSize = static_cast<uint64_t>(sortSharedBufSize_);
+    tilingData->indicesCastMode = static_cast<uint64_t>(indicesCastMode_);
 }
 
 void UnsortedSegmentSumSimdDynSortTiling::DoBlockTiling()
@@ -193,39 +194,36 @@ ge::graphStatus UnsortedSegmentSumSimdDynSortTiling::DoOpTiling()
 
 ge::graphStatus UnsortedSegmentSumSimdDynSortTiling::PostTiling()
 {
+    context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(usedCoreNum_);
     context_->SetScheduleMode(1);
-    if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSumSimdDynSortTiling::DumpTilingInfo()
 {
+    auto tilingData = context_->GetTilingData<UnsortedSegmentSumSimdDynSortTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
     info << ", inputOuterDim: " << inputOuterDim_;
-    info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
-    info << ", innerDim: " << tilingData_.get_innerDim();
-    info << ", sTileNum: " << tilingData_.get_sTileNum();
-    info << ", aTileNum: " << tilingData_.get_aTileNum();
-    info << ", normBlockS: " << tilingData_.get_normBlockS();
-    info << ", tailBlockS: " << tilingData_.get_tailBlockS();
-    info << ", normBlockA: " << tilingData_.get_normBlockA();
-    info << ", tailBlockA: " << tilingData_.get_tailBlockA();
-    info << ", baseS: " << tilingData_.get_baseS();
-    info << ", baseA: " << tilingData_.get_baseA();
-    info << ", sortBaseS: " << tilingData_.get_sortBaseS();
-    info << ", sortBaseA: " << tilingData_.get_sortBaseA();
-    info << ", sortSharedBufSize: " << tilingData_.get_sortSharedBufSize();
-    info << ", indicesCastMode: " << tilingData_.get_indicesCastMode();
+    info << ", outputOuterDim: " << tilingData->outputOuterDim;
+    info << ", innerDim: " << tilingData->innerDim;
+    info << ", sTileNum: " << tilingData->sTileNum;
+    info << ", aTileNum: " << tilingData->aTileNum;
+    info << ", normBlockS: " << tilingData->normBlockS;
+    info << ", tailBlockS: " << tilingData->tailBlockS;
+    info << ", normBlockA: " << tilingData->normBlockA;
+    info << ", tailBlockA: " << tilingData->tailBlockA;
+    info << ", baseS: " << tilingData->baseS;
+    info << ", baseA: " << tilingData->baseA;
+    info << ", sortBaseS: " << tilingData->sortBaseS;
+    info << ", sortBaseA: " << tilingData->sortBaseA;
+    info << ", sortSharedBufSize: " << tilingData->sortSharedBufSize;
+    info << ", indicesCastMode: " << tilingData->indicesCastMode;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSimdDynSortTiling, 25);
+REGISTER_TILING_TEMPLATE("UnsortedSegmentSum", UnsortedSegmentSumSimdDynSortTiling, 25);
 
 } // namespace optiling

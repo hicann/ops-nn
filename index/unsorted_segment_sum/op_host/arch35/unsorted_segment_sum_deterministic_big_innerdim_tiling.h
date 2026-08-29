@@ -19,19 +19,6 @@
 #include "unsorted_segment_sum_tiling.h"
 
 namespace optiling {
-BEGIN_TILING_DATA_DEF(UnsortedSegmentSumDeterministicBigInnerDimTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim);
-TILING_DATA_FIELD_DEF(uint64_t, innerDim);
-TILING_DATA_FIELD_DEF(uint64_t, normalCoreProcessCols);
-TILING_DATA_FIELD_DEF(uint64_t, tailCoreProcessCols);
-TILING_DATA_FIELD_DEF(uint64_t, baseS);
-TILING_DATA_FIELD_DEF(uint64_t, baseA);
-TILING_DATA_FIELD_DEF(uint32_t, sortSharedBufSize);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_8000, UnsortedSegmentSumDeterministicBigInnerDimTilingData);
-
 class UnsortedSegmentSumDeterministicBigInnerDimTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumDeterministicBigInnerDimTiling(gert::TilingContext* context)
@@ -55,8 +42,6 @@ private:
     uint64_t baseA_ = 1;
     uint32_t sortSharedBufSize_ = 0;
     uint32_t col32BAlign_ = 0;
-
-    UnsortedSegmentSumDeterministicBigInnerDimTilingData tilingData_;
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_DETERMINISTIC_BIG_INNERDIM_TILING_H
