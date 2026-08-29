@@ -59,7 +59,7 @@
 
   **阶段2：双轴动态块量化**
 
-- **-1轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数$\{\{V_i\}_{i=1}^{32}\}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$
+- **-1轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数$\{V_i\}_{i=1}^{32}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
   $$
   shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -72,7 +72,7 @@
   $$
   P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32
   $$
-- **-2轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数 $\{\{V_j\}_{j=1}^{32}\}$量化为$\{mxscale2, \{P_j\}_{j=1}^{32}\}$
+- **-2轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数 $\{V_j\}_{j=1}^{32}$量化为$\{mxscale2, \{P_j\}_{j=1}^{32}\}$
 
   $$
   shared\_exp = floor(log_2(max_j(|V_j|))) - emax
@@ -155,7 +155,7 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>输入张量，公式中的x。</td>
-      <td><ul><li>shape为[M, 2N]，最后一维必须为偶数。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>shape为[M, 2N]，最后一维必须能被64整除。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2~6</td>
@@ -245,7 +245,7 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
       <td>mxscale1Out (aclTensor*)</td>
       <td>输出</td>
       <td>表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。</td>
-      <td><ul><li>shape为[M, (ceil(N/32)+2-1)/2, 2]，需进行偶数pad，pad填充值为0。</li></ul></td>
+      <td><ul><li>shape为[M, (ceil(2N/32) + 1) / 2, 2]，需进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3~7</td>
@@ -318,8 +318,8 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
       <td>x、yGrad、y1Out、mxscale1Out、y2Out或mxscale2Out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x、roundModeOptional、dstDtype、scaleAlg、y1Out、mxscale1Out、y2Out、mxscale2Out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -327,8 +327,6 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
     </tr>
     <tr>
       <td>roundModeOptional、dstDtype、scaleAlg不符合当前支持的值。</td>
-    </tr>
-    <tr>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -385,7 +383,7 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
 - FP8输出类型（FLOAT8_E4M3FN）仅支持“rint”舍入模式。
 - groupIndexOptional采用cumsum模式，每个值表示对应group的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
 - 关于mxscale1Out、mxscale2Out的shape约束说明：
-  - mxscale1Out.shape[-2] = (ceil(N/32) + 2 - 1) / 2。
+  - mxscale1Out.shape[-2] = (ceil(2N/32) + 1) / 2。
   - mxscale1Out.shape[-1] = 2。
   - mxscale2Out.shape[-1] = 2。
   - 当groupIndexOptional存在时，mxscale2Out.shape[0] = floor(M/64) + G；当groupIndexOptional不存在时，mxscale2Out.shape[0] = ceil(M/64)。
