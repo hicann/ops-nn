@@ -1,0 +1,6 @@
+caseName,expectRet,expectBaseM,expectBaseN,expectBaseK,expectMte2BW,m,n,k,groupSize,transA,transB,hasBias,weightNz,isMx,l1Size,aBits,bBits,biasBits,yScaleBits
+MxTypeNdFormatWithSolution,1,1,1,1,1,256,256,256,32,0,1,1,0,1,524032,8,4,16,64
+FallbackNdFormat,0,1,1,1,0,256,256,256,32,0,1,1,0,0,0,8,4,16,64
+FallbackMxTypeNdFormat,0,0,0,1,0,256,256,256,32,0,1,1,0,1,0,8,4,16,64
+FallbackNzTransB,0,0,0,1,0,256,256,256,32,0,1,1,1,0,0,8,4,16,64
+FallbackNzNoTransB,0,0,0,1,0,256,256,256,32,0,0,1,1,0,0,8,4,16,64

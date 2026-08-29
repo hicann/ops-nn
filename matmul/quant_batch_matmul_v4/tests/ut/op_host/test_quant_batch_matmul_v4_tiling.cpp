@@ -29,6 +29,7 @@
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../../../common/op_host/math_util.h"
+#include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
 #include "ut_string_utils.h"
 
 using namespace ut_str;
@@ -375,3 +376,192 @@ TEST_P(TestQuantBatchMatmulV4Tiling, generalTest)
 static const std::vector<QuantBatchMatmulV4TilingTestParam> kCaseParams = GetParams();
 
 INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4Tiling, testing::ValuesIn(kCaseParams));
+
+struct CoverageTestParam {
+    bool hasL12Bt;
+    int64_t m;
+    int64_t k;
+    int64_t n;
+    int64_t transA;
+    int64_t transB;
+    int64_t group;
+    ge::Format x2Format;
+    ge::graphStatus tilingResult;
+};
+
+class TestQuantBatchMatmulV4Coverage : public testing::TestWithParam<CoverageTestParam> {};
+
+static void TestOneCoverageCase(const CoverageTestParam& param)
+{
+    int64_t m = param.m;
+    int64_t k = param.k;
+    int64_t n = param.n;
+    int64_t transA = param.transA;
+    int64_t transB = param.transB;
+    int64_t group = param.group;
+    ge::Format x2Format = param.x2Format;
+
+    ge::DataType x1Dtype = ge::DT_FLOAT8_E4M3FN;
+    ge::DataType x2Dtype = ge::DT_FLOAT4_E2M1;
+    ge::DataType x1ScaleDtype = ge::DT_FLOAT8_E8M0;
+    ge::DataType x2ScaleDtype = ge::DT_FLOAT8_E8M0;
+    ge::DataType yDtype = ge::DT_BF16;
+
+    int64_t weightK = k;
+    int64_t weightN = n;
+    int64_t k0 = transB ? 32 : 16;
+    int64_t n0 = transB ? 16 : 32;
+    int64_t k1 = ops::CeilDiv(weightK, k0);
+    int64_t n1 = ops::CeilDiv(weightN, n0);
+
+    gert::StorageShape x1Shape;
+    gert::StorageShape x2Shape;
+    gert::StorageShape x1ScaleShape;
+    gert::StorageShape x2ScaleShape;
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    if (transA) {
+        x1Shape.MutableStorageShape() = gert::Shape({k, m});
+    } else {
+        x1Shape.MutableStorageShape() = gert::Shape({m, k});
+    }
+    x1Shape.MutableOriginShape() = x1Shape.MutableStorageShape();
+
+    if (x2Format == ge::FORMAT_ND) {
+        if (transB) {
+            x2Shape.MutableStorageShape() = gert::Shape({weightN, weightK});
+        } else {
+            x2Shape.MutableStorageShape() = gert::Shape({weightK, weightN});
+        }
+        x2Shape.MutableOriginShape() = x2Shape.MutableStorageShape();
+    } else if (x2Format == ge::FORMAT_FRACTAL_NZ) {
+        if (transB) {
+            x2Shape.MutableOriginShape() = gert::Shape({weightN, weightK});
+            x2Shape.MutableStorageShape() = gert::Shape({k1, n1, n0, k0});
+        } else {
+            x2Shape.MutableOriginShape() = gert::Shape({weightK, weightN});
+            x2Shape.MutableStorageShape() = gert::Shape({n1, k1, k0, n0});
+        }
+    }
+
+    int64_t mxScaleGroupNum = (k + 63) / 64;
+    x1ScaleShape.MutableStorageShape() = gert::Shape({m, mxScaleGroupNum, 2});
+    x1ScaleShape.MutableOriginShape() = x1ScaleShape.MutableStorageShape();
+    x2ScaleShape.MutableStorageShape() = gert::Shape({n, mxScaleGroupNum, 2});
+    x2ScaleShape.MutableOriginShape() = x2ScaleShape.MutableStorageShape();
+
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": aicNum,
+                           "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"
+                           }})";
+    if (!param.hasL12Bt) {
+        const string from = R"("Intrinsic_data_move_l12bt": true, )";
+        const string to = "";
+        auto pos = compileInfoStr.find(from);
+        if (pos != string::npos) {
+            compileInfoStr.replace(pos, from.size(), to);
+        }
+    }
+
+    uint32_t aicNum = 32;
+    uint32_t aivNum = 64;
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> version;
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, version);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    QuantBatchMatmulV4CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("QuantBatchMatmulV4");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(rawTilingData, nullptr);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(10, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape, nullptr, nullptr,
+                                    nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, x2Dtype, x2Format, x2Format)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(group)},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<bool>(static_cast<bool>(group))},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(static_cast<bool>(transA))},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(static_cast<bool>(transB))},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(group)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext, nullptr);
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_NE(tilingParseFunc, nullptr);
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    if (!param.hasL12Bt) {
+        compileInfo.supportL12BtBf16 = false;
+    }
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+    ge::graphStatus ret = tilingFunc(tilingContext);
+    ASSERT_EQ(ret, param.tilingResult);
+}
+
+TEST_P(TestQuantBatchMatmulV4Coverage, generalTest)
+{
+    CoverageTestParam param = GetParam();
+    TestOneCoverageCase(param);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Coverage, TestQuantBatchMatmulV4Coverage,
+    testing::Values(
+        // MX+ND, hasL12Bt=true -> GRAPH_SUCCESS
+        CoverageTestParam{true, 128, 512, 128, 0, 1, 32, ge::FORMAT_ND, ge::GRAPH_SUCCESS},
+        // MX+NZ, hasL12Bt=false -> triggers QuantTypeToString(MX) in CheckInputParams -> GRAPH_FAILED
+        CoverageTestParam{false, 128, 512, 128, 0, 1, 32, ge::FORMAT_FRACTAL_NZ, ge::GRAPH_FAILED}));

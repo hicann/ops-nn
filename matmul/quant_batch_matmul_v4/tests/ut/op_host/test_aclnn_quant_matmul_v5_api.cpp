@@ -456,3 +456,35 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_swap_case)
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_A8W4Int_NZ_TCG_transposeX2_true_err)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 16});
+    TensorDesc x2scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x2scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, false, true, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_A8W4Int_NZ_MX_transposeX2_false_err)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 16});
+    TensorDesc x1scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, false, false, 32),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
