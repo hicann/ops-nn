@@ -306,33 +306,14 @@ __aicore__ inline void ApplyCamePart1FP32<T>::CopyOut(int64_t nLoopIdx, int64_t 
                                                nLoopNormCore_, ONCE_HANDLE_NUM64);
     }
 
-    LocalTensor<float> sumGradRCLocal = sumGradRCQueue_.DeQue<float>();
     const int64_t nCoreIdx = GetBlockIdx() / mCoreNum_;
     const int64_t mCoreIdx = GetBlockIdx() % mCoreNum_;
     int64_t offset = ((nCoreIdx * nLoopNormCore_ + nLoopIdx) * mCoreNum_ * mLoopNumCore_ + mCoreIdx * mLoopNumCore_ +
                       mLoopIdx);
 
-    event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    SetFlag<HardEvent::V_S>(eventIdVToS);
-    WaitFlag<HardEvent::V_S>(eventIdVToS);
-    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-    const int64_t rcOffset = offset * ONCE_ONE_SIZE8;
-    DataCopy(workspaceSumGradRC_[rcOffset], sumGradRCLocal, ONCE_ONE_SIZE8);
-    DataCopy(workspaceSumGradRCLow_[rcOffset], sumGradRCLocal[ONCE_ONE_SIZE8], ONCE_ONE_SIZE8);
-    sumGradRCQueue_.FreeTensor(sumGradRCLocal);
-
-    offset *= ONCE_HANDLE_NUM64;
-    LocalTensor<float> sumGradCLocal = sumGradCQueue_.DeQue<float>();
-    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    DataCopy(workspaceSumGradC_[offset], sumGradCLocal, ONCE_HANDLE_NUM64);
-    sumGradCQueue_.FreeTensor(sumGradCLocal);
-    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    CopyOutReductionWorkspaceApplyCamePart1(sumGradRCQueue_, sumGradCQueue_, workspaceSumGradRC_,
+                                            workspaceSumGradRCLow_, workspaceSumGradC_, offset, ONCE_ONE_SIZE8,
+                                            ONCE_HANDLE_NUM64);
 }
 
 template <typename T>

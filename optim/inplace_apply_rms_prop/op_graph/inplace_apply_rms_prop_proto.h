@@ -13,12 +13,6 @@
 /*!
  * \file inplace_apply_rms_prop_proto.h
  * \brief InplaceApplyRMSProp 图模式算子原型定义
- *
- * 对齐 canndev `REG_OP(InplaceApplyRMSProp)`（nn_training_ops.h / ops_proto_legacy.h）：
- *   - OpType：`InplaceApplyRMSProp`
- *   - 8 输入 + 3 输出（var / ms / mom 显式 inplace alias）
- *   - 属性：`use_locking`（语义占位）
- *   - dtype：`TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16})`
  */
 #ifndef OPS_OP_PROTO_INC_INPLACE_APPLY_RMS_PROP_H_
 #define OPS_OP_PROTO_INC_INPLACE_APPLY_RMS_PROP_H_
@@ -41,7 +35,8 @@ namespace ge {
  *   @li ms:        A Tensor with the same shape/dtype as "var". Mean-square accumulator (in-place updated).
  *   @li mom:       A Tensor with the same shape/dtype as "var". Momentum accumulator (in-place updated).
  *   @li lr:        Scalar Tensor (shape = [1]) learning rate.
- *   @li rho:       Scalar Tensor (shape = [1]) decay rate in [0, 1).
+ *   @li rho:       Scalar Tensor (shape = [1]). The recommended decay-rate range is [0, 1);
+ *                  the implementation does not validate its value.
  *   @li momentum:  Scalar Tensor (shape = [1]) momentum coefficient.
  *   @li epsilon:   Scalar Tensor (shape = [1]) numerical-stability constant. Values no greater than FLT_MIN
  *                  (including NaN) are evaluated as FLT_MIN.

@@ -208,6 +208,36 @@ __aicore__ inline void CopyOutSumGradRWorkspaceApplyCamePart1(TQue<QuePosition::
     sumGradRQueue.FreeTensor(sumGradRLocal);
 }
 
+__aicore__ inline void CopyOutReductionWorkspaceApplyCamePart1(TQue<QuePosition::VECOUT, 1>& sumGradRCQueue,
+                                                               TQue<QuePosition::VECOUT, 1>& sumGradCQueue,
+                                                               GlobalTensor<float>& workspaceSumGradRC,
+                                                               GlobalTensor<float>& workspaceSumGradRCLow,
+                                                               GlobalTensor<float>& workspaceSumGradC, int64_t offset,
+                                                               int64_t scalarSlotSize, int64_t columnTileSize)
+{
+    LocalTensor<float> sumGradRCLocal = sumGradRCQueue.DeQue<float>();
+    event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventIdVToS);
+    WaitFlag<HardEvent::V_S>(eventIdVToS);
+    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    const int64_t rcOffset = offset * scalarSlotSize;
+    DataCopy(workspaceSumGradRC[rcOffset], sumGradRCLocal, scalarSlotSize);
+    DataCopy(workspaceSumGradRCLow[rcOffset], sumGradRCLocal[scalarSlotSize], scalarSlotSize);
+    sumGradRCQueue.FreeTensor(sumGradRCLocal);
+
+    LocalTensor<float> sumGradCLocal = sumGradCQueue.DeQue<float>();
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    DataCopy(workspaceSumGradC[offset * columnTileSize], sumGradCLocal, columnTileSize);
+    sumGradCQueue.FreeTensor(sumGradCLocal);
+    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+}
+
 __aicore__ inline void ComputeCApplyCamePart1(TQue<QuePosition::VECOUT, 1>& sumGradCQueue, int64_t curRepeatTimes,
                                               LocalTensor<float> gradSqrtTmpUb, int64_t mCoreNum, int64_t nCoreNum,
                                               int64_t onceHandleNum)

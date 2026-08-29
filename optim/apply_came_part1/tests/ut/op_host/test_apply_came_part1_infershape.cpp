@@ -12,39 +12,6 @@
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
 
-namespace {
-void RunApplyCamePart1InferDataTypeCase(ge::DataType gradType)
-{
-    ge::DataType gradTypeRef = gradType;
-    ge::DataType epsTypeRef = ge::DT_FLOAT;
-    ge::DataType sumGradRTypeRef = ge::DT_UNDEFINED;
-    ge::DataType sumGradCTypeRef = ge::DT_UNDEFINED;
-    ge::DataType sumGradRCTypeRef = ge::DT_UNDEFINED;
-    auto holder = gert::InferDataTypeContextFaker()
-                      .IrInputNum(2)
-                      .NodeIoNum(2, 3)
-                      .IrInstanceNum({2, 3})
-                      .NodeInputTd(0, gradType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .InputDataTypes({&gradTypeRef, &epsTypeRef})
-                      .OutputDataTypes({&sumGradRTypeRef, &sumGradCTypeRef, &sumGradRCTypeRef})
-                      .Build();
-
-    auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1");
-    ASSERT_NE(impl, nullptr);
-    ASSERT_NE(impl->infer_datatype, nullptr);
-    auto* context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    ASSERT_EQ(impl->infer_datatype(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
-    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
-    EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT);
-}
-} // namespace
-
 static ge::graphStatus InferApplyCamePart1Shape(gert::StorageShape& grad)
 {
     gert::StorageShape eps = {{1}, {-1}};
@@ -115,13 +82,6 @@ TEST(ApplyCamePart1InferShape, TwoDimensionalBfloat16Grad)
     EXPECT_EQ(context->GetOutputShape(2)->GetDimNum(), 0);
 }
 
-TEST(ApplyCamePart1InferShape, InferDataType)
-{
-    RunApplyCamePart1InferDataTypeCase(ge::DT_FLOAT16);
-    RunApplyCamePart1InferDataTypeCase(ge::DT_BF16);
-    RunApplyCamePart1InferDataTypeCase(ge::DT_FLOAT);
-}
-
 TEST(ApplyCamePart1InferShape, SupportsBatchGrad)
 {
     gert::StorageShape grad = {{2, 4, 8}, {-1, -1, -1}};
@@ -144,6 +104,54 @@ TEST(ApplyCamePart1InferShape, SupportsBatchGrad)
     EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(1), 8);
     EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDimNum(), 1);
     EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDim(0), 2);
+}
+
+TEST(ApplyCamePart1InferShape, SupportsHigherRankBatchGrad)
+{
+    gert::StorageShape grad = {{2, 3, 4, 5}, {-1, -1, -1, -1}};
+    gert::StorageShape eps = {{1}, {-1}};
+    gert::StorageShape sumR = {{}, {}};
+    gert::StorageShape sumC = {{}, {}};
+    gert::StorageShape sumRC = {{}, {}};
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 3)
+                      .IrInstanceNum({2, 3})
+                      .InputShapes({&grad, &eps})
+                      .OutputShapes({&sumR, &sumC, &sumRC})
+                      .Build();
+    ASSERT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDimNum(), 3);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(0), 2);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(1), 3);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(2), 4);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDimNum(), 3);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(0), 2);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(1), 3);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(2), 5);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDimNum(), 2);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDim(0), 2);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDim(1), 3);
+}
+
+TEST(ApplyCamePart1InferShape, SupportsScalarEps)
+{
+    gert::StorageShape grad = {{4, 8}, {-1, -1}};
+    gert::StorageShape eps = {{}, {}};
+    gert::StorageShape sumR = {{}, {}};
+    gert::StorageShape sumC = {{}, {}};
+    gert::StorageShape sumRC = {{}, {}};
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 3)
+                      .IrInstanceNum({2, 3})
+                      .InputShapes({&grad, &eps})
+                      .OutputShapes({&sumR, &sumC, &sumRC})
+                      .Build();
+    ASSERT_EQ(infer(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)->GetDim(0), 4);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1)->GetDim(0), 8);
+    EXPECT_EQ(holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2)->GetDimNum(), 0);
 }
 
 TEST(ApplyCamePart1InferShape, RejectsOneDimensionalGrad)

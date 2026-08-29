@@ -25,9 +25,9 @@ __spec__ = {
 }
 
 _TOL = {
-    "float32": {"standard": "stat_rel_err", "threshold": 1e-2},
-    "float16": {"standard": "stat_rel_err", "threshold": 2e-2},
-    "bfloat16": {"standard": "stat_rel_err", "threshold": 4e-2},
+    "float32": {"standard": "cross_check", "threshold": 1e-2},
+    "float16": {"standard": "cross_check", "threshold": 2e-2},
+    "bfloat16": {"standard": "cross_check", "threshold": 4e-2},
 }
 
 

@@ -18,18 +18,19 @@ namespace ge {
  * @brief Performs batch normalization inference.
  *
  * @par Inputs:
- * @li x: A 4D tensor of type float16 or float32 or bfloat16, with format NHWC or NCHW.
+ * @li x: A tensor of type float16 or float32 or bfloat16, with format NC1HWC0, NULL, ND, NCHW, NCDHW,
+ * NHWC or NDHWC.
  * @li scale: A 1D tensor of type float32, for the scale factor, the shape is same as dim C of input x. \n
  * @li offset: A 1D tensor of type float32, for the offset, the shape is same as dim C of input x. \n
  * @li mean: A 1D tensor of type float32, for the mean, the shape is same as dim C of input x. \n
  * @li variance: A 1D tensor of type float32, for the variance, the shape is same as dim C of input x. \n
  *
  * @par Attributes:
- * epsilon: An optional float32, specifying the small value added to variance to
- * avoid dividing by zero. Defaults to "0.0001" . \n
+ * epsilon: A required float32 attribute, specifying the small value added to variance to
+ * avoid dividing by zero. \n
  *
  * @par Outputs:
- * y: A 4D tensor of type float16 or float32 or bfloat16 for the normalized "x", with format NHWC or NCHW. \n
+ * y: A tensor of type float16 or float32 or bfloat16 for the normalized "x", with the same format as x. \n
  *
  * @attention Constraints:
  * For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the

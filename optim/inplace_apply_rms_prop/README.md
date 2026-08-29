@@ -38,12 +38,12 @@ $$
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 |:---|:---|:---|:---|:---|
 | `var` | 输入/输出（inplace） | 待更新的权重张量；shape、dtype与`ms/mom/grad`一致。 | FLOAT、FLOAT16、BFLOAT16 | ND |
-| `ms` | 输入/输出（inplace） | 非负的梯度平方滑动平均状态。 | FLOAT、FLOAT16、BFLOAT16 | ND |
+| `ms` | 输入/输出（inplace） | 梯度平方滑动平均状态；调用方应保证非负，实现不做数值校验。 | FLOAT、FLOAT16、BFLOAT16 | ND |
 | `mom` | 输入/输出（inplace） | 动量缓冲区。 | FLOAT、FLOAT16、BFLOAT16 | ND |
-| `lr` | 输入 | 学习率，1元素scalar Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
-| `rho` | 输入 | 衰减系数，1元素scalar Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
-| `momentum` | 输入 | 动量系数，1元素scalar Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
-| `epsilon` | 输入 | 数值稳定性常数，1元素scalar Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
+| `lr` | 输入 | 学习率，shape为`{1}`的一维ND标量Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
+| `rho` | 输入 | 衰减系数，shape为`{1}`的一维ND标量Tensor；建议取值 `[0, 1)`，实现不做数值校验。 | FLOAT、FLOAT16、BFLOAT16 | ND |
+| `momentum` | 输入 | 动量系数，shape为`{1}`的一维ND标量Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
+| `epsilon` | 输入 | 数值稳定性常数，shape为`{1}`的一维ND标量Tensor。 | FLOAT、FLOAT16、BFLOAT16 | ND |
 | `grad` | 输入 | 当前梯度张量；shape、dtype与`var`一致。 | FLOAT、FLOAT16、BFLOAT16 | ND |
 | `use_locking` | 属性 | 是否加锁更新，默认 `false`；当前实现仅作兼容占位。 | BOOL | - |
 | `var` | 输出（inplace） | 更新后的参数，对应输入`var`。 | FLOAT、FLOAT16、BFLOAT16 | ND |
@@ -52,10 +52,10 @@ $$
 
 ## 约束说明
 
-- `var`、`ms`、`mom`、`grad`的shape、dtype必须完全一致，支持rank1-8；`ms`应为非负的均方状态。
+- `var`、`ms`、`mom`、`grad`的shape、dtype必须完全一致，支持rank1-8；调用方应保证`ms`非负，实现不做数值校验，负值可能使平方根计算产生NaN。
 - 空Tensor通过含0维的ND形态表示。
-- `lr`、`rho`、`momentum`、`epsilon`必须为shape{1}的ND标量张量，dtype与`var`一致；`rho`的有效范围为[0, 1)。
-- `epsilon`在计算域按FP32处理；当其值小于等于`FLT_MIN`时，kernel使用`FLT_MIN`作为下限。
+- `lr`、`rho`、`momentum`、`epsilon`必须为shape{1}的ND标量张量，dtype与`var`一致；`rho`建议取值[0, 1)，实现不做范围校验。
+- `epsilon`在计算域按FP32处理；当其值小于等于`FLT_MIN`或为NaN时，kernel使用`FLT_MIN`作为下限。
 - 支持 `FLOAT`、`FLOAT16`、`BFLOAT16`；FP16/BF16路径在FP32域完成计算后再转换回目标dtype。
 - 支持空Tensor（`numel == 0`），空Tensor路径不执行更新。
 - `use_locking`不改变计算结果，当前实现不引入额外互斥锁。

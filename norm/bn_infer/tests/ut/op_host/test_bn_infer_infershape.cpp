@@ -73,6 +73,10 @@ TEST_F(BNInferInferShapeTest, staticShape) { CheckInferShape({2, 3, 4}); }
 
 TEST_F(BNInferInferShapeTest, dynamicShape) { CheckInferShape({2, -1, 16}); }
 
+TEST_F(BNInferInferShapeTest, nchwLikeShape) { CheckInferShape({2, 3, 4, 5}); }
+
+TEST_F(BNInferInferShapeTest, ndhwcLikeShape) { CheckInferShape({2, 3, 4, 5, 6}); }
+
 TEST_F(BNInferInferShapeTest, unknownRank) { CheckInferShape({-2}); }
 
 void CheckInferDataType(ge::DataType xDataType)

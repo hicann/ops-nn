@@ -153,10 +153,14 @@ __aicore__ inline float InplaceApplyRmsProp<T, BUFFER_MODE>::LoadScalarF32(GM_AD
         copy_params.dstStride = 0;
         DataCopyPadExtParams<T> pad_params{true, 0, 0, 0};
         DataCopyPad(scalar_in, scalar_gm, copy_params, pad_params);
-        PipeBarrier<PIPE_MTE2>();
+        event_t mte2_v = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(mte2_v);
+        WaitFlag<HardEvent::MTE2_V>(mte2_v);
 
         Cast(scalar_out, scalar_in, RoundMode::CAST_NONE, 1);
-        PipeBarrier<PIPE_V>();
+        event_t v_s = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(v_s);
+        WaitFlag<HardEvent::V_S>(v_s);
         return scalar_out.GetValue(0);
     }
 }
@@ -309,7 +313,8 @@ __aicore__ inline void InplaceApplyRmsProp<T, BUFFER_MODE>::ComputeReduced(Local
     // Ascend950 reduced-precision VCONV operates on aligned lane groups.
     // CopyIn pads each UB tile, so converting the rounded-up count is safe;
     // all arithmetic and output copies remain limited to the real element count.
-    int32_t cast_n = (n + 15) / 16 * 16;
+    constexpr int32_t kFp16CastAlignment = 16;
+    int32_t cast_n = (n + kFp16CastAlignment - 1) / kFp16CastAlignment * kFp16CastAlignment;
     uint32_t lanes = GetVecLen() / sizeof(float);
     PipeBarrier<PIPE_MTE2>();
     if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {

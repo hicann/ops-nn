@@ -133,6 +133,7 @@ struct InplaceApplyRMSPropTilingArgs {
     ge::DataType momentumDtype = ge::DT_UNDEFINED;
     ge::DataType epsilonDtype = ge::DT_UNDEFINED;
     ge::DataType gradDtype = ge::DT_UNDEFINED;
+    bool hasUseLockingAttr = true;
 };
 
 static inline ge::DataType ResolveDtype(ge::DataType override, ge::DataType base)
@@ -154,8 +155,8 @@ static gert::KernelRunContextHolder BuildTilingContext(
     const ge::DataType momentumDt = ResolveDtype(args.momentumDtype, args.tensorDtype);
     const ge::DataType epsilonDt = ResolveDtype(args.epsilonDtype, args.tensorDtype);
     const ge::DataType gradDt = ResolveDtype(args.gradDtype, args.tensorDtype);
-    return gert::TilingContextFaker()
-        .SetOpType("InplaceApplyRMSProp")
+    auto builder = gert::TilingContextFaker();
+    builder.SetOpType("InplaceApplyRMSProp")
         .NodeIoNum(8, 3)
         .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
         .InputShapes({&varStorage, &msStorage, &momStorage, &lrStorage, &rhoStorage, &momentumStorage, &epsilonStorage,
@@ -173,11 +174,11 @@ static gert::KernelRunContextHolder BuildTilingContext(
         .NodeInputTd(7, gradDt, args.inputFormat, args.inputFormat)
         .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)
         .NodeOutputTd(1, msDt, args.inputFormat, args.inputFormat)
-        .NodeOutputTd(2, momDt, args.inputFormat, args.inputFormat)
-        .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(args.useLocking)}})
-        .TilingData(tilingData)
-        .Workspace(workspace)
-        .Build();
+        .NodeOutputTd(2, momDt, args.inputFormat, args.inputFormat);
+    if (args.hasUseLockingAttr) {
+        builder.NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(args.useLocking)}});
+    }
+    return builder.TilingData(tilingData).Workspace(workspace).Build();
 }
 
 static void ReadTilingResult(gert::TilingContext* context, InplaceApplyRMSPropTilingResult& result)
@@ -444,6 +445,23 @@ TEST_F(TestInplaceApplyRMSPropTiling, inplace_apply_rms_prop_use_locking_false)
     auto result = DoInplaceApplyRMSPropValidCase({2048}, ge::DT_FLOAT, /*useLocking=*/false);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestInplaceApplyRMSPropTiling, inplace_apply_rms_prop_use_locking_absent)
+{
+    InplaceApplyRMSPropTilingArgs args{/*var=*/{2048},
+                                       /*ms=*/{2048},
+                                       /*mom=*/{2048},
+                                       /*lr=*/{1},
+                                       /*rho=*/{1},
+                                       /*momentum=*/{1},
+                                       /*epsilon=*/{1},
+                                       /*grad=*/{2048},     ge::DT_FLOAT, ge::FORMAT_ND,
+                                       /*useLocking=*/false};
+    args.hasUseLockingAttr = false;
+    auto result = DoInplaceApplyRMSPropTilingCase(args);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, TILING_KEY_FP32_DOUBLE);
 }
 
 TEST_F(TestInplaceApplyRMSPropTiling, inplace_apply_rms_prop_rank_8_boundary)

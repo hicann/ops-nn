@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -443,6 +443,13 @@ ge::graphStatus BNInferLastChannelTiling::FillLastChannelTilingForBSplit(int64_t
            bInner > 1) {
         bInner--;
     }
+    const int64_t requiredUbBytes = paramBytes + cacheBytes +
+                                    bInner * fusedALen * INPUT_OUTPUT_NUM * DOUBLE_BUFFER * bytesPerElement;
+    OP_CHECK_IF(requiredUbBytes > static_cast<int64_t>(aicoreParams_.ubSize),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "requiredUbBytes",
+                                                       std::to_string(requiredUbBytes).c_str(),
+                                                       "last-channel tiling exceeds available UB"),
+                return ge::GRAPH_FAILED);
     int64_t bOuter = Ops::Base::CeilDiv(fusedBLen, bInner);
     int64_t bTail = fusedBLen % bInner;
     int64_t tileBlockBTail = bTail == 0 ? bInner : bTail;

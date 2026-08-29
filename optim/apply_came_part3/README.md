@@ -159,7 +159,6 @@
 - `u`和输入`m`必须为形状相同的二维ND张量，两个维度都必须大于0，且每个维度不超过`INT32_MAX`。
 - `eps`、`beta1`、`clip_threshold`和`sum_square_u`必须为FLOAT32类型的标量或单元素一维张量。
 - `global_shape`为可选INT64类型输入，必须是一维长度为2的张量`[global_n, global_m]`；未提供时使用输入`u`的二维形状进行归约计算。
-- 本仓新增Ascend950/arch35实现；Atlas A2/A3产品沿用canndev既有实现。当前未提供aclnn接口，使用图模式调用。
 
 ## 调用说明
 

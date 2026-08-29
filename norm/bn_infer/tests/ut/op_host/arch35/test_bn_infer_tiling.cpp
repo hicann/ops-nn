@@ -209,6 +209,12 @@ TEST_F(BNInferTilingTest, nhwcFloatContinuousATilingKey901000)
     EXPECT_EQ(tilingKey, 901000);
 }
 
+TEST_F(BNInferTilingTest, rejectLastChannelWhenChannelCacheExceedsUb)
+{
+    auto status = RunBNInferTiling({1, 1, 1, 4096}, ge::DT_FLOAT, ge::FORMAT_NHWC);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
 TEST_F(BNInferTilingTest, nhwcSmallATilingKey902000)
 {
     uint64_t tilingKey = 0;

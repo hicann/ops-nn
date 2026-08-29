@@ -18,14 +18,14 @@ namespace ge {
  *
  * @par Inputs:
  * including:
- * @li grad: A mutable Tensor with rank 2, such as [n, m] , support types:
+ * @li grad: A mutable Tensor with rank not less than 2, such as [batch..., n, m] , support types:
  * float16, float32, bfloat16.
- * @li eps: A scalar, support types: float32. \n
+ * @li eps: A scalar or 1-element Tensor, support types: float32. \n
  *
  * @par Outputs:
- * @li sum_grad_r: A 1-dimensional Tensor, such as [n], support types: float32.
- * @li sum_grad_c: A 1-dimensional Tensor, such as [m], support types: float32.
- * @li sum_grad_rc: A 1-dimensional Tensor, such as [1], support
+ * @li sum_grad_r: A Tensor with shape [batch..., n], support types: float32.
+ * @li sum_grad_c: A Tensor with shape [batch..., m], support types: float32.
+ * @li sum_grad_rc: A Tensor with shape [batch...], and a scalar when grad rank is 2, support
  * types: float32. \n
  *
  * @par Restrictions:
