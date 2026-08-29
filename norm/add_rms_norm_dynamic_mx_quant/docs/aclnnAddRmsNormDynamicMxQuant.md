@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。在输入尾轴axis上，根据每blocksize=32个数，计算出这组数对应的量化尺度mxscale，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。在dst_type为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scale_alg的取值来指定计算mxscale的不同算法。
+- 接口功能：将Add算子、RmsNorm归一化（相比LayerNorm算子去掉了减去均值的部分）与DynamicMxQuant动态MX量化融合为一次计算，减少搬入搬出操作：先对输入做加法，再做RmsNorm归一化，最后在输入尾轴上按blocksize=32分组进行动态MX量化，输出量化结果yOut、加法结果xOut、量化尺度mxscaleOut及标准差倒数rstdOut。mxscaleOut的计算算法由scaleAlg指定（dstType为FP8时支持OCP与cuBLAS两种实现，FP4时仅支持OCP），具体计算过程见下方计算公式。
 - 计算公式：
 
   $$
@@ -38,7 +38,8 @@
 
   当scaleAlg为0时：
 
-   - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
+  - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{V_i\}_{i=1}^{k}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
+
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$
@@ -48,36 +49,43 @@
     $$
 
     $$
-    P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
+    P_i = cast\_to\_dst\_type(V_i/mxscale, roundMode), \quad i = 1, 2, \ldots, k
     $$
-    - emax: 对应数据类型的最大正则数的指数位。
 
-        |   DataType    | emax |
-        | :-----------: | :--: |
-        |  FLOAT4_E2M1  |  2   |
-        |  FLOAT4_E1M2  |  0   |
-        | FLOAT8_E4M3FN |  8   |
-        |  FLOAT8_E5M2  |  15  |
+  - emax: 对应数据类型的最大正规数的指数位。
+
+    |   DataType    | emax |
+    | :-----------: | :--: |
+    |  FLOAT4_E2M1  |  2   |
+    |  FLOAT4_E1M2  |  0   |
+    | FLOAT8_E4M3FN |  8   |
+    |  FLOAT8_E5M2  |  15  |
 
   当scaleAlg为1时，只涉及FP8类型：
-    - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
-    - 找到该块中数值的最大绝对值：
-      $$
-      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
-      $$
-    - 将FP32映射到目标数据类型FP8可表示的范围内：
-      $$
-      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
-      $$
-    - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
-    - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
-    - 为保证量化时不溢出，对指数进行向上取整：
-      $$
-      E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
-      $$
-    - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
-    - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-    - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$
+  - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
+  - 找到该块中数值的最大绝对值：
+
+    $$
+    Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+    $$
+
+  - 将FP32映射到目标数据类型FP8可表示的范围内：
+
+    $$
+    S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+    $$
+
+  - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
+  - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
+  - 为保证量化时不溢出，对指数进行向上取整：
+
+    $$
+    E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
+    $$
+
+  - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
+  - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
+  - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$
 
 ## 函数原型
 
@@ -199,8 +207,8 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
     <tr>
       <td>roundMode（char*）</td>
       <td>输入</td>
-      <td>表示数据转换的模式，对应公式中的round_mode。</td>
-      <td><ul><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li><li>当dstType为36/35时，仅支持{"rint"}。</li></ul></td>
+      <td>表示数据转换的模式，对应公式中的roundMode。</td>
+      <td><ul><li>当dstType为35/36时，仅支持{"rint"}。</li><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -210,7 +218,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>表示指定数据转换后yOut的类型，对应公式中的DType。</td>
-      <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</li></ul></td>
+      <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -260,7 +268,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参`x1`保持一致，除最后一维外各维度与`x1`对应维度保持一致，最后一维为1。`rstdOut` shape与`x1` shape关系举例：若`x1` shape为(2,3,4,8)，则`rstdOut` shape为(2,3,4,1)。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参x1保持一致，除最后一维外各维度与x1对应维度保持一致，最后一维为1。rstdOut shape与x1 shape关系举例：若x1 shape为(2,3,4,8)，则rstdOut shape为(2,3,4,1)。</li><li>当outputRstd为False时，rstdOut为无效输出。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -424,7 +432,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
 
 - mxscaleOut的shape约束说明如下：
   - rank(mxscaleOut) = rank(x1) + 1。
-  - mxscaleOut.shape[-2] = (ceil(x1.shape[-1] / 32) + 2 - 1) / 2。
+  - mxscaleOut.shape[-2] = ceil(ceil(x1.shape[-1] / 32) / 2)，即x1尾轴按blocksize=32分组后的块数向上取整到偶数，再除以2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x1一致。
 
@@ -520,40 +528,32 @@ int main()
     std::vector<int64_t> xShape = {2, 64};
     std::vector<int64_t> gammaShape = {64};
     std::vector<int64_t> mxscaleShape = {2, 1, 2};
-    std::vector<int64_t> rstdShape = {2, 1};
 
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
     void* gammaDeviceAddr = nullptr;
-    void* betaDeviceAddr = nullptr;
 
     void* yDeviceAddr = nullptr;
     void* mxscaleDeviceAddr = nullptr;
-    void* rstdDeviceAddr = nullptr;
     void* xDeviceAddr = nullptr;
 
     aclTensor* x1 = nullptr;
     aclTensor* x2 = nullptr;
     aclTensor* gamma = nullptr;
-    aclTensor* beta = nullptr;
     aclTensor* y = nullptr;
     aclTensor* mxscale = nullptr;
-    aclTensor* rstd = nullptr;
     aclTensor* x = nullptr;
 
     int64_t xShapeSize = GetShapeSize(xShape);
     int64_t gammaShapeSize = GetShapeSize(gammaShape);
     int64_t mxscaleShapeSize = GetShapeSize(mxscaleShape);
-    int64_t rstdShapeSize = GetShapeSize(rstdShape);
 
     std::vector<short> x1HostData(xShapeSize, 0x3800);
     std::vector<short> x2HostData(xShapeSize, 0x3800);
     std::vector<short> gammaHostData(gammaShapeSize, 0x3e00);
-    std::vector<short> betaHostData(gammaShapeSize, 0);
 
     std::vector<int8_t> yHostData(xShapeSize, 0);
     std::vector<int8_t> mxscaleHostData(mxscaleShapeSize, 0);
-    std::vector<float> rstdHostData(rstdShapeSize, 0);
     std::vector<short> xHostData(xShapeSize, 0);
 
     float epsilon = 1e-6;
@@ -583,7 +583,7 @@ int main()
     aclOpExecutor* executor;
     // 调用aclnnAddRmsNormDynamicMxQuant第一段接口
     ret = aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(
-        x1, x2, gamma, nullptr, epsilon, 0, nullptr, 36, false, y, x, mxscale, nullptr, &workspaceSize, &executor);
+        x1, x2, gamma, nullptr, epsilon, 0, const_cast<char*>("rint"), 36, false, y, x, mxscale, nullptr, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS,
         LOG_PRINT("aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存

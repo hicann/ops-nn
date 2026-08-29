@@ -1,6 +1,7 @@
 # NN类torch接口
 
 - [NN类torch接口列表](torch_api_list.md)
+- [add_rms_norm_dynamic_quant](../../norm/add_rms_norm_dynamic_mx_quant/docs/torchapi_add_rms_norm_dynamic_quant.md)
 - [situ_glu](../../activation/situ_glu/docs/torchapi_situ_glu.md)
 - [situ_glu_grad](../../activation/situ_glu_grad/docs/torchapi_situ_glu_grad.md)
 - [swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)
