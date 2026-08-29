@@ -20,36 +20,68 @@
 
 namespace LeakyReluOp {
 using namespace Ops::Base;
+#ifdef __CCE_AICORE__
+constexpr static AscendC::Reg::CastTrait castTrait0 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::UNKNOWN};
+constexpr static AscendC::Reg::CastTrait castTrait1 = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                       AscendC::Reg::MaskMergeMode::ZEROING,
+                                                       AscendC::RoundMode::CAST_RINT};
+#endif
+
 template <class T>
 struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
     __aicore__ inline LeakyReluCustom(LocalTensor<T>& dst, LocalTensor<T>& src, float negativeSlope, uint32_t count)
     {
 #ifdef __CCE_AICORE__
-        uint32_t dtypeSize = sizeof(T);
+        uint32_t dtypeSize = sizeof(float);
+        constexpr uint64_t VECTOR_REG_WIDTH = 256UL;
         uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
         uint16_t loopNum = (count + vl - 1) / vl;
         uint32_t vlSize = vl;
+
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
 
-        Reg::RegTensor<T, Reg::RegTraitNumOne> vregInput;
-        Reg::RegTensor<T, Reg::RegTraitNumOne> vregNegPart;
-        Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutput;
-        Reg::RegTensor<T, Reg::RegTraitNumOne> vregZero;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregInputfloat;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregNegPart;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregOutput;
+        Reg::RegTensor<float, Reg::RegTraitNumOne> vregZero;
         Reg::MaskReg mask, cmpMask;
 
-        __VEC_SCOPE__
-        {
-            Reg::Duplicate(vregZero, (T)0.0);
-            for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
-                Reg::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-
-                Reg::Muls(vregNegPart, vregInput, negativeSlope, mask);
-                Reg::Compare<T, CMPMODE::GT>(cmpMask, vregInput, vregZero, mask);
-                Reg::Select<T>(vregOutput, vregInput, vregNegPart, cmpMask);
-
-                Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+        if constexpr (std::is_same_v<T, float>) {
+            __VEC_SCOPE__
+            {
+                Reg::Duplicate(vregZero, 0.0f);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInputfloat,
+                                                                (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::Muls(vregNegPart, vregInputfloat, negativeSlope, mask);
+                    Reg::Compare<float, CMPMODE::GT>(cmpMask, vregInputfloat, vregZero, mask);
+                    Reg::Select<float>(vregOutput, vregInputfloat, vregNegPart, cmpMask);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                      vregOutput, mask);
+                }
+            }
+        } else {
+            Reg::RegTensor<T, Reg::RegTraitNumOne> vregInputT;
+            Reg::RegTensor<T, Reg::RegTraitNumOne> vregOutputT;
+            __VEC_SCOPE__
+            {
+                Reg::Duplicate(vregZero, 0.0f);
+                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
+                for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInputT,
+                                                                      (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    Reg::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);
+                    Reg::Muls(vregNegPart, vregInputfloat, negativeSlope, mask);
+                    Reg::Compare<float, CMPMODE::GT>(cmpMask, vregInputfloat, vregZero, mask);
+                    Reg::Select<float>(vregOutput, vregInputfloat, vregNegPart, cmpMask);
+                    Reg::Cast<T, float, castTrait1>(vregOutputT, vregOutput, mask);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                      vregOutputT, mask);
+                }
             }
         }
 #endif
@@ -61,18 +93,6 @@ struct LeakyReluDag {
     using OpCopyInX = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
     using OpLeakyRelu = Bind<LeakyReluCustom<U>, OpCopyInX, Placeholder::Var<T, 0>>;
     using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpLeakyRelu>;
-    using Outputs = Elems<OpCopyOut>;
-    using OpDag = DAGSch<Outputs>;
-};
-
-template <typename U, typename T = float>
-struct LeakyReluCastDag {
-    using OpCopyInX = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
-    using OpCopyInXCast = Bind<Vec::Cast<T, U, 0>, OpCopyInX>;
-    using OpLeakyRelu = Bind<LeakyReluCustom<T>, OpCopyInXCast, Placeholder::Var<T, 0>>;
-    constexpr static int CAST_MODE_RINT = 1;
-    using OpCopyOutCast = Bind<Vec::Cast<U, T, CAST_MODE_RINT>, OpLeakyRelu>;
-    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpCopyOutCast>;
     using Outputs = Elems<OpCopyOut>;
     using OpDag = DAGSch<Outputs>;
 };

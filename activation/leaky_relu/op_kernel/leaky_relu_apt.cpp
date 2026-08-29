@@ -31,12 +31,11 @@ __global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, G
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
     if constexpr (dType == static_cast<uint64_t>(TPL_FP16)) {
-        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluCastDag<half, float>::OpDag> sch(tilingData);
+        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluDag<half, float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == static_cast<uint64_t>(TPL_BF16)) {
-        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluCastDag<bfloat16_t, float>::OpDag> sch(
-            tilingData);
+        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluDag<bfloat16_t, float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == static_cast<uint64_t>(TPL_FP32)) {

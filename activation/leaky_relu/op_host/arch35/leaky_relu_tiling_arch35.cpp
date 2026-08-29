@@ -113,10 +113,10 @@ ge::graphStatus LeakyReluTiling::RunTiling()
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = static_cast<uint64_t>(TPL_FP16);
-        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluCastDag<half, float>::OpDag>();
+        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluDag<half, float>::OpDag>();
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = static_cast<uint64_t>(TPL_BF16);
-        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluCastDag<bfloat16_t, float>::OpDag>();
+        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluDag<bfloat16_t, float>::OpDag>();
     } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = static_cast<uint64_t>(TPL_FP32);
         baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluDag<float, float>::OpDag>();
