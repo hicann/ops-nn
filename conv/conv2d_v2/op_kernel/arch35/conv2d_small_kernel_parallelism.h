@@ -159,7 +159,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         }
     }
 
-    cinL1Blocks_ = CeilDiv(this->AlignB(this->tiling_->singleCoreCi, this->GK0Fmap), cinL1_);
+    cinL1Blocks_ = CeilDiv(this->cinAligned_, cinL1_);
 
     uint32_t maxHoRelEnd;
     if constexpr (IsHwMode) {
@@ -708,15 +708,13 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
         } else {
             WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         }
-        uint32_t curCinOriFmap = AlignB(curCinOri, this->GK0Fmap);
-        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi,
-                            curCinOriFmap);
+        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi, curCin);
 
-        uint32_t al1ElemCount = curHi * curWi * curCinOriFmap;
+        uint32_t al1ElemCount = curHi * curWi * curCin;
         uint32_t al1BufOff = kl1Buf * al1BufBytes_;
         LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
-        uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
-        RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters, this->enableBatchDoubleBuffer_, kl1Ev);
+
+        RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1, kl1, kL0, kL0Iters, this->enableBatchDoubleBuffer_, kl1Ev);
         if (!this->enableBatchDoubleBuffer_) {
             SetFlag<HardEvent::MTE1_MTE2>(kl1Ev);
         }
