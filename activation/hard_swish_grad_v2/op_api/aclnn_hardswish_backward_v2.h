@@ -7,8 +7,9 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OP_API_INC_HARDSWISH_BACKWARD_H_
-#define OP_API_INC_HARDSWISH_BACKWARD_H_
+
+#ifndef OP_API_INC_HARDSWISH_BACKWARD_V2_H_
+#define OP_API_INC_HARDSWISH_BACKWARD_V2_H_
 
 #include "aclnn/aclnn_base.h"
 #include "aclnn_util.h"
@@ -18,7 +19,7 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnHardswishBackward的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @brief aclnnHardswishBackwardV2的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  *
  * 算子功能：激活函数hardswish的反向
@@ -26,9 +27,9 @@ extern "C" {
  * $$ res_{i} = grad\_output_{i} \times grad\_self_{i} $$
  * $$
  * grad\_self_{i} = \begin{cases}
- * 0, & self_{i} \lt -3, \\
- * self_{i} / 3 + 0.5, &   -3 \le self_{i} \le 3, \\
- * 1, & self_{i} \gt 3
+ * 0, & self_{i} \le -3, \\
+ * self_{i} / 3 + 0.5, &   -3 \lt self_{i} \lt 3, \\
+ * 1, & self_{i} \ge 3
  * \end{cases}
  * $$
  *
@@ -37,9 +38,9 @@ extern "C" {
  * ```mermaid
 graph LR
  *     A[(gradOutput)] --> B([l0op::Contiguous])
- *     B --> C([l0op::HardSwishGrad])
+ *     B --> C([l0op::HardSwishGradV2])
  *     D[(self)] --> E([l0op::Contiguous])
- *     E --> C([l0op::HardSwishGrad])
+ *     E --> C([l0op::HardSwishGradV2])
  *     C --> F([l0op::ViewCopy])
  *     F --> g[(out)]
 ```
@@ -57,21 +58,21 @@ graph LR
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-                                                             aclTensor* out, uint64_t* workspaceSize,
-                                                             aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnHardswishBackwardV2GetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                               aclTensor* out, uint64_t* workspaceSize,
+                                                               aclOpExecutor** executor);
 
 /**
- * @brief aclnnHardswishBackward的第二段接口，用于执行计算。
+ * @brief aclnnHardswishBackwardV2的第二段接口，用于执行计算。
  *
  * 算子功能：激活函数hardswish的反向
  * 计算公式：
  * $$ res_{i} = grad\_output_{i} \times grad\_self_{i} $$
  * $$
  * grad\_self_{i} = \begin{cases}
- * 0, & self_{i} \lt -3, \\
- * self_{i} / 3 + 0.5, &   -3 \le self_{i} \le 3, \\
- * 1, & self_{i} \gt 3
+ * 0, & self_{i} \le -3, \\
+ * self_{i} / 3 + 0.5, &   -3 \lt self_{i} \lt 3, \\
+ * 1, & self_{i} \ge 3
  * \end{cases}
  * $$
  *
@@ -80,9 +81,9 @@ ACLNN_API aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(const aclTensor* gr
  * ```mermaid
 graph LR
  *     A[(gradOutput)] --> B([l0op::Contiguous])
- *     B --> C([l0op::HardSwishGrad])
+ *     B --> C([l0op::HardSwishGradV2])
  *     D[(self)] --> E([l0op::Contiguous])
- *     E --> C([l0op::HardSwishGrad])
+ *     E --> C([l0op::HardSwishGradV2])
  *     C --> F([l0op::ViewCopy])
  *     F --> g[(out)]
 ```
@@ -93,11 +94,11 @@ graph LR
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnHardswishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                             const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnHardswishBackwardV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // OP_API_INC_HARDSWISH_BACKWARD_H_
+#endif // OP_API_INC_HARDSWISH_BACKWARD_V2_H_

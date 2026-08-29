@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file hard_swish_grad_v2.cpp
+ * \file hard_swish_grad.cpp
  * \brief
  */
 
-#include "hard_swish_grad_v2.h"
+#include "hard_swish_grad.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"
@@ -27,18 +27,18 @@ using namespace op;
 
 namespace l0op {
 
-OP_TYPE_REGISTER(HardSwishGradV2);
+OP_TYPE_REGISTER(HardSwishGrad);
 
-const aclTensor* HardSwishGradV2(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
+const aclTensor* HardSwishGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
 {
-    L0_DFX(HardSwishGradV2, gradOutput, self);
+    L0_DFX(HardSwishGrad, gradOutput, self);
     // 根据推导出的输出shape申请输出tensor
     // 通过输入shape推导算子输出shape
     auto hardSwishGradOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSwishGradV2, OP_INPUT(gradOutput, self), OP_OUTPUT(hardSwishGradOut));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSwishGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(hardSwishGradOut));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSwishGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSwishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return hardSwishGradOut;
 }
