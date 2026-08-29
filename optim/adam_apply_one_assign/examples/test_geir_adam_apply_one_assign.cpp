@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < (int)output.size(); i++) {
         auto& t = output[i];
         int64_t sz = t.GetTensorDesc().GetShape().GetShapeSize();
-        float* data = static_cast<float*>(t.GetData());
+        float* data = (float*)(t.GetData());
         printf("output[%d] (size=%ld): ", i, sz);
         for (int64_t j = 0; j < sz && j < 8; j++)
             printf("%f ", data[j]);
@@ -215,9 +215,9 @@ int main(int argc, char* argv[])
 
     bool pass = true;
     if (output.size() >= 3) {
-        float* d0 = static_cast<float*>(output[0].GetData());
-        float* d1 = static_cast<float*>(output[1].GetData());
-        float* d2 = static_cast<float*>(output[2].GetData());
+        float* d0 = (float*)(output[0].GetData());
+        float* d1 = (float*)(output[1].GetData());
+        float* d2 = (float*)(output[2].GetData());
         if (std::abs(d0[0] - cpu_o0) > 1e-4f) {
             printf("input1_out mismatch: NPU=%f CPU=%f\n", d0[0], cpu_o0);
             pass = false;
