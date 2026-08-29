@@ -339,13 +339,14 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
     DataCopyPadParams padParams{false, 0, 0, 0};
 
     // 激活左/右部分偏移，actRight是表示是否激活右半部分
-    int64_t actOffset = (tl_->swiGluMode == 0) ? tl_->actRight * tl_->UbFactorDimy : 0;
+    // 交织(V2)仅 mode1；mode0/2/3 均走前后半，使用 actRight 偏移
+    int64_t actOffset = (tl_->swiGluMode != 1) ? tl_->actRight * tl_->UbFactorDimy : 0;
     int64_t gateOffset = tl_->UbFactorDimy - actOffset;
 
     // weight_scale搬入
     LocalTensor<float> inScaleLocal = inScaleQueue_.AllocTensor<float>();
     if constexpr (ifXIntIndex_) {
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             // copy_in: weight_scale(G, H) 激活部分
             DataCopyParams dataCopyWeightScaleParams;
             dataCopyWeightScaleParams.blockCount = 1;
@@ -388,7 +389,7 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
 
     // copy_in: bias(1, 2H)->(1, H), (1, H)
     if constexpr (hasBiasIndex_) {
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             biasLocal = biasQueue_.AllocTensor<TBias>();
             DataCopyParams dataCopyBiasParams;
             dataCopyBiasParams.blockCount = 1;
@@ -431,7 +432,7 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
 
         // copy_in: x(xDimPerLoop, H) 激活部分
         LocalTensor<TXtype> xActLocal = xActQueue_.AllocTensor<TXtype>();
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             DataCopyParams dataCopyXParams;
             dataCopyXParams.blockCount = xDimPerLoop;
             dataCopyXParams.blockLen = tl_->UbFactorDimy * sizeof(TXtype);
@@ -508,12 +509,27 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
                 x1Ptr, tmpXPtr, wScale1Ptr, aScalePtr, bias1Ptr, xDimPerLoop, widthFullRow, repeatTimesFullRow,
                 sizePerRepeat, xTypeUbAlignB32FullRow_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
                 tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+        } else if (tl_->swiGluMode == 2) {
+            VF_CALL<DequantSwigluV1<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                                    hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                                    ifBiasBfloat16Index_, 2>>(
+                x1Ptr, x2Ptr, tmpXPtr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xDimPerLoop, width,
+                repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
+                tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+        } else if (tl_->swiGluMode == 3) {
+            VF_CALL<DequantSwigluV1<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                                    hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                                    ifBiasBfloat16Index_, 3>>(
+                x1Ptr, x2Ptr, tmpXPtr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xDimPerLoop, width,
+                repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
+                tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
         } else {
             VF_CALL<DequantSwigluV1<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
                                     hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_,
                                     ifBiasBfloat16Index_>>(
                 x1Ptr, x2Ptr, tmpXPtr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xDimPerLoop, width,
-                repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0);
+                repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
+                tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
         }
 
         __ubuf__ float* qScalePtr = (__ubuf__ float*)inScaleLocal.GetPhyAddr(xUbAlignB32_ * 2);

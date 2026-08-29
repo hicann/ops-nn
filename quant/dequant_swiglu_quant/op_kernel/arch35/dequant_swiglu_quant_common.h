@@ -195,10 +195,11 @@ __aicore__ inline void Int32Dequant(__ubuf__ TXtype* xPtr, __ubuf__ float* dstPt
     }
 } // Int32Dequant end
 
-template <bool hasQuantScale, bool quantIsOne>
+template <bool hasQuantScale, bool quantIsOne, int SwigluMode_ = 0>
 __aicore__ inline void SwigluSingleYWithQuantScale(__ubuf__ float* xPtr, __ubuf__ float* qScalePtr,
                                                    __ubuf__ float* dstPtr, uint32_t offset, uint32_t repeatTimes,
-                                                   uint32_t sizePerRepeat, uint32_t count, bool ifQuantIsOne)
+                                                   uint32_t sizePerRepeat, uint32_t count, bool ifQuantIsOne,
+                                                   float clampLit = 0, float gluAlpha = 0, float gluBias = 0)
 {
     float scalarOne = 1.0f;
     uint32_t maskScalarOne = 1;
@@ -226,11 +227,35 @@ __aicore__ inline void SwigluSingleYWithQuantScale(__ubuf__ float* xPtr, __ubuf_
         AscendC::Reg::LoadAlign(vreg1, xActAddr);
         AscendC::Reg::LoadAlign(vreg2, xGateAddr);
 
-        AscendC::Reg::Muls(vreg6, vreg1, -(scalarOne), mask);
-        AscendC::Reg::Exp(vreg7, vreg6, mask);
-        AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
-        AscendC::Reg::Div(vreg9, vreg1, vreg8, mask);
-        AscendC::Reg::Mul(vreg15, vreg9, vreg2, mask);
+        if constexpr (SwigluMode_ == 0) {
+            // mode0: SiLU 前后半，逐指令保持不变
+            AscendC::Reg::Muls(vreg6, vreg1, -(scalarOne), mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg1, vreg8, mask);
+            AscendC::Reg::Mul(vreg15, vreg9, vreg2, mask);
+        } else if constexpr (SwigluMode_ == 2) {
+            // mode2: x_glu.clamp(max=L) -> x_glu·σ(α·x_glu); x_linear clamp(±L)+bias
+            AscendC::Reg::Mins(vreg1, vreg1, clampLit, mask);
+            AscendC::Reg::Muls(vreg6, vreg1, -gluAlpha, mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg1, vreg8, mask);
+            AscendC::Reg::Mins(vreg2, vreg2, clampLit, mask);
+            AscendC::Reg::Maxs(vreg2, vreg2, -clampLit, mask);
+            AscendC::Reg::Adds(vreg2, vreg2, gluBias, mask);
+            AscendC::Reg::Mul(vreg15, vreg9, vreg2, mask);
+        } else if constexpr (SwigluMode_ == 3) {
+            // mode3: SiLU(α=1) 后 clamp(max=L); x_linear clamp(±L) 无 bias
+            AscendC::Reg::Muls(vreg6, vreg1, -(scalarOne), mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg1, vreg8, mask);
+            AscendC::Reg::Mins(vreg9, vreg9, clampLit, mask);
+            AscendC::Reg::Mins(vreg2, vreg2, clampLit, mask);
+            AscendC::Reg::Maxs(vreg2, vreg2, -clampLit, mask);
+            AscendC::Reg::Mul(vreg15, vreg9, vreg2, mask);
+        }
 
         if constexpr (hasQuantScale) {
             if constexpr (quantIsOne) {
@@ -922,13 +947,14 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
 
 template <typename TXtype, typename TBias, bool ifXIntIndex_, bool ifXFloat16Index_, bool ifXBf16Index_,
           bool hasBiasIndex_, bool hasActScale_, bool ifBiasIntIndex_, bool ifBiasFloatIndex_, bool ifBiasFloat16Index_,
-          bool ifBiasBfloat16Index_>
+          bool ifBiasBfloat16Index_, int SwigluMode_ = 0>
 __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* x2Ptr, __ubuf__ float* dstPtr,
                                        __ubuf__ float* wScale1Ptr, __ubuf__ float* wScale2Ptr,
                                        __ubuf__ float* aScalePtr, __ubuf__ TBias* bias1Ptr, __ubuf__ TBias* bias2Ptr,
                                        uint32_t xDimPerLoop, uint32_t count, uint16_t repeatTimes,
                                        uint16_t sizePerRepeat, uint32_t xTypeUbAlignB32, uint32_t xTUbAlignB32,
-                                       uint32_t dstTypeUbAlignB32, uint32_t aScaleUbAlignB32, uint32_t offset)
+                                       uint32_t dstTypeUbAlignB32, uint32_t aScaleUbAlignB32, uint32_t offset,
+                                       float clampLit = 0, float gluAlpha = 0, float gluBias = 0)
 {
     AscendC::Reg::RegTensor<TXtype> vreg0, vreg10;
     AscendC::Reg::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
@@ -1038,14 +1064,37 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
                 AscendC::Reg::Add(vreg13, vreg13, vreg21, mask);
             }
 
-            // Swish
-            AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
-            AscendC::Reg::Exp(vreg7, vreg6, mask);
-            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
-            AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
-
-            // glu
-            AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+            if constexpr (SwigluMode_ == 0) {
+                // mode0: SiLU 前后半，逐指令保持不变
+                // Swish
+                AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
+                AscendC::Reg::Exp(vreg7, vreg6, mask);
+                AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+                AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+                // glu
+                AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+            } else if constexpr (SwigluMode_ == 2) {
+                // mode2: x_glu.clamp(max=L) -> x_glu·σ(α·x_glu); x_linear clamp(±L)+bias
+                AscendC::Reg::Mins(vreg3, vreg3, clampLit, mask);
+                AscendC::Reg::Muls(vreg6, vreg3, -gluAlpha, mask);
+                AscendC::Reg::Exp(vreg7, vreg6, mask);
+                AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+                AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+                AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+                AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
+                AscendC::Reg::Adds(vreg13, vreg13, gluBias, mask);
+                AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+            } else if constexpr (SwigluMode_ == 3) {
+                // mode3: SiLU(α=1) 后 clamp(max=L); x_linear clamp(±L) 无 bias
+                AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
+                AscendC::Reg::Exp(vreg7, vreg6, mask);
+                AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+                AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+                AscendC::Reg::Mins(vreg9, vreg9, clampLit, mask);
+                AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+                AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
+                AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+            }
 
             // store: reg->ub
             AscendC::Reg::StoreAlign(dstAddr, vreg15, mask);

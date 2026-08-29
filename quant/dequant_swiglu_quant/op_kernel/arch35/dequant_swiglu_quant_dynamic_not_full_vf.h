@@ -143,7 +143,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         AscendC::Reg::Muls(vregS2, vregS0, -gluAlpha, mask);
         AscendC::Reg::Exp(vregS3, vregS2, mask);
         AscendC::Reg::Adds(vregS4, vregS3, scalarOne, mask);
-        AscendC::Reg::Div<float, &DIV_MODE>(vregS5, vregS0, vregS4, mask);
+        AscendC::Reg::Div(vregS5, vregS0, vregS4, mask);
         // glu
         AscendC::Reg::Mins(vregS1, vregS1, clampLit, mask);
         AscendC::Reg::Maxs(vregS1, vregS1, -clampLit, mask);
@@ -302,7 +302,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
     AscendC::Reg::Muls(vregS2, vregS0, -gluAlpha, mask);
     AscendC::Reg::Exp(vregS3, vregS2, mask);
     AscendC::Reg::Adds(vregS4, vregS3, scalarOne, mask);
-    AscendC::Reg::Div<float, &DIV_MODE>(vregS5, vregS0, vregS4, mask);
+    AscendC::Reg::Div(vregS5, vregS0, vregS4, mask);
     // glu
     AscendC::Reg::Mins(vregS1, vregS1, clampLit, mask);
     AscendC::Reg::Maxs(vregS1, vregS1, -clampLit, mask);
@@ -313,11 +313,12 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
 }
 
 template <typename XType, typename BiasType, bool IsXInt, bool IsXFloat16, bool IsXBfloat16, bool HasBias,
-          bool IsBiasInt, bool HasActiScale, bool IsBiasFloat, bool IsBiasFloat16, bool IsBiasBfloat16>
+          bool IsBiasInt, bool HasActiScale, bool IsBiasFloat, bool IsBiasFloat16, bool IsBiasBfloat16,
+          int SwigluMode_ = 0>
 __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x2Ptr, __ubuf__ float* wScale1Ptr,
                                         __ubuf__ float* wScale2Ptr, __ubuf__ float* aScalePtr,
-                                        __ubuf__ BiasType* bias1Ptr, __ubuf__ BiasType* bias2Ptr,
-                                        __ubuf__ float* xTempPtr, uint32_t tileData)
+                                        __ubuf__ BiasType* bias1Ptr, __ubuf__ BiasType* bias2Ptr, float clampLit,
+                                        float gluAlpha, float gluBias, __ubuf__ float* xTempPtr, uint32_t tileData)
 {
     AscendC::Reg::RegTensor<XType> vreg0, vreg10;
     AscendC::Reg::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
@@ -421,12 +422,253 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
             AscendC::Reg::Add(vreg3, vreg3, vreg20, mask);
             AscendC::Reg::Add(vreg13, vreg13, vreg21, mask);
         }
-        // Swish
+        if constexpr (SwigluMode_ == 0) {
+            // mode0: SiLU 前后半，逐指令保持不变
+            // Swish
+            AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+            // glu
+            AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+        } else if constexpr (SwigluMode_ == 2) {
+            // mode2: x_glu.clamp(max=L) -> x_glu·σ(α·x_glu); x_linear clamp(±L)+bias
+            AscendC::Reg::Mins(vreg3, vreg3, clampLit, mask);
+            AscendC::Reg::Muls(vreg6, vreg3, -gluAlpha, mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+            AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+            AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
+            AscendC::Reg::Adds(vreg13, vreg13, gluBias, mask);
+            AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+        } else if constexpr (SwigluMode_ == 3) {
+            // mode3: SiLU(α=1) 后 clamp(max=L); x_linear clamp(±L) 无 bias
+            AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
+            AscendC::Reg::Exp(vreg7, vreg6, mask);
+            AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+            AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+            AscendC::Reg::Mins(vreg9, vreg9, clampLit, mask);
+            AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+            AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
+            AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+        }
+        // store: reg->ub
+        AscendC::Reg::StoreAlign(dstAddr, vreg15, mask);
+    }
+}
+
+template <typename XType, typename BiasType, bool IsXInt, bool IsXFloat16, bool IsXBfloat16, bool HasBias,
+          bool IsBiasInt, bool HasActiScale, bool IsBiasFloat, bool IsBiasFloat16, bool IsBiasBfloat16>
+__aicore__ inline void DequantAndSwiGluV3(__ubuf__ XType* x1Ptr, __ubuf__ XType* x2Ptr, __ubuf__ float* wScale1Ptr,
+                                          __ubuf__ float* wScale2Ptr, __ubuf__ float* aScalePtr,
+                                          __ubuf__ BiasType* bias1Ptr, __ubuf__ BiasType* bias2Ptr,
+                                          __ubuf__ float* xTempPtr, uint32_t tileData, float clampLit, float gluAlpha,
+                                          float gluBias)
+{
+    AscendC::Reg::RegTensor<XType> vreg0, vreg10;
+    AscendC::Reg::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
+    AscendC::Reg::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
+    AscendC::Reg::RegTensor<float> vreg13, vreg14, vreg15;
+    AscendC::Reg::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
+    AscendC::Reg::RegTensor<float> vreg20, vreg21;
+    AscendC::Reg::RegTensor<half> vreg24, vreg25;
+    AscendC::Reg::RegTensor<bfloat16_t> vreg26, vreg27;
+    AscendC::Reg::MaskReg mask;
+
+    constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
+    uint32_t width = tileData;
+    uint16_t repeatTimes = CeilDivision(tileData, sizePerRepeat);
+    const float scalarOne = 1.0;
+    for (uint16_t j = 0; j < repeatTimes; j++) {
+        mask = AscendC::Reg::UpdateMask<uint32_t>(width);
+        __ubuf__ float* wScale1Addr;
+        __ubuf__ float* wScale2Addr;
+        if constexpr (IsXInt) {
+            wScale1Addr = wScale1Ptr + j * sizePerRepeat;
+            wScale2Addr = wScale2Ptr + j * sizePerRepeat;
+            AscendC::Reg::LoadAlign(vreg2, wScale1Addr);
+            AscendC::Reg::LoadAlign(vreg12, wScale2Addr);
+        }
+        auto x1Addr = x1Ptr + j * sizePerRepeat;
+        auto x2Addr = x2Ptr + j * sizePerRepeat;
+        auto dstAddr = xTempPtr + j * sizePerRepeat;
+        if constexpr (IsXFloat16) {
+            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+        }
+        if constexpr (IsXBfloat16) {
+            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+        }
+        if constexpr (IsXInt) {
+            AscendC::Reg::LoadAlign(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign(vreg10, x2Addr);
+        }
+        if constexpr (HasBias) {
+            if constexpr (IsXInt && IsBiasInt) {
+                auto bias1Addr = bias1Ptr + j * sizePerRepeat;
+                auto bias2Addr = bias2Ptr + j * sizePerRepeat;
+                AscendC::Reg::LoadAlign(vreg16, bias1Addr);
+                AscendC::Reg::LoadAlign(vreg17, bias2Addr);
+                AscendC::Reg::Add(vreg0, vreg0, vreg16, mask);
+                AscendC::Reg::Add(vreg10, vreg10, vreg17, mask);
+            }
+        }
+        if constexpr (IsXInt) {
+            AscendC::Reg::Cast<float, XType, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
+            AscendC::Reg::Cast<float, XType, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
+            AscendC::Reg::Mul(vreg3, vreg1, vreg2, mask);
+            AscendC::Reg::Mul(vreg13, vreg11, vreg12, mask);
+        }
+        if constexpr (IsXBfloat16 || IsXFloat16) {
+            AscendC::Reg::Cast<float, XType, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
+            AscendC::Reg::Cast<float, XType, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
+        }
+        if constexpr (HasActiScale) {
+            auto aScaleAddr = aScalePtr;
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+            AscendC::Reg::Mul(vreg3, vreg3, vreg4, mask);
+            AscendC::Reg::Mul(vreg13, vreg13, vreg4, mask);
+        }
+        if constexpr (IsBiasFloat || IsBiasFloat16 || IsBiasBfloat16) {
+            auto bias1Addr = bias1Ptr + j * sizePerRepeat;
+            auto bias2Addr = bias2Ptr + j * sizePerRepeat;
+            if constexpr (IsBiasFloat) {
+                AscendC::Reg::LoadAlign(vreg20, bias1Addr);
+                AscendC::Reg::LoadAlign(vreg21, bias2Addr);
+            }
+            if constexpr (IsBiasFloat16) {
+                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
+                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
+            }
+            if constexpr (IsBiasBfloat16) {
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg26, bias1Addr);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg27, bias2Addr);
+                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
+                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
+            }
+            AscendC::Reg::Add(vreg3, vreg3, vreg20, mask);
+            AscendC::Reg::Add(vreg13, vreg13, vreg21, mask);
+        }
+        // SwiGlu mode=2: clamp(x_glu, max) -> swish(alpha) -> clamp(x_linear) -> x_linear+bias -> y
+        AscendC::Reg::Mins(vreg3, vreg3, clampLit, mask);
+        AscendC::Reg::Muls(vreg6, vreg3, -gluAlpha, mask);
+        AscendC::Reg::Exp(vreg7, vreg6, mask);
+        AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
+        AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+        AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+        AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
+        AscendC::Reg::Adds(vreg13, vreg13, gluBias, mask);
+        AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
+        AscendC::Reg::StoreAlign(dstAddr, vreg15, mask);
+    }
+}
+
+template <typename XType, typename BiasType, bool IsXInt, bool IsXFloat16, bool IsXBfloat16, bool HasBias,
+          bool IsBiasInt, bool HasActiScale, bool IsBiasFloat, bool IsBiasFloat16, bool IsBiasBfloat16>
+__aicore__ inline void DequantAndSwiGluV4(__ubuf__ XType* x1Ptr, __ubuf__ XType* x2Ptr, __ubuf__ float* wScale1Ptr,
+                                          __ubuf__ float* wScale2Ptr, __ubuf__ float* aScalePtr,
+                                          __ubuf__ BiasType* bias1Ptr, __ubuf__ BiasType* bias2Ptr,
+                                          __ubuf__ float* xTempPtr, uint32_t tileData, float clampLit)
+{
+    AscendC::Reg::RegTensor<XType> vreg0, vreg10;
+    AscendC::Reg::RegTensor<float> vreg1, vreg2, vreg3, vreg4, vreg5, vreg6;
+    AscendC::Reg::RegTensor<float> vreg7, vreg8, vreg9, vreg11, vreg12;
+    AscendC::Reg::RegTensor<float> vreg13, vreg14, vreg15;
+    AscendC::Reg::RegTensor<int32_t> vreg16, vreg17, verg18, vreg19;
+    AscendC::Reg::RegTensor<float> vreg20, vreg21;
+    AscendC::Reg::RegTensor<half> vreg24, vreg25;
+    AscendC::Reg::RegTensor<bfloat16_t> vreg26, vreg27;
+    AscendC::Reg::MaskReg mask;
+
+    constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
+    uint32_t width = tileData;
+    uint16_t repeatTimes = CeilDivision(tileData, sizePerRepeat);
+    const float scalarOne = 1.0;
+    for (uint16_t j = 0; j < repeatTimes; j++) {
+        mask = AscendC::Reg::UpdateMask<uint32_t>(width);
+        __ubuf__ float* wScale1Addr;
+        __ubuf__ float* wScale2Addr;
+        if constexpr (IsXInt) {
+            wScale1Addr = wScale1Ptr + j * sizePerRepeat;
+            wScale2Addr = wScale2Ptr + j * sizePerRepeat;
+            AscendC::Reg::LoadAlign(vreg2, wScale1Addr);
+            AscendC::Reg::LoadAlign(vreg12, wScale2Addr);
+        }
+        auto x1Addr = x1Ptr + j * sizePerRepeat;
+        auto x2Addr = x2Ptr + j * sizePerRepeat;
+        auto dstAddr = xTempPtr + j * sizePerRepeat;
+        if constexpr (IsXFloat16) {
+            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+        }
+        if constexpr (IsXBfloat16) {
+            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+        }
+        if constexpr (IsXInt) {
+            AscendC::Reg::LoadAlign(vreg0, x1Addr);
+            AscendC::Reg::LoadAlign(vreg10, x2Addr);
+        }
+        if constexpr (HasBias) {
+            if constexpr (IsXInt && IsBiasInt) {
+                auto bias1Addr = bias1Ptr + j * sizePerRepeat;
+                auto bias2Addr = bias2Ptr + j * sizePerRepeat;
+                AscendC::Reg::LoadAlign(vreg16, bias1Addr);
+                AscendC::Reg::LoadAlign(vreg17, bias2Addr);
+                AscendC::Reg::Add(vreg0, vreg0, vreg16, mask);
+                AscendC::Reg::Add(vreg10, vreg10, vreg17, mask);
+            }
+        }
+        if constexpr (IsXInt) {
+            AscendC::Reg::Cast<float, XType, CAST_INT32_TO_FP32>(vreg1, vreg0, mask);
+            AscendC::Reg::Cast<float, XType, CAST_INT32_TO_FP32>(vreg11, vreg10, mask);
+            AscendC::Reg::Mul(vreg3, vreg1, vreg2, mask);
+            AscendC::Reg::Mul(vreg13, vreg11, vreg12, mask);
+        }
+        if constexpr (IsXBfloat16 || IsXFloat16) {
+            AscendC::Reg::Cast<float, XType, CAST_BF16_FP16_TO_FP32>(vreg3, vreg0, mask);
+            AscendC::Reg::Cast<float, XType, CAST_BF16_FP16_TO_FP32>(vreg13, vreg10, mask);
+        }
+        if constexpr (HasActiScale) {
+            auto aScaleAddr = aScalePtr;
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+            AscendC::Reg::Mul(vreg3, vreg3, vreg4, mask);
+            AscendC::Reg::Mul(vreg13, vreg13, vreg4, mask);
+        }
+        if constexpr (IsBiasFloat || IsBiasFloat16 || IsBiasBfloat16) {
+            auto bias1Addr = bias1Ptr + j * sizePerRepeat;
+            auto bias2Addr = bias2Ptr + j * sizePerRepeat;
+            if constexpr (IsBiasFloat) {
+                AscendC::Reg::LoadAlign(vreg20, bias1Addr);
+                AscendC::Reg::LoadAlign(vreg21, bias2Addr);
+            }
+            if constexpr (IsBiasFloat16) {
+                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
+                AscendC::Reg::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
+            }
+            if constexpr (IsBiasBfloat16) {
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg26, bias1Addr);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg27, bias2Addr);
+                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
+                AscendC::Reg::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
+            }
+            AscendC::Reg::Add(vreg3, vreg3, vreg20, mask);
+            AscendC::Reg::Add(vreg13, vreg13, vreg21, mask);
+        }
+        // SwiGlu mode=3: swish(alpha=1) -> clamp(x_glu) -> clamp(x_linear) -> y=x_glu*x_linear
         AscendC::Reg::Muls(vreg6, vreg3, -(scalarOne), mask);
         AscendC::Reg::Exp(vreg7, vreg6, mask);
         AscendC::Reg::Adds(vreg8, vreg7, scalarOne, mask);
-        AscendC::Reg::Div<float, &DIV_MODE>(vreg9, vreg3, vreg8, mask);
-        // glu
+        AscendC::Reg::Div(vreg9, vreg3, vreg8, mask);
+        AscendC::Reg::Mins(vreg9, vreg9, clampLit, mask);
+        AscendC::Reg::Mins(vreg13, vreg13, clampLit, mask);
+        AscendC::Reg::Maxs(vreg13, vreg13, -clampLit, mask);
         AscendC::Reg::Mul(vreg15, vreg9, vreg13, mask);
         // store: reg->ub
         AscendC::Reg::StoreAlign(dstAddr, vreg15, mask);

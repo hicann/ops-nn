@@ -85,7 +85,9 @@ private:
     __aicore__ inline void ProcessSingleRow(int64_t groupIndex, size_t rowIndex);
     __aicore__ inline void PreProcess(uint32_t tileData);
     __aicore__ inline void PreProcessV2(uint32_t tileData);
-    __aicore__ inline void UpdateReduceMax(uint32_t tileData);
+    __aicore__ inline void PreProcessV3(uint32_t tileData);
+    __aicore__ inline void PreProcessV4(uint32_t tileData);
+    __aicore__ inline void UpdateReduceMax(uint32_t tileData, event_t eventIdSV);
     __aicore__ inline void CalculateResult(uint32_t tileData);
     __aicore__ inline float GetScalarMaxNum();
     __aicore__ inline void SetAlignLength(uint32_t tileData);
@@ -130,6 +132,8 @@ protected:
     __ubuf__ float* xTempPtr_;
     LocalTensor<float> scaleLocal_;
     __ubuf__ float* scalePtr_;
+    // activation_scale按行只搬一次，loop间复用
+    LocalTensor<float> activationScaleLocal_;
 
     uint32_t blockIdx_ = GetBlockIdx();
     // 处理一行需要的循环次数
@@ -287,17 +291,6 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
                     dataCopyWeightScaleParams, padParams); // 门控部分
         weightScaleQueue_.EnQue(weightScaleLocal);
     }
-    // copy_in: activation_scale(BS,)
-    if constexpr (hasActScale_) {
-        LocalTensor<float> activationScaleLocal = activationScaleQueue_.AllocTensor<float>();
-        DataCopyParams dataCopyActScaleParams;
-        dataCopyActScaleParams.blockCount = 1;
-        dataCopyActScaleParams.blockLen = sizeof(float);
-        dataCopyActScaleParams.srcStride = 0;
-        dataCopyActScaleParams.dstStride = 0;
-        DataCopyPad(activationScaleLocal[0], activationScaleGm_[rowIndex], dataCopyActScaleParams, padParams);
-        activationScaleQueue_.EnQue(activationScaleLocal);
-    }
     // copy_in: quant_scale(G, H)
     if constexpr (hasQuantScale_) {
         LocalTensor<QuantScaleType> quantScaleLocal = quantScaleQueue_.AllocTensor<QuantScaleType>();
@@ -367,54 +360,109 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     scaleLocal_ = scaleQueue_.AllocTensor<float>();
     Duplicate(scaleLocal_, 0.0f, 1);
     scalePtr_ = (__ubuf__ float*)scaleLocal_.GetPhyAddr();
+    // activation_scale按行只搬一次（索引为rowIndex，与group无关），整行loop间复用；MTE2->V同步由本次EnQue/DeQue承接
+    if constexpr (hasActScale_) {
+        activationScaleLocal_ = activationScaleQueue_.AllocTensor<float>();
+        DataCopyPadParams actScalePadParams{false, 0, 0, 0};
+        DataCopyParams dataCopyActScaleParams;
+        dataCopyActScaleParams.blockCount = 1;
+        dataCopyActScaleParams.blockLen = sizeof(float);
+        dataCopyActScaleParams.srcStride = 0;
+        dataCopyActScaleParams.dstStride = 0;
+        DataCopyPad(activationScaleLocal_[0], activationScaleGm_[rowIndex], dataCopyActScaleParams, actScalePadParams);
+        activationScaleQueue_.EnQue(activationScaleLocal_);
+        activationScaleLocal_ = activationScaleQueue_.DeQue<float>();
+    }
+    // 事件ID在loop外获取一次并复用，减少每loop的FetchEventID标量开销（同类事件的first-free ID每次调用返回值一致）
+    event_t eventID_S_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+    event_t eventID_S_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    event_t eventID_V_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+    event_t eventID_V_MTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     // 第一步:求整行的ReduceMax值,并将反量化和SwiGlu的计算结果存放到GM上
     for (size_t loop = 0; loop < loopCount_; loop++) {
         uint32_t tileData = (loop == loopCount_ - 1 && tailBlockLength_ != 0) ? tailBlockLength_ : blockLength_;
-        if (swiGluMode_) {
+        if (swiGluMode_ == 1) {
             CopyInV2(groupIdx, rowIndex, loop, tileData, blockLength_);
-            event_t eventID_MTE2_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-            SetFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
-            WaitFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
+            // CopyInV2->PreProcessV2 的 MTE2->V 同步由各输入 TQue EnQue/DeQue 自动承接，删除冗余显式 MTE2_V barrier
             PreProcessV2(tileData);
-        } else {
+        } else if (swiGluMode_ == 2) {
             SetAlignLength(tileData);
-            event_t eventID_S_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
             SetFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
             WaitFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
             CopyIn(groupIdx, rowIndex, loop, tileData, blockLength_);
-            event_t eventID_MTE2_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-            SetFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
-            WaitFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
+            // CopyIn->PreProcessV3 的 MTE2->V 同步由各输入 TQue EnQue/DeQue 自动承接，删除冗余显式 MTE2_V barrier
+            PreProcessV3(tileData);
+        } else if (swiGluMode_ == 3) {
+            SetAlignLength(tileData);
+            SetFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
+            WaitFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
+            CopyIn(groupIdx, rowIndex, loop, tileData, blockLength_);
+            // CopyIn->PreProcessV4 的 MTE2->V 同步由各输入 TQue EnQue/DeQue 自动承接，删除冗余显式 MTE2_V barrier
+            PreProcessV4(tileData);
+        } else {
+            SetAlignLength(tileData);
+            SetFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
+            WaitFlag<HardEvent::S_MTE2>(eventID_S_MTE2);
+            CopyIn(groupIdx, rowIndex, loop, tileData, blockLength_);
+            // CopyIn->PreProcess 的 MTE2->V 同步由各输入 TQue EnQue/DeQue 自动承接，删除冗余显式 MTE2_V barrier
             PreProcess(tileData);
         }
-        UpdateReduceMax(tileData);
-        event_t eventID_V_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
-        WaitFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
-        event_t eventID_V_MTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventID_V_MTE3);
-        WaitFlag<HardEvent::V_MTE3>(eventID_V_MTE3);
-        uint64_t gmOffset = blockIdx_ * yLength_ + loop * blockLength_;
-        CopyOutForXTemp(gmOffset, tileData);
+        UpdateReduceMax(tileData, eventID_S_V);
+        if (loop == loopCount_ - 1) {
+            // 尾tile优化：CalculateReduceMax 为滚动Max，扫完最后一个tile后整行scale已终值化，
+            // 且 xTempLocal_ 中已是 QuantAndCast 所需输入（HasQuantScale 场景 x*quant_scale
+            // 已在 UpdateReduceMax 内写回），故直接出y，省去该tile的 xTemp 落GM + 读回。
+            // UpdateReduceMax->CalculateResult 同属V流水，程序序保证依赖；
+            // CalculateResult->CopyOutY 的 V->MTE3 由 yQueue_ 的 EnQue/DeQue 承接。
+            CalculateResult(tileData);
+            uint64_t outputGmOffset = rowIndex * yLength_ + loop * blockLength_;
+            CopyOutY(outputGmOffset, tileData);
+            // 保留：V->MTE2（单缓冲 quant/weight/bias 队列跨loop、跨行 WAR）
+            SetFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
+            WaitFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
+        } else {
+            // 非尾tile：整行scale尚未终值化，中间结果仍需落GM，待第二步读回后量化
+            // 保留：V->MTE2（单缓冲 quant/weight/bias 队列跨loop WAR）与 V->MTE3（xTempLocal_ 为 TBuf，无自动同步，落
+            // GM 前必须等 V 写完）
+            SetFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
+            WaitFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
+            SetFlag<HardEvent::V_MTE3>(eventID_V_MTE3);
+            WaitFlag<HardEvent::V_MTE3>(eventID_V_MTE3);
+            uint64_t gmOffset = blockIdx_ * yLength_ + loop * blockLength_;
+            CopyOutForXTemp(gmOffset, tileData);
+        }
+    }
+    // activation_scale 仅第一步使用，整行结束后释放（第二步不再使用）
+    if constexpr (hasActScale_) {
+        activationScaleQueue_.FreeTensor(activationScaleLocal_);
     }
     CopyOutScale(rowIndex);
-    event_t eventID_MTE3_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventID_MTE3_MTE2);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventID_MTE3_MTE2);
-    // 第二步: 根据第一步求的ReduceMax值和反量化SwiGlu的计算结果，求量化值
-    for (size_t loop = 0; loop < loopCount_; loop++) {
-        uint32_t tileData = (loop == loopCount_ - 1 && tailBlockLength_ != 0) ? tailBlockLength_ : blockLength_;
-        uint64_t inputGmOffset = blockIdx_ * yLength_ + loop * blockLength_;
-        CopyInForXTemp(inputGmOffset, tileData);
-        event_t eventID_MTE2_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
-        WaitFlag<HardEvent::MTE2_V>(eventID_MTE2_V);
-        CalculateResult(tileData);
-        event_t eventID_V_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
-        WaitFlag<HardEvent::V_MTE2>(eventID_V_MTE2);
-        uint64_t outputGmOffset = rowIndex * yLength_ + loop * blockLength_;
-        CopyOutY(outputGmOffset, tileData);
+    // 尾tile已在第一步内直接出y，第二步只需处理前 loopCount_-1 个tile；
+    // loopCount_==1 时整行在第一步已完成，无GM中转，第二步及步间同步全部省去
+    if (loopCount_ > 1) {
+        // 保留：步间 MTE3->MTE2（动态量化两步串行边界，第二步读回GM前须等第一步全部落盘）
+        event_t eventID_MTE3_MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+        SetFlag<HardEvent::MTE3_MTE2>(eventID_MTE3_MTE2);
+        WaitFlag<HardEvent::MTE3_MTE2>(eventID_MTE3_MTE2);
+        // 第二步事件ID同样loop外取一次复用
+        event_t eventID_MTE2_V_step2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        event_t eventID_V_MTE2_step2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        // 第二步: 根据第一步求的ReduceMax值和反量化SwiGlu的计算结果，求量化值
+        // 前 loopCount_-1 个tile必为整块（尾块只可能出现在最后一个tile），故tileData恒为blockLength_
+        for (size_t loop = 0; loop < loopCount_ - 1; loop++) {
+            uint32_t tileData = blockLength_;
+            uint64_t inputGmOffset = blockIdx_ * yLength_ + loop * blockLength_;
+            CopyInForXTemp(inputGmOffset, tileData);
+            // 保留：MTE2->V（xTempLocal_ 为 TBuf，需等 CopyInForXTemp 读回完成再做 QuantAndCast）
+            SetFlag<HardEvent::MTE2_V>(eventID_MTE2_V_step2);
+            WaitFlag<HardEvent::MTE2_V>(eventID_MTE2_V_step2);
+            CalculateResult(tileData);
+            // 保留：V->MTE2（下一loop CopyInForXTemp 复用 xTempLocal_ 的 WAR）
+            SetFlag<HardEvent::V_MTE2>(eventID_V_MTE2_step2);
+            WaitFlag<HardEvent::V_MTE2>(eventID_V_MTE2_step2);
+            uint64_t outputGmOffset = rowIndex * yLength_ + loop * blockLength_;
+            CopyOutY(outputGmOffset, tileData);
+        }
     }
     scaleQueue_.FreeTensor(scaleLocal_);
 }
@@ -426,14 +474,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
 {
     LocalTensor<XType> xLocal;
     LocalTensor<float> weightScaleLocal;
-    LocalTensor<float> activationScaleLocal;
     LocalTensor<BiasType> biasLocal;
     xLocal = xQueue_.DeQue<XType>();
     if constexpr (ifXIntIndex_) {
         weightScaleLocal = weightScaleQueue_.DeQue<float>();
-    }
-    if constexpr (hasActScale_) {
-        activationScaleLocal = activationScaleQueue_.DeQue<float>();
     }
     if constexpr (hasBiasIndex_) {
         biasLocal = biasQueue_.DeQue<BiasType>();
@@ -446,7 +490,7 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         wScale1Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
         wScale2Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(weightAlignLength_);
     }
-    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal.GetPhyAddr(0);
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal_.GetPhyAddr(0);
     __ubuf__ BiasType* bias1Ptr;
     __ubuf__ BiasType* bias2Ptr;
     if constexpr (hasBiasIndex_) {
@@ -457,14 +501,12 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     VF_CALL<
         DequantAndSwiGlu<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_, ifBiasIntIndex_,
                          hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_, ifBiasBfloat16Index_>>(
-        x1Ptr, x2Ptr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xTempPtr_, tileData);
+        x1Ptr, x2Ptr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, clampLimit_, gluAlpha_, gluBias_,
+        xTempPtr_, tileData);
 
     xQueue_.FreeTensor(xLocal);
     if constexpr (ifXIntIndex_) {
         weightScaleQueue_.FreeTensor(weightScaleLocal);
-    }
-    if constexpr (hasActScale_) {
-        activationScaleQueue_.FreeTensor(activationScaleLocal);
     }
     if constexpr (hasBiasIndex_) {
         biasQueue_.FreeTensor(biasLocal);
@@ -474,7 +516,8 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
 template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
           typename YType>
 __aicore__ inline void
-DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::UpdateReduceMax(uint32_t tileData)
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::UpdateReduceMax(uint32_t tileData,
+                                                                                                     event_t eventIdSV)
 {
     LocalTensor<float> quantScaleLocal;
     if constexpr (hasQuantScale_) {
@@ -482,9 +525,8 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     }
     __ubuf__ float* qScalePtr = (__ubuf__ float*)quantScaleLocal.GetPhyAddr(0);
     float scalarMaxValue = GetScalarMaxNum();
-    event_t eventID_S_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-    SetFlag<HardEvent::S_V>(eventID_S_V);
-    WaitFlag<HardEvent::S_V>(eventID_S_V);
+    SetFlag<HardEvent::S_V>(eventIdSV);
+    WaitFlag<HardEvent::S_V>(eventIdSV);
     VF_CALL<CalculateReduceMax<hasQuantScale_>>(xTempPtr_, qScalePtr, scalePtr_, tileData, scalarMaxValue);
     if constexpr (hasQuantScale_) {
         quantScaleQueue_.FreeTensor(quantScaleLocal);
@@ -498,8 +540,6 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
 {
     LocalTensor<YType> yLocal = yQueue_.AllocTensor<YType>();
     LocalTensor<uint8_t> yFp4Local = yLocal.template ReinterpretCast<uint8_t>();
-    scaleQueue_.EnQue<float>(scaleLocal_);
-    scaleLocal_ = scaleQueue_.DeQue<float>();
 
     __ubuf__ YType* yPtr = (__ubuf__ YType*)yLocal.GetPhyAddr();
     __ubuf__ uint8_t* yFp4Ptr = (__ubuf__ uint8_t*)yFp4Local.GetPhyAddr();
@@ -649,17 +689,6 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
                     padParams); // 激活部分
         weightScaleQueue_.EnQue(weightScaleLocal);
     }
-    // copy_in: activation_scale(BS,)
-    if constexpr (hasActScale_) {
-        LocalTensor<float> activationScaleLocal = activationScaleQueue_.AllocTensor<float>();
-        DataCopyParams dataCopyActScaleParams;
-        dataCopyActScaleParams.blockCount = 1;
-        dataCopyActScaleParams.blockLen = sizeof(float);
-        dataCopyActScaleParams.srcStride = 0;
-        dataCopyActScaleParams.dstStride = 0;
-        DataCopyPad(activationScaleLocal[0], activationScaleGm_[rowIndex], dataCopyActScaleParams, padParams);
-        activationScaleQueue_.EnQue(activationScaleLocal);
-    }
     // copy_in: quant_scale(G, H)
     if constexpr (hasQuantScale_) {
         LocalTensor<QuantScaleType> quantScaleLocal = quantScaleQueue_.AllocTensor<QuantScaleType>();
@@ -692,14 +721,10 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
 {
     LocalTensor<XType> xLocal;
     LocalTensor<float> weightScaleLocal;
-    LocalTensor<float> activationScaleLocal;
     LocalTensor<BiasType> biasLocal;
     xLocal = xQueue_.DeQue<XType>();
     if constexpr (ifXIntIndex_) {
         weightScaleLocal = weightScaleQueue_.DeQue<float>();
-    }
-    if constexpr (hasActScale_) {
-        activationScaleLocal = activationScaleQueue_.DeQue<float>();
     }
     if constexpr (hasBiasIndex_) {
         biasLocal = biasQueue_.DeQue<BiasType>();
@@ -710,7 +735,7 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     if constexpr (ifXIntIndex_) {
         wScalePtr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
     }
-    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal.GetPhyAddr(0);
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal_.GetPhyAddr(0);
     __ubuf__ BiasType* biasPtr;
     if constexpr (hasBiasIndex_) {
         biasPtr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(0);
@@ -725,8 +750,95 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     if constexpr (ifXIntIndex_) {
         weightScaleQueue_.FreeTensor(weightScaleLocal);
     }
-    if constexpr (hasActScale_) {
-        activationScaleQueue_.FreeTensor(activationScaleLocal);
+    if constexpr (hasBiasIndex_) {
+        biasQueue_.FreeTensor(biasLocal);
+    }
+}
+
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcessV3(uint32_t tileData)
+{
+    LocalTensor<XType> xLocal;
+    LocalTensor<float> weightScaleLocal;
+    LocalTensor<BiasType> biasLocal;
+    xLocal = xQueue_.DeQue<XType>();
+    if constexpr (ifXIntIndex_) {
+        weightScaleLocal = weightScaleQueue_.DeQue<float>();
+    }
+    if constexpr (hasBiasIndex_) {
+        biasLocal = biasQueue_.DeQue<BiasType>();
+    }
+    __ubuf__ XType* x1Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(0);
+    __ubuf__ XType* x2Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(xAlignLength_);
+    __ubuf__ float* wScale1Ptr;
+    __ubuf__ float* wScale2Ptr;
+    if constexpr (ifXIntIndex_) {
+        wScale1Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
+        wScale2Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(weightAlignLength_);
+    }
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal_.GetPhyAddr(0);
+    __ubuf__ BiasType* bias1Ptr;
+    __ubuf__ BiasType* bias2Ptr;
+    if constexpr (hasBiasIndex_) {
+        bias1Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(0);
+        bias2Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(biasAlignLength_);
+    }
+
+    VF_CALL<DequantAndSwiGluV3<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                               ifBiasIntIndex_, hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                               ifBiasBfloat16Index_>>(x1Ptr, x2Ptr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr,
+                                                      bias2Ptr, xTempPtr_, tileData, clampLimit_, gluAlpha_, gluBias_);
+
+    xQueue_.FreeTensor(xLocal);
+    if constexpr (ifXIntIndex_) {
+        weightScaleQueue_.FreeTensor(weightScaleLocal);
+    }
+    if constexpr (hasBiasIndex_) {
+        biasQueue_.FreeTensor(biasLocal);
+    }
+}
+
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcessV4(uint32_t tileData)
+{
+    LocalTensor<XType> xLocal;
+    LocalTensor<float> weightScaleLocal;
+    LocalTensor<BiasType> biasLocal;
+    xLocal = xQueue_.DeQue<XType>();
+    if constexpr (ifXIntIndex_) {
+        weightScaleLocal = weightScaleQueue_.DeQue<float>();
+    }
+    if constexpr (hasBiasIndex_) {
+        biasLocal = biasQueue_.DeQue<BiasType>();
+    }
+    __ubuf__ XType* x1Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(0);
+    __ubuf__ XType* x2Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(xAlignLength_);
+    __ubuf__ float* wScale1Ptr;
+    __ubuf__ float* wScale2Ptr;
+    if constexpr (ifXIntIndex_) {
+        wScale1Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
+        wScale2Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(weightAlignLength_);
+    }
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal_.GetPhyAddr(0);
+    __ubuf__ BiasType* bias1Ptr;
+    __ubuf__ BiasType* bias2Ptr;
+    if constexpr (hasBiasIndex_) {
+        bias1Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(0);
+        bias2Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(biasAlignLength_);
+    }
+
+    VF_CALL<DequantAndSwiGluV4<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                               ifBiasIntIndex_, hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                               ifBiasBfloat16Index_>>(x1Ptr, x2Ptr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr,
+                                                      bias2Ptr, xTempPtr_, tileData, clampLimit_);
+
+    xQueue_.FreeTensor(xLocal);
+    if constexpr (ifXIntIndex_) {
+        weightScaleQueue_.FreeTensor(weightScaleLocal);
     }
     if constexpr (hasBiasIndex_) {
         biasQueue_.FreeTensor(biasLocal);

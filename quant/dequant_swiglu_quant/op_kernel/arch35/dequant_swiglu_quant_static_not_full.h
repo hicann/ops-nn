@@ -424,7 +424,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
 
         // copy_in: x(BS, 2H) -> (BS, H),(BS, H)
         xLocal = xQueue_.AllocTensor<TXtype>();
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             CopyIn2HPerRowForSwiGluV1<TXtype>(xLocal, xGm_, rowIdx, ubloop, processNum);
         } else {
             CopyIn2HPerRowForSwiGluV2<TXtype>(xLocal, xGm_, rowIdx, ubloop, processNum);
@@ -433,7 +433,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         // copy_in: weight_scale(G, 2H) -> (G, H),(G, H)
         if constexpr (hasWeightScale_) {
             weightScaleLocal = weightScaleQueue_.AllocTensor<float>();
-            if (tl_->swiGluMode == 0) {
+            if (tl_->swiGluMode != 1) {
                 CopyIn2HPerGroupForSwiGluV1<float>(weightScaleLocal, weightScaleGm_, groupIdx, ubloop, processNum);
             } else {
                 CopyIn2HPerGroupForSwiGluV2<float>(weightScaleLocal, weightScaleGm_, groupIdx, ubloop, processNum);
@@ -455,7 +455,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         if constexpr (hasBiasIndex_) {
             if (ifBiasIntIndex_) {
                 biasInt32Local = biasQueue_.AllocTensor<int32_t>();
-                if (tl_->swiGluMode == 0) {
+                if (tl_->swiGluMode != 1) {
                     CopyIn2HPerGroupForSwiGluV1<int32_t>(biasInt32Local, biasInt32Gm_, groupIdx, ubloop, processNum);
                 } else {
                     CopyIn2HPerGroupForSwiGluV2<int32_t>(biasInt32Local, biasInt32Gm_, groupIdx, ubloop, processNum);
@@ -463,7 +463,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
                 biasQueue_.EnQue(biasInt32Local);
             } else if (ifBiasBfloat16Index_) {
                 biasBf16Local = biasQueue_.AllocTensor<bfloat16_t>();
-                if (tl_->swiGluMode == 0) {
+                if (tl_->swiGluMode != 1) {
                     CopyIn2HPerGroupForSwiGluV1<bfloat16_t>(biasBf16Local, biasBf16Gm_, groupIdx, ubloop, processNum);
                 } else {
                     CopyIn2HPerGroupForSwiGluV2<bfloat16_t>(biasBf16Local, biasBf16Gm_, groupIdx, ubloop, processNum);
@@ -471,7 +471,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
                 biasQueue_.EnQue(biasBf16Local);
             } else if (ifBiasFloat16Index_) {
                 biasFp16Local = biasQueue_.AllocTensor<half>();
-                if (tl_->swiGluMode == 0) {
+                if (tl_->swiGluMode != 1) {
                     CopyIn2HPerGroupForSwiGluV1<half>(biasFp16Local, biasFp16Gm_, groupIdx, ubloop, processNum);
                 } else {
                     CopyIn2HPerGroupForSwiGluV2<half>(biasFp16Local, biasFp16Gm_, groupIdx, ubloop, processNum);
@@ -479,7 +479,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
                 biasQueue_.EnQue(biasFp16Local);
             } else if (ifBiasFloatIndex_) {
                 biasLocal = biasQueue_.AllocTensor<float>();
-                if (tl_->swiGluMode == 0) {
+                if (tl_->swiGluMode != 1) {
                     CopyIn2HPerGroupForSwiGluV1<float>(biasLocal, biasFp32Gm_, groupIdx, ubloop, processNum);
                 } else {
                     CopyIn2HPerGroupForSwiGluV2<float>(biasLocal, biasFp32Gm_, groupIdx, ubloop, processNum);
@@ -547,7 +547,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         uint32_t repeatTimesPerFactor = CeilDivision(processNum, sizePerRepeat);          // 向上取整
         uint32_t repeatTimesPerFactorForV2 = CeilDivision(processNum * 2, sizePerRepeat); // 向上取整
         // SwiGlu Mode不同，UB内数据排布不同，区分处理逻辑
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             // Dequant，根据x的数据类型选择Dequant分支
             if constexpr (ifXIntIndex_) {
                 if (ifBiasIntIndex_ || !hasBiasIndex_) {
@@ -606,15 +606,35 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
                 quantScaleLocal = quantScaleQueue_.DeQue<float>();
                 qScalePtr = (__ubuf__ float*)quantScaleLocal.GetPhyAddr(0);
             }
-            // SwiGlu with QuantScale
-            if (ifQuantIsOne_) {
+            // SwiGlu with QuantScale（mode0/2/3 共用前后半布局，仅激活数学不同）
+            if (tl_->swiGluMode == 2) {
+                if (ifQuantIsOne_) {
+                    VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, true, 2>>(
+                        tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                        sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                } else {
+                    VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, false, 2>>(
+                        tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                        sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                }
+            } else if (tl_->swiGluMode == 3) {
+                if (ifQuantIsOne_) {
+                    VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, true, 3>>(
+                        tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                        sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                } else {
+                    VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, false, 3>>(
+                        tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
+                        sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+                }
+            } else if (ifQuantIsOne_) {
                 VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, true>>(
                     tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
-                    sizePerRepeat, processNum, ifQuantIsOne_);
+                    sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
             } else {
                 VF_CALL<SwigluSingleYWithQuantScale<hasQuantScale_, false>>(
                     tmpPtr, qScalePtr, tmpPtr, static_cast<uint32_t>(tl_->UbFactorDimy), repeatTimesPerFactor,
-                    sizePerRepeat, processNum, ifQuantIsOne_);
+                    sizePerRepeat, processNum, ifQuantIsOne_, tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
             }
         } else {
             if constexpr (ifXIntIndex_) {

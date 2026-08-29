@@ -325,7 +325,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
     // weight_scale搬入
     LocalTensor<float> inScaleLocal = inScaleQueue_.AllocTensor<float>();
     if constexpr (ifXIntIndex_) {
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             // copy_in: weight_scale(G, H) 激活部分
             DataCopyParams dataCopyWeightScaleParams;
             dataCopyWeightScaleParams.blockCount = 1;
@@ -363,7 +363,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
     // copy_in: bias(1, 2H)->(1, H), (1, H)
     if constexpr (hasBiasIndex_) {
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             biasLocal = biasQueue_.AllocTensor<TBias>();
             DataCopyParams dataCopyBiasParams;
             dataCopyBiasParams.blockCount = 1;
@@ -406,7 +406,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
         // copy_in: x(xDimPerLoop, H) 激活部分
         LocalTensor<TXtype> xActLocal = xActQueue_.AllocTensor<TXtype>();
-        if (tl_->swiGluMode == 0) {
+        if (tl_->swiGluMode != 1) {
             DataCopyParams dataCopyXParams;
             dataCopyXParams.blockCount = xDimPerLoop;
             dataCopyXParams.blockLen = tl_->UbFactorDimy * sizeof(TXtype);
@@ -602,7 +602,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                     }
                 }
             } // __VEC_SCOPE__
-        } else {
+        } else if (tl_->swiGluMode == 1) {
             constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
             uint32_t width = tl_->UbFactorDimy;            // 输出y的-1轴对应的shape大小，也即H
             uint32_t widthFullRow = tl_->UbFactorDimy * 2; // 输出x的-1轴对应的shape大小，也即2H
@@ -615,6 +615,26 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                 x1Ptr, tmpXPtr, wScale1Ptr, aScalePtr, bias1Ptr, xDimPerLoop, widthFullRow, repeatTimesFullRow,
                 sizePerRepeat, xTypeUbAlignB32FullRow_, xTypeUbAlignB32_, xTypeUbAlignB32_, aScaleUbAlignB32_, 0,
                 tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+        } else {
+            // mode2/3: 前后半布局，复用 DequantSwigluV1（x1Ptr/x2Ptr 已按前后半就绪）
+            constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);
+            uint32_t width = tl_->UbFactorDimy;
+            uint16_t repeatTimes = CeilDivision(tl_->UbFactorDimy, sizePerRepeat); // 向上取整
+            if (tl_->swiGluMode == 2) {
+                VF_CALL<DequantSwigluV1<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                                        hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                                        ifBiasBfloat16Index_, 2>>(
+                    x1Ptr, x2Ptr, tmpXPtr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xDimPerLoop, width,
+                    repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xUbAlignB32_, aScaleUbAlignB32_, 0,
+                    tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+            } else {
+                VF_CALL<DequantSwigluV1<TXtype, TBias, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
+                                        hasActScale_, ifBiasIntIndex_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                                        ifBiasBfloat16Index_, 3>>(
+                    x1Ptr, x2Ptr, tmpXPtr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xDimPerLoop, width,
+                    repeatTimes, sizePerRepeat, xTypeUbAlignB32_, xTypeUbAlignB32_, xUbAlignB32_, aScaleUbAlignB32_, 0,
+                    tl_->clampLimit, tl_->gluAlpha, tl_->gluBias);
+            }
         }
 
         xActQueue_.FreeTensor(xActLocal);

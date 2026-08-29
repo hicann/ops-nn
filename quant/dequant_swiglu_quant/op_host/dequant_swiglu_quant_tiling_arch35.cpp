@@ -774,9 +774,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
     }
     auto* attrSwigluMode = attrs->GetAttrPointer<int>(ATTR_SWIGLU_MODE_INDEX);
     swigluMode_ = (attrSwigluMode == nullptr) ? 0 : *attrSwigluMode;
-    OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1,
+    OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1 && swigluMode_ != 2 && swigluMode_ != 3,
                 OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "swiglu_mode", std::to_string(swigluMode_).c_str(),
-                                          "0 or 1"),
+                                          "0, 1, 2 or 3"),
                 return ge::GRAPH_FAILED);
     auto* attrClampLimit = attrs->GetAttrPointer<float>(ATTR_CLAMP_LIMIT_INDEX);
     clampLimit_ = (attrClampLimit == nullptr) ? CLAMP_LIMIT_DEFAULT : *attrClampLimit;
@@ -978,6 +978,22 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::DoOpTilingNotFull()
     }
 
     int64_t loopTimesPerRow = (outDimy_ + ubFactorDimy - 1) / ubFactorDimy; // 非全载模板，单核处理一行需要的循环次数
+    // 尾块均分（仅非全载动态量化生效，quantMode_==1）：
+    // 动态量化非全载走两步串行（第一步求ReduceMax并落GM，第二步读回量化），ubFactorDimy 原按UB上限
+    // 取满会导致尾块极小（如outDimy=12288时切成9696+2592，尾块仅占UB的26.7%），该轮流水启动与同步
+    // 开销却按整轮计。在循环次数不变的前提下把尾轴均摊到各轮可提升尾块利用率。
+    // 均分值必然 <= 原ubFactorDimy，不会超出UB容量。
+    // 静态量化(quantMode_==0)无第二遍扫、无GM中转，收益逻辑不同且当前性能已全部达标，故不改其切分。
+    if (quantMode_ == 1 && loopTimesPerRow > 1) {
+        int64_t numPerBlockBalance = (yDtype == ge::DT_FLOAT4_E2M1 or yDtype == ge::DT_FLOAT4_E1M2) ? BLOCK_SIZE * 2 :
+                                                                                                      BLOCK_SIZE;
+        int64_t balanced = Ops::Base::CeilDiv(Ops::Base::CeilDiv(outDimy_, loopTimesPerRow), numPerBlockBalance) *
+                           numPerBlockBalance;
+        // 仅在均分值不增大UB占用、且循环次数不变时生效
+        if (balanced > 0 && balanced <= ubFactorDimy && (outDimy_ + balanced - 1) / balanced == loopTimesPerRow) {
+            ubFactorDimy = balanced;
+        }
+    }
     int64_t tailPerRow = outDimy_ - (loopTimesPerRow - 1) * ubFactorDimy; // 非全载模板，单核处理一行的尾块大小
 
     maxPreCore_ = std::min(static_cast<int64_t>(coreNum_), inDimx_); // 非全载模板，按照行数分核，单核内将一行分段处理
