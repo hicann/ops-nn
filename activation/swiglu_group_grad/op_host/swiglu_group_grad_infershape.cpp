@@ -182,12 +182,27 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
         const bool y_origin_unknown_rank = Ops::Base::IsUnknownRank(*y_origin_shape);
 
         if (!weight_unknown_rank) {
-            const int64_t weightElementNum = weight_shape->GetShapeSize();
-            int64_t totalRows = 1;
-            for (size_t i = 0; i + 1U < grad_y_rank; ++i) {
-                totalRows *= grad_y_shape->GetDim(i);
+            int64_t weightElementNum = 1;
+            bool weight_known = true;
+            for (size_t i = 0; i < weight_shape->GetDimNum(); ++i) {
+                const int64_t dim = weight_shape->GetDim(i);
+                if (IsUnknownDim(dim)) {
+                    weight_known = false;
+                    break;
+                }
+                weightElementNum *= dim;
             }
-            if (weightElementNum != totalRows) {
+            int64_t totalRows = 1;
+            bool total_rows_known = true;
+            for (size_t i = 0; i + 1U < grad_y_rank; ++i) {
+                const int64_t dim = grad_y_shape->GetDim(i);
+                if (IsUnknownDim(dim)) {
+                    total_rows_known = false;
+                    break;
+                }
+                totalRows *= dim;
+            }
+            if (weight_known && total_rows_known && weightElementNum != totalRows) {
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                     context->GetNodeName(), "weight", std::to_string(weightElementNum).c_str(),
                     "The element num of weight must be equal to the product of grad_y leading dims.");
@@ -201,7 +216,8 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
                 return ge::GRAPH_FAILED;
             }
             const int64_t y_origin_last_dim = y_origin_shape->GetDim(y_origin_shape->GetDimNum() - 1U);
-            if (!IsUnknownDim(y_origin_last_dim) && y_origin_last_dim != grad_y_last_dim) {
+            if (!IsUnknownDim(y_origin_last_dim) && !IsUnknownDim(grad_y_last_dim) &&
+                y_origin_last_dim != grad_y_last_dim) {
                 OP_LOGE(context->GetNodeName(),
                         "Invalid y_origin last dim: y_origin.shape[-1](%lld) must equal grad_y.shape[-1](%lld).",
                         static_cast<long long>(y_origin_last_dim), static_cast<long long>(grad_y_last_dim));

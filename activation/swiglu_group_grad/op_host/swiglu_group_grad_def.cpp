@@ -17,7 +17,7 @@
  *   Optional inputs:  weight (T,1)/(B,S,1) [FP32] and y_origin (T,H)/(B,S,H) [BF16/FP16/FP32]
  *                     must be provided together,
  *                     group_index (G,) [INT64]
- *   Attribute:        clamp_limit (Float, default=0 → no clamp)
+ *   Attribute:        clamp_limit (Float, default=-1 → no clamp)
  *   Required output:  grad_x (T,2H)/(B,S,2H) [BF16/FP16/FP32]
  *   Optional output:  grad_weight (T,1)/(B,S,1) [FP32]
  *   Platform:         Ascend950 only (arch35/DAV_3510, RegBase or SIMT path)

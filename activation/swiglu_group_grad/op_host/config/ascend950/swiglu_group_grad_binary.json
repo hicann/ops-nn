@@ -88,7 +88,7 @@
         {
           "name": "clamp_limit",
           "dtype": "float",
-          "value": 0.0
+          "value": null
         }
       ]
     },
@@ -179,7 +179,7 @@
         {
           "name": "clamp_limit",
           "dtype": "float",
-          "value": 0.0
+          "value": null
         }
       ]
     },
@@ -270,7 +270,7 @@
         {
           "name": "clamp_limit",
           "dtype": "float",
-          "value": 0.0
+          "value": null
         }
       ]
     }

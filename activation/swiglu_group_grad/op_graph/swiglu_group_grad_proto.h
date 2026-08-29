@@ -17,7 +17,7 @@
  *   Optional inputs:  weight (T,1)/(B,S,1) FP32, y_origin (T,H)/(B,S,H), group_index (G,) INT64
  *   Required output:  grad_x (T,2H)/(B,S,2H)
  *   Optional output:  grad_weight (T,1)/(B,S,1) FP32
- *   Attribute:        clamp_limit (Float, default=0 → no clamp)
+ *   Attribute:        clamp_limit (Float, default=-1 → no clamp)
  */
 
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SWIGLU_GROUP_GRAD_PROTO_H_
@@ -48,7 +48,7 @@ namespace ge {
 
 * @par Attributes:
 * one attribute:
-* @li clamp_limit: An optional Float. Clipping threshold c; default 0 means no clamp (c=+∞).
+* @li clamp_limit: An optional Float. Clipping threshold c; default -1 means no clamp (c=+∞).
 */
 REG_OP(SwigluGroupGrad)
     .INPUT(grad_y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
@@ -58,7 +58,7 @@ REG_OP(SwigluGroupGrad)
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
     .OUTPUT(grad_x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(grad_weight, TensorType({DT_FLOAT}))
-    .ATTR(clamp_limit, Float, 0)
+    .ATTR(clamp_limit, Float, -1.0f)
     .OP_END_FACTORY_REG(SwigluGroupGrad)
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_SWIGLU_GROUP_GRAD_PROTO_H_
