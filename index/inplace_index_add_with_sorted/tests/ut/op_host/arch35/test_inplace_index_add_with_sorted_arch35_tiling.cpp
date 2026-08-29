@@ -29,7 +29,7 @@ using namespace std;
 using namespace ge;
 
 namespace {
-const uint32_t SORTED_TILING_KEY_ARCH35 = 10000;
+const uint32_t SORTED_SCH_MODE_DEFAULT = 0;
 }
 
 class InplaceIndexAddWithSortedTilingArch35 : public testing::Test {
@@ -139,7 +139,7 @@ TEST_F(InplaceIndexAddWithSortedTilingArch35, test_arch35_float16_first_dim_mult
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_TILING_KEY_ARCH35);
+    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_SCH_MODE_DEFAULT);
     EXPECT_EQ(tilingContext->GetBlockDim(), 64u);
 }
 
@@ -228,7 +228,7 @@ TEST_F(InplaceIndexAddWithSortedTilingArch35, test_arch35_bfloat16_first_dim_sma
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_TILING_KEY_ARCH35);
+    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_SCH_MODE_DEFAULT);
     // usedCoreNum = min(indicesCount=10, coreNum=64) = 10
     EXPECT_EQ(tilingContext->GetBlockDim(), 10u);
 }
@@ -319,7 +319,7 @@ TEST_F(InplaceIndexAddWithSortedTilingArch35, test_arch35_ub_index_multi_round)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_TILING_KEY_ARCH35);
+    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_SCH_MODE_DEFAULT);
     // usedCoreNum = min(2000, 1) = 1
     EXPECT_EQ(tilingContext->GetBlockDim(), 1u);
 }
@@ -410,7 +410,7 @@ TEST_F(InplaceIndexAddWithSortedTilingArch35, test_arch35_each_loop_split)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_TILING_KEY_ARCH35);
+    EXPECT_EQ(tilingContext->GetTilingKey(), SORTED_SCH_MODE_DEFAULT);
 }
 
 // ----------------------------------------------------------------------------------------------

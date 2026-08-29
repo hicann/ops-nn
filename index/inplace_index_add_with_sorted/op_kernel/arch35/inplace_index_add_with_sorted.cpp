@@ -9,26 +9,40 @@
  */
 
 /*!
- * \file inplace_index_add_with_sorted_apt.cpp
- * \brief A5 (ascend950) kernel entry — TILING_KEY_IS runtime dispatch
+ * \file inplace_index_add_with_sorted.cpp
+ * \brief A5 (ascend950) kernel entry — 模板参数派发（单默认调度模式 SORTED_SCH_MODE_DEFAULT）
+ *
+ *   入口路由到负载均衡模板 InplaceIndexAddWithSortedLoadBalance（StageA 核内累加分流 +
+ *   StageB 跨核合并），输入 dtype 由编译框架按 def 输入名 var 生成 DTYPE_VAR 宏实例化。
+ *   老 InplaceIndexAddWithSortedFix 类保留在 fix.h，入口不再路由，
+ *   仅作回退参考（如需回退，取消下方注释并改回 Init/Process 调用）。
  */
 #include "inplace_index_add_with_sorted_struct.h"
-#include "inplace_index_add_with_sorted_fix.h"
+#include "inplace_index_add_with_sorted_tiling_key.h"
+#include "inplace_index_add_with_sorted_load_balance.h"
+// #include "inplace_index_add_with_sorted_fix.h"  // 老 Fix 类：保留不路由
 
-#define SORTED_TILING_KEY 10000
-
-extern "C" __global__ __aicore__ void inplace_index_add_with_sorted(
-    GM_ADDR var, GM_ADDR value, GM_ADDR sorted_indices, GM_ADDR pos,
-    GM_ADDR alpha, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t MODE>
+__global__ __aicore__ void inplace_index_add_with_sorted(GM_ADDR var, GM_ADDR value, GM_ADDR sorted_indices,
+                                                         GM_ADDR pos, GM_ADDR alpha, GM_ADDR output, GM_ADDR workspace,
+                                                         GM_ADDR tiling)
 {
+    if (workspace == nullptr) {
+        return;
+    }
+    GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
+    if (userWorkspace == nullptr) {
+        return;
+    }
+
     AscendC::TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_NONE_TILING;
 
-    if (TILING_KEY_IS(SORTED_TILING_KEY)) {
+    if constexpr (MODE == SORTED_SCH_MODE_DEFAULT) {
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexAddWithSortedTilingData, tilingData, tiling);
-        InplaceIndexAddWithSortedFix<DTYPE_VAR> op(&pipe, &tilingData);
-        op.Init(var, value, sorted_indices, pos, alpha);
+        InplaceIndexAddWithSortedLoadBalance<DTYPE_VAR> op(&pipe, &tilingData);
+        op.Init(var, value, sorted_indices, pos, alpha, userWorkspace);
         op.Process();
     }
 }
