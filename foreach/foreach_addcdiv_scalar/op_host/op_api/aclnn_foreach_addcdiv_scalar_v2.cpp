@@ -163,6 +163,33 @@ static inline aclnnStatus ForeachAddcdivScalarV2CheckParams(const aclTensorList*
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(ForeachAddcdivScalarV2CheckNotNull(self, x2, x3, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 检查 tensor list 内部每个条目非空，避免后续空指针解引用
+    for (uint64_t i = 0; i < self->Size(); i++) {
+        if ((*self)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    for (uint64_t i = 0; i < x2->Size(); i++) {
+        if ((*x2)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    for (uint64_t i = 0; i < x3->Size(); i++) {
+        if ((*x3)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x3[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    for (uint64_t i = 0; i < out->Size(); i++) {
+        if ((*out)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(ForeachAddcdivScalarV2CheckDtypeValid(self, x2, x3, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束

@@ -128,6 +128,22 @@ static inline bool CheckShape(const aclTensorList* x, const aclTensorList* out)
 static inline aclnnStatus CheckParams(const aclTensorList* x, const aclTensorList* out)
 {
     CHECK_RET(CheckNotNull(x, out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // Check every entry in tensor lists is not null, to avoid null pointer
+    // dereference in CheckDtypeValid/CheckShape/CheckFormat.
+    for (uint64_t i = 0; i < x->Size(); i++) {
+        if ((*x)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    for (uint64_t i = 0; i < out->Size(); i++) {
+        if ((*out)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out[%lu] is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
     CHECK_RET(CheckDtypeValid(x, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(x, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(x, out), ACLNN_ERR_PARAM_INVALID);

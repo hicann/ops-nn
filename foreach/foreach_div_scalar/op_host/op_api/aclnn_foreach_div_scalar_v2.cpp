@@ -119,6 +119,16 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(self->Size() == out->Size(), ACLNN_ERR_PARAM_INVALID);
+
+    // Check every entry in tensor lists is not null, to avoid null pointer
+    // dereference in CheckDtypeValid/CheckShape/CheckFormat.
+    for (uint64_t i = 0; i < self->Size(); i++) {
+        if ((*self)[i] == nullptr || (*out)[i] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor entry at index %lu is null.", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
