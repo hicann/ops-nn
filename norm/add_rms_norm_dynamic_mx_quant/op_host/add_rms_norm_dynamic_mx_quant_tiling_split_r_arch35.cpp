@@ -52,7 +52,7 @@ uint64_t AddRmsNormDynamicMxQuantSplitRTiling::GetMaxBaseN(uint64_t initialN)
 
     while (powerSplit > 1 && NUM_TWO * initialN <= binaryAddElemtMaxLen) {
         uint64_t candidateN = NUM_TWO * initialN;
-        uint64_t xInputBuf = NUM_TWO * candidateN * xDtypeSize_ * DOUBLE_BUFFER;
+        uint64_t xInputBuf = (NUM_TWO + hasX3_) * candidateN * xDtypeSize_ * DOUBLE_BUFFER;
         uint64_t gammaBetaBuf = (1 + betaFlag_) * candidateN * gammaDtypeSize_ * DOUBLE_BUFFER;
         uint64_t yBuf = 0;
         if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
@@ -176,39 +176,10 @@ ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::DoLibApiTiling() { return 
 ge::graphStatus AddRmsNormDynamicMxQuantSplitRTiling::PostTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", usedCoreNum_);
-    context_->SetBlockDim(usedCoreNum_);
-
-    auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-                        sizeof(tilingData), rawTilingData->GetCapacity()),
-                return ge::GRAPH_FAILED);
-    auto capSize = rawTilingData->GetCapacity();
-    void* ptrData = rawTilingData->GetData();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
-    void* ptrStruct = static_cast<void*>(&tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
-                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
-    rawTilingData->SetDataSize(sizeof(tilingData));
-
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
-    return ge::GRAPH_SUCCESS;
+    return PostTilingImpl(static_cast<void*>(&tilingData), sizeof(tilingData));
 }
 
-uint64_t AddRmsNormDynamicMxQuantSplitRTiling::GetTilingKey() const
-{
-    AddRmsNormDynamicMxQuantTilingKey tilingKey;
-    tilingKey.SetComputeMode(ComputeMode::SPLIT_R);
-    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
-        tilingKey.SetYDataType(YDataType::FP8);
-    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        tilingKey.SetYDataType(YDataType::FP4);
-    }
-    return tilingKey.GetTilingKey();
-}
+uint64_t AddRmsNormDynamicMxQuantSplitRTiling::GetTilingKey() const { return GetTilingKeyCommon(ComputeMode::SPLIT_R); }
 
 REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantSplitRTiling, ARND_SPLIT_R_PRIORITY);
 } // namespace optiling

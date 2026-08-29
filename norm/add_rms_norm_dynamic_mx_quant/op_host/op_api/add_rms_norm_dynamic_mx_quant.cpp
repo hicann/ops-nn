@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -31,16 +31,14 @@ namespace l0op {
 OP_TYPE_REGISTER(AddRmsNormDynamicMxQuant); // 完成算子原型的关联
 
 const std::array<aclTensor*, ADD_RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM> AddRmsNormDynamicMxQuant(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut, aclTensor* xOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor)
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta, const aclTensor* x3,
+    double epsilon, int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
+    aclTensor* xOut, aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor)
 {
-    // 调用接口，将算子执行任务加到执行器executor中
-    L0_DFX(AddRmsNormDynamicMxQuant, x1, x2, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd);
+    L0_DFX(AddRmsNormDynamicMxQuant, x1, x2, gamma, beta, x3, epsilon, scaleAlg, roundMode, dstType, outputRstd);
 
-    // 调用device的AddRmsNormDynamicMxQuant算子
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AddRmsNormDynamicMxQuant, OP_INPUT(x1, x2, gamma, beta), OP_OUTPUT(yOut, xOut, mxscaleOut, rstdOut),
+        AddRmsNormDynamicMxQuant, OP_INPUT(x1, x2, gamma, beta, x3), OP_OUTPUT(yOut, xOut, mxscaleOut, rstdOut),
         OP_ATTR(static_cast<float>(epsilon), scaleAlg, roundMode, dstType, outputRstd));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AddRmsNormDynamicMxQuant ADD_TO_LAUNCHER_LIST_AICORE failed.");

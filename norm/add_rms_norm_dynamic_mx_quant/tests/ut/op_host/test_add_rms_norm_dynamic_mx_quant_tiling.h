@@ -18,6 +18,10 @@ namespace optiling {
 struct AddRmsNormDynamicMxQuantCompileInfo {
     uint64_t totalCoreNum = 0;
     uint64_t totalUbSize = 0;
+    uint64_t vRegSize = 0;
+    uint64_t ubBlockSize = 0;
+    uint64_t sysWorkspaceSize = 0;
+    bool isRegbase = false;
 };
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TEST_TILING_RUNTIME_ADD_RMS_NORM_DYNAMIC_MX_QUANT_H_

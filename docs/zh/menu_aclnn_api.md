@@ -21,6 +21,7 @@
 - [aclnnAddRmsNorm](../../norm/add_rms_norm/docs/aclnnAddRmsNorm.md)
 - [aclnnAddRmsNormCast](../../norm/add_rms_norm_cast/docs/aclnnAddRmsNormCast.md)
 - [aclnnAddRmsNormDynamicMxQuant](../../norm/add_rms_norm_dynamic_mx_quant/docs/aclnnAddRmsNormDynamicMxQuant.md)
+- [aclnnAddRmsNormDynamicMxQuantV2](../../norm/add_rms_norm_dynamic_mx_quant/docs/aclnnAddRmsNormDynamicMxQuantV2.md)
 - [aclnnAddRmsNormDynamicQuant](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuant.md)
 - [aclnnAddRmsNormDynamicQuantV2](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuantV2.md)
 - [aclnnAddRmsNormQuant](../../norm/add_rms_norm_quant/docs/aclnnAddRmsNormQuant.md)

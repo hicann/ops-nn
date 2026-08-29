@@ -15,10 +15,26 @@
 #include "add_rms_norm_dynamic_mx_quant_tiling.h"
 
 namespace optiling {
-// Tiling entry functions
+
+static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegbase)
+{
+    auto platformInfo = context->GetPlatformInfo();
+    if (platformInfo != nullptr) {
+        useRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
+    } else {
+        auto compileInfo = reinterpret_cast<const AddRmsNormDynamicMxQuantCompileInfo*>(context->GetCompileInfo());
+        OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+        useRegbase = compileInfo->isRegbase;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus Tiling4AddRmsNormDynamicMxQuant(gert::TilingContext* context)
 {
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+    bool useRegbase = false;
+    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
+                return ge::GRAPH_FAILED);
+    if (useRegbase) {
         return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
     OP_LOGE(context, "AddRmsNormDynamicMxQuant is not supported on the current chip!");
@@ -46,6 +62,10 @@ static ge::graphStatus TilingPrepare4AddRmsNormDynamicMxQuant(gert::TilingParseC
         (compileInfoPtr->totalUbSize <= 0),
         OP_LOGE(context, "Get block Size failed, block size: %u", static_cast<uint32_t>(compileInfoPtr->totalUbSize)),
         return ge::GRAPH_FAILED);
+    compileInfoPtr->vRegSize = Ops::Base::GetVRegSize(context);
+    compileInfoPtr->ubBlockSize = Ops::Base::GetUbBlockSize(context);
+    compileInfoPtr->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    compileInfoPtr->isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     return ge::GRAPH_SUCCESS;
 }
 

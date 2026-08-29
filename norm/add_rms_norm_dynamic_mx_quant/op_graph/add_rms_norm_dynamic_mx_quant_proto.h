@@ -38,8 +38,11 @@ namespace ge {
 * @li gamma: A tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format: ND.
 * The shape must match the normalized dimension of x1.
 * @li beta: An optional tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format:
-ND.
+* ND.
 * The shape must match the normalized dimension of x1.
+* @li x3: An optional tensor for add compute. Support dtype: float16, bfloat16, support format: ND.
+* The shape and dtype must be the same as x1. Supports non-contiguous Tensor. When x3 is present,
+* the computation becomes x = x3 + x1 + x2 instead of x = x1 + x2.
 
 * @par Attributes:
 * @li epsilon: An optional attribute for numerical stability in rms norm, the type is float32. Defaults to 1e-6.
@@ -75,6 +78,7 @@ REG_OP(AddRmsNormDynamicMxQuant)
     .INPUT(x2, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(gamma, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
+    .OPTIONAL_INPUT(x3, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))

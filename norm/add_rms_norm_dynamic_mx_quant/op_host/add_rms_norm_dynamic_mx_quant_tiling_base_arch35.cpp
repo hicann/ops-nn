@@ -56,6 +56,44 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckOptionalInput()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckX3Input()
+{
+    OP_LOGD(context_->GetNodeName(), "Enter CheckX3Input.");
+    hasX3_ = 0;
+    const gert::StorageShape* x3Shape = context_->GetOptionalInputShape(X3_INDEX);
+    if (x3Shape == nullptr) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    int64_t x3ShapeSize = x3Shape->GetOriginShape().GetShapeSize();
+    if (x3ShapeSize == 0) {
+        OP_LOGI(context_->GetNodeName(), "x3 is present but empty (shapeSize=0), hasX3=0.");
+        return ge::GRAPH_SUCCESS;
+    }
+
+    hasX3_ = 1;
+
+    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
+    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, x3Shape, nodeName, "x1", "x3"),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x3",
+                                                      Ops::Base::ToString(x3Shape->GetStorageShape()).c_str(),
+                                                      "same as x1 when x3 is present"),
+                return ge::GRAPH_FAILED);
+
+    const gert::Tensor* x3Tensor = context_->GetOptionalInputTensor(X3_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x3Tensor);
+    ge::DataType x3Dtype = x3Tensor->GetDataType();
+    OP_CHECK_IF(x3Dtype != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "x3", Ops::Base::ToString(static_cast<ge::DataType>(x3Dtype)).c_str(),
+                    ("same as x1 (" + Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)) + ")").c_str()),
+                return ge::GRAPH_FAILED);
+
+    OP_LOGI(context_->GetNodeName(), "x3 optional input is present, hasX3=1.");
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeDim()
 {
     OP_LOGD(context_->GetNodeName(), "Enter CheckInputShapeDim.");
@@ -90,27 +128,23 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeValue(
     OP_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gammaShape);
 
-    // x1 and x2 shapes must be equal
     OP_CHECK_IF(
         !NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2"),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2",
                                               Ops::Base::ToString(x2Shape->GetStorageShape()).c_str(), "same as x1"),
         return ge::GRAPH_FAILED);
 
-    // gamma dim num should be 1
     OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(),
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "gamma",
                                              std::to_string(gammaShape->GetStorageShape().GetDimNum()).c_str(), "1D"),
                 return ge::GRAPH_FAILED);
 
-    // gamma should match last dim of x
     OP_CHECK_IF(!NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true),
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
                                                       Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(),
                                                       "should match last dim of x1"),
                 return ge::GRAPH_FAILED);
 
-    // If beta exists, it should match gamma shape
     if (betaFlag_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, betaShape);
@@ -448,17 +482,20 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::SetInputParams()
 
 ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetShapeAttrsInfo()
 {
-    // Get vector/block sizes
     OP_LOGD(context_->GetNodeName(), "Enter GetShapeAttrsInfo.");
-    uint64_t vecLength = Ops::Base::GetVRegSize(context_);
-    OP_CHECK_IF((vecLength <= 0),
-                OP_LOGE(context_, "Get vector Length failed, vector Length: %u", static_cast<uint32_t>(vecLength)),
-                return ge::GRAPH_FAILED);
-    vecLengthFP32_ = vecLength / FP32_SIZE;
-    ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
-    OP_CHECK_IF((ubBlockSize_ <= 0),
-                OP_LOGE(context_, "Get block Size failed, block size: %u", static_cast<uint32_t>(ubBlockSize_)),
-                return ge::GRAPH_FAILED);
+    if (vecLengthFP32_ == 0) {
+        uint64_t vecLength = Ops::Base::GetVRegSize(context_);
+        OP_CHECK_IF((vecLength <= 0),
+                    OP_LOGE(context_, "Get vector Length failed, vector Length: %u", static_cast<uint32_t>(vecLength)),
+                    return ge::GRAPH_FAILED);
+        vecLengthFP32_ = vecLength / FP32_SIZE;
+    }
+    if (ubBlockSize_ == 0) {
+        ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
+        OP_CHECK_IF((ubBlockSize_ <= 0),
+                    OP_LOGE(context_, "Get block Size failed, block size: %u", static_cast<uint32_t>(ubBlockSize_)),
+                    return ge::GRAPH_FAILED);
+    }
 
     OP_CHECK_IF(CheckShapeNull() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Required input is null."),
                 return ge::GRAPH_FAILED);
@@ -469,6 +506,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(CheckInputShapeValue() != ge::GRAPH_SUCCESS,
                 OP_LOGE(context_->GetNodeName(), "Input shape value invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Input dtype invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckX3Input() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "x3 input check failed."),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckOutputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Output dtype invalid."),
@@ -491,6 +530,12 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetPlatformInfo()
     if (compileInfoPtr != nullptr) {
         totalCoreNum_ = compileInfoPtr->totalCoreNum;
         maxUbSize_ = compileInfoPtr->totalUbSize;
+        if (compileInfoPtr->vRegSize > 0) {
+            vecLengthFP32_ = compileInfoPtr->vRegSize / FP32_SIZE;
+        }
+        if (compileInfoPtr->ubBlockSize > 0) {
+            ubBlockSize_ = compileInfoPtr->ubBlockSize;
+        }
     } else {
         OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -504,11 +549,53 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetPlatformInfo()
 
 ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetWorkspaceSize()
 {
+    auto compileInfoPtr = reinterpret_cast<const AddRmsNormDynamicMxQuantCompileInfo*>(context_->GetCompileInfo());
+    if (compileInfoPtr != nullptr && compileInfoPtr->sysWorkspaceSize > 0) {
+        workspaceSize_ = compileInfoPtr->sysWorkspaceSize;
+        return ge::GRAPH_SUCCESS;
+    }
     fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::PostTilingImpl(void* structPtr, size_t structSize)
+{
+    context_->SetBlockDim(usedCoreNum_);
+
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_IF(structSize > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        structSize, rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
+    auto capSize = rawTilingData->GetCapacity();
+    void* ptrData = rawTilingData->GetData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, structPtr);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, structPtr, structSize) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(structSize);
+
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    currentWorkspace[0] = workspaceSize_;
+    return ge::GRAPH_SUCCESS;
+}
+
+uint64_t AddRmsNormDynamicMxQuantRegbaseTilingBase::GetTilingKeyCommon(
+    add_rms_norm_dynamic_mx_quant::ComputeMode mode) const
+{
+    using namespace add_rms_norm_dynamic_mx_quant;
+    AddRmsNormDynamicMxQuantTilingKey tilingKey;
+    tilingKey.SetComputeMode(mode);
+    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
+        tilingKey.SetYDataType(YDataType::FP8);
+    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
+        tilingKey.SetYDataType(YDataType::FP4);
+    }
+    return tilingKey.GetTilingKey(hasX3_);
 }
 
 } // namespace optiling

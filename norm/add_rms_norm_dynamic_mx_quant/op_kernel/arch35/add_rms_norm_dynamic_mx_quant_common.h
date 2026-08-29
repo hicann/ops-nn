@@ -51,6 +51,14 @@ struct IsSame : public falseType {};
 template <typename Tp>
 struct IsSame<Tp, Tp> : public trueType {};
 
+// Derives IS_FP4 from T_Y at compile-time — no manual bool template param needed.
+template <typename T_Y>
+struct IsFP4Type : public falseType {};
+template <>
+struct IsFP4Type<fp4x2_e2m1_t> : public trueType {};
+template <>
+struct IsFP4Type<fp4x2_e1m2_t> : public trueType {};
+
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_FOUR = 4;
@@ -144,60 +152,88 @@ __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T_OUT* dst, RegTensor<fl
 
 // ===================== Split-R Common Free Functions =====================
 
-// (x1 + x2)² → xFp32Tmp
-template <typename T_X>
-__aicore__ inline void MainBlockSquareVF(LocalTensor<T_X>& x1Local, LocalTensor<T_X>& x2Local,
-                                         LocalTensor<float>& xFp32Tmp, uint32_t count)
+// Fused: compute (x3+x1+x2)² → xFp32Tmp AND write x_out = x3+x1+x2 to GM in one VEC pass
+// Addition order: (x3+x1)+x2 — x3 is the residual, added to x1 first, then x2.
+template <typename T_X, bool HAS_X3>
+__aicore__ inline void MainBlockSquareAndWriteXOutVF(LocalTensor<T_X>& x1Local, LocalTensor<T_X>& x2Local,
+                                                     LocalTensor<float>& xFp32Tmp, LocalTensor<T_X>& xOutLocal,
+                                                     uint32_t count, LocalTensor<T_X>* x3Local = nullptr)
 {
     __ubuf__ T_X* x1InUb = (__ubuf__ T_X*)x1Local.GetPhyAddr();
     __ubuf__ T_X* x2InUb = (__ubuf__ T_X*)x2Local.GetPhyAddr();
     __ubuf__ float* xFp32TmpBuf = (__ubuf__ float*)xFp32Tmp.GetPhyAddr();
+    __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+    __ubuf__ T_X* x3InUb = nullptr;
+    if constexpr (HAS_X3) {
+        x3InUb = (__ubuf__ T_X*)x3Local->GetPhyAddr();
+    }
 
     uint16_t loops = (count + VL_F32 - 1) / VL_F32;
     uint32_t sreg = count;
     __VEC_SCOPE__
     {
-        RegTensor<float> x1Reg, x2Reg, xSum;
+        RegTensor<float> x1Reg, x2Reg, xSum, x3Reg;
         MaskReg pregLoop;
         for (uint16_t vi = 0; vi < loops; ++vi) {
             uint32_t offset = vi * VL_F32;
             pregLoop = UpdateMask<float>(sreg);
             LoadTensorForDtypeTIn<T_X>(x1InUb, x1Reg, pregLoop, offset);
             LoadTensorForDtypeTIn<T_X>(x2InUb, x2Reg, pregLoop, offset);
-            AscendC::Reg::Add(xSum, x1Reg, x2Reg, pregLoop);
-            AscendC::Reg::Mul(xSum, xSum, xSum, pregLoop);
-            AscendC::Reg::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, xSum, pregLoop);
+            if constexpr (HAS_X3) {
+                LoadTensorForDtypeTIn<T_X>(x3InUb, x3Reg, pregLoop, offset);
+                AscendC::MicroAPI::Add(xSum, x3Reg, x1Reg, pregLoop);
+                AscendC::MicroAPI::Add(xSum, x2Reg, xSum, pregLoop);
+            } else {
+                AscendC::MicroAPI::Add(xSum, x1Reg, x2Reg, pregLoop);
+            }
+            StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
+            AscendC::MicroAPI::Mul(xSum, xSum, xSum, pregLoop);
+            AscendC::MicroAPI::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, xSum, pregLoop);
         }
     }
 }
 
-// xFp32Tmp += (x1Fold + x2Fold)²
-template <typename T_X>
-__aicore__ inline void FoldBlockSquareAddVF(LocalTensor<T_X>& x1FoldLocal, LocalTensor<T_X>& x2FoldLocal,
-                                            LocalTensor<float>& xFp32Tmp, uint32_t tailCount)
+// Fused: accumulate (x3+x1+x2)² to xFp32Tmp AND write x_out = x3+x1+x2 to GM in one VEC pass
+// Addition order: (x3+x1)+x2 — must match golden's fp32 accumulation order.
+template <typename T_X, bool HAS_X3>
+__aicore__ inline void FoldBlockSquareAddAndWriteXOutVF(LocalTensor<T_X>& x1FoldLocal, LocalTensor<T_X>& x2FoldLocal,
+                                                        LocalTensor<float>& xFp32Tmp, LocalTensor<T_X>& xOutLocal,
+                                                        uint32_t tailCount, LocalTensor<T_X>* x3Local = nullptr)
 {
     __ubuf__ T_X* x1FoldInUb = (__ubuf__ T_X*)x1FoldLocal.GetPhyAddr();
     __ubuf__ T_X* x2FoldInUb = (__ubuf__ T_X*)x2FoldLocal.GetPhyAddr();
     __ubuf__ float* xFp32TmpBuf = (__ubuf__ float*)xFp32Tmp.GetPhyAddr();
+    __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+    __ubuf__ T_X* x3FoldInUb = nullptr;
+    if constexpr (HAS_X3) {
+        x3FoldInUb = (__ubuf__ T_X*)x3Local->GetPhyAddr();
+    }
     uint16_t tailLoops = (tailCount + VL_F32 - 1) / VL_F32;
     uint32_t sregTail = tailCount;
     __VEC_SCOPE__
     {
-        RegTensor<float> x1FoldReg, x2FoldReg, foldSquare, mainReg, sum;
+        RegTensor<float> x1FoldReg, x2FoldReg, foldSquare, mainReg, sum, x3FoldReg;
         MaskReg pregLoop;
         for (uint16_t i = 0; i < tailLoops; ++i) {
             pregLoop = UpdateMask<float>(sregTail);
             uint32_t offset = i * VL_F32;
-            // Fold tile: (x1Fold + x2Fold)²
             LoadTensorForDtypeTIn<T_X>(x1FoldInUb, x1FoldReg, pregLoop, offset);
             LoadTensorForDtypeTIn<T_X>(x2FoldInUb, x2FoldReg, pregLoop, offset);
-            AscendC::Reg::Add(x1FoldReg, x1FoldReg, x2FoldReg, pregLoop);
-            AscendC::Reg::Mul(foldSquare, x1FoldReg, x1FoldReg, pregLoop);
-            // Read back main block result and accumulate
-            AscendC::Reg::LoadAlign(mainReg, xFp32TmpBuf + offset);
-            AscendC::Reg::Add(sum, mainReg, foldSquare, pregLoop);
-            AscendC::Reg::Select(sum, sum, mainReg, pregLoop);
-            AscendC::Reg::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, sum, pregLoop);
+            if constexpr (HAS_X3) {
+                LoadTensorForDtypeTIn<T_X>(x3FoldInUb, x3FoldReg, pregLoop, offset);
+                AscendC::MicroAPI::Add(x1FoldReg, x3FoldReg, x1FoldReg, pregLoop);
+                AscendC::MicroAPI::Add(x1FoldReg, x2FoldReg, x1FoldReg, pregLoop);
+            } else {
+                AscendC::MicroAPI::Add(x1FoldReg, x1FoldReg, x2FoldReg, pregLoop);
+            }
+            StoreTensorForDtypeTOut<T_X>(xOutInUb, x1FoldReg, pregLoop, offset);
+            AscendC::MicroAPI::Mul(foldSquare, x1FoldReg, x1FoldReg, pregLoop);
+            AscendC::MicroAPI::LoadAlign(mainReg, xFp32TmpBuf + offset);
+            AscendC::MicroAPI::Add(sum, mainReg, foldSquare, pregLoop);
+            // Select preserves mainReg for inactive (tail) lanes: StoreAlign writes a full VL_F32
+            // vector, so inactive lanes must carry the existing buffer value to avoid corruption.
+            AscendC::MicroAPI::Select(sum, sum, mainReg, pregLoop);
+            AscendC::MicroAPI::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, sum, pregLoop);
         }
     }
 }
@@ -225,30 +261,46 @@ __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const Lo
     }
 }
 
-template <typename T_X>
+template <typename T_X, bool HAS_X3, bool WRITE_XOUT = true>
 __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xOutLocal,
-                                     LocalTensor<float>& xFp32Local, uint32_t count)
+                                     LocalTensor<float>& xFp32Local, uint32_t count,
+                                     LocalTensor<T_X>* x3Local = nullptr)
 {
     __ubuf__ T_X* x1InUb = (__ubuf__ T_X*)xLocal1.GetPhyAddr();
     __ubuf__ T_X* x2InUb = (__ubuf__ T_X*)xLocal2.GetPhyAddr();
-    __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+    __ubuf__ T_X* xOutInUb = nullptr;
+    if constexpr (WRITE_XOUT) {
+        xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+    }
     __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
+    __ubuf__ T_X* x3InUb = nullptr;
+    if constexpr (HAS_X3) {
+        x3InUb = (__ubuf__ T_X*)x3Local->GetPhyAddr();
+    }
 
     uint32_t sreg = count;
     uint16_t loopCount = (sreg + VL_F32 - 1) / VL_F32;
 
     __VEC_SCOPE__
     {
-        RegTensor<float> x1, x2, xSum;
+        RegTensor<float> x1, x2, xSum, x3;
         MaskReg pregLoop;
         for (uint16_t i = 0; i < loopCount; ++i) {
             uint32_t offset = i * VL_F32;
             pregLoop = UpdateMask<float>(sreg);
             LoadTensorForDtypeTIn<T_X>(x1InUb, x1, pregLoop, offset);
             LoadTensorForDtypeTIn<T_X>(x2InUb, x2, pregLoop, offset);
-            AscendC::Reg::Add(xSum, x1, x2, pregLoop);
-            StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
-            AscendC::Reg::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
+            if constexpr (HAS_X3) {
+                LoadTensorForDtypeTIn<T_X>(x3InUb, x3, pregLoop, offset);
+                AscendC::MicroAPI::Add(xSum, x3, x1, pregLoop);
+                AscendC::MicroAPI::Add(xSum, x2, xSum, pregLoop);
+            } else {
+                AscendC::MicroAPI::Add(xSum, x1, x2, pregLoop);
+            }
+            if constexpr (WRITE_XOUT) {
+                StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
+            }
+            AscendC::MicroAPI::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
         }
     }
 }
@@ -293,10 +345,10 @@ __aicore__ inline void MxQuantComputeMaxExpOCP(__ubuf__ T_X* srcAddr, __ubuf__ u
                 AscendC::Reg::And(vdExpExtract0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0, expMaskBF16, Mask);
                 AscendC::Reg::And(vdExpExtract1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, expMaskBF16, Mask);
             }
-            AscendC::Reg::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, Mask);
-            AscendC::Reg::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, Mask);
-            AscendC::Reg::StoreUnAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, vdMaxExp, u1,
-                                                                                              ELEMENT_AFTER_REDUCE);
+            AscendC::MicroAPI::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, Mask);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::MicroAPI::ReduceType::MAX>(vdMaxExp, vdMaxExp, Mask);
+            AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                maxExpAddr, vdMaxExp, u1, ELEMENT_AFTER_REDUCE);
         }
         AscendC::Reg::StoreUnAlignPost(maxExpAddr, u1, 0);
     }
@@ -385,18 +437,18 @@ __aicore__ inline void MxQuantComputeMaxExpcuBLAS(__ubuf__ T_X* srcAddr, __ubuf_
         AscendC::Reg::MaskReg Mask = AscendC::Reg::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
         AscendC::Reg::UnalignRegForStore u1;
         for (uint16_t i = 0; i < loopNum; i++) {
-            AscendC::Reg::LoadAlign<T_X, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
-                                    AscendC::Reg::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
-                                                                             VL_B16 * DIGIT_TWO);
-            AscendC::Reg::And((AscendC::Reg::RegTensor<uint16_t>&)vdExp0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0,
-                              absMask16Bit, Mask);
-            AscendC::Reg::And((AscendC::Reg::RegTensor<uint16_t>&)vdExp1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1,
-                              absMask16Bit, Mask);
-            AscendC::Reg::Max(vdMaxExp, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0,
-                              (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, Mask);
-            AscendC::Reg::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, Mask);
-            AscendC::Reg::StoreUnAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, vdMaxExp, u1,
-                                                                                              ELEMENT_AFTER_REDUCE);
+            AscendC::MicroAPI::LoadAlign<T_X, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
+                                                                                       VL_B16 * DIGIT_TWO);
+            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
+                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0, absMask16Bit, Mask);
+            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1,
+                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, absMask16Bit, Mask);
+            AscendC::MicroAPI::Max(vdMaxExp, (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
+                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, Mask);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::MicroAPI::ReduceType::MAX>(vdMaxExp, vdMaxExp, Mask);
+            AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                maxExpAddr, vdMaxExp, u1, ELEMENT_AFTER_REDUCE);
         }
         AscendC::Reg::StoreUnAlignPost(maxExpAddr, u1, 0);
     }

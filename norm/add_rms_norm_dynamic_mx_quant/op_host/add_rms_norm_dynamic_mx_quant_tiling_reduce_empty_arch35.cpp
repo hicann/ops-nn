@@ -76,6 +76,11 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
     // Intra-core loop splitting (non-last core)
     int64_t ubAlignElems = static_cast<int64_t>(ubBlockSize_) / elemSize;
     int64_t perCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxElements, perCoreElements), ubAlignElems);
+    // Fallback: when perCoreElements < ubAlignElems, FloorAlign rounds down to 0.
+    // In that case use the unaligned element count directly to avoid zero-length loops.
+    if (perCorePerLoopElements < 1) {
+        perCorePerLoopElements = perCoreElements;
+    }
 
     int64_t perCoreLoops = Ops::Base::CeilDiv(perCoreElements, perCorePerLoopElements);
     int64_t perCoreLastLoopElements = perCoreElements - (perCoreLoops - 1) * perCorePerLoopElements;
@@ -112,35 +117,13 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling() { re
 
 uint64_t AddRmsNormDynamicMxQuantReduceEmptyTiling::GetTilingKey() const
 {
-    AddRmsNormDynamicMxQuantTilingKey tilingKey;
-    tilingKey.SetComputeMode(ComputeMode::REDUCE_EMPTY);
-    tilingKey.SetYDataType(YDataType::FP8);
-    return tilingKey.GetTilingKey();
+    return GetTilingKeyCommon(ComputeMode::REDUCE_EMPTY);
 }
 
 ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()
 {
     OP_LOGD(context_->GetNodeName(), "ReduceEmpty PostTiling: usedCoreNum=%lu.", usedCoreNum_);
-    context_->SetBlockDim(usedCoreNum_);
-
-    auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-                        sizeof(td_), rawTilingData->GetCapacity()),
-                return ge::GRAPH_FAILED);
-    auto capSize = rawTilingData->GetCapacity();
-    void* ptrData = rawTilingData->GetData();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
-    void* ptrStruct = static_cast<void*>(&td_);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
-    rawTilingData->SetDataSize(sizeof(td_));
-
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
-    return ge::GRAPH_SUCCESS;
+    return PostTilingImpl(static_cast<void*>(&td_), sizeof(td_));
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantReduceEmptyTiling,

@@ -81,6 +81,12 @@ public:
             .Format(formatND)
             .UnknownShapeFormat(formatND)
             .AutoContiguous();
+        this->Input("x3")
+            .ParamType(OPTIONAL)
+            .DataType(xDataType)
+            .Format(formatND)
+            .UnknownShapeFormat(formatND)
+            .AutoContiguous();
 
         // Outputs
         this->Output("y")

@@ -462,3 +462,216 @@ TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_case_012)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// V2 interface with x3 present (x = x3 + x1 + x2)
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_case_001)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x3 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 36;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_x3,
+                              epsilon, scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with x3 present, bf16, fp4 output
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_case_002)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x3 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 40;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_x3,
+                              epsilon, scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with x3 present, output_rstd=false
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_case_003)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x3 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 35;
+    bool output_rstd = false;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, tensor_desc_x3, epsilon,
+                              scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with x3=nullptr (fallback to V1 behavior)
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_nullptr_case_004)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 36;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, nullptr, epsilon,
+                              scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with x3 present, fp4_e1m2, round_mode=floor
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_case_005)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_x3 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT4_E1M2, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("floor");
+    int64_t dst_type = 41;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_x3,
+                              epsilon, scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with x3 present, scale_alg=1 (cuBLAS)
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_x3_case_006)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x3 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 1;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 36;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_x3,
+                              epsilon, scale_alg, round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// V2 interface with both beta=nullptr and x3=nullptr (fallback to V1 behavior)
+TEST_F(l2_add_rms_norm_dynamic_mx_quant_test, ascend950_v2_beta_null_x3_null_case)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y_out = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    auto tensor_desc_x_out = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale_out = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd_out = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-5;
+    int64_t scale_alg = 0;
+    char* round_mode = const_cast<char*>("rint");
+    int64_t dst_type = 36;
+    bool output_rstd = true;
+
+    auto ut = OP_API_UT(aclnnAddRmsNormDynamicMxQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, nullptr, nullptr, epsilon, scale_alg,
+                              round_mode, dst_type, output_rstd),
+                        OUTPUT(tensor_desc_y_out, tensor_desc_x_out, tensor_desc_mxscale_out, tensor_desc_rstd_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

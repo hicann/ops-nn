@@ -1,5 +1,6 @@
 {
   "op_type": "AddRmsNormDynamicMxQuant",
+  "optional_input_mode": "gen_placeholder",
   "op_list": [
     {
       "bin_filename": "AddRmsNormDynamicMxQuant_fp16_fp16_toe2m1",
@@ -37,6 +38,16 @@
         {
           "name": "beta",
           "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
           "dtype": "float16",
           "format": "ND",
           "paramType": "optional",
@@ -157,6 +168,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -265,6 +286,16 @@
         {
           "name": "beta",
           "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
           "dtype": "float16",
           "format": "ND",
           "paramType": "optional",
@@ -385,6 +416,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -493,6 +534,16 @@
         {
           "name": "beta",
           "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
           "dtype": "bfloat16",
           "format": "ND",
           "paramType": "optional",
@@ -613,6 +664,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -721,6 +782,16 @@
         {
           "name": "beta",
           "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
           "dtype": "bfloat16",
           "format": "ND",
           "paramType": "optional",
@@ -841,6 +912,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -950,6 +1031,16 @@
           "name": "beta",
           "index": 3,
           "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -1069,6 +1160,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -1178,6 +1279,16 @@
           "name": "beta",
           "index": 3,
           "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -1297,6 +1408,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -1406,6 +1527,16 @@
           "name": "beta",
           "index": 3,
           "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -1525,6 +1656,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -1639,6 +1780,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -1748,6 +1899,16 @@
           "name": "beta",
           "index": 3,
           "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x3",
+          "index": 4,
+          "dtype": "bfloat16",
           "format": "ND",
           "paramType": "optional",
           "shape": [

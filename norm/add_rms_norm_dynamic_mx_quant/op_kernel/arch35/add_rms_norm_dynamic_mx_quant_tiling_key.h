@@ -25,31 +25,75 @@
 #define Y_DATA_TYPE_FP8 0
 #define Y_DATA_TYPE_FP4 1
 
+#define HAS_X3_FALSE 0
+#define HAS_X3_TRUE 1
+
+// Binary-size vs zero-overhead tradeoff:
+// HAS_X3 is a compile-time template parameter (not a tiling data field), so the
+// compiler emits separate binaries for HAS_X3=true/false. This doubles the binary
+// count (5 -> 10 tilingKey variants) but eliminates all runtime branching for x3.
+// HAS_X3=false variants are retained for binary backward compatibility — existing
+// callers using the V1 API (aclnnAddRmsNormDynamicMxQuant, no x3) reuse the
+// original binaries without recompilation.
+
 ASCENDC_TPL_ARGS_DECL(AddRmsNormDynamicMxQuant,
                       ASCENDC_TPL_UINT_DECL(COMPUTE_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD,
                                             COMPUTE_MODE_SPLIT_R, COMPUTE_MODE_REDUCE_EMPTY),
                       ASCENDC_TPL_UINT_DECL(Y_DATA_TYPE, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8,
-                                            Y_DATA_TYPE_FP4));
+                                            Y_DATA_TYPE_FP4),
+                      ASCENDC_TPL_UINT_DECL(HAS_X3, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE, HAS_X3_TRUE));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                                     ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
-                                     ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                                     ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
-                                     ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                                     ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
-                                     ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                                     ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
-                                     ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                                     ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_REDUCE_EMPTY),
-                                     ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8,
-                                                          Y_DATA_TYPE_FP4),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantReduceEmptyTilingData)));
+ASCENDC_TPL_SEL(
+    // === HAS_X3=FALSE: original variants (no x3), backward compatible ===
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_REDUCE_EMPTY),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_FALSE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantReduceEmptyTilingData)),
+    // === HAS_X3=TRUE: new variants (with x3) ===
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_TRUE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_FULL_LOAD),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_TRUE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_TRUE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_SPLIT_R),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_TRUE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantSplitRTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(COMPUTE_MODE, ASCENDC_TPL_UI_LIST, COMPUTE_MODE_REDUCE_EMPTY),
+                         ASCENDC_TPL_UINT_SEL(Y_DATA_TYPE, ASCENDC_TPL_UI_LIST, Y_DATA_TYPE_FP8, Y_DATA_TYPE_FP4),
+                         ASCENDC_TPL_UINT_SEL(HAS_X3, ASCENDC_TPL_UI_LIST, HAS_X3_TRUE),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AddRmsNormDynamicMxQuantReduceEmptyTilingData)));
 #endif

@@ -47,20 +47,18 @@ static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTens
     OP_CHECK_NULL(yOut, return false);
     OP_CHECK_NULL(xOut, return false);
     OP_CHECK_NULL(mxscaleOut, return false);
-    // rstdOut 根据 outputRstd 决定是否校验
     if (outputRstd) {
         OP_CHECK_NULL(rstdOut, return false);
     }
     return true;
 }
 
-static aclnnStatus ComputeAddRmsNormDynamicMxQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
-                                                   const aclTensor* beta, double epsilon, int64_t scaleAlg,
-                                                   char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-                                                   aclTensor* xOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
-                                                   aclOpExecutor* executor)
+static aclnnStatus DoComputeAddRmsNormDynamicMxQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                                     const aclTensor* beta, const aclTensor* x3Optional, double epsilon,
+                                                     int64_t scaleAlg, char* roundMode, int64_t dstType,
+                                                     bool outputRstd, aclTensor* yOut, aclTensor* xOut,
+                                                     aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor)
 {
-    // 创建输出Tensor
     aclTensor* y_output = executor->AllocTensor(yOut->GetViewShape(), yOut->GetDataType(), yOut->GetViewFormat());
     aclTensor* x_output = executor->AllocTensor(xOut->GetViewShape(), xOut->GetDataType(), xOut->GetViewFormat());
     aclTensor* mxscale_output = executor->AllocTensor(mxscaleOut->GetViewShape(), mxscaleOut->GetDataType(),
@@ -70,21 +68,19 @@ static aclnnStatus ComputeAddRmsNormDynamicMxQuant(const aclTensor* x1, const ac
                                                        rstdOut->GetViewFormat()) :
                                  executor->AllocTensor(op::Shape({0}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
 
-    auto addRmsNormDynamicMxQuantOuts = l0op::AddRmsNormDynamicMxQuant(x1, x2, gamma, beta, epsilon, scaleAlg,
-                                                                       roundMode, dstType, outputRstd, y_output,
-                                                                       x_output, mxscale_output, rstd_output, executor);
+    auto addRmsNormDynamicMxQuantOuts = l0op::AddRmsNormDynamicMxQuant(
+        x1, x2, gamma, beta, x3Optional, epsilon, scaleAlg, roundMode, dstType, outputRstd, y_output, x_output,
+        mxscale_output, rstd_output, executor);
 
     auto yComputeOut = std::get<IDX_0>(addRmsNormDynamicMxQuantOuts);
     auto xComputeOut = std::get<IDX_1>(addRmsNormDynamicMxQuantOuts);
     auto mxscaleComputeOut = std::get<IDX_2>(addRmsNormDynamicMxQuantOuts);
     auto rstdComputeOut = std::get<IDX_3>(addRmsNormDynamicMxQuantOuts);
 
-    // 校验输出不为空
     CHECK_RET(yComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(mxscaleComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 将结果拷贝到输出tensor
     auto viewCopyYResult = l0op::ViewCopy(yComputeOut, yOut, executor);
     CHECK_RET(viewCopyYResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -103,6 +99,55 @@ static aclnnStatus ComputeAddRmsNormDynamicMxQuant(const aclTensor* x1, const ac
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus GetWorkspaceSizeImpl(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                        const aclTensor* beta, const aclTensor* x3Optional, double epsilon,
+                                        int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd,
+                                        aclTensor* yOut, aclTensor* xOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
+                                        uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    CHECK_RET(CheckNotNull(x1, x2, gamma, yOut, xOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
+
+    auto x1Shape = x1->GetViewShape();
+    auto gammaDimNum = gamma->GetViewShape().GetDimNum();
+    for (int64_t i = 0; i < static_cast<int64_t>(x1Shape.GetDimNum() - gammaDimNum); ++i) {
+        if (x1Shape.GetDim(i) == 0) {
+            OP_LOGW("Got empty tensor in aclnnAddRmsNormDynamicMxQuant!");
+            *workspaceSize = 0;
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
+    }
+
+    auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
+    auto x2Cont = l0op::Contiguous(x2, uniqueExecutor.get());
+    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
+
+    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const aclTensor* betaCont = (beta == nullptr) ? nullptr : l0op::Contiguous(beta, uniqueExecutor.get());
+    const aclTensor* x3OptionalCont = (x3Optional == nullptr) ? nullptr :
+                                                                l0op::Contiguous(x3Optional, uniqueExecutor.get());
+    if (x3Optional != nullptr) {
+        CHECK_RET(x3OptionalCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(x3OptionalCont->GetViewShape() == x1Cont->GetViewShape(), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(x3OptionalCont->GetDataType() == x1Cont->GetDataType(), ACLNN_ERR_PARAM_INVALID);
+    }
+
+    auto ret = DoComputeAddRmsNormDynamicMxQuant(x1Cont, x2Cont, gammaCont, betaCont, x3OptionalCont, epsilon, scaleAlg,
+                                                 roundMode, dstType, outputRstd, yOut, xOut, mxscaleOut, rstdOut,
+                                                 uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
                                                           const aclTensor* gamma, const aclTensor* beta, double epsilon,
                                                           int64_t scaleAlg, char* roundMode, int64_t dstType,
@@ -115,53 +160,42 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x1, c
                    DFX_IN(x1, x2, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd),
                    DFX_OUT(yOut, xOut, mxscaleOut, rstdOut));
 
-    // 创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
-    // 检查必选输入/输出是否为空指针
-    CHECK_RET(CheckNotNull(x1, x2, gamma, yOut, xOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
-
-    // 校验x1除尾轴外的维度不能为0
-    auto x1Shape = x1->GetViewShape();
-    auto gammaDimNum = gamma->GetViewShape().GetDimNum();
-    for (int64_t i = 0; i < static_cast<int64_t>(x1Shape.GetDimNum() - gammaDimNum); ++i) {
-        if (x1Shape.GetDim(i) == 0) {
-            OP_LOGW("Got empty tensor in aclnnAddRmsNormDynamicMxQuant!");
-            *workspaceSize = 0;
-            uniqueExecutor.ReleaseTo(executor);
-            return ACLNN_SUCCESS;
-        }
-    }
-
-    // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
-    auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
-    auto x2Cont = l0op::Contiguous(x2, uniqueExecutor.get());
-    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
-
-    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    const aclTensor* betaCont = (beta == nullptr) ? nullptr : l0op::Contiguous(beta, uniqueExecutor.get());
-
-    auto ret = ComputeAddRmsNormDynamicMxQuant(x1Cont, x2Cont, gammaCont, betaCont, epsilon, scaleAlg, roundMode,
-                                               dstType, outputRstd, yOut, xOut, mxscaleOut, rstdOut,
-                                               uniqueExecutor.get());
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
-    // 获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    auto ret = GetWorkspaceSizeImpl(x1, x2, gamma, beta, nullptr, epsilon, scaleAlg, roundMode, dstType, outputRstd,
+                                    yOut, xOut, mxscaleOut, rstdOut, workspaceSize, executor);
     OP_LOGD("Finish aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize.");
-    return ACLNN_SUCCESS;
+    return ret;
 }
 
 aclnnStatus aclnnAddRmsNormDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                           aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAddRmsNormDynamicMxQuant);
-    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                            const aclTensor* gamma, const aclTensor* beta,
+                                                            const aclTensor* x3Optional, double epsilon,
+                                                            int64_t scaleAlg, char* roundMode, int64_t dstType,
+                                                            bool outputRstd, aclTensor* yOut, aclTensor* xOut,
+                                                            aclTensor* mxscaleOut, aclTensor* rstdOut,
+                                                            uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_LOGD("Enter aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize.");
+    L2_DFX_PHASE_1(aclnnAddRmsNormDynamicMxQuantV2,
+                   DFX_IN(x1, x2, gamma, beta, x3Optional, epsilon, scaleAlg, roundMode, dstType, outputRstd),
+                   DFX_OUT(yOut, xOut, mxscaleOut, rstdOut));
+
+    auto ret = GetWorkspaceSizeImpl(x1, x2, gamma, beta, x3Optional, epsilon, scaleAlg, roundMode, dstType, outputRstd,
+                                    yOut, xOut, mxscaleOut, rstdOut, workspaceSize, executor);
+    OP_LOGD("Finish aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize.");
+    return ret;
+}
+
+aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                            aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnAddRmsNormDynamicMxQuantV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 

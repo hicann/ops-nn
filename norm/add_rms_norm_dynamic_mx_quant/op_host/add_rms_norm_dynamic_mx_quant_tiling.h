@@ -62,9 +62,9 @@ public:
         return *this;
     }
 
-    uint64_t GetTilingKey() const
+    uint64_t GetTilingKey(uint64_t hasX3) const
     {
-        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_), static_cast<uint64_t>(yDataType_));
+        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_), static_cast<uint64_t>(yDataType_), hasX3);
     }
 
 private:
@@ -79,6 +79,7 @@ constexpr uint64_t X1_INDEX = 0;
 constexpr uint64_t X2_INDEX = 1;
 constexpr uint64_t GAMMA_INDEX = 2;
 constexpr uint64_t BETA_INDEX = 3;
+constexpr uint64_t X3_INDEX = 4;
 constexpr int64_t DIGIT_FOUR = 4;
 
 // Output indices
@@ -104,9 +105,6 @@ constexpr uint32_t FP8_SIZE = 1;
 constexpr uint32_t B16_SIZE = 2;
 constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t NUM_FOUR = 4;
-constexpr uint64_t ALIGN_FACTOR_512 = 512;
-constexpr uint32_t UB_RESERVE_FOR_RSTD_ALIGN = 1024;
-constexpr uint32_t UB_RESERVE_FOR_OUTPUT_Y_ALIGN = 1536;
 constexpr uint64_t ARND_REDUCE_EMPTY_PRIORITY = 500;
 constexpr uint64_t ARND_R_FULL_LOAD_PRIORITY = 1000;
 constexpr uint64_t ARND_SPLIT_R_PRIORITY = 2000;
@@ -125,6 +123,10 @@ const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_F
 struct AddRmsNormDynamicMxQuantCompileInfo {
     uint64_t totalCoreNum = 0;
     uint64_t totalUbSize = 0;
+    uint64_t vRegSize = 0;
+    uint64_t ubBlockSize = 0;
+    uint64_t sysWorkspaceSize = 0;
+    bool isRegbase = false;
 };
 
 // Round mode enum matching DynamicMxQuant
@@ -153,6 +155,7 @@ public:
     // Validation
     ge::graphStatus CheckShapeNull();
     ge::graphStatus CheckOptionalInput();
+    ge::graphStatus CheckX3Input();
     ge::graphStatus CheckInputShapeDim();
     ge::graphStatus CheckInputShapeValue();
     ge::graphStatus CheckInputDtype();
@@ -163,6 +166,9 @@ public:
 
     ge::graphStatus SetInputParams();
     MxRoundMode ParseRoundMode(const std::string& roundMode);
+
+    ge::graphStatus PostTilingImpl(void* structPtr, size_t structSize);
+    uint64_t GetTilingKeyCommon(add_rms_norm_dynamic_mx_quant::ComputeMode mode) const;
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -211,6 +217,7 @@ protected:
     // Flags
     uint32_t betaFlag_{0};
     uint32_t rstdFlag_{0};
+    uint32_t hasX3_{0};
     bool gammaIsFp32_{false};
 };
 
@@ -230,6 +237,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus SetTilingParams();
     uint64_t CalUBTotalSize();
+    uint64_t CalFixedCost(uint64_t rowFactor);
     void SetTilingData();
     void PrintTilingData();
 

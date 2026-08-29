@@ -35,33 +35,51 @@ uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalUBTotalSize()
     uint64_t maxTmpPerRow = Ops::Base::CeilAlign(blockNumInColAxis_ * xDtypeSize_, ubBlockSize_);
     uint64_t halfTmpPerRow = maxTmpPerRow;
 
-    // InQue
+    // InQue (per row)
     uint64_t x1Buf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_);
     uint64_t x2Buf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_);
+    uint64_t x3Buf = hasX3_ ? DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_) : 0;
 
-    // OutQue
-    uint64_t yBuf = 0;
-    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
-        yBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align, ubBlockSize_);
-    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        yBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align / NUM_TWO, ubBlockSize_);
-    }
+    // OutQue: xOut per row; quantY/rstd are rowFactor-dependent fixed costs (handled in CalFixedCost).
+    // The original code used fixed UB_RESERVE constants (1024+1536) to cover the gap between per-row
+    // estimates and actual rowFactor-scaled buffer sizes. CalFixedCost computes the exact cost instead,
+    // avoiding UB overflow when numCol is not aligned to MX_STEP_PROCESS_NUM (256) and rowFactor=1.
     uint64_t xOutBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(R_Align * xDtypeSize_, ubBlockSize_);
     uint64_t mxscaleBuf = DOUBLE_BUFFER * Ops::Base::CeilAlign(mxscaleBufPerRow, ubBlockSize_);
-    uint64_t rstdBuf = DOUBLE_BUFFER * FP32_SIZE;
 
-    // TmpBuffer
+    // TmpBuffer (per row)
     uint64_t xTmpBuf = Ops::Base::CeilAlign(R_Align * FP32_SIZE, ubBlockSize_);
     uint64_t binAddBuf = Ops::Base::CeilAlign(binAddBufPerRow, ubBlockSize_);
-    uint64_t xReduceBuff = FP32_SIZE;
 
     uint64_t maxTmpBuf = maxTmpPerRow;
     uint64_t halfTmpBuf = halfTmpPerRow;
 
-    uint64_t total = x1Buf + x2Buf + yBuf + xOutBuf + mxscaleBuf + rstdBuf + xTmpBuf + binAddBuf + xReduceBuff +
-                     maxTmpBuf + halfTmpBuf;
+    // Per-row total only (excludes rstd/xReduce/quantY which are rowFactor-dependent fixed costs)
+    return x1Buf + x2Buf + x3Buf + xOutBuf + mxscaleBuf + xTmpBuf + binAddBuf + maxTmpBuf + halfTmpBuf;
+}
 
-    return total;
+uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::CalFixedCost(uint64_t rowFactor)
+{
+    // rstd + xReduce: 3 * CeilAlign(rowFactor, VL_F32) * sizeof(float)
+    // (2 double-buffered rstd queues + 1 xReduce buffer, each CeilAlign(rowFactor, VL_F32) * 4 bytes)
+    uint64_t ceilRf = Ops::Base::CeilAlign(rowFactor, vecLengthFP32_);
+    uint64_t rstdXReduceCost = (DOUBLE_BUFFER + 1) * ceilRf * FP32_SIZE;
+
+    // quantY: matches kernel's quantYBufSize formula exactly
+    // kernel: CeilAlign(CeilDiv(numColAlign * rowFactor [/2 for FP4], MX_STEP_PROCESS_NUM), 4) * MX_STEP_PROCESS_NUM
+    uint64_t mxStepProcessNum = vecLengthFP32_ * FP32_SIZE; // 256 bytes
+    uint64_t quantYElements;
+    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
+        quantYElements = numColAlign_ * rowFactor;
+    } else {
+        quantYElements = numColAlign_ * rowFactor / NUM_TWO;
+    }
+    uint64_t quantYBufSize = Ops::Base::CeilAlign(Ops::Base::CeilDiv(quantYElements, mxStepProcessNum),
+                                                  static_cast<uint64_t>(NUM_FOUR)) *
+                             mxStepProcessNum;
+    uint64_t quantYCost = DOUBLE_BUFFER * quantYBufSize;
+
+    return rstdXReduceCost + quantYCost;
 }
 
 ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
@@ -78,18 +96,25 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
         }
     }
 
-    // Pre-reserve UB for rstd alignment padding
     uint64_t binaryAddElemtMaxLen = vecLengthFP32_ * vecLengthFP32_ * NUM_TWO * NUM_TWO;
 
     uint64_t gammaBuf = Ops::Base::CeilAlign(numCol_, ubBlockSize_ / gammaDtypeSize_) * gammaDtypeSize_;
     uint64_t betaBuf = Ops::Base::CeilAlign(betaFlag_ * numCol_, ubBlockSize_ / gammaDtypeSize_) * gammaDtypeSize_;
-    uint64_t availableUb = maxUbSize_ - UB_RESERVE_FOR_RSTD_ALIGN - UB_RESERVE_FOR_OUTPUT_Y_ALIGN - gammaBuf - betaBuf;
+    uint64_t availableUb = maxUbSize_ - gammaBuf - betaBuf;
+
+    uint64_t perRowCost = CalUBTotalSize();
 
     uint64_t rowFactor = 0;
 
-    // Try R-full-load: find max rowFactor A that fits in UB
     if (availableUb > 0 && numColAlign_ <= binaryAddElemtMaxLen) {
-        rowFactor = availableUb / CalUBTotalSize();
+        // Two-pass: first estimate rowFactor ignoring fixed costs, then compute actual fixed costs and re-estimate
+        uint64_t estRowFactor = availableUb / perRowCost;
+        if (estRowFactor > 0) {
+            uint64_t fixedCost = CalFixedCost(estRowFactor);
+            if (availableUb > fixedCost) {
+                rowFactor = (availableUb - fixedCost) / perRowCost;
+            }
+        }
     }
 
     if (rowFactor < 1) {
@@ -183,38 +208,12 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::DoLibApiTiling() { retu
 ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::PostTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", usedCoreNum_);
-    context_->SetBlockDim(usedCoreNum_);
-
-    auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-                        sizeof(tilingData), rawTilingData->GetCapacity()),
-                return ge::GRAPH_FAILED);
-    auto capSize = rawTilingData->GetCapacity();
-    void* ptrData = rawTilingData->GetData();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
-    void* ptrStruct = static_cast<void*>(&tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
-                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
-    rawTilingData->SetDataSize(sizeof(tilingData));
-
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
-    return ge::GRAPH_SUCCESS;
+    return PostTilingImpl(static_cast<void*>(&tilingData), sizeof(tilingData));
 }
 
 uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::GetTilingKey() const
 {
-    AddRmsNormDynamicMxQuantTilingKey tilingKey;
-    tilingKey.SetComputeMode(ComputeMode::FULL_LOAD);
-    if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
-        tilingKey.SetYDataType(YDataType::FP8);
-    } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        tilingKey.SetYDataType(YDataType::FP4);
-    }
-    return tilingKey.GetTilingKey();
+    return GetTilingKeyCommon(ComputeMode::FULL_LOAD);
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantRFullLoadTiling,
