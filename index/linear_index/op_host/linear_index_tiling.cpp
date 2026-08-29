@@ -44,7 +44,7 @@ const int DATA_ALIGN = 32;
 namespace optiling {
 class LinearIndexTiling {
 public:
-    explicit LinearIndexTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit LinearIndexTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -84,7 +84,7 @@ ge::graphStatus LinearIndexTiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     static uint32_t coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
-        OP_LOGE(tilingContext, "coreNum must greater than 0.");
+        OP_LOGE(tilingContext, "coreNum must be greater than 0.");
         return ge::GRAPH_FAILED;
     }
     workspaceSize = compileInfo->workspaceSize;

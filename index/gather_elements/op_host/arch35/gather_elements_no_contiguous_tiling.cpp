@@ -55,14 +55,14 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetPlatformInfo()
                     return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
-        OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", coreNum_);
+        OP_LOGD(opName_, "Get aivNum from compileInfo is: %ld", coreNum_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         coreNum_ = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
-        OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", coreNum_);
+        OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
                 OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
@@ -369,7 +369,7 @@ void GatherElementsNoContiguousTiling::DoCoalesce(vector<int64_t>& tempXShape, v
         for (int64_t i = static_cast<int64_t>(tempXShape.size()) - 2; i >= 0; i--) {
             const bool is_gather_dim = (i == axis_ || i + 1 == axis_);
             if (is_gather_dim || tempXShape[i] != tempIndexShape[i] || tempXShape[i + 1] != tempIndexShape[i + 1]) {
-                //无法合轴
+                // 无法合轴
                 continue;
             }
             bool merge_x = CanMerge(tempXShape.data(), tempXStride.data(), i);

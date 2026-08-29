@@ -35,7 +35,7 @@ constexpr uint32_t GATHER_DATA_KEY = 2;
 struct TilingDataStructIndexPutWithSort {
     uint32_t coreNums = 0;
     uint64_t sliceSizeAligned = 0;
-    uint64_t sliceSize = 0; //尾轴长度
+    uint64_t sliceSize = 0; // 尾轴长度
     uint32_t frontCoreNums = 0;
     uint64_t frontCoreIndicesNums = 0;
     uint64_t tailCoreIndicesNums = 0;
@@ -52,7 +52,7 @@ struct TilingDataStructIndexPutWithSort {
 
 class IndexPutWithSortTilingOp {
 public:
-    explicit IndexPutWithSortTilingOp(gert::TilingContext* context_) : context(context_){};
+    explicit IndexPutWithSortTilingOp(gert::TilingContext* context_) : context(context_) {};
     ge::graphStatus Init();
 
 private:
@@ -238,7 +238,7 @@ ge::graphStatus TilingIndexPutWithSort(gert::TilingContext* context)
     OP_LOGD(context, "IndexPutWithSort start tiling.");
     IndexPutWithSortTilingOp tilingOp(context);
     if (tilingOp.Init() != ge::GRAPH_SUCCESS) {
-        OP_LOGD(context, "IndexPutWithSort tiling faild.");
+        OP_LOGD(context, "IndexPutWithSort tiling failed.");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context, "IndexPutWithSort tiling end.");

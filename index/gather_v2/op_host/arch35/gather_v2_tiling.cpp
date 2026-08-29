@@ -136,16 +136,16 @@ ge::graphStatus Gatherv2TilingBase::GetPlatformInfo()
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         aivNum_ = compileInfoPtr->core_num;
         ubSize_ = compileInfoPtr->ub_size;
-        OP_LOGD(opName_, "Get ubSize form compileInfo is: %ld", ubSize_);
-        OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", aivNum_);
+        OP_LOGD(opName_, "Get ubSize from compileInfo is: %ld", ubSize_);
+        OP_LOGD(opName_, "Get aivNum from compileInfo is: %ld", aivNum_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         aivNum_ = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
         ubSize_ = static_cast<int64_t>(ubSizePlatform);
-        OP_LOGD(opName_, "Get ubSize form ascendcPlatform is: %ld", ubSize_);
-        OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", aivNum_);
+        OP_LOGD(opName_, "Get ubSize from ascendcPlatform is: %ld", ubSize_);
+        OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", aivNum_);
     }
     aicoreParams_.numBlocks = aivNum_;
     return ge::GRAPH_SUCCESS;
@@ -356,7 +356,7 @@ ge::graphStatus Gatherv2TilingBase::CalcEmptyCoreElement()
     }
 
     ySizeWoImprove_ = batchSize_ * outerSize_ * gatherSize_ * innerSizeWoImprove_;
-    int64_t ySizeLen_ = ySizeWoImprove_ * xDtypeSize; //后续用int8_t赋0，这里计算字节数即可
+    int64_t ySizeLen_ = ySizeWoImprove_ * xDtypeSize; // 后续用int8_t赋0，这里计算字节数即可
 
     needCoreNum_ = (ySizeLen_ * BITS_NUM + MIN_TILING_BITS_SIZE_PER_CORE - 1) / MIN_TILING_BITS_SIZE_PER_CORE;
 

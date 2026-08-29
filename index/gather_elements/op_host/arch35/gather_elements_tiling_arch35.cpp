@@ -51,14 +51,14 @@ ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
                     return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
-        OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", coreNum_);
+        OP_LOGD(opName_, "Get aivNum from compileInfo is: %ld", coreNum_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         coreNum_ = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
-        OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", coreNum_);
+        OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
                 OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
@@ -205,7 +205,7 @@ void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, in
     OP_CHECK_IF((idxAfterAxis_ == static_cast<int64_t>(0)),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "idxAfterAxis", std::to_string(idxAfterAxis_).c_str(),
                                                       "idxAfterAxis should not be 0"),
-                return );
+                return);
     int64_t xPerAxisEncludeDim1 = 1;
     int64_t idxPerAxisEncludeDim1 = 1;
     for (int64_t i = 1; i < axis_; i++) {

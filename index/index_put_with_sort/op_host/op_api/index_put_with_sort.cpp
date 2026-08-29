@@ -194,7 +194,7 @@ static bool IndexPutWithSortBetter(const aclTensor* selfRef, const aclTensorList
             sliceSize *= static_cast<int64_t>(selfShape.GetDim(i));
         }
     }
-    OP_LOGD("IndexPutWitSort Op indicesNums %ld, sliceSize %ld", indicesNums, sliceSize);
+    OP_LOGD("IndexPutWithSort Op indicesNums %ld, sliceSize %ld", indicesNums, sliceSize);
     if (sliceSize > INT32_MAX_LIMIT) {
         OP_LOGD("IndexPutWithSort Op not support sliceSize greater than %ld!", INT32_MAX_LIMIT);
         return false;

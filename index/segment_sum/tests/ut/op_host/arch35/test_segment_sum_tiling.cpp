@@ -11,6 +11,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
+#include "base/dlog_pub.h"
 #include "kernel_run_context_facker.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"

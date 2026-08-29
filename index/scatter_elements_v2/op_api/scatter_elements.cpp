@@ -547,7 +547,7 @@ static bool CheckMultiDimFirstAxis(const gert::Shape& dataShape, const gert::Sha
                                    const gert::Shape& updatesShape, size_t dataDimNum)
 {
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, dataDimNum)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when realDim = 0, only support var、indices、updates dim equal.");
+        OP_LOGD("ScatterElementsV2 No Transpose when realDim = 0, only support var, indices, updates dim equal.");
         return false;
     }
     return true;
@@ -558,7 +558,7 @@ static bool CheckMultiDimLastAxis(const aclTensor*, const gert::Shape& dataShape
 {
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, dataDimNum - 1)) {
         OP_LOGD(
-            "ScatterElementsV2 No Transpose when axis = dataDimNum - 1, only support var、indices、updates dim equal.");
+            "ScatterElementsV2 No Transpose when axis = dataDimNum - 1, only support var, indices, updates dim equal.");
         return false;
     }
     return true;
@@ -568,12 +568,12 @@ static bool CheckMultiDimMiddleAxis(const gert::Shape& dataShape, const gert::Sh
                                     const gert::Shape& updatesShape, uint64_t axis, size_t dataDimNum)
 {
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, axis)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when realDim is middle axis, only support var、indices、updates dim "
+        OP_LOGD("ScatterElementsV2 No Transpose when realDim is middle axis, only support var, indices, updates dim "
                 "equal in [1, realDim) range.");
         return false;
     }
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, axis + 1, dataDimNum)) {
-        OP_LOGD("ScatterElementsV2 No Transpose when realDim is middle axis, only support var、indices、updates dim "
+        OP_LOGD("ScatterElementsV2 No Transpose when realDim is middle axis, only support var, indices, updates dim "
                 "equal in [realDim+1, inputDimNum) range.");
         return false;
     }
@@ -619,7 +619,7 @@ static bool NoTransposeShapeCheck(const aclTensor* data, const aclTensor* indice
     }
 
     if (dataDimNum > AXIS_LIMIT || (dataDimNum != indicesShape.GetDimNum()) || dataDimNum != updatesShape.GetDimNum()) {
-        OP_LOGD("ScatterElementsV2 No Transpose only support var、indices、updates dimNums equal.");
+        OP_LOGD("ScatterElementsV2 No Transpose only support var, indices, updates dimNums equal.");
         return false;
     }
     return CheckMultiDimShape(data, dataShape, indicesShape, updatesShape, axis, dataDimNum);

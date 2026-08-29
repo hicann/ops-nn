@@ -270,7 +270,7 @@ ge::graphStatus InplaceIndexAddTiling::CheckInputShape()
         OP_CHECK_IF(indicesAxis_ != expectedNum,
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                         context_->GetNodeName(), "indices", std::to_string(indicesAxis_).c_str(),
-                        ("The shape szie of indices must be equal to the size " + std::to_string(expectedNum) +
+                        ("The shape size of indices must be equal to the size " + std::to_string(expectedNum) +
                          "of the " + std::to_string(dim_)) +
                             " axis of updates."),
                     return ge::GRAPH_FAILED);

@@ -189,7 +189,9 @@ bool CheckAndUpdateAxisAndBatchdims(const gert::TilingContext* context, int64_t&
     OP_CHECK_IF(params_dims <= 0 || indices_dims <= 0,
                 OP_LOGE("GatherV2:", "GatherV2Tiling: params_dims or indices_dims is 0."), return false);
 
-    OP_CHECK_IF(axis < -params_dims || axis >= params_dims, OP_LOGE("GatherV2:", "op GatherV2Tiling: axis is invalid"),
+    OP_CHECK_IF(axis < -params_dims || axis >= params_dims,
+                OP_LOGE("GatherV2:", "op GatherV2Tiling: axis[%ld] is out of range, expected in [%ld, %ld).", axis,
+                        -params_dims, params_dims),
                 return false);
 
     if (axis < 0) {
@@ -198,7 +200,9 @@ bool CheckAndUpdateAxisAndBatchdims(const gert::TilingContext* context, int64_t&
 
     if (batch_dims != 0) {
         OP_CHECK_IF(batch_dims < -indices_dims || batch_dims > indices_dims,
-                    OP_LOGE("GatherV2:", "op GatherV2Tiling: batch_dims is invalid."), return false);
+                    OP_LOGE("GatherV2:", "op GatherV2Tiling: batch_dims[%ld] is out of range, expected in [%ld, %ld].",
+                            batch_dims, -indices_dims, indices_dims),
+                    return false);
         if (batch_dims < 0) {
             batch_dims += indices_dims;
         }
@@ -269,29 +273,31 @@ bool DoCacheModeAlignCheck(int64_t axis, const GatherV2TilingParams* params, con
     OP_CHECK_IF(
         compile_info->impl_mode != IMPL_MODE_HIGH_PERFORMANCE_VALUE,
         OP_LOGD("GatherV2",
-                "[DoCacheModeAlignCheck] no need simpiling for topn cache, becase current is not high_performance"),
+                "[DoCacheModeAlignCheck] no need simplifying for topn cache, because current is not high_performance"),
         return false);
-    OP_CHECK_IF(params->indices_num <= INDICES_MIN_NUM_FOR_CACHE,
-                OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simpiling for topn cache, but indices_num is %ld",
-                        params->indices_num),
-                return false);
-    OP_CHECK_IF(axis != 0,
-                OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simpiling for topn cache, but axis is %ld", axis),
-                return false);
+    OP_CHECK_IF(
+        params->indices_num <= INDICES_MIN_NUM_FOR_CACHE,
+        OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simplifying for topn cache, but indices_num is %ld",
+                params->indices_num),
+        return false);
+    OP_CHECK_IF(
+        axis != 0,
+        OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simplifying for topn cache, but axis is %ld", axis),
+        return false);
     OP_CHECK_IF(
         compile_info->core_num == 0,
-        OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simpiling for topn cache, but need_core_num is %ld",
+        OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simplifying for topn cache, but need_core_num is %ld",
                 compile_info->core_num),
         return false);
 
     // if input param size less than cache n number buffer, no need cache mode
     int64_t cache_n_num_max_size = (compile_info->ub_size - RESERVED_UB_SIZE) / CACHE_MODE_UB_SLICE;
     cache_n_num_max_size = cache_n_num_max_size / BLOCK_SIZE * BLOCK_SIZE;
-    OP_CHECK_IF(
-        params->params_total * compile_info->params_dsize < cache_n_num_max_size,
-        OP_LOGD("GatherV2", "[DoCacheModeAlignCheck] no need simpiling for topn cache, but cache_n_num_max_size is %ld",
-                cache_n_num_max_size),
-        return false);
+    OP_CHECK_IF(params->params_total * compile_info->params_dsize < cache_n_num_max_size,
+                OP_LOGD("GatherV2",
+                        "[DoCacheModeAlignCheck] no need simplifying for topn cache, but cache_n_num_max_size is %ld",
+                        cache_n_num_max_size),
+                return false);
 
     int64_t one_param_row_size = params->params_row * compile_info->params_dsize;
     OP_CHECK_IF(
@@ -333,8 +339,9 @@ bool DoCacheModeNotAlignCheck(int64_t axis, int64_t one_param_row_size, const Ga
 {
     OP_CHECK_IF(
         compile_info->impl_mode != IMPL_MODE_HIGH_PERFORMANCE_VALUE,
-        OP_LOGD("GatherV2",
-                "[DoCacheModeNotAlignCheck] no need simpiling for topn cache, becase current is not high_performance"),
+        OP_LOGD(
+            "GatherV2",
+            "[DoCacheModeNotAlignCheck] no need simplifying for topn cache, because current is not high_performance"),
         return false);
     OP_CHECK_IF(compile_info->params_dsize < SUPPORT_PARAM_SIZE,
                 OP_LOGD("GatherV2", "[DoCacheModeNotAlignCheck] params not support uint8/int8, but type size is :%ld",
@@ -346,11 +353,11 @@ bool DoCacheModeNotAlignCheck(int64_t axis, int64_t one_param_row_size, const Ga
         return false);
     OP_CHECK_IF(
         axis != 0,
-        OP_LOGD("GatherV2", "[DoCacheModeNotAlignCheck] no need simpiling for topn cache, but axis is %ld", axis),
+        OP_LOGD("GatherV2", "[DoCacheModeNotAlignCheck] no need simplifying for topn cache, but axis is %ld", axis),
         return false);
     OP_CHECK_IF(
         compile_info->core_num == 0,
-        OP_LOGD("GatherV2", "[DoCacheModeNotAlignCheck] no need simpiling for topn cache, but need_core_num is %ld",
+        OP_LOGD("GatherV2", "[DoCacheModeNotAlignCheck] no need simplifying for topn cache, but need_core_num is %ld",
                 compile_info->core_num),
         return false);
     int64_t six_part_ub_size = (compile_info->ub_size - RESERVED_UB_SIZE_2K) / CACHE_MODE_UB_SLICE;
@@ -377,7 +384,7 @@ bool DoCacheModeTilingNotAlian(int64_t axis, GatherV2TilingParams* params, const
     params->indices_num_remaining = params->indices_num / params->need_core_num;
     OP_CHECK_IF(params->indices_num_remaining * one_param_row_size < BLOCK_SIZE,
                 OP_LOGD("GatherV2",
-                        "[DoCacheModeTilingNotAlian] no need simpiling for topn cache, but indices_num_each_core is "
+                        "[DoCacheModeTilingNotAlian] no need simplifying for topn cache, but indices_num_each_core is "
                         "%ld, params_d_size is %ld, need_core_num is %ld",
                         params->indices_num_remaining, compile_info->params_dsize, params->need_core_num),
                 return false);
@@ -399,13 +406,14 @@ bool DoCacheModeTilingNotAlian(int64_t axis, GatherV2TilingParams* params, const
 bool DoCpuPreprocessCheck(int64_t axis, int64_t one_param_row_size, int64_t part_ub_size,
                           const GatherV2TilingParams* params, const GatherV2CompileInfo* compile_info)
 {
-    OP_CHECK_IF(part_ub_size == 0,
-                OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simpiling for topn cache, but part_ub_size is %ld",
-                        part_ub_size),
-                return false);
+    OP_CHECK_IF(
+        part_ub_size == 0,
+        OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simplifying for topn cache, but part_ub_size is %ld",
+                part_ub_size),
+        return false);
     OP_CHECK_IF(
         compile_info->is_preprocessed,
-        OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simpiling for topn cache, but is_preprocessed is %d",
+        OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simplifying for topn cache, but is_preprocessed is %d",
                 compile_info->is_preprocessed),
         return false);
 
@@ -414,12 +422,13 @@ bool DoCpuPreprocessCheck(int64_t axis, int64_t one_param_row_size, int64_t part
                         one_param_row_size),
                 return false);
     OP_CHECK_IF(axis != 0,
-                OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simpiling for topn cache, but axis is %ld", axis),
+                OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simplifying for topn cache, but axis is %ld", axis),
                 return false);
-    OP_CHECK_IF(compile_info->core_num == 0,
-                OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simpiling for topn cache, but need_core_num is %ld",
-                        compile_info->core_num),
-                return false);
+    OP_CHECK_IF(
+        compile_info->core_num == 0,
+        OP_LOGD("GatherV2", "[DoCpuPreprocessCheck] no need simplifying for topn cache, but need_core_num is %ld",
+                compile_info->core_num),
+        return false);
     int64_t one_part_ub_size = (compile_info->ub_size - RESERVED_UB_SIZE_2K) / part_ub_size;
     one_part_ub_size = one_part_ub_size / BLOCK_SIZE * BLOCK_SIZE;
     int64_t align_param_row = (one_param_row_size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
@@ -503,7 +512,7 @@ bool DoCacheModeTilingwithCpuPreprocess(int64_t axis, GatherV2TilingParams* para
     OP_CHECK_IF(
         params->indices_num_remaining * one_param_row_size < BLOCK_SIZE,
         OP_LOGD("GatherV2",
-                "[DoCacheModeTilingwithCpuPreprocess] no need simpiling for topn cache, but indices_num_remaining is "
+                "[DoCacheModeTilingwithCpuPreprocess] no need simplifying for topn cache, but indices_num_remaining is "
                 "%ld, params_dsize is %ld, need_core_num is %ld",
                 params->indices_num_remaining, compile_info->params_dsize, params->need_core_num),
         return false);
@@ -572,7 +581,7 @@ bool BlockAlignForParamsTiling(GatherV2TilingParams* params, int64_t indices_num
 
     params->row_num_once_ub = res_ub_size / (params->params_row * params_dsize);
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("GatherV2:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("GatherV2:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = params->indices_row_num_once / params->row_num_once_ub;
     if (params->indices_row_num_once % params->row_num_once_ub != 0) {
@@ -581,7 +590,7 @@ bool BlockAlignForParamsTiling(GatherV2TilingParams* params, int64_t indices_num
 
     params->row_num_last_ub = res_ub_size / (params->params_row * params_dsize);
     OP_CHECK_IF((params->row_num_last_ub == 0),
-                OP_LOGE("GatherV2:", "Devide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
+                OP_LOGE("GatherV2:", "Divide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
                 return false);
     params->inner_loop_num_last = params->indices_row_num_last / params->row_num_last_ub;
     if (params->indices_row_num_last % params->row_num_last_ub != 0) {
@@ -607,7 +616,7 @@ bool BlockLessForIndicesTiling(GatherV2TilingParams* params, int64_t indices_num
         params->row_num_once_ub = int(params->row_num_once_ub / block_num) * block_num;
     }
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = params->indices_row_num_once / params->row_num_once_ub;
     if (params->indices_row_num_once % params->row_num_once_ub != 0) {
@@ -624,7 +633,7 @@ bool BlockLessForIndicesTiling(GatherV2TilingParams* params, int64_t indices_num
         params->row_num_last_ub = int(params->row_num_last_ub / block_num) * block_num;
     }
     OP_CHECK_IF((params->row_num_last_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
                 return false);
     params->inner_loop_num_last = params->indices_row_num_last / params->row_num_last_ub;
     if (params->indices_row_num_last % params->row_num_last_ub != 0) {
@@ -656,7 +665,7 @@ bool BlockLessForParamsTiling(GatherV2TilingParams* params, int64_t indices_num_
         params->row_num_once_ub = int(params->row_num_once_ub / block_num) * block_num;
     }
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = params->indices_row_num_once / params->row_num_once_ub;
     if (params->indices_row_num_once % params->row_num_once_ub != 0) {
@@ -673,7 +682,7 @@ bool BlockLessForParamsTiling(GatherV2TilingParams* params, int64_t indices_num_
         params->row_num_last_ub = int(params->row_num_last_ub / block_num) * block_num;
     }
     OP_CHECK_IF((params->row_num_last_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
                 return false);
     params->inner_loop_num_last = params->indices_row_num_last / params->row_num_last_ub;
     if (params->indices_row_num_last % params->row_num_last_ub != 0) {
@@ -715,7 +724,7 @@ bool BlockAlignForIndicesTiling(GatherV2TilingParams* params, int64_t indices_nu
 
     params->row_num_once_ub = res_ub_size / ((params->params_row) * params_d_size);
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = (params->indices_row_num_once) / (params->row_num_once_ub);
     if ((params->indices_row_num_once) % (params->row_num_once_ub) != 0) {
@@ -724,7 +733,7 @@ bool BlockAlignForIndicesTiling(GatherV2TilingParams* params, int64_t indices_nu
 
     params->row_num_last_ub = res_ub_size / ((params->params_row) * params_d_size);
     OP_CHECK_IF((params->row_num_last_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_last_ub[%ld] exception.", params->row_num_last_ub),
                 return false);
     params->inner_loop_num_last = (params->indices_row_num_last) / (params->row_num_last_ub);
     if ((params->indices_row_num_last) % params->row_num_last_ub != 0) {
@@ -1131,7 +1140,7 @@ bool CalcCacheIndices(GatherV2TilingParams* params, int64_t indices_num_per_loop
         params->row_num_once_ub = int((params->row_num_once_ub) / align_unit) * align_unit;
     }
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = (params->indices_row_num_once) / (params->row_num_once_ub);
     if ((params->indices_row_num_once) % (params->row_num_once_ub) != 0) {
@@ -1173,7 +1182,7 @@ bool CalcWithBatchDims(GatherV2TilingParams* params, int64_t indices_num_per_loo
         params->row_num_once_ub = int((params->row_num_once_ub) / block_num) * block_num;
     }
     OP_CHECK_IF((params->row_num_once_ub == 0),
-                OP_LOGE("Gather Tiling:", "Devide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
+                OP_LOGE("Gather Tiling:", "Divide by row_num_once_ub[%ld] exception.", params->row_num_once_ub),
                 return false);
     params->inner_loop_num = (params->indices_row_num_once) / (params->row_num_once_ub);
     if ((params->indices_row_num_once) % (params->row_num_once_ub) != 0) {

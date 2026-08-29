@@ -76,7 +76,7 @@ static ge::graphStatus TilingPrepare4ScatterNd(gert::TilingParseContext* context
     auto compileInfo = context->GetCompiledInfo<ScatterNdCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
-    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterNd GRAPH_SUCESS.");
+    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterNd GRAPH_SUCCESS.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -104,7 +104,7 @@ static ge::graphStatus Tiling4ScatterNd(gert::TilingContext* context)
         return false;
     }
 
-    OP_LOGD(context->GetNodeName(), "ScatterNdTiling is ascendc. runing Smit tiling.");
+    OP_LOGD(context->GetNodeName(), "ScatterNdTiling is ascendc. running Smit tiling.");
     return TilingScatterNd(context);
 }
 

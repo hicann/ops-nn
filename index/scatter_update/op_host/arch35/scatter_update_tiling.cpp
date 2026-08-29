@@ -36,7 +36,7 @@ ge::graphStatus TilingPrepareScatterUpdateForAscendC(gert::TilingParseContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."),
+    OP_CHECK_IF((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);

@@ -106,7 +106,7 @@ static bool CheckParamValid(const aclTensor* self, int64_t k, int64_t dim)
     int64_t tmpK = (tmpDim > 0) ? inputShape.GetDim(dim) : 1;
     if (k <= 0 || k > tmpK) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Selected index k out or range (max num of self.size(%ld) is %ld, but k is %ld)", tmpDim, tmpK, k);
+                "Selected index k out of range (max num of self.size(%ld) is %ld, but k is %ld)", tmpDim, tmpK, k);
         return false;
     }
     return true;

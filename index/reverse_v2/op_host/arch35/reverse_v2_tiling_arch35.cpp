@@ -298,7 +298,7 @@ void ReverseV2Tiling::DoSimdTiling()
 {
     dimNum_ = inputShape_.size();
     int64_t reverseDimNum = reversedDims_.size();
-    //判断输入轴是否有效
+    // 判断输入轴是否有效
     if (reverseDimNum < 1 || dimNum_ < TWO_DIMS) {
         isSimd_ = false;
         return;
@@ -622,7 +622,7 @@ static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext
     workspaces[0] = WORKSPACE_SIZE;
 
     PrintTilingData4ReverseV2(context, tilingData);
-    OP_LOGD(context->GetNodeName(), "ReverseV2ToTensorMoveTilingForAscendC running END ops-nn cang.");
+    OP_LOGD(context->GetNodeName(), "ReverseV2ToTensorMoveTilingForAscendC running END.");
     return ge::GRAPH_SUCCESS;
 }
 

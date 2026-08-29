@@ -79,20 +79,20 @@ ge::graphStatus GatherNdSimtTiling::GetPlatformInfo()
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
-        OP_LOGD("GatherNdSimt", "Get aivNum form compileInfo is: %ld, ubSize: %ld", coreNum_, ubSize_);
+        OP_LOGD("GatherNdSimt", "Get aivNum from compileInfo is: %ld, ubSize: %ld", coreNum_, ubSize_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         coreNum_ = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = ubSizePlatForm;
-        OP_LOGD("GatherNdSimt", "Get aivNum form ascendcPlatform is: %ld, ubSize: %ld", coreNum_, ubSize_);
+        OP_LOGD("GatherNdSimt", "Get aivNum from ascendcPlatform is: %ld, ubSize: %ld", coreNum_, ubSize_);
     }
     OP_CHECK_IF(
         (coreNum_ <= 0 || ubSize_ <= 0),
         OP_LOGE(
             "GatherNdSimt",
-            "coreNum and ubSize should not be samller than 0, but got coreNum [%lu] and ubSize [%lu], please check.",
+            "coreNum and ubSize should not be smaller than 0, but got coreNum [%lu] and ubSize [%lu], please check.",
             coreNum_, ubSize_),
         return ge::GRAPH_FAILED);
 

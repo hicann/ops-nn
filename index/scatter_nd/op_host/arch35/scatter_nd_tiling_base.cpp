@@ -387,7 +387,7 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
 ge::graphStatus ScatterNdTiling::DoOpTiling()
 {
     if (preAxis_ == 0) {
-        OP_LOGD(opName, "ScatterNdTiling for empty input is runing");
+        OP_LOGD(opName, "ScatterNdTiling for empty input is running");
         SetTilingData();
         return ge::GRAPH_SUCCESS;
     }

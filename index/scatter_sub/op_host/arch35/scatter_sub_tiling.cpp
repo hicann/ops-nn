@@ -25,7 +25,7 @@ static ge::graphStatus Tiling4ScatterSub(gert::TilingContext* context)
     auto compileInfo = reinterpret_cast<const ScatterSubCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
-    OP_LOGD(context->GetNodeName(), "ScatterSubTiling is ascendc. runing ascendc tiling.");
+    OP_LOGD(context->GetNodeName(), "ScatterSubTiling is ascendc. running ascendc tiling.");
     return ScatterAddTilingForAscendC(context);
 }
 

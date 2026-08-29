@@ -77,7 +77,8 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
     int64_t axisAttr = *axis;
     int64_t inputDimNum = inputGradShape->GetDimNum();
     if (axisAttr < -inputDimNum || axisAttr >= inputDimNum) {
-        OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, axisAttr is %ld, not supported", axisAttr);
+        OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, axisAttr %ld is out of range, expected in [%ld, %ld)",
+                axisAttr, -inputDimNum, inputDimNum);
         return ge::GRAPH_FAILED;
     }
     if (axisAttr < 0) {

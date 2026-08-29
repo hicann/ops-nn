@@ -44,10 +44,9 @@ const int64_t RESERVED_BUFFER_SIZE = 1024;
 } // namespace
 
 namespace optiling {
-class InplaceIndexAddWithSortedTiling
-{
+class InplaceIndexAddWithSortedTiling {
 public:
-    explicit InplaceIndexAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit InplaceIndexAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
 
@@ -118,8 +117,7 @@ bool InplaceIndexAddWithSortedTiling::CheckParam()
 
     auto inputDimNum = inputShape.GetDimNum();
     if (inputDimNum > MAX_DIM_NUM) {
-        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "dim",
-            std::to_string(inputDimNum).c_str(), "<= 8");
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "dim", std::to_string(inputDimNum).c_str(), "<= 8");
         return false;
     }
     if (inputDimNum != updatesShape.GetDimNum()) {
@@ -154,7 +152,7 @@ ge::graphStatus InplaceIndexAddWithSortedTiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     coreNum = static_cast<int32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
-        OP_LOGE(tilingContext, "coreNum must greater than 0.");
+        OP_LOGE(tilingContext, "coreNum must be greater than 0.");
         return ge::GRAPH_FAILED;
     }
     ubSize = static_cast<int64_t>(compileInfo->ubSizePlatForm) - INDEX_BUFFER_SIZE - RESERVED_BUFFER_SIZE;
@@ -206,7 +204,7 @@ ge::graphStatus InplaceIndexAddWithSortedTiling::RunKernelTiling()
 void InplaceIndexAddWithSortedTiling::processFirstDimTilingData()
 {
     maxSize = (ubSize / BUF_CNT) / BLOCK_SIZE * BLOCK_SIZE;
-    maxSize /= SIZE_OF_FP32; // 转为element
+    maxSize /= SIZE_OF_FP32;       // 转为element
     maxSize = (maxSize / 16) * 16; // 元素对齐
 
     usedCoreNum = indicesCount < coreNum ? indicesCount : coreNum;
@@ -270,7 +268,7 @@ void InplaceIndexAddWithSortedTiling::TilingDataSet()
 
     tilingContext->SetBlockDim(usedCoreNum);
     tilingContext->SetTilingKey(static_cast<uint64_t>(tilingKey));
-    
+
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize;
 }
@@ -324,8 +322,8 @@ ge::graphStatus TilingPrepareForInplaceIndexAddWithSorted(gert::TilingParseConte
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

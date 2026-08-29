@@ -144,7 +144,7 @@ static ge::graphStatus GatherCommonInfer(gert::InferShapeContext* context, const
     OP_CHECK_IF(x_real_dim_cnt < 1,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x dim num",
                                                       std::to_string(x_real_dim_cnt).c_str(),
-                                                      "The value of x dim num must be greater than 1"),
+                                                      "The value of x dim num must be greater than or equal to 1"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(!CheckAndUpdateAxis(context, batch_dims, axis, gather_info),

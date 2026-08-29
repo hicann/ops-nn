@@ -123,7 +123,7 @@ static inline bool CheckOutShape(const aclTensor* self, const aclIntArray* outpu
 
     OP_CHECK(oT == gradOutputD && oH == gradOutputH && oW == gradOutputW,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Inconsistant gradOutput size. oT= %ld, oH= %ld, oW= %ld."
+                     "Inconsistent gradOutput size. oT= %ld, oH= %ld, oW= %ld."
                      " gradOutput: %ld x %ld x %ld.",
                      oT, oH, oW, gradOutputD, gradOutputH, gradOutputW),
              return false);

@@ -821,7 +821,7 @@ static void ComputeInitOutputUbParams(const int32_t& ids_ele_num, const int32_t&
 
     int32_t output_ub_init_times = 0;
     int32_t output_ub_init_last_repeat_time = 0;
-    OP_LOGD("UnsorteSegmentSum",
+    OP_LOGD("UnsortedSegmentSum",
             "#e_size_align is %d, ids_ele_num is %d, repeat_pad is %d, sheng is %d, col_sub_block is %d, mode is %d",
             e_size_align, ids_ele_num, repeat_pad, sheng, col_sub_block, mode);
     if (repeat_times % MAX_REPEAT_TIME == 0) {
@@ -2409,7 +2409,7 @@ ge::graphStatus Tiling4SegmentSumComm(gert::TilingContext* context, const int32_
     } else if (input_dtype == ge::DT_INT32 || input_dtype == ge::DT_FLOAT16) {
         if (CalcTiling4Int(context, input_dtype, output_ub_ele_num_one_row, num_segments, e_size, input_size, ids_size,
                            input_ele_byte, ids_ele_byte) != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context->GetNodeName(), "exec CCalcTilingForInt failed.");
+            OP_LOGE(context->GetNodeName(), "exec CalcTilingForInt failed.");
 
             return ge::GRAPH_FAILED;
         }

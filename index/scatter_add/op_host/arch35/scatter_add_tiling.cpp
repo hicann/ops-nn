@@ -44,7 +44,7 @@ static ge::graphStatus TilingPrepare4ScatterAdd(gert::TilingParseContext* contex
 {
     auto compile_info = context->GetCompiledInfo<ScatterAddCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterAdd GRAPH_SUCESS.");
+    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterAdd GRAPH_SUCCESS.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -55,10 +55,10 @@ void CalAtomicBranchRunningParams(gert::TilingContext* context, ScatterAddTiling
 {
     int64_t update_size_byte = cal_params.var_size * cal_params.updates_num;
     int64_t half_ub_size = cal_params.ub_size / 2;
-    OP_CHECK_IF(half_ub_size == 0, OP_LOGE(context->GetNodeName(), "half_ub_size = 0 is not support"), return );
-    OP_CHECK_IF(cal_params.var_size == 0, OP_LOGE(context->GetNodeName(), "var_size = 0 is not support"), return );
+    OP_CHECK_IF(half_ub_size == 0, OP_LOGE(context->GetNodeName(), "half_ub_size = 0 is not support"), return);
+    OP_CHECK_IF(cal_params.var_size == 0, OP_LOGE(context->GetNodeName(), "var_size = 0 is not support"), return);
     OP_CHECK_IF(cal_params.indices_size == 0, OP_LOGE(context->GetNodeName(), "indices_size = 0 is not support"),
-                return );
+                return);
     tiling_data_ptr->updates_loop_num = cal_params.updates_data_num / (half_ub_size / cal_params.var_size);
     tiling_data_ptr->updates_last_num = cal_params.updates_data_num % (half_ub_size / cal_params.var_size);
     tiling_data_ptr->indices_loop_num = cal_params.indices_num / (half_ub_size / cal_params.indices_size);
@@ -91,13 +91,13 @@ void CalNotAtomicBranchRunningParams(gert::TilingContext* context, ScatterAddTil
     int64_t update_size_byte = cal_params.var_size * cal_params.updates_num;
     int64_t var_ub_size = cal_params.ub_size / 8 * 3;
     int64_t indices_ub_size = cal_params.ub_size / 8 * 2;
-    OP_CHECK_IF(cal_params.var_size == 0, OP_LOGE(context->GetNodeName(), "var_size = 0 is not support"), return );
+    OP_CHECK_IF(cal_params.var_size == 0, OP_LOGE(context->GetNodeName(), "var_size = 0 is not support"), return);
     OP_CHECK_IF(cal_params.indices_size == 0, OP_LOGE(context->GetNodeName(), "indices_size = 0 is not support"),
-                return );
-    OP_CHECK_IF(var_ub_size == 0, OP_LOGE(context->GetNodeName(), "var_ub_size = 0 is not support"), return );
-    OP_CHECK_IF(indices_ub_size == 0, OP_LOGE(context->GetNodeName(), "indices_ub_size = 0 is not support"), return );
+                return);
+    OP_CHECK_IF(var_ub_size == 0, OP_LOGE(context->GetNodeName(), "var_ub_size = 0 is not support"), return);
+    OP_CHECK_IF(indices_ub_size == 0, OP_LOGE(context->GetNodeName(), "indices_ub_size = 0 is not support"), return);
     OP_CHECK_IF(cal_params.var_data_each_block == 0,
-                OP_LOGE(context->GetNodeName(), "var_data_each_block = 0 is not support"), return );
+                OP_LOGE(context->GetNodeName(), "var_data_each_block = 0 is not support"), return);
     tiling_data_ptr->var_loop_num = cal_params.var_num / (var_ub_size / cal_params.var_size);
     tiling_data_ptr->var_last_num = cal_params.var_num % (var_ub_size / cal_params.var_size);
     tiling_data_ptr->updates_loop_num = cal_params.updates_data_num / (var_ub_size / cal_params.var_size);
@@ -154,12 +154,12 @@ void CalScatterAddHighPerfBranchParams(gert::TilingContext* context, ScatterAddT
                                        CalParams& cal_params)
 {
     int64_t half_ub_size = cal_params.ub_size / DATA_TWO;
-    OP_CHECK_IF(half_ub_size == 0, OP_LOGE(context->GetNodeName(), "half_ub_size = 0 is not support"), return );
-    OP_CHECK_IF(cal_params.core_num == 0, OP_LOGE(context->GetNodeName(), "core_num = 0 is not support"), return );
+    OP_CHECK_IF(half_ub_size == 0, OP_LOGE(context->GetNodeName(), "half_ub_size = 0 is not support"), return);
+    OP_CHECK_IF(cal_params.core_num == 0, OP_LOGE(context->GetNodeName(), "core_num = 0 is not support"), return);
     OP_CHECK_IF(cal_params.indices_size == 0, OP_LOGE(context->GetNodeName(), "indices_size = 0 is not support"),
-                return );
+                return);
     OP_CHECK_IF(cal_params.var_data_each_block == 0,
-                OP_LOGE(context->GetNodeName(), "var_data_each_block = 0 is not support"), return );
+                OP_LOGE(context->GetNodeName(), "var_data_each_block = 0 is not support"), return);
     tiling_data_ptr->tiling_mode = TILING_MODE_16;
     tiling_data_ptr->updates_data_num = cal_params.updates_data_num;
     tiling_data_ptr->indices_each_core_data = ceil(float(cal_params.indices_num) / cal_params.core_num);

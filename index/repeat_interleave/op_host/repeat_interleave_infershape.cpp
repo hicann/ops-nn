@@ -83,7 +83,9 @@ static graphStatus InferShape4RepeatInterleave(gert::InferShapeContext* context)
     int64_t xDimNum = xShape->GetDimNum();
     int64_t axisAttr = *axis;
     if (axisAttr < -xDimNum || axisAttr >= xDimNum) {
-        OP_LOGE(context->GetNodeName(), "InferShape4RepeatInterleave FAILED, axisAttr is %ld, not support", axisAttr);
+        OP_LOGE(context->GetNodeName(),
+                "InferShape4RepeatInterleave FAILED, axisAttr %ld is out of range, expected in [%ld, %ld)", axisAttr,
+                -xDimNum, xDimNum);
         return ge::GRAPH_FAILED;
     }
     if (axisAttr < 0) {

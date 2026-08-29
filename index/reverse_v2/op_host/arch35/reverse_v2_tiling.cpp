@@ -37,7 +37,7 @@ bool GetAxisToReverseRunInfo(const gert::TilingContext* context, const gert::Sha
     const size_t input_x_rank = x_shape.GetDimNum();
     if (axes_num > input_x_rank) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes", std::to_string(axes_num).c_str(),
-                                              "axes cannot greater then input rank");
+                                              "axes count cannot be greater then input rank");
         return false;
     }
     run_info.real_shape_size = input_x_rank;
@@ -146,7 +146,7 @@ static void MergedAxes(ReverseRunInfo& run_info)
 
 static void InsertAxes(ReverseRunInfo& run_info, const int64_t split_factor)
 {
-    OP_CHECK_IF(split_factor == 0, OP_LOGE("InsertAxes", "split_factor = 0 is not support"), return );
+    OP_CHECK_IF(split_factor == 0, OP_LOGE("InsertAxes", "split_factor = 0 is not support"), return);
     run_info.reverse_shape[run_info.merged_wr_idx] = run_info.reverse_shape[run_info.merged_wr_idx] / split_factor;
     run_info.merged_wr_idx -= 1;
     run_info.reverse_shape[run_info.merged_wr_idx] = split_factor;
@@ -353,7 +353,7 @@ static ge::graphStatus Tiling4ReverseV2(gert::TilingContext* context)
     OP_LOGD(context->GetNodeName(), "after GetAxisToReverseRunInfo, run info: %s.",
             run_info.OriginInfoToString().c_str());
     OP_CHECK_IF(run_info.shape_size == 0,
-                OP_LOGE(context->GetNodeName(), "reverse donot support empty tensor, shape is %s.",
+                OP_LOGE(context->GetNodeName(), "reverse does not support empty tensor, shape is %s.",
                         Ops::Base::ToString(x_shape).c_str()),
                 return ge::GRAPH_FAILED);
 
@@ -399,7 +399,7 @@ static ge::graphStatus TilingPrepareReverseV2ForAscendC(gert::TilingParseContext
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."),
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
@@ -423,21 +423,21 @@ static ge::graphStatus TilingPrepare4ReverseV2(gert::TilingParseContext* context
     const nlohmann::json& vars = (*parsed_object_cinfo)["vars"];
     OP_CHECK_IF(vars.empty(), OP_LOGE(context->GetNodeName(), "get vars failed."), return ge::GRAPH_FAILED);
     uint32_t core_num = 0;
-    OP_CHECK_IF(!GetTilingCoreNum(context, core_num), OP_LOGE(context->GetNodeName(), "get core_num from GE faided."),
+    OP_CHECK_IF(!GetTilingCoreNum(context, core_num), OP_LOGE(context->GetNodeName(), "get core_num from GE failed."),
                 return ge::GRAPH_FAILED);
     compile_info->core_num = static_cast<int64_t>(core_num);
     OP_CHECK_IF(!ReadCompileItem(vars, "max_elements", compile_info->max_elements),
-                OP_LOGE(context->GetNodeName(), "get max_elements from compile info faided."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "get max_elements from compile info failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!ReadCompileItem(vars, "max_elements_last_large_size", compile_info->max_elements_last_large_size),
-                OP_LOGE(context->GetNodeName(), "get max_elements_last_large_size from compile info faided."),
+                OP_LOGE(context->GetNodeName(), "get max_elements_last_large_size from compile info failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!ReadCompileItem(vars, "dtype_rate", compile_info->dtype_rate),
-                OP_LOGE(context->GetNodeName(), "get dtype_rate from compile info faided."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "get dtype_rate from compile info failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!ReadCompileItem(vars, "topk_threshold", compile_info->topk_threshold),
-                OP_LOGE(context->GetNodeName(), "get topk_threshold from compile info faided."),
+                OP_LOGE(context->GetNodeName(), "get topk_threshold from compile info failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!ReadCompileItem(vars, "is_vconcat", compile_info->is_vconcat),
-                OP_LOGE(context->GetNodeName(), "get is_vconcat from compile info faided."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "get is_vconcat from compile info failed."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

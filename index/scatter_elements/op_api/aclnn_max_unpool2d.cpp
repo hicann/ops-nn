@@ -90,7 +90,7 @@ static bool CheckInpuNullTensor(const aclTensor* self)
     for (size_t i = 1; i < dimNum; ++i) {
         if (inputShape.GetDim(i) <= 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "max_unpool2d():expected input to have non-empty spatiak dimensions, "
+                    "max_unpool2d():expected input to have non-empty spatial dimensions, "
                     "but input has sizes %zu with dimension %zu being empty.",
                     dimNum, i);
             return false;
@@ -121,7 +121,7 @@ static bool CheckOutputSize(const aclTensor* self, const aclIntArray* outputSize
     }
     OP_CHECK(((*outputSize)[0] * (*outputSize)[1]) >= (dimH * dimW),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "The output volums are of size %ld x %ld, should greater than or equal to "
+                     "The output volumes are of size %ld x %ld, should greater than or equal to "
                      "self of size %ld x %ld.",
                      (*outputSize)[0], (*outputSize)[1], dimH, dimW),
              return false);
