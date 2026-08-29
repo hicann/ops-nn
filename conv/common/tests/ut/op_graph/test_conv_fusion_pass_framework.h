@@ -44,6 +44,9 @@ struct TensorInfo {
     {
         tensorDesc.SetDataType(dataType);
         tensorDesc.SetFormat(dataFormat);
+        tensorDesc.SetShape(Shape(tensorShape));
+        tensorDesc.SetOriginFormat(dataFormat);
+        tensorDesc.SetOriginShape(Shape(tensorShape));
     }
 
     TensorInfo& SetDtype(DataType dataType)
@@ -130,7 +133,7 @@ struct SocConfig {
 // ============================================================================
 
 struct NodeConfig {
-    NodeConfig(const std::string& nodeName = "") : name(nodeName) {}
+    explicit NodeConfig(const std::string& nodeName = "") : name(nodeName) {}
 
     NodeConfig& SetName(const std::string& nodeName)
     {
@@ -776,7 +779,7 @@ struct FilterBranchOptions {
 
 class TestGraph {
 public:
-    TestGraph(const std::string& name = "test_graph") : graphName(name), graphBuilder(name.c_str()) {}
+    explicit TestGraph(const std::string& name = "test_graph") : graphName(name), graphBuilder(name.c_str()) {}
 
     TestGraph& SetSoc(const SocConfig& socConfig)
     {
@@ -1022,8 +1025,9 @@ public:
         tensorDesc.SetDataType(dtype);
         tensorDesc.SetFormat(format);
         auto it = nodeMap.find(nodeName);
-
-        it->second.UpdateInputDesc(index, tensorDesc);
+        if (it != nodeMap.end()) {
+            it->second.UpdateInputDesc(index, tensorDesc);
+        }
     }
 
     void UpdateNodeOutputDesc(const std::string& nodeName, int32_t index, DataType dtype, Format format)
@@ -1032,8 +1036,9 @@ public:
         tensorDesc.SetDataType(dtype);
         tensorDesc.SetFormat(format);
         auto it = nodeMap.find(nodeName);
-
-        it->second.UpdateOutputDesc(index, tensorDesc);
+        if (it != nodeMap.end()) {
+            it->second.UpdateOutputDesc(index, tensorDesc);
+        }
     }
 
     void UpdateNodeInputDescEx(const std::string& nodeName, int32_t index, const TensorDesc& tensorDesc)
@@ -1283,12 +1288,12 @@ public:
         return true;
     }
 
-    static bool GetListIntAttr(const GNode &node, const char *attrName, std::vector<int64_t> &value)
+    static bool GetListIntAttr(const GNode& node, const char* attrName, std::vector<int64_t>& value)
     {
         return node.GetAttr(AscendString(attrName), value) == GRAPH_SUCCESS;
     }
 
-    static bool GetNodeName(const GNode &node, std::string &name)
+    static bool GetNodeName(const GNode& node, std::string& name)
     {
         AscendString nodeName;
         if (node.GetName(nodeName) != GRAPH_SUCCESS) {
@@ -1298,7 +1303,7 @@ public:
         return true;
     }
 
-    static bool GetInputProducerType(const GNode &node, int32_t inputIdx, std::string &producerType)
+    static bool GetInputProducerType(const GNode& node, int32_t inputIdx, std::string& producerType)
     {
         auto producerPair = node.GetInDataNodesAndPortIndexs(inputIdx);
         if (producerPair.first == nullptr) {
@@ -1312,14 +1317,14 @@ public:
         return true;
     }
 
-    static bool HasOutEdgeTo(const GNode &src, int32_t srcOutIdx, const GNode &dst, int32_t dstInIdx)
+    static bool HasOutEdgeTo(const GNode& src, int32_t srcOutIdx, const GNode& dst, int32_t dstInIdx)
     {
         std::string dstName;
         if (!GetNodeName(dst, dstName)) {
             return false;
         }
         auto consumers = src.GetOutDataNodesAndPortIndexs(srcOutIdx);
-        for (const auto &consumerPair : consumers) {
+        for (const auto& consumerPair : consumers) {
             if (consumerPair.first == nullptr || consumerPair.second != dstInIdx) {
                 continue;
             }
