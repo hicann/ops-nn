@@ -121,6 +121,7 @@ private:
                                             const LocalTensor<int32_t>& bestIdxBuf, int64_t bIdx, int64_t k0,
                                             int64_t k1);
     __aicore__ inline void ReduceChunk(int64_t len, float& segMin, int32_t& segIdx);
+    __aicore__ inline int32_t FirstNanIndex(const LocalTensor<float>& distBuf, int64_t len);
     __aicore__ inline void FlushOut(const GlobalTensor<T>& distGm, const GlobalTensor<int32_t>& idxGm, int64_t taskBase,
                                     int64_t count);
 
@@ -164,12 +165,15 @@ private:
 
 protected:
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
+    constexpr static int64_t BITS_PER_BYTE = 8;
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
     // 查询点分块大小(32B 的整数倍; 决定候选块的复用次数)
     constexpr static int64_t QUERY_TILE = 64;
     // 跨段最小值的初值必须是 +inf, 不能用 3.4e38 之类的"极大值"哨兵:
     // 坐标取到 fp32 极值域时真实距离会溢出成 inf, 而 `inf < 3.4e38` 为假 → 哨兵反而赢过真实值,
     // 输出 3.4e38 而不是 inf(真机实测过的缺陷)。
+    // 注意: 只把本文件的哨兵定成 +inf 并不足够 —— AscendC::ReduceMin 内部的累加器初值同样是
+    // FLT_MAX, 同一缺陷会从库函数入口漏回来。段内归约后的还原见 ReduceSegment 的 ②。
     constexpr static float DIST_INIT_VALUE = __builtin_inff();
 };
 
@@ -325,6 +329,73 @@ __aicore__ inline void ChamferDistanceND<T>::ReduceChunk(int64_t len, float& seg
     AscendC::WaitFlag<HardEvent::V_S>(eventVToS);
     segMin = redBuf.GetValue(0);
     segIdx = static_cast<int32_t>(redBuf.template ReinterpretCast<uint32_t>().GetValue(1));
+
+    // ── 归约结果的两处还原(实测缺陷, 见下) ──────────────────────────────────
+    // ① NaN: AscendC::ReduceMin 会被段内任一 NaN 污染成 NaN, 但它给回的下标不是"首个
+    //    NaN"。torch.min(golden 用的就是它)的语义是 NaN 传播且取首个 NaN 的下标, 故这里
+    //    自行扫出首个 NaN。该分支只在段内出现 NaN 时进入, 正常数据的热路径不受影响。
+    // NaN 判定用 IEEE 自比不等: arch35 这条编译链没有 isnan(), AscendC 也未提供 NaN 判定
+    // API —— 仓内用 isnan 的算子(foreach_minimum 家族、max_pool*_argmax、adaptive_max_pool*)
+    // 走的都是 SIMT 或 arch22 路径, 本文件走不到。语义与 isnan 完全一致。
+    if (segMin != segMin) {
+        segIdx = FirstNanIndex(distBuf, len);
+        return;
+    }
+    // ② +inf 被截断成 FLT_MAX: ReduceMin 内部以 GetMaxValue<float>() = FLT_MAX 作累加器
+    //    初值(dav_3510/kernel_operator_vec_reduce_impl.h 的 ReduceIndexTemplate),
+    //    Min(FLT_MAX, +inf) = FLT_MAX。于是整段距离全为 +inf 时归约出 FLT_MAX 而非 +inf,
+    //    再被跨段"严格小于"顶掉 +inf 哨兵, 最终输出 3.4028235e38。
+    //    真机实测: 坐标取 [2e19,3e19] 与 [-3e19,-2e19] 时 64/64 个输出恰为 FLT_MAX、
+    //    inf 计数为 0, 而竞品(torch 与 pytorch3d)和 A2 在同一输入下都给 +inf。
+    //    segMin == FLT_MAX 只可能来自"整段全 +inf"或"恰好等于 FLT_MAX 的真实距离"
+    //    (后者是零测集, 且本身已在溢出边界), 统一还原成 +inf。
+    if (segMin == AscendC::NumericLimits<float>::Max()) {
+        segMin = DIST_INIT_VALUE;
+    }
+}
+
+// 段内**首个** NaN 的下标, 向量实现。
+// 做法与仓内同类算子一致(adaptive_max_pool3d 的 GetMask + GetIndexWithLastNan):
+//   ① Compare(EQ) 自比得掩码 —— NaN 是唯一不等于自己的值, 故掩码为 1 的位置是非 NaN;
+//   ② Select 把 NaN 位置换成 -inf(非 NaN 位置保留原距离), 一次 ReduceMin(calIndex=true)
+//      即得 -inf 及其下标, 也就是首个 NaN 的下标(ReduceMin 并列取先出现者)。
+// 与该算子的差别: 它取**最后一个** NaN(GetIndexWithLastNan, 用 Select+ReduceMax);
+// 本算子的 golden 是 torch.min, 实测 torch 的 min/max 在 NaN 时都返回**首个** NaN 的
+// 下标, 故这里用 ReduceMin 取首个。
+// 尾部对齐区先填 0(非 NaN), 否则 padding 会被 Compare 当成有效元素参与判定。
+template <typename T>
+__aicore__ inline int32_t ChamferDistanceND<T>::FirstNanIndex(const LocalTensor<float>& distBuf, int64_t len)
+{
+    // 掩码复用 workBuf_(ReduceMin 的 work tensor): 掩码在 Select 之后即失效, 而 workBuf
+    // 要到随后的 ReduceMin 才被写, 两者生命周期不重叠。**不新开 buffer** 是有意为之 ——
+    // 新增 UB 会改变 host 侧 bytesPerPoint 的预算, 一旦 host/kernel 两边没同步就会把
+    // 正常形状挤出分块(实测: 只改 kernel 不改 host 时, bf16 直接 INVALID_TILING)。
+    // arch35 的 Compare 只接受 uint8_t/int8_t 掩码(arch22 才是 uint16_t)。
+    // 容量不变式(恒成立, 与 dtype/shape 无关): 掩码需 cmpLen/8 字节, 而
+    //   cmpLen = AlignUp(len, VL) <= AlignUp(colsPerChunk_, VL) = chunkAlign  (len <= colsPerChunk_),
+    //   workBuf_ = chunkAlign * sizeof(float) = 4 * chunkAlign 字节,
+    // 故余量恒为 32 倍; 最小分块(colsPerChunk_ = VL = 64)时是 256B 对 8B。
+    // 若日后有人缩小 workBuf_ 或改变 chunkAlign 的定义, 需重核这条不变式。
+    LocalTensor<uint8_t> nanMask = workBuf_.template Get<uint8_t>();
+    LocalTensor<float> workBuf = workBuf_.template Get<float>();
+    LocalTensor<float> redBuf = redBuf_.template Get<float>();
+
+    const int64_t cmpLen = AlignUp(len, static_cast<int64_t>(VL_FP32));
+    if (cmpLen > len) {
+        AscendC::Duplicate(distBuf[len], 0.0f, static_cast<int32_t>(cmpLen - len));
+        AscendC::PipeBarrier<PIPE_V>();
+    }
+    AscendC::Compare(nanMask, distBuf, distBuf, AscendC::CMPMODE::EQ, static_cast<int32_t>(cmpLen));
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(distBuf, nanMask, distBuf, AscendC::NumericLimits<float>::NegativeInfinity(),
+                    AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, static_cast<int32_t>(cmpLen));
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::ReduceMin<float>(redBuf, distBuf, workBuf, static_cast<int32_t>(cmpLen), true);
+
+    event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    AscendC::SetFlag<HardEvent::V_S>(eventVToS);
+    AscendC::WaitFlag<HardEvent::V_S>(eventVToS);
+    return static_cast<int32_t>(redBuf.template ReinterpretCast<uint32_t>().GetValue(1));
 }
 
 template <typename T>
@@ -367,8 +438,16 @@ __aicore__ inline void ChamferDistanceND<T>::ScanBatchSegment(
             float segMin = DIST_INIT_VALUE;
             int32_t segIdx = 0;
             ReduceChunk(len, segMin, segIdx);
-            // 严格小于: 并列时保留更早的段, 与"取最小下标"一致
-            if (segMin < bestBuf.GetValue(k)) {
+            // 严格小于: 并列时保留更早的段, 与"取最小下标"一致。
+            // NaN 具吸收性: 任一候选距离为 NaN 时结果恒为 NaN(与 golden 的 torch.min 一致);
+            // 且一旦置成 NaN 就不再被后续段覆盖, 使下标停在**首个** NaN 上。
+            // 不加这两个判断时 `NaN < cur` 恒为假, NaN 段会被整段跳过 —— 真机实测:
+            // 一半候选为 NaN、一半有限时, NPU 输出 +inf(连有限的那一半也丢了),
+            // 而 golden/torch 给 NaN。
+            const float cur = bestBuf.GetValue(k);
+            const bool curIsNan = (cur != cur); // 自比不等即 NaN, 理由同 ReduceChunk
+            const bool segIsNan = (segMin != segMin);
+            if (!curIsNan && (segIsNan || segMin < cur)) {
                 bestBuf.SetValue(k, segMin);
                 bestIdxBuf.SetValue(k, static_cast<int32_t>(colOff) + segIdx);
             }

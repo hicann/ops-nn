@@ -29,10 +29,6 @@ __spec__ = {
 }
 
 # 判据: 浮点输出配 cross_check 才会去取三方数据; L1 见 verification.md §5.2
-_TOL = {
-    "float32": {"standard": "cross_check", "level": "L1"},
-    "float16": {"standard": "cross_check", "level": "L1"},
-}
 
 
 def _attr(kwargs, name, default):
@@ -67,7 +63,10 @@ def _compute(pred, target, dout, weight=None, **kwargs):
     """
     gamma = _attr(kwargs, "gamma", 2.0)
     alpha = _attr(kwargs, "alpha", 0.25)
-    reduction = _attr(kwargs, "reduction", "mean")
+    # reduction 大小写不敏感: 内核侧 ParseReduction 先 tolower 再比对(对齐 A2 的
+    # canndev softmax_focal_loss_grad.py: reduction.lower() 落在 {none,mean,sum} 内),
+    # golden 这里若按字面比较, "MEAN" 会被当成非 mean 而漏掉 1/numel 缩放。
+    reduction = str(_attr(kwargs, "reduction", "mean")).lower()
 
     dt = pred.dtype
     if dt in (torch.float16, torch.bfloat16):
@@ -139,7 +138,7 @@ class _Compose:
     def __init__(self, gamma=2.0, alpha=0.25, reduction="mean", **kwargs):
         self.gamma = float(gamma)
         self.alpha = float(alpha)
-        self.reduction = str(reduction)
+        self.reduction = str(reduction).lower()  # 同上: 大小写不敏感
 
     def __call__(self, pred, target, dout, weight=None, **kwargs):
         out_dtype = pred.dtype
@@ -185,7 +184,6 @@ class SoftmaxFocalLossGradKernelSpec:
         ]
 
     third_party = {"torch": _Compose}
-    tolerance = _TOL
 
 
 # 【不存在】aclnn 通路: canndev 老树 ops/built-in/op_api 与新树 ops/ 下均无

@@ -42,8 +42,8 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND});
 
-        this->Attr("gamma").AttrType(OPTIONAL).Float(2.0);
         this->Attr("alpha").AttrType(OPTIONAL).Float(0.25);
+        this->Attr("gamma").AttrType(OPTIONAL).Float(2.0);
         this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
         OpAICoreConfig aicoreConfig;

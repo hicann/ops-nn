@@ -13,6 +13,9 @@
  * \brief softmax_focal_loss tiling for ascend950
  */
 
+#include <algorithm>
+#include <cctype>
+#include <string>
 #include <cstring>
 #include "error_util.h"
 #include "register/op_def_registry.h"
@@ -35,6 +38,7 @@ constexpr uint32_t OUTPUT_Y_IDX = 0;
 
 constexpr uint32_t ATTR_GAMMA_IDX = 0;
 constexpr uint32_t ATTR_ALPHA_IDX = 1;
+constexpr uint32_t ATTR_REDUCTION_IDX = 2;
 
 constexpr int64_t DTYPE_LEN_FP16 = 2;
 constexpr int64_t DTYPE_LEN_FP32 = 4;
@@ -49,6 +53,21 @@ constexpr int64_t ACC_ALIGN_ELEM = 8;
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 constexpr int32_t TILING_ITER = 2;
+
+// 本算子不做跨样本归约: 输出 shape 恒等于 pred(infershape 钉死), 一行内所有元素同值 = Σce × Σfw,
+// 装不下 mean/sum 需要的标量。A2(canndev softmax_focal_loss.py:211) 同样只放行 "none", 其余取值报错。
+// 这里做同样的闸, 避免"接受了一个自己不实现的取值"后静默按 none 返回。大小写不敏感(A2 侧同为宽松比较)。
+ge::graphStatus CheckReduction(gert::TilingContext* context, const char* reduction)
+{
+    std::string red(reduction);
+    std::transform(red.begin(), red.end(), red.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (red != "none") {
+        OP_LOGE(context->GetNodeName(), "attr reduction only supports none, got %s", reduction);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
 } // namespace
 
 class SoftmaxFocalLossTiling {
@@ -237,6 +256,17 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
     OP_CHECK_IF((dimNum < 1),
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "pred", std::to_string(dimNum), "> 0"),
                 return ge::GRAPH_FAILED);
+    // 任一维长度为 0 时输入退化为空张量, 类别维语义随之失效(对 0 个类别做归约无定义)。
+    // 对齐 A2: 前向 softmax_focal_loss.py 把动态 shape 的取值范围声明为 [(1, None), (1, None)]
+    // (每维下界为 1、不含 0), 反向 tiling 更是逐维查 0 直接报错。
+    for (size_t i = 0; i < dimNum; ++i) {
+        OP_CHECK_IF((storageShape.GetDim(i) == 0),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "pred",
+                                                          Ops::Base::ToString(storageShape).c_str(),
+                                                          "must not contain a zero-sized dim"),
+                    return ge::GRAPH_FAILED);
+    }
+
     tilingData_->r = storageShape.GetDim(dimNum - 1);
     tilingData_->a = (tilingData_->r == 0) ? 0 : storageShape.GetShapeSize() / tilingData_->r;
 
@@ -257,6 +287,16 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
         if (alpha != nullptr) {
             tilingData_->alpha = *alpha;
         }
+    }
+    // 缺省值取 "none"(本算子唯一支持的取值), 属性未下发时按缺省处理即可通过。
+    // 【已批准差异】A2 的 IR 缺省是 "mean", 但 A2 实现同样只放行 "none", 那个缺省值在 A2 上必然报错、
+    // 不可用; 此处把缺省对齐到支持面内, 避免"缺省即非法"。
+    const char* reduction = nullptr;
+    if (attrNum > ATTR_REDUCTION_IDX) {
+        reduction = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
+    }
+    if (CheckReduction(context_, reduction == nullptr ? "none" : reduction) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
     CalCoreSplit();

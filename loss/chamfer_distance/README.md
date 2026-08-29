@@ -35,7 +35,6 @@
 
   - batch之间相互独立，两组点集的点数$N$必须相同。
   - 存在并列最小值时，取下标最小者。
-  - 中间计算统一使用FLOAT精度，FLOAT16与BFLOAT16输入先转FLOAT参与运算，最后转回输出数据类型。
 
 ## 参数说明
 
@@ -55,6 +54,7 @@
 - dist1、dist2的数据类型与xyz1一致；idx1、idx2的数据类型固定为INT32。
 - 输出的shape由xyz1的第1、2维决定，即$(B, N)$。
 - BFLOAT16仅<term>Ascend 950PR/Ascend 950DT</term>支持，其余产品的数据类型支持FLOAT16、FLOAT。
+- xyz1的$B$或$N$为0时（两组点集同时为空），dist1、dist2、idx1、idx2输出对应的空Tensor，算子正常返回。
 - 坐标取值含inf或nan时，按IEEE规则参与比较与传播，不做拦截。
 
 ## 调用说明

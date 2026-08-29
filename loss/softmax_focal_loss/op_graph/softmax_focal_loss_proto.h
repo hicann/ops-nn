@@ -25,7 +25,9 @@ namespace ge {
 *@par Inputs:
 *Three inputs, including:
 * @li pred: A Tensor. Must be one of the following types: float16, float32.
-*The probabilities produced by a preceding softmax, shape "batch_size * num_classes".
+*The probabilities produced by a preceding softmax. The last axis is the class axis and the
+*remaining axes are sample axes. On <term>Ascend 950PR/Ascend 950DT</term> any rank >= 1 is
+*accepted; the other products only support the two-dimensional form "batch_size * num_classes".
 * @li target: A Tensor of type int32. The one-hot ground truth, same shape as "pred".
 * @li weight: An optional Tensor. Must be one of the following types: float16, float32.
 *Per-element weight, same shape as "pred". Treated as all ones when absent. \n
@@ -33,8 +35,10 @@ namespace ge {
 *@par Attributes:
 * @li gamma: An optional float. Exponential coefficient of the focal loss. Defaults to "2.0".
 * @li alpha: An optional float. Weighted coefficient of the focal loss. Defaults to "0.25".
-* @li reduction: An optional string. Defaults to "mean". The compute side performs no reduction,
-*so the output always has the same shape as "pred". \n
+* @li reduction: An optional string. Defaults to "none". Only "none" is supported; any other value is
+*rejected, because the output always has the same shape as "pred" and cannot carry the scalar result
+*that "mean"/"sum" would produce. The default differs from the "mean" declared on other products,
+*where that default is rejected by the implementation and therefore unusable. \n
 
 *@par Outputs:
 *y: A Tensor. Has the same type and shape as "pred". All elements within one row share the same
@@ -49,7 +53,7 @@ REG_OP(SoftmaxFocalLoss)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(gamma, Float, 2.0)
     .ATTR(alpha, Float, 0.25)
-    .ATTR(reduction, String, "mean")
+    .ATTR(reduction, String, "none")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
 #endif // OPS_PROTO_DEF_SOFTMAXFOCALLOSS
 

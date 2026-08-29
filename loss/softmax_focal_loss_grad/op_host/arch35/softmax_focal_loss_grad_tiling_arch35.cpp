@@ -13,7 +13,10 @@
  * \brief softmax_focal_loss_grad tiling for ascend950
  */
 
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <string>
 #include "error_util.h"
 #include "register/op_def_registry.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -33,8 +36,10 @@ constexpr uint32_t INPUT_TARGET_IDX = 1;
 constexpr uint32_t INPUT_DOUT_IDX = 2;
 constexpr uint32_t INPUT_WEIGHT_IDX = 3;
 
-constexpr uint32_t ATTR_GAMMA_IDX = 0;
-constexpr uint32_t ATTR_ALPHA_IDX = 1;
+// 顺序对齐 A2 既有 IR：SoftmaxFocalLossGrad 是 alpha 在前、gamma 在后
+// （注意与前向 SoftmaxFocalLoss 相反，A2 本身两者就不一致，按各自的基线来）
+constexpr uint32_t ATTR_ALPHA_IDX = 0;
+constexpr uint32_t ATTR_GAMMA_IDX = 1;
 constexpr uint32_t ATTR_REDUCTION_IDX = 2;
 
 constexpr int64_t DTYPE_LEN_FP16 = 2;
@@ -49,6 +54,24 @@ constexpr int64_t ACC_ALIGN_ELEM = 8;
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 constexpr int32_t TILING_ITER = 2;
+// reduction 的取值集合与大小写规则对齐 A2(canndev softmax_focal_loss_grad.py:242-243):
+// reduction.lower() 必须落在 {"none", "mean", "sum"} 内, 非法值报错; 只有 "mean" 需要缩放。
+ge::graphStatus ParseReduction(gert::TilingContext* context, const char* reduction, bool& isMean)
+{
+    std::string red(reduction);
+    std::transform(red.begin(), red.end(), red.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (red == "mean") {
+        isMean = true;
+    } else if (red == "none" || red == "sum") {
+        isMean = false;
+    } else {
+        OP_LOGE(context->GetNodeName(), "attr reduction must be none/mean/sum, got %s", reduction);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 } // namespace
 
 class SoftmaxFocalLossGradTiling {
@@ -109,6 +132,18 @@ ge::graphStatus SoftmaxFocalLossGradTiling::CheckShapes()
 {
     auto predShape = context_->GetInputShape(INPUT_PRED_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, predShape);
+    // 任一维长度为 0 时输入退化为空张量, 归约轴(类别维)的语义随之失效——对 0 个类别做归约本身无定义,
+    // 输出该是什么没有权威依据。对齐 A2 tiling(canndev op_tiling/runtime/softmax_focal_loss_grad.cc:47-50)
+    // 直接拒收, 不由本算子自行定义未定义行为。
+    const auto& predStorageShape = predShape->GetStorageShape();
+    for (size_t i = 0; i < predStorageShape.GetDimNum(); ++i) {
+        OP_CHECK_IF((predStorageShape.GetDim(i) == 0),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "pred",
+                                                          Ops::Base::ToString(predStorageShape).c_str(),
+                                                          "must not contain a zero-sized dim"),
+                    return ge::GRAPH_FAILED);
+    }
+
     auto targetShape = context_->GetInputShape(INPUT_TARGET_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, targetShape);
     OP_CHECK_IF((predShape->GetStorageShape() != targetShape->GetStorageShape()),
@@ -272,15 +307,23 @@ ge::graphStatus SoftmaxFocalLossGradTiling::ParseAttrs()
         }
     }
 
-    // reduction 折算成一个缩放系数下发, kernel 侧无分支
-    tilingData_->reductionCoef = 1.0f;
+    // reduction 折算成一个缩放系数下发, kernel 侧无分支。
+    // 缺省值 "mean" 由 IR/def 声明(对齐 A2 的 REG_OP .ATTR(reduction, String, "mean") 与 py 签名默认),
+    // 框架按声明填好属性后才进 tiling; 下面的 attrNum 判断只是防御, 缺省分支同样按 mean 折算 ——
+    // 不能停在 coef=1.0, 那是 "none"/"sum" 的语义。
+    bool isMean = true;
     if (attrNum > ATTR_REDUCTION_IDX) {
         const char* reduction = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
-        if (reduction != nullptr && strcmp(reduction, "mean") == 0) {
-            int64_t numel = tilingData_->a * tilingData_->r;
-            if (numel > 0) {
-                tilingData_->reductionCoef = 1.0f / static_cast<float>(numel);
-            }
+        if (reduction != nullptr && ParseReduction(context_, reduction, isMean) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+    }
+    tilingData_->reductionCoef = 1.0f;
+    if (isMean) {
+        int64_t numel = tilingData_->a * tilingData_->r;
+        // numel == 0 时输出为空张量, 没有元素会被缩放, 系数取值无意义; 此处仅防除零
+        if (numel > 0) {
+            tilingData_->reductionCoef = 1.0f / static_cast<float>(numel);
         }
     }
     return ge::GRAPH_SUCCESS;

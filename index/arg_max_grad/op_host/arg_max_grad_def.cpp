@@ -7,40 +7,37 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
-/* !
- * \file softmax_focal_loss_def.cpp
- * \brief softmax_focal_loss def
+/*!
+ * \file arg_max_grad_def.cpp
+ * \brief arg_max_grad def
  */
 
 #include "register/op_def_registry.h"
 
 namespace ops {
-class SoftmaxFocalLoss : public OpDef {
+class ArgMaxGrad : public OpDef {
 public:
-    explicit SoftmaxFocalLoss(const char* name) : OpDef(name)
+    explicit ArgMaxGrad(const char* name) : OpDef(name)
     {
-        // pred 与 weight 的 dtype 相互独立, 对齐 A2 声明的四种组合
-        this->Input("pred")
+        // dtype 面对齐 A2 的 aic-ascend910b-ops-info.ini 的 [ArgMaxGrad] 段:
+        // var/updates/y 为 float16 / float / int32 / int8 四组, indices 恒 int32
+        this->Input("var")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Input("target")
+        this->Input("indices")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Input("weight")
-            .ParamType(OPTIONAL)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT})
+        this->Input("updates")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-
-        this->Attr("gamma").AttrType(OPTIONAL).Float(2.0);
-        this->Attr("alpha").AttrType(OPTIONAL).Float(0.25);
-        this->Attr("reduction").AttrType(OPTIONAL).String("none");
+        this->Attr("dimension").AttrType(REQUIRED).Int();
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
@@ -51,5 +48,5 @@ public:
     }
 };
 
-OP_ADD(SoftmaxFocalLoss);
+OP_ADD(ArgMaxGrad);
 } // namespace ops

@@ -46,17 +46,17 @@
 | weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与pred一致；不传入时按全1处理。数据类型可与pred不同。 | FLOAT16、FLOAT  | ND       |
 | gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
 | alpha  | 属性           | 调制因子的权重系数，对应公式中的$\alpha$，缺省值为0.25。      | FLOAT           | -        |
-| reduction | 属性        | 缺省值为"mean"。计算侧不做归约，输出恒与pred同shape。          | STRING          | -        |
+| reduction | 属性        | 缺省值为"none"，当前也仅支持"none"，传入其他取值会报错。 | STRING          | -        |
 | y      | 输出           | 损失值，shape与pred一致，同一行内各元素取值相同。数据类型与pred一致。 | FLOAT16、FLOAT  | ND       |
 
 ## 约束说明
 
 - pred与y的数据类型保持一致；weight的数据类型可独立于pred取FLOAT16或FLOAT。
 - target、weight的shape必须与pred一致，target的数据类型固定为INT32。
-- 归约轴固定为最后一维。
-- reduction属性在计算侧不生效，输出恒为pred的shape。
-- pred取值为0或1时，$\log$运算按IEEE规则产生$\pm\infty$并向后传播，不做拦截。
-- 中间计算统一使用FLOAT精度，FLOAT16输入先转FLOAT参与运算，最后转回输出数据类型。
+- pred各维长度必须大于0，不支持空Tensor。
+- target应为one-hot编码：本算子不校验target的取值，非one-hot时其数值会作为权重直接参与行内求和，结果不再是Focal Loss的定义值。
+- 归约轴固定为最后一维：pred的最后一维为类别维，其余维为样本维。<term>Ascend 950PR/Ascend 950DT</term>支持任意rank≥1的pred，其余产品仅支持二维形式(batch_size, num_classes)。
+- reduction属性当前仅支持"none"：本算子的输出shape恒等于pred，无法承载"mean"/"sum"所需的标量结果，故传入"none"以外的取值（大小写不敏感）直接报错。缺省值取"none"，不显式传入该属性时按"none"处理。
 
 ## 调用说明
 

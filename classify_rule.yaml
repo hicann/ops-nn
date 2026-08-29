@@ -2421,8 +2421,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/embedding/op_kernel/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_host/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_kernel/arch35/
-        - ops/ops-nn/index/arg_max_grad_d/op_host/arch35/
-        - ops/ops-nn/index/arg_max_grad_d/op_kernel/arch35/
+        - ops/ops-nn/index/arg_max_grad/op_host/arch35/
+        - ops/ops-nn/index/arg_max_grad/op_kernel/arch35/
         - ops/ops-nn/index/scatter/op_host/arch35/
         - ops/ops-nn/index/scatter/op_kernel/arch35/
         - ops/ops-nn/index/scatter_nd/op_host/arch35/
@@ -2488,8 +2488,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/reverse_v2/tests/
         - ops/ops-nn/index/gather_nd/examples/
         - ops/ops-nn/index/gather_nd/tests/
-        - ops/ops-nn/index/arg_max_grad_d/examples/
-        - ops/ops-nn/index/arg_max_grad_d/tests/
+        - ops/ops-nn/index/arg_max_grad/examples/
+        - ops/ops-nn/index/arg_max_grad/tests/
         - ops/ops-nn/index/scatter/example/
         - ops/ops-nn/index/scatter/tests/
         - ops/ops-nn/index/inplace_index_add/tests/

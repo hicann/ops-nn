@@ -29,10 +29,6 @@ __spec__ = {
 }
 
 # 判据: 浮点输出配 cross_check 才会去取三方数据; L1 见 verification.md §5.2
-_TOL = {
-    "float32": {"standard": "cross_check", "level": "L1"},
-    "float16": {"standard": "cross_check", "level": "L1"},
-}
 
 
 def _attr(kwargs, name, default):
@@ -106,7 +102,6 @@ class _Compose:
     def __init__(self, gamma=2.0, alpha=0.25, reduction="mean", **kwargs):
         self.gamma = float(gamma)
         self.alpha = float(alpha)
-        self.reduction = str(reduction)
 
     def __call__(self, pred, target, weight=None, **kwargs):
         out_dtype = pred.dtype
@@ -143,7 +138,6 @@ class SoftmaxFocalLossKernelSpec:
         ]
 
     third_party = {"torch": _Compose}
-    tolerance = _TOL
 
 
 # 【不存在】aclnn 通路: canndev 老树 ops/built-in/op_api 与新树 ops/ 下均无

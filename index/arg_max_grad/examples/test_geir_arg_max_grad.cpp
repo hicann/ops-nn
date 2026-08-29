@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file test_geir_chamfer_distance.cpp
- * \brief GE graph construction sample for ChamferDistance (arch35 ND format).
+ * \file test_geir_arg_max_grad.cpp
+ * \brief GE graph construction sample for ArgMaxGrad (arch35 ND format).
  */
 #include <iostream>
 #include <string.h>
@@ -27,7 +27,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../op_graph/chamfer_distance_proto.h"
+#include "../op_graph/arg_max_grad_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -44,8 +44,7 @@ string GetTime()
     return string(b);
 }
 
-// 构图打通用的常量输入: 点坐标一律填 0.5(fp16 用 0x3800 表示 ~0.5), 整型分支填 1。
-// 本样例只验证 GE 图能否构建与执行, 不校验数值结果。
+// 数据只为构图打通, 不校验数值
 int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataType dt)
 {
     desc.SetRealDimCnt(shapes.size());
@@ -93,16 +92,17 @@ int CreateGraph(DataType dt, std::vector<ge::Tensor>& input, std::vector<Operato
                 std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
-    auto op_node = op::ChamferDistance("chamfer_distance_op");
-    // 点集布局 (2, B, N): 首维是 x/y 两个坐标平面(见 01 §6.1)
-    std::vector<int64_t> xyzShape = {2, 4, 64};
-    std::vector<int64_t> outShape = {4, 64};
-    ADD_INPUT(1, xyz1, dt, xyzShape);
-    ADD_INPUT(2, xyz2, dt, xyzShape);
-    ADD_OUTPUT(dist1, dt, outShape);
-    ADD_OUTPUT(dist2, dt, outShape);
-    ADD_OUTPUT(idx1, DT_INT32, outShape);
-    ADD_OUTPUT(idx2, DT_INT32, outShape);
+    auto op_node = op::ArgMaxGrad("arg_max_grad_op");
+    // var 为 (outer, D, inner); indices/updates 把 dimension 轴置 1
+    const int64_t dimension = 1;
+    std::vector<int64_t> varShape = {4, 16, 8};
+    // indices/updates 把 dimension 轴 squeeze 掉(GE 侧 verify 要求 rank(var) == rank(updates) + 1)
+    std::vector<int64_t> idxShape = {4, 8};
+    ADD_INPUT(1, var, dt, varShape);
+    ADD_INPUT(2, indices, DT_INT32, idxShape);
+    ADD_INPUT(3, updates, dt, idxShape);
+    op_node.set_attr_dimension(dimension);
+    ADD_OUTPUT(y, dt, varShape);
     outputs.push_back(op_node);
     return SUCCESS;
 }

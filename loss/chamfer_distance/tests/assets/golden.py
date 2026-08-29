@@ -35,13 +35,6 @@ __spec__ = {
     "chamfer_distance": "ChamferDistanceKernelSpec",
 }
 
-# dist 是浮点输出走 cross_check; idx 是整数输出, TTK 自动路由到逐位相等
-_TOL = {
-    "float32": {"standard": "cross_check", "level": "L1"},
-    "float16": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "cross_check", "level": "L1"},
-}
-
 # (B, N, N) 的全对比矩阵在大 N 上会撑爆内存, 按查询点分块算
 _CHUNK = 512
 
@@ -173,7 +166,6 @@ class ChamferDistanceKernelSpec:
         ]
 
     third_party = {"torch": _Compose}
-    tolerance = _TOL
 
 
 # 【不存在】aclnn 通路: canndev 老树 op_api 只有 aclnn_chamfer_distance_backward.h(反向),

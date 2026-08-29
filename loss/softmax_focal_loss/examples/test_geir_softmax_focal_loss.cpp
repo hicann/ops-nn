@@ -100,7 +100,7 @@ int CreateGraph(DataType dt, std::vector<ge::Tensor>& input, std::vector<Operato
     ADD_INPUT(3, weight, dt, xShape);
     op_node.set_attr_gamma(2.0f);
     op_node.set_attr_alpha(0.25f);
-    op_node.set_attr_reduction("mean");
+    op_node.set_attr_reduction("none");
     ADD_OUTPUT(y, dt, xShape);
     outputs.push_back(op_node);
     return SUCCESS;

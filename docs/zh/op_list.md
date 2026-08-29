@@ -2120,7 +2120,7 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/arg_max_grad_d/README.md">arg_max_grad_d</a></td>
+    <td><a href="../../index/arg_max_grad/README.md">arg_max_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>

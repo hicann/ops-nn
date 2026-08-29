@@ -57,20 +57,19 @@
 | pred   | 输入           | 前级softmax输出的概率，对应公式中的$p$，取值应落在(0, 1)开区间。 | FLOAT16、FLOAT  | ND       |
 | target | 输入           | one-hot标签，对应公式中的$t$，shape与pred一致。               | INT32           | ND       |
 | dout   | 输入           | 上游传入的梯度，对应公式中的$\text{d}$，shape与数据类型均与pred一致。 | FLOAT16、FLOAT  | ND       |
-| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与数据类型均与pred一致；不传入时按全1处理。 | FLOAT16、FLOAT  | ND       |
-| gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
+| weight | 可选输入       | 逐元素权重，对应公式中的$w$，shape与数据类型均与pred一致。不传入时按全1处理，该行为仅<term>Ascend 950PR/Ascend 950DT</term>支持，其余产品需显式传入weight。 | FLOAT16、FLOAT  | ND       |
 | alpha  | 属性           | 调制因子的权重系数，对应公式中的$\alpha$，缺省值为0.25。      | FLOAT           | -        |
-| reduction | 属性        | 缺省值为"mean"。取"mean"时梯度乘以$1/\text{numel(pred)}$。     | STRING          | -        |
+| gamma  | 属性           | 调制因子的指数，对应公式中的$\gamma$，缺省值为2.0。           | FLOAT           | -        |
+| reduction | 属性        | 取值为"none"、"mean"、"sum"之一（大小写不敏感），缺省值为"mean"，传入其他取值会报错。取"mean"时梯度乘以$1/\text{numel(pred)}$，"none"与"sum"不缩放。 | STRING          | -        |
 | grad   | 输出           | pred的梯度，shape与数据类型均与pred一致。                     | FLOAT16、FLOAT  | ND       |
 
 ## 约束说明
 
 - pred、dout、weight、grad的数据类型保持一致；target的数据类型固定为INT32。
 - target、dout、weight的shape必须与pred一致。
+- pred各维长度必须大于0，不支持空Tensor。
 - 归约轴固定为最后一维。
-- pred取值为0或1时，$\log$运算按IEEE规则产生$\pm\infty$并向后传播，不做拦截。
 - gamma小于1且pred趋近1时，$(1-p)^{\gamma-1}$发散，该行为与算法定义一致，不做拦截。
-- 中间计算统一使用FLOAT精度，FLOAT16输入先转FLOAT参与运算，最后转回输出数据类型。
 
 ## 调用说明
 

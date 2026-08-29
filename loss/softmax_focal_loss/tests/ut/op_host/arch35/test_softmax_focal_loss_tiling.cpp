@@ -23,6 +23,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
+#include "../../../../op_kernel/arch35/softmax_focal_loss_tiling_data.h"
 
 using namespace ut_util;
 using namespace std;
@@ -49,7 +50,9 @@ static ge::graphStatus DoSoftmaxFocalLossTilingCase(std::initializer_list<int64_
                                                     ge::DataType weightDtype, bool hasWeight, float gamma, float alpha,
                                                     std::string reduction, uint64_t& tilingKey, uint32_t& blockDim,
                                                     std::initializer_list<int64_t> targetShapeOv = {},
-                                                    std::initializer_list<int64_t> weightShapeOv = {})
+                                                    std::initializer_list<int64_t> weightShapeOv = {},
+                                                    bool withReductionAttr = true, float* gammaOut = nullptr,
+                                                    float* alphaOut = nullptr)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -95,6 +98,13 @@ static ge::graphStatus DoSoftmaxFocalLossTilingCase(std::initializer_list<int64_
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
     EXPECT_NE(param, nullptr);
 
+    // reduction 是 OPTIONAL 属性, withReductionAttr=false 模拟调用方完全不下发的场景
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"gamma", Ops::NN::AnyValue::CreateFrom<float>(gamma)}, {"alpha", Ops::NN::AnyValue::CreateFrom<float>(alpha)}};
+    if (withReductionAttr) {
+        attrList.emplace_back("reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction));
+    }
+
     // 缺省 optional 输入时: NodeIoNum 只算实到输入, IrInstanceNum 该位置 0, InputShapes 不传 nullptr
     auto buildHolder = [&]() {
         if (hasWeight) {
@@ -110,9 +120,7 @@ static ge::graphStatus DoSoftmaxFocalLossTilingCase(std::initializer_list<int64_
                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeInputTd(2, weightDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeOutputTd(0, predDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({{"gamma", Ops::NN::AnyValue::CreateFrom<float>(gamma)},
-                            {"alpha", Ops::NN::AnyValue::CreateFrom<float>(alpha)},
-                            {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+                .NodeAttrs(attrList)
                 .TilingData(param.get())
                 .Workspace(wsSize)
                 .Build();
@@ -128,9 +136,7 @@ static ge::graphStatus DoSoftmaxFocalLossTilingCase(std::initializer_list<int64_
             .NodeInputTd(0, predDtype, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(0, predDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"gamma", Ops::NN::AnyValue::CreateFrom<float>(gamma)},
-                        {"alpha", Ops::NN::AnyValue::CreateFrom<float>(alpha)},
-                        {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+            .NodeAttrs(attrList)
             .TilingData(param.get())
             .Workspace(wsSize)
             .Build();
@@ -149,6 +155,16 @@ static ge::graphStatus DoSoftmaxFocalLossTilingCase(std::initializer_list<int64_
     if (ret == ge::GRAPH_SUCCESS) {
         tilingKey = tilingContext->GetTilingKey();
         blockDim = tilingContext->GetBlockDim();
+        auto raw = tilingContext->GetRawTilingData();
+        if (raw != nullptr && raw->GetDataSize() >= sizeof(SoftmaxFocalLossArch35TilingData)) {
+            const auto* td = reinterpret_cast<const SoftmaxFocalLossArch35TilingData*>(raw->GetData());
+            if (gammaOut != nullptr) {
+                *gammaOut = td->gamma;
+            }
+            if (alphaOut != nullptr) {
+                *alphaOut = td->alpha;
+            }
+        }
     }
     return ret;
 }
@@ -205,10 +221,13 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_empty_tensor)
 {
     uint64_t tilingKey = 0;
     uint32_t blockDim = 0;
+    // 空张量按 A2 拒收: 类别维语义失效, 不静默返回空结果
     EXPECT_EQ(DoSoftmaxFocalLossTilingCase({0, 64}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
                                            blockDim),
-              ge::GRAPH_SUCCESS);
-    EXPECT_EQ(blockDim, 1U);
+              ge::GRAPH_FAILED);
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 0}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
+                                           blockDim),
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(SoftmaxFocalLossTiling, test_tiling_invalid_dtype)
@@ -236,4 +255,51 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_weight_shape_mismatch)
     EXPECT_EQ(DoSoftmaxFocalLossTilingCase({8, 64}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
                                            blockDim, {}, {8, 32}),
               ge::GRAPH_FAILED);
+}
+
+// reduction 仅支持 "none"(与 A2 一致): 输出 shape 恒等于 pred, 装不下 mean/sum 的标量结果,
+// 传入其他取值必须报错而不是静默按 none 计算; 大小写不敏感
+TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_only_none)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
+                                           blockDim),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "NONE", tilingKey,
+                                           blockDim),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "mean", tilingKey,
+                                           blockDim),
+              ge::GRAPH_FAILED);
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "sum", tilingKey,
+                                           blockDim),
+              ge::GRAPH_FAILED);
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "avg", tilingKey,
+                                           blockDim),
+              ge::GRAPH_FAILED);
+}
+
+// 属性顺序必须与 A2 的 REG_OP 一致(前向是 gamma 在前、alpha 在后, 与反向相反)。用非对称取值断言 tilingData。
+TEST_F(SoftmaxFocalLossTiling, test_tiling_attr_order_gamma_before_alpha)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    float gamma = 0.0f;
+    float alpha = 0.0f;
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 3.0f, 0.75f, "none", tilingKey,
+                                           blockDim, {}, {}, true, &gamma, &alpha),
+              ge::GRAPH_SUCCESS);
+    EXPECT_FLOAT_EQ(gamma, 3.0f);
+    EXPECT_FLOAT_EQ(alpha, 0.75f);
+}
+
+// 缺省值取 "none": 不下发该属性时按缺省处理, 应正常通过(而不是落到不支持的取值上)
+TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_absent_defaults_to_none)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    EXPECT_EQ(DoSoftmaxFocalLossTilingCase({32, 128}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
+                                           blockDim, {}, {}, false),
+              ge::GRAPH_SUCCESS);
 }
