@@ -35,7 +35,7 @@ constexpr uint32_t NUM_HALF = 2;
 constexpr uint32_t DB_SIZE = 2;
 constexpr uint32_t DATA_SIZE_L0C = 4;
 constexpr uint64_t WORKSPACE_SIZE = 16 * 1024 * 1024;
-constexpr int32_t ASW_PRIORITY = 10;
+constexpr int32_t ASW_PRIORITY = 11;
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingASW::DoOpTiling()
 {

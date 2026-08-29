@@ -37,5 +37,20 @@ __aicore__ inline int64_t AlignBlock(const int64_t& t)
     return AscendC::Align(t, static_cast<int64_t>(blockSize / sizeof(DataType)));
 }
 
+// L2 cache 关闭策略（仅 __NPU_ARCH__ == 5102 生效）
+template <typename XType, typename WType>
+__aicore__ inline void SetL2CacheHint(bool aL2CacheDisable, bool bL2CacheDisable, AscendC::GlobalTensor<XType>& aGlobal,
+                                      AscendC::GlobalTensor<WType>& bGlobal)
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if (aL2CacheDisable) {
+        aGlobal.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+    if (bL2CacheDisable) {
+        bGlobal.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+#endif
+}
+
 } // namespace Gemm
 } // namespace Cmct

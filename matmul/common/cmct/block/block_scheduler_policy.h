@@ -37,5 +37,9 @@ struct BuiltInFlatQuantScheduler {};
 struct BuiltInRotateQuantScheduler {};
 struct BuiltInMulScheduler {};
 struct BuiltInVectorScheduler {};
+// ASW 滑窗调度器标签（ASW 场景只有非全载一种）
+struct WqbmmAswtScheduler {
+    static constexpr uint64_t FULL_LOAD_MODE = 0;
+};
 } // namespace Gemm
 } // namespace Cmct

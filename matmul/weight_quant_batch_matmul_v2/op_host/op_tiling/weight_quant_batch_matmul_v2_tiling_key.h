@@ -52,6 +52,7 @@ enum class OptimizationAlgorithmSubCategory : uint8_t {
     ANTI_REG_SCSC = 5,
     ITERATE_BATCH = 6,
     ITERATE_BATCH_NO_BATCH_OUT = 8,
+    ASW_CMCT = 9, // cmct 风格 ASW 模板，与 kernel 侧 WQBMMV2_SUB_ALGO_ASW_CMCT 数值一致
 };
 
 // 对应6-9位 fixp模板自定义组合

@@ -369,5 +369,25 @@ struct MatmulToVector {
     using SingleShape = SingleCoreShape;
 };
 
+// antiquant scale 模式，供 wqbmmv2 ASW（A16W8）路径使用
+enum class WqbmmAntiQuantMode : uint8_t {
+    PER_TENSOR = 0,
+    PER_CHANNEL = 1,
+};
+
+/**
+ * @struct WqbmmMatmulWithoutQuePolicy
+ * @brief wqbmmv2 ASW 路径的编译期 policy，携带 antiquant 模式
+ */
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>,
+          WqbmmAntiQuantMode ANTIQUANT_MODE = WqbmmAntiQuantMode::PER_TENSOR>
+struct WqbmmMatmulWithoutQuePolicy {
+    using SingleShape = SingleCoreShape;
+    static constexpr uint64_t fullLoadMode = 0;
+    static constexpr WqbmmAntiQuantMode antiQuantMode = ANTIQUANT_MODE;
+    static constexpr bool enablePerTensorScale = (ANTIQUANT_MODE == WqbmmAntiQuantMode::PER_TENSOR);
+    static constexpr bool enablePerChannelScale = (ANTIQUANT_MODE == WqbmmAntiQuantMode::PER_CHANNEL);
+};
+
 } // namespace Gemm
 } // namespace Cmct
