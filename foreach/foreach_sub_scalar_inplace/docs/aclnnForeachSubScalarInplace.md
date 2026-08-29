@@ -41,7 +41,7 @@
 
 ```Cpp
 aclnnStatus aclnnForeachSubScalarInplaceGetWorkspaceSize(
-  const aclTensorList *x,
+  aclTensorList       *xRef,
   const aclTensor     *scalar,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
@@ -82,7 +82,7 @@ aclnnStatus aclnnForeachSubScalarInplace(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x（aclTensorList*）</td>
+      <td>xRef（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示进行减法运算的输入和输出张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachSubScalarInplace(
       <td>scalar（aclTensor*）</td>
       <td>输入</td>
       <td>表示减法运算的第二个输入张量，对应公式中的`scalar`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。</li><li>当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`xRef`的数据类型具有一定对应关系：<ul><li>当`xRef`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`xRef`的数据类型保持一致。</li><li>当`xRef`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -146,23 +146,23 @@ aclnnStatus aclnnForeachSubScalarInplace(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、scalar是空指针。</td>
+      <td>传入的xRef、scalar是空指针。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>x、scalar的数据类型不在支持的范围之内。</td>
+      <td>xRef、scalar的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x中存在空指针Tensor。</td>
+      <td>xRef中存在空指针Tensor。</td>
     </tr>
     <tr>
       <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="4">561002</td>
-      <td>x中的Tensor的数据类型不一致。</td>
+      <td>xRef中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x中的Tensor维度超过8维。</td>
+      <td>xRef中的Tensor维度超过8维。</td>
     </tr>
     <tr>
       <td>scalar元素个数不为1。</td>

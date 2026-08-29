@@ -18,7 +18,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachLogInplace_6e9d83785a155707dd688f98fa1c07a8",
@@ -37,7 +51,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachLogInplace_1b4945d7fb4ac08b2c01fe6b38169922",
@@ -56,7 +84,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     }
   ]
 }

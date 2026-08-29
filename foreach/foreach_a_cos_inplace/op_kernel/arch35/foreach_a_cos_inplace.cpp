@@ -16,24 +16,24 @@
 using namespace ForeachACosInplace;
 
 template <typename T>
-__aicore__ inline void ForeachACosInplaceImpl(GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachACosInplaceImpl(GM_ADDR x, GM_ADDR xRef, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachACosInplaceRegbase<T, ForeachSoloTilingDataRegbase> op;
-    op.Init(x, x, workspace, tilingData, tPipe);
+    op.Init(x, xRef, workspace, tilingData, tPipe);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_a_cos_inplace(GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_a_cos_inplace(GM_ADDR x, GM_ADDR xRef, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachACosInplaceImpl<half>(x, workspace, tiling, &pipeOp);
+        ForeachACosInplaceImpl<half>(x, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
-        ForeachACosInplaceImpl<float>(x, workspace, tiling, &pipeOp);
+        ForeachACosInplaceImpl<float>(x, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachACosInplaceImpl<bfloat16_t>(x, workspace, tiling, &pipeOp);
+        ForeachACosInplaceImpl<bfloat16_t>(x, xRef, workspace, tiling, &pipeOp);
     }
     pipeOp.Destroy();
 }

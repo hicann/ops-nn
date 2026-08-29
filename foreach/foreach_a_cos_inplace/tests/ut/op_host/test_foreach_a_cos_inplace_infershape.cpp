@@ -51,6 +51,17 @@ TEST_F(ForeachACosInplaceTest, infer_shape_success)
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_NE(context, nullptr);
     ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    // 就地参数已由同名 IR 输出镜像(ref 配对), 输出 shape 必须被真正推导出来
+    auto output_shape_0 = context->GetOutputShape(0);
+    ASSERT_NE(output_shape_0, nullptr);
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_0), "[8]");
+    auto output_shape_1 = context->GetOutputShape(1);
+    ASSERT_NE(output_shape_1, nullptr);
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_1), "[9]");
+    auto output_shape_2 = context->GetOutputShape(2);
+    ASSERT_NE(output_shape_2, nullptr);
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[10]");
 }
 
 TEST_F(ForeachACosInplaceTest, infer_datatype_success)

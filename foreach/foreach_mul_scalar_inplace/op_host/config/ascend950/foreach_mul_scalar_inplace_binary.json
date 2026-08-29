@@ -29,7 +29,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachMulScalarInplace_ee6956153d1509869b814dc4b0349fad",
@@ -59,7 +73,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachMulScalarInplace_453815453e7498422a45034d5a89fdc5",
@@ -89,7 +117,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachMulScalarInplace_b4f51846f29ac5d7d46d9406e8cef1fd",
@@ -119,7 +161,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachMulScalarInplace_bcb874ea9a2fcd1657cc743b13cc913a",
@@ -149,7 +205,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     }
   ]
 }

@@ -42,8 +42,15 @@
   <tbody>
     <tr>
       <td>x</td>
-      <td>输入/输出</td>
-      <td>支持空Tensor。表示按元素以e为底做对数函数运算的输入张量列表，对应公式中的`x`，同时作为输出，计算结果原地写回该参数。取值范围为(0, +∞)。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数（Dim）不大于8。</td>
+      <td>输入</td>
+      <td>支持空Tensor。表示按元素以e为底做对数函数运算的输入张量列表，对应公式中的`x`。取值范围为(0, +∞)。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数（Dim）不大于8。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x</td>
+      <td>输出</td>
+      <td>支持空Tensor。表示计算结果张量列表，与输入`x`共享内存，计算结果原地写回。该参数中每个Tensor的shape和数据类型均与输入`x`中对应位置的Tensor一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

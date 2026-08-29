@@ -365,8 +365,9 @@ uint64_t ForeachRegbaseTiling::GetTilingKey() const
 ge::graphStatus ForeachRegbaseTiling::CheckOutput()
 {
     size_t outputCount = context_->GetComputeNodeOutputNum();
-    // In-place foreach ops declare no output (x serves as both input and output); skip the
-    // output validation for them. Non-in-place ops keep the original {x, y} count/dtype/shape checks.
+    // In-place foreach ops come in two shapes: those that mirror the in-place parameter with an IR
+    // output of the same name (ref pairing) go through the checks below like any other op; those that
+    // declare no output at all have nothing to validate. Non-in-place ops keep the {x, y} checks.
     if (outputCount == 0) {
         return ge::GRAPH_SUCCESS;
     }

@@ -17,29 +17,29 @@
 using namespace ForeachSubScalarInplace;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachSubScalarInplaceImpl(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR workspace, GM_ADDR tiling,
-                                                   TPipe* tPipe)
+__aicore__ inline void ForeachSubScalarInplaceImpl(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR xRef, GM_ADDR workspace,
+                                                   GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachSubScalarInplaceRegbase<T, ScalarT, ForeachSoloTilingDataRegbase> op;
     // inplace: feed x as both inputs and outputs
-    op.Init(inputs, scalar, inputs, workspace, tilingData, tPipe);
+    op.Init(inputs, scalar, xRef, workspace, tilingData, tPipe);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_sub_scalar_inplace(GM_ADDR x, GM_ADDR scalar, GM_ADDR workspace,
-                                                                 GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_sub_scalar_inplace(GM_ADDR x, GM_ADDR scalar, GM_ADDR xRef,
+                                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachSubScalarInplaceImpl<half, DTYPE_SCALAR>(x, scalar, workspace, tiling, &pipeOp);
+        ForeachSubScalarInplaceImpl<half, DTYPE_SCALAR>(x, scalar, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
-        ForeachSubScalarInplaceImpl<float, float>(x, scalar, workspace, tiling, &pipeOp);
+        ForeachSubScalarInplaceImpl<float, float>(x, scalar, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
-        ForeachSubScalarInplaceImpl<int, int>(x, scalar, workspace, tiling, &pipeOp);
+        ForeachSubScalarInplaceImpl<int, int>(x, scalar, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachSubScalarInplaceImpl<bfloat16_t, float>(x, scalar, workspace, tiling, &pipeOp);
+        ForeachSubScalarInplaceImpl<bfloat16_t, float>(x, scalar, xRef, workspace, tiling, &pipeOp);
     }
     pipeOp.Destroy();
 }

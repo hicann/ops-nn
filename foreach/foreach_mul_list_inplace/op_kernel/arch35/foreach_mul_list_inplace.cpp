@@ -17,29 +17,29 @@
 using namespace ForeachMulListInplace;
 
 template <typename T>
-__aicore__ inline void ForeachMulListInplaceImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace, GM_ADDR tiling,
-                                                 TPipe* tPipe)
+__aicore__ inline void ForeachMulListInplaceImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR x1Ref, GM_ADDR workspace,
+                                                 GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachMulListInplaceRegbase<T, ForeachSoloTilingDataRegbase> op;
     // inplace: x1 serves as both the first input and the output
-    op.Init(x1, x2, x1, workspace, tilingData, tPipe);
+    op.Init(x1, x2, x1Ref, workspace, tilingData, tPipe);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_mul_list_inplace(GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace,
+extern "C" __global__ __aicore__ void foreach_mul_list_inplace(GM_ADDR x1, GM_ADDR x2, GM_ADDR x1Ref, GM_ADDR workspace,
                                                                GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachMulListInplaceImpl<half>(x1, x2, workspace, tiling, &pipeOp);
+        ForeachMulListInplaceImpl<half>(x1, x2, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
-        ForeachMulListInplaceImpl<float>(x1, x2, workspace, tiling, &pipeOp);
+        ForeachMulListInplaceImpl<float>(x1, x2, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
-        ForeachMulListInplaceImpl<int>(x1, x2, workspace, tiling, &pipeOp);
+        ForeachMulListInplaceImpl<int>(x1, x2, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachMulListInplaceImpl<bfloat16_t>(x1, x2, workspace, tiling, &pipeOp);
+        ForeachMulListInplaceImpl<bfloat16_t>(x1, x2, x1Ref, workspace, tiling, &pipeOp);
     }
     pipeOp.Destroy();
 }

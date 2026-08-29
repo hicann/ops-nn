@@ -79,6 +79,19 @@ static ge::graphStatus InferDataType4ForeachInplace(gert::InferDataTypeContext* 
     return ge::GRAPH_SUCCESS;
 }
 
+// In-place foreach ops whose in-place parameter is mirrored by an IR output of the same name (ref
+// pairing, which is what lets the generated aclnn write results back to a non-contiguous parameter)
+// do have an output to infer, and it is always identical to the input list.
+static ge::graphStatus InferShape4ForeachInplaceRef(gert::InferShapeContext* context)
+{
+    return InferShape4ForeachCommon(context);
+}
+
+static ge::graphStatus InferDataType4ForeachInplaceRef(gert::InferDataTypeContext* context)
+{
+    return InferDataType4ForeachCommon(context);
+}
+
 IMPL_OP_INFERSHAPE(ForeachAbs)
     .InferShape(ops::InferShape4ForeachCommon)
     .InferDataType(ops::InferDataType4ForeachCommon);
@@ -240,36 +253,36 @@ IMPL_OP_INFERSHAPE(ForeachZeroInplace)
     .InferDataType(ops::InferDataType4ForeachInplace);
 
 IMPL_OP_INFERSHAPE(ForeachMulScalarInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachSubScalarInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachMulListInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachDivListInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachAddListInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachSubListInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachACosInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachLogInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachInplaceRef)
+    .InferDataType(ops::InferDataType4ForeachInplaceRef);
 
 IMPL_OP_INFERSHAPE(ForeachNonFiniteCheckAndUnscale)
     .InferShape(ops::InferShape4ForeachInplace)

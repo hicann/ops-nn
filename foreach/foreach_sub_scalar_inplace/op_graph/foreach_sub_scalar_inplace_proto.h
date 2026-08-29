@@ -31,9 +31,13 @@ namespace ge {
  *        When the data type of x is BFLOAT16, scalar supports the FLOAT32 data type.
  *        When the data type of x is FLOAT16, scalar supports both FLOAT16 and FLOAT32 data types.
  */
+#ifndef OPS_PROTO_DEF_FOREACHSUBSCALARINPLACE
+#define OPS_PROTO_DEF_FOREACHSUBSCALARINPLACE
 REG_OP(ForeachSubScalarInplace)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .INPUT(scalar, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
+    .DYNAMIC_OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachSubScalarInplace)
+#endif // OPS_PROTO_DEF_FOREACHSUBSCALARINPLACE
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_SUB_SCALAR_INPLACE_H_

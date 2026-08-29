@@ -16,24 +16,24 @@
 using namespace ForeachLogInplace;
 
 template <typename T>
-__aicore__ inline void ForeachLogInplaceImpl(GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachLogInplaceImpl(GM_ADDR x, GM_ADDR xRef, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachLogInplaceRegbase<T, ForeachSoloTilingDataRegbase> op;
-    op.Init(x, x, workspace, tilingData, tPipe);
+    op.Init(x, xRef, workspace, tilingData, tPipe);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_log_inplace(GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_log_inplace(GM_ADDR x, GM_ADDR xRef, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachLogInplaceImpl<half>(x, workspace, tiling, &pipeOp);
+        ForeachLogInplaceImpl<half>(x, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
-        ForeachLogInplaceImpl<float>(x, workspace, tiling, &pipeOp);
+        ForeachLogInplaceImpl<float>(x, xRef, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachLogInplaceImpl<bfloat16_t>(x, workspace, tiling, &pipeOp);
+        ForeachLogInplaceImpl<bfloat16_t>(x, xRef, workspace, tiling, &pipeOp);
     }
     pipeOp.Destroy();
 }

@@ -19,8 +19,12 @@ namespace ge {
 /**
  * @brief x = acos(x) element-wise over a tensor list, written back in place. Valid range [-1, 1].
  */
+#ifndef OPS_PROTO_DEF_FOREACHACOSINPLACE
+#define OPS_PROTO_DEF_FOREACHACOSINPLACE
 REG_OP(ForeachACosInplace)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .DYNAMIC_OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachACosInplace)
+#endif // OPS_PROTO_DEF_FOREACHACOSINPLACE
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_A_COS_INPLACE_H_

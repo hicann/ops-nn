@@ -41,7 +41,7 @@
 
 ```Cpp
 aclnnStatus aclnnForeachACosInplaceGetWorkspaceSize(
-  const aclTensorList *x,
+  aclTensorList       *xRef,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -81,7 +81,7 @@ aclnnStatus aclnnForeachACosInplace(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x（aclTensorList*）</td>
+      <td>xRef（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示进行反余弦运算的输入和输出张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
@@ -135,23 +135,23 @@ aclnnStatus aclnnForeachACosInplace(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x是空指针。</td>
+      <td>传入的xRef是空指针。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>x的数据类型不在支持的范围之内。</td>
+      <td>xRef的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x中存在空指针Tensor。</td>
+      <td>xRef中存在空指针Tensor。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="2">561002</td>
-      <td>x中的Tensor的数据类型不一致。</td>
+      <td>xRef中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x中的Tensor维度超过8维。</td>
+      <td>xRef中的Tensor维度超过8维。</td>
     </tr>
   </tbody></table>
 

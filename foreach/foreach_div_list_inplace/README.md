@@ -42,8 +42,15 @@
   <tbody>
     <tr>
       <td>x1</td>
-      <td>输入/输出</td>
-      <td>支持空Tensor。表示除法运算的第一个输入张量列表，对应公式中的`x1`，同时作为输出，计算结果原地写回该参数。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数不超过8维。</td>
+      <td>输入</td>
+      <td>支持空Tensor。表示除法运算的第一个输入张量列表，对应公式中的`x1`。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数不超过8维。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x1</td>
+      <td>输出</td>
+      <td>支持空Tensor。表示计算结果张量列表，与输入`x1`共享内存，计算结果原地写回。该参数中每个Tensor的shape和数据类型均与输入`x1`中对应位置的Tensor一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

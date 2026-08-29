@@ -17,29 +17,29 @@
 using namespace ForeachAddListInplace;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachAddListInplaceImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR workspace,
-                                                 GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachAddListInplaceImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR x1Ref,
+                                                 GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
     ForeachAddListInplaceRegbase<T, ScalarT, ForeachSoloTilingDataRegbase> op;
     // inplace: x1 serves as both the first input and the output
-    op.Init(x1, x2, alpha, x1, workspace, tilingData, tPipe);
+    op.Init(x1, x2, alpha, x1Ref, workspace, tilingData, tPipe);
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_add_list_inplace(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR workspace,
-                                                               GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_add_list_inplace(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR x1Ref,
+                                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachAddListInplaceImpl<half, DTYPE_ALPHA>(x1, x2, alpha, workspace, tiling, &pipeOp);
+        ForeachAddListInplaceImpl<half, DTYPE_ALPHA>(x1, x2, alpha, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
-        ForeachAddListInplaceImpl<float, float>(x1, x2, alpha, workspace, tiling, &pipeOp);
+        ForeachAddListInplaceImpl<float, float>(x1, x2, alpha, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
-        ForeachAddListInplaceImpl<int, int>(x1, x2, alpha, workspace, tiling, &pipeOp);
+        ForeachAddListInplaceImpl<int, int>(x1, x2, alpha, x1Ref, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachAddListInplaceImpl<bfloat16_t, float>(x1, x2, alpha, workspace, tiling, &pipeOp);
+        ForeachAddListInplaceImpl<bfloat16_t, float>(x1, x2, alpha, x1Ref, workspace, tiling, &pipeOp);
     }
     pipeOp.Destroy();
 }

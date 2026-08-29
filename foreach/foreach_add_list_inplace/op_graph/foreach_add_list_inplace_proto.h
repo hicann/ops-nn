@@ -19,10 +19,14 @@ namespace ge {
 /**
  * @brief y(=x1) = x1 + alpha * x2, element-wise over two tensor lists, written back in place to x1.
  */
+#ifndef OPS_PROTO_DEF_FOREACHADDLISTINPLACE
+#define OPS_PROTO_DEF_FOREACHADDLISTINPLACE
 REG_OP(ForeachAddListInplace)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .DYNAMIC_INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .INPUT(alpha, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
+    .DYNAMIC_OUTPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachAddListInplace)
+#endif // OPS_PROTO_DEF_FOREACHADDLISTINPLACE
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_ADD_LIST_INPLACE_H_

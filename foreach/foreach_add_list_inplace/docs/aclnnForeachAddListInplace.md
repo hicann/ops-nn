@@ -41,7 +41,7 @@
 
 ```Cpp
 aclnnStatus aclnnForeachAddListInplaceGetWorkspaceSize(
-  const aclTensorList *x1,
+  aclTensorList       *x1Ref,
   const aclTensorList *x2,
   const aclTensor     *alpha,
   uint64_t            *workspaceSize,
@@ -83,7 +83,7 @@ aclnnStatus aclnnForeachAddListInplace(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1（aclTensorList*）</td>
+      <td>x1Ref（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>表示加法运算的第一个输入张量列表，同时也是原地更新的输出张量列表。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnForeachAddListInplace(
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示加法运算的第二个输入张量列表。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1Ref`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnForeachAddListInplace(
       <td>alpha（aclTensor*）</td>
       <td>输入</td>
       <td>表示加法运算中第二个输入的系数。对应公式中的`alpha`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。</li><li>当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1Ref`的数据类型具有一定对应关系：<ul><li>当`x1Ref`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1Ref`的数据类型保持一致。</li><li>当`x1Ref`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -157,35 +157,35 @@ aclnnStatus aclnnForeachAddListInplace(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x1、x2、alpha是空指针。</td>
+      <td>传入的x1Ref、x2、alpha是空指针。</td>
     </tr>
     <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>x1、x2、alpha的数据类型不在支持的范围之内。</td>
+      <td>x1Ref、x2、alpha的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x1、x2的数据类型不一致。</td>
+      <td>x1Ref、x2的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2中存在空指针Tensor。</td>
+      <td>x1Ref、x2中存在空指针Tensor。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="5">561002</td>
-      <td>x1、x2的shape不满足约束。</td>
+      <td>x1Ref、x2的shape不满足约束。</td>
     </tr>
     <tr>
-      <td>x1、x2中的Tensor的数据类型不一致。</td>
+      <td>x1Ref、x2中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2中的Tensor维度超过8维。</td>
+      <td>x1Ref、x2中的Tensor维度超过8维。</td>
     </tr>
     <tr>
       <td>alpha元素个数不为1。</td>
     </tr>
     <tr>
-      <td>x1、x2的Tensor数量不一致。</td>
+      <td>x1Ref、x2的Tensor数量不一致。</td>
     </tr>
   </tbody></table>
 

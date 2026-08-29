@@ -14,12 +14,19 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-// Inplace: x = log(x), x serves as both input and output (no Output declared).
+// Inplace: x = log(x). Input and Output share the name "x" so opbuild pairs them as a ref
+// parameter, which is what makes the generated aclnn write results back to a non-contiguous x.
 class ForeachLogInplace : public OpDef {
 public:
     explicit ForeachLogInplace(const char* name) : OpDef(name)
     {
         this->Input("x")
+            .ParamType(DYNAMIC)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Output("x")
             .ParamType(DYNAMIC)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})

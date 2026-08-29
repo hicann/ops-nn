@@ -25,9 +25,13 @@ namespace ge {
  *         This value is also an output (in-place).
  * @li x2: A tensor list with the same length, dtype and format as x1.
  */
+#ifndef OPS_PROTO_DEF_FOREACHMULLISTINPLACE
+#define OPS_PROTO_DEF_FOREACHMULLISTINPLACE
 REG_OP(ForeachMulListInplace)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .DYNAMIC_INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
+    .DYNAMIC_OUTPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachMulListInplace)
+#endif // OPS_PROTO_DEF_FOREACHMULLISTINPLACE
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_MUL_LIST_INPLACE_H_

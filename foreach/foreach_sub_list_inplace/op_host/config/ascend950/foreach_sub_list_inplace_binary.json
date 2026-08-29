@@ -42,7 +42,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachSubListInplace_56674f97c5a9e71c6691d61f8ae0a23d",
@@ -85,7 +99,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachSubListInplace_0059c18b0072d52966d032ef27527bfd",
@@ -128,7 +156,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachSubListInplace_c6a3b1747473cdb0aafb4bf8c97dee1d",
@@ -171,7 +213,21 @@
           "format_match_mode": "FormatAgnostic"
         }
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     }
   ]
 }

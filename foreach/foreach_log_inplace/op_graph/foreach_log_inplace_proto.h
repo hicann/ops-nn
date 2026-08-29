@@ -19,8 +19,12 @@ namespace ge {
 /**
  * @brief x = log(x) element-wise over a tensor list, written back in place. Valid range (0, inf).
  */
+#ifndef OPS_PROTO_DEF_FOREACHLOGINPLACE
+#define OPS_PROTO_DEF_FOREACHLOGINPLACE
 REG_OP(ForeachLogInplace)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .DYNAMIC_OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachLogInplace)
+#endif // OPS_PROTO_DEF_FOREACHLOGINPLACE
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_LOG_INPLACE_H_

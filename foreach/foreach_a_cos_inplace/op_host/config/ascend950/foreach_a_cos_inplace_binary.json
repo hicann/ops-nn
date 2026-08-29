@@ -18,7 +18,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachACosInplace_085f6855312137bfbf51785536ac5afb",
@@ -37,7 +51,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     },
     {
       "bin_filename": "ForeachACosInplace_71235f78a8637597548ae19c661da205",
@@ -56,7 +84,21 @@
           }
         ]
       ],
-      "outputs": []
+      "outputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ]
     }
   ]
 }
