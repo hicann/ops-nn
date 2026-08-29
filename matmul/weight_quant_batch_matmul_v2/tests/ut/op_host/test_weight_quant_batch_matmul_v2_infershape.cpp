@@ -71,4 +71,72 @@ TEST_F(TestWeightQuantBatchMatmulV2InferShape, UnknownDimNum)
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectYShape));
 }
+
+// batch dim mismatch: both x and weight have batch>1 but different -> BroadcastBatchDim returns false
+TEST_F(TestWeightQuantBatchMatmulV2InferShape, BatchDimMismatch)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("WeightQuantBatchMatmulV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+    gert::StorageShape xShape = {{2, 64, 128}, {2, 64, 128}};
+    gert::StorageShape weightShape = {{3, 128, 256}, {3, 128, 256}};
+    gert::StorageShape antiQuantScale = {{256}, {256}};
+    gert::StorageShape antiQuantOffset = {{256}, {256}};
+    gert::StorageShape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &weightShape, &antiQuantScale, &antiQuantOffset, nullptr, nullptr, nullptr})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// !transposeWeight + DT_FLOAT weight: covers the else branch (weightN *= INT4_NUMS_IN_INT32)
+TEST_F(TestWeightQuantBatchMatmulV2InferShape, FloatWeightNotTransposed)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("WeightQuantBatchMatmulV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+    gert::StorageShape xShape = {{64, 128}, {64, 128}};
+    gert::StorageShape weightShape = {{128, 256}, {128, 256}};
+    gert::StorageShape antiQuantScale = {{256}, {256}};
+    gert::StorageShape antiQuantOffset = {{256}, {256}};
+    gert::StorageShape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &weightShape, &antiQuantScale, &antiQuantOffset, nullptr, nullptr, nullptr})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+// BroadcastBatchDim failure when batch dims > 1 and different
+TEST_F(TestWeightQuantBatchMatmulV2InferShape, BroadcastBatchDimMismatch)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("WeightQuantBatchMatmulV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape xShape = {{2, 96, 11264}, {2, 96, 11264}};
+    gert::StorageShape weightShape = {{3, 1408, 11264}, {3, 1408, 11264}};
+    gert::StorageShape antiQuantScale = {{1408}, {1408}};
+    gert::StorageShape yShape;
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weightShape, &antiQuantScale, nullptr, nullptr, nullptr, nullptr})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
+    ASSERT_NE(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
 } // namespace

@@ -276,6 +276,87 @@ TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantMulMatMulFusion)
     EXPECT_EQ(r.weightQuantCount, 1);
 }
 
+// scaleN mismatch: Mul const shape product != 1 and != nDim
+TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantMulScaleNMismatchNoFusion)
+{
+    es::EsGraphBuilder gb("anti_quant_mul_scale_n_mismatch");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto scaleConst = MakeScaleConst(gb, 2);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({2}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// offsetN mismatch: Add const shape product != 1 and != nDim
+TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantAddMulOffsetNMismatchNoFusion)
+{
+    es::EsGraphBuilder gb("anti_quant_add_mul_offset_n_mismatch");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto offsetConst = MakeOffsetConst(gb, 2);
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 1.0F, 0, false);
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *offsetConst.GetProducer(), 0, addNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({2}, DT_FLOAT));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
 // AscendAntiQuant -> Add -> Mul -> MatMulV2
 TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantAddMulMatMulFusion)
 {
@@ -474,6 +555,486 @@ TEST_F(AntiQuantMatMulFusionPassTest, NoAntiQuantNoFusion)
     EXPECT_TRUE(r.hasMatMul);
 }
 
+// Blacklist K/N = 5120/10240 causes fusion to be skipped
+TEST_F(AntiQuantMatMulFusionPassTest, BlacklistKNNNoFusion)
+{
+    constexpr int64_t kBlackN = 10240;
+    es::EsGraphBuilder gb("blacklist_knn");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, kBlackN});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, kBlackN}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, kBlackN}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, kBlackN}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, kBlackN}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, kBlackN}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Matmul input shape is 3D (not 2D)
+TEST_F(AntiQuantMatMulFusionPassTest, MatmulShape3DNoFusion)
+{
+    es::EsGraphBuilder gb("matmul_shape_3d");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K, 1});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K, 1}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K, 1}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Dynamic shape (dim = -1)
+TEST_F(AntiQuantMatMulFusionPassTest, DynamicShapeNoFusion)
+{
+    es::EsGraphBuilder gb("dynamic_shape");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, -1});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, -1}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, -1}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// AscendAntiQuant input shape is 3D (not 2D)
+TEST_F(AntiQuantMatMulFusionPassTest, AntiquantShape3DNoFusion)
+{
+    es::EsGraphBuilder gb("antiquant_shape_3d");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N, 1});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N, 1}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N, 1}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N, 1}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// AntiQuant output has multiple consumers
+TEST_F(AntiQuantMatMulFusionPassTest, MultipleAntiQuantConsumersNoFusion)
+{
+    es::EsGraphBuilder gb("multi_anti_consumers");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x1 = gb.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto x2 = gb.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(2, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mm1 = BuildMatMulV2Node(graphPtr, "mm1", false, false, false);
+    auto mm2 = BuildMatMulV2Node(graphPtr, "mm2", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x1.GetProducer(), 0, mm1, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mm1, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x2.GetProducer(), 0, mm2, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mm2, 1);
+    x1.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    x2.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mm1.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mm1.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mm1.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    mm2.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mm2.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mm2.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x1, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    graph->SetOutputs({{mm1, 0}, {mm2, 0}});
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// AntiQuant scale is 0
+TEST_F(AntiQuantMatMulFusionPassTest, ScaleZeroNoFusion)
+{
+    es::EsGraphBuilder gb("scale_zero");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 0.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Mul node has no AntiQuant/Add chain input (both inputs are Const)
+TEST_F(AntiQuantMatMulFusionPassTest, MulWithoutChainNoFusion)
+{
+    es::EsGraphBuilder gb("mul_without_chain");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto scaleConst1 = MakeScaleConst(gb, DIM_N);
+    auto scaleConst2 = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst1.GetProducer(), 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst2.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Null graph
+TEST_F(AntiQuantMatMulFusionPassTest, NullGraphNoFusion)
+{
+    std::shared_ptr<Graph> nullGraph = nullptr;
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(nullGraph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// Empty graph (no MatMul nodes)
+TEST_F(AntiQuantMatMulFusionPassTest, EmptyGraphNoFusion)
+{
+    es::EsGraphBuilder gb("empty_graph");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto x1 = gb.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto x2 = gb.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x1.GetProducer(), 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x2.GetProducer(), 0, addNode, 1);
+    x1.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    x2.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x1, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(addNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// Add output has multiple consumers
+TEST_F(AntiQuantMatMulFusionPassTest, MultipleAddConsumersNoFusion)
+{
+    es::EsGraphBuilder gb("multi_add_consumers");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto offsetConst = MakeOffsetConst(gb, DIM_N);
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 1.0F, 0, false);
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    auto mm2Node = BuildMatMulV2Node(graphPtr, "matmul2", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *offsetConst.GetProducer(), 0, addNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mm2Node, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    mm2Node.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mm2Node.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    graph->SetOutputs({{mmNode, 0}, {mm2Node, 0}});
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Mul output has multiple consumers
+TEST_F(AntiQuantMatMulFusionPassTest, MultipleMulConsumersNoFusion)
+{
+    es::EsGraphBuilder gb("multi_mul_consumers");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    auto mm2Node = BuildMatMulV2Node(graphPtr, "matmul2", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mm2Node, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    mm2Node.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mm2Node.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    graph->SetOutputs({{mmNode, 0}, {mm2Node, 0}});
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Add without AntiQuant in Mul chain: Add(data,data)->Mul->MatMul
+TEST_F(AntiQuantMatMulFusionPassTest, AddWithoutAntiQuantNoFusion)
+{
+    es::EsGraphBuilder gb("add_without_antiquant");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w1 = gb.CreateInput(1, "w1", DT_FLOAT16, FORMAT_ND, {DIM_K, DIM_N});
+    auto w2 = gb.CreateInput(2, "w2", DT_FLOAT16, FORMAT_ND, {DIM_K, DIM_N});
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w1.GetProducer(), 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w2.GetProducer(), 0, addNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w1.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    w2.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Add's const input is not a Const node (it's a Data input)
+TEST_F(AntiQuantMatMulFusionPassTest, AddConstNotConstNoFusion)
+{
+    es::EsGraphBuilder gb("add_const_not_const");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto dataInput = gb.CreateInput(2, "data_input", DT_FLOAT16, FORMAT_ND, {DIM_N});
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 1.0F, 0, false);
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *dataInput.GetProducer(), 0, addNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    dataInput.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_N}, DT_FLOAT16));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT16));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// Mul's const input is not a Const node (it's a Data input)
+TEST_F(AntiQuantMatMulFusionPassTest, MulConstNotConstNoFusion)
+{
+    es::EsGraphBuilder gb("mul_const_not_const");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto dataInput = gb.CreateInput(2, "data_input", DT_FLOAT16, FORMAT_ND, {DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *dataInput.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    dataInput.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_N}, DT_FLOAT16));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT16));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
 // No fusion: M dim too large
 TEST_F(AntiQuantMatMulFusionPassTest, MDimTooLargeNoFusion)
 {
@@ -554,6 +1115,96 @@ TEST_F(AntiQuantMatMulFusionPassTest, DtypeMismatchNoFusion)
     TestablePass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
 
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// matmul input x dtype mismatch (not float16)
+TEST_F(AntiQuantMatMulFusionPassTest, MmInDtypeMismatchNoFusion)
+{
+    es::EsGraphBuilder gb("mm_in_dtype_mismatch");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// AscendAntiQuant input dtype mismatch (not int8)
+TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantInDtypeMismatchNoFusion)
+{
+    es::EsGraphBuilder gb("anti_in_dtype_mismatch");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+    auto r = CheckFusionResult(graph);
+    EXPECT_FALSE(r.hasWeightQuant);
+}
+
+// AscendAntiQuant output dtype mismatch (not float16)
+TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantOutDtypeMismatchNoFusion)
+{
+    es::EsGraphBuilder gb("anti_out_dtype_mismatch");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     auto r = CheckFusionResult(graph);
     EXPECT_FALSE(r.hasWeightQuant);
 }
@@ -699,4 +1350,141 @@ TEST_F(AntiQuantMatMulFusionPassTest, AntiQuantMatMulFusionPassAntiquatAddMulMat
     auto r = CheckFusionResult(graph);
     EXPECT_FALSE(r.hasMatMul);
     EXPECT_TRUE(r.hasWeightQuant);
+}
+
+TEST_F(AntiQuantMatMulFusionPassTest, ConstNodeInvalidDtype)
+{
+    es::EsGraphBuilder gb("const_invalid_dtype");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    std::vector<float> vals(static_cast<size_t>(DIM_N), 1.0F);
+    auto scaleConst = gb.CreateConst(vals, {DIM_N});
+    scaleConst.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_N}, DT_BF16));
+
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 0.0F, 0, false);
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_BF16));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+
+    CustomPassContext passContext;
+    TestablePass pass;
+    pass.Run(graph, passContext);
+}
+
+TEST_F(AntiQuantMatMulFusionPassTest, AddConstNodeInvalidDtype)
+{
+    es::EsGraphBuilder gb("add_const_invalid_dtype");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    std::vector<float> offsetVals(static_cast<size_t>(DIM_N), 0.0F);
+    auto offsetConst = gb.CreateConst(offsetVals, {DIM_N});
+    offsetConst.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_N}, DT_BF16));
+
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 2.0F, 0.0F, 0, false);
+    auto addNode = BuildAddNode(graphPtr, "add");
+    auto mulNode = BuildMulNode(graphPtr, "mul");
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    auto scaleConst = MakeScaleConst(gb, DIM_N);
+
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, addNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *offsetConst.GetProducer(), 0, addNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, addNode, 0, mulNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scaleConst.GetProducer(), 0, mulNode, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, mulNode, 0, mmNode, 1);
+
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    addNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_BF16));
+    addNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mulNode.UpdateInputDesc(1, MakeTD({DIM_N}, DT_FLOAT));
+    mulNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    ASSERT_NE(graph, nullptr);
+    SetGraphOutput(mmNode, graph);
+
+    CustomPassContext passContext;
+    TestablePass pass;
+    pass.Run(graph, passContext);
+}
+
+TEST_F(AntiQuantMatMulFusionPassTest, NullGraphRun)
+{
+    CustomPassContext passContext;
+    TestablePass pass;
+    std::shared_ptr<Graph> nullGraph = nullptr;
+    EXPECT_EQ(pass.Run(nullGraph, passContext), ge::GRAPH_NOT_CHANGED);
+}
+
+TEST_F(AntiQuantMatMulFusionPassTest, UnsupportedPlatformRun)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.soc_info.arch_type = 0;
+    platformInfo.str_info.short_soc_version = "Ascend910";
+    optiCompilationInfo.soc_version = "Ascend910";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    es::EsGraphBuilder gb("unsupported_platform");
+    auto graphPtr = gb.GetCGraphBuilder()->GetGraph();
+    auto x = gb.CreateInput(0, "x", DT_FLOAT16, FORMAT_ND, {DIM_M, DIM_K});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_K, DIM_N});
+    auto antiNode = BuildAscendAntiQuant(graphPtr, "anti", 1.0F, 0.0F, 0, false);
+    auto mmNode = BuildMatMulV2Node(graphPtr, "matmul", false, false, false);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *w.GetProducer(), 0, antiNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), 0, mmNode, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, antiNode, 0, mmNode, 1);
+    x.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    w.GetProducer()->UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateInputDesc(0, MakeTD({DIM_K, DIM_N}, DT_INT8));
+    antiNode.UpdateOutputDesc(0, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(0, MakeTD({DIM_M, DIM_K}, DT_FLOAT16));
+    mmNode.UpdateInputDesc(1, MakeTD({DIM_K, DIM_N}, DT_FLOAT16));
+    mmNode.UpdateOutputDesc(0, MakeTD({DIM_M, DIM_N}, DT_FLOAT16));
+    es::EsGraphBuilder::SetOutput(x, 0);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset();
+    SetGraphOutput(mmNode, graph);
+
+    CustomPassContext passContext;
+    TestablePass pass;
+    pass.Run(graph, passContext);
+
+    fe::PlatformInfoManager::Instance().platform_info_map_.erase("Ascend910");
 }

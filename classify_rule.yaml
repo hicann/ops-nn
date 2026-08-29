@@ -1210,6 +1210,7 @@ matmul-quant@ops-nn:
         - ops/ops-nn/matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/quant_batch_matmul_v3/op_kernel/arch35/
         - ops/ops-nn/matmul/quant_matmul_reduce_sum/
+        - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1236,6 +1237,7 @@ matmul-quant@ops-nn:
       - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
       - ops/ops-nn/matmul/*/op_kernel/
+      - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
 
 matmul-weight-quant@ops-nn:
   src:
@@ -1254,7 +1256,6 @@ matmul-weight-quant@ops-nn:
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_api/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_kernel/arch35/
-        - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1278,9 +1279,11 @@ matmul-weight-quant@ops-nn:
       - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
       - ops/ops-nn/matmul/quant_batch_matmul_v4/op_kernel/arch35/
+      - ops/ops-nn/matmul/quant_batch_matmul_v4/op_graph/*_fallback.cpp
       - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/
       - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/tool.h
       - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_kernel/arch35/
+      - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_graph/*_fallback.cpp
 
 norm-c@ops-nn:
   src:

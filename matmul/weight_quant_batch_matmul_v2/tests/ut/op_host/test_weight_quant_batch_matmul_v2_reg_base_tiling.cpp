@@ -469,3 +469,352 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_init_compile_info)
     ASSERT_NE(tilingFunc, nullptr);
     ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 }
+
+static ge::graphStatus RunRegBaseTiling(int64_t m, int64_t k, int64_t n, int64_t antiQuantOffsetExistFlag,
+                                        int64_t biasFlag, int64_t transA, int64_t transB, int64_t group,
+                                        ge::DataType xDtype, ge::DataType weightDtype, ge::DataType quantScaleDtype,
+                                        ge::DataType yDtype, uint32_t aicNum, uint32_t aivNum, int64_t weightFormat)
+{
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": aicNum,
+                           "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"}
+                            })";
+    ge::Format bFormat = ge::FORMAT_ND;
+    if (weightFormat == 1) {
+        bFormat = ge::FORMAT_FRACTAL_NZ;
+    } else if (weightFormat == 2) {
+        bFormat = ge::FORMAT_FRACTAL_NZ_C0_16;
+    }
+    ge::DataType biasDtype = xDtype;
+    if (xDtype == ge::DT_BF16) {
+        biasDtype = ge::DT_FLOAT;
+    }
+    gert::StorageShape xShape;
+    gert::StorageShape weigthShape;
+    gert::StorageShape antiQuantScaleShape;
+    gert::StorageShape antiQuantOffsetShape;
+    gert::StorageShape biasShape;
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    if (transA) {
+        xShape.MutableStorageShape() = gert::Shape({k, m});
+        xShape.MutableOriginShape() = gert::Shape({k, m});
+    } else {
+        xShape.MutableStorageShape() = gert::Shape({m, k});
+        xShape.MutableOriginShape() = gert::Shape({m, k});
+    }
+    if (transB) {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
+            weigthShape.MutableStorageShape() = gert::Shape({(k + 16) / 16, (n + 16) / 16L, 16L, 16});
+        } else {
+            weigthShape.MutableStorageShape() = gert::Shape({n, k});
+        }
+        weigthShape.MutableOriginShape() = gert::Shape({n, k});
+    } else {
+        if (bFormat == ge::FORMAT_FRACTAL_NZ || bFormat == ge::FORMAT_FRACTAL_NZ_C0_16) {
+            weigthShape.MutableStorageShape() = gert::Shape({(n + 16) / 16, (k + 16) / 16L, 16L, 16});
+        } else {
+            weigthShape.MutableStorageShape() = gert::Shape({k, n});
+        }
+        weigthShape.MutableOriginShape() = gert::Shape({k, n});
+    }
+    int64_t groupSize = 0;
+    if (group > 0) {
+        groupSize = group;
+        int64_t groupNum = (k + group - 1) / group;
+        if (transB) {
+            antiQuantOffsetShape.MutableStorageShape() = gert::Shape({n, groupNum});
+            antiQuantScaleShape.MutableStorageShape() = gert::Shape({n, groupNum});
+        } else {
+            antiQuantOffsetShape.MutableStorageShape() = gert::Shape({groupNum, n});
+            antiQuantScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});
+        }
+    } else if (group < 0) {
+        antiQuantOffsetShape.MutableStorageShape() = gert::Shape({n});
+        antiQuantScaleShape.MutableStorageShape() = gert::Shape({n});
+    } else {
+        antiQuantOffsetShape.MutableStorageShape() = gert::Shape({1});
+        antiQuantScaleShape.MutableStorageShape() = gert::Shape({1});
+    }
+
+    biasShape.MutableStorageShape() = gert::Shape({n});
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    MatmulV3CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("WeightQuantBatchMatmulV2");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr, nullptr, nullptr,
+                                    biasFlag ? &biasShape : nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, weightDtype, ge::FORMAT_ND, bFormat)
+                      .NodeInputTd(2, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, quantScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    tilingParseFunc(kernelHold.GetContext<gert::KernelContext>());
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    return tilingFunc(tilingContext);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nz_not_transpose)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 256, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_transpose_downward_factor)
+{
+    auto status = RunRegBaseTiling(16, 768, 1024, 1, 0, 0, 1, 96, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nd_not_transpose_b1_full_load)
+{
+    auto status = RunRegBaseTiling(8, 256, 512, 1, 0, 0, 0, 128, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nz_not_transpose_group256)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 256, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_transpose_group128_k896)
+{
+    auto status = RunRegBaseTiling(16, 896, 1024, 1, 0, 0, 1, 128, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nd_transpose_group128)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 128, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nz_not_transpose_group32)
+{
+    auto status = RunRegBaseTiling(8, 4096, 512, 1, 0, 0, 0, 32, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_transpose_group64_k640)
+{
+    auto status = RunRegBaseTiling(16, 640, 1024, 1, 0, 0, 1, 64, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nz_not_transpose_group128)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 128, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_downward_factor_while_loop)
+{
+    auto status = RunRegBaseTiling(304, 1600, 448, 0, 0, 0, 1, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_b1_full_load_only)
+{
+    auto status = RunRegBaseTiling(32, 960, 1024, 1, 0, 0, 1, 96, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nd_transpose_cacheline_align)
+{
+    auto status = RunRegBaseTiling(32, 960, 1024, 1, 0, 0, 1, 128, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nz_transpose_group128)
+{
+    auto status = RunRegBaseTiling(8, 4096, 512, 1, 0, 0, 1, 128, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_transpose_group96_large_n)
+{
+    auto status = RunRegBaseTiling(128, 1600, 512, 1, 0, 0, 1, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_not_transpose_group96_large_m)
+{
+    auto status = RunRegBaseTiling(256, 1600, 448, 1, 0, 0, 0, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nz_not_transpose_group64)
+{
+    auto status = RunRegBaseTiling(8, 4096, 512, 1, 0, 0, 0, 64, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_get_invalid_flag_cube_bound_k1024)
+{
+    auto status = RunRegBaseTiling(16, 1024, 1024, 1, 0, 0, 1, 96, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nd_transpose_group64_cacheline)
+{
+    auto status = RunRegBaseTiling(256, 960, 8192, 1, 0, 0, 1, 64, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_single_shape_tiling_half_n)
+{
+    auto status = RunRegBaseTiling(48, 1024, 2560, 1, 0, 0, 0, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_single_shape_tiling_half_m_half_n)
+{
+    auto status = RunRegBaseTiling(48, 1024, 1280, 1, 0, 0, 0, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_transpose_group96_k1024)
+{
+    auto status = RunRegBaseTiling(16, 1024, 1024, 1, 0, 0, 1, 96, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int4_nd_not_transpose_group128_k1024)
+{
+    auto status = RunRegBaseTiling(16, 1024, 1024, 1, 0, 0, 0, 128, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nd_transpose_group96_large_k)
+{
+    auto status = RunRegBaseTiling(8, 2048, 512, 1, 0, 0, 1, 96, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_unsupported_weight_dtype)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 128, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_no_quant_scale_dtype_mismatch)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 128, ge::DT_BF16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_bf16_fp4_bias_dtype_check)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 128, ge::DT_BF16, ge::DT_FLOAT4_E2M1, ge::DT_UINT64,
+                                   ge::DT_BF16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_bf16_int8_nz_bias_dtype_check)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 128, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT64, ge::DT_BF16,
+                                   32, 64, 1);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_reg_base_reject_per_channel)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, -1, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_reg_base_reject_float_weight)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_reg_base_reject_int8_output)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 32, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_INT8, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}

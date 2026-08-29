@@ -111,6 +111,17 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
         bFormat = ge::FORMAT_FRACTAL_NZ;
     }
     uint32_t soc = stol(testParam[idx++]);
+    int64_t enableUncache = 0;
+    int64_t wb1 = b1, wb2 = b2, wb3 = b3, wb4 = b4; // weight batch dims (default = x batch)
+    if (testParam.size() > idx) {
+        enableUncache = stol(testParam[idx++]);
+    }
+    if (testParam.size() > idx + 3) {
+        wb1 = stol(testParam[idx++]);
+        wb2 = stol(testParam[idx++]);
+        wb3 = stol(testParam[idx++]);
+        wb4 = stol(testParam[idx++]);
+    }
     ge::DataType biasDtype = xDtype;
     if (xDtype == ge::DT_BF16) {
         biasDtype = ge::DT_FLOAT;
@@ -132,11 +143,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
         xShape.MutableOriginShape() = gert::Shape({b1, b2, b3, b4, m, k});
     }
     if (transB) {
-        weigthShape.MutableStorageShape() = gert::Shape({b1, b2, b3, b4, n, k});
-        weigthShape.MutableOriginShape() = gert::Shape({b1, b2, b3, b4, n, k});
+        weigthShape.MutableStorageShape() = gert::Shape({wb1, wb2, wb3, wb4, n, k});
+        weigthShape.MutableOriginShape() = gert::Shape({wb1, wb2, wb3, wb4, n, k});
     } else {
-        weigthShape.MutableStorageShape() = gert::Shape({b1, b2, b3, b4, k, n});
-        weigthShape.MutableOriginShape() = gert::Shape({b1, b2, b3, b4, k, n});
+        weigthShape.MutableStorageShape() = gert::Shape({wb1, wb2, wb3, wb4, k, n});
+        weigthShape.MutableOriginShape() = gert::Shape({wb1, wb2, wb3, wb4, k, n});
     }
     int64_t groupSize = 0;
     if (group > 0) {
@@ -223,7 +234,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
                                   {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"ascendc_op_para_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"enable_uncache", Ops::NN::AnyValue::CreateFrom<int64_t>(enableUncache)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -296,6 +311,18 @@ static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"Case_1_2_16_64_64_64_64_0_0_0_0_1_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 314597891UL},
     {"Case_1_2_16_64_64_64_64_0_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 310403587UL},
     {"Case_1_2_16_64_64_64_64_0_0_0_0_1_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 306209283UL},
+    // ASW single-batch + enable_uncache=1 to cover SetDisableL2cache (L2 uncache logic)
+    {"ASW_1_1_1_1_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 285229571UL},
+    {"ASW_1_1_1_1_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 302006787UL},
+    {"ASW_1_1_1_1_1024_512_512_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 302006787UL},
+    // k aligned to 128 to trigger rightNotL2Cache; large M/N for totalSize>=l2Size (leftNotL2Cache branch)
+    {"ASW_1_1_1_1_64_128_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 302006787UL},
+    {"ASW_1_1_1_1_2048_1024_2048_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_1", 16, 302006787UL},
+    // broadcast cases: x batch != weight batch to cover CalL1Tiling/GetBroadCastInfo broadcast branches
+    {"BC3_1_2_16_64_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_0_1_2_16_1", 16, 285237763UL},
+    {"BC2_1_2_16_64_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_0_1_2_1_64", 16, 285237763UL},
+    {"BC1_1_2_16_64_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_0_1_1_16_64", 16, 285237763UL},
+    {"BC0_2_2_16_64_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0_0_1_2_16_64", 16, 285237763UL},
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2IterBatchTiling, testing::ValuesIn(casesParams));

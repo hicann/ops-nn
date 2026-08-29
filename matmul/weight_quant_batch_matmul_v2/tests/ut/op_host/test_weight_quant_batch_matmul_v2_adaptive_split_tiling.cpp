@@ -312,3 +312,253 @@ static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, testing::ValuesIn(casesParams));
+
+// Test with Ascend910_55 soc version to cover SetAttrs and ASCEND910_55-specific branches
+TEST_F(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, ascend910_55_SetAttrs)
+{
+    int64_t m = 128;
+    int64_t k = 1024;
+    int64_t n = 4096;
+    ge::DataType xDtype = ge::DT_FLOAT16;
+    ge::DataType weightDtype = ge::DT_INT4;
+    ge::DataType yDtype = ge::DT_FLOAT16;
+    ge::DataType biasDtype = ge::DT_FLOAT16;
+
+    gert::StorageShape xShape({m, k}, {m, k});
+    gert::StorageShape weigthShape({n, k}, {n, k});
+    gert::StorageShape antiQuantScaleShape({1}, {1});
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 32,
+                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
+                            })";
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    MatmulV3CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("WeightQuantBatchMatmulV2");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape, nullptr, nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, weightDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend910_55"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+    tilingFunc(tilingContext);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, a16w4_nz_large_m_not_full_load_a)
+{
+    int64_t m = 256;
+    int64_t k = 8192;
+    int64_t n = 512;
+    int64_t group = 128;
+    ge::DataType xDtype = ge::DT_FLOAT16;
+    ge::DataType weightDtype = ge::DT_INT4;
+    ge::DataType yDtype = ge::DT_FLOAT16;
+
+    gert::StorageShape xShape({m, k}, {m, k});
+    gert::StorageShape weigthShape({(n + 15) / 16, (k + 15) / 16, 16, 16}, {(n + 15) / 16, (k + 15) / 16, 16, 16});
+    gert::StorageShape antiQuantScaleShape({(k + group - 1) / group, n}, {(k + group - 1) / group, n});
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 32,
+                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
+                            })";
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    MatmulV3CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("WeightQuantBatchMatmulV2");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape, nullptr, nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, weightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(2, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(group)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+    tilingFunc(tilingContext);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, mxfp4_nz_not_transpose_per_channel)
+{
+    int64_t m = 8;
+    int64_t k = 8192;
+    int64_t n = 512;
+    ge::DataType xDtype = ge::DT_FLOAT16;
+    ge::DataType weightDtype = ge::DT_FLOAT4_E2M1;
+    ge::DataType yDtype = ge::DT_FLOAT16;
+    ge::DataType scaleDtype = ge::DT_FLOAT8_E8M0;
+
+    gert::StorageShape xShape({m, k}, {m, k});
+    gert::StorageShape weigthShape({(n + 15) / 16, (k + 15) / 16, 16, 16}, {(n + 15) / 16, (k + 15) / 16, 16, 16});
+    gert::StorageShape antiQuantScaleShape({n}, {n});
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 32,
+                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
+                            })";
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    MatmulV3CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("WeightQuantBatchMatmulV2");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape, nullptr, nullptr, nullptr, nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, weightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(2, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+    tilingFunc(tilingContext);
+}

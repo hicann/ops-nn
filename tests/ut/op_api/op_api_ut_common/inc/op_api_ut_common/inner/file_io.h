@@ -10,6 +10,7 @@
 #ifndef _OP_API_UT_COMMON_FILE_IO_H_
 #define _OP_API_UT_COMMON_FILE_IO_H_
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <memory>

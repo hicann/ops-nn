@@ -97,3 +97,239 @@ TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_nz_invalid_weight_n
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_fp8_pergroup_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 128), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_bf16_uint64_scale_fixpipe_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_scale_dtype_mismatch)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_bf16_bias_wrong_dtype)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, bias, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_quant_offset_without_scale)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc quantOffset = TensorDesc({32}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, quantOffset, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_nz_func_wrong_platform)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulNz,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_RUNTIME_ERROR);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int4_nz_transposed)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({32, 64}, ACL_INT4, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 1), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_large_k)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 65536}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({32, 65536}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend910B_uint64_scale_y_not_fp16)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({64, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc quantScale = TensorDesc({32}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, quantScale, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bias_wrong_dtype)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({4, 2, 16, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc antiquantScale = TensorDesc({1, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, bias, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_pergroup_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 64), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pergroup_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc antiquantScale = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulNz,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 64), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_pertensor_scale_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc antiquantScale = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulNz,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_fp8_nz_weight_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc antiquantScale = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulNz,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_int8_nz_bf16_bias_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc antiquantScale = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulNz,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, bias, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_float_weight_preprocess)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    ut.TestGetWorkspaceSize(&workspace_size);
+}
+
+TEST_F(l2_weight_quant_batch_matmul_v2_opapi_test, ascend950_float_weight_uint8_scale_preprocess)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight = TensorDesc({128, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc antiquantScale = TensorDesc({64}, ACL_UINT8, ACL_FORMAT_ND);
+    TensorDesc y = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnWeightQuantBatchMatmulV2,
+                        INPUT(x, weight, antiquantScale, nullptr, nullptr, nullptr, nullptr, 0), OUTPUT(y));
+    uint64_t workspace_size = 0;
+    ut.TestGetWorkspaceSize(&workspace_size);
+}

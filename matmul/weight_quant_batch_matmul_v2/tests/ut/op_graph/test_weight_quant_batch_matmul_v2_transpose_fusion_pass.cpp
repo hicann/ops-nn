@@ -1028,10 +1028,196 @@ TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, SharedTransposeWeightSca
     TestablePass pass;
     EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
 
-    EXPECT_EQ(CountNodesByType(graph, "Transpose"), 0);
     auto result = CheckFusionResult(graph);
+    EXPECT_FALSE(result.hasTranspose);
     EXPECT_TRUE(result.hasWeightQuant);
     EXPECT_TRUE(result.transposeWeightAttr);
+}
+
+// Null graph
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, NullGraphNoFusion)
+{
+    std::shared_ptr<Graph> nullGraph = nullptr;
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(nullGraph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// x dtype mismatch (not FLOAT16/BF16)
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, XDtypeMismatchNoFusion)
+{
+    auto gb = es::EsGraphBuilder("x_dtype_mismatch");
+    auto x = gb.CreateInput(0, "x", DT_FLOAT, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_FLOAT);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256}, DT_FLOAT);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128}, DT_FLOAT, {DIM_64, DIM_256}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_FLOAT);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// weight dtype mismatch
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, WeightDtypeMismatchNoFusion)
+{
+    auto gb = es::EsGraphBuilder("weight_dtype_mismatch");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT64, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT64);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128}, DT_BF16, {DIM_64, DIM_256}, DT_INT64, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_BF16);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// output dtype mismatch (not FLOAT16/BF16/INT8)
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, OutputDtypeMismatchNoFusion)
+{
+    auto gb = es::EsGraphBuilder("output_dtype_mismatch");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128}, DT_BF16, {DIM_64, DIM_256}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_FLOAT);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// x shape is not 2D
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, XShapeNot2DNoFusion)
+{
+    auto gb = es::EsGraphBuilder("x_shape_not_2d");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256, DIM_1});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256, DIM_1}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256, DIM_1}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128, DIM_1}, DT_BF16, {DIM_64, DIM_256}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_BF16);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// weight shape is not 2D
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, WeightShapeNot2DNoFusion)
+{
+    auto gb = es::EsGraphBuilder("weight_shape_not_2d");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256, DIM_1});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256, DIM_1}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128}, DT_BF16, {DIM_64, DIM_256, DIM_1}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_BF16);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// No transpose before x and weight
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, NoTransposeInputNoFusion)
+{
+    auto gb = es::EsGraphBuilder("no_transpose_input_no_fusion");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto wq = es::WeightQuantBatchMatmulV2(x, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_128, DIM_256}, DT_BF16, {DIM_64, DIM_256}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_BF16);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+}
+
+// Platform info retrieval fails
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, PlatformInfoFailNoFusion)
+{
+    fe::PlatformInfoManager::Instance().platform_info_map_.clear();
+
+    auto gb = es::EsGraphBuilder("platform_info_fail");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(wq, false, false);
+    SetDataDesc(x, {DIM_128, DIM_256}, DT_BF16);
+    SetDataDesc(w, {DIM_64, DIM_256}, DT_INT8);
+    SetDataDesc(s, {DIM_64, DIM_1}, DT_BF16);
+    SetDataDesc(o, {DIM_64, DIM_1}, DT_BF16);
+    SetTransposeDescs(tx, {DIM_128, DIM_256}, DT_BF16);
+    SetWqbmmv2Descs(wq, {DIM_256, DIM_128}, DT_BF16, {DIM_64, DIM_256}, DT_INT8, {DIM_64, DIM_1}, DT_BF16,
+                    {DIM_64, DIM_1}, DT_BF16, true, {}, DT_FLOAT, false, {DIM_128, DIM_64}, DT_BF16);
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
+
+    SetUpTestCase();
 }
 
 TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, XTransposePlusSharedWeightOffset)
@@ -1205,4 +1391,73 @@ TEST_F(WeightQuantBatchMatmulV2TransposeFusionPassTest, ScaleTransposeNoOffsetTr
     EXPECT_FALSE(result.hasTranspose);
     EXPECT_TRUE(result.hasWeightQuant);
     EXPECT_TRUE(result.transposeWeightAttr);
+}
+
+class WeightQuantBatchMatmulV2TransposeFusionNoL0cTest : public testing::Test {
+protected:
+    class TestablePass : public ops::WeightQuantBatchMatmulV2TransposeFusionPass {};
+
+    static void SetUpTestCase()
+    {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optiCompilationInfo;
+        platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_l12ub"] = {"float16"};
+        optiCompilationInfo.soc_version = "soc_version_nol0c";
+        fe::PlatformInfoManager::Instance().platform_info_map_["soc_version_nol0c"] = platformInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    }
+
+    static void TearDownTestCase() { fe::PlatformInfoManager::Instance().platform_info_map_.clear(); }
+};
+
+TEST_F(WeightQuantBatchMatmulV2TransposeFusionNoL0cTest, NoL0c2outPlatformSkip)
+{
+    auto gb = es::EsGraphBuilder("no_l0c2out_test");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto tx = CreateTranspose(gb, x);
+    auto wq = es::WeightQuantBatchMatmulV2(tx, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(graph, false, false);
+
+    CustomPassContext passContext;
+    TestablePass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), ge::GRAPH_NOT_CHANGED);
+}
+
+class WeightQuantBatchMatmulV2TransposeNZWithL0cTest : public testing::Test {
+protected:
+    class TestableNZPass : public ops::WeightQuantBatchMatmulV2TransposeNZFusionPass {};
+
+    static void SetUpTestCase()
+    {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optiCompilationInfo;
+        platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_fix_pipe_l0c2out"] = {"float16"};
+        optiCompilationInfo.soc_version = "soc_version_with_l0c";
+        fe::PlatformInfoManager::Instance().platform_info_map_["soc_version_with_l0c"] = platformInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    }
+
+    static void TearDownTestCase() { fe::PlatformInfoManager::Instance().platform_info_map_.clear(); }
+};
+
+TEST_F(WeightQuantBatchMatmulV2TransposeNZWithL0cTest, NZPassWithL0c2outSkip)
+{
+    auto gb = es::EsGraphBuilder("nz_with_l0c_test");
+    auto x = gb.CreateInput(0, "x", DT_BF16, FORMAT_ND, {DIM_128, DIM_256});
+    auto w = gb.CreateInput(1, "weight", DT_INT8, FORMAT_ND, {DIM_64, DIM_256});
+    auto s = gb.CreateInput(2, "scale", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto o = gb.CreateInput(3, "offset", DT_BF16, FORMAT_ND, {DIM_64, DIM_1});
+    auto wq = es::WeightQuantBatchMatmulV2(x, w, s, o);
+    std::shared_ptr<Graph> graph = gb.BuildAndReset({wq});
+    ASSERT_NE(graph, nullptr);
+    SetWqbmmv2Attrs(graph, false, false);
+
+    CustomPassContext passContext;
+    TestableNZPass pass;
+    EXPECT_EQ(pass.Run(graph, passContext), ge::GRAPH_NOT_CHANGED);
 }

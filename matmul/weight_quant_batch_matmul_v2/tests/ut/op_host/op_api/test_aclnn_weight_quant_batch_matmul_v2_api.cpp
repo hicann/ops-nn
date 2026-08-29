@@ -14,6 +14,8 @@
 #include <thread>
 #include <vector>
 #include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v2.h"
+#include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v3.h"
+#include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_nz.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -2743,6 +2745,181 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
+    {"err_fp4_fp32_pertensor",
+     {2, 64},
+     {64, 128},
+     {1, 128},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     0,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT4_E2M1,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_fp8_e8m0_mx",
+     {2, 64},
+     {64, 128},
+     {2, 128},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     0,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT8_E4M3FN,
+     ACL_FLOAT8_E8M0,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_fp8_pergroup",
+     {2, 64},
+     {64, 128},
+     {2, 128},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     64,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT8_E4M3FN,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_fp8_pertensor",
+     {2, 64},
+     {64, 128},
+     {1},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     0,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT8_E4M3FN,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_fp4_bias_float",
+     {2, 64},
+     {64, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     32,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT4_E2M1,
+     ACL_FLOAT8_E8M0,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     true,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_int8nz_bias_bf16",
+     {2, 64},
+     {64, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     0,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_INT8,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_BF16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_FRACTAL_NZ,
+     false,
+     false,
+     false,
+     true,
+     ACLNN_ERR_PARAM_INVALID},
+    {"err_int4_bias_int8",
+     {2, 64},
+     {64, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     0,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_INT4,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_INT8,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     true,
+     ACLNN_ERR_PARAM_INVALID},
 };
 
 INSTANTIATE_TEST_SUITE_P(Ascend910B2_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910B2,
@@ -2799,4 +2976,235 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_multi_thread)
 {
     TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulV2TestParam), 3,
                     NpuArch::DAV_3510, op::SocVersion::ASCEND950);
+}
+
+// innerPrecise invalid value (V3 API)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_910B2, ascend910B2_innerPreciseInvalid)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, 2,
+                                                             y, &ws, &exe);
+    EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+}
+
+// Bias dtype mismatch: bias=INT8 instead of FLOAT on 910B2
+TEST_F(l2_weight_quant_batch_matmul_v2_test_910B2, ascend910B2_biasDtypeMismatch)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto bias = CreateTensorDesc({1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, bias, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// quantScaleOptional not null on 310P (unsupported)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_310P, ascend310P_quantScaleNotNull)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto quantScale = CreateTensorDesc({1, 1664}, ACL_UINT64, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, quantScale, nullptr, nullptr, 0,
+                                                             y, &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: INT8 NZ weight with per-group antiquantGroupSize > 0
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerGroup)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 128,
+                                                             y, &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: INT8 NZ weight with per-tensor scale (shape size == 1)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzPerTensor)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: INT8 NZ weight with transposed x (per-channel)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzTransposedX)
+{
+    auto x = CreateTensorDesc({11264, 96}, ACL_BF16, ACL_FORMAT_ND, TRANSPOSE_LAST_TWO_DIMS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: FP4 weight with per-channel/per-tensor (antiquantGroupSize == 0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp4PerChannel)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: FP8 weight with MX mode (antiquantScale=FLOAT8_E8M0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8MxMode)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: FP8 weight with per-group (antiquantGroupSize > 0)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerGroup)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 128,
+                                                             y, &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: FP8 weight with per-tensor (scale shape size == 1, n != 1)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp8PerTensor)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: BF16 x with FP4/FP8 weight + bias dtype not BF16
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchFp4)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto bias = CreateTensorDesc({1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, bias, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: BF16 x with INT8 NZ weight + bias dtype not FLOAT
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchInt8Nz)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto bias = CreateTensorDesc({1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, bias, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: BF16 x with INT8 ND weight + bias dtype not BF16/FLOAT (default branch)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_biasDtypeMismatchDefault)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto bias = CreateTensorDesc({1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, bias, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: NZ weight with unsupported dtype (INT32)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_nzWeightUnsupportedDtype)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: INT8 NZ weight with large K (exceeds M_K_N_MAX_VALUE)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_int8NzLargeK)
+{
+    constexpr int64_t kLargeK = 100000;
+    auto x = CreateTensorDesc({96, kLargeK}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({kLargeK, 1664}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: antiquantScale dtype mismatch with antiquantOffset
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_antiquantOffsetDtypeMismatch)
+{
+    auto x = CreateTensorDesc({96, 11264}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({11264, 1664}, ACL_INT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({1, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto offset = CreateTensorDesc({1, 1664}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({96, 1664}, ACL_BF16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, offset, nullptr, nullptr, nullptr, 0, y,
+                                                             &ws, &exe);
+    EXPECT_NE(ret, ACLNN_SUCCESS);
 }
