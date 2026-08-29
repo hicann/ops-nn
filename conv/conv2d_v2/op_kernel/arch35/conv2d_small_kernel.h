@@ -411,7 +411,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         uint32_t curK = tiling_->kL0;
         uint32_t curKAL0 = tiling_->kL0;
         if (kl0Iter == kL0MaxIter - 1) {
-            curKAL0 = kTotalFmap_ * tiling_->kh * tiling_->kw % tiling_->kL0;
+            curKAL0 = kTotalFmap_ % tiling_->kL0;
             curKAL0 = curKAL0 == 0 ? tiling_->kL0 : curKAL0;
             curK = AlignB(curKAL0, GK0);
         }
