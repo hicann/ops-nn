@@ -170,20 +170,11 @@ def swiglu_group_quant(
 
 
 def _swiglu_group_quant_backward_autograd(ctx, grad_y, grad_y_scale, grad_y_origin):
-    saved_x, saved_weight, saved_group_index = ctx.saved_tensors
+    saved_x, saved_weight, saved_group_index, y_origin = ctx.saved_tensors
     if grad_y_origin is None:
-        return None, None, None, None, None, None, None, None, None, None, None
+        return None, None, None, None
     if saved_weight is None:
         y_origin = None
-    else:
-        _, _, y_origin = torch.ops.cann_ops_nn.swiglu_group_quant(
-            saved_x,
-            None,
-            saved_group_index,
-            None,
-            clamp_limit=ctx.clamp_limit,
-            output_origin=True,
-        )
     grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_quant_backward(
         grad_y_origin,
         saved_x,
@@ -193,12 +184,13 @@ def _swiglu_group_quant_backward_autograd(ctx, grad_y, grad_y_scale, grad_y_orig
         clamp_limit=ctx.clamp_limit,
     )
     grad_weight = grad_weight if saved_weight is not None else None
-    return grad_x, grad_weight, None, None, None, None, None, None, None, None, None
+    return grad_x, grad_weight, None, None
 
 
 def _swiglu_group_quant_setup_context(ctx, inputs, keyword_only_inputs, output):
     x, weight, group_index, scale = inputs
-    ctx.save_for_backward(x, weight, group_index)
+    _, _, y_origin = output
+    ctx.save_for_backward(x, weight, group_index, y_origin)
     ctx.clamp_limit = keyword_only_inputs["clamp_limit"]
     ctx.set_materialize_grads(False)
 

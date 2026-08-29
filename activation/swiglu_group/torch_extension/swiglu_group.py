@@ -55,28 +55,23 @@ def swiglu_group(x, weight=None, group_index=None, *, clamp_limit=-1.0):
 
 
 def _swiglu_group_backward_autograd(ctx, grad_output):
-    saved_x, saved_weight, saved_group_index = ctx.saved_tensors
-    clamp_limit_bwd = -1.0 if ctx.clamp_limit == -1.0 else ctx.clamp_limit
+    saved_x, saved_weight, saved_group_index, y_origin = ctx.saved_tensors
     if saved_weight is None:
         y_origin = None
-    else:
-        y_origin = torch.ops.cann_ops_nn.swiglu_group(
-            saved_x, None, saved_group_index, clamp_limit=ctx.clamp_limit
-        )
     grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
         grad_output,
         saved_x,
         weight=saved_weight,
         y_origin=y_origin,
         group_index=saved_group_index,
-        clamp_limit=clamp_limit_bwd,
+        clamp_limit=ctx.clamp_limit,
     )
-    return grad_x, grad_weight, None, None
+    return grad_x, grad_weight, None
 
 
 def _swiglu_group_setup_context(ctx, inputs, keyword_only_inputs, output):
     x, weight, group_index = inputs
-    ctx.save_for_backward(x, weight, group_index)
+    ctx.save_for_backward(x, weight, group_index, output)
     ctx.clamp_limit = keyword_only_inputs["clamp_limit"]
 
 
