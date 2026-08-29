@@ -53,7 +53,7 @@
 aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(
     const aclTensor *x1,
     const aclTensor *x2,
-    const aclTensor *x1Scale,
+    const aclTensor *x1ScaleOptional,
     const aclTensor *x2Scale,
     aclTensor       *yRef,
     bool             transposeX1,

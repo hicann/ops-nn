@@ -7,8 +7,8 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2 推理产品|×|
-|Atlas 推理系列产品|x|
+|Atlas 200I/500 A2 推理产品|x|
+|Atlas 推理系列产品|√|
 |Atlas 训练系列产品|x|
 |Kirin X90 处理器系列产品|√|
 |Kirin 9030 处理器系列产品|√|
@@ -22,7 +22,7 @@
     - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32，out为FLOAT16/BFLOAT16：
 
       $$
-      out = ((x1 @ (x2*x2Scale)) + yoffset) * x1Scale
+      out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
       $$
 
     - 无x1Scale无bias：
@@ -58,7 +58,7 @@
     - x1Scale， bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
 
       $$
-      out = x1@x2 * scale * x1Scale + bias
+      out = x1@x2 * x2Scale * x1Scale + bias
       $$
 
     - x1，x2为INT8，x1Scale, x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16  (pertoken-pergroup量化):

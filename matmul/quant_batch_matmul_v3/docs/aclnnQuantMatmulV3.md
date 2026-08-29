@@ -122,7 +122,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <td><ul>
         <li>ND：
         <ul><li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
-        <li>在transposeX1为false时shape形如（batch，n，k），在transposeX1为true时shape形如（batch，k，n），batch可不存在，其中k与x1的shape中的k一致</li></ul> </li>
+        <li>在transposeX2为false时shape形如（batch，k，n），在transposeX2为true时shape形如（batch，n，k），batch可不存在，其中k与x1的shape中的k一致</li></ul> </li>
         <li>NZ：
           <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul>
           <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul>
@@ -245,7 +245,7 @@ aclnnStatus aclnnQuantMatmulV3(
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - x1、x2支持INT8、INT4
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
-    - scale支持INT32、BFLOAT16、FLOAT32
+    - bias支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
     - 全量化场景下，x2为ND格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor；A8W8全量化场景下，x2为NZ格式时，当输入x1的m为0时，输出为空Tensor。
 
@@ -272,18 +272,18 @@ aclnnStatus aclnnQuantMatmulV3(
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
         <td>161001</td>
-        <td>传入的x1、x2、x2Scale或out是空指针。</td>
+        <td>传入的x1、x2、scale或out是空指针。</td>
       </tr>
       <tr>
         <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="3">161002</td>
-        <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的数据类型和数据格式不在支持的范围之内。</td>
+        <td>x1、x2、bias、scale、offset或out的数据类型和数据格式不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的shape不满足校验条件。</td>
+        <td>x1、x2、bias、scale、offset或out的shape不满足校验条件。</td>
       </tr>
       <tr>
-        <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out是空tensor。</td>
+        <td>x1、x2、bias、scale、offset或out是空tensor。</td>
       </tr>
     </tbody>
     </table>
