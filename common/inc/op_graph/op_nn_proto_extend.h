@@ -2409,71 +2409,77 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
     .OP_END_FACTORY_REG(ScatterNonAliasingAdd)
 
-    /**
-    * @brief Computes the maximum along segments of a tensor. \n
-        Computes a tensor such that (output[i] = max_{j...} x[j...]. \n
-        the value of segment_ids must be  in [0, num_segments - 1]. \n
-        for example:x = [[0,1,2],[3,4,5],[6,7,8]], segment_ids = [0,0,1] num_segments = 5 \n
-        output[0] = [3, 4, 5]
-        output[1] = [6, 7, 8]
-        output[2] = [-2147483648, -2147483648, -2147483648]
-        output[3] = [-2147483648, -2147483648, -2147483648]
-        output[4] = [-2147483648, -2147483648, -2147483648]
-    * @par Inputs:
-    * Three inputs, including:
-    * @li x: A Tensor format is ND. Support 1D ~ 8D.
-    * Type must be one of the following types:double, float32, float16,
-    * int16, int32, int64, int8, uint16, uint32, uint64, uint8, bfloat16.
-    * @li segment_ids: A 1D Tensor of type int32, int64, whose shape is a prefix of "x.shape".
-    * A Tensor of type int32, int64, whose shape is a prefix, format is ND,
-    * ids value is small than x rank, or equal of x shape rank.
-    * @li num_segments: A Tensor of type int32, int64, format is ND.
-    * Indicates the output segment.
+/**
+* @brief Computes the maximum along segments of a tensor. \n
+    Computes a tensor such that (output[i] = max_{j...} x[j...]. \n
+    the value of segment_ids must be  in [0, num_segments - 1]. \n
+    for example:x = [[0,1,2],[3,4,5],[6,7,8]], segment_ids = [0,0,1] num_segments = 5 \n
+    output[0] = [3, 4, 5]
+    output[1] = [6, 7, 8]
+    output[2] = [-2147483648, -2147483648, -2147483648]
+    output[3] = [-2147483648, -2147483648, -2147483648]
+    output[4] = [-2147483648, -2147483648, -2147483648]
+* @par Inputs:
+* Three inputs, including:
+* @li x: A Tensor format is ND. Support 1D ~ 8D.
+* Type must be one of the following types:double, float32, float16,
+* int16, int32, int64, int8, uint16, uint32, uint64, uint8, bfloat16.
+* @li segment_ids: A 1D Tensor of type int32, int64, whose shape is a prefix of "x.shape".
+* A Tensor of type int32, int64, whose shape is a prefix, format is ND,
+* ids value is small than x rank, or equal of x shape rank.
+* @li num_segments: A Tensor of type int32, int64, format is ND.
+* Indicates the output segment.
 
-    * @par Outputs:
-    * y: type and format is the same as x type.
+* @par Outputs:
+* y: type and format is the same as x type.
 
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator UnsortedSegmentMax.
-    */
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator UnsortedSegmentMax.
+*/
+#ifndef OPS_PROTO_DEF_UNSORTEDSEGMENTMAX
+#define OPS_PROTO_DEF_UNSORTEDSEGMENTMAX
     REG_OP(UnsortedSegmentMax)
     .INPUT(x, TensorType::RealNumberType())
     .INPUT(segment_ids, TensorType::IndexNumberType())
     .INPUT(num_segments, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType::RealNumberType())
     .OP_END_FACTORY_REG(UnsortedSegmentMax)
+#endif
 
-    /**
-    * @brief Computes the product along segments of a tensor. \n
-        Computes a tensor such that (output[i] = mul_{j...} x[j...]. \n
-        the value of segment_ids must be  in [0, num_segments - 1]. \n
-        for example:x = [[0,1,2],[3,4,5],[6,7,8]], segment_ids = [0,0,1] num_segments = 5 \n
-        output[0] = [0, 4, 10]
-        output[1] = [6, 7, 8]
-        output[2] = [1, 1, 1]
-        output[3] = [1, 1, 1]
-        output[4] = [1, 1, 1]
-    * @par Inputs:
-    * Three inputs, including:
-    * @li x: A Tensor of type NumberType(), format is ND. bank of shape must greater zero.
-    * @li segment_ids: A 1D Tensor of type IndexNumberType, whose shape is a prefix of "x.shape".
-    * A Tensor of type int32, int64, whose shape is a prefix, format is ND,
-    * bank of shape is small than x rank, or equal of x shape rank.
-    * @li num_segments: A Tensor of type int32, int64, format is ND.
-    * Indicates the output segment.
+/**
+* @brief Computes the product along segments of a tensor. \n
+    Computes a tensor such that (output[i] = mul_{j...} x[j...]. \n
+    the value of segment_ids must be  in [0, num_segments - 1]. \n
+    for example:x = [[0,1,2],[3,4,5],[6,7,8]], segment_ids = [0,0,1] num_segments = 5 \n
+    output[0] = [0, 4, 10]
+    output[1] = [6, 7, 8]
+    output[2] = [1, 1, 1]
+    output[3] = [1, 1, 1]
+    output[4] = [1, 1, 1]
+* @par Inputs:
+* Three inputs, including:
+* @li x: A Tensor of type NumberType(), format is ND. bank of shape must greater zero.
+* @li segment_ids: A 1D Tensor of type IndexNumberType, whose shape is a prefix of "x.shape".
+* A Tensor of type int32, int64, whose shape is a prefix, format is ND,
+* bank of shape is small than x rank, or equal of x shape rank.
+* @li num_segments: A Tensor of type int32, int64, format is ND.
+* Indicates the output segment.
 
-    * @par Outputs:
-    * y: A Tensor type and format is the same as x type. \n
+* @par Outputs:
+* y: A Tensor type and format is the same as x type. \n
 
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator UnsortedSegmentProd.
-    */
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator UnsortedSegmentProd.
+*/
+#ifndef OPS_PROTO_DEF_UNSORTEDSEGMENTPROD
+#define OPS_PROTO_DEF_UNSORTEDSEGMENTPROD
     REG_OP(UnsortedSegmentProd)
     .INPUT(x, TensorType::NumberType())
     .INPUT(segment_ids, TensorType::IndexNumberType())
     .INPUT(num_segments, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType::NumberType())
     .OP_END_FACTORY_REG(UnsortedSegmentProd)
+#endif
 
     /**
     * @brief Choose the value of X with value according to mask.
