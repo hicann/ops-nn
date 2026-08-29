@@ -63,12 +63,28 @@ static int32_t GetRuntimeGeCompilerVersion()
 // InplaceSub 输入个数(x, indices, v)
 const size_t kInplaceSubInputNum = 3;
 
-// ScatterSub var/updates 支持的 dtype,与 ScatterSub IR 定义对齐
-static bool IsSupportedDataDtype(const DataType dtype)
+// ScatterSub var/updates 支持的 dtype。
+// 默认所有 dtype 均支持；仅对未注册 INT8/UINT8/BF16 kernel 的老芯片使用黑名单排除。
+// 新芯片无需改动本函数即可自动继承完整 dtype 集合。
+static bool IsSupportedDataDtype(const DataType dtype, const std::string& socVersion)
 {
-    static const std::initializer_list<DataType> kSupportedDataDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32,
-                                                                         DT_INT8,    DT_UINT8, DT_BF16};
-    return std::find(kSupportedDataDtypes.begin(), kSupportedDataDtypes.end(), dtype) != kSupportedDataDtypes.end();
+    static const std::initializer_list<DataType> kAllDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32,
+                                                               DT_INT8,    DT_UINT8, DT_BF16};
+    if (std::find(kAllDtypes.begin(), kAllDtypes.end(), dtype) == kAllDtypes.end()) {
+        return false;
+    }
+    // INT8/UINT8/BF16 kernel 未在老芯片上注册，需排除。
+    static const std::initializer_list<DataType> kLimitedDtypes = {DT_INT8, DT_UINT8, DT_BF16};
+    static const std::initializer_list<const char*> kLimitedSocs = {"Ascend910", "Ascend910_93", "Ascend910B",
+                                                                    "Ascend310P"};
+    if (std::find(kLimitedDtypes.begin(), kLimitedDtypes.end(), dtype) != kLimitedDtypes.end()) {
+        for (const auto* soc : kLimitedSocs) {
+            if (socVersion == soc) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 // ScatterSub indices 支持的 dtype(IndexNumberType: int32/int64)
@@ -117,18 +133,27 @@ static Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<Sub
     return GeUtils::InferShape(*replaceGraph, inputShapes);
 }
 
-// 平台校验:原融合规则只排除 Ascend310,其余平台均融合
-static bool IsSupportedPlatform()
+// 查询当前 SoC 短版本字符串；查询失败返回空字符串。
+static std::string GetCurrentSocVersion()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
-    OP_LOGE_IF(
-        fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
-        false, PASS_NAME.c_str(), "Get platform_info failed.");
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        return {};
+    }
+    return platformInfo.str_info.short_soc_version;
+}
 
-    const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc == NOT_SUPPORT_SOC) {
-        OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported, skip.", soc.c_str());
+// 平台校验:原融合规则只排除 Ascend310,其余平台均融合。
+static bool IsSupportedPlatform()
+{
+    const std::string curSoc = GetCurrentSocVersion();
+    if (curSoc.empty()) {
+        OPS_LOG_W(PASS_NAME.c_str(), "Get platform_info failed, skip.");
+        return false;
+    }
+    if (curSoc == NOT_SUPPORT_SOC) {
+        OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported, skip.", curSoc.c_str());
         return false;
     }
     return true;
@@ -192,6 +217,7 @@ bool AInplaceSubFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     if (!IsSupportedPlatform()) {
         return false;
     }
+    const std::string curSoc = GetCurrentSocVersion();
 
     NodeIo captured;
     OP_LOGE_IF(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
@@ -221,10 +247,11 @@ bool AInplaceSubFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     TensorDesc vDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(2, vDesc) != SUCCESS, false, PASS_NAME.c_str(), "Get input v desc failed.");
 
-    if (!IsSupportedDataDtype(xDesc.GetDataType()) || !IsSupportedDataDtype(vDesc.GetDataType()) ||
+    if (!IsSupportedDataDtype(xDesc.GetDataType(), curSoc) || !IsSupportedDataDtype(vDesc.GetDataType(), curSoc) ||
         !IsSupportedIndicesDtype(indicesDesc.GetDataType())) {
-        OPS_LOG_D(PASS_NAME.c_str(), "ScatterSub does not support input dtype (x:%d, indices:%d, v:%d), skip.",
-                  xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType());
+        OPS_LOG_D(PASS_NAME.c_str(),
+                  "ScatterSub does not support input dtype (x:%d, indices:%d, v:%d) on soc %s, skip.",
+                  xDesc.GetDataType(), indicesDesc.GetDataType(), vDesc.GetDataType(), curSoc.c_str());
         return false;
     }
 

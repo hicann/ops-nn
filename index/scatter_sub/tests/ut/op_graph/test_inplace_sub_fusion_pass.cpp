@@ -267,3 +267,18 @@ TEST_F(AInplaceSubFusionPassTest, unsupportedIndicesDtypeFail)
     EXPECT_FALSE(FindNodeByType(graph, "ScatterSub"));
     EXPECT_TRUE(FindNodeByType(graph, "InplaceSub"));
 }
+
+// Negative: BF16 的 ScatterSub kernel 未在 Ascend910_93 上注册(黑名单排除),
+// 该平台下 BF16 输入应拒绝融合,InplaceSub 保留。
+TEST_F(AInplaceSubFusionPassTest, inplaceSubFusionBf16Ascend910_93UnsupportedFail)
+{
+    SetPlatform("Ascend910_93");
+    auto graph = BuildTestGraph(DT_BF16, {4, 8}, {2}, {2, 8});
+    CustomPassContext passContext;
+    OPS::NN::AInplaceSubFusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterSub"));
+    EXPECT_TRUE(FindNodeByType(graph, "InplaceSub"));
+}

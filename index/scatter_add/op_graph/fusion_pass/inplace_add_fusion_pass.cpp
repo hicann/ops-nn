@@ -88,17 +88,26 @@ bool IsSupportedIndicesDtype(const DataType dtype)
            kSupportedIndicesDtypes.end();
 }
 
-// Ascend310 does not support the legacy lowering. Ascend950 provides a native InplaceAdd implementation,
-// so its graph must keep the original node and dispatch to the native binary.
-bool IsSupportSoc(std::string& curSoc)
+// Returns the current SoC short version string, or empty string on failure.
+std::string GetCurrentSocVersion()
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
     if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        return {};
+    }
+    return platformInfo.str_info.short_soc_version;
+}
+
+// Ascend310 does not support the legacy lowering. Ascend950 provides a native InplaceAdd implementation,
+// so its graph must keep the original node and dispatch to the native binary.
+bool IsSupportSoc()
+{
+    const std::string curSoc = GetCurrentSocVersion();
+    if (curSoc.empty()) {
         OP_LOGW(kPassName.c_str(), "Get platform info failed, not fusion.");
         return false;
     }
-    curSoc = platformInfo.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
     if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc) {
         OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
@@ -203,10 +212,10 @@ bool AInplaceAddFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     }
 
     // Keep the legacy lowering for older supported products; Ascend950 uses the native InplaceAdd binary.
-    std::string curSoc;
-    if (!IsSupportSoc(curSoc)) {
+    if (!IsSupportSoc()) {
         return false;
     }
+    const std::string curSoc = GetCurrentSocVersion();
 
     NodeIo inplaceAddIo;
     OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureInplaceAdd, inplaceAddIo) != SUCCESS, false, kPassName.c_str(),
