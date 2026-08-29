@@ -176,3 +176,24 @@ TEST_F(ScatterMinTiling, test_tiling_big_slice)
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
+
+// var first axis == INT32_MAX -> accepted. The largest in-bound index is INT32_MAX-1, which is
+// strictly below the INT32_MAX value the parallel merge sort uses to pad short runs.
+TEST_F(ScatterMinTiling, test_tiling_var_dim0_eq_int32max)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{2147483647L}, {2147483647L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_INT32, ge::DT_INT32,
+                                  true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0);
+}
+
+// var first axis == INT32_MAX + 1 -> rejected. An in-bound index may then equal INT32_MAX, which is
+// indistinguishable from the sort padding key. Matches the declared constraint in README.
+TEST_F(ScatterMinTiling, test_tiling_var_dim0_over_int32max)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{2147483648L}, {2147483648L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_INT32, ge::DT_INT32,
+                                  true, key);
+    EXPECT_EQ(st, ge::GRAPH_FAILED);
+}

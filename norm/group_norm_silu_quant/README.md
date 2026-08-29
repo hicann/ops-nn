@@ -70,7 +70,7 @@
         <td>self</td>
         <td>输入</td>
         <td>计算公式中的x。</td>
-        <td>支持空Tensor（任意维度为0）。此时out为空，meanOut填充为0，rstdOut填充为NAN。</td>
+        <td>支持空Tensor：N（第0维）与C（第1维）需大于0，其余维度可为0。此时out为空，meanOut填充为0，rstdOut填充为NAN。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>2-8，其中第0维为N，第1维为C</td>
@@ -144,7 +144,7 @@
         <td>INT8</td>
         <td>ND</td>
         <td>与self一致</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>meanOut</td>
@@ -154,7 +154,7 @@
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>rstdOut</td>
@@ -164,7 +164,7 @@
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>workspaceSize</td>

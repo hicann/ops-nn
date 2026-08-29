@@ -157,7 +157,7 @@ aclnnStatus aclnnGroupNormSilu(
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>与self一致</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>meanOut（aclTensor*）</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnGroupNormSilu(
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>rstdOut（aclTensor*）</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnGroupNormSilu(
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>(N, group)</td>
-        <td>x</td>
+        <td>√</td>
     </tr>
     <tr>
         <td>workspaceSize（uint64_t*）</td>
