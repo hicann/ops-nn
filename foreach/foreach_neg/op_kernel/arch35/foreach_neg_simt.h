@@ -30,6 +30,8 @@ constexpr int TENSOR_PTR_SHIFT = 3;
 using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
+// Max tensor count must match ForeachNegTilingData::tensorElements capacity (256)
+constexpr int32_t MAX_TENSOR_NUM_FOREACH_NEG_SIMT = 256;
 
 /**
  * \brief Get the GM address of the idx-th tensor in a TensorList
@@ -82,6 +84,10 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachNegTili
         offsetof(ForeachNegTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
+    // Defense-in-depth: tensorElements capacity is 256, clamp tensorCount to avoid OOB read on GM
+    if (tensorCount > MAX_TENSOR_NUM_FOREACH_NEG_SIMT) {
+        tensorCount = MAX_TENSOR_NUM_FOREACH_NEG_SIMT;
+    }
 
     AscendC::Simt::VF_CALL<OpForeachNegSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
 }

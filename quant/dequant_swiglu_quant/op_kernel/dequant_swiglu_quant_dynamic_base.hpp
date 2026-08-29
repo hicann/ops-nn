@@ -183,7 +183,7 @@ public:
             WaitFlag<HardEvent::V_S>(eventIdV2S);
             float value = maxTempLocal.GetValue(rowId * baseRowLen + i) / 127;
             maxTempLocal.SetValue(rowId * baseRowLen + i, value);
-            float scale = 1 / value;
+            float scale = (value == 0.0f) ? 1.0f : (1.0f / value);
             Muls(swiLocal[i * offsetCalc], swiLocal[i * offsetCalc], scale, colNum);
             PipeBarrier<PIPE_V>();
         }

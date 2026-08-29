@@ -29,6 +29,7 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
+constexpr int32_t MAX_TENSOR_NUM_FOREACH_NEG = 256;
 
 struct ForeachNegCompileInfo {};
 
@@ -56,6 +57,9 @@ static ge::graphStatus ForeachNegTilingFunc(gert::TilingContext* context)
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
+    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_NEG),
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM_FOREACH_NEG),
+                return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);

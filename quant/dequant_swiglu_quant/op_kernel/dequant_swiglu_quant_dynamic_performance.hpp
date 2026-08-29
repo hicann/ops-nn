@@ -373,7 +373,7 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Base
 
     float value = this->maxTempLocal.GetValue(rowId * this->baseRowLen) / 127;
     this->maxTempLocal.SetValue(rowId * this->baseRowLen, value);
-    float scale = 1 / value;
+    float scale = (value == 0.0f) ? 1.0f : (1.0f / value);
     Muls(swiLocal, swiLocal, scale, this->colNum);
     PipeBarrier<PIPE_V>();
 
