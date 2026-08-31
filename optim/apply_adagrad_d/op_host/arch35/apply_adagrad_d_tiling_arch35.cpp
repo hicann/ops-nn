@@ -227,10 +227,12 @@ ge::graphStatus ApplyAdagradDTiling::RunTiling()
                 return ge::GRAPH_FAILED);
     if (updateSlots_) {
         OP_CHECK_IF(DoUpdateSlotsTiling() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for update slots."),
+                    return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(DoNonUpdateSlotsTiling() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed."), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for non-update slots."),
+                    return ge::GRAPH_FAILED);
     }
     return SetTilingData();
 }

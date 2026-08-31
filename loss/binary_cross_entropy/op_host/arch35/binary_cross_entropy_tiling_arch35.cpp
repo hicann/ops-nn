@@ -66,7 +66,7 @@ ge::graphStatus BinaryCrossEntropyTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output (validate before tiling)",
                                   Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     if (this->outputDtype != this->inputXDtype) {
@@ -147,7 +147,8 @@ ge::graphStatus BinaryCrossEntropyTiling::RunFp16ReduceTiling(ReduceOpInputParam
         OP_CHECK_IF((Tiling4ReduceOp<BCESumDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
                                                                     &compileInfo->opInfo,
                                                                     &tiling->reduceTiling) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed for FP16 Sum"),
+                    return ge::GRAPH_FAILED);
     } else if (this->isReductionSum && hasWeight) {
         // reducesum and optional input weight is not null
         OP_CHECK_IF((Tiling4ReduceOp<BCEHasWeightSumDag<half, float>::OpDag>(
@@ -217,10 +218,12 @@ ge::graphStatus BinaryCrossEntropyTiling::DoReduceTiling(const BinaryCrossEntrop
     }
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16ReduceTiling(opInput, compileInfo) == ge::GRAPH_FAILED,
-                    OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy reduce tiling failed (FP16)"),
+                    return ge::GRAPH_FAILED);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         OP_CHECK_IF(RunFp32ReduceTiling(opInput, compileInfo) == ge::GRAPH_FAILED,
-                    OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy reduce tiling failed (FP32)"),
+                    return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
                                   Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
@@ -267,7 +270,7 @@ ge::graphStatus BinaryCrossEntropyTiling::RunTiling(const BinaryCrossEntropyComp
     OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
                 return ge::GRAPH_FAILED);
     // check input shape
-    OP_CHECK_IF(CheckInputShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
+    OP_CHECK_IF(CheckInputShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get input shape failed"),
                 return ge::GRAPH_FAILED);
 
     auto attrs = tilingContext->GetAttrs();

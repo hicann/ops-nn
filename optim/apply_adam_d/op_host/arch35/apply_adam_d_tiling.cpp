@@ -46,7 +46,7 @@ constexpr int32_t OUTPUT_NUM = 3;
 
 class ApplyAdamDTiling {
 public:
-    explicit ApplyAdamDTiling(gert::TilingContext* context) : tilingContext_(context){};
+    explicit ApplyAdamDTiling(gert::TilingContext* context) : tilingContext_(context) {};
 
     ge::graphStatus RunTiling();
     ApplyAdamDTilingData* tiling_ = nullptr;
@@ -193,7 +193,7 @@ ge::graphStatus ApplyAdamDTiling::RunTiling()
                         OP_LOGE(tilingContext_->GetNodeName(), "do tiling failed for fp32 with nesterov"),
                         return ge::GRAPH_FAILED);
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var",
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var (nesterov)",
                                       Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
             return ge::GRAPH_FAILED;
         }
@@ -207,7 +207,7 @@ ge::graphStatus ApplyAdamDTiling::RunTiling()
                 eleBaseTiling.DoTiling<ApplyAdamDDagFusion<float>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
                 OP_LOGE(tilingContext_->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var",
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var (non-nesterov)",
                                       Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
             return ge::GRAPH_FAILED;
         }

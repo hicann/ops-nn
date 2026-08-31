@@ -72,7 +72,7 @@ static inline void PrintTilingData(CTCLossV2TilingData4AscendC& tilingData)
     OP_LOGI("CTCLossV2", "blockDimY: %ld", tilingData.get_blockDimY());
     OP_LOGI("CTCLossV2", "targetsDim: %ld", tilingData.get_targetsDim());
     OP_LOGI("CTCLossV2", "tgBatchStride: %ld", tilingData.get_tgBatchStride());
-    OP_LOGI("CTCLossV2", "workspaceSize: %ld", tilingData.get_workspaceSize());
+    OP_LOGI("CTCLossV2", "workspaceSize: %ld bytes", tilingData.get_workspaceSize());
     OP_LOGI("CTCLossV2", "gridY: %ld", tilingData.get_gridY());
     OP_LOGI("CTCLossV2", "usedCoreNum: %ld", tilingData.get_usedCoreNum());
 }
@@ -241,7 +241,8 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
         threadsTarget = DIM2 * maxTargetLength + 1;
     }
     int32_t threadsMaxBatch = MAX_THREAD / threadsTarget;
-    OP_CHECK_IF(totalCoreNum == 0, OP_LOGE("Tiling4CTCLossV2ForAscendC", "totalCoreNum is zero."),
+    OP_CHECK_IF(totalCoreNum == 0,
+                OP_LOGE("Tiling4CTCLossV2ForAscendC", "totalCoreNum is zero, expected a positive value."),
                 return ge::GRAPH_FAILED);
     int32_t threadsPerBlockBatch = (logProbsDimSize1 + totalCoreNum - 1) / totalCoreNum;
     blockDimX = threadsTarget;

@@ -133,27 +133,30 @@ ge::graphStatus MseLossGradTilingClass::DoScalarDagOpTiling()
     if (this->inputDtype == ge::DT_FLOAT16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for ScalarDag FP16. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<bfloat16_t, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for ScalarDag BF16. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<float, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for ScalarDag FP32. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
-                                  "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict (ScalarDag stage)",
+                                  ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -164,27 +167,30 @@ ge::graphStatus MseLossGradTilingClass::DoTensorDagOpTiling()
     if (this->inputDtype == ge::DT_FLOAT16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for TensorDag FP16. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<bfloat16_t, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for TensorDag BF16. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<float, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
-        OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
+            OP_LOGE(context_->GetNodeName(), "Do tiling failed for TensorDag FP32. Please check the detailed log."),
+            return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
-                                  "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict (TensorDag stage)",
+                                  ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
 

@@ -127,24 +127,28 @@ ge::graphStatus SmoothL1LossV2Tiling::TilingReduce(const SmoothL1LossV2CompileIn
             OP_CHECK_IF((Tiling4ReduceOp<SmoothL1LossV2::SmoothL1LossV2SumDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed for SumDag<half, float>"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<SmoothL1LossV2::SmoothL1LossV2MeanDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed for MeanDag<half, float>"),
+                        return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<SmoothL1LossV2::SmoothL1LossV2SumDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed for SumDag<float, float>"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<SmoothL1LossV2::SmoothL1LossV2MeanDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "SmoothL1LossV2 Tiling failed for MeanDag<float, float>"),
+                        return ge::GRAPH_FAILED);
         }
     }
     return ge::GRAPH_SUCCESS;

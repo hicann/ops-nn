@@ -33,7 +33,7 @@ static constexpr int32_t SIZE4 = 4;
 static constexpr int32_t SIZE2 = 2;
 class L2LossTiling {
 public:
-    explicit L2LossTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit L2LossTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
 
 protected:
@@ -73,9 +73,11 @@ ge::graphStatus L2LossTiling::TilingReduce()
         status = Tiling4ReduceOp<L2Loss::L2LossDag<half, float>::OpDag>(tilingContext, opInput, key.ReduceTiling);
     }
 
-    OP_CHECK_IF((status == ge::GRAPH_FAILED),
-                OP_LOGE(tilingContext->GetNodeName(), "ReduceOp Tiling failed, dtype shoude be in (half/bf16/float)"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (status == ge::GRAPH_FAILED),
+        OP_LOGE(tilingContext->GetNodeName(), "ReduceOp Tiling failed, dtype [%s] should be in (half/bf16/float)",
+                ge::TypeUtils::DataTypeToSerialString(opInput.inputDtype).c_str()),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -144,7 +144,7 @@ static uint32_t LargestPowerOfTwo(uint32_t n)
 
 static void Tiling4NLLLossSimt(gert::TilingContext* context, NLLLossACTilingParam& tilingParams)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4NLLLossSimt is begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4NLLLossSimt begins");
     tilingParams.usedThread = std::min(tilingParams.maxThread, THREAD_DIM);
     tilingParams.tilingKey = SIMT_TILINGKEY;
     if (tilingParams.xDims == INPUT_ONE_DIM || tilingParams.xDims == INPUT_TWO_DIM) {
@@ -203,7 +203,7 @@ static void Tiling4NLLLossSimd(gert::TilingContext* context, NLLLossACTilingPara
 
 static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t maxCoreNum, uint32_t maxThread)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4NLLLossAC is begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4NLLLossAC begins");
     NLLLossACTilingData tiling;
     NLLLossACTilingParam tilingParams;
     size_t usrSize = 0;
@@ -227,8 +227,9 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
         auto nsize = xShape.GetDimNum() == 1 ? 1 : xShape.GetDim(0);
         if (targetShape.GetDim(0) < nsize) {
             std::string reasonMsg = "The 0th axis of input target must be greater than or equal to the elements " +
-                                    std::to_string(nsize) +
-                                    " of input x, "
+                                    std::to_string(nsize) + " of input x, but current target 0th axis is " +
+                                    std::to_string(targetShape.GetDim(0)) +
+                                    ", "
                                     "where the elements of x indicates the number of axes that require normalization "
                                     "computation";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
@@ -399,11 +400,15 @@ static ge::graphStatus TilingPrepareForNLLLoss(gert::TilingParseContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->maxCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->maxCoreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->maxCoreNum <= 0),
+        OP_LOGE(context->GetNodeName(), "The core num %u is invalid, valid range is >0", compileInfo->maxCoreNum),
+        return ge::GRAPH_FAILED);
     compileInfo->maxThread = 2048U;
-    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The thread num is invalid."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->maxThread <= 0),
+        OP_LOGE(context->GetNodeName(), "The thread num %u is invalid, valid range is >0", compileInfo->maxThread),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 // register tiling inferface of the Nllloss op

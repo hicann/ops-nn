@@ -225,7 +225,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     deformableOffsetAttrInfo.offsetValueDim = isModulated ? POINT_WEIGHT_SIZE : POINT_NOT_WEIGHT_SIZE;
     OP_CHECK_IF(!isModulated,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "modulated", "false",
-                                                      "The modulated attr only support true currently"),
+                                                      "The modulated attr only supports true currently"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -247,7 +247,7 @@ ge::graphStatus CheckOffsetArgs(const gert::TilingContext* context, DeformableOf
                         deformableOffsetsOffset.deformableGroups),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(deformableOffsetAttrInfo.deformableGroupsAttr != deformableOffsetsOffset.deformableGroups,
-                OP_LOGE(context->GetNodeName(), "Deformable groups attr is %u is invalid when deformableGroups is %u",
+                OP_LOGE(context->GetNodeName(), "Deformable groups attr %u is invalid when deformableGroups is %u",
                         deformableOffsetAttrInfo.deformableGroupsAttr, deformableOffsetsOffset.deformableGroups),
                 return ge::GRAPH_FAILED);
 
@@ -317,11 +317,17 @@ ge::graphStatus CalDeformableOffsetsOffset(gert::TilingContext* context, gert::S
                                           1;
 
     OP_CHECK_IF(deformableOffsetsOffset.imgOutHeight <= 0,
-                OP_LOGE(context->GetNodeName(), "ImgOutHeight must be greater than 0"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(deformableOffsetsOffset.imgOutWidth <= 0,
-                OP_LOGE(context->GetNodeName(), "ImgOutWidth must be greater than 0"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(deformableOffsetsOffset.imgChannel <= 0,
-                OP_LOGE(context->GetNodeName(), "Img channel must be greater than 0"), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "ImgOutHeight %ld must be greater than 0",
+                        deformableOffsetsOffset.imgOutHeight),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        deformableOffsetsOffset.imgOutWidth <= 0,
+        OP_LOGE(context->GetNodeName(), "ImgOutWidth %ld must be greater than 0", deformableOffsetsOffset.imgOutWidth),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        deformableOffsetsOffset.imgChannel <= 0,
+        OP_LOGE(context->GetNodeName(), "Img channel %ld must be greater than 0", deformableOffsetsOffset.imgChannel),
+        return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckOffsetArgs(context, deformableOffsetsOffset, inputOffsetShape, outputShapeInfo,
                                 deformableOffsetAttrInfo) != ge::GRAPH_SUCCESS,
@@ -450,7 +456,9 @@ ge::graphStatus Tiling4PrepareDeformableOffsets(gert::TilingParseContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."),
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "The core num %ld is invalid; it must be greater than 0.",
+                        compileInfo->coreNum),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

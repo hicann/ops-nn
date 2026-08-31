@@ -75,7 +75,7 @@ const std::string OP_NAME = "CTCLossV2Grad";
 
 class CTCLossV2GradTiling4AscendC {
 public:
-    explicit CTCLossV2GradTiling4AscendC(gert::TilingContext* context) : context_(context){};
+    explicit CTCLossV2GradTiling4AscendC(gert::TilingContext* context) : context_(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     bool CheckShapeInfo();
@@ -307,7 +307,7 @@ void CTCLossV2GradTiling4AscendC::PrintTilingData() const
     OP_LOGD(nodeName, "updateLcabThreadNum is %ld.", updateLcabThreadNum);
     OP_LOGD(nodeName, "calGradThreadNum is %ld.", calGradThreadNum);
     OP_LOGD(nodeName, "End printing");
-    OP_LOGD(nodeName, "CTCLossV2Grad tiling end running");
+    OP_LOGD(nodeName, "CTCLossV2Grad tiling ended running");
 }
 
 ge::graphStatus CTCLossV2GradTiling4AscendC::Init()
@@ -463,21 +463,21 @@ bool CTCLossV2GradTiling4AscendC::CheckShapeInfo()
         return false;
     }
     OP_LOGD(nodeName, "gradOutN is %ld.", gradOutN);
-    OP_LOGD(nodeName, "batchSize is %ld.", batchSize);
+    OP_LOGD(nodeName, "[CheckShapeInfo] batchSize is %ld.", batchSize);
     OP_LOGD(nodeName, "inputLengthsN is %ld.", inputLengthsN);
     OP_LOGD(nodeName, "targetLengthsN is %ld.", targetLengthsN);
     OP_LOGD(nodeName, "lossN is %ld.", lossN);
     OP_LOGD(nodeName, "logAlphaN is %ld.", logAlphaN);
     OP_LOGD(nodeName, "gradN is %ld.", gradN);
-    OP_LOGD(nodeName, "targetsDimNum is %ld.", targetsDimNum);
+    OP_LOGD(nodeName, "[CheckShapeInfo] targetsDimNum is %ld.", targetsDimNum);
     OP_LOGD(nodeName, "targetsN is %ld.", targetsN);
     bool NCheck = gradOutN == batchSize && batchSize == inputLengthsN && inputLengthsN == targetLengthsN &&
                   targetLengthsN == lossN && lossN == logAlphaN && logAlphaN == gradN;
     NCheck = targetsDimNum > 1 ? (NCheck && (batchSize == targetsN)) : NCheck;
     OP_CHECK_IF(!NCheck, OP_LOGE(nodeName, "Check batchSize failed."), return false);
-    OP_LOGD(nodeName, "maxInputLength is %ld.", maxInputLength);
+    OP_LOGD(nodeName, "[CheckShapeInfo] maxInputLength is %ld.", maxInputLength);
     OP_LOGD(nodeName, "gradT is %ld.", gradT);
-    OP_LOGD(nodeName, "logAlphaT is %ld.", logAlphaT);
+    OP_LOGD(nodeName, "[CheckShapeInfo] logAlphaT is %ld.", logAlphaT);
     bool TCheck = maxInputLength == gradT && gradT == logAlphaT;
     OP_CHECK_IF(!TCheck, OP_LOGE(nodeName, "Check max time failed."), return false);
 
@@ -511,7 +511,8 @@ static ge::graphStatus TilingPrepare4CTCLossV2Grad([[maybe_unused]] gert::Tiling
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo4AscendC->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo4AscendC->totalCoreNum <= 0),
-                OP_LOGE(context->GetNodeName(), "TilingPrepare4CTCLossV2Grad fail to get core num."),
+                OP_LOGE(context->GetNodeName(), "TilingPrepare4CTCLossV2Grad got invalid core num %d, expected > 0.",
+                        compileInfo4AscendC->totalCoreNum),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

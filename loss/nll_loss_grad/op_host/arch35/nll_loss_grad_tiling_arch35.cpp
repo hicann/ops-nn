@@ -244,12 +244,14 @@ ge::graphStatus TilingPrepareNLLLossGradForAscendC(gert::TilingParseContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+    OP_CHECK_IF((compile_info->core_num <= 0),
+                OP_LOGE(context->GetNodeName(), "core_num must be positive, but got %ld", compile_info->core_num),
                 return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compile_info->ub_size = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compile_info->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+    OP_CHECK_IF((compile_info->ub_size <= 0),
+                OP_LOGE(context->GetNodeName(), "ub_size must be positive, but got %ld", compile_info->ub_size),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

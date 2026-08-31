@@ -124,24 +124,28 @@ ge::graphStatus MseLossTiling::TilingReduce(const MseLossCompileInfo* compileInf
             OP_CHECK_IF((Tiling4ReduceOp<MseLoss::MseLossSumDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss sum tiling failed for half input"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<MseLoss::MseLossMeanDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss mean tiling failed for half input"),
+                        return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<MseLoss::MseLossSumDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss sum tiling failed for float input"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<MseLoss::MseLossMeanDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "MseLoss mean tiling failed for float input"),
+                        return ge::GRAPH_FAILED);
         }
     }
     return ge::GRAPH_SUCCESS;

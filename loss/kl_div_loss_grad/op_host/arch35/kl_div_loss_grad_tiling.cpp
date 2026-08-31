@@ -54,8 +54,8 @@ ge::graphStatus KlDivLossGradTiling::CalcInputDtype()
     this->inputGradDtype = inputGradDesc->GetDataType();
     OP_CHECK_IF(this->inputGradDtype != ge::DT_FLOAT16 && this->inputGradDtype != ge::DT_BF16 &&
                     this->inputGradDtype != ge::DT_FLOAT,
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad", ToString(this->inputGradDtype).c_str(),
-                                          "FLOAT, FLOAT16 or BF16"),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad (input dtype check)",
+                                          ToString(this->inputGradDtype).c_str(), "FLOAT, FLOAT16 or BF16"),
                 return ge::GRAPH_FAILED);
 
     auto inputInputDesc = context_->GetInputDesc(INPUT_INPUT_INDEX);
@@ -197,7 +197,7 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CalcDiffDtype() == ge::GRAPH_FAILED,
-                OP_LOGE(context_->GetNodeName(), "get dtype failed, all input and out dtype need same"),
+                OP_LOGE(context_->GetNodeName(), "get dtype failed, all input and output dtypes must be the same"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get output dtype failed"),
@@ -217,8 +217,10 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto inputLabelShape = EnsureNotScalar(inputShape->GetStorageShape());
     this->reducationCof_ = CalcReductionCof(inputLabelShape);
-    OP_CHECK_IF(this->reducationCof_ < 0.0f, OP_LOGE(context_->GetNodeName(), "reducationCof must > 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        this->reducationCof_ < 0.0f,
+        OP_LOGE(context_->GetNodeName(), "reductionCof must be greater than 0, but got %f", this->reducationCof_),
+        return ge::GRAPH_FAILED);
     if (input0DType == ge::DT_FLOAT16 || input0DType == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16BroadcastTiling(this->reducationCof_) == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "RunFp16BroadcastTiling failed. Please check the detailed log."),
@@ -238,15 +240,16 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
 ge::graphStatus KlDivLossGradTiling::RunFp16BroadcastTiling(float reducationCof)
 {
     if (this->logTarget_) {
-        OP_LOGD(context_->GetNodeName(), "use logTarget true");
+        OP_LOGD(context_->GetNodeName(), "use logTarget true for FP16 broadcast");
         BroadcastBaseTiling<KlDivLossGrad::KDLGLogTargetTrue<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(reducationCof);
         OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    OP_LOGE(context_->GetNodeName(),
+                            "Do tiling failed for FP16 logTarget true. Please check the detailed log."),
                     return ge::GRAPH_FAILED);
         this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), LOG_TARGET_TRUE);
     } else {
-        OP_LOGD(context_->GetNodeName(), "use logTarget false");
+        OP_LOGD(context_->GetNodeName(), "use logTarget false for FP16 broadcast");
         BroadcastBaseTiling<KlDivLossGrad::KDLGLogTargetFalse<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(reducationCof);
         OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
@@ -326,7 +329,7 @@ ge::graphStatus KlDivLossGradTilingPrepareAscendC(gert::TilingParseContext* cont
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
     OP_CHECK_IF((compileInfo->ubSize <= 0),
-                OP_LOGE(context->GetNodeName(), "get ub size failed, ub size: %lu", compileInfo->ubSize),
+                OP_LOGE(context->GetNodeName(), "get ub size failed, ub size: %lu bytes", compileInfo->ubSize),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

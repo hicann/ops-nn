@@ -173,7 +173,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagOpTiling()
     } else if (this->inputDtype == ge::DT_FLOAT) {
         return DoScalarDagTilingForType<float>();
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict for scalar dag", ToString(this->inputDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
@@ -189,7 +189,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoDagTilingForType()
     brcBaseTiling.SetScalar(this->invertSigma);
     brcBaseTiling.SetScalar(this->reduceMeanCof);
     OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                OP_LOGE(context_->GetNodeName(), "Do tiling failed for tensor dag. Please check the detailed log."),
                 return ge::GRAPH_FAILED);
     this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     return ge::GRAPH_SUCCESS;
@@ -204,7 +204,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoTensorDagOpTiling()
     } else if (this->inputDtype == ge::DT_FLOAT) {
         return DoDagTilingForType<float>();
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict for tensor dag", ToString(this->inputDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }

@@ -73,7 +73,7 @@ struct BaseTilingData {
 
 class SoftmaxCrossEntropyWithLogitsRegbaseTiling {
 public:
-    explicit SoftmaxCrossEntropyWithLogitsRegbaseTiling(gert::TilingContext* context) : context_(context){};
+    explicit SoftmaxCrossEntropyWithLogitsRegbaseTiling(gert::TilingContext* context) : context_(context) {};
 
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
@@ -171,7 +171,7 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CheckInputShape()
         if (featuresStorageShape.GetShapeSize() == 1) {
             featuresBroc = IS_SCALAR;
         }
-        OP_LOGD(context_, "feature need broadcast.");
+        OP_LOGD(context_, "feature needs broadcast.");
     }
     if (!IsElewiseShape(outputShape, labelsStorageShape)) {
         labelsBroc = NEED_BROC;
@@ -379,8 +379,10 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoDimCollapse()
     }
     auto collapseOutput = dims.back();
     uint64_t shapeLen = collapseOutput.size();
-    OP_CHECK_IF(shapeLen != DIM_NUM, OP_LOGE(context_->GetNodeName(), "broadcast only support dim size 2."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        shapeLen != DIM_NUM,
+        OP_LOGE(context_->GetNodeName(), "broadcast only supports dim size 2, current dim size is %lu.", shapeLen),
+        return ge::GRAPH_FAILED);
 
     baseTiling_.a = collapseOutput[0];
     baseTiling_.r = collapseOutput[1];
@@ -405,15 +407,15 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter SoftmaxCrossEntropyWithLogitsRegbaseTiling DoTiling.v1.1");
 
-    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputParams is failed"),
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputParams failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"),
+    OP_CHECK_IF(CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputShapes failed."),
                 return ge::GRAPH_FAILED);
     auto featureShape = context_->GetInputShape(INPUT_LABELS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, featureShape);
     auto featureStorageShape = featureShape->GetStorageShape();
     if (featuresBroc == NEED_BROC || labelsBroc == NEED_BROC) {
-        OP_CHECK_IF(DoDimCollapse() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "DoDimCollapse is failed"),
+        OP_CHECK_IF(DoDimCollapse() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "DoDimCollapse failed."),
                     return ge::GRAPH_FAILED);
     } else {
         auto output = context_->GetOutputShape(OUTPUT_BACKPROP_IDX);

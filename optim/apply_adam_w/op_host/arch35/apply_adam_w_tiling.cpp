@@ -162,8 +162,8 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling()
             ret = eleBaseTiling.DoTiling<ApplyAdamWAmsGradDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(input0DType).c_str(),
-                                      "fp16, bf16 or fp32");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var (amsgrad branch)",
+                                      Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     } else {
@@ -177,8 +177,8 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling()
             ret = eleBaseTiling.DoTiling<ApplyAdamWDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(input0DType).c_str(),
-                                      "fp16, bf16 or fp32");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var (non-amsgrad branch)",
+                                      Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     }

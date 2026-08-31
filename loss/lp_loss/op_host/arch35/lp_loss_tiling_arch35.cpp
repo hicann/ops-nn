@@ -36,7 +36,7 @@ static const map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"
 static const map<ge::DataType, uint32_t> DTYEP_2_INT_KEY{{ge::DT_FLOAT16, 10}, {ge::DT_FLOAT, 20}, {ge::DT_BF16, 30}};
 class LpLossTiling {
 public:
-    explicit LpLossTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit LpLossTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling(const ReduceOpCompileInfo* compileInfo);
 
 protected:
@@ -94,7 +94,7 @@ ge::graphStatus LpLossTiling::SetTilingData()
     uint64_t tilingKey;
     GEN_REDUCE_TILING_KEY(tilingKey, key.ReduceTiling, key.Reduction, key.Dtype);
     OP_LOGI(tilingContext->GetNodeName(),
-            "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, Reducetiong is : %u, Dtype is %u",
+            "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, Reduction is : %u, Dtype is %u",
             key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, tilingKey,
             key.Reduction, key.Dtype);
     if (static_cast<int32_t>(this->reduction) < 1) {
@@ -140,24 +140,28 @@ ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed for half sum"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed for half mean"),
+                        return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed for float sum"),
+                        return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
                          ge::GRAPH_FAILED),
-                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed for float mean"),
+                        return ge::GRAPH_FAILED);
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -222,7 +226,7 @@ ge::graphStatus TilingPrepareForLpLoss(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->vectorCoreNum == 0UL),
-                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu, expected > 0",
                         compileInfo->vectorCoreNum),
                 return ge::GRAPH_FAILED);
 
@@ -236,23 +240,24 @@ ge::graphStatus TilingPrepareForLpLoss(gert::TilingParseContext* context)
 
     compileInfo->cacheLineSize = Ops::Base::GetCacheLineSize(context);
     OP_CHECK_IF(compileInfo->cacheLineSize == 0UL,
-                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu, expected > 0.",
                         compileInfo->cacheLineSize),
                 return ge::GRAPH_FAILED);
 
     compileInfo->ubBlockSize = Ops::Base::GetUbBlockSize(context);
-    OP_CHECK_IF(
-        compileInfo->ubBlockSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.", compileInfo->ubBlockSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->ubBlockSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu, expected > 0.",
+                        compileInfo->ubBlockSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = Ops::Base::GetVRegSize(context);
-    OP_CHECK_IF(
-        compileInfo->vRegSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.", compileInfo->vRegSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->vRegSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu, expected > 0.",
+                        compileInfo->vRegSize),
+                return ge::GRAPH_FAILED);
 
-    OP_LOGD(context->GetNodeName(), "GetCoreNum:%lu, ubSize:%lu, cacheLineSize:%lu, ubBlockSize:%lu, vRegSize:%lu",
+    OP_LOGD(context->GetNodeName(),
+            "GetCoreNum:%lu, ubSize:%lu bytes, cacheLineSize:%lu bytes, ubBlockSize:%lu bytes, vRegSize:%lu bytes",
             compileInfo->vectorCoreNum, compileInfo->ubSize, compileInfo->cacheLineSize, compileInfo->ubBlockSize,
             compileInfo->vRegSize);
 

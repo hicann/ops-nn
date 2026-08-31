@@ -138,7 +138,7 @@ ge::graphStatus L1LossGradTiling::CheckGradsIsScalar()
     const gert::Shape& inputGradsShape = EnsureNotScalar(gradsStorageShape->GetStorageShape());
     if (inputGradsShape.GetDimNum() == 1 && inputGradsShape.GetDim(0) == 1) {
         this->inputGradsIsScalar_ = static_cast<uint32_t>(ATTR_IS_TRUE);
-        OP_LOGD(context_->GetNodeName(), "input grads is sclar");
+        OP_LOGD(context_->GetNodeName(), "input grads is scalar");
         return ge::GRAPH_SUCCESS;
     }
     OP_LOGD(context_->GetNodeName(), "input grads is tensor");
@@ -200,7 +200,7 @@ ge::graphStatus L1LossGradTiling::DoOpTiling()
     OP_CHECK_IF(CheckGradsIsScalar() == ge::GRAPH_FAILED,
                 OP_LOGE(context_->GetNodeName(), "check inputGrads is scalar failed"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CaluateReduceElts() == ge::GRAPH_FAILED,
-                OP_LOGE(context_->GetNodeName(), "get CaluateReduceElts failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "get CalculateReduceElts failed"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(DoTiling() == ge::GRAPH_FAILED, OP_LOGE(context_, "DoTiling failed"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

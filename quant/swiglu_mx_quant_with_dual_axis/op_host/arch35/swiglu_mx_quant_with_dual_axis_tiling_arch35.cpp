@@ -90,7 +90,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::GetAttr()
     OP_CHECK_IF((Y_SUPPORT_DTYPE_FP8_SET.count(tilingParams_.yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     context_->GetNodeName(), "round_mode", roundModeStr.c_str(),
-                    "When output y's data type is FLOAT8_E4M3FN or FLOAT8_E5M2, round_mode only support rint"),
+                    "When output y's data type is FLOAT8_E4M3FN or FLOAT8_E5M2, round_mode only supports rint"),
                 return ge::GRAPH_FAILED);
 
     tilingParams_.roundMode = static_cast<int64_t>(roundMode);
@@ -115,7 +115,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::GetAttr()
     tilingParams_.dstType = static_cast<int64_t>(*attrDstType);
     std::string reasonMsg = "y1 dtype is " + std::to_string(static_cast<int32_t>(tilingParams_.yDtype)) +
                             ", dst_type is " + std::to_string(tilingParams_.dstType) +
-                            ", hese two must be identical, dst_type represents the output dtype.";
+                            ", these two must be identical, dst_type represents the output dtype.";
     OP_CHECK_IF((static_cast<int64_t>(tilingParams_.yDtype) != tilingParams_.dstType),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dst_type",
                                                       std::to_string(tilingParams_.dstType).c_str(), reasonMsg.c_str()),
@@ -154,8 +154,8 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckDtype()
                             ge::TypeUtils::DataTypeToSerialString(y2Dtype);
     OP_CHECK_IF(Y_SUPPORT_DTYPE_SET.count(y1Dtype) == 0 || y2Dtype != y1Dtype,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y1 and y2", yDtypeMsg.c_str(),
-                                                       "y1 dtype must in [FLOAT4_E2M1, FLOAT4_E1M2, FLOAT8_E4M3FN, "
-                                                       "FLOAT8_E5M2], and y2 dtype must be same as y1 dtype"),
+                                                       "y1 dtype must be in [FLOAT4_E2M1, FLOAT4_E1M2, FLOAT8_E4M3FN, "
+                                                       "FLOAT8_E5M2], and y2 dtype must be the same as y1 dtype"),
                 return ge::GRAPH_FAILED);
 
     auto outputScale1Ptr = context_->GetOutputDesc(INDEX_OUTPUT_MX_SCALE1);
@@ -169,7 +169,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckDtype()
     OP_CHECK_IF(OUTPUT_SCALE_DTYPE_SET.count(scale1Dtype) == 0 || OUTPUT_SCALE_DTYPE_SET.count(scale2Dtype) == 0,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mx_scale1 and mx_scale2",
                                                        scaleDtypeMsg.c_str(),
-                                                       "mx_scale1 and mx_scal2 dtype must be FLOAT8_E8M0"),
+                                                       "mx_scale1 and mx_scale2 dtype must be FLOAT8_E8M0"),
                 return ge::GRAPH_FAILED);
     tilingParams_.yDtype = y1Dtype;
     return ge::GRAPH_SUCCESS;
@@ -213,7 +213,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckScaleShape(const gert::Sha
                                       ", mx_scale2 shape[1] must be equal to x_shape[1] / 2";
     OP_CHECK_IF(
         mxScale2Shape.GetDim(1) != tilingParams_.dimN,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mx_cale2",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mx_scale2",
                                               Ops::Base::ToString(mxScale2Shape).c_str(), reasonScale2MsgDim1.c_str()),
         return ge::GRAPH_FAILED);
     int64_t mxScaleShapeDim2 = tilingParams_.isGroupIdx == 1 ?
@@ -224,7 +224,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckScaleShape(const gert::Sha
         " numGroups is " + std::to_string(tilingParams_.numGroups) +
         " M represents the 0th dimension of x shape, numGroups represents the 0th dimension of group_index shape, "
         "isGroupIdx indicates whether input group_index exists, when group_index exists, dim0 = FloorDiv(M, 64) + "
-        "numGroups, when not exists, dim0 = CeilDiv(M, 64)";
+        "numGroups, when it does not exist, dim0 = CeilDiv(M, 64)";
     OP_CHECK_IF(
         mxScale2Shape.GetDim(0) != mxScaleShapeDim2,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mx_scale2",
@@ -251,7 +251,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckYShape(const gert::Shape& 
     tilingParams_.dimN = lastDim / DIGIT_TWO; // SwiGLU halves the last dim
     std::string
         reasonMsg = "x shape is " + Ops::Base::ToString(xShape) +
-                    ".The first dimension of y1's shape must be equal to half of the first dimension of x's shape.";
+                    ". The first dimension of y1's shape must be equal to half of the first dimension of x's shape.";
     OP_CHECK_IF(y1Shape.GetDim(1) != tilingParams_.dimN,
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y1",
                                                       Ops::Base::ToString(y1Shape).c_str(), reasonMsg.c_str()),
@@ -296,7 +296,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckShape()
     std::string sizeMsg = std::to_string(xSize) + " and " + std::to_string(y1Size);
     OP_CHECK_IF(xSize <= 0 || y1Size <= 0,
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x and y1", sizeMsg.c_str(),
-                                                           "x and y1 shape size must > 0"),
+                                                           "x and y1 shape size must be greater than 0"),
                 return ge::GRAPH_FAILED);
     auto mxScale1ShapePtr = context_->GetOutputShape(INDEX_OUTPUT_MX_SCALE1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, mxScale1ShapePtr);
@@ -310,7 +310,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckShape()
     OP_CHECK_IF(mxScale1Size <= 0 || mxScale2Size <= 0,
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "mx_scale1 and mx_scale2",
                                                            sizeMxscaleMsg.c_str(),
-                                                           "mx_scale1 and mx_scale2 shape size must > 0"),
+                                                           "mx_scale1 and mx_scale2 shape size must be greater than 0"),
                 return ge::GRAPH_FAILED);
     // Input x must be 2D [M, 2N]
     std::string shapeDimMsg = "x shape dim is " + std::to_string(xShape.GetDimNum()) + " y1 shape dim is " +
@@ -382,11 +382,11 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::ComputeTilingParams()
     int64_t tmpScale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE;
     int64_t tmpScale2Ub = tilingParams_.blockW * DIGIT_TWO * tilingParams_.dtypeSize;
     int64_t allNeedUb = xUb + swigluUb + y1Ub + y2Ub + scale1Ub + scale2Ub + tmpScale1Ub + tmpScale2Ub;
-    OP_CHECK_IF(
-        (allNeedUb > tilingParams_.ubSize),
-        OP_LOGE(context_->GetNodeName(), "The basic split block (64, 256) cannot fit, allNeedUb is %ld, ubSize is %ld",
-                allNeedUb, tilingParams_.ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((allNeedUb > tilingParams_.ubSize),
+                OP_LOGE(context_->GetNodeName(),
+                        "The basic split block (64, 256) cannot fit, allNeedUb is %ld bytes, ubSize is %ld bytes",
+                        allNeedUb, tilingParams_.ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
