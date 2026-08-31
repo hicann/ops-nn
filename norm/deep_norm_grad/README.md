@@ -156,7 +156,12 @@
 
 ## 约束说明
 
-无
+- `dy`、`x`、`gx`、`dx`、`dgx` 的 shape 必须完全一致，且 `dy` 的各维度都必须大于 0。
+- `mean`、`rstd` 的 rank 必须与 `dy` 一致，前导维与 `dy` 对齐，归一化对应的尾部维必须全部为 `1`，并且 `mean` 与 `rstd` 的 shape 必须一致。
+- `gamma` 的 rank 必须小于 `dy` 的 rank，且其各维度必须与 `dy` 的尾部维一一匹配；`dbeta`、`dgamma` 的 shape 也必须与 `gamma` 一致。
+- `dy/x/gx/gamma/dx/dgx` 的 dtype 必须一致，只支持 `FLOAT32`、`FLOAT16`、`BFLOAT16`；`mean/rstd/dbeta/dgamma` 只支持 `FLOAT32`。
+- tiling 侧会对 shape 乘积和字节跨度做溢出检查，不满足约束时会直接拒绝输入。
+- 当 `numCols < 500 && numRows >= 1024` 时，算子走 small-D tiling 分支，并要求额外 workspace；其余场景走普通分支。
 
 ## 调用说明
 

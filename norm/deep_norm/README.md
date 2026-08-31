@@ -115,7 +115,12 @@
 
 ## 约束说明
 
-无。
+- `x` 维度数支持 2-8，`gamma` 维度数支持 1-7，且必须小于 `x` 的维度数。
+- `x`、`gx`、`beta`、`gamma`、`y` 的 dtype 必须一致，只支持 `FLOAT32`、`FLOAT16`、`BFLOAT16`；`mean`、`rstd` 固定为 `FLOAT32`。
+- `gx`、`y` 的 shape 必须与 `x` 一致；`beta`、`gamma` 的 shape 必须与 `x` 的尾部维一致。
+- `mean`、`rstd` 的 shape 必须与 `x` 的前导维一致，归一化对应的尾部维必须全部为 `1`，且 `mean` 与 `rstd` 的 shape 必须一致。
+- `x` 的各维度必须大于 0，tiling 侧会对 `numRow/numColAlign` 以及 shape 乘积做范围检查，超出 `uint32` 的输入会被拒绝。
+- arch35 tiling 会根据 reduce 维长度和 UB 空间在 full-load / partial-load 两条路径间切换；partial-load 场景需要额外 workspace。
 
 ## 调用说明
 

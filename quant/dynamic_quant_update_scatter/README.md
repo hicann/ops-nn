@@ -70,7 +70,7 @@
     <tr>
       <td>axis</td>
       <td>属性</td>
-      <td>scatter轴。只支持-2。</td>
+      <td>scatter轴。支持负数取值（按var维数归一化），归一化后必须是内层轴（不能取第0维或最后一维）。</td>
       <td>-</td>
       <td>-</td>
     </tr>
@@ -88,12 +88,14 @@
 ## 约束说明
 
 1. indices的维数只能是1维或者2维，如果是2维，其第2维的大小必须是2。
-2. updates的维数与var、var_scale的维数一样，其第1维的大小等于indices的第1维的大小，且var不大于的第1维的大小，其axis轴的大小不大于var的axis轴的大小。
-3. var和var_scale维度一致。
-4. smooth_scales为1维且大小和var[-1]一致。
+2. updates的维数与var的维数一致；其第1维的大小等于indices的第1维的大小，且不大于var的第1维的大小；其axis轴的大小不大于var的axis轴的大小；除第1维和axis轴外，其余各维的大小必须与var完全一致。
+3. var_scale与var的维数一致，除最后一维外各维大小必须与var相同，且最后一维的大小必须为1（即每个量化行对应一个scale，var_scale的元素数等于var的元素数除以var最后一维的大小）。
+4. smooth_scales为1维且大小和var[-1]一致，其数据类型必须与updates的数据类型一致。
 5. reduce支持‘update’；为兼容历史调用，‘none’和空字符串同样执行更新操作。
-6. 尾轴需要32B对齐。
+6. 尾轴需要32B对齐：var与updates在axis轴之后各维的乘积（合并尾轴）按INT8元素个数计必须是32的倍数，且两者相等。
 7. indices映射的scatter数据段不能重合，若重合则因为多核并发原因将导致多次执行结果不一样。
+8. axis支持负数取值，按“axis + var维数”归一化；归一化后必须是内层轴（不能取第0维或最后一维），因此var的维数必须大于等于3。
+9. 各输入shape的每一维大小必须为正数（不支持空tensor）。
 
 ## 调用说明
 
