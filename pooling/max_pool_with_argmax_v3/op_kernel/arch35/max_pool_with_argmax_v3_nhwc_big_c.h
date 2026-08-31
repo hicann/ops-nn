@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
 #include "max_pool_with_argmax_v3_base.h"
+#include "pool_utils/arch35/data_move/max_pool_with_argmax_data_move.h"
 
 namespace MaxPoolWithArgmaxV3NHWC {
 using namespace AscendC;
@@ -43,11 +44,9 @@ public:
     __aicore__ inline void Process();
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void CopyIn();
-    __aicore__ inline void FillPadNegVF(__ubuf__ T1* xLocalAddr);
     __aicore__ inline void Compute(__ubuf__ T1* maxValueLocal, __ubuf__ T2* argmaxLocal);
 
     __aicore__ inline void InitHelpBuf();
-    __aicore__ inline void CopyResultToUb(__ubuf__ T1* maxValueLocal, __ubuf__ T2* argmaxLocal);
 
     template <const bool IS_SPLIT_KERNEL>
     __aicore__ inline void MaxPoolAndArgmaxV3VF(__ubuf__ T1* xLocal, __ubuf__ T1* maxValueLocal,
@@ -315,32 +314,12 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::InitHelpBu
     {
         AscendC::Reg::RegTensor<T1> negInfReg;
         AscendC::Reg::RegTensor<T2> negOne;
-        DuplicateNegInfReg(negInfReg);
+        PoolUtils::Compute::DuplicateNegInfReg<T1>(negInfReg);
         AscendC::Reg::Duplicate(negOne, 0);
         AscendC::Reg::MaskReg pregAll = AscendC::Reg::CreateMask<T1, AscendC::Reg::MaskPattern::ALL>();
         AscendC::Reg::MaskReg pregAllT2 = AscendC::Reg::CreateMask<T2, AscendC::Reg::MaskPattern::ALL>();
         AscendC::Reg::StoreAlign(maxValueHelp, negInfReg, pregAll);
         AscendC::Reg::StoreAlign(argmaxHelp, negOne, pregAllT2);
-    }
-}
-
-template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResultToUb(__ubuf__ T1* maxValueLocal,
-                                                                                     __ubuf__ T2* argmaxLocal)
-{
-    __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
-
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<T1> vreg0;
-        AscendC::Reg::RegTensor<T2> argmaxUpdateVreg;
-        AscendC::Reg::MaskReg pregAllT1 = AscendC::Reg::CreateMask<T1, AscendC::Reg::MaskPattern::ALL>();
-        AscendC::Reg::MaskReg pregAllT2 = AscendC::Reg::CreateMask<T2, AscendC::Reg::MaskPattern::ALL>();
-        AscendC::Reg::LoadAlign(vreg0, maxValueHelp);
-        AscendC::Reg::LoadAlign(argmaxUpdateVreg, argmaxHelp);
-        AscendC::Reg::StoreAlign(maxValueLocal, vreg0, pregAllT1);
-        AscendC::Reg::StoreAlign(argmaxLocal, argmaxUpdateVreg, pregAllT2);
     }
 }
 
@@ -370,7 +349,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Process()
                     Compute(maxValueAddr, argmaxAddr);
                 }
             }
-            CopyResultToUb(maxValueAddr, argmaxAddr);
+            __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
+            __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                      HELPER_BUFFER_SIZE_512 / sizeof(T1);
+            PoolUtils::DataMove::CopyResultToUb(maxValueAddr, argmaxAddr, maxValueHelp, argmaxHelp);
         } else {
             ScalarCompute(loopNum);
             CopyIn();
@@ -681,80 +663,6 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyOut()
     }
     maxValueQue_.FreeTensor(maxValueLocal);
     argmaxQue_.FreeTensor(argmaxLocal);
-}
-
-template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNegVF(__ubuf__ T1* xLocalAddr)
-{
-    int32_t top = baseBlockTopOffsetInOcean_;
-    int32_t left = baseBlockLeftOffsetInOcean_;
-    int32_t right = baseBlockRightOffsetInOcean_;
-    int32_t down = baseBlockDownOffsetInOcean_;
-    int64_t wInputActual = wInputActual_;
-    int64_t hInputActual = hInputActual_;
-    int32_t cOutputActualAlign = cOutputActualAlign_;
-    int32_t hInputActualAmend = (hOutputActual_ - 1) * hStride_ + hKernel_;
-    int32_t wInputActualAmend = (wOutputActual_ - 1) * wStride_ + wKernel_;
-    uint32_t computeSize = platform::GetVRegSize() / sizeof(T1);
-
-    uint32_t topCount = top * wInputActualAmend * cOutputActualAlign;
-    uint16_t topRepeatTimes = (topCount + computeSize - 1) / computeSize;
-
-    int32_t leftSingleRowCount = left * cOutputActualAlign;
-    uint16_t leftSingleRowRepeatTimes = (leftSingleRowCount + computeSize - 1) / computeSize;
-    int32_t leftStartOffset = topCount;
-
-    int32_t rightSingleRowCount = right * cOutputActualAlign;
-    uint16_t rightSingleRowRepeatTimes = (rightSingleRowCount + computeSize - 1) / computeSize;
-    int32_t rightStartOffset = topCount + (wInputActual + left) * cOutputActualAlign;
-
-    uint32_t downCount = down * wInputActualAmend * cOutputActualAlign;
-    uint16_t downRepeatTimes = (downCount + computeSize - 1) / computeSize;
-    int32_t downStartOffset = (hInputActual + top) * wInputActualAmend * cOutputActualAlign;
-    uint16_t nOutputActual = nOutputActual_;
-    int32_t nStartOffset = hInputActualAmend * wInputActualAmend * cOutputActualAlign;
-    __VEC_SCOPE__
-
-    {
-        AscendC::Reg::RegTensor<T1> negInfReg;
-        DuplicateNegInfReg(negInfReg);
-        for (uint16_t n = 0; n < nOutputActual; n++) {
-            int32_t nOffset = n * nStartOffset;
-            // top
-            uint32_t topCountTmp = topCount;
-            for (uint16_t i = 0; i < topRepeatTimes; i++) {
-                AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(topCountTmp);
-                AscendC::Reg::StoreAlign(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
-            }
-
-            // left
-            for (uint16_t hIndex = 0; hIndex < static_cast<uint16_t>(hInputActual); hIndex++) {
-                int32_t leftOffset = hIndex * wInputActualAmend * cOutputActualAlign + leftStartOffset;
-                uint32_t leftCount = leftSingleRowCount;
-                for (uint16_t i = 0; i < leftSingleRowRepeatTimes; i++) {
-                    AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(leftCount);
-                    AscendC::Reg::StoreAlign(xLocalAddr + nOffset + leftOffset + i * computeSize, negInfReg, preg);
-                }
-            }
-
-            // right
-            for (uint16_t hIndex = 0; hIndex < static_cast<uint16_t>(hInputActual); hIndex++) {
-                int32_t rightOffset = hIndex * wInputActualAmend * cOutputActualAlign + rightStartOffset;
-                uint32_t rightCount = rightSingleRowCount;
-                for (uint16_t i = 0; i < rightSingleRowRepeatTimes; i++) {
-                    AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(rightCount);
-                    AscendC::Reg::StoreAlign(xLocalAddr + nOffset + rightOffset + i * computeSize, negInfReg, preg);
-                }
-            }
-
-            // down
-            uint32_t downCountTmp = downCount;
-            for (uint16_t i = 0; i < downRepeatTimes; i++) {
-                AscendC::Reg::MaskReg preg = AscendC::Reg::UpdateMask<T1>(downCountTmp);
-                AscendC::Reg::StoreAlign(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg, preg);
-            }
-        }
-    }
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>

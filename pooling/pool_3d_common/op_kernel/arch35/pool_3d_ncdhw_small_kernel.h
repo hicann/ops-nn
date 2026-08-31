@@ -16,6 +16,7 @@
 #define POOL_3D_NCDHW_SMALL_KERNEL_H_
 
 #include "pool_3d_common.h"
+#include "pool_utils/arch35/data_move/pool_3d_result_data_move.h"
 #include "gather_index_impl.h"
 
 #include "../inc/platform.h"
@@ -39,7 +40,6 @@ private:
     __aicore__ inline void SparseCopyInMultiRows(int64_t offset, int64_t nout, int64_t dout, int64_t hout,
                                                  int64_t wout);
     __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo& inputInfo, int32_t splitMode);
-    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t blockLen);
     template <typename U, bool USE_TRAIT_TWO>
     __aicore__ inline void ComputeMultiBatch(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
                                              const Pool3dParam& paramInfo);
@@ -316,7 +316,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::BaseComput
         } else {
             Compute<U, GATHER_MODE, false>(inputInfo, outInfo, paramInfo);
         }
-        CopyMaxOut(dstOffset * channel_, n * depths * rows * cols * channel_);
+        PoolUtils::DataMove::CopyMaxOutNcdhwSmall<T>(maxUBOutput_, maxGm_, dstOffset * channel_,
+                                                     n * depths * rows * cols * channel_);
     }
 }
 
@@ -392,19 +393,6 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMult
         DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
     }
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyMaxOut(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>

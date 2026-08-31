@@ -18,6 +18,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "kernel_operator.h"
+#include "pool_utils/pool_type_traits.h"
 
 namespace GatherIndexImpl {
 using namespace AscendC;
@@ -27,15 +28,6 @@ constexpr int32_t TWO = 2;
 constexpr int32_t THREE = 3;
 constexpr int32_t FOUR = 4;
 constexpr int32_t FIVE = 5;
-
-template <typename T>
-struct VciTypeGet {
-    using type = typename std::conditional<
-        std::is_same<T, uint32_t>::value, int32_t,
-        typename std::conditional<
-            std::is_same<T, uint16_t>::value, int16_t,
-            typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
-};
 
 struct ShapeInfo {
     uint32_t inStride[FIVE] = {1};
@@ -56,7 +48,7 @@ __aicore__ inline void GenGatherFiveDim(const ShapeInfo& param, LocalTensor<U>& 
     constexpr U oneRegLength = platform::GetVRegSize() / sizeof(U);
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -132,7 +124,7 @@ __aicore__ inline void GenGatherFourDim(const ShapeInfo& param, LocalTensor<U>& 
     constexpr U oneRegLength = platform::GetVRegSize() / sizeof(U);
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -196,7 +188,7 @@ __aicore__ inline void GenGatherIndexThreeDim(const ShapeInfo& param, LocalTenso
     constexpr U oneRegLength = platform::GetVRegSize() / sizeof(U);
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -249,7 +241,7 @@ __aicore__ inline void GenGatherIndexTwoDim(uint32_t wFactorOut, uint32_t wIn, u
     // i / wFactorOut * wIn * hStride + i % wFactorOut * wStride
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -293,7 +285,7 @@ __aicore__ inline void GenGatherIndexOneDim(uint32_t wStride, LocalTensor<U>& in
     // i * wStride
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
 
         Reg::RegTensor<U> vd0;

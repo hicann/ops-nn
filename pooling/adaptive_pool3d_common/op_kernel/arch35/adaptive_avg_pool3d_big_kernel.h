@@ -16,78 +16,11 @@
 #define ADAPTIVE_AVG_POOL3D_BIG_KERNEL_H_
 
 #include "adaptive_pool3d_big_kernel.h"
+#include "pool_utils/arch35/compute/adaptive_avg_pool_big_kernel_compute.h"
 
 namespace AdaptivePool3d {
 using namespace AscendC;
 constexpr int32_t STORE_ADD_BUFFER = 1024;
-
-template <typename T, typename U>
-__aicore__ inline void StoreOneValue(const __ubuf__ void* dstAddr, Reg::RegTensor<U>& srcReg, Reg::MaskReg& maskReg,
-                                     uint32_t offset)
-{
-    auto addr = (__ubuf__ T*)dstAddr + offset;
-    if constexpr (IsSameType<T, half>::value) {
-        Reg::RegTensor<half> regfp16;
-        Reg::Cast<half, float, CASTB4TOB2>(regfp16, srcReg, maskReg);
-        Reg::StoreAlign<half, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regfp16, maskReg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        Reg::RegTensor<bfloat16_t> regBf16;
-        Reg::Cast<bfloat16_t, float, CASTB4TOB2>(regBf16, srcReg, maskReg);
-        Reg::StoreAlign<bfloat16_t, Reg::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regBf16, maskReg);
-    } else if constexpr (sizeof(T) == DIGHT4) {
-        Reg::StoreAlign<T, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (Reg::RegTensor<T>&)srcReg, maskReg);
-    } else {
-        Reg::UnalignRegForStore uReg;
-        Reg::StoreUnAlign(addr, srcReg, uReg, 1);
-        Reg::StoreUnAlignPost(addr, uReg, 0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void LoadOneValue(const __ubuf__ void* srcAddr, Reg::RegTensor<U>& dstReg, Reg::MaskReg& preg,
-                                    uint32_t offset)
-{
-    auto addr = (__ubuf__ U*)srcAddr + offset;
-    if constexpr (sizeof(U) == DIGHT4) {
-        Reg::LoadAlign<U, Reg::LoadDist::DIST_BRC_B32>(dstReg, addr);
-    } else {
-        Reg::UnalignRegForLoad ureg;
-        Reg::LoadUnAlignPre(ureg, addr);
-        Reg::LoadUnAlign(dstReg, ureg, addr, 1);
-    }
-}
-
-template <typename T, typename U>
-__aicore__ inline void LoadXLocalToReg(const __ubuf__ void* srcAddr, Reg::RegTensor<U>& dstReg, Reg::MaskReg& preg,
-                                       Reg::AddrReg& offset)
-{
-    if constexpr (IsSameType<T, half>::value) {
-        Reg::RegTensor<half> regfp16;
-        Reg::LoadAlign<half, Reg::LoadDist::DIST_UNPACK_B16>(regfp16, (__ubuf__ half*)srcAddr, offset);
-        Reg::Cast<float, half, CASTB2TOB4>(dstReg, regfp16, preg);
-    } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        Reg::RegTensor<bfloat16_t> regBf16;
-        Reg::LoadAlign<bfloat16_t, Reg::LoadDist::DIST_UNPACK_B16>(regBf16, (__ubuf__ bfloat16_t*)srcAddr, offset);
-        Reg::Cast<float, bfloat16_t, CASTB2TOB4>(dstReg, regBf16, preg);
-    } else {
-        Reg::LoadAlign(dstReg, (__ubuf__ float*)srcAddr, offset);
-    }
-}
-
-template <typename U>
-__aicore__ inline void UpdateSum(Reg::RegTensor<U>& res, const __ubuf__ U* storeLocalAddr, int32_t offset)
-{
-    // get data from local mem
-    Reg::MaskReg pregOne = Reg::CreateMask<U, Reg::MaskPattern::VL1>();
-    Reg::RegTensor<U> lastRes;
-
-    // get last res from local mem
-    LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, offset);
-
-    // calc sum
-    Reg::Add(res, res, lastRes, pregOne);
-    Reg::LocalMemBar<Reg::MemType::VEC_LOAD, Reg::MemType::VEC_STORE>();
-}
 
 template <typename T>
 class AdaptiveAvgPool3dBigKernel : public AdaptivePool3dBigKernel<T> {
@@ -108,8 +41,6 @@ private:
     __aicore__ inline void ComputeSplitD(int64_t curIdx);
     __aicore__ inline void ComputeSplitH(int64_t curIdx);
     __aicore__ inline void ComputeSplitW(int64_t curIdx);
-    template <int32_t SPLIT_MODE, typename U>
-    __aicore__ inline void ComputeSum(LocalTensor<T> xLocal, int64_t localCurIdx, int64_t dataCount);
     template <typename U>
     __aicore__ inline void ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx);
 
@@ -181,45 +112,10 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeAvg(LocalTensor<U> 
         Reg::RegTensor<U> lastRes;
 
         Reg::Duplicate(disiv, divNum);
-        LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, 0);
+        PoolUtils::Compute::LoadOneValue<U>(storeLocalAddr, lastRes, pregOne, 0);
         Reg::Div(lastRes, lastRes, disiv, pregOne);
 
-        StoreOneValue<T, U>(dstLocalAddr, lastRes, pregOne, curIdx);
-    }
-}
-
-template <typename T>
-template <int32_t SPLIT_MODE, typename U>
-__aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(LocalTensor<T> xLocal, int64_t localCurIdx,
-                                                                 int64_t dataCount)
-{
-    LocalTensor<U> storeAddLocal = this->storeAddUB_.template Get<U>();
-    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
-    __ubuf__ U* storeLocalAddr = (__ubuf__ U*)storeAddLocal.GetPhyAddr();
-
-    uint32_t repeatCount = platform::GetVRegSize() / sizeof(U); // 一个vf需要的次数
-    uint16_t repeatTimes = ops::CeilDiv(static_cast<uint32_t>(dataCount),
-                                        repeatCount); // 上取整，获取repeatCount的整数倍
-    uint32_t dataCount_ = dataCount;
-
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> res;
-        Reg::MaskReg sumMask = Reg::CreateMask<U, Reg::MaskPattern::VL1>();
-        Reg::Duplicate(res, static_cast<U>(0));
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            Reg::MaskReg p0 = Reg::UpdateMask<U>(dataCount_);            // 一次处理数量
-            Reg::AddrReg offset = Reg::CreateAddrReg<T>(i, repeatCount); // 搬运偏移
-            LoadXLocalToReg<T, U>(xLocalAddr, vd0, p0, offset);
-            Reg::Reduce<Reg::ReduceType::SUM>(vd1, vd0, p0);
-            Reg::Add(res, res, vd1, sumMask);
-        }
-        if constexpr (SPLIT_MODE != NO_SPLIT) {
-            UpdateSum<U>(res, storeLocalAddr, 0);
-        }
-        StoreOneValue<U, U>(storeLocalAddr, res, sumMask, 0);
+        PoolUtils::Compute::StoreOneValue<T, U>(dstLocalAddr, lastRes, pregOne, curIdx);
     }
 }
 
@@ -234,7 +130,8 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitD(int64_t curI
         int32_t curDFactor = dLoop == (dLoops - 1) ? dTail : dFactor;
         AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, this->curkH_, curDFactor);
         LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-        ComputeSum<SPLIT_D, float>(xLocal, curIdx, this->AlignHW * curDFactor);
+        PoolUtils::Compute::ComputeSum<T, float, SPLIT_D != NO_SPLIT>(xLocal, this->storeAddUB_.template Get<float>(),
+                                                                      this->AlignHW * curDFactor);
         inputOffset += curDFactor * this->inHW_;
         this->inputQue_.template FreeTensor<T>(xLocal);
     }
@@ -252,7 +149,8 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitH(int64_t curI
             int64_t curHFactor = hLoop == (hLoops - 1) ? hTail : hFactor;
             AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor, DIGHT1);
             LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-            ComputeSum<SPLIT_H, float>(xLocal, curIdx, this->AlignW * curHFactor);
+            PoolUtils::Compute::ComputeSum<T, float, SPLIT_H != NO_SPLIT>(
+                xLocal, this->storeAddUB_.template Get<float>(), this->AlignW * curHFactor);
             inputOffset += hFactor * this->tilingData_.wInDim;
             this->inputQue_.template FreeTensor<T>(xLocal);
         }
@@ -273,7 +171,8 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitW(int64_t curI
                 int64_t curWFactor = wLoop == (wLoops - 1) ? wTail : wFactor;
                 AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, curWFactor, DIGHT1, DIGHT1);
                 LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-                ComputeSum<SPLIT_W, float>(xLocal, curIdx, curWFactor);
+                PoolUtils::Compute::ComputeSum<T, float, SPLIT_W != NO_SPLIT>(
+                    xLocal, this->storeAddUB_.template Get<float>(), curWFactor);
                 inputOffset += curWFactor;
                 this->inputQue_.template FreeTensor<T>(xLocal);
             }
@@ -286,7 +185,8 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::NoSplitProcess(int64_t cur
 {
     AdaptivePool3dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_, this->curkD_);
     LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-    ComputeSum<NO_SPLIT, float>(xLocal, curIdx, this->AlignDHW);
+    PoolUtils::Compute::ComputeSum<T, float, NO_SPLIT != NO_SPLIT>(xLocal, this->storeAddUB_.template Get<float>(),
+                                                                   this->AlignDHW);
     this->inputQue_.template FreeTensor<T>(xLocal);
 }
 
@@ -345,14 +245,14 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::Process()
         BaseCompute(curLocalIdx);
         curLocalIdx++;
         if (curLocalIdx == BATCH_COPYOUT_COUNT) {
-            AdaptivePool3dBigKernel<T>::CopyOut(curLocalIdx, outputOffset);
+            PoolUtils::DataMove::CopyOut<T>(this->outputUB_, this->yGm_, curLocalIdx, outputOffset);
             InitOutputBuffer();
             outputOffset = outIdx + 1;
             curLocalIdx = 0;
         }
     }
     if (curLocalIdx != 0) {
-        AdaptivePool3dBigKernel<T>::CopyOut(curLocalIdx, outputOffset);
+        PoolUtils::DataMove::CopyOut<T>(this->outputUB_, this->yGm_, curLocalIdx, outputOffset);
     }
 }
 } // namespace AdaptivePool3d

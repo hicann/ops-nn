@@ -541,6 +541,7 @@ function(gen_ops_info_and_python)
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/impl/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/impl/c_api
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/include/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include/c_api
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/pooling/pool_utils/op_kernel ${CMAKE_BINARY_DIR}/tbe/ascendc/common/pool_utils
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
   )
@@ -561,6 +562,10 @@ function(gen_ops_info_and_python)
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/arch35/
       DESTINATION ${IMPL_INSTALL_DIR}/common/arch35
+    )
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/pool_utils/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/pool_utils
     )
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/inc/

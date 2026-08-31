@@ -21,6 +21,7 @@
 #include "adaptive_avg_pool2d_struct.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "pool_utils/arch35/data_move/adaptive_pool_big_kernel_data_move.h"
 
 namespace AdaptivePool2dOp {
 using namespace AscendC;
@@ -63,7 +64,6 @@ public:
     __aicore__ inline void UnAlignCopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CalcWindowSize(int64_t curIdx);
-    __aicore__ inline void CopyOut(int64_t copyCount, int64_t offset);
     __aicore__ inline void CalcBatchWindowSize(int64_t startOutIdx, int64_t endOutIdx);
     template <typename U>
     __aicore__ inline U GetDtypeMinValue();
@@ -158,21 +158,6 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(int64_t offset,
     NdDmaParams<T, DIM3> paramsMain = {loopInfo};
     DataCopy<T, DIM3, mulConfig>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void AdaptivePool2dBigKernel<T>::CopyOut(int64_t copyCount, int64_t offset)
-{
-    event_t eventIdVtoMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
-    LocalTensor<T> outputLocal = outputUB_.Get<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = DIGHT1;
-    extParams.blockLen = copyCount * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(yGm_[offset], outputLocal, extParams);
 }
 
 template <typename T>

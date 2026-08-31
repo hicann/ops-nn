@@ -16,6 +16,7 @@
 #define POOL_3D_SMALL_KERNEL_PAD_H_
 
 #include "pool_3d_common.h"
+#include "pool_utils/arch35/data_move/pool_3d_result_data_move.h"
 #include "gather_index_impl.h"
 #include "scatter_index_impl.h"
 #include "copy_pad_impl.h"
@@ -41,7 +42,6 @@ private:
     __aicore__ inline void InitDivisor();
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo& inputInfo, int32_t splitMode);
-    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t blockLen);
     template <typename U, bool USE_TRAIT_TWO>
     __aicore__ inline void ComputeMultiBatch(const ShapeInfo& outInfo, const Pool3dParam& paramInfo,
                                              const CopyPad::CopyPadShapeInfo& padInfo);
@@ -349,7 +349,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernelPad<T, OP_TYPE, OUT_DIV>::BaseCompu
         } else {
             Compute<U, GATHER_MODE, false>(outInfo, paramInfo, padInfo);
         }
-        CopyMaxOut(dstOffset, n * depths * rows * cols);
+        PoolUtils::DataMove::CopyMaxOutNcdhwSmall<T>(maxUBOutput_, maxGm_, dstOffset, n * depths * rows * cols);
     }
 }
 
@@ -432,19 +432,6 @@ __aicore__ inline void Pool3DNcdhwSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     }
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3DNcdhwSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyMaxOut(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>

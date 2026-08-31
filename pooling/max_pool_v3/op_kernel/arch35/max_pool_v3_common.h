@@ -21,6 +21,9 @@
 #endif
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
+#include "pool_utils/arch35/index/pool_2d_gather_scatter_index.h"
+#include "pool_utils/pool_type_traits.h"
+#include "pool_utils/arch35/data_move/pool_reg_element_data_move.h"
 
 namespace MaxPoolV3 {
 using namespace AscendC;
@@ -98,14 +101,6 @@ struct GetGatherType {
 };
 
 template <typename T>
-struct VciTypeGet {
-    using type = typename std::conditional<
-        IsSame<T, uint32_t>::value, int32_t,
-        typename std::conditional<IsSame<T, uint16_t>::value, int16_t,
-                                  typename std::conditional<IsSame<T, uint64_t>::value, int64_t, T>::type>::type>::type;
-};
-
-template <typename T>
 struct IndexTypeGet {
     using type = typename std::conditional<sizeof(T) == B8 || sizeof(T) == B16, uint16_t, uint32_t>::type;
 };
@@ -118,16 +113,6 @@ constexpr AscendC::Reg::CastTrait castTraitB162B8 = {
     AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
-
-template <typename T>
-__aicore__ inline void StoreElement(const __ubuf__ void* output, Reg::RegTensor<T>& src, uint32_t offset,
-                                    uint32_t element)
-{
-    Reg::UnalignRegForStore u0;
-    auto dstAddr = (__ubuf__ T*)(output) + offset;
-    Reg::StoreUnAlign(dstAddr, src, u0, element);
-    Reg::StoreUnAlignPost(dstAddr, u0, 0);
-}
 
 template <typename T, typename RegDstT>
 __aicore__ inline void LoadOneElement(const __ubuf__ void* input, RegDstT& dst, uint32_t offset)
@@ -250,7 +235,7 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, c
     RegDstT v0;
     Reg::RegTensor<U> sIndex;
     Reg::MaskReg preg;
-    using regType = typename VciTypeGet<U>::type;
+    using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
     Reg::Arange((Reg::RegTensor<regType>&)sIndex, 0);
     auto dstAddr1 = (__ubuf__ T*)dstAddr + dstRowOffset * dstRowStride + dstColOffset;
     for (uint16_t i = 0; i < batch; i++) {
@@ -302,7 +287,7 @@ __aicore__ inline void CustomCopyByScatterMultiRows(const __ubuf__ T* dstAddr, c
         preg = Reg::UpdateMask<U>(sreg);
         tailPreg = Reg::UpdateMask<U>(tailSreg);
     }
-    using regType = typename VciTypeGet<U>::type;
+    using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
     Reg::RegTensor<U> vd0;
     Reg::Arange((Reg::RegTensor<regType>&)gIndex, 0);
     __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr + dstOffset;
@@ -496,417 +481,6 @@ __aicore__ inline void MaxPoolSplitBatch(__ubuf__ T* dstLocalAddr, __ubuf__ T* s
     Reg::StoreUnAlignPost(dstAddr, u0, 0);
 }
 
-template <typename U>
-__aicore__ inline void GenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElemtsIn,
-                                                uint32_t wIn, uint32_t hStride, uint32_t wStride,
-                                                LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-
-    U batchElemtsOut = hFactorOut * wFactorOut;
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> v3;
-        Reg::RegTensor<U> v4;
-        Reg::RegTensor<U> v5;
-        Reg::RegTensor<U> v6;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::RegTensor<U> vd6;
-        Reg::RegTensor<U> vd7;
-        Reg::RegTensor<U> vd8;
-        Reg::RegTensor<U> vd9;
-        Reg::RegTensor<U> vd10;
-        Reg::RegTensor<U> vd11;
-        Reg::RegTensor<U> vd12;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wFactorOut, p0);
-        Reg::Duplicate(v2, (U)wIn, p0);
-        Reg::Duplicate(v3, (U)hStride, p0);
-        Reg::Duplicate(v4, (U)wStride, p0);
-        Reg::Duplicate(v5, (U)batchElemtsIn, p0);
-        Reg::Duplicate(v6, (U)batchElemtsOut, p0);
-
-        Reg::Div(vd1, v0, v6, p0);  // i / (rows * cols)
-        Reg::Mul(vd2, vd1, v5, p0); // i / (rows * cols) * batchElemtsIn
-        Reg::Mul(vd3, vd1, v6, p0); // (i / wFactorOut * wIn * hStride)
-        Reg::Sub(vd4, v0, vd3, p0); // i % (rows * cols)
-
-        Reg::Div(vd5, vd4, v1, p0);    // hwoffset / cols
-        Reg::Mul(vd6, vd5, v2, p0);    // hwoffset / cols * wIn
-        Reg::Mul(vd7, vd6, v3, p0);    // hwoffset / cols * wIn * hStride
-        Reg::Mul(vd8, vd5, v1, p0);    // hwoffset / cols * cols
-        Reg::Sub(vd9, vd4, vd8, p0);   // hwoffset % cols
-        Reg::Mul(vd10, vd9, v4, p0);   // hwoffset % cols * wStride
-        Reg::Add(vd11, vd7, vd10, p0); // hwoffset / cols * wIn * hStride + hwoffset % cols * wStride
-        Reg::Add(vd12, vd2, vd11, p0);
-        Reg::StoreAlign(dstAddr, vd12, p0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void GenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t wIn, uint32_t hStride, uint32_t wStride,
-                                              LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-
-    // i / wFactorOut * wIn * hStride + i % wFactorOut * wStride
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> v3;
-        Reg::RegTensor<U> v4;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::RegTensor<U> vd6;
-        Reg::RegTensor<U> vd7;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wFactorOut, p0);
-        Reg::Duplicate(v2, (U)wIn, p0);
-        Reg::Duplicate(v3, (U)hStride, p0);
-        Reg::Duplicate(v4, (U)wStride, p0);
-
-        Reg::Div(vd1, v0, v1, p0);   // i / wFactorOut
-        Reg::Mul(vd2, vd1, v2, p0);  // (i / wFactorOut * wIn)
-        Reg::Mul(vd3, vd2, v3, p0);  // (i / wFactorOut * wIn * hStride)
-        Reg::Mul(vd4, vd1, v1, p0);  // (i / wFactorOut * wFactorOut)
-        Reg::Sub(vd5, v0, vd4, p0);  // i % wFactor
-        Reg::Mul(vd6, vd5, v4, p0);  // i % wFactorOut * wStride
-        Reg::Add(vd7, vd3, vd6, p0); // (i / wFactorOut * wIn * hStride + i % wFactorOut * wStride)
-        Reg::StoreAlign(dstAddr, vd7, p0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void GenGatherIndexSingleRow(uint32_t wStride, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    // i * wStride
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-
-        Reg::RegTensor<U> vd0;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wStride, p0);
-        Reg::Mul(vd0, v0, v1, p0); // (i / wFactorOut * wIn)
-        Reg::StoreAlign(dstAddr, vd0, p0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void GenGatherIndexSingleKernel(uint32_t wIn, uint32_t kW, uint32_t kH, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    uint16_t repeatNum = Ops::Base::GetVRegSize() / sizeof(U);
-    uint16_t loopNum = (kW * kH + repeatNum - 1) / repeatNum;
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-        for (uint16_t i = 0; i < loopNum; i++) {
-            Reg::Arange((Reg::RegTensor<regType>&)v0, i * repeatNum);
-            Reg::Duplicate(v1, (U)kW, p0);
-            Reg::Duplicate(v2, (U)wIn, p0);
-
-            Reg::Div(vd1, v0, v1, p0);
-            Reg::Mul(vd2, vd1, v2, p0);
-            Reg::Mul(vd3, vd1, v1, p0);
-            Reg::Sub(vd4, v0, vd3, p0);
-            Reg::Add(vd5, vd2, vd4, p0);
-            Reg::StoreAlign(dstAddr + i * repeatNum, vd5, p0);
-        }
-    }
-}
-
-template <typename U, bool SingleRow>
-__aicore__ inline void GenScatterIndex(uint32_t wIn, uint32_t wInDst, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        if constexpr (SingleRow) {
-            Reg::StoreAlign(dstAddr, v0, p0);
-        } else {
-            Reg::Duplicate(v1, (U)wIn, p0);
-            Reg::Duplicate(v2, (U)wInDst, p0);
-
-            Reg::Div(vd1, v0, v1, p0);
-            Reg::Mul(vd2, vd1, v2, p0);
-            Reg::Mul(vd3, vd1, v1, p0);
-            Reg::Sub(vd4, v0, vd3, p0);
-            Reg::Add(vd5, vd2, vd4, p0);
-            Reg::StoreAlign(dstAddr, vd5, p0);
-        }
-    }
-}
-
-template <typename U, bool SingleRow>
-__aicore__ inline void NHWCGenScatterIndex(uint32_t wIn, uint32_t wInDstElms, uint32_t channels,
-                                           LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> v3;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::RegTensor<U> vd6;
-        Reg::RegTensor<U> vd7;
-        Reg::RegTensor<U> vd8;
-        Reg::RegTensor<U> vd9;
-        Reg::RegTensor<U> vd10;
-
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        if constexpr (SingleRow) {
-            Reg::StoreAlign(dstAddr, v0, p0);
-        } else {
-            Reg::Duplicate(v1, (U)wIn, p0);
-            Reg::Duplicate(v2, (U)wInDstElms, p0);
-            Reg::Duplicate(v3, (U)channels, p0);
-
-            Reg::Div(vd1, v0, v3, p0);  // i / channels
-            Reg::Div(vd2, vd1, v1, p0); // i / channels / win
-            Reg::Mul(vd3, vd2, v2, p0); // i / channels / win * winDst
-
-            Reg::Mul(vd4, vd2, v1, p0);  // i / channels / win * win
-            Reg::Sub(vd5, vd1, vd4, p0); // i / channels mod win
-            Reg::Mul(vd6, vd5, v3, p0);  // ( i / channels mod win) * channels
-            Reg::Add(vd7, vd3, vd6, p0); // i / channels / win * winDst + i / channels mod win * channels
-
-            Reg::Mul(vd8, vd1, v3, p0);
-            Reg::Sub(vd9, v0, vd8, p0); // i mod channels
-
-            Reg::Add(vd10, vd9, vd7,
-                     p0); // (i / channels / win * winDst + i / channels mod win) * channels + i mod channels
-            Reg::StoreAlign(dstAddr, vd10, p0);
-        }
-    }
-}
-
-template <typename U>
-__aicore__ inline void NHWCGenGatherIndexSingleRow(uint32_t wStride, uint32_t channels, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    // i * wStride
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<regType> tmp;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wStride, p0);
-        Reg::Duplicate(v2, (U)channels, p0); // channels
-        Reg::Div(vd0, v0, v2, p0);           // i / channels
-        Reg::Mul(vd1, vd0, v2, p0);
-        Reg::Sub(vd5, v0, vd1, p0);  // i % channel
-        Reg::Mul(vd2, vd0, v1, p0);  // (i / channel * wstride)
-        Reg::Mul(vd3, vd2, v2, p0);  // (i / channel * wstride * channels)
-        Reg::Add(vd4, vd3, vd5, p0); // (i / channel * wstride * channels) + i % channel
-        Reg::StoreAlign(dstAddr, vd4, p0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void NHWCGenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t wInElms, uint32_t hStride,
-                                                  uint32_t wStride, uint32_t channels, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-
-    // i / wFactorOut * wIn * hStride + i % wFactorOut * wStride
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> v3;
-        Reg::RegTensor<U> v4;
-        Reg::RegTensor<U> v5;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd3;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::RegTensor<U> vd6;
-        Reg::RegTensor<U> vd7;
-        Reg::RegTensor<U> vd8;
-        Reg::RegTensor<U> vd9;
-        Reg::RegTensor<U> vd10;
-        Reg::RegTensor<U> vd11;
-        Reg::RegTensor<U> vd12;
-        Reg::RegTensor<U> vd13;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wFactorOut, p0);
-        Reg::Duplicate(v2, (U)wInElms, p0);
-        Reg::Duplicate(v3, (U)hStride, p0);
-        Reg::Duplicate(v4, (U)wStride, p0);
-        Reg::Duplicate(v5, (U)channels, p0);
-
-        Reg::Div(vd1, v0, v5, p0);  // i / channels
-        Reg::Div(vd2, vd1, v1, p0); // i / channels / wFactorOut
-        Reg::Mul(vd3, vd2, v2, p0); // (i  / channels / wFactorOut * wIn)
-        Reg::Mul(vd4, vd3, v3, p0); // (i / channels / wFactorOut * wIn * hStride
-
-        Reg::Mul(vd5, vd2, v1, p0);  // (i / channels / wFactorOut * wFactorOut)
-        Reg::Sub(vd6, vd1, vd5, p0); // (i  / channels) % wFactor
-        Reg::Mul(vd7, vd6, v4, p0);  // (i  / channels) % wFactorOut * wStride
-        Reg::Mul(vd8, vd7, v5, p0);  // ( i  / channels) % wFactorOut * wStride) * channels
-
-        Reg::Add(
-            vd9, vd8, vd4,
-            p0); // (i  / channels) / wFactorOut * wIn * hStride + (i  / channels) % wFactorOut * wStride* channels)
-        Reg::Mul(vd11, vd1, v5, p0);  // i / channels * channels
-        Reg::Sub(vd12, v0, vd11, p0); // i mod channel
-        Reg::Add(vd13, vd9, vd12, p0);
-        Reg::StoreAlign(dstAddr, vd13, p0);
-    }
-}
-
-template <typename U>
-__aicore__ inline void NHWCGenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn,
-                                                    uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-                                                    uint32_t channels, LocalTensor<U>& indexLocal)
-{
-    auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-
-    U batchElemtsIn = hIn * wInElms;
-    U batchElemtsOut = hFactorOut * wFactorOut * channels;
-    __VEC_SCOPE__
-    {
-        using regType = typename VciTypeGet<U>::type;
-        Reg::RegTensor<U> v0;
-        Reg::RegTensor<U> v1;
-        Reg::RegTensor<U> v2;
-        Reg::RegTensor<U> v3;
-        Reg::RegTensor<U> v4;
-        Reg::RegTensor<U> v5;
-        Reg::RegTensor<U> v6;
-        Reg::RegTensor<U> v7;
-
-        Reg::RegTensor<U> vd0;
-        Reg::RegTensor<U> vd1;
-        Reg::RegTensor<U> vd2;
-        Reg::RegTensor<U> vd4;
-        Reg::RegTensor<U> vd5;
-        Reg::RegTensor<U> vd6;
-        Reg::RegTensor<U> vd8;
-        Reg::RegTensor<U> vd12;
-        Reg::RegTensor<U> vd14;
-        Reg::RegTensor<U> vd17;
-        Reg::RegTensor<U> vd18;
-        Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
-
-        Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
-        Reg::Duplicate(v1, (U)wFactorOut, p0);
-        Reg::Duplicate(v2, (U)wInElms, p0);
-        Reg::Duplicate(v3, (U)hStride, p0);
-        Reg::Duplicate(v4, (U)wStride, p0);
-        Reg::Duplicate(v5, (U)channels, p0);
-        Reg::Duplicate(v6, (U)batchElemtsIn, p0);
-        Reg::Duplicate(v7, (U)batchElemtsOut, p0);
-
-        Reg::Div(vd1, v0, v7, p0);  // i / (rows * cols * channels)
-        Reg::Mul(vd2, vd1, v6, p0); // i / (rows * cols * channels) * batchElemtsIn       n
-
-        Reg::Mul(vd4, vd1, v7, p0); // (i / (rows * cols * channels) * (rows * cols * channels)
-        Reg::Sub(vd4, v0, vd4, p0); // i % (rows * cols *channels)
-
-        Reg::Div(vd5, vd4, v5, p0); // hwoffset / channels
-        Reg::Div(vd6, vd5, v1, p0); // hwoffset / channels / wfout
-        Reg::Mul(vd8, vd6, v2, p0); // hwoffset / channels / wfout * win
-        Reg::Mul(vd8, vd8, v3, p0); // hwoffset / channels / wfout * hstride  h
-
-        Reg::Mul(vd12, vd6, v1, p0);   // hwoffset / channels / wfout * wfout
-        Reg::Sub(vd12, vd5, vd12, p0); // hwoffset / channels % wfout
-        Reg::Mul(vd12, vd12, v4, p0);  // hwoffset / channels % wfout * wstride
-        Reg::Mul(vd12, vd12, v5, p0);  // (hwoffset / channels % wfout * wstride) * channels
-
-        Reg::Add(vd14, vd12, vd8,
-                 p0);                  // hwoffset / channels / wfout * hstride + hwoffset / channels % wfout * wstride
-        Reg::Add(vd14, vd14, vd2, p0); // (hwoffset / channels / wfout * hstride + hwoffset / channels / wfout *
-                                       // wstride) * channels + i / (rows * cols * channels) * batchElemtsIn
-
-        Reg::Div(vd17, v0, v5, p0);   // i / channels
-        Reg::Mul(vd17, vd17, v5, p0); // i / channels * channels
-        Reg::Sub(vd17, v0, vd17, p0); // i % channels
-
-        Reg::Add(vd18, vd14, vd17, p0);
-        Reg::StoreAlign(dstAddr, vd18, p0);
-    }
-}
-
 template <typename T, typename RegDstT>
 __aicore__ inline void MergeMaxRes(RegDstT& res, const __ubuf__ T* dstLocalAddr, int32_t offset)
 {
@@ -990,15 +564,6 @@ __aicore__ inline void DuplicateNegInf(RegDstT& v0)
     }
 }
 
-template <uint16_t REG_NUM, uint16_t IDX, typename U>
-__aicore__ inline void LoadIndex(__ubuf__ U* indexAddr, Reg::RegTensor<U>& index)
-{
-    constexpr uint32_t repeatNum = Ops::Base::GetVRegSize() / sizeof(U);
-    if constexpr (REG_NUM > IDX) {
-        Reg::LoadAlign(index, indexAddr + IDX * repeatNum);
-    }
-}
-
 template <uint16_t REG_NUM, uint16_t IDX, typename U, typename T, typename RegDstT>
 __aicore__ inline void ComputeMaxWithGather(RegDstT& res, __ubuf__ T* srcAddr, Reg::RegTensor<U>& index,
                                             Reg::MaskReg& mask)
@@ -1041,21 +606,21 @@ __aicore__ inline void MaxPoolSingleKernelCommon(__ubuf__ T* dstLocalAddr, __ubu
         Reg::MaskReg pTail = Reg::UpdateMask<U>(tailNum);
 
         Reg::LoadAlign(index[0], indexAddr);
-        LoadIndex<REG_NUM, ONE>(indexAddr, index[ONE]);
-        LoadIndex<REG_NUM, TWO>(indexAddr, index[TWO]);
-        LoadIndex<REG_NUM, THREE>(indexAddr, index[THREE]);
-        LoadIndex<REG_NUM, FOUR>(indexAddr, index[FOUR]);
-        LoadIndex<REG_NUM, FIVE>(indexAddr, index[FIVE]);
-        LoadIndex<REG_NUM, SIX>(indexAddr, index[SIX]);
-        LoadIndex<REG_NUM, SEVEN>(indexAddr, index[SEVEN]);
-        LoadIndex<REG_NUM, EIGHT>(indexAddr, index[EIGHT]);
-        LoadIndex<REG_NUM, NINE>(indexAddr, index[NINE]);
-        LoadIndex<REG_NUM, TEN>(indexAddr, index[TEN]);
-        LoadIndex<REG_NUM, ELEVEN>(indexAddr, index[ELEVEN]);
-        LoadIndex<REG_NUM, TWELVE>(indexAddr, index[TWELVE]);
-        LoadIndex<REG_NUM, THIRTEEN>(indexAddr, index[THIRTEEN]);
-        LoadIndex<REG_NUM, FOURTEEN>(indexAddr, index[FOURTEEN]);
-        LoadIndex<REG_NUM, FIFTEEN>(indexAddr, index[FIFTEEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, ONE>(indexAddr, index[ONE]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, TWO>(indexAddr, index[TWO]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, THREE>(indexAddr, index[THREE]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, FOUR>(indexAddr, index[FOUR]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, FIVE>(indexAddr, index[FIVE]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, SIX>(indexAddr, index[SIX]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, SEVEN>(indexAddr, index[SEVEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, EIGHT>(indexAddr, index[EIGHT]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, NINE>(indexAddr, index[NINE]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, TEN>(indexAddr, index[TEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, ELEVEN>(indexAddr, index[ELEVEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, TWELVE>(indexAddr, index[TWELVE]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, THIRTEEN>(indexAddr, index[THIRTEEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, FOURTEEN>(indexAddr, index[FOURTEEN]);
+        PoolUtils::DataMove::LoadIndex<REG_NUM, FIFTEEN>(indexAddr, index[FIFTEEN]);
         __ubuf__ T* dstAddr = dstLocalAddr;
         for (uint16_t i = 0; i < loopN; i++) {
             __ubuf__ T* srcAddr = xLocalAddr + i * oneChannelElements;

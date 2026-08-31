@@ -17,6 +17,7 @@
 
 #include "copy_pad_impl.h"
 #include "pool_3d_common.h"
+#include "pool_utils/arch35/data_move/pool_3d_result_data_move.h"
 #include "../inc/platform.h"
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
@@ -37,8 +38,6 @@ private:
     template <typename M, typename U>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void CopyInMultiChannels(int64_t offset, TensorDescInfo& inputInfo);
-    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t deps, int64_t rows, int64_t cols,
-                                                int64_t channels);
     template <typename M, typename U>
     __aicore__ inline void ComputeSingleChannels(int64_t n, int64_t inDeps, int64_t inRows, int64_t cols,
                                                  int64_t outDeps, int64_t outRows, int64_t outCols,
@@ -143,7 +142,8 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::BaseCompute()
              tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels}};
         CopyInMultiChannels(srcOffset, inputInfo);
         ComputeSingleChannels<M, U>(n, inDeps, inRows, inCols, deps, rows, cols, alignChannels);
-        CopyOutMultiChannels(dstOffset, n, deps, rows, cols, channels);
+        PoolUtils::DataMove::CopyOutMultiChannelsNdhwc<T>(maxUBOutput_, maxGm_, dstOffset, n, deps, rows, cols,
+                                                          channels);
     }
 }
 
@@ -192,21 +192,6 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::CopyInMultiChannels(in
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     }
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T, int32_t OP_TYPE>
-__aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::CopyOutMultiChannels(int64_t offset, int64_t n, int64_t deps,
-                                                                               int64_t rows, int64_t cols,
-                                                                               int64_t channels)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = n * deps * rows * cols;
-    extParams.blockLen = channels * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
 }
 
 template <typename T, int32_t OP_TYPE>

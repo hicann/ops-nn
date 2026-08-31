@@ -20,6 +20,8 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "max_pool_with_argmax_base.h"
 #include "max_pool_with_argmax_nhwc_big_c.h"
+#include "pool_utils/arch35/compute/max_pool_with_argmax_nhwc_big_c_compute.h"
+#include "pool_utils/arch35/index/max_pool_with_argmax_index.h"
 
 namespace MaxPoolWithArgmaxSmallCNameSpace {
 using namespace AscendC;
@@ -214,7 +216,11 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::MaxPool
     __ubuf__ uint32_t* helpAddr = (__ubuf__ uint32_t*)helpTensor.GetPhyAddr();
 
     if constexpr (IS_PAD == 1) {
-        this->FillPadNegVF(xAddr);
+        PoolUtils::Compute::FillPadNegVF<T1>(xAddr, this->baseBlockTopOffsetInOcean_, this->baseBlockLeftOffsetInOcean_,
+                                             this->baseBlockRightOffsetInOcean_, this->baseBlockDownOffsetInOcean_,
+                                             this->wInputActual_, this->hInputActual_, this->cOutputActualAlign_,
+                                             this->hOutputActual_, this->hStride_, this->hKernel_, this->wOutputActual_,
+                                             this->wStride_, this->wKernel_, this->nOutputActual_);
     }
 
     uint16_t repeatElm = V_REG_SIZE / sizeof(T2);
@@ -302,13 +308,16 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
-                                  num1D);
-        GenGatterIndex4D<T2>(argmaxCStart, 0, argNum3D, 0, argNum2D, 0, argNum1D); // 其他方向为0，C方向索引
-        GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0); // 其他方向为0，W方向索引
-        GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, static_cast<T2>(hStride), argNum2D,
-                             0); // 其他方向为0，H方向索引
-        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        PoolUtils::Index::GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D,
+                                                    num2D, rate2D, num1D);
+        PoolUtils::Index::GenGatterIndex4D<T2>(argmaxCStart, 0, argNum3D, 0, argNum2D, 0,
+                                               argNum1D); // 其他方向为0，C方向索引
+        PoolUtils::Index::GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D,
+                                               0); // 其他方向为0，W方向索引
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, static_cast<T2>(hStride), argNum2D,
+                                               0); // 其他方向为0，H方向索引
+        PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
+                                                    scatterIdxNum1D);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
@@ -397,9 +406,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::RegTensor<T2> argmaxHStart;
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D, num2D, rate2D,
-                                  num1D);
-        GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, hStride, argNum2D, 0);
+        PoolUtils::Index::GenGatterIndex4D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate4D, num3D, rate3D,
+                                                    num2D, rate2D, num1D);
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, hStride, argNum2D, 0);
 
         Reg::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
         Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), (Reg::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
@@ -412,9 +421,10 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::RegTensor<uint32_t> scatterStartIdx;
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex4D<T2>(argmaxCStart, 0, argNum3D, 0, argNum2D, 0, argNum1D);
-        GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0);
-        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        PoolUtils::Index::GenGatterIndex4D<T2>(argmaxCStart, 0, argNum3D, 0, argNum2D, 0, argNum1D);
+        PoolUtils::Index::GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0);
+        PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
+                                                    scatterIdxNum1D);
 
         Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE, (Reg::RegTensor<uint32_t>&)argmaxWStart,
                         maskAllU32);
@@ -533,11 +543,13 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
-        GenGatterIndex3D<T2>(argmaxCStart, 0, argMaxNum2D, 0, argmaxNum1D);
-        GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
-        GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
-        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        PoolUtils::Index::GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D,
+                                                    num1D);
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxCStart, 0, argMaxNum2D, 0, argmaxNum1D);
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
+        PoolUtils::Index::GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
+        PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
+                                                    scatterIdxNum1D);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
@@ -623,8 +635,10 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::RegTensor<uint32_t> scatterStartIdx;
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
-        GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+        PoolUtils::Index::GenGatterIndex3D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D,
+                                                    num1D);
+        PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
+                                                    scatterIdxNum1D);
 
         Reg::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
         Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), scatterStartIdx, maskAllU32);
@@ -637,9 +651,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         Reg::RegTensor<T2> argmaxWStart;
         Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        GenGatterIndex3D<T2>(argmaxCStart, 0, argMaxNum2D, 0, argmaxNum1D);
-        GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
-        GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxCStart, 0, argMaxNum2D, 0, argmaxNum1D);
+        PoolUtils::Index::GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
+        PoolUtils::Index::GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
 
         Reg::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE, (Reg::RegTensor<uint32_t>&)argmaxHStart,
                         maskAllU32);
@@ -759,11 +773,12 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
             Reg::MaskReg maskAllU32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
             Reg::MaskReg maskAllT2 = Reg::CreateMask<T2, Reg::MaskPattern::ALL>();
 
-            GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate2D, num1D);
-            GenGatterIndex2D<T2>(argmaxCStart, 0, static_cast<T2>(argmaxNum1D));
-            GenGatterIndex2D<T2>(argmaxWStart, argmaxRate2D, static_cast<T2>(argmaxNum1D), 0);
+            PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)gatterStartIdx, rate2D, num1D);
+            PoolUtils::Index::GenGatterIndex2D<T2>(argmaxCStart, 0, static_cast<T2>(argmaxNum1D));
+            PoolUtils::Index::GenGatterIndex2D<T2>(argmaxWStart, argmaxRate2D, static_cast<T2>(argmaxNum1D), 0);
             Reg::Duplicate(argmaxHStart, 0);
-            GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
+            PoolUtils::Index::GenGatterIndex2D<int32_t>((Reg::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D,
+                                                        scatterIdxNum1D);
 
             Reg::Adds(gatterStartIdx, gatterStartIdx, nIdex * ubNumHWC, maskAllU32);
             Reg::Adds(scatterStartIdx, scatterStartIdx, nIdex * oneNOutScatterElements, maskAllU32);

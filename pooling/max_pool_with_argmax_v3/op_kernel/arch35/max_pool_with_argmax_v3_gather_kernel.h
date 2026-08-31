@@ -16,6 +16,9 @@
 #define MAX_POOL_WITH_ARGMAX_V3_GATHER_KERNEL_H_
 
 #include "max_pool_with_argmax_v3_base.h"
+#include "pool_utils/arch35/index/max_pool_with_argmax_index.h"
+#include "pool_utils/arch35/index/pool_index_without_pad_align.h"
+#include "pool_utils/arch35/data_move/pool_calc_buffer_data_move.h"
 
 namespace MaxPoolWithArgmaxV3GatherNameSpace {
 using namespace AscendC;
@@ -40,19 +43,7 @@ private:
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
     __aicore__ inline void CopyOut();
-    __aicore__ inline void DupBufferNegInf(__ubuf__ T1* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail);
-    __aicore__ inline void CopyToCalcBuffer(__ubuf__ T1* dstAddr, __ubuf__ T1* srcAddr, uint16_t batch, uint16_t rows,
-                                            uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm,
-                                            uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
-                                            uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset);
     __aicore__ inline void DupAndCopyToCalcBuffer(__ubuf__ T1* dstAddr, __ubuf__ T1* srcAddr);
-    __aicore__ inline void ConvertIndexWithoutPadAlign(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left,
-                                                       T2 wInputActualNoPad, T2 hIndexBase, Reg::RegTensor<T2>& dstReg,
-                                                       int32_t ncInputOffset);
-    __aicore__ inline void ConvertIndexWithoutPadAlignNc(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
-                                                         T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-                                                         Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset,
-                                                         int32_t ncOutputCount, int32_t inputNcSize);
     __aicore__ inline void ProcessW(__ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr, int32_t hOffset,
                                     uint16_t wStrideOffset, Reg::RegTensor<int32_t>& indexReg, uint16_t hKernel,
                                     uint16_t wKernel, uint16_t repeatElem, int32_t outputOffset,
@@ -235,43 +226,6 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::CopyIn()
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::DupBufferNegInf(__ubuf__ T1* dstAddr,
-                                                                                        uint32_t repeatElm,
-                                                                                        uint16_t loop, uint32_t tail)
-{
-    Reg::RegTensor<T1> v0;
-    DuplicateNegInfReg<T1>(v0);
-    Reg::MaskReg preg = Reg::CreateMask<T1, Reg::MaskPattern::ALL>();
-    uint32_t maskCount = tail;
-    for (uint16_t i = 0; i < loop; i++) {
-        Reg::StoreAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
-    }
-    preg = Reg::UpdateMask<T1>(maskCount);
-    Reg::StoreAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
-}
-template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::CopyToCalcBuffer(
-    __ubuf__ T1* dstAddr, __ubuf__ T1* srcAddr, uint16_t batch, uint16_t rows, uint16_t loopCols, uint16_t tailCols,
-    uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride,
-    uint32_t dstRowOffset, uint32_t dstColOffset)
-{
-    Reg::RegTensor<T1> v0;
-    Reg::UnalignRegForStore u0;
-    for (uint16_t i = 0; i < batch; i++) {
-        for (uint16_t j = 0; j < rows; j++) {
-            __ubuf__ T1* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
-            __ubuf__ T1* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
-            for (uint16_t k = 0; k < loopCols; k++) {
-                Reg::LoadAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
-            }
-            Reg::LoadAlign<T1, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-            Reg::StoreUnAlignPost(curDstAddr, u0, 0);
-        }
-    }
-}
-template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::DupAndCopyToCalcBuffer(__ubuf__ T1* dstAddr,
                                                                                                __ubuf__ T1* srcAddr)
 {
@@ -287,10 +241,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::DupAndCo
     uint32_t dstColOffset = leftOffsetToInputLeft_;
     __VEC_SCOPE__
     {
-        DupBufferNegInf(dstAddr, vlT1_, loopDup, tailDup);
-        CopyToCalcBuffer(dstAddr, srcAddr, highAxisActual_, hInputActualNoPad_, loopCols, tailCols, vlT1_,
-                         dstBatchStride, wInputActualNoPadAlign, dstBatchStride, wInputActualAlignedPad_, dstRowOffset,
-                         dstColOffset);
+        PoolUtils::Compute::DupBufferNegInfCommon<T1>(dstAddr, vlT1_, loopDup, tailDup);
+        PoolUtils::DataMove::CopyToCalcBuffer2DCommon<T1>(
+            dstAddr, srcAddr, highAxisActual_, hInputActualNoPad_, loopCols, tailCols, vlT1_, dstBatchStride,
+            wInputActualNoPadAlign, dstBatchStride, wInputActualAlignedPad_, dstRowOffset, dstColOffset);
     }
     return;
 }
@@ -326,22 +280,6 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::Compute(
     return;
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertIndexWithoutPadAlignNc(
-    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
-{
-    ConvertIndexWithoutPadAlignNcCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
-                                                    ncInputOffset, ncOutputCount, inputNcSize);
-}
-template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertIndexWithoutPadAlign(
-    Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
-    Reg::RegTensor<T2>& dstReg, int32_t ncInputOffset)
-{
-    ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
-                                                  ncInputOffset);
-}
-template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ProcessW(
     __ubuf__ T1* computeAddr, __ubuf__ T1* maxValueAddr, int32_t hOffset, uint16_t wStrideOffset,
     Reg::RegTensor<int32_t>& indexReg, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem, int32_t outputOffset,
@@ -360,7 +298,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ProcessW
     Reg::UnalignRegForStore u0;
 
     __ubuf__ T1* maxValueAddrLocal = maxValueAddr + outputOffset;
-    DuplicateNegInfReg<T1>(maxReg);
+    PoolUtils::Compute::DuplicateNegInfReg<T1>(maxReg);
     Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
     for (uint16_t i = 0; i < hKernel; i++) {
         for (uint16_t j = 0; j < wKernel; j++) {
@@ -437,8 +375,9 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::SingleRo
                     int32_t wOutputOffset = ncOutputOffset + hLoop * wOutputActual + wLoop * repeatsElem;
                     ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                              repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
-                    ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
-                                                maxIndexConvertReg, ncInputOffset);
+                    PoolUtils::Index::ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(maxIndexReg, wInputActualAlignedPad,
+                                                                                    left, wInput, hIndexBase,
+                                                                                    maxIndexConvertReg, ncInputOffset);
                     Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
                     Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
                 }
@@ -447,8 +386,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::SingleRo
                 int32_t wOutputOffsetTail = ncOutputOffset + hLoop * wOutputActual + loopW * repeatsElem;
                 ProcessW(computeAddr, maxValueAddr, wOffsetTail, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                          tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
-                ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
-                                            maxIndexConvertReg, ncInputOffset);
+                PoolUtils::Index::ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
+                    maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase, maxIndexConvertReg, ncInputOffset);
                 Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
                 Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
             }
@@ -493,7 +432,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
         Reg::RegTensor<T2> maxIndexConvertReg;
         Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr;
-        GenGatterIndex2D<int32_t>(indexReg, rate2D, wOutputActual, wStride);
+        PoolUtils::Index::GenGatterIndex2D<int32_t>(indexReg, rate2D, wOutputActual, wStride);
         for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
             int32_t ncInputOffset = nc * hInputActualPad * wInputActualAlignedPad;
             for (uint16_t hLoop = 0; hLoop < hLoopTimes; hLoop++) {
@@ -501,8 +440,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
                 int32_t wOutputOffset = nc * hOutputActual * wOutputActual + hLoop * hBatchCount * wOutputActual;
                 ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                          repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
-                ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
-                                            maxIndexConvertReg, ncInputOffset);
+                PoolUtils::Index::ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
+                    maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase, maxIndexConvertReg, ncInputOffset);
                 Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
                 Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
             }
@@ -510,8 +449,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiRow
             int32_t wOutputOffsetTail = nc * hOutputActual * wOutputActual + hLoopTimes * hBatchCount * wOutputActual;
             ProcessW(computeAddr, maxValueAddr, wOffsetTail, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                      tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
-            ConvertIndexWithoutPadAlign(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
-                                        maxIndexConvertReg, ncInputOffset);
+            PoolUtils::Index::ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
+                maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase, maxIndexConvertReg, ncInputOffset);
             Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
             Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
         }
@@ -556,14 +495,15 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiNcG
         Reg::RegTensor<T2> maxIndexConvertReg;
         Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr;
-        GenGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+        PoolUtils::Index::GenGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
         for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
             uint32_t wOffset = nc * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
             uint32_t wOutputOffset = nc * ncBatchCount * hOutputActual * wOutputActual;
             ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                      repeatsElem, wOutputOffset, maxIndexReg, hDilation, wDilation);
-            ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase,
-                                          maxIndexConvertReg, wOffset, num2D, rate3D);
+            PoolUtils::Index::ConvertIndexWithoutPadAlignNcCommon<T2, IS_PAD>(maxIndexReg, wInputActualAlignedPad, left,
+                                                                              wInput, hIndexBase, maxIndexConvertReg,
+                                                                              wOffset, num2D, rate3D);
             Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
             Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
         }
@@ -571,8 +511,9 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::MultiNcG
         uint32_t wOutputOffsetTail = ncLoopTimes * ncBatchCount * hOutputActual * wOutputActual;
         ProcessW(computeAddr, maxValueAddr, wOffsetTail, wInputActualAlignedPad, indexReg, hKernel, wKernel,
                  tailRepeatsElem, wOutputOffsetTail, maxIndexReg, hDilation, wDilation);
-        ConvertIndexWithoutPadAlignNc(maxIndexReg, wInputActualAlignedPad, left, wInput, hIndexBase, maxIndexConvertReg,
-                                      wOffsetTail, num2D, rate3D);
+        PoolUtils::Index::ConvertIndexWithoutPadAlignNcCommon<T2, IS_PAD>(maxIndexReg, wInputActualAlignedPad, left,
+                                                                          wInput, hIndexBase, maxIndexConvertReg,
+                                                                          wOffsetTail, num2D, rate3D);
         Reg::StoreUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
         Reg::StoreUnAlignPost(argmaxAddrLocal, u1, 0);
     }

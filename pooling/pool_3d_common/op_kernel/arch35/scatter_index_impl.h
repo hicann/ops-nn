@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "kernel_operator.h"
+#include "pool_utils/pool_type_traits.h"
 
 namespace ScatterIndexImpl {
 using namespace AscendC;
@@ -40,22 +41,13 @@ struct ScatterShapeInfo {
     uint32_t dstStride[FIVE] = {1};
 };
 
-template <typename T>
-struct VciTypeGet {
-    using type = typename std::conditional<
-        std::is_same<T, uint32_t>::value, int32_t,
-        typename std::conditional<
-            std::is_same<T, uint16_t>::value, int16_t,
-            typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
-};
-
 template <typename U>
 __aicore__ inline void GenScatterIndexOneDim(const ScatterShapeInfo& params, LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::MaskReg p0 = Reg::CreateMask<U, Reg::MaskPattern::ALL>();
         Reg::Arange((Reg::RegTensor<regType>&)v0, 0);
@@ -69,7 +61,7 @@ __aicore__ inline void GenScatterIndexTwoDim(const ScatterShapeInfo& params, Loc
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -103,7 +95,7 @@ __aicore__ inline void GenScatterIndexThreeDim(const ScatterShapeInfo& params, L
     U twoDimsElmsIn = params.inSize[DIM0] * params.inSize[DIM1];
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -149,7 +141,7 @@ __aicore__ inline void GenScatterIndexFourDim(const ScatterShapeInfo& params, Lo
     U threeDimsElmsIn = params.inSize[DIM0] * params.inSize[DIM1] * params.inSize[DIM2];
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;
@@ -203,7 +195,7 @@ __aicore__ inline void GenScatterIndexFiveDim(const ScatterShapeInfo& params, Lo
     U fourDimsElmsIn = params.inSize[DIM0] * params.inSize[DIM1] * params.inSize[DIM2] * params.inSize[DIM3];
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<U> v0;
         Reg::RegTensor<U> v1;
         Reg::RegTensor<U> v2;

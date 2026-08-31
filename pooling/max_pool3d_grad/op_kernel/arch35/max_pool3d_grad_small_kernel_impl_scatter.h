@@ -92,8 +92,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
         AscendC::Reg::Duplicate(magicWReg, magicW);
         AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
         AscendC::Reg::RegTensor<uint32_t> initialRegGrad;
-        GenInitial1DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize);
-        GenInitial1DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegGrad, wProBatchSize);
+        PoolGradCommon::GenInitial1DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize);
+        PoolGradCommon::GenInitial1DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegGrad, wProBatchSize);
         AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
         AscendC::Reg::RegTensor<uint32_t> parallelRegGrad;
         AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
@@ -113,7 +113,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                                     hIdx * wArgmaxActual + dIndexOffset + highIndexOffset);
                             AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, indexOffset, allMaskU32);
                             AscendC::Reg::Adds(parallelRegGrad, initialRegGrad, offset, allMaskU32);
-                            DoSingleNCNcdhwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
+                            DoSingleNCNchwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, all, magicHWReg,
                                 static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
                                 wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
@@ -127,7 +127,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                                 hIdx * wArgmaxActual + dIndexOffset + highIndexOffset);
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, indexOffset, allMaskU32);
                         AscendC::Reg::Adds(parallelRegGrad, initialRegGrad, offset, allMaskU32);
-                        DoSingleNCNcdhwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
+                        DoSingleNCNchwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, wRemainBatchCount,
                             magicHWReg, static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
                             hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg,
@@ -142,7 +142,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                                 dIndexOffset + highIndexOffset);
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, indexOffset, allMaskU32);
                         AscendC::Reg::Adds(parallelRegGrad, initialRegGrad, offset, allMaskU32);
-                        DoSingleNCNcdhwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
+                        DoSingleNCNchwFastDiv<TYPE_ORIG_X, TYPE_ARGMAX, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, one, magicHWReg,
                             static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
                             wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
@@ -218,13 +218,15 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
         AscendC::Reg::RegTensor<uint32_t> initialRegGrad;
         AscendC::Reg::RegTensor<uint32_t> initialRegGradOne;
         AscendC::Reg::MaskReg allMaskReg = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
-                                   wArgmaxActual, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxActual);
+        GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxActual, wFullBatchCount, divW);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize,
+                                      wArgmaxActual);
 
-        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initialRegGrad, wProBatchSize, hProBatchSize,
-                                   wArgmaxAligned, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegGradOne, hProBatchSize, wArgmaxAligned);
+        GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initialRegGrad, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, divW);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegGradOne, hProBatchSize,
+                                      wArgmaxAligned);
 
         AscendC::Reg::StoreAlign(helpAddr, initialRegIndex, allMaskReg);
         AscendC::Reg::StoreAlign(helpAddr + dataCount, initialRegIndexOne, allMaskReg);
@@ -509,9 +511,10 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                 wProBatchSize, 1, hArgmaxActual, wFullBatchCount, wArgmaxActual, divW, divW);
         Gen3DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOneDw, dProBatchSize, hProBatchSize,
                           wArgmaxActual, 1, hArgmaxActual, div1);
-        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize, hProBatchSize,
-                                   wArgmaxActual, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, hProBatchSize, wArgmaxActual);
+        GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxActual, wFullBatchCount, divW);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, hProBatchSize,
+                                      wArgmaxActual);
 
         // Grad
         GenInitial3DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGrad, dProBatchSize, hProBatchSize,
@@ -523,9 +526,10 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                                 wProBatchSize, 1, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divW, divW);
         Gen3DIndexOneFast((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGradOneDw, dProBatchSize, hProBatchSize,
                           wArgmaxAligned, 1, hArgmaxActual, div1);
-        DhwGenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGrad, wProBatchSize, hProBatchSize,
-                                   wArgmaxAligned, wFullBatchCount, divW);
-        DhwGen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGradOne, hProBatchSize, wArgmaxAligned);
+        GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGrad, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, divW);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGradOne, hProBatchSize,
+                                      wArgmaxAligned);
 
         AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
         AscendC::Reg::RegTensor<uint32_t> parallelRegGrad;
@@ -974,8 +978,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                               wArgmaxAligned, hFullBatchCount, divH);
         GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGrad, wProBatchSize,
                                 dArgmaxActual * hArgmaxActual, wArgmaxAligned, wFullBatchCount, divW);
-        Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGradOne, dArgmaxActual * hArgmaxActual,
-                      wArgmaxAligned);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGradOne,
+                                      dArgmaxActual * hArgmaxActual, wArgmaxAligned);
         //  Grad
         GenInitial4DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial4DRegIndex, wProBatchSize, hProBatchSize,
                                 wArgmaxActual, wFullBatchCount, hFullBatchCount, dFullBatchCount, depthStrideNonAlign,
@@ -994,8 +998,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                               hProBatchSize, wArgmaxActual, hFullBatchCount, divH);
         GenInitial2DIndicesFast((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
                                 dArgmaxActual * hArgmaxActual, wArgmaxActual, wFullBatchCount, divW);
-        Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, dArgmaxActual * hArgmaxActual,
-                      wArgmaxActual);
+        PoolGradCommon::Gen2DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne,
+                                      dArgmaxActual * hArgmaxActual, wArgmaxActual);
 
         AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
         AscendC::Reg::RegTensor<uint32_t> parallelRegGrad;

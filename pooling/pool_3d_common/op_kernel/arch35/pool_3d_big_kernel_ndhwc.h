@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "pool_utils/pool_type_traits.h"
 
 namespace Pool3D {
 using namespace AscendC;
@@ -796,7 +797,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
     uint16_t loopNum = dataCount;
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<T> res;
         Reg::RegTensor<U> v0;
         AscendC::Reg::UnalignRegForStore u0;

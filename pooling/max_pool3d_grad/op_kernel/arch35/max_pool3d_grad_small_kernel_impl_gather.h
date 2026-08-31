@@ -95,7 +95,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     Reg::MaskReg tmpMask;
     Reg::UnalignReg u0;
 
-    SetNegInfReg<TYPE_ORIG_X>(maxReg);
+    PoolUtils::Compute::DuplicateNegInfReg<TYPE_ORIG_X>(maxReg);
 
     Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
 
@@ -194,7 +194,8 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
         Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
         Reg::UnalignReg u1;
         __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
-        CalGatterIndex4D<int32_t>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual, wStride);
+        PoolUtils::Index::GenGatterIndex4D<int32_t>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual,
+                                                    wStride);
         for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
             uint32_t wOffset = nc * ncBatchCount * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
             ProcessW(computeAddr, wOffset, wInputActualAlignedPad, hInputActualPad, indexReg, dKernel, hKernel, wKernel,
@@ -262,7 +263,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
             Reg::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
             Reg::UnalignReg u1;
             __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
-            CalGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+            PoolUtils::Index::GenGatterIndex3D<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
             argmaxAddrLocal = argmaxAddr + nc * dOutputActual * hOutputActual * wOutputActual;
             int32_t ncInputOffset = nc * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
             for (uint16_t dLoop = 0; dLoop < static_cast<uint16_t>(dLoopTimes); dLoop++) {
@@ -337,7 +338,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
                 int32_t ncInputOffset = nc * dInputActualPad * hInputActualPad * wInputActualAlignedPad;
                 argmaxAddrLocal = argmaxAddr + nc * dOutputActual * hOutputActual * wOutputActual +
                                   dLoop * hOutputActual * wOutputActual;
-                CalGatterIndex2D<int32_t>(indexReg, rate2D, wOutputActual, wStride);
+                PoolUtils::Index::GenGatterIndex2D<int32_t>(indexReg, rate2D, wOutputActual, wStride);
                 for (uint16_t hLoop = 0; hLoop < hLoopTimes; hLoop++) {
                     int32_t wOffset = ncInputOffset + dLoop * dStride * hInputActualPad * wInputActualAlignedPad +
                                       hLoop * hBatchCount * hStride * wInputActualAlignedPad;
@@ -444,7 +445,7 @@ __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CH
     __local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
     Reg::RegTensor<TYPE_ORIG_X> v0;
-    SetNegInfReg<TYPE_ORIG_X>(v0);
+    PoolUtils::Compute::DuplicateNegInfReg<TYPE_ORIG_X>(v0);
     Reg::MaskReg preg = Reg::CreateMask<TYPE_ORIG_X, Reg::MaskPattern::ALL>();
     uint32_t maskCount = tail;
     for (uint16_t i = 0; i < loop; i++) {

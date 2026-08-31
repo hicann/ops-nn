@@ -313,7 +313,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
     __ubuf__ T1* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
     Reg::RegTensor<T1> v0;
-    SetNegInfReg<T1>(v0);
+    PoolUtils::Compute::DuplicateNegInfReg<T1>(v0);
     Reg::MaskReg preg = Reg::CreateMask<T1, Reg::MaskPattern::ALL>();
     uint32_t maskCount = tail;
     for (uint16_t i = 0; i < loop; i++) {
@@ -869,7 +869,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
     Reg::UnalignRegForStore u0;
 
     __ubuf__ T1* maxValueAddrLocal = maxValueAddr + outputOffset;
-    SetNegInfReg<T1>(maxReg);
+    PoolUtils::Compute::DuplicateNegInfReg<T1>(maxReg);
     Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU16);
     for (uint16_t d = 0; d < dKernel; d++) {
         for (uint16_t i = 0; i < hKernel; i++) {
@@ -1055,7 +1055,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
             Reg::RegTensor<UB_INDEXT> maxIndexReg;
             UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
             __ubuf__ T2* argmaxAddrLocal = argmaxAddr + ncOutBase;
-            CalGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+            PoolUtils::Index::GenGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
             for (uint16_t dLoop = 0; dLoop < static_cast<uint16_t>(dLoopTimes); dLoop++) {
                 UB_INDEXT wOffset = static_cast<UB_INDEXT>(ncInputBase + dLoop * dBatchInputStride);
                 UB_INDEXT wOutputOffset = static_cast<UB_INDEXT>(ncOutBase + dLoop * dBatchOutputStride);
@@ -1139,7 +1139,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
                 Reg::RegTensor<UB_INDEXT> maxIndexReg;
                 UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
                 __ubuf__ T2* argmaxAddrLocal = argmaxAddr + ncDOutBase;
-                CalGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
+                PoolUtils::Index::GenGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
                 for (uint16_t hLoop = 0; hLoop < hLoopTimes; hLoop++) {
                     UB_INDEXT wOffset = static_cast<UB_INDEXT>(ncDInputBase + hLoop * hInputStride);
                     UB_INDEXT wOutputOffset = static_cast<UB_INDEXT>(ncDOutBase + hLoop * hOutputStride);
@@ -1223,7 +1223,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
         Reg::RegTensor<T2> maxIndexConvertRegT2;
         Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr;
-        CalGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual, wStride);
+        PoolUtils::Index::GenGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual,
+                                                      wStride);
 
         for (uint16_t ncLoop = 0; ncLoop < ncLoopTimes; ncLoop++) {
             UB_INDEXT wOffset = static_cast<UB_INDEXT>(ncLoop * wInputStrideU32);
@@ -1421,7 +1422,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
                     UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
                     __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncDOutBase) +
                                                    static_cast<T2>(hLoop * hOutputStride);
-                    CalGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
+                    PoolUtils::Index::GenGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
                     ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, hInputActualPad, indexReg,
                              dKernel, hKernel, wKernel, repeatsElem, wOutputOffset, maxIndexReg, dDilation, hDilation,
                              wDilation);
@@ -1437,7 +1438,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
                 UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
                 __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncDOutBase) +
                                                static_cast<T2>(hLoopTimes * hOutputStride);
-                CalGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
+                PoolUtils::Index::GenGatterIndex2D<UB_INDEXT>(indexReg, rate2D, wOutputActual, wStride);
 
                 UB_INDEXT wOffsetTail = static_cast<UB_INDEXT>(ncDInputBase + tailHInputOffset);
                 UB_INDEXT wOutputOffsetTail = static_cast<UB_INDEXT>(ncDOutBase + tailHOutputOffset);
@@ -1519,7 +1520,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
                 UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
                 __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncOutBase) +
                                                static_cast<T2>(dLoop * dBatchOutputStride);
-                CalGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+                PoolUtils::Index::GenGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
                 ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, hInputActualPad, indexReg, dKernel,
                          hKernel, wKernel, repeatsElem, wOutputOffset, maxIndexReg, dDilation, hDilation, wDilation);
                 ConvertBaseIndexAndWriteArgmax(maxIndexReg, wInputActualAlignedPad, hInputActualPad, ncInputOffset,
@@ -1534,7 +1535,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
             UB_INDEXT ncInputOffset = static_cast<UB_INDEXT>(ncInputBase);
             __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncOutBase) +
                                            static_cast<T2>(dLoopTimes * dBatchOutputStride);
-            CalGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+            PoolUtils::Index::GenGatterIndex3D<UB_INDEXT>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
             UB_INDEXT wOffsetTail = static_cast<UB_INDEXT>(ncInputBase + tailDInputOffset);
             UB_INDEXT wOutputOffsetTail = static_cast<UB_INDEXT>(ncOutBase + tailDOutputOffset);
             ProcessW(computeAddr, maxValueAddr, wOffsetTail, wInputActualAlignedPad, hInputActualPad, indexReg, dKernel,
@@ -1609,7 +1610,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
             Reg::RegTensor<T2> maxIndexConvertRegT2;
             Reg::UnalignRegForStore u1;
             __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncLoop * wOutStrideU32);
-            CalGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual, wStride);
+            PoolUtils::Index::GenGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual,
+                                                          wStride);
             ProcessW(computeAddr, maxValueAddr, wOffset, wInputActualAlignedPad, hInputActualPad, indexReg, dKernel,
                      hKernel, wKernel, repeatsElem, wOutputOffset, maxIndexReg, dDilation, hDilation, wDilation);
             ConvertNcAndWriteArgmax(maxIndexReg, maxIndexConvertRegTep, maxIndexConvertRegT2, u1,
@@ -1625,7 +1627,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
         Reg::RegTensor<T2> maxIndexConvertRegT2;
         Reg::UnalignRegForStore u1;
         __ubuf__ T2* argmaxAddrLocal = argmaxAddr + static_cast<T2>(ncLoopTimes * wOutStrideU32);
-        CalGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual, wStride);
+        PoolUtils::Index::GenGatterIndex4D<UB_INDEXT>(indexReg, rate4D, num3D, rate3D, num2D, rate2D, wOutputActual,
+                                                      wStride);
 
         UB_INDEXT wOffsetTail = static_cast<UB_INDEXT>(tailNcInputOffset);
         UB_INDEXT wOutputOffsetTail = static_cast<UB_INDEXT>(tailNcOutputOffset);

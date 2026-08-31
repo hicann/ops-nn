@@ -16,6 +16,7 @@
 #define MAX_POOL_V3_NHWC_BIG_KERNEL_H_
 
 #include "max_pool_v3_common.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
 
 namespace MaxPoolV3 {
 using namespace AscendC;
@@ -53,7 +54,6 @@ private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <int32_t SPLIT_MODE>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx);
-    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t rows, int64_t cols, int64_t blockLen);
     __aicore__ inline void CopyInMultiRowsContiguous(int64_t offset, int64_t rows, int64_t cols);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
@@ -192,26 +192,6 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::BaseCompute(int64_t beginIdx, 
             SplitChannelProcess(idx, curkH, curkW, curInOffset);
         }
     }
-}
-
-template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInSingleRow(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
 }
 
 template <typename T>
@@ -359,7 +339,7 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitChannelProcess(int32_t cu
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int64_t inputOffset = curInOffset + hLoop * tilingData_->wInDim * tilingData_->channel + cLoop * cFactor;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
-                CopyInSingleRow(inputOffset, curFactor);
+                PoolUtils::DataMove::CopyInSingleRow(inputQue_, xGm_, inputOffset, curFactor);
                 LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
                 LocalTensor<T> xLocal = inputQue_.DeQue<T>();
                 Max(maxOutLocal, xLocal, maxOutLocal, curFactor);
@@ -475,7 +455,7 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::ComputeSingleWithGather(int32_
     {
         using RegDstT = typename std::conditional<sizeof(M) == B64, Reg::RegTensor<M, Reg::RegTraitNumTwo>,
                                                   Reg::RegTensor<M>>::type;
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         using gatherType = typename GetGatherType<M>::type;
         RegDstT res;
         Reg::RegTensor<U> v0;

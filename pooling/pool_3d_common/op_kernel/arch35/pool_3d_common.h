@@ -19,6 +19,7 @@
 #include "../inc/kernel_utils.h"
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "pool_utils/arch35/compute/pool_fast_div.h"
 
 namespace Pool3D {
 using namespace AscendC;
@@ -148,15 +149,6 @@ struct GetGatherType {
 };
 
 template <typename T>
-struct VciTypeGet {
-    using type = typename std::conditional<
-        std::is_same<T, uint32_t>::value, int32_t,
-        typename std::conditional<
-            std::is_same<T, uint16_t>::value, int16_t,
-            typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
-};
-
-template <typename T>
 struct IndexTypeGet {
     using type = typename std::conditional<sizeof(T) == B8 || sizeof(T) == B16, uint16_t, uint32_t>::type;
 };
@@ -201,16 +193,6 @@ __aicore__ inline void CalcKernelSizeCore(const ParamsForDim& paramsInfo, int64_
     // min (in + pr - origin, k)
     curkWithPad = min(paramsInfo.in + paramsInfo.pr - curOrigin, paramsInfo.k);
     curOrigin += leftInvaild * paramsInfo.d; // 矫正到curOrigin +轴位置
-}
-
-template <typename T>
-__aicore__ inline void StoreElement(const __ubuf__ void* output, Reg::RegTensor<T>& src, uint32_t offset,
-                                    uint32_t element)
-{
-    Reg::UnalignRegForStore u0;
-    auto dstAddr = (__ubuf__ T*)(output) + offset;
-    Reg::StoreUnAlign(dstAddr, src, u0, element);
-    Reg::StoreUnAlignPost(dstAddr, u0, 0);
 }
 
 template <typename T, typename RegDstT>
@@ -866,15 +848,6 @@ __aicore__ inline void Pool3DWithOneLoop(__ubuf__ Z* dstAddr, __ubuf__ T* srcAdd
     }
 }
 
-__aicore__ inline void FastDivImpl(Reg::RegTensor<uint32_t>& res, Reg::RegTensor<uint32_t>& src,
-                                   Reg::RegTensor<uint32_t>& magic, int16_t shift, Reg::MaskReg& mask)
-{
-    Reg::RegTensor<uint32_t> tmp;
-    Reg::Mull(tmp, res, src, magic, mask);
-    Reg::Add(tmp, src, res, mask);
-    Reg::ShiftRights(res, tmp, shift, mask);
-}
-
 template <typename T, bool INCLUDE_PAD, typename RegT>
 __aicore__ inline void CalcWindowSize(Reg::RegTensor<float>& res, RegT& src, T kD, T sD, T negFrontPad, T dIn,
                                       T dInAndBackendPad, Reg::MaskReg& mask)
@@ -970,16 +943,17 @@ __aicore__ inline void ComputeDivisorImplB32(__ubuf__ float* divAddr, const Calc
             Reg::MaskReg pWrite = Reg::UpdateMask<float32_t>(sreg);
             if constexpr (PAD_MULTI_BATCH) {
                 Reg::Duplicate(v4, oneBatchOut, p0);
-                FastDivImpl((Reg::RegTensor<uint32_t>&)vd1, (Reg::RegTensor<uint32_t>&)v0, magic2, shift2, p0);
+                PoolUtils::Compute::FastDivImpl((Reg::RegTensor<uint32_t>&)vd1, (Reg::RegTensor<uint32_t>&)v0, magic2,
+                                                shift2, p0);
                 Reg::Mul(vd2, vd1, v4, p0);
                 Reg::Sub(v0, v0, vd2, p0);
             }
-            FastDivImpl((Reg::RegTensor<uint32_t>&)vd1, (Reg::RegTensor<uint32_t>&)v0, magic0, shift0,
-                        p0);            // (i / outhw) -> didx
-            Reg::Mul(vd2, vd1, v1, p0); //
-            Reg::Sub(vd3, v0, vd2, p0); // (i % outhw)
-            FastDivImpl((Reg::RegTensor<uint32_t>&)vd4, (Reg::RegTensor<uint32_t>&)vd3, magic1, shift1,
-                        p0); // (i % outhw / outw) ->hidx
+            PoolUtils::Compute::FastDivImpl((Reg::RegTensor<uint32_t>&)vd1, (Reg::RegTensor<uint32_t>&)v0, magic0,
+                                            shift0, p0); // (i / outhw) -> didx
+            Reg::Mul(vd2, vd1, v1, p0);                  //
+            Reg::Sub(vd3, v0, vd2, p0);                  // (i % outhw)
+            PoolUtils::Compute::FastDivImpl((Reg::RegTensor<uint32_t>&)vd4, (Reg::RegTensor<uint32_t>&)vd3, magic1,
+                                            shift1, p0); // (i % outhw / outw) ->hidx
 
             Reg::Mul(vd6, vd4, v2, p0);  //
             Reg::Sub(vd5, vd3, vd6, p0); // i % outw  ->widx(vd5)

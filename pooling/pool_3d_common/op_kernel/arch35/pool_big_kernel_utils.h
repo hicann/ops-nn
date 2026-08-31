@@ -12,6 +12,7 @@
 #define POOL_BIG_KERNEL_UTILS_H_
 
 #include "kernel_operator.h"
+#include "pool_utils/arch35/compute/max_pool_negative_value.h"
 
 namespace PoolBigKernelUtils {
 using namespace AscendC;
@@ -119,28 +120,11 @@ __aicore__ inline void CalcRealIndex(Reg::RegTensor<T>& resIndex, Reg::RegTensor
 }
 
 template <typename T>
-__aicore__ inline void DuplicateNegInfReg(Reg::RegTensor<T>& negInfReg)
-{
-    constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;
-    constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;
-    constexpr uint16_t BFLOAT16_NEG_INF = 0xFF80;
-    using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
-
-    if constexpr (std::is_same<T, float>::value) {
-        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, FLOAT32_NEG_INF);
-    } else if constexpr (std::is_same<T, half>::value) {
-        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, FLOAT16_NEG_INF);
-    } else {
-        Reg::Duplicate((Reg::RegTensor<computeType>&)negInfReg, BFLOAT16_NEG_INF);
-    }
-}
-
-template <typename T>
 __aicore__ inline void DuplicateNegInf(const __ubuf__ void* dstAddr, uint32_t calNum, uint32_t offset)
 {
     Reg::RegTensor<T> v0;
     Reg::UnalignRegForStore u0;
-    DuplicateNegInfReg<T>(v0);
+    PoolUtils::Compute::DuplicateNegInfReg<T>(v0);
     __ubuf__ T* addr = (__ubuf__ T*)dstAddr + offset;
     Reg::StoreUnAlign(addr, v0, u0, calNum);
     Reg::StoreUnAlignPost(addr, u0, 0);

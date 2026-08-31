@@ -21,6 +21,8 @@
 #include "../inc/platform.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "adaptive_avg_pool3d_grad_struct.h"
+#include "pool_utils/arch35/data_move/adaptive_avg_pool_grad_data_move.h"
+#include "pool_utils/arch35/data_move/adaptive_pool_transpose_data_move.h"
 #include "adaptive_avg_pool3d_grad_ncdhw_big_kernel.h"
 #include <type_traits>
 
@@ -45,15 +47,9 @@ public:
     __aicore__ inline void ProcessPerLoop();
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void CopyIn();
-    __aicore__ inline void TransInput(uint32_t rowNum, uint32_t colNum);
     __aicore__ inline void Compute();
     __aicore__ inline void TransOut();
     __aicore__ inline void CopyOut();
-
-    __aicore__ inline void TransposeB16(LocalTensor<T> dst, LocalTensor<T> src, uint32_t rowNum, uint32_t colNum);
-
-    template <typename I>
-    __aicore__ inline void TransposeB32(LocalTensor<I> dst, LocalTensor<I> src, uint32_t rowNum, uint32_t colNum);
 
 private:
     __aicore__ inline void CalcOutputRangeFromInputIndex(int64_t inputIdxGlobal, int64_t outputSize, int64_t inputSize,
@@ -313,118 +309,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CopyIn()
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransposeB16(LocalTensor<T> dst,
-                                                                                     LocalTensor<T> src,
-                                                                                     uint32_t rowNum, uint32_t colNum)
-{
-    uint64_t dstList[TRANS_ADDR_LEN];
-    uint64_t srcList[TRANS_ADDR_LEN];
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-
-    const uint32_t transPoseAlign = BLOCK_SIZE / sizeof(T);
-    if (colNum == transPoseAlign) {
-        transDataParams.repeatTimes = rowNum / TRANS_ADDR_LEN;
-        transDataParams.dstRepStride = TRANS_ADDR_LEN * sizeof(T) / BLOCK_SIZE;
-        transDataParams.srcRepStride = TRANS_ADDR_LEN;
-
-        for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcList[i] = static_cast<uint64_t>(src[i * transPoseAlign].GetPhyAddr());
-            dstList[i] = static_cast<uint64_t>(dst[i * rowNum].GetPhyAddr());
-        }
-
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
-        }
-
-        TransDataTo5HD<T>(dstList, srcList, transDataParams);
-    } else {
-        transDataParams.repeatTimes = colNum / transPoseAlign;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-
-        for (int32_t rowLoopIdx = 0; rowLoopIdx < static_cast<int32_t>(rowNum / TRANS_ADDR_LEN); rowLoopIdx++) {
-            for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] = static_cast<uint64_t>(src[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
-                dstList[i] = static_cast<uint64_t>(dst[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
-            }
-            TransDataTo5HD<T>(dstList, srcList, transDataParams);
-        }
-    }
-}
-
-template <typename T, typename INDEX>
-template <typename I>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransposeB32(LocalTensor<I> dst,
-                                                                                     LocalTensor<I> src,
-                                                                                     uint32_t rowNum, uint32_t colNum)
-{
-    uint64_t dstList[TRANS_ADDR_LEN];
-    uint64_t srcList[TRANS_ADDR_LEN];
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-
-    const uint32_t transPoseAlign = BLOCK_SIZE / sizeof(I);
-    if (colNum == transPoseAlign) {
-        transDataParams.repeatTimes = rowNum / TRANS_ADDR_LEN;
-        transDataParams.dstRepStride = TRANS_ADDR_LEN * sizeof(I) / BLOCK_SIZE;
-        transDataParams.srcRepStride = TRANS_ADDR_LEN;
-
-        for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcList[i] = static_cast<uint64_t>(src[i * transPoseAlign].GetPhyAddr());
-        }
-        for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-            dstList[i * 2] = static_cast<uint64_t>(dst[i * rowNum].GetPhyAddr());
-            dstList[i * 2 + 1] = static_cast<uint64_t>(dst[i * rowNum + transPoseAlign].GetPhyAddr());
-        }
-
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
-        }
-
-        TransDataTo5HD<I>(dstList, srcList, transDataParams);
-    } else {
-        transDataParams.repeatTimes = colNum / transPoseAlign;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-
-        for (int32_t rowLoopIdx = 0; rowLoopIdx < static_cast<int32_t>(rowNum / TRANS_ADDR_LEN); rowLoopIdx++) {
-            for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] = static_cast<uint64_t>(src[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
-            }
-            for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-                dstList[i * 2] = static_cast<uint64_t>(dst[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
-                dstList[i * 2 + 1] = static_cast<uint64_t>(
-                    dst[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum + transPoseAlign].GetPhyAddr());
-            }
-            TransDataTo5HD<I>(dstList, srcList, transDataParams);
-        }
-    }
-}
-
-template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransInput(uint32_t rowNum, uint32_t colNum)
-{
-    LocalTensor<T> srcLocal = inputQue_.DeQue<T>();
-    LocalTensor<T> dstLocal = transQue_.AllocTensor<T>();
-
-    if constexpr (IsSameType<T, float>::value) {
-        this->template TransposeB32<T>(dstLocal, srcLocal, rowNum, colNum);
-    } else {
-        this->TransposeB16(dstLocal, srcLocal, rowNum, colNum);
-    }
-
-    PIPE_V_S();
-
-    inputQue_.FreeTensor(srcLocal);
-    transQue_.EnQue(dstLocal);
-}
-
-template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CalcOutputRangeFromInputIndex(
     int64_t inputIdxGlobal, int64_t outputSize, int64_t inputSize, int64_t axisTileIndex, int64_t axisInner,
     int64_t axisOutputActual, int64_t& stLocal, int64_t& edLocal, int64_t& coverCount) const
@@ -641,9 +525,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransOut
     LocalTensor<T> dstLocal = transQue_.AllocTensor<T>();
 
     if constexpr (IsSameType<T, float>::value) {
-        this->template TransposeB32<T>(dstLocal, srcLocal, rowNum, colNum);
+        PoolUtils::DataMove::TransposeB32<T>(dstLocal, srcLocal, rowNum, colNum, BLOCK_SIZE);
     } else {
-        this->TransposeB16(dstLocal, srcLocal, rowNum, colNum);
+        PoolUtils::DataMove::TransposeB16<T>(dstLocal, srcLocal, rowNum, colNum, BLOCK_SIZE);
     }
 
     PIPE_V_S();
@@ -694,7 +578,8 @@ template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ProcessPerLoop()
 {
     CopyIn();
-    TransInput(static_cast<uint32_t>(highAxisAligned_), static_cast<uint32_t>(inputColNum_));
+    PoolUtils::DataMove::TransInput<T, 1>(inputQue_, transQue_, static_cast<uint32_t>(highAxisAligned_),
+                                          static_cast<uint32_t>(inputColNum_), BLOCK_SIZE);
     Compute();
     TransOut();
     CopyOut();

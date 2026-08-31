@@ -511,7 +511,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::Process()
         BaseCompute(curLocalIdx);
         curLocalIdx++;
         if (curLocalIdx == BATCH_COPYOUT_COUNT) {
-            AdaptivePool3dBigKernel<T>::CopyOut(curLocalIdx, outputOffset);
+            PoolUtils::DataMove::CopyOut<T>(this->outputUB_, this->yGm_, curLocalIdx, outputOffset);
             CopyOutIndices(curLocalIdx, outputOffset);
             InitOutputBuffer();
             outputOffset = outIdx + 1;
@@ -519,7 +519,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::Process()
         }
     }
     if (curLocalIdx != 0) {
-        AdaptivePool3dBigKernel<T>::CopyOut(curLocalIdx, outputOffset);
+        PoolUtils::DataMove::CopyOut<T>(this->outputUB_, this->yGm_, curLocalIdx, outputOffset);
         CopyOutIndices(curLocalIdx, outputOffset);
     }
     if constexpr (IsSameType<T, half>::value) {

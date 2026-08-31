@@ -22,6 +22,9 @@
 #include "../inc/load_store_utils.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "adaptive_pool3d_tiling_struct.h"
+#include "pool_utils/arch35/compute/adaptive_pool3d_parall_pool_compute.h"
+#include "pool_utils/arch35/data_move/adaptive_pool3d_parall_pool_data_move.h"
+#include "pool_utils/arch35/data_move/adaptive_pool_transpose_data_move.h"
 
 namespace AdaptivePool3d {
 using namespace AscendC;
@@ -63,14 +66,6 @@ public:
         const AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
-    __aicore__ inline void CalInputBlockPara(int64_t curBlockIdx, BlockSplitParam& blockPara);
-    __aicore__ inline void CopyInput(uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen,
-                                     int64_t xOffset);
-    __aicore__ inline void TransposeB16(LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum,
-                                        uint32_t colNum);
-    template <typename U>
-    __aicore__ inline void TransposeB32(LocalTensor<U> xLocalTrans, LocalTensor<U> xLocal, uint32_t rowNum,
-                                        uint32_t colNum);
     __aicore__ inline void TransInput(uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen);
     __aicore__ inline void CalKernelSize(int64_t kernelIdx, int32_t kernelNum, int64_t dimIn, int64_t dimOut,
                                          LocalTensor<int32_t> startIdxLocal, LocalTensor<int32_t> kernelSizeLocal);
@@ -157,171 +152,6 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Init(GM_ADDR x, GM_AD
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalInputBlockPara(int64_t curBlockIdx,
-                                                                             BlockSplitParam& blockPara)
-{
-    int64_t dhwOuter = tilingData_.doOuter * tilingData_.hoOuter * tilingData_.woOuter;
-    int64_t hwOuter = tilingData_.hoOuter * tilingData_.woOuter;
-
-    blockPara.ncIdx = curBlockIdx / dhwOuter;
-    blockPara.ncNum = (blockPara.ncIdx == (tilingData_.ncOuter - 1)) ? tilingData_.ncTail : tilingData_.ncFactor;
-    /* ncdhw */
-    int64_t blockIdxOnNc = curBlockIdx % dhwOuter;
-    blockPara.doIdx = blockIdxOnNc / hwOuter;
-    blockPara.doNum = (blockPara.doIdx == (tilingData_.doOuter - 1)) ? tilingData_.doTail : tilingData_.doFactor;
-
-    int64_t blockIdxOnD = blockIdxOnNc % hwOuter;
-    blockPara.hoIdx = blockIdxOnD / tilingData_.woOuter;
-    blockPara.hoNum = (blockPara.hoIdx == (tilingData_.hoOuter - 1)) ? tilingData_.hoTail : tilingData_.hoFactor;
-
-    int64_t blockIdxOnDH = blockIdxOnD % tilingData_.woOuter;
-    blockPara.woIdx = blockIdxOnDH % tilingData_.woOuter;
-    blockPara.woNum = (blockPara.woIdx == (tilingData_.woOuter - 1)) ? tilingData_.woTail : tilingData_.woFactor;
-
-    blockPara.kerDStartIdx = ((blockPara.doIdx * tilingData_.doFactor) * tilingData_.dIn) / tilingData_.dOut;
-    blockPara.kerHStartIdx = ((blockPara.hoIdx * tilingData_.hoFactor) * tilingData_.hIn) / tilingData_.hOut;
-    blockPara.kerWStartIdx = ((blockPara.woIdx * tilingData_.woFactor) * tilingData_.wIn) / tilingData_.wOut;
-    int32_t kerDEndIdx = Ceil((blockPara.doIdx * tilingData_.doFactor + blockPara.doNum) * tilingData_.dIn,
-                              tilingData_.dOut);
-    int32_t kerHEndIdx = Ceil((blockPara.hoIdx * tilingData_.hoFactor + blockPara.hoNum) * tilingData_.hIn,
-                              tilingData_.hOut);
-    int32_t kerWEndIdx = Ceil((blockPara.woIdx * tilingData_.woFactor + blockPara.woNum) * tilingData_.wIn,
-                              tilingData_.wOut);
-
-    blockPara.diDataLen = kerDEndIdx - blockPara.kerDStartIdx;
-    blockPara.hiDataLen = kerHEndIdx - blockPara.kerHStartIdx;
-    blockPara.wiDataLen = kerWEndIdx - blockPara.kerWStartIdx;
-    blockPara.xOffset = blockPara.ncIdx * tilingData_.ncFactor * inDHW_ + blockPara.kerDStartIdx * inHW_ +
-                        blockPara.kerHStartIdx * tilingData_.wIn + blockPara.kerWStartIdx;
-}
-
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyInput(uint32_t ncNum, uint32_t diDataLen,
-                                                                     uint32_t hiDataLen, uint32_t wiDataLen,
-                                                                     int64_t xOffset)
-{
-    LocalTensor<T> xLocal = inputQue.AllocTensor<T>();
-
-    uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
-    DataCopyExtParams paramsIn = {static_cast<uint16_t>(hiDataLen), static_cast<uint32_t>(wiDataLen * sizeof(T)),
-                                  static_cast<uint32_t>((tilingData_.wIn - wiDataLen) * sizeof(T)),
-                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<T> padParams = {false, 0, 0, 0};
-
-    LoopModeParams loopModeParams;
-    loopModeParams.loop1Size = diDataLen;
-    loopModeParams.loop2Size = ncNum;
-    loopModeParams.loop1SrcStride = inHW_ * sizeof(T);
-    loopModeParams.loop2SrcStride = inDHW_ * sizeof(T);
-    loopModeParams.loop1DstStride = hiDataLen * wiDataAlign * sizeof(T);
-    loopModeParams.loop2DstStride = diDataLen * hiDataLen * wiDataAlign * sizeof(T);
-
-    SetLoopModePara(loopModeParams, DataCopyMVType::OUT_TO_UB);
-    DataCopyPad(xLocal, xGm[xOffset], paramsIn, padParams);
-    ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    inputQue.EnQue(xLocal);
-}
-
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB16(LocalTensor<T> xLocalTrans,
-                                                                        LocalTensor<T> xLocal, uint32_t rowNum,
-                                                                        uint32_t colNum)
-{
-    uint64_t dstList[TRANS_ADDR_LEN];
-    uint64_t srcList[TRANS_ADDR_LEN];
-
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-
-    uint64_t transPoseAlign = ubAlignNum_;
-    if (colNum == transPoseAlign) {
-        /* repeat在行方向，一次处理16*8个b32或者16*16个B16 */
-        transDataParams.repeatTimes = rowNum / TRANS_ADDR_LEN;
-        /* dstSride16*sizeof(T), srcSride16dataBlock */
-        transDataParams.dstRepStride = TRANS_ADDR_LEN * sizeof(T) / ubBlockSize_;
-        transDataParams.srcRepStride = TRANS_ADDR_LEN;
-        for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcList[i] = static_cast<uint64_t>(xLocal[i * transPoseAlign].GetPhyAddr());
-            dstList[i] = static_cast<uint64_t>(xLocalTrans[i * rowNum].GetPhyAddr());
-        }
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
-        }
-        TransDataTo5HD<T>(dstList, srcList, transDataParams);
-    } else {
-        /* repeatTimes不会为1 */
-        transDataParams.repeatTimes = colNum / transPoseAlign;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-        /* repeat在列方向,一次处理16*8个b32或者16*16个B16， 行方向一次处理16行 */
-        for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
-            for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] = static_cast<uint64_t>(
-                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
-                dstList[i] = static_cast<uint64_t>(xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
-            }
-            TransDataTo5HD<T>(dstList, srcList, transDataParams);
-        }
-    }
-}
-
-template <typename T, typename ID_T>
-template <typename U>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB32(LocalTensor<U> xLocalTrans,
-                                                                        LocalTensor<U> xLocal, uint32_t rowNum,
-                                                                        uint32_t colNum)
-{
-    uint64_t dstList[TRANS_ADDR_LEN];
-    uint64_t srcList[TRANS_ADDR_LEN];
-
-    TransDataTo5HDParams transDataParams;
-    transDataParams.dstHighHalf = false;
-    transDataParams.srcHighHalf = false;
-    uint64_t transPoseAlign = ubBlockSize_ / sizeof(U);
-    if (colNum == transPoseAlign) {
-        /* repeat在行方向，一次处理16*8个b32或者16*16个B16 */
-        transDataParams.repeatTimes = rowNum / TRANS_ADDR_LEN;
-        /* dstSride大小为16*sizeof(T), srcSride大小为16个dataBlock */
-        transDataParams.dstRepStride = TRANS_ADDR_LEN * sizeof(int32_t) / ubBlockSize_;
-        transDataParams.srcRepStride = TRANS_ADDR_LEN;
-
-        for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcList[i] = static_cast<uint64_t>(xLocal[i * transPoseAlign].GetPhyAddr());
-        }
-        for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-            dstList[i * 2] = static_cast<uint64_t>(xLocalTrans[i * rowNum].GetPhyAddr());
-            dstList[i * 2 + 1] = static_cast<uint64_t>(xLocalTrans[i * rowNum + transPoseAlign].GetPhyAddr());
-        }
-        if (transDataParams.repeatTimes == 1) {
-            transDataParams.srcRepStride = 0;
-            transDataParams.dstRepStride = 0;
-        }
-        TransDataTo5HD<U>(dstList, srcList, transDataParams);
-    } else {
-        /* repeatTimes不会为1 */
-        transDataParams.repeatTimes = colNum / transPoseAlign;
-        transDataParams.dstRepStride = rowNum;
-        transDataParams.srcRepStride = 1;
-        /* repeat在列方向, 一次处理16*8个b32或者16*16个B16, 行方向一次处理16行 */
-        for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
-            for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] = static_cast<uint64_t>(
-                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
-            }
-            for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-                dstList[i * 2] = static_cast<uint64_t>(
-                    xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
-                dstList[i * 2 + 1] = static_cast<uint64_t>(
-                    xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum + transPoseAlign].GetPhyAddr());
-            }
-            TransDataTo5HD<U>(dstList, srcList, transDataParams);
-        }
-    }
-}
-
-template <typename T, typename ID_T>
 __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransInput(uint32_t diDataLen, uint32_t hiDataLen,
                                                                       uint32_t wiDataLen)
 {
@@ -329,9 +159,11 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransInput(uint32_t d
     LocalTensor<T> xLocal = inputQue.DeQue<T>();
     LocalTensor<T> xLocalTransVL = avgQue.AllocTensor<T>();
     if constexpr (IsSameType<T, float>::value) {
-        TransposeB32<T>(xLocalTransVL, xLocal, vlNum_, diDataLen * hiDataLen * wiDataAlign);
+        PoolUtils::DataMove::TransposeB32<T>(xLocalTransVL, xLocal, vlNum_, diDataLen * hiDataLen * wiDataAlign,
+                                             ubBlockSize_);
     } else {
-        TransposeB16(xLocalTransVL, xLocal, vlNum_, diDataLen * hiDataLen * wiDataAlign);
+        PoolUtils::DataMove::TransposeB16<T>(xLocalTransVL, xLocal, vlNum_, diDataLen * hiDataLen * wiDataAlign,
+                                             ubBlockSize_);
     }
     inputQue.FreeTensor(xLocal);
     avgQue.EnQue(xLocalTransVL);
@@ -581,7 +413,7 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransOut(int64_t doNu
 
     /* 5HD transpose时rowNum按16对齐 */
     auto rowNumAlign = ops::CeilAlign(static_cast<uint64_t>(rowNum), TRANS_ADDR_LEN);
-    TransposeB32<float>(avgOutLocal, dTransLocal, rowNumAlign, vlNum_);
+    PoolUtils::DataMove::TransposeB32<float>(avgOutLocal, dTransLocal, rowNumAlign, vlNum_, ubBlockSize_);
     avgTransQue.FreeTensor(dTransLocal);
     avgQue.EnQue(avgOutLocal);
 }
@@ -637,8 +469,10 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Process()
     if (startBlockIdx_ >= endBlockIdx_) {
         return;
     }
-    CalInputBlockPara(startBlockIdx_, blockPara_);
-    CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen, blockPara_.xOffset);
+    PoolUtils::Compute::CalInputBlockPara(startBlockIdx_, blockPara_, tilingData_, inDHW_, inHW_);
+    PoolUtils::DataMove::CopyInput<T>(inputQue, xGm, blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen,
+                                      blockPara_.wiDataLen, blockPara_.xOffset, ubAlignNum_, tilingData_.wIn, inHW_,
+                                      inDHW_);
     for (auto curIdx = startBlockIdx_; curIdx < endBlockIdx_ - 1; curIdx++) {
         auto ncIdx = blockPara_.ncIdx;
         auto doIdx = blockPara_.doIdx;
@@ -660,9 +494,10 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Process()
 
         TransInput(diDataLen, hiDataLen, wiDataLen);
 
-        CalInputBlockPara(curIdx + 1, blockPara_);
-        CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen,
-                  blockPara_.xOffset);
+        PoolUtils::Compute::CalInputBlockPara(curIdx + 1, blockPara_, tilingData_, inDHW_, inHW_);
+        PoolUtils::DataMove::CopyInput<T>(inputQue, xGm, blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen,
+                                          blockPara_.wiDataLen, blockPara_.xOffset, ubAlignNum_, tilingData_.wIn, inHW_,
+                                          inDHW_);
 
         /* outshape: [woNum, hiDataLen, diDataLen, vl] */
         AvgPoolOnW(diDataLen, hiDataLen, wiDataLen, woIdx, woNum);

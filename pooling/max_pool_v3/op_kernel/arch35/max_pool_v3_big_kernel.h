@@ -16,6 +16,7 @@
 #define MAX_POOL_V3_BIG_KERNEL_H_
 
 #include "max_pool_v3_common.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
 
 namespace MaxPoolV3 {
 using namespace AscendC;
@@ -34,8 +35,6 @@ private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <bool SPLIT_KERNEL>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx, int64_t maxCount);
-    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset,
                                                 int64_t maxCount);
@@ -156,46 +155,6 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::BaseCompute(int64_t beginIdx, int6
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3BigKernel<T>::CopyInSingleRow(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void MaxPoolV3BigKernel<T>::CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = blockCount;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = (tilingData_->wInDim - blockLen) * sizeof(T);
-    extParams.dstStride = 0;
-    DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
 __aicore__ inline void MaxPoolV3BigKernel<T>::CopyMaxOut(int64_t curIdx)
 {
     constexpr int32_t maxLocalLen = OUT_BUFFER_LEN;
@@ -220,7 +179,7 @@ template <typename T>
 __aicore__ inline void MaxPoolV3BigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
                                                                    int64_t curInOffset, int64_t maxCount)
 {
-    CopyInMultiRows(curInOffset, curkW, curkH);
+    PoolUtils::DataMove::BigKernel::CopyInMultiRows(inputQue_, xGm_, curInOffset, curkW, curkH, tilingData_->wInDim);
     ComputeSingle<false, false>(localCurIdx, curkW * curkH);
 }
 
@@ -241,7 +200,8 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::SplitKernelProcess(int32_t localCu
 
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int32_t curhFactor = hLoop == hLoops - 1 ? hTail : hFactor;
-            CopyInMultiRows(inputOffset, curkW, curhFactor);
+            PoolUtils::DataMove::BigKernel::CopyInMultiRows(inputQue_, xGm_, inputOffset, curkW, curhFactor,
+                                                            tilingData_->wInDim);
             ComputeSingle<true, false>(localCurIdx, curkW * curhFactor);
             inputOffset += curhFactor * tilingData_->wInDim;
             kernelOffset += curhFactor * tilingData_->wInDim;
@@ -258,7 +218,7 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::SplitKernelProcess(int32_t localCu
             kernelOffset = curOriginIndex_ + hLoop * tilingData_->wInDim;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
                 int32_t curFactor = wLoop == wLoops - 1 ? wTail : wFactor;
-                CopyInSingleRow(inputOffset, curFactor);
+                PoolUtils::DataMove::CopyInSingleRow(inputQue_, xGm_, inputOffset, curFactor);
                 ComputeSingle<true, true>(localCurIdx, curFactor);
                 inputOffset += curFactor;
                 kernelOffset += curFactor;
@@ -350,7 +310,7 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::ComputeSingle(int32_t localCurIdx,
             // merge cur result with last result
             MergeMaxRes<T>(res, dstLocalAddr, localCurIdx);
         }
-        StoreElement<T>(dstLocalAddr, res, localCurIdx, 1);
+        PoolUtils::DataMove::StoreElement<T>(dstLocalAddr, res, localCurIdx, 1);
     }
     inputQue_.FreeTensor<T>(xLocal);
 }

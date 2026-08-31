@@ -17,6 +17,7 @@
 #include "avg_pool_common.h"
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -40,7 +41,6 @@ private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <int32_t SPLIT_MODE>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx);
-    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t hLen, int64_t wLen, int64_t blockLen);
     __aicore__ inline void CopyInMultiRowsContiguous(int64_t offset, int64_t hLen, int64_t wLen);
     __aicore__ inline void CopyAvgOut(int64_t curIdx);
@@ -190,26 +190,6 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::BaseCompute(int64_t beginIdx, in
             SplitChannelProcess(idx, curkH, curkW, curInOffset);
         }
     }
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInSingleRow(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
 }
 
 template <typename T>
@@ -429,7 +409,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitChannelProcess(int32_t curI
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int64_t inputOffset = curInOffset + hLoop * tilingData_->wInDim * tilingData_->channel + cLoop * cFactor;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
-                CopyInSingleRow(inputOffset, curFactor);
+                PoolUtils::DataMove::CopyInSingleRow(inputQue_, xGm_, inputOffset, curFactor);
                 LocalTensor<T> xLocal = inputQue_.DeQue<T>();
                 if constexpr (std::is_same<T, float>::value) {
                     LocalTensor<T> sumLocal = outputBuf_.Get<T>();
@@ -680,7 +660,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGather(int32_t 
     uint16_t loopNum = dataCount;
     __VEC_SCOPE__
     {
-        using regType = typename VciTypeGet<U>::type;
+        using regType = typename PoolUtils::TypeTraits::VciTypeGet<U>::type;
         Reg::RegTensor<T> res;
         Reg::RegTensor<U> v0;
         AscendC::Reg::UnalignRegForStore u0;

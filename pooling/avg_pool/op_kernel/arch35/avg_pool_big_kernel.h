@@ -18,6 +18,8 @@
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
+#include "pool_utils/arch35/data_move/pool_big_kernel_result_data_move.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -37,9 +39,6 @@ private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <bool SPLIT_KERNEL>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx, int64_t maxCount);
-    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount);
-    __aicore__ inline void CopyResultToUb(int64_t curIdx);
     __aicore__ inline void CopyAvgOut(int64_t curIdx);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset,
                                                 int64_t maxCount);
@@ -163,70 +162,8 @@ __aicore__ inline void AvgPoolBigKernel<T>::BaseCompute(int64_t beginIdx, int64_
             InitOutLocal<false>(localCurIdx);
             NoSplitKernelProcess(localCurIdx, curkH, curkW, curInOffset, maxCount);
         }
-        CopyResultToUb(localCurIdx);
+        PoolUtils::DataMove::BigKernel::CopyResultToUb<T>(uBOutput_, ubLoopResult_, localCurIdx, ONE);
         CopyAvgOut(idx);
-    }
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolBigKernel<T>::CopyInSingleRow(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolBigKernel<T>::CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = blockCount;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = (tilingData_->wInDim - blockLen) * sizeof(T);
-    extParams.dstStride = 0;
-    DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolBigKernel<T>::CopyResultToUb(int64_t curIdx)
-{
-    LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
-    __ubuf__ T* dstAddr = (__ubuf__ T*)uboutLocal.GetPhyAddr() + curIdx;
-
-    LocalTensor<T> ubResult = ubLoopResult_.Get<T>();
-    __ubuf__ T* srcAddr = (__ubuf__ T*)ubResult.GetPhyAddr();
-
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<T> res;
-        Reg::UnalignRegForLoad u0;
-        Reg::LoadUnAlignPre(u0, srcAddr);
-        Reg::LoadUnAlign(res, u0, srcAddr, ONE);
-
-        Reg::UnalignRegForStore u1;
-        Reg::StoreUnAlign(dstAddr, res, u1, ONE);
-        Reg::StoreUnAlignPost(dstAddr, u1, 0);
     }
 }
 
@@ -254,7 +191,7 @@ template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
                                                                  int64_t curInOffset, int64_t maxCount)
 {
-    CopyInMultiRows(curInOffset, curkW, curkH);
+    PoolUtils::DataMove::BigKernel::CopyInMultiRows(inputQue_, xGm_, curInOffset, curkW, curkH, tilingData_->wInDim);
     ComputeSum(curkW * curkH);
     ComputeAvg();
 }
@@ -274,7 +211,8 @@ __aicore__ inline void AvgPoolBigKernel<T>::SplitKernelProcess(int32_t localCurI
         int64_t hTail = curkH - (hLoops - 1) * hFactor;
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int32_t curhFactor = hLoop == hLoops - 1 ? hTail : hFactor;
-            CopyInMultiRows(inputOffset, curkW, curhFactor);
+            PoolUtils::DataMove::BigKernel::CopyInMultiRows(inputQue_, xGm_, inputOffset, curkW, curhFactor,
+                                                            tilingData_->wInDim);
             ComputeSum(curkW * curhFactor);
             inputOffset += curhFactor * tilingData_->wInDim;
             kernelOffset += curhFactor * tilingData_->wInDim;
@@ -290,7 +228,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::SplitKernelProcess(int32_t localCurI
             kernelOffset = curOriginIndex_ + hLoop * tilingData_->wInDim;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
                 int32_t curFactor = wLoop == wLoops - 1 ? wTail : wFactor;
-                CopyInSingleRow(inputOffset, curFactor);
+                PoolUtils::DataMove::CopyInSingleRow(inputQue_, xGm_, inputOffset, curFactor);
                 ComputeSum(curFactor);
                 inputOffset += curFactor;
                 kernelOffset += curFactor;

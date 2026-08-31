@@ -19,6 +19,10 @@
 #include "op_kernel/platform_util.h"
 #include "../inc/kernel_utils.h"
 #include "avg_pool_struct.h"
+#include "pool_utils/arch35/data_move/pool_2d_multi_channel_data_move.h"
+#include "pool_utils/arch35/data_move/pool_2d_nhwc_small_kernel_data_move.h"
+#include "pool_utils/arch35/index/pool_2d_nhwc_small_kernel_index.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -37,15 +41,6 @@ private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void InitDivisor();
-    __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
-                                           uint32_t inColsElms, uint32_t channels);
-    __aicore__ inline void CopyInMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels,
-                                               int64_t alignChannels, int64_t winDim);
-    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
-                                      uint32_t channels);
-    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols,
-                                                int64_t channels);
     __aicore__ inline void ComputeDivisor(int64_t start, int64_t num);
     __aicore__ inline void DivCompute(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr, uint32_t num);
     template <typename M, typename U>
@@ -72,10 +67,6 @@ private:
     __aicore__ inline void MultiChannelCopyAndPad(LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inCols,
                                                   int64_t expectRowStart, int64_t expectColStart, int64_t realRows,
                                                   int64_t realCols, int64_t channels);
-    template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms,
-                                          uint32_t hStride, uint32_t wStride, uint32_t channels,
-                                          LocalTensor<U>& indexLocal);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
     __aicore__ inline int64_t max(int64_t a, int64_t b) { return (a < b) ? b : a; }
     TPipe* pipe_;
@@ -170,14 +161,15 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::BaseCompute()
     uint32_t maxRows = max((outUbFactorH - 1) * sH + tilingData_->kH, tilingData_->hInDim + tilingData_->tPad);
     if constexpr (GATHER_MODE != NOT_GATHER) {
         LocalTensor<U> indexLocal = indexBuf_.Get<U>();
-        GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, maxRows, alignColsElms, sH, sW, channels,
-                                       indexLocal);
+        PoolUtils::Index::GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, maxRows, alignColsElms, sH, sW,
+                                                         channels, indexLocal);
     }
 
     if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
-        NHWCGenScatterIndex<U, false>(tilingData_->wInDim, alignColsElms, channels, scatterIndexLocal);
+        PoolUtils::Index::NHWCGenScatterIndex<U, false>(tilingData_->wInDim, alignColsElms, channels,
+                                                        scatterIndexLocal);
     } else if (tilingData_->copyMode == SCATTER_SINGLE_ROW) {
-        NHWCGenScatterIndex<U, true>(tilingData_->wInDim, alignColsElms, channels, scatterIndexLocal);
+        PoolUtils::Index::NHWCGenScatterIndex<U, true>(tilingData_->wInDim, alignColsElms, channels, scatterIndexLocal);
     }
     for (int64_t idx = startIdx; idx < endIdx; idx++) {
         int64_t nIdx = idx / (tilingData_->hLoop * tilingData_->wLoop);
@@ -212,12 +204,16 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::BaseCompute()
         }
 
         if constexpr (GATHER_MODE == NOT_GATHER) {
-            CopyInMultiChannels(srcOffset, n, realRows, realCols, channels, alignChannels, tilingData_->wInDim);
+            PoolUtils::DataMove::CopyInMultiChannels(inputQue_, xGm_,
+                                                     {srcOffset, n, realRows, realCols, channels, alignChannels,
+                                                      tilingData_->wInDim, tilingData_->splitMode});
         } else {
             if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
-                CopyInSingleRow(srcOffset, n * realRows * realCols * channels);
+                PoolUtils::DataMove::CopyInSingleRow(inputQue_, xGm_, srcOffset, n * realRows * realCols * channels);
             } else {
-                CopyInMultiRows(srcOffset, n, realRows, realCols, alignColsElms, channels);
+                PoolUtils::DataMove::Pad::CopyInMultiRows(inputQue_, xGm_, srcOffset, n, realRows, realCols,
+                                                          alignColsElms, channels, tilingData_->wInDim,
+                                                          tilingData_->hInDim);
             }
         }
 
@@ -233,148 +229,10 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::BaseCompute()
         }
 
         if constexpr (GATHER_MODE == NOT_GATHER) {
-            CopyOutMultiChannels(dstOffset, n, rows, cols, channels);
+            PoolUtils::DataMove::CopyOutMultiChannels(maxUBOutput_, maxGm_, {dstOffset, n, rows, cols, channels});
         } else {
-            CopyMaxOut(dstOffset, n, rows, cols, channels);
+            PoolUtils::DataMove::CopyMaxOut(maxUBOutput_, maxGm_, dstOffset, n, rows, cols, channels);
         }
-    }
-}
-
-template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyInSingleRow(int64_t offset, int64_t blockLen)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = blockLen * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyInMultiRows(int64_t offset, int64_t n,
-                                                                              int64_t blockCount, int64_t blockLen,
-                                                                              uint32_t inColsElms, uint32_t channels)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    int32_t elemNum = Ops::Base::GetUbBlockSize() / sizeof(T);
-    int64_t batchStride = blockCount * inColsElms;
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-    uint32_t dstStride = (inColsElms - blockLen * channels) * sizeof(T) / Ops::Base::GetUbBlockSize();
-    DataCopyExtParams extParams;
-    extParams.blockCount = blockCount;
-    extParams.blockLen = blockLen * channels * sizeof(T);
-    extParams.srcStride = (tilingData_->wInDim - blockLen) * channels * sizeof(T);
-    extParams.dstStride = dstStride;
-    if (n > 1) {
-        LoopModeParams loopParams;
-        loopParams.loop2Size = 1;
-        loopParams.loop1Size = n;
-        loopParams.loop2SrcStride = 0;
-        loopParams.loop2DstStride = 0;
-        loopParams.loop1SrcStride = tilingData_->wInDim * tilingData_->hInDim * channels * sizeof(T);
-        loopParams.loop1DstStride = batchStride * sizeof(T);
-        SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else {
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-    }
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyInMultiChannels(int64_t offset, int64_t n,
-                                                                                  int64_t rows, int64_t cols,
-                                                                                  int64_t channels,
-                                                                                  int64_t alignChannels, int64_t winDim)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-    uint32_t dstStride = (alignChannels - channels) * sizeof(T) / Ops::Base::GetUbBlockSize();
-    DataCopyExtParams extParams;
-    extParams.blockCount = n * rows * cols;
-    extParams.blockLen = channels * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = dstStride;
-    if (tilingData_->splitMode != SPLIT_COLS) {
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-    } else {
-        LoopModeParams loopParams;
-        loopParams.loop2Size = 1;
-        loopParams.loop1Size = rows;
-        loopParams.loop2SrcStride = 0;
-        loopParams.loop2DstStride = 0;
-        loopParams.loop1SrcStride = winDim * channels * sizeof(T);
-        loopParams.loop1DstStride = cols * alignChannels * sizeof(T);
-        SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
-        extParams.blockCount = cols;
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    }
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
-                                                                         int64_t blockLen, uint32_t channels)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = (n * blockCount * blockLen * channels) * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
-}
-
-template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyOutMultiChannels(int64_t offset, int64_t n,
-                                                                                   int64_t rows, int64_t cols,
-                                                                                   int64_t channels)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = n * rows * cols;
-    extParams.blockLen = channels * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
-}
-
-template <typename T, bool OUT_DIV>
-template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
-                                                                             uint32_t hIn, uint32_t wInElms,
-                                                                             uint32_t hStride, uint32_t wStride,
-                                                                             uint32_t channels,
-                                                                             LocalTensor<U>& indexLocal)
-{
-    if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
-        NHWCGenGatherIndexSingleRow<U>(wStride, channels, indexLocal);
-    } else if constexpr (GATHER_MODE == GATHER_MULTI_ROW) {
-        NHWCGenGatherIndexMultiRow<U>(wFactorOut, wInElms, hStride, wStride, channels, indexLocal);
-    } else {
-        NHWCGenGatherIndexMultiBatch<U>(hFactorOut, wFactorOut, hIn, wInElms, hStride, wStride, channels, indexLocal);
     }
 }
 

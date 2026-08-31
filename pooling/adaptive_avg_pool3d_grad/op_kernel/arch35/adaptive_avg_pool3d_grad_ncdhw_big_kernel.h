@@ -20,6 +20,8 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
 #include "adaptive_avg_pool3d_grad_struct.h"
+#include "pool_utils/arch35/compute/adaptive_avg_pool_grad_compute.h"
+#include "pool_utils/arch35/data_move/adaptive_avg_pool_grad_data_move.h"
 
 namespace AdaptiveAvgPool3dGradOp {
 using namespace AscendC;
@@ -74,13 +76,6 @@ constexpr AscendC::Reg::CastTrait castTraitTF32 = {
     AscendC::Reg::SatMode::UNKNOWN,
     AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN,
-};
-
-constexpr AscendC::Reg::CastTrait castTraitI64I32 = {
-    AscendC::Reg::RegLayout::ZERO,
-    AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_ROUND,
 };
 
 constexpr AscendC::Reg::CastTrait castTraitU32U16 = {
@@ -150,15 +145,6 @@ public:
                                                  __ubuf__ INDEX* gmStWAddr, __ubuf__ INDEX* gmEdWAddr,
                                                  __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr,
                                                  __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr);
-    __aicore__ inline void GatherCopyGradUb2Reg(AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx,
-                                                AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                                __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
-    __aicore__ inline void ScatterCopyGradReg2Ub(AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx,
-                                                 AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                                 __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
-    __aicore__ inline void DoGradRegAdds(AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                         COMPUTE_TYPE& gradInputValue, __ubuf__ COMPUTE_TYPE* yAddr,
-                                         uint32_t& maskCount);
     __aicore__ inline void ComputeGradIndexHW(AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx, INDEX gradKernelW,
                                               INDEX gradStHIdxOffset, INDEX gradStWIdx, INDEX highDHOffset,
                                               AscendC::Reg::MaskReg& pregU32MaskAll);
@@ -622,55 +608,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::CalAndCopy
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::GatherCopyGradUb2Reg(
-    AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx, AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
-{
-    uint32_t maskCountTemp = maskCount;
-    AscendC::Reg::MaskReg pregU32 = AscendC::Reg::UpdateMask<uint32_t>(maskCountTemp);
-    if constexpr (std::is_same<INDEX, int64_t>::value) {
-        AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<INDEX, AscendC::Reg::MaskPattern::ALL>();
-        AscendC::Reg::RegTensor<int32_t> gradOutputUBIdxI32;
-        AscendC::Reg::Cast<int32_t, int64_t, castTraitI64I32>(gradOutputUBIdxI32, gradOutputUBIdx, allMask);
-        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdxI32,
-                           (AscendC::Reg::RegTensor<int64_t>&)gradOutputUBIdxI32);
-        AscendC::Reg::Gather(gradOutputUbValue, yAddr, (AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdxI32, pregU32);
-    } else {
-        AscendC::Reg::Gather(gradOutputUbValue, yAddr, (AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdx, pregU32);
-    }
-}
-
-template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::ScatterCopyGradReg2Ub(
-    AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx, AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
-{
-    uint32_t maskCountTemp = maskCount;
-    AscendC::Reg::MaskReg pregU32 = AscendC::Reg::UpdateMask<uint32_t>(maskCountTemp);
-    if constexpr (std::is_same<INDEX, int64_t>::value) {
-        AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<INDEX, AscendC::Reg::MaskPattern::ALL>();
-        AscendC::Reg::RegTensor<int32_t> gradOutputUBIdxI32;
-        AscendC::Reg::Cast<int32_t, int64_t, castTraitI64I32>(gradOutputUBIdxI32, gradOutputUBIdx, allMask);
-        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdxI32,
-                           (AscendC::Reg::RegTensor<int64_t>&)gradOutputUBIdxI32);
-        AscendC::Reg::Scatter(yAddr, gradOutputUbValue, (AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdxI32,
-                              pregU32);
-    } else {
-        AscendC::Reg::Scatter(yAddr, gradOutputUbValue, (AscendC::Reg::RegTensor<uint32_t>&)gradOutputUBIdx, pregU32);
-    }
-}
-
-template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradRegAdds(
-    AscendC::Reg::RegTensor<COMPUTE_TYPE>& gradOutputUbValue, COMPUTE_TYPE& gradInputValue,
-    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
-{
-    uint32_t maskCountTemp = maskCount;
-    AscendC::Reg::MaskReg pregU32 = AscendC::Reg::UpdateMask<uint32_t>(maskCountTemp);
-    AscendC::Reg::Adds(gradOutputUbValue, gradOutputUbValue, COMPUTE_TYPE(gradInputValue), pregU32);
-}
-
-template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::ComputeGradIndexHW(
     AscendC::Reg::RegTensor<INDEX>& gradOutputUBIdx, INDEX gradKernelW, INDEX gradStHIdxOffset, INDEX gradStWIdx,
     INDEX highDHOffset, AscendC::Reg::MaskReg& pregU32MaskAll)
@@ -796,7 +733,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                         auto yAddrUnalign = yAddr + highDHWOffset;
                         AscendC::Reg::LoadUnAlignPre(u0, yAddrUnalign);
                         AscendC::Reg::LoadUnAlign(gradOutputUbValue, u0, yAddrUnalign);
-                        DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, wloopCountTail);
+                        PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, wloopCountTail);
                         AscendC::Reg::StoreUnAlign(yAddrUnalign, gradOutputUbValue, u1, wloopCountTail);
                         AscendC::Reg::StoreUnAlignPost(yAddrUnalign, u1, wloopCountTail);
                     }
@@ -825,17 +762,21 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                             INDEX gradStHIdxOffset = gradStHIdx + hwloopIdx * maxWParaNum;
                             ComputeGradIndexHW(gradOutputUBIdx, gradKernelW, gradStHIdxOffset, gradStWIdx, highDHOffset,
                                                pregU32MaskAll);
-                            GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
-                            DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
-                            ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                            PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                      maskCountFull);
+                            PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
+                            PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                       maskCountFull);
                         }
 
                         INDEX gradStHIdxOffset = gradStHIdx + hwloopCount * maxWParaNum;
                         ComputeGradIndexHW(gradOutputUBIdx, gradKernelW, gradStHIdxOffset, gradStWIdx, highDHOffset,
                                            pregU32MaskAll);
-                        GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
-                        DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
-                        ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                        PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                  maskCountTail);
+                        PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
+                        PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                   maskCountTail);
                     }
                 } else {
                     __VEC_SCOPE__
@@ -849,9 +790,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                             INDEX gradStHIdxOffset = gradStHIdx + hwloopIdx * maxWParaNum;
                             ComputeGradIndexHW(gradOutputUBIdx, gradKernelW, gradStHIdxOffset, gradStWIdx, highDHOffset,
                                                pregU32MaskAll);
-                            GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
-                            DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
-                            ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                            PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                      maskCountFull);
+                            PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
+                            PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                       maskCountFull);
                         }
                     }
 
@@ -865,9 +808,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                         INDEX gradStHIdxOffset = gradStHIdx + hwloopCount * maxWParaNum;
                         ComputeGradIndexHW(gradOutputUBIdx, gradKernelW, gradStHIdxOffset, gradStWIdx, highDHOffset,
                                            pregU32MaskAll);
-                        GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
-                        DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
-                        ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                        PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                  maskCountTail);
+                        PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
+                        PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                   maskCountTail);
                     }
                 }
             }
@@ -896,17 +841,20 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                         INDEX gradStDIdxOffset = gradStDIdx + dhwloopIdx * maxHWParaNum;
                         ComputeGradIndexDHW(gradOutputUBIdx, gradKernelHW, gradKernelW, gradStDIdxOffset, outputHWAlign,
                                             gradStHIdx, gradStWIdx, highOffset, pregU32MaskAll);
-                        GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
-                        DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
-                        ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                        PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                  maskCountFull);
+                        PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
+                        PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                   maskCountFull);
                     }
 
                     INDEX gradStDIdxOffset = gradStDIdx + dhwloopCount * maxHWParaNum;
                     ComputeGradIndexDHW(gradOutputUBIdx, gradKernelHW, gradKernelW, gradStDIdxOffset, outputHWAlign,
                                         gradStHIdx, gradStWIdx, highOffset, pregU32MaskAll);
-                    GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
-                    DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
-                    ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                    PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                    PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
+                    PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                               maskCountTail);
                 }
             } else {
                 __VEC_SCOPE__
@@ -919,9 +867,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                         INDEX gradStDIdxOffset = gradStDIdx + dhwloopIdx * maxHWParaNum;
                         ComputeGradIndexDHW(gradOutputUBIdx, gradKernelHW, gradKernelW, gradStDIdxOffset, outputHWAlign,
                                             gradStHIdx, gradStWIdx, highOffset, pregU32MaskAll);
-                        GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
-                        DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
-                        ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                        PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                  maskCountFull);
+                        PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
+                        PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                                   maskCountFull);
                     }
                 }
 
@@ -935,9 +885,10 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                     INDEX gradStDIdxOffset = gradStDIdx + dhwloopCount * maxHWParaNum;
                     ComputeGradIndexDHW(gradOutputUBIdx, gradKernelHW, gradKernelW, gradStDIdxOffset, outputHWAlign,
                                         gradStHIdx, gradStWIdx, highOffset, pregU32MaskAll);
-                    GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
-                    DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
-                    ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                    PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountTail);
+                    PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountTail);
+                    PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr,
+                                                               maskCountTail);
                 }
             }
         } else {
@@ -957,9 +908,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                 AscendC::Reg::RegTensor<INDEX> gradOutputUBIdx;
                 ComputeGradIndexDHW(gradOutputUBIdx, gradKernelHW, gradKernelW, gradStDIdx, outputHWAlign, gradStHIdx,
                                     gradStWIdx, highOffset, pregU32MaskAll);
-                GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
-                DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
-                ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                PoolUtils::DataMove::GatherCopyGradUb2Reg(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
+                PoolUtils::Compute::DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, maskCountFull);
+                PoolUtils::DataMove::ScatterCopyGradReg2Ub(gradOutputUBIdx, gradOutputUbValue, yAddr, maskCountFull);
             }
         }
     }

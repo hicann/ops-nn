@@ -16,19 +16,18 @@
 #include "../inc/platform.h"
 #include "max_pool_grad_struct.h"
 #include "max_pool_grad_nchw_backward_base.h"
-#include "../max_pool_with_argmax_v3/arch35/max_pool_with_argmax_v3_base.h"
+#include "pool_utils/arch35/compute/max_pool_negative_value.h"
+#include "pool_utils/arch35/index/max_pool_with_argmax_index.h"
+#include "pool_utils/arch35/data_move/pool_calc_buffer_data_move.h"
 #include "../pool_3d_common/arch35/pool_big_kernel_utils.h"
 #include "../pool_3d_common/arch35/pool_3d_common.h"
 #include "simt_api/asc_simt.h"
 
 namespace MaxPoolGradNCHWSmallKernelNameSpace {
 using namespace AscendC;
-using ::DuplicateNegInfRegVF;
-using ::GenGatterIndex3DVF;
 using MaxPoolGradNCHWNameSpace::ConvertIndexInt32FastDiv;
 using MaxPoolGradNCHWNameSpace::ConvertIndexInt32FastDivVF;
 using MaxPoolGradNCHWNameSpace::ConvertIndexNcInt32FastDivVF;
-using MaxPoolGradNCHWNameSpace::GenInitial1DIndices;
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
 
 constexpr uint32_t BUFFER_NUM = 2;
@@ -79,13 +78,6 @@ public:
     __aicore__ inline void MultiRowGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
     __aicore__ inline void SingleRowGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
     __aicore__ inline void MultiNcGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
-    __aicore__ inline void DupBufferNegInf(__local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop,
-                                           uint32_t tail);
-    __aicore__ inline void CopyToCalcBuffer(__local_mem__ TYPE_ORIG_X* dstAddr, __local_mem__ TYPE_ORIG_X* srcAddr,
-                                            uint16_t batch, uint16_t rows, uint16_t loopCols, uint16_t tailCols,
-                                            uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride,
-                                            uint32_t dstBatchStride, uint32_t dstRowStride, uint32_t dstRowOffset,
-                                            uint32_t dstColOffset);
     __aicore__ inline void DupAndCopyToCalcBuffer(__local_mem__ TYPE_ORIG_X* dstAddr,
                                                   __local_mem__ TYPE_ORIG_X* srcAddr);
     __aicore__ inline void ForwardCopyIn();
@@ -356,7 +348,7 @@ __simd_callee__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>
     Reg::MaskReg gtMask;
     Reg::MaskReg tmpMask;
     Reg::UnalignReg u0;
-    DuplicateNegInfRegVF<TYPE_ORIG_X>(maxReg);
+    PoolUtils::Compute::DuplicateNegInfRegVF<TYPE_ORIG_X>(maxReg);
 
     Reg::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
     for (int32_t hIndex = 0; hIndex < hKernel; hIndex++) {
@@ -448,7 +440,7 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Sin
     {
         Reg::RegTensor<int32_t> indexRegInit;
         Reg::MaskReg allMaskI32 = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
-        GenInitial1DIndices<int32_t>(indexRegInit, static_cast<int64_t>(wStride));
+        PoolGradCommon::GenInitial1DIndices<int32_t>(indexRegInit, static_cast<int64_t>(wStride));
 
         for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
             for (uint16_t hLoop = 0; hLoop < static_cast<uint16_t>(hOutputActual); hLoop++) {
@@ -525,8 +517,8 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Mul
         Reg::RegTensor<int32_t> maxIndexConvertReg;
         Reg::UnalignReg u1;
         __local_mem__ int32_t* argmaxAddrLocal = argmaxAddr;
-        GenGatterIndex2D<int32_t>(indexReg, static_cast<int32_t>(rate2D), static_cast<int32_t>(wOutputActual),
-                                  static_cast<int32_t>(wStride));
+        PoolUtils::Index::GenGatterIndex2D<int32_t>(indexReg, static_cast<int32_t>(rate2D),
+                                                    static_cast<int32_t>(wOutputActual), static_cast<int32_t>(wStride));
         for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
             int32_t ncInputOffset = nc * hInputActualPad * wInputActualAlignedPad;
             for (uint16_t hLoop = 0; hLoop < hLoopTimes; hLoop++) {
@@ -563,7 +555,7 @@ __simd_vf__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Pr
     Reg::RegTensor<int32_t> maxIndexConvertReg;
     Reg::UnalignReg u1;
 
-    GenGatterIndex3DVF<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+    PoolUtils::Index::GenGatterIndex3DVF<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
 
     ProcessW((__local_mem__ TYPE_ORIG_X*)computeAddr, hOffset, wInputActualAlignedPad, indexReg, hKernel, wKernel,
              repeatsElem, maxIndexReg, hDilation, wDilation);
@@ -640,23 +632,6 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Mul
 }
 
 template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::DupBufferNegInf(
-    __local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
-{
-    DupBufferNegInfCommon<TYPE_ORIG_X>(dstAddr, repeatElm, loop, tail);
-}
-
-template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::CopyToCalcBuffer(
-    __local_mem__ TYPE_ORIG_X* dstAddr, __local_mem__ TYPE_ORIG_X* srcAddr, uint16_t batch, uint16_t rows,
-    uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride,
-    uint32_t dstBatchStride, uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
-{
-    CopyToCalcBuffer2DCommon<TYPE_ORIG_X>(dstAddr, srcAddr, batch, rows, loopCols, tailCols, repeatElm, srcBatchStride,
-                                          srcRowStride, dstBatchStride, dstRowStride, dstRowOffset, dstColOffset);
-}
-
-template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::DupAndCopyToCalcBuffer(
     __local_mem__ TYPE_ORIG_X* dstAddr, __local_mem__ TYPE_ORIG_X* srcAddr)
 {
@@ -677,11 +652,12 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Dup
     uint16_t tailCols = wCols % repeatElm;
     __VEC_SCOPE__
     {
-        DupBufferNegInf(dstAddr, repeatElm,
-                        highAxis * (hRows + hPad + downOffsetToInputDown_) * (wInputPadActualAlign / repeatElm),
-                        repeatElm);
-        CopyToCalcBuffer(dstAddr, srcAddr, highAxis, hRows, loopCols, tailCols, repeatElm, srcBatchStride, srcRowStride,
-                         dstBatchStride, dstRowStride, hPad, wPad);
+        PoolUtils::Compute::DupBufferNegInfCommon<TYPE_ORIG_X>(
+            dstAddr, repeatElm, highAxis * (hRows + hPad + downOffsetToInputDown_) * (wInputPadActualAlign / repeatElm),
+            repeatElm);
+        PoolUtils::DataMove::CopyToCalcBuffer2DCommon<TYPE_ORIG_X>(dstAddr, srcAddr, highAxis, hRows, loopCols,
+                                                                   tailCols, repeatElm, srcBatchStride, srcRowStride,
+                                                                   dstBatchStride, dstRowStride, hPad, wPad);
     }
 };
 

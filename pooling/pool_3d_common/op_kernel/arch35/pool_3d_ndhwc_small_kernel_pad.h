@@ -17,6 +17,8 @@
 
 #include "copy_pad_impl.h"
 #include "pool_3d_common.h"
+#include "pool_3d_ndhwc_gather_index_common.h"
+#include "pool_utils/arch35/data_move/pool_3d_result_data_move.h"
 #include "../inc/platform.h"
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
@@ -42,8 +44,6 @@ private:
     __aicore__ inline void GenIndexInfo(CopyPad::CopyPadShapeInfo& padInfo, uint32_t& realOneRowElements,
                                         uint32_t& realOnePlaneElements, uint32_t& realOneBatchElements);
     __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo& inputInfo);
-    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
-                                      int64_t channels);
     template <typename M, typename U, bool USE_TRAIT_TWO>
     __aicore__ inline void ComputeMultiRow(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
                                            const Pool3dParam& paramInfo);
@@ -56,9 +56,6 @@ private:
     template <typename M, typename U, bool USE_TRAIT_TWO>
     __aicore__ inline void ComputeMultiBatch(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
                                              const Pool3dParam& paramInfo);
-    template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal,
-                                          uint16_t loopNum = 1);
     template <typename M, typename U>
     __aicore__ inline void CopyPadData(LocalTensor<T>& inLocal, LocalTensor<T>& outLocal,
                                        const CopyPad::CopyPadShapeInfo& padInfo);
@@ -218,7 +215,7 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenIndexI
         {1, sW, sH, sD, 1}                               // stride
     };
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
-    GenGatherIndex<U, GATHER_MODE>(info, indexLocal, 2);
+    Pool3D::GenNdhwcSmallGatherIndex<U, GATHER_MODE>(info, indexLocal, 2);
 
     ScatterIndexImpl::ScatterShapeInfo shapeInfo = {
         {inDim0Size, inDim1Size, inDim2Size, inDim3Size, 1},
@@ -356,7 +353,7 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::BaseCompu
         } else {
             Compute<M, U, GATHER_MODE, false>(padInfo, outInfo, paramInfo);
         }
-        CopyMaxOut(dstOffset, n * deps, rows, cols, channels);
+        PoolUtils::DataMove::CopyMaxOutNdhwcSmall<T>(maxUBOutput_, maxGm_, dstOffset, n * deps, rows, cols, channels);
     }
 }
 
@@ -434,37 +431,6 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     }
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyMaxOut(int64_t offset, int64_t n,
-                                                                                  int64_t blockCount, int64_t blockLen,
-                                                                                  int64_t channels)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = (n * blockCount * blockLen * channels) * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
-}
-
-template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenGatherIndex(
-    const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal, uint16_t loopNum)
-{
-    if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
-        GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::TWO>(param, indexLocal, loopNum);
-    } else if constexpr (GATHER_MODE == GATHER_MULTI_ROW) {
-        GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::THREE>(param, indexLocal, loopNum);
-    } else if constexpr (GATHER_MODE == GATHER_MULTI_PLANE) {
-        GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::FOUR>(param, indexLocal, loopNum);
-    } else {
-        GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::FIVE>(param, indexLocal, loopNum);
-    }
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>

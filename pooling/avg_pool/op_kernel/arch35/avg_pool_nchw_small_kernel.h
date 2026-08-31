@@ -19,6 +19,9 @@
 #include "op_kernel/platform_util.h"
 #include "../inc/kernel_utils.h"
 #include "op_kernel/math_util.h"
+#include "pool_utils/arch35/data_move/pool_2d_nchw_small_kernel_data_move.h"
+#include "pool_utils/arch35/index/pool_2d_nchw_small_kernel_index.h"
+#include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -47,11 +50,6 @@ public:
 private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
-    __aicore__ inline void CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param, int32_t inCols,
-                                                 int64_t colsInUb, int64_t channelStride);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
-                                           uint32_t colsInUb);
-    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen);
     template <typename M, typename U>
     __aicore__ inline void ComputeMultiRow(const ComputeParam& param);
     template <typename M, typename U>
@@ -60,9 +58,6 @@ private:
     __aicore__ inline void ComputeMultiBatch(const ComputeParam& param);
     template <typename M, typename U>
     __aicore__ inline void ComputeSingleKernel(const ComputeParam& param);
-    template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements,
-                                          uint32_t wIn, uint32_t hStride, uint32_t wStride, LocalTensor<U>& indexLocal);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
@@ -145,9 +140,11 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
     if (isSparse) {
         uint32_t elemNum = Ops::Base::GetUbBlockSize() / sizeof(T);
         batchElementsIn = Ops::Base::CeilAlign(static_cast<uint32_t>(outUbFactorH * kH * tilingData_->wInDim), elemNum);
-        GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, batchElementsIn, colsInUb, kH, sW, indexLocal);
+        PoolUtils::Index::GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, batchElementsIn, colsInUb, kH, sW,
+                                                         kW, kH, indexLocal);
     } else {
-        GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, batchElementsIn, colsInUb, sH, sW, indexLocal);
+        PoolUtils::Index::GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, batchElementsIn, colsInUb, sH, sW,
+                                                         kW, kH, indexLocal);
     }
 
     for (int64_t idx = startIdx; idx < endIdx; idx++) {
@@ -173,10 +170,14 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
         if (isSparse) {
             inRows = outUbFactorH * kH;
             param.inRows = outUbFactorH * kH;
-            CopyInMultiRowsSparse(srcOffset, param, inCols, colsInUb, batchElementsIn);
+            PoolUtils::DataMove::SmallKernel::CopyInMultiRowsSparse<T, BUFFER_NUM>(
+                inputQue_, xGm_, srcOffset, param.n, param.outRows, inCols, colsInUb, batchElementsIn,
+                tilingData_->splitMode, SPLIT_COLS, tilingData_->kH, tilingData_->sH, tilingData_->wInDim,
+                tilingData_->hInDim);
             param.sH = kH;
         } else {
-            CopyInMultiRows(srcOffset, n, inRows, inCols, colsInUb);
+            PoolUtils::DataMove::NoPad::CopyInMultiRows(inputQue_, xGm_, srcOffset, n, inRows, inCols, colsInUb,
+                                                        tilingData_->splitMode, tilingData_->wInDim);
         }
         if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
             ComputeSingleRow<M, U>(param);
@@ -187,116 +188,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
         } else {
             ComputeSingleKernel<M, U>(param);
         }
-        CopyMaxOut(dstOffset, n, rows, cols);
-    }
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param,
-                                                                    int32_t inCols, int64_t colsInUb,
-                                                                    int64_t channelStride)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    DataCopyExtParams extParams;
-    DataCopyPadExtParams<T> padExtParams;
-    LoopModeParams loopParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-    if (tilingData_->splitMode != SPLIT_COLS) {
-        uint32_t elemNum = Ops::Base::GetUbBlockSize() / sizeof(T);
-        extParams.blockCount = param.outRows;
-        extParams.blockLen = tilingData_->kH * tilingData_->wInDim * sizeof(T);
-        extParams.srcStride = (tilingData_->sH - tilingData_->kH) * tilingData_->wInDim * sizeof(T);
-        extParams.dstStride = 0;
-        loopParams.loop2Size = 1;
-        loopParams.loop1Size = param.n;
-        loopParams.loop2SrcStride = 0;
-        loopParams.loop2DstStride = 0;
-        loopParams.loop1SrcStride = tilingData_->wInDim * tilingData_->hInDim * sizeof(T);
-        loopParams.loop1DstStride = channelStride * sizeof(T);
-        SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
-        DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else {
-        uint32_t dstStride = (colsInUb - inCols) * sizeof(T) / Ops::Base::GetUbBlockSize();
-        extParams.blockCount = tilingData_->kH;
-        extParams.blockLen = inCols * sizeof(T);
-        extParams.srcStride = (tilingData_->wInDim - inCols) * sizeof(T);
-        extParams.dstStride = dstStride;
-        loopParams.loop2Size = param.n;
-        loopParams.loop1Size = param.outRows;
-        loopParams.loop2SrcStride = tilingData_->wInDim * tilingData_->hInDim * sizeof(T);
-        loopParams.loop2DstStride = param.outRows * tilingData_->kH * colsInUb * sizeof(T);
-        loopParams.loop1SrcStride = tilingData_->wInDim * tilingData_->sH * sizeof(T);
-        loopParams.loop1DstStride = tilingData_->kH * colsInUb * sizeof(T);
-        SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    }
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount,
-                                                              int64_t blockLen, uint32_t colsInUb)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    int64_t channelStride = blockCount * colsInUb;
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    if (tilingData_->splitMode != SPLIT_COLS) {
-        DataCopyExtParams extParams;
-        extParams.blockCount = 1;
-        extParams.blockLen = n * blockCount * blockLen * sizeof(T);
-        extParams.srcStride = 0;
-        extParams.dstStride = 0;
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-    } else {
-        uint32_t dstStride = (colsInUb - blockLen) * sizeof(T) / Ops::Base::GetUbBlockSize();
-        DataCopyExtParams extParams;
-        extParams.blockCount = blockCount;
-        extParams.blockLen = blockLen * sizeof(T);
-        extParams.srcStride = (tilingData_->wInDim - blockLen) * sizeof(T);
-        extParams.dstStride = dstStride;
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-    }
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
-__aicore__ inline void AvgPoolSmallKernel<T>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
-                                                         int64_t blockLen)
-{
-    LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
-    DataCopyExtParams extParams;
-    extParams.blockCount = 1;
-    extParams.blockLen = (n * blockCount * blockLen) * sizeof(T);
-    extParams.srcStride = 0;
-    extParams.dstStride = 0;
-    DataCopyPad<T>(maxGm_[offset], maxOutLocal, extParams);
-    maxUBOutput_.FreeTensor<T>(maxOutLocal);
-}
-
-template <typename T>
-template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void AvgPoolSmallKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
-                                                             uint32_t batchElements, uint32_t wIn, uint32_t hStride,
-                                                             uint32_t wStride, LocalTensor<U>& indexLocal)
-{
-    if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
-        GenGatherIndexSingleRow<U>(wStride, indexLocal);
-    } else if constexpr (GATHER_MODE == GATHER_MULTI_ROW) {
-        GenGatherIndexMultiRow<U>(wFactorOut, wIn, hStride, wStride, indexLocal);
-    } else if constexpr (GATHER_MODE == GATHER_MULTI_BATCH) {
-        GenGatherIndexMultiBatch<U>(hFactorOut, wFactorOut, batchElements, wIn, hStride, wStride, indexLocal);
-    } else {
-        GenGatherIndexSingleKernel(wIn, tilingData_->kW, tilingData_->kH, indexLocal);
+        PoolUtils::DataMove::CopyMaxOut(maxUBOutput_, maxGm_, dstOffset, n, rows, cols);
     }
 }
 

@@ -17,7 +17,6 @@
 #include "../inc/platform.h"
 #include "max_pool_grad_nchw_backward_base.h"
 #include "../pool_3d_common/arch35/pool_big_kernel_utils.h"
-#include "../max_pool_with_argmax_v3/arch35/max_pool_with_argmax_v3_base.h"
 #include <algorithm>
 #include <type_traits>
 

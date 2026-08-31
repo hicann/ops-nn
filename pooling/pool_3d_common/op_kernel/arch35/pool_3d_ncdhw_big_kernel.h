@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
+#include "pool_utils/arch35/data_move/pool_big_kernel_result_data_move.h"
 
 namespace Pool3D {
 using namespace AscendC;
@@ -41,7 +42,6 @@ private:
     __aicore__ inline void CopyInMultiItems(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount);
     __aicore__ inline int64_t AdapterKsize(int64_t dimIndex);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
-    __aicore__ inline void CopyResultToUb(int64_t curIdx);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW,
                                                 int64_t curInOffset, int64_t maxCount);
     __aicore__ inline void ComputeSum(int64_t length);
@@ -190,7 +190,7 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::BaseCompute(int64_t beg
             InitOutLocal<true>(localCurIdx);
             NoSplitKernelProcess(localCurIdx, curkD, curkH, curkW, curInOffset, maxCount);
         }
-        CopyResultToUb(localCurIdx);
+        PoolUtils::DataMove::BigKernel::CopyResultToUb<T>(uBOutput_, ubLoopResult_, localCurIdx, ONE);
         CopyMaxOut(idx);
     }
 }
@@ -218,28 +218,6 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CopyInMultiItems(int64_
     NdDmaParams<T, DIM3> paramsMain = {loopInfo};
     DataCopy<T, DIM3, config>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
-}
-
-template <typename T, int32_t OP_TYPE>
-__aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CopyResultToUb(int64_t curIdx)
-{
-    LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
-    __ubuf__ T* dstAddr = (__ubuf__ T*)uboutLocal.GetPhyAddr() + curIdx;
-
-    LocalTensor<T> ubResult = ubLoopResult_.Get<T>();
-    __ubuf__ T* srcAddr = (__ubuf__ T*)ubResult.GetPhyAddr();
-
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<T> res;
-        Reg::UnalignRegForLoad u0;
-        Reg::LoadUnAlignPre(u0, srcAddr);
-        Reg::LoadUnAlign(res, u0, srcAddr, ONE);
-
-        Reg::UnalignRegForStore u1;
-        Reg::StoreUnAlign(dstAddr, res, u1, ONE);
-        Reg::StoreUnAlignPost(dstAddr, u1, 0);
-    }
 }
 
 template <typename T, int32_t OP_TYPE>

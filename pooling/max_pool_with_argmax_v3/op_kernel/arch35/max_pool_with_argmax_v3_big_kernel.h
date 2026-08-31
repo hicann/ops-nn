@@ -136,7 +136,7 @@ __aicore__ inline void DuplicateNegInf(const __ubuf__ void* dstAddr, uint32_t ca
 {
     Reg::RegTensor<T> v0;
     Reg::UnalignRegForStore u0;
-    DuplicateNegInfReg<T>(v0);
+    PoolUtils::Compute::DuplicateNegInfReg<T>(v0);
     __ubuf__ T* addr = (__ubuf__ T*)dstAddr + offset;
     Reg::StoreUnAlign(addr, v0, u0, calNum);
     Reg::StoreUnAlignPost(addr, u0, 0);
@@ -481,7 +481,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3BigKernel<T1, T2, TINDEX>::InitOutLoca
     __VEC_SCOPE__
     {
         Reg::RegTensor<T1> v0;
-        DuplicateNegInfReg<T1>(v0);
+        PoolUtils::Compute::DuplicateNegInfReg<T1>(v0);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             Reg::MaskReg p0 = Reg::UpdateMask<T1>(num);
             Reg::AddrReg offsetReg = Reg::CreateAddrReg<T1>(i, repeatElm);
