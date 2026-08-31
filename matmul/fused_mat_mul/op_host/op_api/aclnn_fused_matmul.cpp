@@ -128,26 +128,26 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-// 校验是否不为NZ格式
+// 校验是否包含不支持的FRACTAL_NZ格式
 static bool CheckFormat(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                         const aclTensor* y)
 {
     if (x->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ || x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
         y->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1, x2 and y do not support FRACTAL_NZ format");
         return false;
     }
 
     if (bias != nullptr) {
         if (bias->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias does not support FRACTAL_NZ format");
             return false;
         }
     }
 
     if (x3 != nullptr) {
         if (x3->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x3 does not support FRACTAL_NZ format");
             return false;
         }
     }
@@ -319,6 +319,18 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
         return false;
     }
 
+    const auto& xShape = x->GetViewShape();
+    const auto& x2Shape = x2->GetViewShape();
+    const int64_t xDimNum = xShape.GetDimNum();
+    const int64_t x2DimNum = x2Shape.GetDimNum();
+    const int64_t xKDim = xShape[xDimNum - 1];
+    const int64_t x2KDim = x2Shape[x2DimNum - DIM_LEN_MIN];
+    if (xKDim != x2KDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different, x1 Kdim[%ld], x2 Kdim[%ld].",
+                xKDim, x2KDim);
+        return false;
+    }
+
     CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y, fusedOpType), false);
     if (isGelu) {
         CHECK_RET(CheckGeluBatchShape(x), false);
@@ -402,7 +414,8 @@ static bool CheckFmmWithScaleAddScenario(const aclTensor* x, const aclTensor* x2
     bool positiveShape = xShape[0] > 0 && xShape[1] > 0 && xShape[2] > 0 && x2Shape[2] > 0;
     if (!batchMatched || !matmulMatched || !outputMatched || !positiveShape) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The scale_add scenario requires x[B,M,K] * x2[B,K,N] + x3[B,M,N] -> y[B,M,N].");
+                "The scale_add scenario requires x[B,M,K] * x2[B,K,N] + x3[B,M,N] -> y[B,M,N], and B, M, N "
+                "and K must be greater than 0.");
         return false;
     }
     return true;

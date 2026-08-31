@@ -236,9 +236,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateOpSpecific()
         const auto* x2Desc = context_->GetInputDesc(INPUT_X2_IDX);
         const auto* x3Desc = context_->GetOptionalInputDesc(INPUT_X3_IDX);
         const auto* yDesc = context_->GetOutputDesc(0);
-        if (compileInfo->aicNum == 0UL || args_.isATrans || args_.isBTrans || args_.isHf32) {
+        if (compileInfo->aicNum == 0UL || args_.isATrans || args_.isBTrans) {
             OP_LOGE(args_.opName,
-                    "FusedMatMul scale_add requires aicNum greater than 0 and does not support transpose or hf32");
+                    "FusedMatMul scale_add requires aicNum greater than 0 and does not support transpose");
             return ge::GRAPH_FAILED;
         }
         if (x1Desc->GetStorageFormat() != ge::FORMAT_ND || x2Desc->GetStorageFormat() != ge::FORMAT_ND ||

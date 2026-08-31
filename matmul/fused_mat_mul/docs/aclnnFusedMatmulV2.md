@@ -288,8 +288,8 @@ aclnnStatus aclnnFusedMatmulV2(
         <td>fusedOpType为gelu_tanh、gelu_erf，传入的bias不是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="8">161002</td>
+        <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="9">161002</td>
         <td>x1和x2的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -297,6 +297,9 @@ aclnnStatus aclnnFusedMatmulV2(
       </tr>
       <tr>
         <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维；fusedOpType为"add"、"mul"时支持2-3维；其他取值支持二维。</td>
+      </tr>
+      <tr>
+        <td>x1与x2用于矩阵乘的K轴长度不一致。</td>
       </tr>
       <tr>
         <td>fusedOpType为"add"、"mul"时，x3的shape不满足要求：x3为二维时，Shape[-2]、Shape[-1]需要与y的Shape[-2]、Shape[-1]保持一致；x3为三维时，Shape[-2]、Shape[-1]需要与y的Shape[-2]、Shape[-1]保持一致，且batch轴需要与y一致或为1。</td>
