@@ -25,7 +25,7 @@ struct SplitCComputeInfo : public CommonComputeInfo {
     uint64_t wInFactor{0};
 };
 
-DECLARE_SPLIT_TILING_CLASS(AdaptiveAvgPool2dSplitCTiling, SplitCComputeInfo)
+DECLARE_SPLIT_TILING_CLASS(AdaptiveAvgPool2dSplitCTiling, SplitCComputeInfo);
 
 } // namespace optiling
 #endif // ADAPTIVE_AVG_POOL2D_SPLIT_C_TILING_H

@@ -84,6 +84,7 @@ constexpr uint64_t BIG_KERNEL_SUM_LIMIT = 10240;
 constexpr uint64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
 constexpr uint64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
 constexpr uint64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
+constexpr uint64_t MULTI_KW_LIMIT = 1024;
 
 struct TilingParams {
     uint64_t inN = 0;
@@ -363,7 +364,7 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode)
     mode = MODE_MULTI_W;
     // when multiW kw over 1024 and  datacopy step by step(avoid DataCopyParams), skip MAX_TILE_NUM limit to reduce loop
     // iterations.
-    if (!(params.socVersion == platform_ascendc::SocVersion::ASCEND310P && params.kW > 1024 &&
+    if (!(params.socVersion == platform_ascendc::SocVersion::ASCEND310P && params.kW > MULTI_KW_LIMIT &&
           alignCSingle != params.inC)) {
         windowWNum = windowWNum * params.kW <= static_cast<uint64_t>(MAX_TILE_NUM) ?
                          windowWNum :

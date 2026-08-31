@@ -435,7 +435,7 @@ void TryHalfNcFactor(CommonComputeInfo& ci, uint64_t maxHo, MeetUbFunc meetUb)
         ge::graphStatus SetTilingData();                                                        \
         void PrintTilingData() const;                                                           \
         ComputeInfoType computeInfo_;                                                           \
-    };
+    }
 
 } // namespace optiling
 

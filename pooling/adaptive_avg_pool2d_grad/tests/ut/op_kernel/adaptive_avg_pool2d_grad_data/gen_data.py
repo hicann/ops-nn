@@ -1,18 +1,69 @@
 #!/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------
 
 import sys
 import numpy as np
 
 CASE_LIST = {
     # === BIG_KERNEL cases (TPL_BIG_KERNEL template, pre-computed tiling from original) ===
-    "test_big_fp32_single_core_0": {"n": 1, "c": 8, "h_in": 8, "w_in": 8, "h_out": 4, "w_out": 4},
-    "test_big_fp16_single_core_10": {"n": 1, "c": 8, "h_in": 8, "w_in": 8, "h_out": 4, "w_out": 4},
-    "test_big_fp32_multi_core_20": {"n": 1, "c": 8, "h_in": 12, "w_in": 12, "h_out": 4, "w_out": 4},
-    "test_big_fp32_large_nc_30": {"n": 1, "c": 256, "h_in": 4, "w_in": 4, "h_out": 2, "w_out": 2},
+    "test_big_fp32_single_core_0": {
+        "n": 1,
+        "c": 8,
+        "h_in": 8,
+        "w_in": 8,
+        "h_out": 4,
+        "w_out": 4,
+    },
+    "test_big_fp16_single_core_10": {
+        "n": 1,
+        "c": 8,
+        "h_in": 8,
+        "w_in": 8,
+        "h_out": 4,
+        "w_out": 4,
+    },
+    "test_big_fp32_multi_core_20": {
+        "n": 1,
+        "c": 8,
+        "h_in": 12,
+        "w_in": 12,
+        "h_out": 4,
+        "w_out": 4,
+    },
+    "test_big_fp32_large_nc_30": {
+        "n": 1,
+        "c": 256,
+        "h_in": 4,
+        "w_in": 4,
+        "h_out": 2,
+        "w_out": 2,
+    },
     # === SIMT cases (TPL_SIMT_KERNEL template) ===
-    "test_simt_fp32_small":  {"n": 1, "c": 2, "h_in": 8, "w_in": 8, "h_out": 4, "w_out": 4},
-    "test_simt_fp32_medium": {"n": 1, "c": 2, "h_in": 8, "w_in": 8, "h_out": 2, "w_out": 2},
+    "test_simt_fp32_small": {
+        "n": 1,
+        "c": 2,
+        "h_in": 8,
+        "w_in": 8,
+        "h_out": 4,
+        "w_out": 4,
+    },
+    "test_simt_fp32_medium": {
+        "n": 1,
+        "c": 2,
+        "h_in": 8,
+        "w_in": 8,
+        "h_out": 2,
+        "w_out": 2,
+    },
 }
 DTYPE_MAP = {"float32": np.float32, "float16": np.float16}
 

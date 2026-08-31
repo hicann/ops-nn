@@ -41,12 +41,12 @@ public:
     void AddTiling(int32_t priority)
     {
         OPS_ERR_IF(cases_.find(priority) != cases_.end(),
-                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "There are duplicate registrations."), return );
+                   OPS_REPORT_VECTOR_INNER_ERR(op_type_, "There are duplicate registrations."), return);
         cases_[priority] = TILING_CLASS<T>;
         OPS_ERR_IF(
             cases_[priority] == nullptr,
             OPS_REPORT_VECTOR_INNER_ERR(op_type_, "PoolRegister op tiling func failed, please check the class name."),
-            return );
+            return);
     }
 
     const std::map<int32_t, TilingClassCase>& GetTilingCases() { return cases_; }
@@ -81,6 +81,7 @@ public:
         } else {
             if (soc_iter->second.find(op_type) == soc_iter->second.end()) {
                 soc_iter->second[op_type] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(op_type));
+                soc_iter->second[op_type] = std::make_shared<TilingCases>(op_type);
             }
         }
 

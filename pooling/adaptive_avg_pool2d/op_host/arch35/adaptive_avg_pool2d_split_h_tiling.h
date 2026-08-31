@@ -20,6 +20,6 @@
 #include "../../op_kernel/arch35/adaptive_avg_pool2d_struct.h"
 
 namespace optiling {
-DECLARE_SPLIT_TILING_CLASS(AdaptiveAvgPool2dSplitHTiling, CommonComputeInfo)
+DECLARE_SPLIT_TILING_CLASS(AdaptiveAvgPool2dSplitHTiling, CommonComputeInfo);
 } // namespace optiling
 #endif // ADAPTIVE_AVG_POOL2D_SPLIT_H_TILING_H
