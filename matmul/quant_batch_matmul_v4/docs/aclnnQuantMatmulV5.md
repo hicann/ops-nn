@@ -934,7 +934,9 @@ aclnnStatus aclnnQuantMatmulV5(
   - MX全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
   - MX全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
   - MX全量化场景下，x1Scale、x2Scale 仅最后三轴支持<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>。
-  - MX伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
+  - MX伪量化场景下，当x2数据类型为FLOAT4_E2M1时，不支持batch轴，且要求k是8的倍数。
+    - x1的约束：仅支持非转置。数据格式仅支持ND格式。
+    - x2的约束：仅支持转置。数据格式支持ND、NZ格式；当x2为NZ格式时，要求n是8的倍数。
   - MX伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
 
   </details>
@@ -959,7 +961,9 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - T-CG量化模式下，yScale数据类型支持INT64和UINT64，数据格式支持ND，shape支持2维，shape表示为(1, n)。当原始输入类型不满足约束和限制中的数据类型组合时，需要提前调用TransQuantParamV2算子的aclnn接口来将其转成UINT64数据类型。当输入数据类型是INT64时，内部会把INT64当成UINT64处理。
   - T-CG量化模式下，bias是预留参数，当前版本不支持，需要传入nullptr。
-  - T-CG量化模式下，transposeX1为false。数据格式支持ND格式。要求支持k是32的倍数，transposeX2为true。
+  - T-CG量化模式下，要求k是32的倍数。
+    - x1的约束：仅支持非转置。数据格式仅支持ND格式。
+    - x2的约束：当x2为ND格式时，仅支持转置；当x2为NZ格式时，仅支持非转置。
   - T-CG量化模式下，[groupSizeM，groupSizeN，groupSizeK]取值组合支持[0, 0, 32]和[1, 1, 32]，对应的groupSize值分别为32和4295032864。
   - T-CG量化模式下，out和x2Scale的数据类型需要一致。
 
