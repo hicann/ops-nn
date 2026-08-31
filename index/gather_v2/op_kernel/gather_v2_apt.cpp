@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "arch35/gather_v2.h"
+#include "arch35/gather_v2_simt.h"
 #include "arch35/gather_v2_simd.h"
 #include "arch35/gather_v2_simd_two_dim.h"
 #include "arch35/gather_v2_simd_last_gather.h"

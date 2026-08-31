@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file avg_pool_common.h
+ * \file avg_pool_kernel_common.h
  * \brief
  */
-#ifndef AVG_POOL_COMMON_H_
-#define AVG_POOL_COMMON_H_
+#ifndef AVG_POOL_KERNEL_COMMON_H_
+#define AVG_POOL_KERNEL_COMMON_H_
 
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
@@ -1351,4 +1351,4 @@ __aicore__ inline void AvgPoolSingleKernelDefault(__ubuf__ T* dstLocalAddr, __ub
 
 } // namespace AvgPool
 
-#endif // AVG_POOL_COMMON_H_
+#endif // AVG_POOL_KERNEL_COMMON_H_

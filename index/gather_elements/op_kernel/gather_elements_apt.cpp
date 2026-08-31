@@ -12,7 +12,7 @@
  * \file gather_elements.cpp
  * \brief
  */
-#include "arch35/gather_elements.h"
+#include "arch35/gather_elements_simt.h"
 #include "arch35/gather_elements_no_contiguos.h"
 #include "arch35/gather_elements_full_load.h"
 

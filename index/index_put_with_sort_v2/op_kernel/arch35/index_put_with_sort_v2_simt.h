@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file index_put_with_sort_v2.h
+ * \file index_put_with_sort_v2_simt.h
  * \brief
  */
 
-#ifndef INDEX_PUT_WITH_SORT_V2_H
-#define INDEX_PUT_WITH_SORT_V2_H
+#ifndef INDEX_PUT_WITH_SORT_V2_SIMT_H
+#define INDEX_PUT_WITH_SORT_V2_SIMT_H
 
 #include <type_traits>
 #include "kernel_tiling/kernel_tiling.h"
@@ -215,4 +215,4 @@ private:
     TBuf<TPosition::VECCALC> Buf_;
 };
 } // namespace AscendC
-#endif // INDEX_PUT_WITH_SORT_V2_H
+#endif // INDEX_PUT_WITH_SORT_V2_SIMT_H

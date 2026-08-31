@@ -14,7 +14,7 @@
 #ifndef AVG_POOL_NHWC_BIG_KERNEL_H_
 #define AVG_POOL_NHWC_BIG_KERNEL_H_
 
-#include "avg_pool_common.h"
+#include "avg_pool_kernel_common.h"
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"
 #include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"

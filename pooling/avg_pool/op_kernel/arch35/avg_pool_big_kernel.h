@@ -14,7 +14,7 @@
 #ifndef AVG_POOL_BIG_KERNEL_H_
 #define AVG_POOL_BIG_KERNEL_H_
 
-#include "avg_pool_common.h"
+#include "avg_pool_kernel_common.h"
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"

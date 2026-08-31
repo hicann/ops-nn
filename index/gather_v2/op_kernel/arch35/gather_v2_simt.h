@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file gather_v2.h
+ * \file gather_v2_simt.h
  * \brief
  */
-#ifndef GATHER_V2_H
-#define GATHER_V2_H
+#ifndef GATHER_V2_SIMT_H
+#define GATHER_V2_SIMT_H
 
 #ifndef K_MAX_SHAPE_DIM
 #define K_MAX_SHAPE_DIM 0
@@ -147,4 +147,4 @@ __aicore__ inline void Gatherv2<X_T, INDICES_T, INDEX_SIZE_T>::Process()
     }
 }
 } // namespace gatherv2
-#endif // GATHER_V2_H
+#endif // GATHER_V2_SIMT_H

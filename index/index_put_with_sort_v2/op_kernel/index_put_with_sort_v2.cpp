@@ -14,7 +14,7 @@
  */
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "arch35/index_put_with_sort_v2.h"
+#include "arch35/index_put_with_sort_v2_simt.h"
 #include "arch35/index_put_with_sort_v2_simd.h"
 
 using namespace AscendC;

@@ -9,11 +9,11 @@
  */
 
 /* !
- * \file gather_elements.h
+ * \file gather_elements_simt.h
  * \brief
  */
-#ifndef GATHER_ELEMENTS_H
-#define GATHER_ELEMENTS_H
+#ifndef GATHER_ELEMENTS_SIMT_H
+#define GATHER_ELEMENTS_SIMT_H
 
 #include "kernel_operator.h"
 #include "simt_api/asc_simt.h"
@@ -519,4 +519,4 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     }
 }
 } // namespace GatherElements
-#endif // GATHER_ELEMENTS_H
+#endif // GATHER_ELEMENTS_SIMT_H
