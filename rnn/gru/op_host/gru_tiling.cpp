@@ -124,7 +124,10 @@ ge::graphStatus GruTilingOp::GetVectorTiling()
     auto ubSplit = (gruParams_.dataType == 2 ? 6 : 5) + multiple;
     auto BLOCK_SIZE = 32;
     auto partUb = ((gruParams_.ubSize / ubSplit) + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE / 4;
-    gruParams_.baseN = gruParams_.singleCoreN < partUb ? gruParams_.singleCoreN : partUb;
+    auto calBlockSize = BLOCK_SIZE / gruParams_.dataType;
+    partUb = partUb / calBlockSize * calBlockSize;
+    auto singleCoreNAlign = Ops::Base::CeilDiv(gruParams_.singleCoreN, calBlockSize) * calBlockSize;
+    gruParams_.baseN = singleCoreNAlign < partUb ? singleCoreNAlign : partUb;
     gruParams_.baseM = partUb / gruParams_.baseN < gruParams_.singleCoreM ? partUb / gruParams_.baseN :
                                                                             gruParams_.singleCoreM;
 
