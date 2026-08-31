@@ -305,8 +305,8 @@ int main() {
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> varRefShape = {3, 2};
-  std::vector<int64_t> indicesShape = {2, 3};
-  std::vector<int64_t> updatesShape = {2, 3, 2};
+  std::vector<int64_t> indicesShape = {2, 1};
+  std::vector<int64_t> updatesShape = {2, 1, 2};
   void* varRefDeviceAddr = nullptr;
   void* indicesDeviceAddr = nullptr;
   void* updatesDeviceAddr = nullptr;
