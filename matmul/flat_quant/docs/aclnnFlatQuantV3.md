@@ -515,19 +515,16 @@ int main()
     std::vector<int64_t> xShape = {16, 16, 16};
     std::vector<int64_t> kroneckerP1Shape = {16, 16};
     std::vector<int64_t> kroneckerP2Shape = {16, 16};
-    std::vector<int64_t> groupListShape = {1};
     std::vector<int64_t> outShape = {16, 16, 2};
     std::vector<int64_t> quantScaleShape = {16};
     void* xDeviceAddr = nullptr;
     void* kroneckerP1DeviceAddr = nullptr;
     void* kroneckerP2DeviceAddr = nullptr;
-    void* groupListDeviceAddr = nullptr;
     void* outDeviceAddr = nullptr;
     void* quantScaleDeviceAddr = nullptr;
     aclTensor* x = nullptr;
     aclTensor* kroneckerP1 = nullptr;
     aclTensor* kroneckerP2 = nullptr;
-    aclTensor* groupList = nullptr;
     aclTensor* out = nullptr;
     aclTensor* quantScale = nullptr;
     double clipRatio = 1.0;
@@ -536,7 +533,6 @@ int main()
     std::vector<aclFloat16> xHostData(16 * 16 * 16, aclFloatToFloat16(1));
     std::vector<aclFloat16> kroneckerP1HostData(16 * 16, aclFloatToFloat16(1));
     std::vector<aclFloat16> kroneckerP2HostData(16 * 16, aclFloatToFloat16(1));
-    std::vector<int64_t> groupListHostData = {8};
     std::vector<int32_t> outHostData(16 * 16 * 2, 1);
     std::vector<float> quantScaleHostData(16, 0);
     // 创建x aclTensor
@@ -551,10 +547,6 @@ int main()
     ret = CreateAclTensor(kroneckerP2HostData, kroneckerP2Shape, &kroneckerP2DeviceAddr, aclDataType::ACL_FLOAT16,
                           &kroneckerP2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建groupList aclTensor
-    ret = CreateAclTensor(groupListHostData, groupListShape, &groupListDeviceAddr, aclDataType::ACL_INT64, &groupList);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT32, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -566,14 +558,14 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnFlatQuantV3第一段接口
-    ret = aclnnFlatQuantV3GetWorkspaceSize(x, kroneckerP1, kroneckerP2, groupList, clipRatio, dstTypeMax, groupListType,
+    ret = aclnnFlatQuantV3GetWorkspaceSize(x, kroneckerP1, kroneckerP2, nullptr, clipRatio, dstTypeMax, groupListType,
                                            out, quantScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFlatQuantV3GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
     }
     // 调用aclnnFlatQuantV3第二段接口
     ret = aclnnFlatQuantV3(workspaceAddr, workspaceSize, executor, stream);
@@ -604,7 +596,6 @@ int main()
     aclDestroyTensor(x);
     aclDestroyTensor(kroneckerP1);
     aclDestroyTensor(kroneckerP2);
-    aclDestroyTensor(groupList);
     aclDestroyTensor(out);
     aclDestroyTensor(quantScale);
 
@@ -612,7 +603,6 @@ int main()
     aclrtFree(xDeviceAddr);
     aclrtFree(kroneckerP1DeviceAddr);
     aclrtFree(kroneckerP2DeviceAddr);
-    aclrtFree(groupListDeviceAddr);
     aclrtFree(outDeviceAddr);
     aclrtFree(quantScaleDeviceAddr);
     if (workspaceSize > 0) {
