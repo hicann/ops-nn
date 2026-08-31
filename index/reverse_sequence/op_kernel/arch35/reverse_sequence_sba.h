@@ -67,7 +67,7 @@ private:
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseA1Compute(
-    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor, CompType batchDim,
+    __ubuf__ T* xLocal, __gm__ SeqType* seqGm, __ubuf__ T* outLocal, CompType xUbFactor, CompType batchDim,
     CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0,
     CompType shift1, CompType shift2, CompType shift3);
 
@@ -167,7 +167,7 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ComputeSplitA1(
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseA1Compute(
-    __local_mem__ T* xLocal, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType xUbFactor, CompType batchDim,
+    __ubuf__ T* xLocal, __gm__ SeqType* seqGm, __ubuf__ T* outLocal, CompType xUbFactor, CompType batchDim,
     CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0,
     CompType shift1, CompType shift2, CompType shift3)
 {
@@ -214,10 +214,9 @@ __aicore__ inline void ReverseSequenceSBA<T, SeqType, CompType>::ReverseCompute(
     GetUintDivMagicAndShift(params.m3, params.shift3, static_cast<CompType>(tilingData_->sDim));
 
     asc_vf_call<ReverseA1Compute<T, SeqType, CompType>>(
-        dim3(USED_THREAD), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(outLocal.GetPhyAddr()), xUbFactor, tilingData_->bDim, tilingData_->sDim,
-        tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
-        params.shift2, params.shift3);
+        dim3(USED_THREAD), (__ubuf__ T*)(xLocal.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+        (__ubuf__ T*)(outLocal.GetPhyAddr()), xUbFactor, tilingData_->bDim, tilingData_->sDim, tilingData_->reverseSize,
+        params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
 
     outQueue_.EnQue(outLocal);
     dataQueue_.FreeTensor(xLocal);

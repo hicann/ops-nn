@@ -37,7 +37,7 @@ using namespace AscendC;
 
 template <typename T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputer(
-    GM_ADDR x, GM_ADDR y, uint32_t m0, uint32_t shift0, __local_mem__ T* tmpLocal, uint32_t perTensorShapeSize,
+    GM_ADDR x, GM_ADDR y, uint32_t m0, uint32_t shift0, __ubuf__ T* tmpLocal, uint32_t perTensorShapeSize,
     uint32_t concatDim, uint32_t needCalNum)
 {
     for (uint32_t curCalIdx = static_cast<uint32_t>(threadIdx.x); curCalIdx < needCalNum;
@@ -106,7 +106,7 @@ __aicore__ inline void ConcatOffsetSimt<T>::Process(GM_ADDR x, GM_ADDR y)
     uint32_t needCalNum = static_cast<uint32_t>(tilingData_->needCalNum);
     int32_t threadNum = static_cast<int32_t>(tilingData_->threadNum);
 
-    asc_vf_call<SimtComputer<T>>(dim3(threadNum), x, y, m0, shift0, (__local_mem__ T*)(tmpLocal.GetPhyAddr()),
+    asc_vf_call<SimtComputer<T>>(dim3(threadNum), x, y, m0, shift0, (__ubuf__ T*)(tmpLocal.GetPhyAddr()),
                                  perTensorShapeSize, concatDim, needCalNum);
 }
 

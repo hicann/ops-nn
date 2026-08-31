@@ -195,9 +195,9 @@ __aicore__ inline void GluSmallShape<T>::ComputeSigmoidAndMul(const int64_t& cou
     LocalTensor<T> x2Local = inQueueX2.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();
 
-    __local_mem__ T* x1LocalPtr = (__local_mem__ T*)x1Local.GetPhyAddr();
-    __local_mem__ T* x2LocalPtr = (__local_mem__ T*)x2Local.GetPhyAddr();
-    __local_mem__ T* outLocalPtr = (__local_mem__ T*)outLocal.GetPhyAddr();
+    __ubuf__ T* x1LocalPtr = (__ubuf__ T*)x1Local.GetPhyAddr();
+    __ubuf__ T* x2LocalPtr = (__ubuf__ T*)x2Local.GetPhyAddr();
+    __ubuf__ T* outLocalPtr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
     ComputeSigmoidAndMulImpl<T>(x1LocalPtr, x2LocalPtr, outLocalPtr, count);
 

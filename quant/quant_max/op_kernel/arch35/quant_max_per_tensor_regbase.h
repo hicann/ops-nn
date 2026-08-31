@@ -152,9 +152,9 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
     LocalTensor<U> outLocal = outQueueY_.AllocTensor<U>();
     LocalTensor<float> tileMaxLocal = tileMaxBuf_.Get<float>();
 
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ U* outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
-    __local_mem__ float* tileMaxLocalAddr = (__local_mem__ float*)tileMaxLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ U* outLocalAddr = (__ubuf__ U*)outLocal.GetPhyAddr();
+    __ubuf__ float* tileMaxLocalAddr = (__ubuf__ float*)tileMaxLocal.GetPhyAddr();
 
     uint16_t vfLoopNum = (dataCount + VL - 1) / VL;
 
@@ -169,7 +169,7 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
         AscendC::Reg::RegTensor<U> vregY;
 
         AscendC::Reg::MaskReg mask = AscendC::Reg::CreateMask<float>();
-        AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregTileMaxFp32, tileMaxLocalAddr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vregTileMaxFp32, tileMaxLocalAddr);
 
         AscendC::Reg::Duplicate<float>(vregS, scaleValue_, mask);
 
@@ -178,13 +178,14 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
             mask = AscendC::Reg::UpdateMask<float>(count);
 
             if constexpr (IsSameType<T, float>::value) {
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatX, xLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatX, xLocalAddr + i * VL);
             } else if constexpr (IsSameType<T, half>::value) {
-                AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL);
                 AscendC::Reg::Cast<float, half, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_FP32>(vregFloatX,
                                                                                                         vregX, mask);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-                AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX,
+                                                                                             xLocalAddr + i * VL);
                 AscendC::Reg::Cast<float, bfloat16_t, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_BF16_TO_FP32>(
                     vregFloatX, vregX, mask);
             }
@@ -196,20 +197,23 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
             if constexpr (IsSameType<U, hifloat8_t>::value) {
                 AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_HIFP8>(vregY, vregFloatY,
                                                                                                       mask);
-                AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY, mask);
+                AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY,
+                                                                                     mask);
             } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
                 AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_FP8E5M2>(
                     vregY, vregFloatY, mask);
-                AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY, mask);
+                AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY,
+                                                                                     mask);
             } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
                 AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_FP8E4M3>(
                     vregY, vregFloatY, mask);
-                AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY, mask);
+                AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY,
+                                                                                     mask);
             }
         }
 
         AscendC::Reg::Reduce<AscendC::Reg::ReduceType::MAX>(vregTileMaxFp32, vregTileMaxFp32, mask);
-        AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM>(tileMaxLocalAddr, vregTileMaxFp32, mask);
+        AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_NORM>(tileMaxLocalAddr, vregTileMaxFp32, mask);
     }
 
     inQueueX_.FreeTensor(xLocal);

@@ -85,8 +85,8 @@ private:
     template <typename U, int64_t GatherMode>
     __aicore__ inline void ComputeSplitB(int64_t srcOffset, int64_t bStart, int64_t dimBNum);
     template <typename U>
-    __aicore__ inline void ComputeSplitBGather(__local_mem__ T* srcAddr, __local_mem__ T* dstAddr, int32_t totalNum);
-    __aicore__ inline void ComputeSplitBNotGather(__local_mem__ int8_t* srcAddr, __local_mem__ int8_t* dstAddr);
+    __aicore__ inline void ComputeSplitBGather(__ubuf__ T* srcAddr, __ubuf__ T* dstAddr, int32_t totalNum);
+    __aicore__ inline void ComputeSplitBNotGather(__ubuf__ int8_t* srcAddr, __ubuf__ int8_t* dstAddr);
     __aicore__ inline void CopyInMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen);
     __aicore__ inline void CopyOutMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen);
     __aicore__ inline void CopyInSingleDim(int64_t offset, int64_t blockLen);
@@ -357,7 +357,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenDimSGatherIndex(int64_
             Reg::Mul(vd5, vd1, v1, p0);
             Reg::Sub(vd6, v0, vd5, p0); // i % dimA
             Reg::Add(vd7, vd4, vd6, p0);
-            Reg::DataCopy(dstAddr + i * repeatNum, vd7, p0);
+            Reg::StoreAlign(dstAddr + i * repeatNum, vd7, p0);
         }
     }
 }
@@ -372,8 +372,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA
     GenDimSGatherIndex<U>(dimSNum, tilingData_->aDim, indexLocal);
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* yLocalAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     uint32_t repeatNum = platform::GetVRegSize() / sizeof(U);
     uint16_t totalNum = dimSNum * tilingData_->aDim;
@@ -392,15 +392,15 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA
         Reg::MaskReg pMaskB8;
         for (uint16_t i = 0; i < loop; i++) {
             pMask = Reg::UpdateMask<U>(updateNum);
-            Reg::DataCopy(v0, indexAddr + i * repeatNum);
+            Reg::LoadAlign(v0, indexAddr + i * repeatNum);
             if constexpr (sizeof(T) == 1) {
-                Reg::DataCopyGather(vd0, xLocalAddr, v0, pMask);
+                Reg::Gather(vd0, xLocalAddr, v0, pMask);
                 Reg::Pack((Reg::RegTensor<uint8_t>&)vd1, vd0);
-                Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
-                Reg::DataCopy(yLocalAddr + i * repeatNum, vd1, pMaskB8);
+                Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
+                Reg::StoreAlign(yLocalAddr + i * repeatNum, vd1, pMaskB8);
             } else {
-                Reg::DataCopyGather(vd1, xLocalAddr, v0, pMask);
-                Reg::DataCopy(yLocalAddr + i * repeatNum, vd1, pMask);
+                Reg::Gather(vd1, xLocalAddr, v0, pMask);
+                Reg::StoreAlign(yLocalAddr + i * repeatNum, vd1, pMask);
             }
         }
     }
@@ -417,8 +417,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSCopyA(int64_
     CopyInMultiDim(srcOffset, 1, copyDims * tilingData_->aDim);
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-    __local_mem__ int8_t* xLocalAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
-    __local_mem__ int8_t* yLocalAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
+    __ubuf__ int8_t* xLocalAddr = (__ubuf__ int8_t*)xLocal.GetPhyAddr();
+    __ubuf__ int8_t* yLocalAddr = (__ubuf__ int8_t*)yLocal.GetPhyAddr();
     uint16_t repeatNum = platform::GetVRegSize();
     uint32_t totalNum = copyDims * tilingData_->aDim * tilingData_->dtypeSize;
     uint16_t loop = (totalNum + repeatNum - 1) / repeatNum;
@@ -429,8 +429,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSCopyA(int64_
         AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < loop; i++) {
             preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
-            Reg::DataCopy(v0, xLocalAddr + i * repeatNum);
-            Reg::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
+            Reg::LoadAlign(v0, xLocalAddr + i * repeatNum);
+            Reg::StoreAlign(yLocalAddr + i * repeatNum, v0, preg);
         }
     }
     inputQue_.FreeTensor(xLocal);
@@ -445,8 +445,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(
     CopyInMultiDim(srcOffset, dimSNum, tilingData_->aDim);
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-    __local_mem__ int8_t* xLocalAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
-    __local_mem__ int8_t* yLocalAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
+    __ubuf__ int8_t* xLocalAddr = (__ubuf__ int8_t*)xLocal.GetPhyAddr();
+    __ubuf__ int8_t* yLocalAddr = (__ubuf__ int8_t*)yLocal.GetPhyAddr();
     uint16_t repeatNum = platform::GetVRegSize();
     uint16_t dimASize = tilingData_->aDim * tilingData_->dtypeSize;
     uint16_t dimALoop = (dimASize + repeatNum - 1) / repeatNum;
@@ -465,8 +465,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(
                 preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
                 auto curSrcAddr = srcAddr + j * repeatNum;
                 auto curDstAddr = dstAddr + j * repeatNum;
-                AscendC::Reg::DataCopy(inReg, curSrcAddr);
-                AscendC::Reg::DataCopy(curDstAddr, inReg, preg);
+                AscendC::Reg::LoadAlign(inReg, curSrcAddr);
+                AscendC::Reg::StoreAlign(curDstAddr, inReg, preg);
             }
         }
     }
@@ -521,18 +521,18 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(int64_
             // i % dimA
             Reg::Sub(vd6, v0, vd5, p0);
             Reg::Add(vd7, vd4, vd6, p0);
-            Reg::DataCopy(dstAddr + i * repeatNum, vd7, p0);
+            Reg::StoreAlign(dstAddr + i * repeatNum, vd7, p0);
         }
 
         Reg::RegTensor<U> v5;
         Reg::UnalignReg u0;
         for (uint16_t i = 0; i < notReverseLoopNum; i++) {
             Reg::Arange((Reg::RegTensor<regType>&)v5, startNum + i * repeatNum);
-            Reg::DataCopyUnAlign(dstAddr1, v5, u0, repeatNum);
+            Reg::StoreUnAlign(dstAddr1, v5, u0, repeatNum);
         }
         Reg::Arange((Reg::RegTensor<regType>&)v5, startNum + notReverseLoopNum * repeatNum);
-        Reg::DataCopyUnAlign(dstAddr1, v5, u0, tailNum);
-        Reg::DataCopyUnAlignPost(dstAddr1, u0, 0);
+        Reg::StoreUnAlign(dstAddr1, v5, u0, tailNum);
+        Reg::StoreUnAlignPost(dstAddr1, u0, 0);
     }
 }
 
@@ -545,8 +545,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitB(int64_t src
         LocalTensor<U> indexLocal = indexBuf_.Get<U>();
         LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
         LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-        __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-        __local_mem__ T* yLocalAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+        __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+        __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
         int32_t dimBStride = ops::Aligned(tilingData_->aDim * tilingData_->sDim, eleBlk_);
         int32_t totalNum = tilingData_->aDim * tilingData_->sDim;
         for (int64_t i = 0; i < dimBNum; i++) {
@@ -564,8 +564,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitB(int64_t src
         CopyInMultiDim(srcOffset, dimBNum * tilingData_->sDim, tilingData_->aDim); // A对齐拷入拷出
         LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
         LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-        __local_mem__ int8_t* xLocalAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
-        __local_mem__ int8_t* yLocalAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
+        __ubuf__ int8_t* xLocalAddr = (__ubuf__ int8_t*)xLocal.GetPhyAddr();
+        __ubuf__ int8_t* yLocalAddr = (__ubuf__ int8_t*)yLocal.GetPhyAddr();
         int32_t dimBStride = tilingData_->sDim * ops::Aligned(tilingData_->aDim * tilingData_->dtypeSize, ubBlockSize_);
         for (int64_t i = 0; i < dimBNum; i++) {
             GetCurrentSeqLength(bStart + i);
@@ -581,8 +581,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitB(int64_t src
 
 template <typename T, typename SeqType>
 template <typename U>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(__local_mem__ T* srcAddr,
-                                                                           __local_mem__ T* dstAddr, int32_t totalNum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(__ubuf__ T* srcAddr, __ubuf__ T* dstAddr,
+                                                                           int32_t totalNum)
 {
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
@@ -604,23 +604,23 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(__loc
         Reg::MaskReg pMaskB8;
         for (uint16_t i = 0; i < loop; i++) {
             pMask = Reg::UpdateMask<U>(updateNum);
-            Reg::DataCopy(v0, indexAddr + i * repeatNum);
+            Reg::LoadAlign(v0, indexAddr + i * repeatNum);
             if constexpr (sizeof(T) == 1) {
-                Reg::DataCopyGather(vd0, srcAddr1, v0, pMask);
+                Reg::Gather(vd0, srcAddr1, v0, pMask);
                 Reg::Pack((Reg::RegTensor<uint8_t>&)vd1, vd0);
-                Reg::MaskPack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
-                Reg::DataCopy(dstAddr1 + i * repeatNum, vd1, pMaskB8);
+                Reg::Pack<AscendC::Reg::HighLowPart::LOWEST>(pMaskB8, pMask);
+                Reg::StoreAlign(dstAddr1 + i * repeatNum, vd1, pMaskB8);
             } else {
-                Reg::DataCopyGather(vd1, srcAddr1, v0, pMask);
-                Reg::DataCopy(dstAddr1 + i * repeatNum, vd1, pMask);
+                Reg::Gather(vd1, srcAddr1, v0, pMask);
+                Reg::StoreAlign(dstAddr1 + i * repeatNum, vd1, pMask);
             }
         }
     }
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__local_mem__ int8_t* srcAddr,
-                                                                              __local_mem__ int8_t* dstAddr)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__ubuf__ int8_t* srcAddr,
+                                                                              __ubuf__ int8_t* dstAddr)
 {
     uint16_t repeatNum = platform::GetVRegSize();
     uint32_t dimASize = tilingData_->aDim * tilingData_->dtypeSize;
@@ -643,8 +643,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__
                 preg = AscendC::Reg::UpdateMask<int8_t>(updateNum);
                 auto curSrcAddr = srcAddr1 + j * repeatNum;
                 auto curDstAddr = dstAddr1 + j * repeatNum;
-                AscendC::Reg::DataCopy(inReg, curSrcAddr);
-                AscendC::Reg::DataCopy(curDstAddr, inReg, preg);
+                AscendC::Reg::LoadAlign(inReg, curSrcAddr);
+                AscendC::Reg::StoreAlign(curDstAddr, inReg, preg);
             }
         }
         uint32_t notReverseNum = notRevrseTotalNum;
@@ -652,8 +652,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__
         AscendC::Reg::MaskReg preg1;
         for (uint16_t i = 0; i < notRevrseLoop; i++) {
             preg1 = AscendC::Reg::UpdateMask<int8_t>(notReverseNum);
-            Reg::DataCopy(v0, srcAddr2 + i * repeatNum);
-            Reg::DataCopy(dstAddr2 + i * repeatNum, v0, preg1);
+            Reg::LoadAlign(v0, srcAddr2 + i * repeatNum);
+            Reg::StoreAlign(dstAddr2 + i * repeatNum, v0, preg1);
         }
     }
 }

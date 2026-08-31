@@ -108,7 +108,7 @@ __aicore__ inline void ComputeSigmoidAndMulCore(AscendC::Reg::RegTensor<T>& vreg
         AscendC::Reg::Or((Reg::RegTensor<uint16_t>&)vregOutput, (Reg::RegTensor<uint16_t>&)vreg15,
                          (Reg::RegTensor<uint16_t>&)vreg16, maskAll8);
 
-        AscendC::Reg::DataCopy(outLocalPtr + loopIdx * vlSize, vregOutput, preg0);
+        AscendC::Reg::StoreAlign(outLocalPtr + loopIdx * vlSize, vregOutput, preg0);
     } else {
         AscendC::Reg::Muls<T, T, AscendC::Reg::MaskMergeMode::ZEROING>(vreg1, vregB, static_cast<T>(-1), preg0);
         AscendC::Reg::Exp<T, AscendC::Reg::MaskMergeMode::ZEROING>(vreg2, vreg1, preg0);
@@ -117,13 +117,13 @@ __aicore__ inline void ComputeSigmoidAndMulCore(AscendC::Reg::RegTensor<T>& vreg
 
         AscendC::Reg::Mul<T, AscendC::Reg::MaskMergeMode::ZEROING>(vregOutput, vreg4, vregA, preg0);
 
-        AscendC::Reg::DataCopy(outLocalPtr + loopIdx * vlSize, vregOutput, preg0);
+        AscendC::Reg::StoreAlign(outLocalPtr + loopIdx * vlSize, vregOutput, preg0);
     }
 }
 
 template <typename T>
-__aicore__ inline void ComputeSigmoidAndMulImpl(__local_mem__ T* x1LocalPtr, __local_mem__ T* x2LocalPtr,
-                                                __local_mem__ T* outLocalPtr, const int64_t& count)
+__aicore__ inline void ComputeSigmoidAndMulImpl(__ubuf__ T* x1LocalPtr, __ubuf__ T* x2LocalPtr, __ubuf__ T* outLocalPtr,
+                                                const int64_t& count)
 {
     using namespace Ops::Base;
     constexpr uint32_t VECTOR_LENGTH = GetVRegSize();
@@ -148,8 +148,8 @@ __aicore__ inline void ComputeSigmoidAndMulImpl(__local_mem__ T* x1LocalPtr, __l
 
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
             preg0 = AscendC::Reg::UpdateMask<T>(size);
-            AscendC::Reg::DataCopy(vregInput1, (__ubuf__ T*)(x1LocalPtr + loopIdx * vlSize));
-            AscendC::Reg::DataCopy(vregInput2, (__ubuf__ T*)(x2LocalPtr + loopIdx * vlSize));
+            AscendC::Reg::LoadAlign(vregInput1, (__ubuf__ T*)(x1LocalPtr + loopIdx * vlSize));
+            AscendC::Reg::LoadAlign(vregInput2, (__ubuf__ T*)(x2LocalPtr + loopIdx * vlSize));
 
             ComputeSigmoidAndMulCore<T>(vregInput1, vregInput2, vregOutput, outLocalPtr, loopIdx, vlSize, preg0,
                                         maskAll8, vreg0);
@@ -158,7 +158,7 @@ __aicore__ inline void ComputeSigmoidAndMulImpl(__local_mem__ T* x1LocalPtr, __l
 }
 
 template <typename T>
-__aicore__ inline void ComputeSigmoidAndMulWithDeInterleave(__local_mem__ T* xLocalPtr, __local_mem__ T* outLocalPtr,
+__aicore__ inline void ComputeSigmoidAndMulWithDeInterleave(__ubuf__ T* xLocalPtr, __ubuf__ T* outLocalPtr,
                                                             const int64_t& count)
 {
     using namespace Ops::Base;
@@ -187,8 +187,8 @@ __aicore__ inline void ComputeSigmoidAndMulWithDeInterleave(__local_mem__ T* xLo
 
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
             preg0 = AscendC::Reg::UpdateMask<T>(size);
-            AscendC::Reg::DataCopy(vregInput1, (__ubuf__ T*)(xLocalPtr + loopIdx * 2 * vlSize));
-            AscendC::Reg::DataCopy(vregInput2, (__ubuf__ T*)(xLocalPtr + loopIdx * 2 * vlSize + vlSize));
+            AscendC::Reg::LoadAlign(vregInput1, (__ubuf__ T*)(xLocalPtr + loopIdx * 2 * vlSize));
+            AscendC::Reg::LoadAlign(vregInput2, (__ubuf__ T*)(xLocalPtr + loopIdx * 2 * vlSize + vlSize));
 
             Reg::DeInterleave<T>(vreg1, vreg2, vregInput1, vregInput2);
 

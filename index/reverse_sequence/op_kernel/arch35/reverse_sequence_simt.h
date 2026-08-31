@@ -88,9 +88,9 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::Init(GM_ADDR x
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtCompute(
-    __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType curOffset, CompType xUbSize,
-    CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3,
-    CompType shift0, CompType shift1, CompType shift2, CompType shift3)
+    __gm__ T* xGm, __gm__ SeqType* seqGm, __ubuf__ T* outLocal, CompType curOffset, CompType xUbSize, CompType batchDim,
+    CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0,
+    CompType shift1, CompType shift2, CompType shift3)
 {
     for (CompType i = threadIdx.x; i < xUbSize; i += blockDim.x) {
         CompType xOffset = curOffset + i;
@@ -133,7 +133,7 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::ReverseCompute
 
     asc_vf_call<ReverseSimtCompute<T, SeqType, CompType>>(
         dim3(USED_THREAD), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim,
+        (__ubuf__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim,
         tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1,
         params.shift2, params.shift3);
 

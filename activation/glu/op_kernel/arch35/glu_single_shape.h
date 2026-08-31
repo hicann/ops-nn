@@ -171,8 +171,8 @@ __aicore__ inline void GluSingleShape<T>::ComputeSigmoidAndMul(const int64_t& co
     LocalTensor<T> xLocal = inQueueX.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();
 
-    __local_mem__ T* xLocalPtr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* outLocalPtr = (__local_mem__ T*)outLocal.GetPhyAddr();
+    __ubuf__ T* xLocalPtr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* outLocalPtr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
     ComputeSigmoidAndMulWithDeInterleave<T>(xLocalPtr, outLocalPtr, count);
 

@@ -165,8 +165,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::SplitSSingleCopy
 {
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
-    __local_mem__ int8_t* xLocalAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
-    __local_mem__ int8_t* yLocalAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
+    __ubuf__ int8_t* xLocalAddr = (__ubuf__ int8_t*)xLocal.GetPhyAddr();
+    __ubuf__ int8_t* yLocalAddr = (__ubuf__ int8_t*)yLocal.GetPhyAddr();
     uint16_t repeatNum = platform::GetVRegSize();
     uint32_t totalNum = dimSNums * tilingData_->dtypeSize;
     uint16_t loop = (totalNum + repeatNum - 1) / repeatNum;
@@ -177,8 +177,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::SplitSSingleCopy
         AscendC::Reg::MaskReg preg;
         for (uint16_t i = 0; i < loop; i++) {
             preg = AscendC::Reg::UpdateMask<int8_t>(maskNums);
-            Reg::DataCopy(v0, xLocalAddr + i * repeatNum);
-            Reg::DataCopy(yLocalAddr + i * repeatNum, v0, preg);
+            Reg::LoadAlign(v0, xLocalAddr + i * repeatNum);
+            Reg::StoreAlign(yLocalAddr + i * repeatNum, v0, preg);
         }
     }
     inputQue_.FreeTensor(xLocal);
@@ -205,10 +205,9 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::GetCurrentSeqLen
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseSSimtCompute(__gm__ T* xGm, __gm__ SeqType* seqGm,
-                                                                                  __local_mem__ T* xLocal,
-                                                                                  __local_mem__ T* outLocal,
-                                                                                  CompType sStart, CompType seqLen,
-                                                                                  CompType dimNum)
+                                                                                  __ubuf__ T* xLocal,
+                                                                                  __ubuf__ T* outLocal, CompType sStart,
+                                                                                  CompType seqLen, CompType dimNum)
 {
     for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType seqIdx = i + sStart; // i % dimSNum
@@ -229,8 +228,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseSCompute(
 
     asc_vf_call<ReverseSSimtCompute<T, SeqType, CompType>>(
         dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(outLocal.GetPhyAddr()),
-        static_cast<CompType>(sStart), static_cast<CompType>(seqLen), static_cast<CompType>(dimNum));
+        (__ubuf__ T*)(xLocal.GetPhyAddr()), (__ubuf__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(sStart),
+        static_cast<CompType>(seqLen), static_cast<CompType>(dimNum));
 
     outQue_.EnQue(outLocal);
     inputQue_.FreeTensor(xLocal);
@@ -276,8 +275,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ComputeSplitS(in
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseBSSimtCompute(
-    __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* xLocal, __local_mem__ T* outLocal, CompType bStart,
-    CompType dimNum, CompType dimSNum, CompType m0, CompType shift0)
+    __gm__ T* xGm, __gm__ SeqType* seqGm, __ubuf__ T* xLocal, __ubuf__ T* outLocal, CompType bStart, CompType dimNum,
+    CompType dimSNum, CompType m0, CompType shift0)
 {
     for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType curBIdx = bStart;
@@ -314,8 +313,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseBSCompute
 
     asc_vf_call<ReverseBSSimtCompute<T, SeqType, CompType>>(
         dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(outLocal.GetPhyAddr()),
-        static_cast<CompType>(bStart), static_cast<CompType>(dimNum), static_cast<CompType>(dimSNum), m0, shift0);
+        (__ubuf__ T*)(xLocal.GetPhyAddr()), (__ubuf__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(bStart),
+        static_cast<CompType>(dimNum), static_cast<CompType>(dimSNum), m0, shift0);
 
     outQue_.EnQue(outLocal);
     inputQue_.FreeTensor(xLocal);
@@ -336,8 +335,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ComputeSplitB(in
 
 template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseABSSimtCompute(
-    __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* xLocal, __local_mem__ T* outLocal, CompType dimNum,
-    CompType dimBSNum, CompType dimSNum, CompType m0, CompType m1, CompType shift0, CompType shift1)
+    __gm__ T* xGm, __gm__ SeqType* seqGm, __ubuf__ T* xLocal, __ubuf__ T* outLocal, CompType dimNum, CompType dimBSNum,
+    CompType dimSNum, CompType m0, CompType m1, CompType shift0, CompType shift1)
 {
     for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType curAIdx = Simt::UintDiv(i, m0, shift0);     // i / dimBSNum
@@ -377,9 +376,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseABSComput
 
     asc_vf_call<ReverseABSSimtCompute<T, SeqType, CompType>>(
         dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
-        (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(outLocal.GetPhyAddr()),
-        static_cast<CompType>(dimNum), static_cast<CompType>(dimBSNum), static_cast<CompType>(dimSNum), m0, m1, shift0,
-        shift1);
+        (__ubuf__ T*)(xLocal.GetPhyAddr()), (__ubuf__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(dimNum),
+        static_cast<CompType>(dimBSNum), static_cast<CompType>(dimSNum), m0, m1, shift0, shift1);
 
     outQue_.EnQue(outLocal);
     inputQue_.FreeTensor(xLocal);
