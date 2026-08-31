@@ -122,7 +122,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     // cinL1_ derived from kAL1: kAL1 = cinL1 * kernelHxkernelW.
     // hoL0_/woL0_ are already set by InitCommon from tiling_->hoL0/woL0.
     this->cinL1_ = AlignB(this->tiling_->kAL1 / this->tiling_->kernelHxkernelW, this->GK0);
-    this->cinL1Blocks_ = CeilDiv(this->cinAligned_, this->cinL1_);
+    this->cinL1Blocks_ = CeilDiv(AlignB(this->tiling_->singleCoreCi, this->GK0Fmap), this->cinL1_);
 
     this->al1BufBytes_ = this->tiling_->aL1SpaceSize;
     this->al1ElemPerBuf_ = this->tiling_->aL1SpaceSize / sizeof(FmapType);
@@ -173,7 +173,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
 
     // kL0 from tiling directly (N axis fullload L0: nl0 = nbl1, no per-chunk recomputation).
     uint32_t kL0 = this->tiling_->kL0;
-    uint32_t kL0Iters = CeilDiv(this->kTotal_, kL0);
+    uint32_t kL0Iters = CeilDiv(this->kTotalFmap_, kL0);
     uint32_t kernelHxW = this->tiling_->kh * this->tiling_->kw;
 
     LocalTensor<weightType> bl1Full(TPosition::B1, this->bl1OffBytes_, this->bl1ElemCount_);
@@ -455,15 +455,15 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
             SetFlag<HardEvent::MTE2_MTE1>(kl1Ev);
             WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         }
-
+        uint32_t curCinOriFmap = AlignB(curCinOri, this->GK0Fmap);
         this->SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi,
-                                  curCin);
+                                  curCinOriFmap);
 
-        uint32_t al1ElemCount = curHi * curWi * curCin;
+        uint32_t al1ElemCount = curHi * curWi * curCinOriFmap;
         uint32_t al1BufOff = kl1Buf * this->al1BufBytes_;
         LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
-
-        this->RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1, kl1, kL0, kL0Iters);
+        uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
+        this->RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters);
 
         SetFlag<HardEvent::MTE1_MTE2>(kl1Ev);
     }

@@ -204,6 +204,8 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
+                              descInfo_.weightDtype == ge::DataType::DT_INT8) ||
+                             (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_INT8);
     if (fmPartloadCond && dtypeFmPartloadOk && IsWeightNZFormat(descInfo_.weightFormat)) {
         return CONV_SMALL_KERNEL_FM_PARTLOAD;
