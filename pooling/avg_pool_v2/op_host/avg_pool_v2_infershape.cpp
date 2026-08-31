@@ -304,6 +304,12 @@ static graphStatus InferShapeForAvgPoolV2(InferShapeContext* context)
             inputs.outW = (inputs.inW - inputs.windowW + inputs.padleft + inputs.padright + inputs.strideW - 1) /
                               inputs.strideW +
                           1;
+            if ((inputs.outH - 1) * inputs.strideH >= inputs.inH + inputs.padtop) {
+                --inputs.outH;
+            }
+            if ((inputs.outW - 1) * inputs.strideW >= inputs.inW + inputs.padleft) {
+                --inputs.outW;
+            }
         } else {
             inputs.outH = (inputs.inH - inputs.windowH + inputs.padtop + inputs.padbottom) / inputs.strideH + 1;
             inputs.outW = (inputs.inW - inputs.windowW + inputs.padleft + inputs.padright) / inputs.strideW + 1;
