@@ -35,7 +35,6 @@ struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);
-        constexpr uint64_t VECTOR_REG_WIDTH = 256UL;
         uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
         uint16_t loopNum = (count + vl - 1) / vl;
         uint32_t vlSize = vl;
@@ -53,8 +52,8 @@ struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
             __VEC_SCOPE__
             {
                 Reg::Duplicate(vregZero, 0.0f);
-                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                     Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(vregInputfloat,
                                                                 (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                     Reg::Muls(vregNegPart, vregInputfloat, negativeSlope, mask);
@@ -70,8 +69,8 @@ struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
             __VEC_SCOPE__
             {
                 Reg::Duplicate(vregZero, 0.0f);
-                mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+                    mask = Reg::UpdateMask<float, Reg::RegTraitNumOne>(count);
                     Reg::LoadAlign<T, Reg::LoadDist::DIST_UNPACK_B16>(vregInputT,
                                                                       (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                     Reg::Cast<float, T, castTrait0>(vregInputfloat, vregInputT, mask);

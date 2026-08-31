@@ -670,7 +670,10 @@ ge::graphStatus Tiling4DynamicBlockQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4DynamicBlockQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
+ge::graphStatus TilingPrepare4DynamicBlockQuant([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
 
 // register tiling interface of the DynamicBlockQuant op.
 IMPL_OP_OPTILING(DynamicBlockQuant)

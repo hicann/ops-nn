@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include "securec.h"
 #include "common/inc/error_util.h"
 #include "softmax_grad_ext_fusion_pass.h"
 #include "es_nn_ops.h"
@@ -29,11 +30,22 @@ const int64_t kSubgraphInputGrad = 0;
 const int64_t kSubgraphInputX1 = 1;
 const int64_t kSubgraphInputX2 = 2;
 const int32_t kReduceSumAxesInputIdx = 1;
+const size_t kMinSubgraphInputCount = 3;
+
+const int64_t kUnknownShapeDim = -1;
+const int64_t kReduceLastAxis = -1;
+const int64_t kAxesShapeDim = 1;
+const int32_t kPatternV2VariantCount = 4;
+const int32_t kBinaryInputX1Idx = 0;
+const int32_t kBinaryInputX2Idx = 1;
+const int32_t kReduceSumInputXIdx = 0;
+const int32_t kNodeOutputIdx = 0;
+const std::string kTargetSocVersion = "Ascend950";
 
 bool IsUnknownShape(const std::vector<int64_t>& dims)
 {
     for (auto dim : dims) {
-        if (dim == -1) {
+        if (dim == kUnknownShapeDim) {
             return true;
         }
     }
@@ -49,8 +61,8 @@ bool IsTargetPlatform()
         false, kPassName.c_str(), "Get platform_info failed.");
     const std::string soc = platform_info.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s", soc.c_str());
-    if (soc != "Ascend950") {
-        OPS_LOG_D(kPassName.c_str(), "Platform is not support, only support Ascend950.");
+    if (soc != kTargetSocVersion) {
+        OPS_LOG_D(kPassName.c_str(), "Platform is not support, only support %s.", kTargetSocVersion.c_str());
         return false;
     }
     return true;
@@ -108,9 +120,15 @@ bool GetAxisFromReduceSum(const GNode& sum_node, int64_t& axis_value, bool& keep
         return false;
     }
     if (dtype == DT_INT64) {
-        axis_value = static_cast<int64_t>(*reinterpret_cast<const int64_t*>(data));
+        int64_t tmp = 0;
+        auto memRet = memcpy_s(&tmp, sizeof(int64_t), data, sizeof(int64_t));
+        OP_LOGE_IF(memRet != EOK, false, kPassName.c_str(), "memcpy_s for int64 axes failed, ret=%d.", memRet);
+        axis_value = tmp;
     } else if (dtype == DT_INT32) {
-        axis_value = static_cast<int64_t>(*reinterpret_cast<const int32_t*>(data));
+        int32_t tmp = 0;
+        auto memRet = memcpy_s(&tmp, sizeof(int32_t), data, sizeof(int32_t));
+        OP_LOGE_IF(memRet != EOK, false, kPassName.c_str(), "memcpy_s for int32 axes failed, ret=%d.", memRet);
+        axis_value = tmp;
     } else {
         OPS_LOG_D(kPassName.c_str(), "ReduceSum axes dtype %d is not supported.", static_cast<int32_t>(dtype));
         return false;
@@ -120,7 +138,7 @@ bool GetAxisFromReduceSum(const GNode& sum_node, int64_t& axis_value, bool& keep
         OPS_LOG_D(kPassName.c_str(), "Failed to get keep_dims attr from ReduceSum.");
         return false;
     }
-    OPS_LOG_D(kPassName.c_str(), "ReduceSum axis=%ld, keep_dims=%d.", axis_value, static_cast<int32_t>(keep_dims));
+    OPS_LOG_D(kPassName.c_str(), "ReduceSum axis=%lld, keep_dims=%d.", axis_value, static_cast<int32_t>(keep_dims));
     return true;
 }
 
@@ -199,15 +217,17 @@ es::EsTensorHolder BuildBinaryNode(es::EsGraphBuilder& graph_builder, const es::
                      .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                      .Build();
 #endif
-    es::AddEdgeAndUpdatePeerDesc(*graph, *input0.GetProducer(), input0.GetProducerOutIndex(), node, 0);
-    es::AddEdgeAndUpdatePeerDesc(*graph, *input1.GetProducer(), input1.GetProducerOutIndex(), node, 1);
-    return es::EsTensorHolder(c_builder->GetTensorHolderFromNode(node, 0));
+    ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input0.GetProducer(), input0.GetProducerOutIndex(),
+                                                         node, kBinaryInputX1Idx));
+    ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input1.GetProducer(), input1.GetProducerOutIndex(),
+                                                         node, kBinaryInputX2Idx));
+    return es::EsTensorHolder(c_builder->GetTensorHolderFromNode(node, kNodeOutputIdx));
 }
 
 // Build a ReduceSum node used inside a pattern. axes is an internal Const node (CreateConst).
 es::EsTensorHolder BuildPatternReduceSum(es::EsGraphBuilder& graph_builder, const es::EsTensorHolder& input)
 {
-    auto axes = graph_builder.CreateConst(std::vector<int64_t>{-1}, std::vector<int64_t>{1});
+    auto axes = graph_builder.CreateConst(std::vector<int64_t>{kReduceLastAxis}, std::vector<int64_t>{kAxesShapeDim});
     auto* c_builder = graph_builder.GetCGraphBuilder();
     auto* graph = c_builder->GetGraph();
 #if NN_HAS_V2_IR_API
@@ -235,20 +255,20 @@ es::EsTensorHolder BuildPatternReduceSum(es::EsGraphBuilder& graph_builder, cons
                            es::CreateFrom(true)}})
                      .Build();
 #endif
-    es::AddEdgeAndUpdatePeerDesc(*graph, *input.GetProducer(), input.GetProducerOutIndex(), node, 0);
-    es::AddEdgeAndUpdatePeerDesc(*graph, *axes.GetProducer(), axes.GetProducerOutIndex(), node, 1);
-    return es::EsTensorHolder(c_builder->GetTensorHolderFromNode(node, 0));
+    ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *input.GetProducer(), input.GetProducerOutIndex(),
+                                                         node, kReduceSumInputXIdx));
+    ES_ASSERT_GRAPH_SUCCESS(es::AddEdgeAndUpdatePeerDesc(*graph, *axes.GetProducer(), axes.GetProducerOutIndex(), node,
+                                                         kReduceSumAxesInputIdx));
+    return es::EsTensorHolder(c_builder->GetTensorHolderFromNode(node, kNodeOutputIdx));
 }
 
-// v1 pattern:
-//   mul = Mul(input0, input1); sum = ReduceSum(mul); sub = Sub(input0, sum);
-//   mul1 = Mul(input2, input1); mulGrad = Mul(mul1, sub)
+// Pattern: output = x2 * x1 * (grad - ReduceSum(grad * x1))
 PatternUniqPtr MakePatternSoftmaxGradExt(const std::string& pass_name)
 {
     auto graph_builder = es::EsGraphBuilder(pass_name.c_str());
-    auto input0 = graph_builder.CreateInput(0, "grad");
-    auto input1 = graph_builder.CreateInput(1, "x1");
-    auto input2 = graph_builder.CreateInput(2, "x2");
+    auto input0 = graph_builder.CreateInput(kSubgraphInputGrad, "grad");
+    auto input1 = graph_builder.CreateInput(kSubgraphInputX1, "x1");
+    auto input2 = graph_builder.CreateInput(kSubgraphInputX2, "x2");
 
     auto mul = BuildBinaryNode(graph_builder, input0, input1, "Mul");
     auto sum = BuildPatternReduceSum(graph_builder, mul);
@@ -258,7 +278,7 @@ PatternUniqPtr MakePatternSoftmaxGradExt(const std::string& pass_name)
 
     auto graph = graph_builder.BuildAndReset({mul_grad});
     auto pattern = std::make_unique<Pattern>(std::move(*graph));
-    pattern->CaptureTensor({*sum.GetProducer(), 0});
+    pattern->CaptureTensor({*sum.GetProducer(), kNodeOutputIdx});
     return pattern;
 }
 
@@ -271,9 +291,9 @@ PatternUniqPtr MakePatternSoftmaxGradExtV2(const std::string& pass_name, int32_t
 {
     std::string builder_name = pass_name + "_" + std::to_string(variant);
     auto graph_builder = es::EsGraphBuilder(builder_name.c_str());
-    auto input0 = graph_builder.CreateInput(0, "grad");
-    auto input1 = graph_builder.CreateInput(1, "x1");
-    auto input2 = graph_builder.CreateInput(2, "x2");
+    auto input0 = graph_builder.CreateInput(kSubgraphInputGrad, "grad");
+    auto input1 = graph_builder.CreateInput(kSubgraphInputX1, "x1");
+    auto input2 = graph_builder.CreateInput(kSubgraphInputX2, "x2");
 
     auto mul = BuildBinaryNode(graph_builder, input0, input1, "Mul");
     auto sum = BuildPatternReduceSum(graph_builder, mul);
@@ -302,7 +322,7 @@ PatternUniqPtr MakePatternSoftmaxGradExtV2(const std::string& pass_name, int32_t
 
     auto graph = graph_builder.BuildAndReset({mul_grad});
     auto pattern = std::make_unique<Pattern>(std::move(*graph));
-    pattern->CaptureTensor({*sum.GetProducer(), 0});
+    pattern->CaptureTensor({*sum.GetProducer(), kNodeOutputIdx});
     return pattern;
 }
 
@@ -322,12 +342,13 @@ GraphUniqPtr SoftmaxGradExtReplacementCommon(const std::unique_ptr<MatchResult>&
 
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
-    OP_LOGE_IF(subgraph_inputs.size() < 3UL, nullptr, pass_name.c_str(), "Subgraph inputs size %zu is less than 3.",
-               subgraph_inputs.size());
+    OP_LOGE_IF(subgraph_inputs.size() < kMinSubgraphInputCount, nullptr, pass_name.c_str(),
+               "Subgraph inputs size %zu is less than %zu.", subgraph_inputs.size(), kMinSubgraphInputCount);
 
     auto graph_builder = es::EsGraphBuilder("replacement");
     auto replacement_inputs = CreateReplacementInputs(graph_builder, subgraph_inputs);
-    OP_LOGE_IF(replacement_inputs.size() < 3UL, nullptr, pass_name.c_str(), "Create replacement inputs failed.");
+    OP_LOGE_IF(replacement_inputs.size() < kMinSubgraphInputCount, nullptr, pass_name.c_str(),
+               "Create replacement inputs failed.");
 
     // SoftmaxGradExt(grad, x1, x2): grad=input0, x1=input1, x2=input2.
     auto softmax_grad_ext = es::SoftmaxGradExt(replacement_inputs[kSubgraphInputGrad],
@@ -376,7 +397,7 @@ std::vector<PatternUniqPtr> SoftmaxGradExtV2FusionPass::Patterns()
 {
     OPS_LOG_D(kPassNameV2.c_str(), "Enter Patterns for SoftmaxGradExtV2FusionPass.");
     std::vector<PatternUniqPtr> patterns;
-    for (int32_t i = 0; i < 4; ++i) {
+    for (int32_t i = 0; i < kPatternV2VariantCount; ++i) {
         patterns.emplace_back(MakePatternSoftmaxGradExtV2(kPassNameV2, i));
     }
     return patterns;

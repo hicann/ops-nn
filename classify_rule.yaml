@@ -594,36 +594,16 @@ activation-c@ops-nn:
       test_code:
         - ops/ops-nn/activation/celu_v2/tests/
         - ops/ops-nn/activation/celu_v2/examples/
-        - ops/ops-nn/activation/elu/tests/
-        - ops/ops-nn/activation/elu/examples/
-        - ops/ops-nn/activation/elu_grad_v2/tests/
-        - ops/ops-nn/activation/elu_grad_v2/examples/
         - ops/ops-nn/activation/erfinv/tests/
         - ops/ops-nn/activation/erfinv/examples/
-        - ops/ops-nn/activation/fast_gelu/examples/
-        - ops/ops-nn/activation/fast_gelu_grad/examples/
         - ops/ops-nn/activation/fatrelu_mul/tests/
         - ops/ops-nn/activation/fatrelu_mul/examples/
         - ops/ops-nn/activation/clipped_swiglu/tests/
         - ops/ops-nn/activation/clipped_swiglu/examples/
         - ops/ops-nn/activation/clipped_swiglu_grad/tests/
         - ops/ops-nn/activation/clipped_swiglu_grad/examples/
-        - ops/ops-nn/activation/ge_glu_grad_v2/tests/
-        - ops/ops-nn/activation/ge_glu_grad_v2/examples/
-        - ops/ops-nn/activation/ge_glu_v2/tests/
-        - ops/ops-nn/activation/ge_glu_v2/examples/
-        - ops/ops-nn/activation/gelu/tests/
-        - ops/ops-nn/activation/gelu/examples/
-        - ops/ops-nn/activation/gelu_grad/tests/
-        - ops/ops-nn/activation/gelu_grad/examples/
-        - ops/ops-nn/activation/gelu_grad_v2/tests/
-        - ops/ops-nn/activation/gelu_grad_v2/examples/
         - ops/ops-nn/activation/gelu_mul/tests/
         - ops/ops-nn/activation/gelu_mul/examples/
-        - ops/ops-nn/activation/gelu_quant/tests/
-        - ops/ops-nn/activation/gelu_quant/examples/
-        - ops/ops-nn/activation/gelu_v2/tests/
-        - ops/ops-nn/activation/gelu_v2/examples/
         - ops/ops-nn/activation/glu/examples/
         - ops/ops-nn/activation/glu/tests/
         - ops/ops-nn/activation/hard_shrink/tests/
@@ -640,14 +620,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/hard_swish_grad/examples/
         - ops/ops-nn/activation/hard_swish_grad_v2/tests/
         - ops/ops-nn/activation/hard_swish_grad_v2/examples/
-        - ops/ops-nn/activation/hardtanh_grad/tests/
-        - ops/ops-nn/activation/hardtanh_grad/examples/
         - ops/ops-nn/activation/heaviside/tests/
         - ops/ops-nn/activation/heaviside/examples/
-        - ops/ops-nn/activation/leaky_relu/tests/
-        - ops/ops-nn/activation/leaky_relu/examples/
-        - ops/ops-nn/activation/leaky_relu_grad/tests/
-        - ops/ops-nn/activation/leaky_relu_grad/examples/
         - ops/ops-nn/activation/log_sigmoid/tests/
         - ops/ops-nn/activation/log_sigmoid/examples/
         - ops/ops-nn/activation/logsigmoid_grad/tests/
@@ -660,14 +634,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/mish/examples/
         - ops/ops-nn/activation/mish_grad/tests/
         - ops/ops-nn/activation/mish_grad/examples/
-        - ops/ops-nn/activation/p_relu/tests/
-        - ops/ops-nn/activation/p_relu/examples/
         - ops/ops-nn/activation/prelu_grad_update/tests/
         - ops/ops-nn/activation/prelu_grad_update/examples/
-        - ops/ops-nn/activation/relu/tests/
-        - ops/ops-nn/activation/relu/examples/
-        - ops/ops-nn/activation/relu_grad/tests/
-        - ops/ops-nn/activation/relu_grad/examples/
         - ops/ops-nn/activation/relu_grad_v2/tests/
         - ops/ops-nn/activation/relu_grad_v2/examples/
         - ops/ops-nn/activation/selu/tests/
@@ -676,12 +644,6 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/selu_grad/examples/
         - ops/ops-nn/activation/shrink/tests/
         - ops/ops-nn/activation/shrink/examples/
-        - ops/ops-nn/activation/sigmoid/tests/
-        - ops/ops-nn/activation/sigmoid/examples/
-        - ops/ops-nn/activation/sigmoid_grad/tests/
-        - ops/ops-nn/activation/sigmoid_grad/examples/
-        - ops/ops-nn/activation/silu_grad/tests/
-        - ops/ops-nn/activation/silu_grad/examples/
         - ops/ops-nn/activation/situ_glu/tests/
         - ops/ops-nn/activation/situ_glu/examples/
         - ops/ops-nn/activation/situ_glu_grad/tests/
@@ -704,12 +666,6 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/squared_relu/examples/
         - ops/ops-nn/activation/swi_glu/tests/
         - ops/ops-nn/activation/swi_glu/examples/
-        - ops/ops-nn/activation/swi_glu_grad/tests/
-        - ops/ops-nn/activation/swi_glu_grad/examples/
-        - ops/ops-nn/activation/swish/tests/
-        - ops/ops-nn/activation/swish/examples/
-        - ops/ops-nn/activation/swish_grad/tests/
-        - ops/ops-nn/activation/swish_grad/examples/
         - ops/ops-nn/activation/swiglu_group_quant/tests/
         - ops/ops-nn/activation/swiglu_group_quant/examples/
         - ops/ops-nn/activation/threshold/tests/
@@ -2116,55 +2072,56 @@ VC1@ops-nn:
       kernel_style: null
     unrelease:
       test_code:
-        #- ops/ops-nn/activation/elu/examples/
-        #- ops/ops-nn/activation/elu/tests/
+        - ops/ops-nn/activation/elu/examples/
+        - ops/ops-nn/activation/elu/tests/
         - ops/ops-nn/activation/elu_grad/examples/
         - ops/ops-nn/activation/elu_grad/tests/
-        #- ops/ops-nn/activation/elu_grad_v2/examples/
-        #- ops/ops-nn/activation/elu_grad_v2/tests/
-        #- ops/ops-nn/activation/fast_gelu/examples/
-        #- ops/ops-nn/activation/fast_gelu/tests/
-        #- ops/ops-nn/activation/fast_gelu_grad/examples/
+        - ops/ops-nn/activation/elu_grad_v2/examples/
+        - ops/ops-nn/activation/elu_grad_v2/tests/
+        - ops/ops-nn/activation/fast_gelu/examples/
+        - ops/ops-nn/activation/fast_gelu/tests/
+        - ops/ops-nn/activation/fast_gelu_grad/examples/
         - ops/ops-nn/activation/fast_gelu_grad/tests/
-        #- ops/ops-nn/activation/ge_glu_grad_v2/examples/
-        #- ops/ops-nn/activation/ge_glu_grad_v2/tests/
-        #- ops/ops-nn/activation/ge_glu_v2/examples/
-        #- ops/ops-nn/activation/ge_glu_v2/tests/
-        #- ops/ops-nn/activation/gelu/examples/
-        #- ops/ops-nn/activation/gelu/tests/
-        #- ops/ops-nn/activation/gelu_grad/examples/
-        #- ops/ops-nn/activation/gelu_grad/tests/
-        #- ops/ops-nn/activation/gelu_grad_v2/examples/
-        #- ops/ops-nn/activation/gelu_grad_v2/tests/
-        #- ops/ops-nn/activation/gelu_quant/examples/
-        #- ops/ops-nn/activation/gelu_quant/tests/
-        #- ops/ops-nn/activation/gelu_v2/examples/
-        #- ops/ops-nn/activation/gelu_v2/tests/
-        #- ops/ops-nn/activation/hardtanh_grad/examples/
-        #- ops/ops-nn/activation/hardtanh_grad/tests/
-        #- ops/ops-nn/activation/leaky_relu/examples/
-        #- ops/ops-nn/activation/leaky_relu/tests/
-        #- ops/ops-nn/activation/leaky_relu_grad/examples/
-        #- ops/ops-nn/activation/leaky_relu_grad/tests/
-        #- ops/ops-nn/activation/prelu/examples/
-        #- ops/ops-nn/activation/prelu/tests/
-        #- ops/ops-nn/activation/relu/examples/
-        #- ops/ops-nn/activation/relu/tests/
+        - ops/ops-nn/activation/ge_glu_grad_v2/examples/
+        - ops/ops-nn/activation/ge_glu_grad_v2/tests/
+        - ops/ops-nn/activation/ge_glu_v2/examples/
+        - ops/ops-nn/activation/ge_glu_v2/tests/
+        - ops/ops-nn/activation/gelu/examples/
+        - ops/ops-nn/activation/gelu/tests/
+        - ops/ops-nn/activation/gelu_grad/examples/
+        - ops/ops-nn/activation/gelu_grad/tests/
+        - ops/ops-nn/activation/gelu_grad_v2/examples/
+        - ops/ops-nn/activation/gelu_grad_v2/tests/
+        - ops/ops-nn/activation/gelu_quant/examples/
+        - ops/ops-nn/activation/gelu_quant/tests/
+        - ops/ops-nn/activation/gelu_v2/examples/
+        - ops/ops-nn/activation/gelu_v2/tests/
+        - ops/ops-nn/activation/hardtanh_grad/examples/
+        - ops/ops-nn/activation/hardtanh_grad/tests/
+        - ops/ops-nn/activation/leaky_relu/examples/
+        - ops/ops-nn/activation/leaky_relu/tests/
+        - ops/ops-nn/activation/leaky_relu_grad/examples/
+        - ops/ops-nn/activation/leaky_relu_grad/tests/
+        - ops/ops-nn/activation/p_relu/examples/
+        - ops/ops-nn/activation/p_relu/tests/
+        - ops/ops-nn/activation/relu/examples/
+        - ops/ops-nn/activation/relu/tests/
+        - ops/ops-nn/activation/relu_grad/examples/
+        - ops/ops-nn/activation/relu_grad/tests/
         - ops/ops-nn/activation/relu_v2/examples/
         - ops/ops-nn/activation/relu_v2/tests/
-        #- ops/ops-nn/activation/sigmoid/examples/
-        #- ops/ops-nn/activation/sigmoid/tests/
-        #- ops/ops-nn/activation/sigmoid_grad/examples/
-        #- ops/ops-nn/activation/sigmoid_grad/tests/
-        #- ops/ops-nn/activation/silu_grad/examples/
-        #- ops/ops-nn/activation/silu_grad/tests/
-        #- ops/ops-nn/activation/swi_glu_grad/examples/
-        #- ops/ops-nn/activation/swi_glu_grad/tests/
-        #- ops/ops-nn/activation/swish/examples/
-        #- ops/ops-nn/activation/swish/tests/
-        #- ops/ops-nn/activation/swish_grad/examples/
-        #- ops/ops-nn/activation/swish_grad/tests/
-        - ops/ops-nn/quant/ascend_quant/examples/
+        - ops/ops-nn/activation/sigmoid/examples/
+        - ops/ops-nn/activation/sigmoid/tests/
+        - ops/ops-nn/activation/sigmoid_grad/examples/
+        - ops/ops-nn/activation/sigmoid_grad/tests/
+        - ops/ops-nn/activation/silu_grad/examples/
+        - ops/ops-nn/activation/silu_grad/tests/
+        - ops/ops-nn/activation/swi_glu_grad/examples/
+        - ops/ops-nn/activation/swi_glu_grad/tests/
+        - ops/ops-nn/activation/swish/examples/
+        - ops/ops-nn/activation/swish/tests/
+        - ops/ops-nn/activation/swish_grad/examples/
+        - ops/ops-nn/activation/swish_grad/tests/
         - ops/ops-nn/quant/ascend_quant/tests/
         - ops/ops-nn/quant/ascend_quant_v2/examples/
         - ops/ops-nn/quant/ascend_quant_v2/tests/

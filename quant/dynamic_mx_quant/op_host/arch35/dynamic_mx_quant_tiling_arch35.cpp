@@ -754,7 +754,10 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4DynamicMxQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
+ge::graphStatus TilingPrepare4DynamicMxQuant([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
 
 // register tiling interface of the DynamicMxQuant op.
 IMPL_OP_OPTILING(DynamicMxQuant)
