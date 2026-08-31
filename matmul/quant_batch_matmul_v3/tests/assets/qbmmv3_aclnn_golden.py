@@ -164,13 +164,12 @@ def _customize_inputs_impl(x1, x2, scale, offset, bias, pertoken_scale, **kwargs
     ACLNN 模式不捕获返回值，需要用 write_back in-place 修改。
     """
     testcase_name = kwargs.get("testcase_name", "unknown")
-    input_ranges = kwargs.get("input_ranges", None)
 
     # 1. E8M0 NaN 清洗（in-place write_back）
-    for idx, tensor in enumerate([x1, x2, scale, None, None, pertoken_scale]):
+    for tensor in [x1, x2, scale, pertoken_scale]:
         if tensor is None:
             continue
-        cleaned = _quant.sanitize_e8m0_scale(tensor, idx, input_ranges, testcase_name)
+        cleaned = _quant.sanitize_e8m0_scale(tensor, testcase_name)
         if cleaned is not tensor:
             _util.write_back(tensor, cleaned)
 

@@ -259,13 +259,10 @@ class WeightQuantBatchMatmulV2TorchApiTestSpec:
             elif weight.dtype == torch.float32:
                 _pack_fp4_weight(weight, need_nz, is_transposed)
 
-        input_ranges = kwargs.get("input_ranges", None)
         testcase_name = kwargs.get("testcase_name", "unknown")
 
         if antiquant_scale is not None:
-            sanitized = _quant_util.sanitize_e8m0_scale(
-                antiquant_scale, 2, input_ranges, testcase_name
-            )
+            sanitized = _quant_util.sanitize_e8m0_scale(antiquant_scale, testcase_name)
             if sanitized is not antiquant_scale:
                 _util.write_back(antiquant_scale, sanitized)
 

@@ -561,10 +561,9 @@ class QuantBatchMatmulV4TestSpec:
     ):
         """输入预处理: 清洗 E8M0 NaN + 生成 UINT64 scale。"""
         testcase_name = kwargs.get("testcase_name", "unknown")
-        input_ranges = kwargs.get("input_ranges", None)
 
-        x1_scale = sanitize_e8m0_scale(x1_scale, 3, input_ranges, testcase_name)
-        x2_scale = sanitize_e8m0_scale(x2_scale, 4, input_ranges, testcase_name)
+        x1_scale = sanitize_e8m0_scale(x1_scale, testcase_name)
+        x2_scale = sanitize_e8m0_scale(x2_scale, testcase_name)
 
         if y_scale is not None and y_scale.dtype.name == "uint64":
             y_scale = generate_u64_scale(y_scale.shape)

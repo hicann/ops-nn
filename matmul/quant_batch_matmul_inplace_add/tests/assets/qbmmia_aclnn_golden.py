@@ -44,12 +44,11 @@ def _to_np(*tensors):
 
 def _customize_inputs_impl(x1, x2, x1ScaleOptional, x2Scale, yRef, **kwargs):
     testcase_name = kwargs.get("testcase_name", "unknown")
-    input_ranges = kwargs.get("input_ranges", None)
 
-    for idx, tensor in enumerate([x1, x2, x1ScaleOptional, x2Scale, yRef]):
+    for tensor in [x1, x2, x1ScaleOptional, x2Scale, yRef]:
         if tensor is None:
             continue
-        cleaned = _quant.sanitize_e8m0_scale(tensor, idx, input_ranges, testcase_name)
+        cleaned = _quant.sanitize_e8m0_scale(tensor, testcase_name)
         if cleaned is not tensor:
             _util.write_back(tensor, cleaned)
 

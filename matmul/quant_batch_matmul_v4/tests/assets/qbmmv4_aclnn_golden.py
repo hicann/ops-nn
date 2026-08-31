@@ -360,13 +360,12 @@ def _customize_inputs_impl(x1, x2, x1Scale, x2Scale, yScale, bias, **kwargs):
     2. UINT64 scale 生成 (x2Scale, yScale)
     """
     testcase_name = kwargs.get("testcase_name", "unknown")
-    input_ranges = kwargs.get("input_ranges", None)
 
     # 1. E8M0 NaN 清洗
-    for idx, tensor in enumerate([x1, x2, x1Scale, x2Scale]):
+    for tensor in [x1, x2, x1Scale, x2Scale]:
         if tensor is None:
             continue
-        cleaned = sanitize_e8m0_scale(tensor, idx, input_ranges, testcase_name)
+        cleaned = sanitize_e8m0_scale(tensor, testcase_name)
         if cleaned is not tensor:
             write_back(tensor, cleaned)
 

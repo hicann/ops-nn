@@ -1,13 +1,8 @@
-testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision
-e2e_matmul_2d_fp32,torch.matmul,"((113,131),(131,97))","('float32','float32')",,{},,"((-5,5),)","((0.0001,0.0001),)",1e-4
-e2e_matmul_3d_fp16,torch.matmul,"((2,96,64),(2,64,80))","('float16','float16')",,{},,"((-5,5),)","((0.001,0.001),)",
-e2e_matmul_3d_bf16,torch.matmul,"((2,64,131),(2,131,79))","('bfloat16','bfloat16')",,{},,"((-5,5),)","((0.001,0.001),)",
-e2e_matmul_3d_out,torch.matmul,"((2,96,128),(2,128,112),(2,96,112))","('float32','float32','float32')",,{},"(2,)","((-5,5),)","((0.0001,0.0001),)",1e-4
-e2e_matmul_4d_broadcast,torch.matmul,"((1,96,128),(2,128,112))","('float16','float16')",,{},,"((-5,5),)","((0.001,0.001),)",
-e2e_bmm_fp16,torch.bmm,"((2,67,89),(2,89,79))","('float16','float16')",,{},,"((-5,5),)","((0.001,0.001),)",
-e2e_bmm_fp16_out,torch.bmm,"((2,48,80),(2,80,112),(2,48,112))","('float16','float16','float16')",,{},"(2,)","((-5,5),)","((0.001,0.001),)",
-e2e_addbmm_fp32,torch.addbmm,"((96,80),(2,96,128),(2,128,80))","('float32','float32','float32')",,"{'beta':1.0,'alpha':1.0}",,"((-5,5),)","((0.0001,0.0001),)",1e-4
-e2e_addbmm_fp16_out,torch.addbmm,"((73,97),(2,73,81),(2,81,97),(73,97))","('float16','float16','float16','float16')",,"{'beta':1.0,'alpha':1.0}","(3,)","((-5,5),)","((0.001,0.001),)",
-e2e_baddbmm_fp16,torch.baddbmm,"((2,67,79),(2,67,89),(2,89,79))","('float16','float16','float16')",,"{'beta':1.0,'alpha':1.0}",,"((-5,5),)","((0.001,0.001),)",
-e2e_baddbmm_bf16_out,torch.baddbmm,"((3,96,128),(3,96,192),(3,192,128),(3,96,128))","('bfloat16','bfloat16','bfloat16','bfloat16')",,"{'beta':1.0,'alpha':1.0}","(3,)","((-5,5),)","((0.001,0.001),)",
-e2e_baddbmm_scaled,torch.baddbmm,"((96,80),(2,96,128),(2,128,80))","('float32','float32','float32')",,"{'beta':1.2,'alpha':0.8}",,"((-5,5),)","((0.0001,0.0001),)",1e-4
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,tensor_storage_shapes,tensor_view_strides,tensor_view_offsets,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision
+mmv3_noFixpip_noFullLoad_aswt_noTrans_basicApi_float32_float32_int8_ND_ND_ND_noBias_torchapi,torch.matmul,"((32, 448), (448, 192), (32, 192))","('float32', 'float32', 'float32')","('ND', 'ND', 'ND')","((32, 448), (448, 192), (32, 192))","(None, None, None)","(0, 0, 0)",{},"(2,)","((0, 5), (0, 5), None)","((0.001, 0.001),)",0.001
+bmmv3_transpose_network_01_torchapi,torch.matmul,"((512, 150, 8), (512, 8, 150), (512, 150, 150))","('float16', 'float16', 'float16')","('ND', 'ND', 'ND')","((512, 150, 8), (150, 512, 8), (512, 150, 150))","(None, (8, 1, 4096), None)","(0, 0, 0)",{},"(2,)","((-1, 1), (-1, 1), None)","((0.001, 0.001),)",0.001
+BatchMatMulV3_noFixpip_aFullLoad_aswt_iterbatch_noTrans_basicApi_float32_float32_float32_ND_ND_ND_noBias_torchapi,torch.matmul,"((12, 12), (1024, 13, 12, 13), (1024, 13, 12, 13))","('float32', 'float32', 'float32')","('ND', 'ND', 'ND')","((12, 12), (1024, 13, 12, 13), (1024, 13, 12, 13))","(None, None, None)","(0, 0, 0)",{},"(2,)","((-5, 5), (-5, 5), None)","((0.001, 0.001),)",0.001
+e2e_bmm_fp16,torch.bmm,"((2,67,89),(2,89,79))","('float16','float16')",,,,,{},,"((-5,5),)","((0.001,0.001),)",
+e2e_bmm_fp16_out,torch.bmm,"((2,48,80),(2,80,112),(2,48,112))","('float16','float16','float16')",,,,,{},"(2,)","((-5,5),)","((0.001,0.001),)",
+e2e_addbmm_fp16_out,torch.addbmm,"((73,97),(2,73,81),(2,81,97),(73,97))","('float16','float16','float16','float16')",,,,,"{'beta':1.0,'alpha':1.0}","(3,)","((-5,5),)","((0.001,0.001),)",
+bmmv3_hfloat32_ND_fusedmatmul_add_transpose_network02_torchapi,torch.baddbmm,"((512, 150, 8), (512, 150, 150), (512, 150, 8), (512, 150, 8))","('float32', 'float32', 'float32', 'float32')","('ND', 'ND', 'ND', 'ND')","((512, 150, 8), (512, 150, 150), (150, 512, 8), (512, 150, 8))","(None, None, (8, 4096, 1), None)","(0, 0, 0, 0)","{'beta': 1.0, 'alpha': 1.0}","(3,)","((0, 1), (0, 1), (0, 1), None)","((0.001, 0.001),)",0.001

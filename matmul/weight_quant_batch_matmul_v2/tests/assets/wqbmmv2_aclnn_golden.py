@@ -119,8 +119,6 @@ def _preprocess_scale_dtype(np_args, tensor_dtypes, kwargs):
         np_args[2] = np_args[2].astype(_quant_util.np_mx_scale)
         np_args[2] = _quant_util.sanitize_e8m0_scale(
             np_args[2],
-            2,
-            kwargs.get("input_ranges", None),
             kwargs.get("testcase_name", "unknown"),
         )
 
@@ -159,13 +157,10 @@ def _aclnn_customize_inputs(
 
     ACLNN 路径框架不捕获 customize_inputs 返回值，必须 in-place 修改。
     """
-    input_ranges = kwargs.get("input_ranges", None)
     testcase_name = kwargs.get("testcase_name", "unknown")
 
     if antiquantScale is not None:
-        sanitized = _quant_util.sanitize_e8m0_scale(
-            antiquantScale, 2, input_ranges, testcase_name
-        )
+        sanitized = _quant_util.sanitize_e8m0_scale(antiquantScale, testcase_name)
         if sanitized is not antiquantScale:
             _util.write_back(antiquantScale, sanitized)
 

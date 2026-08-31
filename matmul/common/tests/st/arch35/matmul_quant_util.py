@@ -17,7 +17,9 @@ Extracted from matmul_golden_util for use by quant operators (qbmmv3, qbmmv4, wq
 
 import warnings
 import numpy as np
+import torch
 import en_dtypes
+import matmul_golden_util
 
 # ============================================================================
 # dtype constants
@@ -72,39 +74,31 @@ def needs_scale_generate(x1_dtype, x2_scale, bias_dtype, scale_dtype):
     return True
 
 
-def sanitize_e8m0_scale(tensor, input_index, input_ranges, testcase_name):
-    """Ensure float8_e8m0 scale tensor has no NaN values.
+def sanitize_e8m0_scale(tensor, testcase_name="unknown"):
+    """Sanitize float8_e8m0 scale tensor by removing NaN values.
 
     float8_e8m0 is unsigned (8 exponent bits, no sign bit), so negative values
-    and zero become NaN. This function regenerates with a positive range if
-    NaN is detected.
+    and zero become NaN. If NaN is detected, the whole tensor is regenerated
+    with values in [0, 5].
     """
     if tensor is None or "float8_e8m0" not in str(tensor.dtype):
         return tensor
-    nan_count = int(np.isnan(tensor.astype(np.float32)).sum())
+
+    tensor_np = matmul_golden_util.torch_to_numpy(tensor)
+    nan_count = int(np.isnan(tensor_np.astype(np.float32)).sum())
     if nan_count == 0:
         return tensor
-    orig_low, orig_high = -10, 10
-    if input_ranges is not None:
-        try:
-            rng = input_ranges[input_index] if input_index < len(input_ranges) else None
-            if rng is not None and len(rng) >= 2:
-                orig_low = rng[0] if rng[0] is not None else -10
-                orig_high = rng[1] if rng[1] is not None else 10
-        except (TypeError, IndexError):
-            pass
-    new_high = max(abs(float(orig_low)), abs(float(orig_high)), 1.0)
-    new_low = max(new_high * 0.001, 1e-6)
+
     warnings.warn(
-        f"[{testcase_name}] Input {input_index} dtype=float8_e8m0 contains {nan_count} NaN "
-        f"values (original range ({orig_low}, {orig_high}) includes negatives). "
-        f"Regenerating with positive range ({new_low}, {new_high})."
+        f"[{testcase_name}] Detected {nan_count} NaN values in float8_e8m0 scale, "
+        f"regenerating with [0, 5] range"
     )
-    return (
-        np.random.uniform(new_low, new_high, tensor.shape)
-        .astype(np.float32)
-        .astype(tensor.dtype)
-    )
+
+    new_data = np.random.uniform(0, 5, size=tensor.shape).astype(np.float32)
+    if isinstance(tensor, np.ndarray):
+        return new_data.astype(tensor.dtype)
+    new_data_e8m0 = new_data.astype(tensor_np.dtype)
+    return torch.from_numpy(new_data_e8m0.view(np.uint8)).view(tensor.dtype)
 
 
 def get_input_range(input_ranges, index):

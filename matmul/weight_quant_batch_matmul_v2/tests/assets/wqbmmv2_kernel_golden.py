@@ -457,11 +457,10 @@ class WeightQuantBatchMatmulV2TestSpec:
         dtype: int = -1,
         **kwargs,
     ):
-        input_ranges = kwargs.get("input_ranges", None)
         testcase_name = kwargs.get("testcase_name", "unknown")
 
         antiquant_scale = _quant_util.sanitize_e8m0_scale(
-            antiquant_scale, 2, input_ranges, testcase_name
+            antiquant_scale, testcase_name
         )
 
         _quant_util.validate_wqbmmv2_constraints(

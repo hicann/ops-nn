@@ -9,10 +9,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""E2E 层 golden 实现。
-
-委托 bmmv3_aclnn_golden 完成计算。
-"""
+"""E2E golden specs: torch API tests delegate to the aclnn golden implementations."""
 
 import os
 import sys
@@ -31,17 +28,11 @@ class TorchMatmulTestSpec:
 
     @staticmethod
     def golden(input, other, *, out=None, **kwargs):
-        """torch.matmul."""
         return _aclnn.AclnnMatmulTestSpec.golden(input, other, out=out, **kwargs)
 
 
-class TorchMmTestSpec:
-    compare = _util.isclose_compare
-
-    @staticmethod
-    def golden(input, mat2, *, out=None, **kwargs):
-        """torch.mm."""
-        return _aclnn.AclnnMatmulTestSpec.golden(input, mat2, out=out, **kwargs)
+class TorchMmTestSpec(TorchMatmulTestSpec):
+    """torch.mm delegates to the same aclnn mm golden."""
 
 
 class TorchAddmmTestSpec:
@@ -49,7 +40,6 @@ class TorchAddmmTestSpec:
 
     @staticmethod
     def golden(input, mat1, mat2, *, beta=1.0, alpha=1.0, out=None, **kwargs):
-        """torch.addmm."""
         return _aclnn.AclnnAddmmTestSpec.golden(
             input, mat1, mat2, beta=beta, alpha=alpha, out=out, **kwargs
         )

@@ -781,17 +781,14 @@ class QuantBatchMatmulV3TestSpec:
         输入预处理：清洗 E8M0 NaN + UINT64 scale 生成。
         """
         testcase_name = kwargs.get("testcase_name", "unknown")
-        input_ranges = kwargs.get("input_ranges", None)
         output_dtypes = kwargs.get("output_dtypes", ["float32"])
         out_dtype = output_dtypes[0]
 
         # 清洗 E8M0 NaN
-        x1 = sanitize_e8m0_scale(x1, 0, input_ranges, testcase_name)
-        x2 = sanitize_e8m0_scale(x2, 1, input_ranges, testcase_name)
-        scale = sanitize_e8m0_scale(scale, 2, input_ranges, testcase_name)
-        pertoken_scale = sanitize_e8m0_scale(
-            pertoken_scale, 5, input_ranges, testcase_name
-        )
+        x1 = sanitize_e8m0_scale(x1, testcase_name)
+        x2 = sanitize_e8m0_scale(x2, testcase_name)
+        scale = sanitize_e8m0_scale(scale, testcase_name)
+        pertoken_scale = sanitize_e8m0_scale(pertoken_scale, testcase_name)
 
         # UINT64 scale 生成
         if scale.dtype in ("uint64", "int64"):

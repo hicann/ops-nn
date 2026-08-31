@@ -137,6 +137,8 @@ def torch_to_numpy(tensor):
         _TORCH_FP8_TO_NP[torch.hifloat8] = np_hif8
     if hasattr(torch, "float8_e8m0"):
         _TORCH_FP8_TO_NP[torch.float8_e8m0] = np_mx_scale
+    if hasattr(torch, "float8_e8m0fnu"):
+        _TORCH_FP8_TO_NP[torch.float8_e8m0fnu] = np_mx_scale
 
     np_dt = _TORCH_FP8_TO_NP.get(tensor.dtype)
     if np_dt is not None:
