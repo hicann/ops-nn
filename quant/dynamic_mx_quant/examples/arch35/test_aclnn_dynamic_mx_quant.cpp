@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -103,12 +102,12 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* x = nullptr;
     aclTensor* yOut = nullptr;
     aclTensor* mxscaleOut = nullptr;
-    //对应BF16的值(0, 8, 64, 512)
+    // 对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {0, 16640, 17024, 17408};
-    //对应float8_e4m3的值(0, 4, 32, 256)
+    // 对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {0, 72, 96, 120};
-    //对应float8_e8m0的值(2)
-    std::vector<uint8_t> mxscaleOutHostData = {{128, 0}};
+    // 对应float8_e8m0的值(2)
+    std::vector<uint8_t> mxscaleOutHostData = {128, 0};
     int64_t axis = -1;
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;
@@ -152,13 +151,13 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     ret = aclnnDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuant failed. ERROR: %d\n", ret); return ret);
 
-    //（固定写法）同步等待任务执行结束
+    // （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
-    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                       size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);

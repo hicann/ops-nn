@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -99,7 +98,7 @@ int aclnnDynamicMxQuantV3Test(int32_t deviceId, aclrtStream& stream)
     aclTensor* mxscaleOut = nullptr;
     std::vector<uint16_t> xHostData = {0, 16640, 17024, 17408};
     std::vector<uint8_t> yOutHostData = {0, 72, 96, 120};
-    std::vector<uint8_t> mxscaleOutHostData = {{128, 0}};
+    std::vector<uint8_t> mxscaleOutHostData = {128, 0};
     int64_t axis = -1;
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;

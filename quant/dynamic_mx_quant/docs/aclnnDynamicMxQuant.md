@@ -424,7 +424,7 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {0, 72, 96, 120};
     //对应float8_e8m0的值(2)
-    std::vector<uint8_t> mxscaleOutHostData = {{128, 0}};
+    std::vector<uint8_t> mxscaleOutHostData = {128, 0};
     int64_t axis = -1;
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;
@@ -473,7 +473,7 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
     std::vector<uint8_t> yOutData(
-        size, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+        size, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                       size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);

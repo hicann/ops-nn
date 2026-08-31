@@ -84,7 +84,7 @@ aclnnStatus aclnnInplaceQuantScatterV2(
       <td>输入|输出</td>
       <td>源数据张量。</td>
       <td>支持空Tensor。</td>
-      <td>INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8</td>
+      <td>INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>3-8</td>
       <td>√</td>
@@ -290,10 +290,10 @@ aclnnStatus aclnnInplaceQuantScatterV2(
 
     |selfRef|indices|updates|quantScales|quantZeroPoints|
     |---|---|---|---|---|
-    |INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8|INT32|BFLOAT16|BFLOAT16|BFLOAT16|
-    |INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8|INT64|BFLOAT16|BFLOAT16|BFLOAT16|
-    |INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8|INT32|FLOAT16|FLOAT32|INT32|
-    |INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8|INT64|FLOAT16|FLOAT32|INT32|
+    |INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8|INT32|BFLOAT16|BFLOAT16|BFLOAT16|
+    |INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8|INT64|BFLOAT16|BFLOAT16|BFLOAT16|
+    |INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8|INT32|FLOAT16|FLOAT32|INT32|
+    |INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8|INT64|FLOAT16|FLOAT32|INT32|
 
   <!-- end id7 -->
 
@@ -385,11 +385,11 @@ int main() {
   aclTensor* updates = nullptr;
   aclTensor* quantScales = nullptr;
   aclTensor* quantZeroPoints = nullptr;
-  std::vector<int8_t> selfRefHostData{32, 0};
+  std::vector<int8_t> selfRefHostData(32, 0);
   std::vector<int32_t> indicesHostData{0};
-  std::vector<float> updatesHostData{32, 1.0};
-  std::vector<float> quantScalesHostData{32, 0.5};
-  std::vector<float> quantZeroPointsHostData{32, 0.5};
+  std::vector<uint16_t> updatesHostData(32, 15360);  // FP16 1.0 = 0x3C00 = 15360
+  std::vector<float> quantScalesHostData(32, 0.5);
+  std::vector<int32_t> quantZeroPointsHostData(32, 0);
   int64_t axis = -2;
   int64_t quantAxis = -1;
   int64_t reduction = 1;

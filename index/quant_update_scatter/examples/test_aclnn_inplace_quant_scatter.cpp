@@ -95,11 +95,11 @@ int main()
     aclTensor* updates = nullptr;
     aclTensor* quantScales = nullptr;
     aclTensor* quantZeroPoints = nullptr;
-    std::vector<int8_t> selfRefHostData{32, 0};
+    std::vector<int8_t> selfRefHostData(32, 0);
     std::vector<int32_t> indicesHostData{0};
-    std::vector<float> updatesHostData{32, 1.0};
-    std::vector<float> quantScalesHostData{32, 0.5};
-    std::vector<float> quantZeroPointsHostData{32, 0.5};
+    std::vector<uint16_t> updatesHostData(32, 15360); // FP16 1.0 = 0x3C00 = 15360
+    std::vector<float> quantScalesHostData(32, 0.5);
+    std::vector<int32_t> quantZeroPointsHostData(32, 0);
     int64_t axis = -2;
     int64_t quantAxis = -1;
     int64_t reduction = 1;
