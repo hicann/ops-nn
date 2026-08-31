@@ -250,7 +250,7 @@ static inline void GetExpectedScaleShape(const QuantMatmulActivationQuantWeightN
 
 static inline int64_t InferOutputShape(const QuantMatmulActivationQuantWeightNzParams& params)
 {
-    int64_t inferedOutbatchValue = 1;
+    int64_t inferredOutbatchValue = 1;
     auto x1DimNum = params.x1->GetViewShape().GetDimNum();
     auto x2DimNum = params.x2->GetViewShape().GetDimNum();
     auto outDimNum = std::max(x1DimNum, x2DimNum);
@@ -267,9 +267,9 @@ static inline int64_t InferOutputShape(const QuantMatmulActivationQuantWeightNzP
             return OUTPUT_INFER_FAIL;
         }
         int64_t curBatchValue = static_cast<int64_t>(std::max(shortDimValue, longDimValue));
-        inferedOutbatchValue = inferedOutbatchValue * curBatchValue;
+        inferredOutbatchValue = inferredOutbatchValue * curBatchValue;
     }
-    return inferedOutbatchValue;
+    return inferredOutbatchValue;
 }
 
 static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, bool transpose, aclOpExecutor* executor)
