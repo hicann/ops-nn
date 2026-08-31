@@ -2750,6 +2750,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/sigmoid_focal_loss/README.md">sigmoid_focal_loss</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算带类别平衡和难样本聚焦因子的Sigmoid二分类损失，支持none、sum和mean归约。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_grad/README.md">smooth_l1_loss_grad</a></td>
     <td>✓</td>
     <td>✓</td>
