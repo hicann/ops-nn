@@ -15,6 +15,7 @@
  * \brief ThresholdGradV2D 形状/类型推导: out = broadcast(gradOutput, self), dtype=gradOutput
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "exe_graph/runtime/infer_datatype_context.h"
@@ -43,6 +44,7 @@ static ge::graphStatus InferShape4ThresholdGradV2D(gert::InferShapeContext* cont
         int64_t sd = (i < rn - sn) ? 1 : s->GetDim(i - (rn - sn));
         out->SetDim(i, gd > sd ? gd : sd);
     }
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*out).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

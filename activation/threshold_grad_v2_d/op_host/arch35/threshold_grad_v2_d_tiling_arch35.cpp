@@ -117,6 +117,8 @@ ge::graphStatus ThresholdGradV2DTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
 
+    OP_LOGI(context_->GetNodeName(), "[TilingData] tilingKey=%lu, threshold=%f", tilingKey, (double)thresHold);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -139,6 +141,7 @@ ge::graphStatus TilingForThresholdGradV2D(gert::TilingContext* context)
     }
     auto compileInfo = reinterpret_cast<const BroadcastCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD("ThresholdGradV2DTiling", "Enter new ThresholdGradV2DTiling");
     ThresholdGradV2DTiling tiling(context);
     return tiling.DoTiling();
