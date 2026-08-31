@@ -378,7 +378,7 @@ int main() {
   // 形状定义
   std::vector<int64_t> biasShape = {hiddenSize * 4};
   std::vector<int64_t> commonShape = {batchSize, hiddenSize};
-  std::vector<int64_t> gatesShape = {batchSize, 4 * hiddenSize};;
+  std::vector<int64_t> gatesShape = {batchSize, 4 * hiddenSize};
 
   // 输入设备地址指针
   void* inputGatesDeviceAddr = nullptr;
