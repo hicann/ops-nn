@@ -4570,6 +4570,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool_ext2/README.md">max_pool_ext2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于4维的输入张量，进行最大池化（max pooling）操作。支持NHWC和NCHW两种数据格式，支持SAME和VALID两种填充模式。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool_v3/README.md">max_pool_v3</a></td>
     <td>✓</td>
     <td>✓</td>
