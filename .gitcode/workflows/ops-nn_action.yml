@@ -11,7 +11,7 @@ concurrency:
 on:
   pull_request_comment:
     types: [created]
-    branches: [ '*' ]
+    branches: [ '**' ]
     comments: [ '^(?:\/)?compile*' ]
   pr_comment:
       types: [ created ]
@@ -56,7 +56,6 @@ stages:
             uses: checkout
             with:
               ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
-              token: ${{secrets.GIT_TOKEN}}
           -
             name: get_pr
             identifier: get_pr
@@ -67,7 +66,6 @@ stages:
               owner: ${{ env.org_name }}
               repo: ${{ env.repo_name }}
               pr_number: ${{ atomgit.event.pull_request.number }}
-              git_token: ${{secrets.GIT_TOKEN}}
           -
             name: upload
             uses: obs-upload
@@ -94,7 +92,6 @@ stages:
             uses: checkout
             with:
               ref: master
-              token: ${{secrets.GIT_TOKEN}}
           -
             name: upload
             uses: obs-upload
@@ -118,7 +115,6 @@ stages:
               owner: ${{ env.org_name }}
               repo: ${{ env.repo_name }}
               pr_number: ${{ atomgit.event.pull_request.number }}
-              token: ${{ secrets.GIT_TOKEN }}
               apply_label: ${{ vars.APPLY_LABEL }}
           - name: associate-pr-comment
             uses: associate-pr-comment
@@ -300,6 +296,15 @@ stages:
           size: 'xlarge'
           package_name: 'cann-ops-nn-950_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950 }}
+      JOB_Compile_Ascend_X86_mobile_station_9030_ubuntu24:
+        name: Compile_Ascend_X86_mobile_station_9030_ubuntu24
+        uses: .gitcode/workflows/compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_X86_mobile_station_9030_ubuntu24'
+          arch: 'x64'
+          size: 'large'
+          package_name: 'cann-ops-nn-kirinx90_linux-x86_64_9030_ubuntu24.run'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_staticcheck_md_check:
         name: staticcheck_md_check
         uses: .gitcode/workflows/staticcheck_action.yml
@@ -354,7 +359,6 @@ stages:
             identifier: process_checkout
             uses: checkout
             with:
-              token: ${{secrets.GIT_TOKEN}}
           -
             name: download
             uses: obs-download
