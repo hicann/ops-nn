@@ -206,6 +206,28 @@ static inline bool IsFormatNZ(const aclTensor* tensor)
             ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32);
 }
 
+namespace internal {
+
+bool CheckNotNull(TupleTensor mandatoryTensors, const aclTensor* out);
+bool CheckDimRange(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale, const aclTensor* out);
+bool CheckA8W4FloatQuantType(const aclTensor* x1, const aclTensor* x2, const aclTensor* perTokenScale,
+                             const aclTensor* x2Scale);
+aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                       const aclTensor* x2Scale, const aclTensor* out);
+aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans, bool isA4W4,
+                        const aclTensor* out, const char* apiName);
+bool CheckInputAttrExistence(const TupleAttr& boolsTrans, const TupleTensor& mandatoryTensors,
+                             const TupleOptional& optionalTensors);
+bool CheckDimRangeA8W4(const TupleTensor& mandatoryTensors, const TupleOptional& optionalTensors, const aclTensor* out);
+bool CheckScaleDimRangeA8W4(const TupleTensor& mandatoryTensors, const TupleOptional& optionalTensors);
+
+bool GetTransposeAttrValue(const aclTensor* tensor, bool transpose, bool checkSpecialCase = true);
+aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
+                                                          TupleAttr boolsTrans, const aclTensor* out,
+                                                          aclOpExecutor* executor, const char* apiName);
+
+} // namespace internal
+
 } // namespace quant_matmul_v4
 
 #endif // QUANT_MATMUL_V4_COMMON_H
