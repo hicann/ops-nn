@@ -122,5 +122,6 @@ REG_OP(QuantConv2D)
     .ATTR(offset_x, Int, 0)
     .ATTR(round_mode, String, "rint")
     .OP_END_FACTORY_REG(QuantConv2D)
+#endif // OPS_PROTO_DEF_QUANTCONV2D
 } // namespace ge
 #endif // QUANT_CONV2D_PROTO_H
