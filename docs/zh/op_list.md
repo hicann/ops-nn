@@ -879,6 +879,16 @@
   </tr>
   <tr>
     <td>control</td>
+    <td><a href="../../control/npu_get_float_status/README.md">npu_get_float_status</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>读取NPU硬件浮点溢出状态寄存器，输出固定全零的Tensor。</td>
+  </tr>
+  <tr>
+    <td>control</td>
     <td><a href="../../control/sleep/README.md">sleep</a></td>
     <td>✓</td>
     <td>✓</td>
