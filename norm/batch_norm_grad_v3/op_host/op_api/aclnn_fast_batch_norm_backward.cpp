@@ -85,23 +85,23 @@ static inline bool isBatchNormSupportAscendC(void)
     return socVersionSupport;
 }
 
-static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
-                             const aclBoolArray* outputMask)
+static bool CheckMaskNotNull(const aclTensor* fastGradInput, const aclTensor* fastGradWeight,
+                             const aclTensor* fastGradBias, const aclBoolArray* fastOutputMask)
 {
     // fast batch norm backward: check output mask validity
-    OP_CHECK_NULL(outputMask, return false);
-    if (outputMask->Size() < GRAD_WEIGHT_INDEX) {
+    OP_CHECK_NULL(fastOutputMask, return false);
+    if (fastOutputMask->Size() < GRAD_WEIGHT_INDEX) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not be less than 1.");
         return false;
     }
-    if ((*outputMask)[0]) {
-        OP_CHECK_NULL(gradInput, return false);
+    if ((*fastOutputMask)[0]) {
+        OP_CHECK_NULL(fastGradInput, return false);
     }
-    if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
-        OP_CHECK_NULL(gradWeight, return false);
+    if ((*fastOutputMask)[GRAD_WEIGHT_INDEX]) {
+        OP_CHECK_NULL(fastGradWeight, return false);
     }
-    if ((*outputMask)[GRAD_BIAS_INDEX]) {
-        OP_CHECK_NULL(gradBias, return false);
+    if ((*fastOutputMask)[GRAD_BIAS_INDEX]) {
+        OP_CHECK_NULL(fastGradBias, return false);
     }
     return true;
 }
@@ -118,9 +118,9 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 
 static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* input)
 {
-    const auto& supportList = GetDtypeSupportList();
-    OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, supportList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(input, supportList, return false);
+    const auto& fastSupportList = GetDtypeSupportList();
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, fastSupportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(input, fastSupportList, return false);
     OP_CHECK_DTYPE_NOT_SAME(input, gradOut, return false);
 
     return true;
@@ -129,15 +129,15 @@ static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* input)
 static bool CheckGradDtypeValid(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
                                 const aclBoolArray* outputMask)
 {
-    const auto& supportList = GetDtypeSupportList();
+    const auto& fastSupportList = GetDtypeSupportList();
     if ((*outputMask)[0]) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, fastSupportList, return false);
     }
     if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(gradWeight, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(gradWeight, fastSupportList, return false);
     }
     if ((*outputMask)[GRAD_BIAS_INDEX]) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(gradBias, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(gradBias, fastSupportList, return false);
     }
 
     return true;
@@ -146,21 +146,21 @@ static bool CheckGradDtypeValid(const aclTensor* gradInput, const aclTensor* gra
 static bool CheckOtherDtypeValid(const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar,
                                  const aclTensor* saveMean, const aclTensor* saveInvstd)
 {
-    const auto& supportList = GetDtypeSupportList();
+    const auto& fastSupportList = GetDtypeSupportList();
     if (weight != nullptr) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(weight, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(weight, fastSupportList, return false);
     }
     if (runningMean != nullptr) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(runningMean, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(runningMean, fastSupportList, return false);
     }
     if (runningVar != nullptr) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(runningVar, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(runningVar, fastSupportList, return false);
     }
     if (saveMean != nullptr) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(saveMean, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(saveMean, fastSupportList, return false);
     }
     if (saveInvstd != nullptr) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(saveInvstd, supportList, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(saveInvstd, fastSupportList, return false);
     }
     return true;
 }
@@ -208,27 +208,28 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     return true;
 }
 
-static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* runningMean,
-                            const aclTensor* runningVar)
+static bool CheckOtherShape(int fastDimC, const aclTensor* fastWeight, const aclTensor* fastRunningMean,
+                            const aclTensor* fastRunningVar)
 {
-    if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
+    if (fastWeight != nullptr &&
+        (fastWeight->GetViewShape().GetDimNum() != 1 || fastWeight->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of weight should be one and shape is channel num of input[%d], but got [%s].", dimC,
-                op::ToString(weight->GetViewShape()).GetString());
+                "Dim of weight should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                op::ToString(fastWeight->GetViewShape()).GetString());
         return false;
     }
-    if (runningMean != nullptr &&
-        (runningMean->GetViewShape().GetDimNum() != 1 || runningMean->GetViewShape()[0] != dimC)) {
+    if (fastRunningMean != nullptr &&
+        (fastRunningMean->GetViewShape().GetDimNum() != 1 || fastRunningMean->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
-                op::ToString(runningMean->GetViewShape()).GetString());
+                "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                op::ToString(fastRunningMean->GetViewShape()).GetString());
         return false;
     }
-    if (runningVar != nullptr &&
-        (runningVar->GetViewShape().GetDimNum() != 1 || runningVar->GetViewShape()[0] != dimC)) {
+    if (fastRunningVar != nullptr &&
+        (fastRunningVar->GetViewShape().GetDimNum() != 1 || fastRunningVar->GetViewShape()[0] != fastDimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", dimC,
-                op::ToString(runningVar->GetViewShape()).GetString());
+                "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", fastDimC,
+                op::ToString(fastRunningVar->GetViewShape()).GetString());
         return false;
     }
     return true;
@@ -482,32 +483,32 @@ aclnnStatus FastBatchNormBackwardProcForAscendC(const aclTensor* gradOut, const 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormBackwardPrepare(const aclTensor* input, const aclTensor*& weight,
-                                         const aclTensor*& runningMean, const aclTensor*& runningVar,
-                                         const aclTensor*& saveMean, const aclTensor*& saveInvstd,
+aclnnStatus FastBatchNormBackwardPrepare(const aclTensor* input, const aclTensor*& fastWeight,
+                                         const aclTensor*& fastRunningMean, const aclTensor*& fastRunningVar,
+                                         const aclTensor*& fastSaveMean, const aclTensor*& fastSaveInvstd,
                                          aclOpExecutor* executor)
 {
     // fast batch norm backward: prepare default values for optional tensors
-    size_t dimC = input->GetViewShape()[1];
-    if (runningMean == nullptr) {
-        runningMean = op::FillScalar(dimC, 0, executor);
-        CHECK_RET(runningMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    size_t fastDimC = input->GetViewShape()[1];
+    if (fastRunningMean == nullptr) {
+        fastRunningMean = op::FillScalar(fastDimC, 0, executor);
+        CHECK_RET(fastRunningMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    if (runningVar == nullptr) {
-        runningVar = op::FillScalar(dimC, 1, executor);
-        CHECK_RET(runningVar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (fastRunningVar == nullptr) {
+        fastRunningVar = op::FillScalar(fastDimC, 1, executor);
+        CHECK_RET(fastRunningVar != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    if (weight == nullptr) {
-        weight = op::FillScalar(dimC, 1, executor);
-        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (fastWeight == nullptr) {
+        fastWeight = op::FillScalar(fastDimC, 1, executor);
+        CHECK_RET(fastWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    if (saveMean == nullptr) {
-        saveMean = op::FillScalar(dimC, 0, executor);
-        CHECK_RET(saveMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (fastSaveMean == nullptr) {
+        fastSaveMean = op::FillScalar(fastDimC, 0, executor);
+        CHECK_RET(fastSaveMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    if (saveInvstd == nullptr) {
-        saveInvstd = op::FillScalar(dimC, 1, executor);
-        CHECK_RET(saveInvstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (fastSaveInvstd == nullptr) {
+        fastSaveInvstd = op::FillScalar(fastDimC, 1, executor);
+        CHECK_RET(fastSaveInvstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
 }

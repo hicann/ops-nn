@@ -209,12 +209,12 @@ aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const ac
         }
         aclIntArray* originShapeArray = uniqueExecutor.get()->AllocIntArray(originShapes, inputDims);
         auto bnOutputReshape = l0op::Reshape(bnOutput, originShapeArray, uniqueExecutor.get());
-        auto bnOutputReformat = l0op::ReFormat(bnOutputReshape, Format::FORMAT_ND);
-        auto viewCopyResult = l0op::ViewCopy(bnOutputReformat, output, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto elemtOutputReformat = l0op::ReFormat(bnOutputReshape, Format::FORMAT_ND);
+        auto elemtViewCopyResult = l0op::ViewCopy(elemtOutputReformat, output, uniqueExecutor.get());
+        CHECK_RET(elemtViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto viewCopyResult = l0op::ViewCopy(bnOutput, output, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto elemtViewCopyResult = l0op::ViewCopy(bnOutput, output, uniqueExecutor.get());
+        CHECK_RET(elemtViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

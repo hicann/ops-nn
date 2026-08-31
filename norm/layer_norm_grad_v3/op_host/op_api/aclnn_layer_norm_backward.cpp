@@ -317,12 +317,12 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
     // 固定写法，将输入转换成连续的tensor
     auto gradOutContiguous = l0op::Contiguous(gradOut, uniqueExecutor.get());
     CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto meanContiguous = l0op::Contiguous(mean, uniqueExecutor.get());
-    CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto rstdContiguous = l0op::Contiguous(rstd, uniqueExecutor.get());
-    CHECK_RET(rstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto lnInput = l0op::Contiguous(input, uniqueExecutor.get());
+    CHECK_RET(lnInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto lnMean = l0op::Contiguous(mean, uniqueExecutor.get());
+    CHECK_RET(lnMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto lnRstd = l0op::Contiguous(rstd, uniqueExecutor.get());
+    CHECK_RET(lnRstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 构造新的weightContiguous
     const aclTensor* weightContiguous = nullptr;
     if (weightOptional) {
@@ -330,7 +330,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
     } else {
         auto weightTensor = uniqueExecutor.get()->ConvertToTensor(normalizedShape, DataType::DT_INT64);
         aclScalar* scalarOne = uniqueExecutor.get()->AllocScalar(1);
-        auto oneTensor = uniqueExecutor.get()->ConvertToTensor(scalarOne, inputContiguous->GetDataType());
+        auto oneTensor = uniqueExecutor.get()->ConvertToTensor(scalarOne, lnInput->GetDataType());
         weightContiguous = l0op::Fill(weightTensor, oneTensor, normalizedShape, uniqueExecutor.get());
     }
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -341,9 +341,9 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
     if (gradV3Compute) {
         OP_LOGD("Entering into layer_norm_grad Func.");
         // LayerNormGradV3只支持fp32 rstd mean输入，如果不是fp32先转fp32
-        auto rstdContiguousFp32 = l0op::Cast(rstdContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
+        auto rstdContiguousFp32 = l0op::Cast(lnRstd, DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(rstdContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto meanContiguousFp32 = l0op::Cast(meanContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
+        auto meanContiguousFp32 = l0op::Cast(lnMean, DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(meanContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // npuArch 3510 支持更多的输出数据类型，只在不满足信息库条件时cast
         DataType gradWeightType = DataType::DT_FLOAT;
@@ -353,7 +353,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
             gradWeightType = weightContiguous->GetDataType();
         }
         std::array<aclTensor*, GRAD_OUT_NUM> gradRes = l0op::LayerNormGradV3(
-            gradOutContiguous, inputContiguous, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask,
+            gradOutContiguous, lnInput, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask,
             gradWeightType, uniqueExecutor.get());
         // 根据mask处理输出
         GenOutWithMask(gradRes[GRAD_INPUT_INDEX], gradInputOut, (*outputMask)[GRAD_INPUT_INDEX], uniqueExecutor.get());
@@ -366,13 +366,13 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
         const aclTensor* meanCastTemp = nullptr;
         const aclTensor* rstdCastTemp = nullptr;
         if (mean->GetDataType() != rstd->GetDataType()) {
-            meanCastTemp = l0op::Cast(meanContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
+            meanCastTemp = l0op::Cast(lnMean, DataType::DT_FLOAT, uniqueExecutor.get());
             CHECK_RET(meanCastTemp != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            rstdCastTemp = l0op::Cast(rstdContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
+            rstdCastTemp = l0op::Cast(lnRstd, DataType::DT_FLOAT, uniqueExecutor.get());
             CHECK_RET(rstdCastTemp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
-            meanCastTemp = meanContiguous;
-            rstdCastTemp = rstdContiguous;
+            meanCastTemp = lnMean;
+            rstdCastTemp = lnRstd;
         }
         const aclTensor* meanCast = nullptr;
         const aclTensor* rstdCast = nullptr;
@@ -389,7 +389,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
         }
 
         std::array<aclTensor*, X_OUT_NUM> xBackpropV3Res = l0op::LayerNormXBackpropV3(
-            gradOutContiguous, inputContiguous, rstdCast, meanCast, weightContiguous, uniqueExecutor.get());
+            gradOutContiguous, lnInput, rstdCast, meanCast, weightContiguous, uniqueExecutor.get());
         auto TempWeightRes = xBackpropV3Res[1];
         CHECK_RET(TempWeightRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 调用layer_norm_beta_gamma_backprop_v2算子进行计算

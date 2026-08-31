@@ -177,9 +177,9 @@ static bool CheckInputDim(const gert::TilingContext* context, size_t dyDimNum, s
                                              "in the range of [1, 8]"),
                 return false);
     if (gammaDimNum > xDimNum) {
-        std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
+        std::string gammaDimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
+            context->GetNodeName(), "gamma and x", gammaDimsMsg.c_str(),
             "The shape dim of input gamma must be less than or equal to that of input x");
         return false;
     }

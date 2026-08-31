@@ -60,21 +60,21 @@ static ge::graphStatus InferShape4AddRmsNormQuant(gert::InferShapeContext* conte
 static graphStatus InferDataType4AddRmsNormQuant(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context, "Begin to do InferDataType4AddRmsNormQuant");
-    ge::DataType yDtype = ge::DT_INT8;
-    auto* attrs = context->GetAttrs();
-    if (attrs != nullptr) {
-        const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
-        if (pDstDtype != nullptr) {
-            int32_t dstDtype = *pDstDtype;
-            yDtype = static_cast<ge::DataType>(dstDtype);
-            OP_CHECK_IF(std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+    ge::DataType v2YDtype = ge::DT_INT8;
+    auto* v2Attrs = context->GetAttrs();
+    if (v2Attrs != nullptr) {
+        const int32_t* v2DstTypePtr = v2Attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
+        if (v2DstTypePtr != nullptr) {
+            int32_t v2DstDtype = *v2DstTypePtr;
+            v2YDtype = static_cast<ge::DataType>(v2DstDtype);
+            OP_CHECK_IF(std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), v2YDtype) == OUT_TYPE_LIST.end(),
                         OP_LOGE(context,
                                 "attr dst_type only support 2(int8), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
                         return ge::GRAPH_FAILED);
         }
     }
-    context->SetOutputDataType(OUTPUT_Y1_IDX, yDtype);
-    context->SetOutputDataType(OUTPUT_Y2_IDX, yDtype);
+    context->SetOutputDataType(OUTPUT_Y1_IDX, v2YDtype);
+    context->SetOutputDataType(OUTPUT_Y2_IDX, v2YDtype);
     context->SetOutputDataType(OUTPUT_X_IDX, context->GetInputDataType(INPUT_X1_IDX));
     OP_LOGD(context, "End to do InferDataType4AddRmsNormQuant");
     return GRAPH_SUCCESS;

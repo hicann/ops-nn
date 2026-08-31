@@ -99,38 +99,38 @@ public:
 private:
     OpAICoreConfig GetKirinCoreConfig() const
     {
-        OpAICoreConfig config_kirin;
-        config_kirin.DynamicCompileStaticFlag(true)
+        OpAICoreConfig maskedKirinConfig;
+        maskedKirinConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        config_kirin.Input("x")
+        maskedKirinConfig.Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("atten_mask")
+        maskedKirinConfig.Input("atten_mask")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("relative_pos_bias")
+        maskedKirinConfig.Input("relative_pos_bias")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y")
+        maskedKirinConfig.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        return config_kirin;
+        return maskedKirinConfig;
     }
 };
 

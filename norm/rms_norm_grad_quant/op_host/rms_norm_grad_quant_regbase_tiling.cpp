@@ -342,12 +342,12 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
     }
 
     // check offsetX
-    auto offsetXDesc = context_->GetInputDesc(INPUT_INDEX_5);
-    if (offsetXDesc != nullptr) {
-        auto offsetXDtype = offsetXDesc->GetDataType();
-        if (offsetXDtype != ge::DataType::DT_INT32) {
-            std::string dtypeMsg = ToString(offsetXDtype);
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "offsetX", dtypeMsg.c_str(),
+    auto regbaseOffsetXDesc = context_->GetInputDesc(INPUT_INDEX_5);
+    if (regbaseOffsetXDesc != nullptr) {
+        auto regbaseOffsetXDtype = regbaseOffsetXDesc->GetDataType();
+        if (regbaseOffsetXDtype != ge::DataType::DT_INT32) {
+            std::string regbaseOffsetDtypeMsg = ToString(regbaseOffsetXDtype);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "offsetX", regbaseOffsetDtypeMsg.c_str(),
                                                   "The dtype of input offsetX should be INT32");
             return ge::GRAPH_FAILED;
         }
@@ -390,21 +390,21 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::GetShapeAttrsInfo()
     }
 
     // set Attrs
-    auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    auto regbaseAttrs = context_->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, regbaseAttrs);
     // check quant
-    const char* quantMode = attrs->GetAttrPointer<char>(ATTR_INDEX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, quantMode);
-    if (strcmp(quantMode, "static") == 0) {
+    const char* regbaseQuantMode = regbaseAttrs->GetAttrPointer<char>(ATTR_INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, regbaseQuantMode);
+    if (strcmp(regbaseQuantMode, "static") == 0) {
         quantMode_ = STATIC_QUANT_MODE;
     } else {
         OP_CHECK_IF((true), OP_LOGE(context_->GetNodeName(), "the attr of quant mode should be static."),
                     return ge::GRAPH_FAILED);
     }
     // set divMode
-    const bool* divModePtr = attrs->GetBool(ATTR_INDEX_1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, divModePtr);
-    divMode_ = *divModePtr ? ComputeModeDivMode::DIV_MODE : ComputeModeDivMode::NOT_DIV_MODE;
+    const bool* regbaseDivModePtr = regbaseAttrs->GetBool(ATTR_INDEX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, regbaseDivModePtr);
+    divMode_ = *regbaseDivModePtr ? ComputeModeDivMode::DIV_MODE : ComputeModeDivMode::NOT_DIV_MODE;
     return ge::GRAPH_SUCCESS;
 }
 

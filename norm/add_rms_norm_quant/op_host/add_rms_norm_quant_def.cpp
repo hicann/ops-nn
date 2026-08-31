@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -123,77 +122,77 @@ public:
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
-        OpAICoreConfig config310P;
-        config310P.Input("x1")
+        OpAICoreConfig addRmsQuantConfig310p;
+        addRmsQuantConfig310p.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("x2")
+        addRmsQuantConfig310p.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("gamma")
+        addRmsQuantConfig310p.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("scales1")
+        addRmsQuantConfig310p.Input("scales1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("scales2")
+        addRmsQuantConfig310p.Input("scales2")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("zero_points1")
+        addRmsQuantConfig310p.Input("zero_points1")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_INT32})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("zero_points2")
+        addRmsQuantConfig310p.Input("zero_points2")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_INT32})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Input("beta")
+        addRmsQuantConfig310p.Input("beta")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Output("y1")
+        addRmsQuantConfig310p.Output("y1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Output("y2")
+        addRmsQuantConfig310p.Output("y2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.Output("x")
+        addRmsQuantConfig310p.Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config310P.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
-        this->AICore().AddConfig("ascend310p", config310P);
-        this->AICore().AddConfig("kirinx90", config310P);
-        this->AICore().AddConfig("kirin9030", config310P);
+        addRmsQuantConfig310p.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend310p", addRmsQuantConfig310p);
+        this->AICore().AddConfig("kirinx90", addRmsQuantConfig310p);
+        this->AICore().AddConfig("kirin9030", addRmsQuantConfig310p);
 
         OpAICoreConfig configRegbase;
         configRegbase.Input("x1")

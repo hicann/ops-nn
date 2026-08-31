@@ -90,118 +90,118 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg0()
     // m 切分，合轴后的shape为（m, n）沿m轴做reduce
     constexpr static int64_t mFactorBlockAligned = MFACTOR_DEFAULT;
 
-    int64_t blocksNeeded = Ops::Base::CeilDiv(rows_, mFactorBlockAligned);
-    usedCoreNumDgamma_ = blocksNeeded < static_cast<int64_t>(aivCoreNum_) ? blocksNeeded : aivCoreNum_;
+    int64_t quantBlocksNeeded = Ops::Base::CeilDiv(rows_, mFactorBlockAligned);
+    usedCoreNumDgamma_ = quantBlocksNeeded < static_cast<int64_t>(aivCoreNum_) ? quantBlocksNeeded : aivCoreNum_;
 
-    int64_t mPerBlock = Ops::Base::FloorDiv(rows_, usedCoreNumDgamma_);
-    int64_t remainder = rows_ - usedCoreNumDgamma_ * mPerBlock;
+    int64_t quantMPerBlock = Ops::Base::FloorDiv(rows_, usedCoreNumDgamma_);
+    int64_t quantRemainder = rows_ - usedCoreNumDgamma_ * quantMPerBlock;
 
-    int64_t mToProcessMainBlock = mPerBlock + 1;
-    int64_t mToProcessTailBlock = mPerBlock;
+    int64_t quantMainMToProcess = quantMPerBlock + 1;
+    int64_t quantTailMToProcess = quantMPerBlock;
 
-    int64_t mLoopMainBlock = Ops::Base::FloorDiv(mToProcessMainBlock, mFactorBlockAligned);
-    int64_t mTotalLoopMainBlock = Ops::Base::CeilDiv(mToProcessMainBlock, mFactorBlockAligned);
-    int64_t mTailMainBlock = mToProcessMainBlock - mLoopMainBlock * mFactorBlockAligned;
-    int64_t basicBlockLoopMainBlock = FindNearestPower2(mTotalLoopMainBlock);
-    int64_t mainFoldCountMainBlock = mLoopMainBlock - basicBlockLoopMainBlock;
+    int64_t quantMainMLoop = Ops::Base::FloorDiv(quantMainMToProcess, mFactorBlockAligned);
+    int64_t quantMainMTotalLoop = Ops::Base::CeilDiv(quantMainMToProcess, mFactorBlockAligned);
+    int64_t quantMainMTail = quantMainMToProcess - quantMainMLoop * mFactorBlockAligned;
+    int64_t quantMainBasicBlockLoop = FindNearestPower2(quantMainMTotalLoop);
+    int64_t quantMainFoldCount = quantMainMLoop - quantMainBasicBlockLoop;
 
-    int64_t cacheBufferCountMainBlock = 1;
-    int64_t resultCacheIDMainBlock = 0;
-    if (basicBlockLoopMainBlock != 0) {
-        cacheBufferCountMainBlock = ULONG_BIT_LEN - static_cast<int64_t>(
-                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
-        resultCacheIDMainBlock = GetCacheID(basicBlockLoopMainBlock - 1);
+    int64_t quantMainCacheBufferCount = 1;
+    int64_t quantMainResultCacheId = 0;
+    if (quantMainBasicBlockLoop != 0) {
+        quantMainCacheBufferCount = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(quantMainBasicBlockLoop)));
+        quantMainResultCacheId = GetCacheID(quantMainBasicBlockLoop - 1);
     }
 
-    int64_t mLoopTailBlock = Ops::Base::FloorDiv(mToProcessTailBlock, mFactorBlockAligned);
-    int64_t mTotalLoopTailBlock = Ops::Base::CeilDiv(mToProcessTailBlock, mFactorBlockAligned);
-    int64_t mTailTailBlock = mToProcessTailBlock - mLoopTailBlock * mFactorBlockAligned;
-    int64_t basicBlockLoopTailBlock = FindNearestPower2(mTotalLoopTailBlock);
-    int64_t mainFoldCountTailBlock = mLoopTailBlock - basicBlockLoopTailBlock;
+    int64_t quantTailMLoop = Ops::Base::FloorDiv(quantTailMToProcess, mFactorBlockAligned);
+    int64_t quantTailMTotalLoop = Ops::Base::CeilDiv(quantTailMToProcess, mFactorBlockAligned);
+    int64_t quantTailMTail = quantTailMToProcess - quantTailMLoop * mFactorBlockAligned;
+    int64_t quantTailBasicBlockLoop = FindNearestPower2(quantTailMTotalLoop);
+    int64_t quantTailFoldCount = quantTailMLoop - quantTailBasicBlockLoop;
 
-    int64_t cacheBufferCountTailBlock = 1;
-    int64_t resultCacheIDTailBlock = 0;
-    if (basicBlockLoopTailBlock != 0) {
-        cacheBufferCountTailBlock = ULONG_BIT_LEN - static_cast<int64_t>(
-                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
-        resultCacheIDTailBlock = GetCacheID(basicBlockLoopTailBlock - 1);
+    int64_t quantTailCacheBufferCount = 1;
+    int64_t quantTailResultCacheId = 0;
+    if (quantTailBasicBlockLoop != 0) {
+        quantTailCacheBufferCount = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(quantTailBasicBlockLoop)));
+        quantTailResultCacheId = GetCacheID(quantTailBasicBlockLoop - 1);
     }
 
     // n切分
     constexpr static int64_t gammaDefaultNfactor = 64;
 
-    int64_t dyDtypeSize = dyDtype_ == ge::DataType::DT_FLOAT ? CONST_FOUR : CONST_TWO;
+    int64_t quantDyDtypeSize = dyDtype_ == ge::DataType::DT_FLOAT ? CONST_FOUR : CONST_TWO;
 
-    int64_t nFactorMax = (ubSize_ - mFactorBlockAligned * sizeof(float) * CONST_THREE) /
-                         (mFactorBlockAligned * (CONST_SIX * dyDtypeSize + sizeof(float)) +
-                          sizeof(float) * (CONST_THREE + cacheBufferCountMainBlock));
-    OP_TILING_CHECK(nFactorMax < blockSize_ / gammaDefaultNfactor,
+    int64_t quantNFactorMax = (ubSize_ - mFactorBlockAligned * sizeof(float) * CONST_THREE) /
+                              (mFactorBlockAligned * (CONST_SIX * quantDyDtypeSize + sizeof(float)) +
+                               sizeof(float) * (CONST_THREE + quantMainCacheBufferCount));
+    OP_TILING_CHECK(quantNFactorMax < blockSize_ / gammaDefaultNfactor,
                     OP_LOGI(context_->GetNodeName(),
                             "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
-                            "nFactorMax: %ld.",
-                            rows_, cols_, ubSize_, nFactorMax),
+                            "quantNFactorMax: %ld.",
+                            rows_, cols_, ubSize_, quantNFactorMax),
                     return ge::GRAPH_PARAM_INVALID);
 
-    int64_t dyBlockLen = blockSize_ / dyDtypeSize;
-    int64_t nFactorBlockAligned = Ops::Base::FloorAlign(nFactorMax, dyBlockLen);
-    nFactorBlockAligned = nFactorBlockAligned > cols_ ? cols_ : nFactorBlockAligned;
-    nFactorBlockAligned = Ops::Base::CeilAlign(nFactorBlockAligned, dyBlockLen);
-    int64_t nLoop = Ops::Base::FloorDiv(cols_, nFactorBlockAligned);
-    int64_t nTail = cols_ - nLoop * nFactorBlockAligned;
+    int64_t quantDyBlockLen = blockSize_ / quantDyDtypeSize;
+    int64_t quantNFactorBlockAligned = Ops::Base::FloorAlign(quantNFactorMax, quantDyBlockLen);
+    quantNFactorBlockAligned = quantNFactorBlockAligned > cols_ ? cols_ : quantNFactorBlockAligned;
+    quantNFactorBlockAligned = Ops::Base::CeilAlign(quantNFactorBlockAligned, quantDyBlockLen);
+    int64_t quantNLoop = Ops::Base::FloorDiv(cols_, quantNFactorBlockAligned);
+    int64_t quantNTail = cols_ - quantNLoop * quantNFactorBlockAligned;
 
     // 参数设置
     tilingData_.dgammaUsedCoreNum = usedCoreNumDgamma_;
-    tilingData_.dgammaMPerBlock = mPerBlock;
-    tilingData_.dgammaMReminder = remainder;
-    tilingData_.dgammaNloop = nLoop;
-    tilingData_.dgammaNtail = nTail;
+    tilingData_.dgammaMPerBlock = quantMPerBlock;
+    tilingData_.dgammaMReminder = quantRemainder;
+    tilingData_.dgammaNloop = quantNLoop;
+    tilingData_.dgammaNtail = quantNTail;
     tilingData_.dgammaMfactorBlockAligned = mFactorBlockAligned;
-    tilingData_.dgammaNfactorBlockAligned = nFactorBlockAligned;
+    tilingData_.dgammaNfactorBlockAligned = quantNFactorBlockAligned;
 
-    tilingData_.dgammaMToProcessMainBlock = mToProcessMainBlock;
-    tilingData_.dgammaMLoopMainBlock = mLoopMainBlock;
-    tilingData_.dgammaMTotalLoopMainBlock = mTotalLoopMainBlock;
-    tilingData_.dgammaMTailMainBlock = mTailMainBlock;
-    tilingData_.dgammaBasicBlockLoopMainBlock = basicBlockLoopMainBlock;
-    tilingData_.dgammaMainFoldCountMainBlock = mainFoldCountMainBlock;
-    tilingData_.dgammaCacheBufferCountMainBlock = cacheBufferCountMainBlock;
-    tilingData_.dgammaResultCacheIDMainBlock = resultCacheIDMainBlock;
+    tilingData_.dgammaMToProcessMainBlock = quantMainMToProcess;
+    tilingData_.dgammaMLoopMainBlock = quantMainMLoop;
+    tilingData_.dgammaMTotalLoopMainBlock = quantMainMTotalLoop;
+    tilingData_.dgammaMTailMainBlock = quantMainMTail;
+    tilingData_.dgammaBasicBlockLoopMainBlock = quantMainBasicBlockLoop;
+    tilingData_.dgammaMainFoldCountMainBlock = quantMainFoldCount;
+    tilingData_.dgammaCacheBufferCountMainBlock = quantMainCacheBufferCount;
+    tilingData_.dgammaResultCacheIDMainBlock = quantMainResultCacheId;
 
-    tilingData_.dgammaMToProcessTailBlock = mToProcessTailBlock;
-    tilingData_.dgammaMLoopTailBlock = mLoopTailBlock;
-    tilingData_.dgammaMTotalLoopTailBlock = mTotalLoopTailBlock;
-    tilingData_.dgammaMTailTailBlock = mTailTailBlock;
-    tilingData_.dgammaBasicBlockLoopTailBlock = basicBlockLoopTailBlock;
-    tilingData_.dgammaMainFoldCountTailBlock = mainFoldCountTailBlock;
-    tilingData_.dgammaCacheBufferCountTailBlock = cacheBufferCountTailBlock;
-    tilingData_.dgammaResultCacheIDTailBlock = resultCacheIDTailBlock;
+    tilingData_.dgammaMToProcessTailBlock = quantTailMToProcess;
+    tilingData_.dgammaMLoopTailBlock = quantTailMLoop;
+    tilingData_.dgammaMTotalLoopTailBlock = quantTailMTotalLoop;
+    tilingData_.dgammaMTailTailBlock = quantTailMTail;
+    tilingData_.dgammaBasicBlockLoopTailBlock = quantTailBasicBlockLoop;
+    tilingData_.dgammaMainFoldCountTailBlock = quantTailFoldCount;
+    tilingData_.dgammaCacheBufferCountTailBlock = quantTailCacheBufferCount;
+    tilingData_.dgammaResultCacheIDTailBlock = quantTailResultCacheId;
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg1()
 {
-    int64_t aInnerMax = ubSize_ / CONST_TWO / sizeof(float) / (usedCoreNumDgamma_ + 1);
+    int64_t quantAInnerMax = ubSize_ / CONST_TWO / sizeof(float) / (usedCoreNumDgamma_ + 1);
 
-    int64_t blockLen = blockSize_ / sizeof(float);
+    int64_t quantBlockLen = blockSize_ / sizeof(float);
 
     OP_TILING_CHECK(
-        aInnerMax < blockLen,
+        quantAInnerMax < quantBlockLen,
         OP_LOGI(context_->GetNodeName(),
-                "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .", aInnerMax),
+                "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .", quantAInnerMax),
         return ge::GRAPH_PARAM_INVALID);
 
-    int64_t aInnerMaxAligned = Ops::Base::FloorAlign(aInnerMax, blockLen);
+    int64_t quantAInnerMaxAligned = Ops::Base::FloorAlign(quantAInnerMax, quantBlockLen);
 
-    int64_t aInner = cols_ < aInnerMaxAligned ? cols_ : aInnerMaxAligned;
-    int64_t aInnerAligned = Ops::Base::CeilAlign(aInner, blockLen);
+    int64_t quantAInner = cols_ < quantAInnerMaxAligned ? cols_ : quantAInnerMaxAligned;
+    int64_t quantAInnerAligned = Ops::Base::CeilAlign(quantAInner, quantBlockLen);
 
-    int64_t aOuter = Ops::Base::CeilDiv(cols_, aInnerAligned);
-    int64_t aTail = cols_ - (aOuter - 1) * aInnerAligned;
+    int64_t quantAOuter = Ops::Base::CeilDiv(cols_, quantAInnerAligned);
+    int64_t quantATail = cols_ - (quantAOuter - 1) * quantAInnerAligned;
 
-    tilingData_.dgammaAInnerAlignedStg1 = aInnerAligned;
-    tilingData_.dgammaAOuterStg1 = aOuter;
-    tilingData_.dgammaATailStg1 = aTail;
+    tilingData_.dgammaAInnerAlignedStg1 = quantAInnerAligned;
+    tilingData_.dgammaAOuterStg1 = quantAOuter;
+    tilingData_.dgammaATailStg1 = quantATail;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -260,18 +260,18 @@ int64_t RmsNormGradQuantBigMTiling::GetCacheID(const int64_t idx)
     return __builtin_popcountll(idx ^ (idx + CONST_ONE)) - CONST_ONE;
 }
 
-int64_t RmsNormGradQuantBigMTiling::FindNearestPower2(const int64_t value)
+int64_t RmsNormGradQuantBigMTiling::FindNearestPower2(const int64_t quantValue)
 {
-    if (value <= CONST_ONE) {
+    if (quantValue <= CONST_ONE) {
         return CONST_ZERO;
-    } else if (value <= CONST_TWO) {
+    } else if (quantValue <= CONST_TWO) {
         return CONST_ONE;
-    } else if (value <= CONST_FOUR) {
+    } else if (quantValue <= CONST_FOUR) {
         return CONST_TWO;
     } else {
-        const int64_t num = value - CONST_ONE;
-        const int64_t pow = CONST_SIXTY_THREE - __builtin_clzl(num);
-        return (CONST_ONE << pow);
+        const int64_t quantNum = quantValue - CONST_ONE;
+        const int64_t quantPower = CONST_SIXTY_THREE - __builtin_clzl(quantNum);
+        return (CONST_ONE << quantPower);
     }
 }
 

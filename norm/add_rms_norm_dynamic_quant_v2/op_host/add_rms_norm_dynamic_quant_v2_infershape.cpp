@@ -120,26 +120,26 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
     OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
                 return GRAPH_FAILED);
-    size_t outputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
+    size_t v2OutputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
 
     // unknown rank
     if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
-        if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-            const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
-            if (outputMask[0]) {
+        if (v2OutputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+            const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
+            if (v2OutputMask[0]) {
                 SetUnknownRank(*outScale1Shape);
                 *y1Shape = *x1Shape;
             } else {
                 *outScale1Shape = gert::Shape({1});
             }
-            if (outputMask[1]) {
+            if (v2OutputMask[1]) {
                 SetUnknownRank(*outScale2Shape);
                 *y2Shape = *x1Shape;
             } else {
                 *outScale2Shape = gert::Shape({1});
             }
-            *y3Shape = outputMask[2] ? *x1Shape : gert::Shape({1});
-            *y4Shape = outputMask[3] ? *x1Shape : gert::Shape({1});
+            *y3Shape = v2OutputMask[2] ? *x1Shape : gert::Shape({1});
+            *y4Shape = v2OutputMask[3] ? *x1Shape : gert::Shape({1});
         } else {
             *y1Shape = *x1Shape;
             SetUnknownRank(*outScale1Shape);
@@ -159,21 +159,21 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
     *outScale1Shape = gert::Shape({1});
     *outScale2Shape = gert::Shape({1});
 
-    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-        OP_CHECK_IF(outputMaskLen != NUM_FOUR,
+    if (v2OutputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+        OP_CHECK_IF(v2OutputMaskLen != NUM_FOUR,
                     OP_LOGE(context, "When output_mask is not NULL, the array size must be 4."), return GRAPH_FAILED);
 
-        const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
-        if (outputMask[0]) {
+        const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
+        if (v2OutputMask[0]) {
             *y1Shape = *x1Shape;
             *outScale1Shape = outScaleShape;
         }
-        if (outputMask[1]) {
+        if (v2OutputMask[1]) {
             *y2Shape = *x1Shape;
             *outScale2Shape = outScaleShape;
         }
-        *y3Shape = outputMask[2] ? *x1Shape : gert::Shape({1});
-        *y4Shape = outputMask[3] ? *x1Shape : gert::Shape({1});
+        *y3Shape = v2OutputMask[2] ? *x1Shape : gert::Shape({1});
+        *y4Shape = v2OutputMask[3] ? *x1Shape : gert::Shape({1});
     } else {
         *y1Shape = *x1Shape;
         *y3Shape = *x1Shape;

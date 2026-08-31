@@ -87,45 +87,45 @@ public:
         config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", config_950);
 
-        OpAICoreConfig config_310p;
+        OpAICoreConfig addLayerGradConfig310p;
         // input
-        config_310p.Input("dy")
+        addLayerGradConfig310p.Input("dy")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("x1")
+        addLayerGradConfig310p.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("x2")
+        addLayerGradConfig310p.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("rstd")
+        addLayerGradConfig310p.Input("rstd")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("mean")
+        addLayerGradConfig310p.Input("mean")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("gamma")
+        addLayerGradConfig310p.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("dsum")
+        addLayerGradConfig310p.Input("dsum")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
@@ -133,26 +133,26 @@ public:
             .AutoContiguous();
 
         // output
-        config_310p.Output("dx")
+        addLayerGradConfig310p.Output("dx")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.Output("dgamma")
+        addLayerGradConfig310p.Output("dgamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.Output("dbeta")
+        addLayerGradConfig310p.Output("dbeta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.DynamicCompileStaticFlag(true)
+        addLayerGradConfig310p.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
-        this->AICore().AddConfig("ascend310p", config_310p);
+        this->AICore().AddConfig("ascend310p", addLayerGradConfig310p);
     }
 };
 

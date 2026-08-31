@@ -83,36 +83,36 @@ public:
 private:
     OpAICoreConfig GetKirinCoreConfig() const
     {
-        OpAICoreConfig config_kirin;
-        config_kirin.DynamicCompileStaticFlag(true)
+        OpAICoreConfig gemmaKirinConfig;
+        gemmaKirinConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        config_kirin.Input("x")
+        gemmaKirinConfig.Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("gamma")
+        gemmaKirinConfig.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y")
+        gemmaKirinConfig.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_kirin.Output("rstd")
+        gemmaKirinConfig.Output("rstd")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        return config_kirin;
+        return gemmaKirinConfig;
     }
 };
 OP_ADD(GemmaRmsNorm);

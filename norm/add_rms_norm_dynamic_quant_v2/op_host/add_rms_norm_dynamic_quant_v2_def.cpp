@@ -219,92 +219,92 @@ private:
 
     OpAICoreConfig GetKirinCoreConfig() const
     {
-        OpAICoreConfig config_kirin;
-        config_kirin.DynamicCompileStaticFlag(true)
+        OpAICoreConfig v2KirinConfig;
+        v2KirinConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        config_kirin.Input("x1")
+        v2KirinConfig.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("x2")
+        v2KirinConfig.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("gamma")
+        v2KirinConfig.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("smooth_scale1")
+        v2KirinConfig.Input("smooth_scale1")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("smooth_scale2")
+        v2KirinConfig.Input("smooth_scale2")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Input("beta")
+        v2KirinConfig.Input("beta")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y1")
+        v2KirinConfig.Output("y1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y2")
+        v2KirinConfig.Output("y2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y3")
+        v2KirinConfig.Output("y3")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("y4")
+        v2KirinConfig.Output("y4")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("x")
+        v2KirinConfig.Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("scale1")
+        v2KirinConfig.Output("scale1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        config_kirin.Output("scale2")
+        v2KirinConfig.Output("scale2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        return config_kirin;
+        return v2KirinConfig;
     }
 };
 OP_ADD(AddRmsNormDynamicQuantV2);

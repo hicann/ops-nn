@@ -246,17 +246,17 @@ static bool CheckAllNotNull(std::initializer_list<T> ptrList)
 }
 
 template <typename T>
-static inline bool CheckEqualsAll(std::initializer_list<T> eleList)
+static inline bool CheckEqualsAll(std::initializer_list<T> gradElements)
 {
-    bool ret = true;
-    if (eleList.size() > 0) {
-        const T* fontPtr = eleList.begin();
-        for (const T* curtPtr = eleList.begin(); curtPtr != eleList.end(); curtPtr++) {
-            ret = ret && (*(curtPtr) == *(fontPtr));
-            fontPtr = curtPtr;
+    bool gradEqual = true;
+    if (gradElements.size() > 0) {
+        const T* gradFirstPtr = gradElements.begin();
+        for (const T* gradCurrentPtr = gradElements.begin(); gradCurrentPtr != gradElements.end(); gradCurrentPtr++) {
+            gradEqual = gradEqual && (*(gradCurrentPtr) == *(gradFirstPtr));
+            gradFirstPtr = gradCurrentPtr;
         }
     }
-    return ret;
+    return gradEqual;
 }
 
 static inline bool HasNoZero(const gert::StorageShape* shapePtr, size_t shapeDim)

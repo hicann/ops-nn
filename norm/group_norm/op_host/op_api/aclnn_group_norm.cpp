@@ -282,15 +282,15 @@ static const aclTensor* RstdProcess(const aclTensor* variance, int64_t N, int64_
 
 static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor)
 {
-    FVector<int64_t> shape;
+    FVector<int64_t> groupShape;
     size_t dimNum = out->GetViewShape().GetDimNum();
     for (size_t idx = 0; idx < dimNum; idx++) {
         int64_t tmpVal = out->GetViewShape().GetDim(idx);
-        shape.push_back(tmpVal);
+        groupShape.push_back(tmpVal);
     }
-    auto dims = executor->ConvertToTensor(shape.data(), shape.size(), DataType::DT_INT64);
+    auto dims = executor->ConvertToTensor(groupShape.data(), groupShape.size(), DataType::DT_INT64);
     CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto shapeArray = executor->AllocIntArray(shape.data(), shape.size());
+    auto shapeArray = executor->AllocIntArray(groupShape.data(), groupShape.size());
     CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     FVector<float> valVector = {val};

@@ -150,38 +150,39 @@ private:
 
     __aicore__ inline void ComputeRstd(LocalTensor<T> xLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num)
     {
-        LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
-        LocalTensor<float> sqx = sqxBuf.Get<float>();
-        LocalTensor<float> reduce_buf_local = reduceFp32Buf.Get<float>();
-        Cast(x_fp32, xLocal, RoundMode::CAST_NONE, calc_row_num * numColAlign);
+        LocalTensor<float> castXFp32 = xFp32Buf.Get<float>();
+        LocalTensor<float> castSquareX = sqxBuf.Get<float>();
+        LocalTensor<float> castReduceBuffer = reduceFp32Buf.Get<float>();
+        Cast(castXFp32, xLocal, RoundMode::CAST_NONE, calc_row_num * numColAlign);
         PipeBarrier<PIPE_V>();
 
-        Mul(sqx, x_fp32, x_fp32, calc_row_num * numColAlign);
+        Mul(castSquareX, castXFp32, castXFp32, calc_row_num * numColAlign);
         PipeBarrier<PIPE_V>();
 
-        Muls(sqx, sqx, avgFactor, calc_row_num * numColAlign);
+        Muls(castSquareX, castSquareX, avgFactor, calc_row_num * numColAlign);
         PipeBarrier<PIPE_V>();
 
-        for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            ReduceSumCustom(rstdLocal[i_i * NUM_PER_BLK_FP32], sqx[i_i * numColAlign], reduce_buf_local, numCol);
+        for (uint32_t castRowIndex = 0; castRowIndex < calc_row_num; castRowIndex++) {
+            ReduceSumCustom(rstdLocal[castRowIndex * NUM_PER_BLK_FP32], castSquareX[castRowIndex * numColAlign],
+                            castReduceBuffer, numCol);
         }
         Adds(rstdLocal, rstdLocal, epsilon, calc_row_num * NUM_PER_BLK_FP32);
         PipeBarrier<PIPE_V>();
 
         Sqrt(rstdLocal, rstdLocal, calc_row_num * NUM_PER_BLK_FP32);
-        Duplicate(reduce_buf_local, ONE, NUM_PER_BLK_FP32);
+        Duplicate(castReduceBuffer, ONE, NUM_PER_BLK_FP32);
         PipeBarrier<PIPE_V>();
 
-        int32_t repeatTimes = calc_row_num * NUM_PER_BLK_FP32 / NUM_PER_REP_FP32;
-        int32_t tailCount = calc_row_num * NUM_PER_BLK_FP32 % NUM_PER_REP_FP32;
-        int32_t bodyCount = repeatTimes * NUM_PER_REP_FP32;
+        int32_t castRepeatTimes = calc_row_num * NUM_PER_BLK_FP32 / NUM_PER_REP_FP32;
+        int32_t castTailCount = calc_row_num * NUM_PER_BLK_FP32 % NUM_PER_REP_FP32;
+        int32_t castBodyCount = castRepeatTimes * NUM_PER_REP_FP32;
 
-        if (likely(repeatTimes > 0)) {
-            Div(rstdLocal, reduce_buf_local, rstdLocal, NUM_PER_REP_FP32, repeatTimes,
+        if (likely(castRepeatTimes > 0)) {
+            Div(rstdLocal, castReduceBuffer, rstdLocal, NUM_PER_REP_FP32, castRepeatTimes,
                 {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
-        if (unlikely(tailCount != 0)) {
-            Div(rstdLocal[bodyCount], reduce_buf_local, rstdLocal[bodyCount], tailCount, 1,
+        if (unlikely(castTailCount != 0)) {
+            Div(rstdLocal[castBodyCount], castReduceBuffer, rstdLocal[castBodyCount], castTailCount, 1,
                 {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
         PipeBarrier<PIPE_V>();

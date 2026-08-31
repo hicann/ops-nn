@@ -93,64 +93,64 @@ public:
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
-        OpAICoreConfig config_310p;
-        config_310p.Input("x1")
+        OpAICoreConfig addLayerConfig310p;
+        addLayerConfig310p.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310)
             .AutoContiguous();
-        config_310p.Input("x2")
+        addLayerConfig310p.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310)
             .AutoContiguous();
-        config_310p.Input("gamma")
+        addLayerConfig310p.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310)
             .AutoContiguous();
-        config_310p.Input("beta")
+        addLayerConfig310p.Input("beta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310)
             .AutoContiguous();
-        config_310p.Input("bias")
+        addLayerConfig310p.Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310)
             .AutoContiguous();
-        config_310p.Output("y")
+        addLayerConfig310p.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310);
-        config_310p.Output("mean")
+        addLayerConfig310p.Output("mean")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310);
-        config_310p.Output("rstd")
+        addLayerConfig310p.Output("rstd")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310);
-        config_310p.Output("x")
+        addLayerConfig310p.Output("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_310)
             .UnknownShapeFormat(ALL_FORMAT_ND_310);
-        config_310p.DynamicCompileStaticFlag(true)
+        addLayerConfig310p.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
-        this->AICore().AddConfig("ascend310p", config_310p);
-        this->AICore().AddConfig("kirinx90", config_310p);
-        this->AICore().AddConfig("kirin9030", config_310p);
+        this->AICore().AddConfig("ascend310p", addLayerConfig310p);
+        this->AICore().AddConfig("kirinx90", addLayerConfig310p);
+        this->AICore().AddConfig("kirin9030", addLayerConfig310p);
 
         OpAICoreConfig config_950;
         config_950.Input("x1")

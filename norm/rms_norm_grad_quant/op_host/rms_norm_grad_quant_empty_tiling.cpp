@@ -211,31 +211,31 @@ ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsDtype()
     }
 
     // check offsetX
-    auto offsetXDesc = context_->GetInputDesc(INPUT_INDEX_5);
-    if (offsetXDesc != nullptr) {
-        auto offsetXDtype = offsetXDesc->GetDataType();
-        if (offsetXDtype != ge::DataType::DT_INT32) {
-            std::string dtypeMsg = ToString(offsetXDtype);
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "offsetX", dtypeMsg.c_str(),
+    auto emptyOffsetDesc = context_->GetInputDesc(INPUT_INDEX_5);
+    if (emptyOffsetDesc != nullptr) {
+        auto emptyOffsetType = emptyOffsetDesc->GetDataType();
+        if (emptyOffsetType != ge::DataType::DT_INT32) {
+            std::string emptyDtypeMsg = ToString(emptyOffsetType);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "offsetX", emptyDtypeMsg.c_str(),
                                                   "The dtype of input offsetX should be INT32");
             return ge::GRAPH_FAILED;
         }
     }
 
     // check dx dtype (scales_x is required, always quant mode)
-    auto dxDesc = context_->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
-    auto dxDtype = dxDesc->GetDataType();
-    OP_CHECK_IF((dxDtype != ge::DataType::DT_HIFLOAT8 && dxDtype != ge::DataType::DT_INT8),
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dx", ToString(dxDtype).c_str(), "HIFLOAT8 or INT8"),
+    auto emptyDxDesc = context_->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, emptyDxDesc);
+    auto edxType = emptyDxDesc->GetDataType();
+    OP_CHECK_IF((edxType != ge::DataType::DT_HIFLOAT8 && edxType != ge::DataType::DT_INT8),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dx", ToString(edxType).c_str(), "HIFLOAT8 or INT8"),
                 return ge::GRAPH_FAILED);
 
     // check dgamma dtype
-    auto dgammaDesc = context_->GetOutputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, dgammaDesc);
-    auto dgammaDtype = dgammaDesc->GetDataType();
-    OP_CHECK_IF((dgammaDtype != ge::DataType::DT_FLOAT),
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(dgammaDtype).c_str(), "FLOAT"),
+    auto emptyDgammaDesc = context_->GetOutputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, emptyDgammaDesc);
+    auto eDgammaType = emptyDgammaDesc->GetDataType();
+    OP_CHECK_IF((eDgammaType != ge::DataType::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(eDgammaType).c_str(), "FLOAT"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -308,23 +308,23 @@ uint64_t RmsNormGradQuantEmptyTiling::GetTilingKey() const
 ge::graphStatus RmsNormGradQuantEmptyTiling::PostTiling()
 {
     context_->SetBlockDim(aivCoreNum_);
-    auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(sizeof(tilingData_) > rawTilingData->GetCapacity(),
+    auto emptyRawData = context_->GetRawTilingData();
+    OP_CHECK_IF(sizeof(tilingData_) > emptyRawData->GetCapacity(),
                 OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-                        sizeof(tilingData_), rawTilingData->GetCapacity()),
+                        sizeof(tilingData_), emptyRawData->GetCapacity()),
                 return ge::GRAPH_FAILED);
-    auto capSize = rawTilingData->GetCapacity();
-    void* ptrData = rawTilingData->GetData();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
-    void* ptrStruct = static_cast<void*>(&tilingData_);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData_)) != 0,
+    auto emptyCapacity = emptyRawData->GetCapacity();
+    void* emptyDataPtr = emptyRawData->GetData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, emptyDataPtr);
+    void* emptyStructPtr = static_cast<void*>(&tilingData_);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, emptyStructPtr);
+    OP_CHECK_IF(memcpy_s(emptyDataPtr, emptyCapacity, emptyStructPtr, sizeof(tilingData_)) != 0,
                 OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
-    rawTilingData->SetDataSize(sizeof(tilingData_));
+    emptyRawData->SetDataSize(sizeof(tilingData_));
 
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
+    size_t* emptyWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, emptyWorkspace);
+    emptyWorkspace[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
 }
 

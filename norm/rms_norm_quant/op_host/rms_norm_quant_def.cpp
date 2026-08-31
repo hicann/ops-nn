@@ -59,47 +59,47 @@ public:
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
-        OpAICoreConfig config310P;
-        config310P.Input("x")
+        OpAICoreConfig rmsQuantConfig310p;
+        rmsQuantConfig310p.Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        config310P.Input("gamma")
+        rmsQuantConfig310p.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        config310P.Input("beta")
+        rmsQuantConfig310p.Input("beta")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        config310P.Input("scale")
+        rmsQuantConfig310p.Input("scale")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        config310P.Input("offset")
+        rmsQuantConfig310p.Input("offset")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
 
-        config310P.Output("y")
+        rmsQuantConfig310p.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        config310P.DynamicCompileStaticFlag(true)
+        rmsQuantConfig310p.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
-        this->AICore().AddConfig("ascend310p", config310P);
-        this->AICore().AddConfig("ascend310b", config310P);
-        this->AICore().AddConfig("kirinx90", config310P);
-        this->AICore().AddConfig("kirin9030", config310P);
+        this->AICore().AddConfig("ascend310p", rmsQuantConfig310p);
+        this->AICore().AddConfig("ascend310b", rmsQuantConfig310p);
+        this->AICore().AddConfig("kirinx90", rmsQuantConfig310p);
+        this->AICore().AddConfig("kirin9030", rmsQuantConfig310p);
     }
 };
 

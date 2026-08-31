@@ -77,64 +77,64 @@ public:
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
-        OpAICoreConfig config_310p;
-        config_310p.Input("x1")
+        OpAICoreConfig inplaceConfig310p;
+        inplaceConfig310p.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("x2")
+        inplaceConfig310p.Input("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("gamma")
+        inplaceConfig310p.Input("gamma")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("beta")
+        inplaceConfig310p.Input("beta")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Input("bias")
+        inplaceConfig310p.Input("bias")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_310p.Output("x1")
+        inplaceConfig310p.Output("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.Output("mean")
+        inplaceConfig310p.Output("mean")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.Output("rstd")
+        inplaceConfig310p.Output("rstd")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.Output("x2")
+        inplaceConfig310p.Output("x2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        config_310p.DynamicCompileStaticFlag(true)
+        inplaceConfig310p.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
-        this->AICore().AddConfig("ascend310p", config_310p);
-        this->AICore().AddConfig("kirinx90", config_310p);
-        this->AICore().AddConfig("kirin9030", config_310p);
+        this->AICore().AddConfig("ascend310p", inplaceConfig310p);
+        this->AICore().AddConfig("kirinx90", inplaceConfig310p);
+        this->AICore().AddConfig("kirin9030", inplaceConfig310p);
 
         OpAICoreConfig config_950;
         config_950.Input("x1")

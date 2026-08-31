@@ -39,7 +39,7 @@ constexpr int32_t DEEP_NORM_OUTPUT_Y_INDEX = 2;
 
 inline ge::graphStatus CheckDeepNormShapeDim(const gert::TilingContext* context)
 {
-    const gert::StorageShape* xShape = context->GetInputShape(DEEP_NORM_INPUT_X_INDEX);
+    const gert::StorageShape* deepXShape = context->GetInputShape(DEEP_NORM_INPUT_X_INDEX);
     const gert::StorageShape* gxShape = context->GetInputShape(DEEP_NORM_INPUT_GX_INDEX);
     const gert::StorageShape* betaShape = context->GetInputShape(DEEP_NORM_INPUT_BETA_INDEX);
     const gert::StorageShape* gammaShape = context->GetInputShape(DEEP_NORM_INPUT_GAMMA_INDEX);
@@ -47,7 +47,7 @@ inline ge::graphStatus CheckDeepNormShapeDim(const gert::TilingContext* context)
     const gert::StorageShape* rstdShape = context->GetOutputShape(DEEP_NORM_OUTPUT_RSTD_INDEX);
     const gert::StorageShape* yShape = context->GetOutputShape(DEEP_NORM_OUTPUT_Y_INDEX);
 
-    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, deepXShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, gxShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
@@ -55,7 +55,7 @@ inline ge::graphStatus CheckDeepNormShapeDim(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    size_t xDimNum = xShape->GetStorageShape().GetDimNum();
+    size_t xDimNum = deepXShape->GetStorageShape().GetDimNum();
     size_t gxDimNum = gxShape->GetStorageShape().GetDimNum();
     size_t betaDimNum = betaShape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();

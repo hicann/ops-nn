@@ -343,8 +343,8 @@ aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(const aclTensor* self, const a
         auto castOut = l0op::Cast(updateOut, out->GetDataType(), uniqueExecutor.get());
         CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto linalgViewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
+        CHECK_RET(linalgViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

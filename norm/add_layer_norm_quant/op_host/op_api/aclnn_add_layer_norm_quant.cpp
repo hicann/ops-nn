@@ -52,12 +52,12 @@ static inline bool CheckPlatform()
     return true;
 }
 
-static inline bool CheckOptInputDtype(const aclTensor* tensorPtr, op::DataType dtype)
+static inline bool CheckOptInputDtype(const aclTensor* quantTensor, op::DataType quantDtype)
 {
-    if (tensorPtr == nullptr) {
+    if (quantTensor == nullptr) {
         return true;
     }
-    OP_CHECK_DTYPE_NOT_MATCH(tensorPtr, dtype, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(quantTensor, quantDtype, return false);
     return true;
 }
 
