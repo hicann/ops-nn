@@ -2349,6 +2349,11 @@ static bool Is1x1DwTransToMm(const ConvolutionBackwardInputTensor& inputTensor, 
     }
     op::Shape weightShape = inputTensor.weight->GetViewShape();
     // 5D NCDHW weight + 1x1x1 kernel
+    if (inputTensor.gradOutput->GetStorageFormat() != op::Format::FORMAT_NCDHW ||
+        inputTensor.input->GetStorageFormat() != op::Format::FORMAT_NCDHW ||
+        inputTensor.weight->GetStorageFormat() != op::Format::FORMAT_NCDHW) {
+        return false;
+    }
     if (weightShape.GetDimNum() != CONV3DINPUTDIM || weightShape[dDimNCDHWIdx] != 1 || weightShape[hDimNCDHWIdx] != 1 ||
         weightShape[wDimNCDHWIdx] != 1) {
         return false;
