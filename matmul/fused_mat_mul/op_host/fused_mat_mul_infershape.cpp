@@ -190,7 +190,7 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
                             (dim_a != kMatmulV2MaxShapeSize ||
                              (shape_c->GetDim(0) != 1 && shape_c->GetDim(0) != shape_a->GetDim(0)) ||
                              a_m != shape_c->GetDim(1) || b_n != shape_c->GetDim(kMatMulX3Idx)),
-                        CUBE_INNER_ERR_REPORT(op_name, "The shape c(%ld, %ld, %ld) is illgeal!", shape_c->GetDim(0),
+                        CUBE_INNER_ERR_REPORT(op_name, "The shape c(%ld, %ld, %ld) is illegal!", shape_c->GetDim(0),
                                               shape_c->GetDim(1), shape_c->GetDim(kMatMulX3Idx)),
                         return ge::GRAPH_FAILED);
         }

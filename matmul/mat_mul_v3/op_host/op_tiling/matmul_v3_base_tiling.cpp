@@ -980,7 +980,7 @@ bool MatmulV3BaseTiling::GetTilingInputArgs(std::shared_ptr<void>& inputArgs, si
     try {
         matmulInputArgs = std::make_shared<tuningtiling::MatMulV3InputArgs>();
     } catch (const std::bad_alloc&) {
-        OP_LOGI(args_.opName, "get tiling from repo error: input args is nullptr.");
+        OP_LOGE(args_.opName, "get tiling from repo error: input args is nullptr.");
         return false;
     }
 

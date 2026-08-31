@@ -78,7 +78,7 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
         .append(std::to_string(outputDataType));
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
     if (err != 0) {
-        std::cerr << "Error: strcat_s failed with error code " << err << std::endl;
+        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "strcat_s failed with error code %d.", err);
         return ge::GRAPH_FAILED;
     }
 

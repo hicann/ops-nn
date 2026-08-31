@@ -9,34 +9,43 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-import ml_dtypes
 import numpy as np
 from ml_dtypes import bfloat16, float8_e5m2, float8_e4m3fn
 
 __golden__ = {
-    "kernel": {
-        "transpose_quant_batch_mat_mul": "transpose_quant_batch_mat_mul_golden"
-    },
+    "kernel": {"transpose_quant_batch_mat_mul": "transpose_quant_batch_mat_mul_golden"},
     "e2e": {
         "torch_npu.npu_transpose_quant_batchmatmul": "torch_npu_npu_transpose_quant_batchmatmul_golden"
-    }
+    },
 }
 
 _DTYPE_ATTR_MAP = {1: np.float16, 27: bfloat16}
 
 _FRACTAL_DIMS = {
-    "float16":  (16, 16),
+    "float16": (16, 16),
     "bfloat16": (16, 16),
-    "float32":  (16, 8),
+    "float32": (16, 8),
 }
 
 
-def customize_inputs(x1, x2, bias=None, x1_scale=None, x2_scale=None, *,
-                     dtype=1, group_size=0, perm_x1=(1, 0, 2), perm_x2=(0, 1, 2),
-                     perm_y=(1, 0, 2), batch_split_factor=1, **kwargs):
-    input_formats = kwargs.get('input_formats', ())
-    input_ori_shapes = kwargs.get('input_ori_shapes', ())
-    if len(input_formats) > 1 and input_formats[1] == 'FRACTAL_NZ':
+def customize_inputs(
+    x1,
+    x2,
+    bias=None,
+    x1_scale=None,
+    x2_scale=None,
+    *,
+    dtype=1,
+    group_size=0,
+    perm_x1=(1, 0, 2),
+    perm_x2=(0, 1, 2),
+    perm_y=(1, 0, 2),
+    batch_split_factor=1,
+    **kwargs,
+):
+    input_formats = kwargs.get("input_formats", ())
+    input_ori_shapes = kwargs.get("input_ori_shapes", ())
+    if len(input_formats) > 1 and input_formats[1] == "FRACTAL_NZ":
         x2_dtype_str = _dtype_to_str(x2.dtype)
         ori_shape = input_ori_shapes[1] if len(input_ori_shapes) > 1 else None
         x2 = _nz_to_nd(x2, x2_dtype_str, ori_shape)
@@ -47,15 +56,35 @@ def pre_compare(*outputs, **kwargs):
     return list(outputs)
 
 
-def transpose_quant_batch_mat_mul_golden(x1, x2, bias=None, x1_scale=None,
-                                          x2_scale=None, *, dtype=1, group_size=0,
-                                          perm_x1=(1, 0, 2), perm_x2=(0, 1, 2),
-                                          perm_y=(1, 0, 2), batch_split_factor=1,
-                                          **kwargs):
+def transpose_quant_batch_mat_mul_golden(
+    x1,
+    x2,
+    bias=None,
+    x1_scale=None,
+    x2_scale=None,
+    *,
+    dtype=1,
+    group_size=0,
+    perm_x1=(1, 0, 2),
+    perm_x2=(0, 1, 2),
+    perm_y=(1, 0, 2),
+    batch_split_factor=1,
+    **kwargs,
+):
     x1, x2, bias, x1_scale, x2_scale = customize_inputs(
-        x1, x2, bias, x1_scale, x2_scale,
-        dtype=dtype, group_size=group_size, perm_x1=perm_x1, perm_x2=perm_x2,
-        perm_y=perm_y, batch_split_factor=batch_split_factor, **kwargs)
+        x1,
+        x2,
+        bias,
+        x1_scale,
+        x2_scale,
+        dtype=dtype,
+        group_size=group_size,
+        perm_x1=perm_x1,
+        perm_x2=perm_x2,
+        perm_y=perm_y,
+        batch_split_factor=batch_split_factor,
+        **kwargs,
+    )
 
     x1_f32 = x1.astype(np.float32)
     x2_f32 = x2.astype(np.float32)
@@ -141,7 +170,6 @@ def _mxfp8_matmul(x1, x2, x1_scale, x2_scale):
 
 
 class TransposeQuantBatchMatMulAssets:
-
     golden = transpose_quant_batch_mat_mul_golden
     customize_inputs = customize_inputs
     pre_compare = pre_compare
@@ -188,7 +216,12 @@ def _nz_to_nd(data, dtype_str, ori_shape=None):
     m0, n0 = _FRACTAL_DIMS.get(dtype_str, (16, 16))
     shape = data.shape
     batch_dims = len(shape) - 4
-    perm = list(range(batch_dims)) + [batch_dims + 1, batch_dims + 2, batch_dims + 0, batch_dims + 3]
+    perm = list(range(batch_dims)) + [
+        batch_dims + 1,
+        batch_dims + 2,
+        batch_dims + 0,
+        batch_dims + 3,
+    ]
     data = np.transpose(data, perm)
     m1 = shape[batch_dims + 1]
     m0_actual = shape[batch_dims + 2]
@@ -204,10 +237,22 @@ def _nz_to_nd(data, dtype_str, ori_shape=None):
 
 # ===== E2E golden (torch-based, retained for e2e mode) =====
 
-def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None, x1_scale=None,
-                                                     x2_scale=None, group_sizes=None, perm_x1=None,
-                                                     perm_x2=None, perm_y=None, batch_split_factor=None, **kwargs):
-    import torch
+
+def torch_npu_npu_transpose_quant_batchmatmul_golden(
+    x1,
+    x2,
+    dtype,
+    *,
+    bias=None,
+    x1_scale=None,
+    x2_scale=None,
+    group_sizes=None,
+    perm_x1=None,
+    perm_x2=None,
+    perm_y=None,
+    batch_split_factor=None,
+    **kwargs,
+):
     x1 = _torch_to_numpy(x1)
     x2 = _torch_to_numpy(x2)
     bias = _torch_to_numpy(bias)
@@ -216,11 +261,13 @@ def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None
     x1_dtype = str(x1.dtype)
     x2_dtype = str(x2.dtype)
     x1_scale_dtype = ""
-    if isinstance(x1_scale, torch.Tensor):
+    if x1_scale is not None:
         x1_scale_dtype = str(x1_scale.dtype)
-    pertoken_flag = (x1_scale is not None
-                     and x1_dtype in ("int8", "float8_e4m3fn", "float8_e5m2")
-                     and x1_scale_dtype in ("float32",))
+    pertoken_flag = (
+        x1_scale is not None
+        and x1_dtype in ("int8", "float8_e4m3fn", "float8_e5m2")
+        and x1_scale_dtype in ("float32",)
+    )
 
     x1 = _transpose_(x1, perm_x1)
     x2 = _transpose_(x2, perm_x2)
@@ -228,7 +275,9 @@ def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None
     x1 = _x_dtype_cope(x1, x1_dtype)
     x2 = _x_dtype_cope(x2, x2_dtype)
     if pertoken_flag:
-        out = _pertoken_calculation(x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=False, output_dtype=dtype)
+        out = _pertoken_calculation(
+            x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=False, output_dtype=dtype
+        )
     else:
         raise TypeError("Please check whether this quantitative method is supported")
     out = _transpose_(out, perm_y)
@@ -236,16 +285,21 @@ def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None
     return out
 
 
-def _pertoken_calculation(x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=False, output_dtype=2):
+def _pertoken_calculation(
+    x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=False, output_dtype=2
+):
     import torch
+
     x1 = torch.from_numpy(x1)
     x2 = torch.from_numpy(x2)
     out = torch.matmul(x1, x2)
     if bias is not None:
         bias = torch.from_numpy(bias)
-    if bias is not None and (bias.dtype == "int32" or (bias.dtype == "float32" and not is_bias_epilogue)):
+    if bias is not None and (
+        bias.dtype == "int32" or (bias.dtype == "float32" and not is_bias_epilogue)
+    ):
         out = torch.add(out, bias)
-    out = (out * x2_scale.astype(np.float32))
+    out = out * x2_scale.astype(np.float32)
 
     x1_scale = torch.from_numpy(x1_scale)
     pertoken_scale_slice = torch.unsqueeze(x1_scale, dim=1).to(torch.float32)
@@ -258,7 +312,13 @@ def _pertoken_calculation(x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=Fal
 
 
 def _x_dtype_cope(x, x_dtype):
-    if x_dtype in ("float8_e4m3fn", "float8_e5m2", "float4_e2m1", "float4_e1m2", "hifloat8"):
+    if x_dtype in (
+        "float8_e4m3fn",
+        "float8_e5m2",
+        "float4_e2m1",
+        "float4_e1m2",
+        "hifloat8",
+    ):
         x = x.astype(np.float32)
     else:
         x = x.astype(np.int32)
@@ -267,6 +327,7 @@ def _x_dtype_cope(x, x_dtype):
 
 def _transpose_(x, array_trans_x):
     import torch
+
     if isinstance(x, torch.Tensor):
         x = torch.permute(x, array_trans_x)
     elif isinstance(x, np.ndarray):
@@ -278,6 +339,7 @@ def _transpose_(x, array_trans_x):
 
 def _out_dtype_cope(out, output_dtype):
     import torch
+
     if output_dtype == torch.float32:
         out = out.astype(np.float32)
     elif output_dtype == torch.float16:
@@ -298,6 +360,7 @@ def _out_dtype_cope(out, output_dtype):
 
 def _torch_to_numpy(x):
     import torch
+
     if isinstance(x, torch.Tensor):
         if x.dtype == torch.float8_e5m2:
             x = x.to(torch.float32).numpy().astype(float8_e5m2)

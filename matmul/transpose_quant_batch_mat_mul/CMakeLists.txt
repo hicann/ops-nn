@@ -27,7 +27,7 @@ add_kernel_sources(
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(
         "ascend950pr_9599"
-        "-DKFC_L1_RESERVER_SIZE=0 -D__fp8e4m3=float8_e4m3_t -D__fp4e2m1x2=int8_t -D__fp8e8m0=float8_e8m0_t -DDTYPE_X1=float8_e4m3_t -DDTYPE_X2=float8_e4m3_t -DDTYPE_X1_SCALE=float -DDTYPE_X2_SCALE=float  -DDTYPE_Y=half"
+        "-DKFC_L1_RESERVER_SIZE=0 -D__fp8e4m3=fp8_e5m2_t -D__fp4e2m1x2=int8_t -D__fp8e8m0=fp8_e8m0_t -DDTYPE_X1=fp8_e5m2_t -DDTYPE_X2=fp8_e5m2_t -DDTYPE_X1_SCALE=float -DDTYPE_X2_SCALE=float  -DDTYPE_Y=half"
         mat_mul_v3 batch_mat_mul_v3 quant_batch_matmul_v3
     )
     add_custom_target(tqbmm_stub_mx_h

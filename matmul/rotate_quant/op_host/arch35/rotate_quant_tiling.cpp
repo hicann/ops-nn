@@ -385,8 +385,8 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
     const auto& rotShape = context_->GetInputShape(ROT_INDEX)->GetStorageShape();
 
     OP_TILING_CHECK(xShape.GetDimNum() < MIN_X_DIM_NUM || xShape.GetDimNum() > MAX_X_DIM_NUM,
-                    OP_LOGE(inputParams_.opName, "Input x rank[%zu] should be in [%d, %d].", MIN_X_DIM_NUM,
-                            MAX_X_DIM_NUM, xShape.GetDimNum()),
+                    OP_LOGE(inputParams_.opName, "Input x rank[%zu] should be in [%d, %d].", xShape.GetDimNum(),
+                            MIN_X_DIM_NUM, MAX_X_DIM_NUM),
                     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
