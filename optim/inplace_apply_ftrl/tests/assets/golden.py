@@ -35,6 +35,8 @@ def _to_scalar(x):
 
 
 def _np_to_tf_dtype(np_dtype):
+    if np_dtype == np.dtype(np.float64):
+        return tf.float64
     if np_dtype == np.dtype(np.float32):
         return tf.float32
     if np_dtype == np.dtype(np.float16):
@@ -77,26 +79,45 @@ def _compute(var, accum, linear, grad, lr, l1, l2, lr_power, tf_dtype):
 def inplace_apply_ftrl_golden(var, accum, linear, grad, lr, l1, l2, lr_power, **kwargs):
     """FTRL-Proximal V1 就地更新 golden.
 
-    FP16/BF16 输入在计算前统一升精度到 FP32，计算完成后降回原精度。
-    返回 [var_new, accum_new, linear_new].
+    FP16/BF16 输入在计算前统一升精度到 FP32；其余 dtype（含 TTK Promote
+    升上来的 FP64/FP32）按传入精度直接计算，不做降级。计算完成后降回
+    调用方期望的输出 dtype。返回 [var_new, accum_new, linear_new].
     """
     if tf is None:
         raise RuntimeError("tensorflow is required for InplaceApplyFtrl golden")
 
     out_dtype = var.dtype
+    calc_dtype = var.dtype
 
-    if out_dtype != np.dtype(np.float32):
-        var = var.astype(np.float32)
-        accum = accum.astype(np.float32)
-        linear = linear.astype(np.float32)
-        grad = grad.astype(np.float32)
-        lr = np.asarray(lr).astype(np.float32)
-        l1 = np.asarray(l1).astype(np.float32)
-        l2 = np.asarray(l2).astype(np.float32)
-        lr_power = np.asarray(lr_power).astype(np.float32)
+    # 仅 FP16/BF16 升精到 FP32；FP32/FP64 保持原样（尊重 TTK Promote 的升精结果）
+    if calc_dtype in (np.dtype(np.float16),):
+        calc_dtype = np.dtype(np.float32)
+    else:
+        try:
+            from ml_dtypes import bfloat16 as _bf16
+
+            if calc_dtype == np.dtype(_bf16):
+                calc_dtype = np.dtype(np.float32)
+        except ImportError:
+            pass
+        # numpy 侧 bfloat16 以 2 字节 void(V) 形式出现
+        if calc_dtype.kind == "V" and calc_dtype.itemsize == 2:
+            calc_dtype = np.dtype(np.float32)
+
+    if calc_dtype != var.dtype:
+        var = var.astype(calc_dtype)
+        accum = accum.astype(calc_dtype)
+        linear = linear.astype(calc_dtype)
+        grad = grad.astype(calc_dtype)
+        lr = np.asarray(lr).astype(calc_dtype)
+        l1 = np.asarray(l1).astype(calc_dtype)
+        l2 = np.asarray(l2).astype(calc_dtype)
+        lr_power = np.asarray(lr_power).astype(calc_dtype)
+
+    tf_dtype = _np_to_tf_dtype(calc_dtype)
 
     var_new, accum_new, linear_new = _compute(
-        var, accum, linear, grad, lr, l1, l2, lr_power, tf.float32
+        var, accum, linear, grad, lr, l1, l2, lr_power, tf_dtype
     )
 
     return [
@@ -158,13 +179,11 @@ class InplaceApplyFtrlTestSpec:
     """InplaceApplyFtrl kernel TestSpec (GEIR pathway)."""
 
     golden = staticmethod(inplace_apply_ftrl_golden)
-    third_party = {"geir": _TfInplaceApplyFtrl}
+    third_party = {"tf": _TfInplaceApplyFtrl}
     tolerance = {
-        "geir": {
-            "float32": {"standard": "stat_rel_err"},
-            "float16": {"standard": "stat_rel_err"},
-            "bfloat16": {"standard": "stat_rel_err"},
-        }
+        "float32": {"standard": "cross_check", "level": "L1"},
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "bfloat16": {"standard": "cross_check", "level": "L1"},
     }
 
 

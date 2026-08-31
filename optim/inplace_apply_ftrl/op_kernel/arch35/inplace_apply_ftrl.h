@@ -57,6 +57,7 @@ constexpr bool ENABLE_PAD = true;
 constexpr uint32_t NO_PAD_LEN = 0;
 
 constexpr float POW_FLOOR_EPS = 1e-30f; // Power-floor guard: |n| + eps before Ln
+constexpr PowerConfig FTRL_POW_HIGH_PRECISION = {PowerAlgo::DOUBLE_FLOAT_TECH};
 constexpr float ZERO_F = 0.0f;
 constexpr float ONE_F = 1.0f;
 constexpr float NEG_ONE_F = -1.0f;
@@ -393,8 +394,10 @@ __aicore__ inline void InplaceApplyFtrl<T>::ComputePow(int32_t n)
         Adds(tmpB_, tmpB_, POW_FLOOR_EPS, n);
         Sqrt(tmpB_, tmpB_, n);
     } else {
-        Power(powNew_, accumNew_, negLrPower_, static_cast<uint32_t>(n));
-        Power(tmpB_, srcAccum_, negLrPower_, static_cast<uint32_t>(n));
+        // High-precision pow (double-float tech) for non-special lr_power paths.
+        // Tensors are fp32 regardless of the T template parameter, so use float explicitly.
+        Power<float, false, FTRL_POW_HIGH_PRECISION>(powNew_, accumNew_, negLrPower_, static_cast<uint32_t>(n));
+        Power<float, false, FTRL_POW_HIGH_PRECISION>(tmpB_, srcAccum_, negLrPower_, static_cast<uint32_t>(n));
     }
 }
 
