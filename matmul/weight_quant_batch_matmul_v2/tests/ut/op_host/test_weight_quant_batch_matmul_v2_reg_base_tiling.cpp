@@ -606,7 +606,15 @@ static ge::graphStatus RunRegBaseTiling(int64_t m, int64_t k, int64_t n, int64_t
     tilingParseFunc(kernelHold.GetContext<gert::KernelContext>());
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
-    return tilingFunc(tilingContext);
+    auto status = tilingFunc(tilingContext);
+
+    // Also directly exercise RegBase DoTiling + PrintCVTilingData(false) to cover DumpCVTilingDataToLog
+    // (OPS_LOG_E branch evaluates arguments, unlike OPS_LOG_D which is gated by CheckLogLevel)
+    auto regBaseTiling = optiling::WeightQuantBatchMatmulV2RegBase(tilingContext);
+    if (regBaseTiling.DoTiling() == ge::GRAPH_SUCCESS) {
+        regBaseTiling.PrintCVTilingData(false);
+    }
+    return status;
 }
 
 TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_int8_nz_not_transpose)
@@ -817,4 +825,11 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_reg_base_reject_int8_outp
     auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 1, 32, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
                                    ge::DT_INT8, 32, 64, 0);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_print_cv_tiling_data_error_level)
+{
+    auto status = RunRegBaseTiling(8, 8192, 512, 1, 0, 0, 0, 256, ge::DT_FLOAT16, ge::DT_INT4, ge::DT_UINT64,
+                                   ge::DT_FLOAT16, 32, 64, 0);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
 }
