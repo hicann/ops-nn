@@ -23,8 +23,8 @@
 namespace BNGV3RARRecomputeSplitR0 {
 using namespace AscendC;
 using namespace BatchNormGradV3;
-static constexpr int64_t UB_ADD_BUF = 3 * 1024;              // ub间二分累加固定buf
-static constexpr uint32_t UB_ADD_LEN = 1024 / sizeof(float); // ub内二分累加每级存放个数
+static constexpr uint32_t UB_ADD_LEN = 4 * VL_FP32;                   // ub内二分累加每级存放个数
+static constexpr int64_t UB_ADD_BUF = 3 * UB_ADD_LEN * sizeof(float); // ub间二分累加固定buf
 
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RARRecomputeSplitR0 {

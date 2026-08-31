@@ -37,7 +37,7 @@ constexpr int64_t BINARY_ADD_COEF = 2;
 constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
 constexpr int64_t WSP_RESERVED_SIZE = 16L * 1024L * 1024L;
 constexpr int64_t MEAN_AND_VAR_NODE_NUM = 2;
-constexpr int64_t FIRST_VCADD_RESULT_MAX_NUM = 128;
+constexpr int64_t FIRST_VCADD_RESULT_VL_MULTIPLE = 2;
 } // namespace
 
 static int64_t FindBinaryQuotient(int64_t len)
@@ -241,8 +241,8 @@ ge::graphStatus BatchNormRARBlockSplitRTiling::DoOpTiling()
     int64_t blockDimAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) *
                                 FP32_BYTE;
     int64_t tmpbuffer3AlignSize = std::max(static_cast<int64_t>(aicoreParams_.blockDim) * patternAAlign,
-                                           static_cast<int64_t>(
-                                               Ops::Base::CeilAlign(FIRST_VCADD_RESULT_MAX_NUM, fp32EleNumPerBlock))) *
+                                           static_cast<int64_t>(Ops::Base::CeilAlign(
+                                               FIRST_VCADD_RESULT_VL_MULTIPLE * vlFp32_, fp32EleNumPerBlock))) *
                                   FP32_BYTE;
 
     OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling DoOpTiling: runningMeanVarSize is %lu !",

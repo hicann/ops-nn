@@ -25,15 +25,15 @@ using namespace AscendC;
 
 constexpr uint32_t DIGIT_TWO = 2;
 constexpr uint32_t DIGIT_THREE = 3;
-constexpr uint32_t CACHE_BUFF_SIZE = 6 * 1024 + 2 * 256;
-constexpr uint32_t DGAMA_CACHE_INDEX = 768;
+constexpr uint32_t CACHE_BUFF_SIZE = 6 * 1024 + 2 * VECTOR_LENGTH;
+constexpr uint32_t DGAMA_CACHE_INDEX = 3 * VECTOR_LENGTH;
 constexpr uint32_t CACHE_LEVEL0_INDEX = 0;
-constexpr uint32_t CACHE_LEVEL1_INDEX = 256;
-constexpr uint32_t CACHE_LEVEL2_INDEX = 512;
-constexpr uint32_t DBETA_FOLD_CACHE_INDEX = 1536;
-constexpr uint32_t DGAMA_FOLD_CACHE_INDEX = 1536 + 64;
-constexpr uint32_t FOLD_CACHE_CAPACITY = 64;
-constexpr uint32_t ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY = 256;
+constexpr uint32_t CACHE_LEVEL1_INDEX = VECTOR_LENGTH;
+constexpr uint32_t CACHE_LEVEL2_INDEX = 2 * VECTOR_LENGTH;
+constexpr uint32_t DBETA_FOLD_CACHE_INDEX = 6 * VECTOR_LENGTH;
+constexpr uint32_t DGAMA_FOLD_CACHE_INDEX = 6 * VECTOR_LENGTH + VL_FP32;
+constexpr uint32_t FOLD_CACHE_CAPACITY = VL_FP32;
+constexpr uint32_t ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY = VECTOR_LENGTH;
 
 using BinaryAddParam = struct BNGBinaryAddParam {
     uint32_t binaryAddQuotient = 0;

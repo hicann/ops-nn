@@ -1081,7 +1081,7 @@ private:
     static constexpr uint32_t ROW_FOUR_OFFSET = 4;
     static constexpr int32_t NUM_ONE = 1;
     static constexpr int32_t NUM_TWO = 2;
-    static constexpr uint32_t FIRST_VCADD_RESULT_MAX_NUM = 128;
+    static constexpr uint32_t FIRST_VCADD_RESULT_MAX_NUM = 2 * VL_F32;
     /* ascendc variable */
     TQue<QuePosition::VECIN, 1> xQueue;
     TQue<QuePosition::VECIN, 1> gammaQueue;

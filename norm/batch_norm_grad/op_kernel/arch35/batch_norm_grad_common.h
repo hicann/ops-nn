@@ -42,15 +42,15 @@ static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
 
 static constexpr uint32_t DIGIT_TWO = 2;
 static constexpr uint32_t DIGIT_THREE = 3;
-static constexpr uint32_t CACHE_BUFF_SIZE = 6 * 1024 + 2 * 256;
-static constexpr uint32_t DGAMA_CACHE_INDEX = 768;
+static constexpr uint32_t CACHE_BUFF_SIZE = 6 * 1024 + 2 * VECTOR_LENGTH;
+static constexpr uint32_t DGAMA_CACHE_INDEX = 3 * VECTOR_LENGTH;
 static constexpr uint32_t CACHE_LEVEL0_INDEX = 0;
-static constexpr uint32_t CACHE_LEVEL1_INDEX = 256;
-static constexpr uint32_t CACHE_LEVEL2_INDEX = 512;
-static constexpr uint32_t DBETA_FOLD_CACHE_INDEX = 1536;
-static constexpr uint32_t DGAMA_FOLD_CACHE_INDEX = 1536 + 64;
-static constexpr uint32_t FOLD_CACHE_CAPACITY = 64;
-static constexpr uint32_t ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY = 256;
+static constexpr uint32_t CACHE_LEVEL1_INDEX = VECTOR_LENGTH;
+static constexpr uint32_t CACHE_LEVEL2_INDEX = 2 * VECTOR_LENGTH;
+static constexpr uint32_t DBETA_FOLD_CACHE_INDEX = 6 * VECTOR_LENGTH;
+static constexpr uint32_t DGAMA_FOLD_CACHE_INDEX = 6 * VECTOR_LENGTH + VL_FP32;
+static constexpr uint32_t FOLD_CACHE_CAPACITY = VL_FP32;
+static constexpr uint32_t ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY = VECTOR_LENGTH;
 
 using BinaryAddParam = struct BNGBinaryAddParam {
     uint32_t binaryAddQuotient = 0;

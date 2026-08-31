@@ -49,14 +49,7 @@ constexpr static int64_t DICHOTOMY_ADD_COEFF = 2;
 
 __aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
-__aicore__ inline constexpr uint32_t GetVRegSize()
-{
-#if __CCE_AICORE__ == 310 || __NPU_ARCH == 5102
-    return AscendC::VECTOR_REG_WIDTH;
-#else
-    return 256U;
-#endif
-}
+__aicore__ inline constexpr uint32_t GetVRegSize() { return AscendC::VECTOR_REG_WIDTH; }
 
 template <typename T>
 __aicore__ inline T FloorDiv(T a, T b)
