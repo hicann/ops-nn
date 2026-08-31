@@ -195,11 +195,15 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL1IterBatch()
             }
             --candidate;
         }
-        iterBatchL1_ = candidate;
+        // prefer factor of iterBatchCandidate for uniform tiling; otherwise keep iterBatchL1_
+        // and kernel splits tiles by batchUnit boundary with remainder segments, and still no less than 2
+        if (candidate >= 2UL) {
+            iterBatchL1_ = candidate;
+        }
     }
     // iterBatchL1 expected to be no less than 2
     if (iterBatchL1_ < 2UL) {
-        OP_LOGD(args_.opName, "[iterbatch_broadcast_basicapi] iterBatchL1 < 2 after contiguity constraint.");
+        OP_LOGD(args_.opName, "[iterbatch_broadcast_basicapi] iterBatchL1 < 2 after candidate selection.");
         return false;
     }
     return true;
@@ -212,9 +216,7 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL0IterBatch()
     iterBatchL0C_ = ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE, sizeCOneBatch_);
     uint64_t iterBatchL0AWithoutDB = ops::FloorDiv(compileInfo_.l0ASize, sizeAOneBatch_);
     uint64_t iterBatchL0BWithoutDB = ops::FloorDiv(compileInfo_.l0BSize, sizeBOneBatch_);
-    l0CanLoadBatch_ = (std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_}) >= 1UL) ||
-                      (iterBatchL0AWithoutDB >= 1 && iterBatchL0BWithoutDB >= 1 &&
-                       iterBatchL0C_ > 1); // try to reduce fixpipe instr
+    l0CanLoadBatch_ = std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_}) >= 1UL; // try to reduce fixpipe instr
     constexpr static double defaultBalanceOfBatch = 0.8;
     if (!l0CanLoadBatch_) {
         double avgIterBatch = static_cast<double>(batchInfo_->batchC) / static_cast<double>(compileInfo_.aicNum);
@@ -227,6 +229,27 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL0IterBatch()
         }
     }
     return true;
+}
+
+bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckFullLoad() const
+{
+    bool isBroadcastA = broadcastAxisA_ < MAX_BATCH_DIM;
+    uint64_t alignMatASize = batchInfo_->batchA * alignMValue_ * alignKValue_ * args_.aDtypeSize;
+    uint64_t alignMatBSize = batchInfo_->batchB * alignKValue_ * alignNValue_ * args_.bDtypeSize;
+    if (!l0CanLoadBatch_) {
+        return false;
+    }
+    if (isBroadcastA && batchInfo_->batchA == 1UL) {
+        return args_.mValue <= BASIC_BLOCK_SIZE_256 && alignMatASize * DB_SIZE <= compileInfo_.l1Size &&
+               (alignMatBSize >= compileInfo_.l1Size * compileInfo_.aicNum ||
+                batchInfo_->batchB * ops::CeilDiv(args_.nValue, BASIC_BLOCK_SIZE_256) >= 4UL * compileInfo_.aicNum);
+    }
+    if (!isBroadcastA && batchInfo_->batchB == 1UL) {
+        return args_.nValue <= BASIC_BLOCK_SIZE_256 && alignMatBSize * DB_SIZE <= compileInfo_.l1Size &&
+               (alignMatASize >= compileInfo_.l1Size * compileInfo_.aicNum ||
+                batchInfo_->batchA * ops::CeilDiv(args_.mValue, BASIC_BLOCK_SIZE_256) >= 4UL * compileInfo_.aicNum);
+    }
+    return false;
 }
 
 bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsCapable()
@@ -256,6 +279,10 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsCapable()
     if (!CheckL1IterBatch() || !CheckL0IterBatch()) {
         return false;
     }
+    if (CheckFullLoad()) {
+        OP_LOGD(args_.opName, "[iterbatch_broadcast_basicapi] choose full-load strategy");
+        return false;
+    }
     OP_LOGI(args_.opName, "Enter BatchMatmul basicapi iterbatch_broadcast module.");
     return true;
 }
@@ -274,7 +301,15 @@ ge::graphStatus BatchMatMulV3IterBatchBroadcastBasicApiTiling::DoOpTiling()
         runInfo_.baseN = alignNValue_;
         runInfo_.baseK = alignKValue_;
     } else {
-        if ((alignMValue_ < alignNValue_) && (alignMValue_ > alignKValue_)) {
+        if (alignMValue_ * alignNValue_ <= compileInfo_.l0CSize / DB_SIZE / NUM_FOUR &&
+            std::max(alignMValue_, alignNValue_) * BASIC_BLOCK_SIZE_16 <=
+                compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize) {
+            runInfo_.baseM = alignMValue_;
+            runInfo_.baseN = alignNValue_;
+            runInfo_.baseK = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize,
+                                                    std::max(runInfo_.baseM, runInfo_.baseN)),
+                                      alignKValue_);
+        } else if ((alignMValue_ < alignNValue_) && (alignMValue_ > alignKValue_)) {
             runInfo_.baseK = alignKValue_;
             runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
                                       alignMValue_);

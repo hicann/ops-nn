@@ -18,7 +18,7 @@ using namespace matmul_v3_advanced;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 class BatchMatMulV3IterBatchBroadcastBasicApiTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3IterBatchBroadcastBasicApiTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
+    BatchMatMulV3IterBatchBroadcastBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
         : MatMulV3BaseTiling(context, cfg) {};
 
     ~BatchMatMulV3IterBatchBroadcastBasicApiTiling() override {};
@@ -57,8 +57,9 @@ private:
     bool CheckNonBroadcastAxisMatch() const;
     bool CheckL1IterBatch();
     bool CheckL0IterBatch();
+    bool CheckFullLoad() const;
     uint64_t GetABatchDim(int32_t idx) const;
     uint64_t GetBBatchDim(int32_t idx) const;
 };
-}
-}
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling
