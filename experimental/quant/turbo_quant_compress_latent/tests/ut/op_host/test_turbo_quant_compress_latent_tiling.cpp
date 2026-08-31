@@ -32,12 +32,13 @@ using namespace ge;
 using namespace ut_util;
 
 namespace {
-constexpr size_t TILING_FIELD_NUM = 5;
+constexpr size_t TILING_FIELD_NUM = 6;
 constexpr size_t IDX_NUM_TOKENS = 0;
 constexpr size_t IDX_TOKENS_PER_CORE = 1;
 constexpr size_t IDX_HEAD_DIM = 2;
 constexpr size_t IDX_SLOT_SIZE = 3;
 constexpr size_t IDX_TOKENS_PER_BATCH = 4;
+constexpr size_t IDX_OUTPUT_MODE = 5;
 } // namespace
 
 class TurboQuantCompressLatentTiling : public testing::Test {
@@ -53,7 +54,7 @@ struct TilingResult {
     uint32_t fields[TILING_FIELD_NUM];
 };
 
-static TilingResult RunTiling(int64_t numTokens, int64_t headDim, int64_t centCount)
+static TilingResult RunTiling(int64_t numTokens, int64_t headDim, int64_t centCount, int64_t outputMode = 0)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -96,8 +97,8 @@ static TilingResult RunTiling(int64_t numTokens, int64_t headDim, int64_t centCo
 
     gert::StorageShape latentShape = {{numTokens, headDim}, {numTokens, headDim}};
     gert::StorageShape centShape = {{centCount}, {centCount}};
-    gert::StorageShape slotShape = {{numTokens, optiling::TqCompressSlotSize(headDim)},
-                                    {numTokens, optiling::TqCompressSlotSize(headDim)}};
+    gert::StorageShape slotShape = {{numTokens, optiling::TqCompressOutputSlotSize(headDim, outputMode)},
+                                    {numTokens, optiling::TqCompressOutputSlotSize(headDim, outputMode)}};
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -113,6 +114,7 @@ static TilingResult RunTiling(int64_t numTokens, int64_t headDim, int64_t centCo
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_UINT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"output_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(outputMode)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -146,6 +148,7 @@ static void ExpectValidSplit(const TilingResult& r, int64_t numTokens)
     EXPECT_EQ(r.fields[IDX_NUM_TOKENS], static_cast<uint32_t>(numTokens));
     EXPECT_EQ(r.fields[IDX_HEAD_DIM], 512U);
     EXPECT_EQ(r.fields[IDX_SLOT_SIZE], 320U);
+    EXPECT_EQ(r.fields[IDX_OUTPUT_MODE], 0U);
     EXPECT_GE(r.fields[IDX_TOKENS_PER_CORE], 1U);
     EXPECT_GE(r.blockDim, 1U);
     // the last core must not be fully empty, and together the cores must cover every token
@@ -210,4 +213,17 @@ TEST_F(TurboQuantCompressLatentTiling, unsupported_head_dim)
 TEST_F(TurboQuantCompressLatentTiling, wrong_centroid_count)
 {
     EXPECT_EQ(RunTiling(16, 512, 8).status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TurboQuantCompressLatentTiling, compact_corrected)
+{
+    TilingResult r = RunTiling(128, 512, 16, 1);
+    EXPECT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.fields[IDX_SLOT_SIZE], 258U);
+    EXPECT_EQ(r.fields[IDX_OUTPUT_MODE], 1U);
+}
+
+TEST_F(TurboQuantCompressLatentTiling, invalid_output_mode)
+{
+    EXPECT_EQ(RunTiling(16, 512, 16, 2).status, ge::GRAPH_FAILED);
 }

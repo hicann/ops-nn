@@ -17,11 +17,15 @@ N_CENT = 16
 SCALE_BYTES = 2
 SLOT_ALIGN = 64
 SUPPORTED_HEAD_DIM = 512
+OUTPUT_PADDED = 0
+OUTPUT_COMPACT_CORRECTED = 1
 
 
-def slot_size(head_dim):
+def slot_size(head_dim, output_mode=OUTPUT_PADDED):
     """Bytes per compressed slot: packed nibbles + fp16 norm, padded up to SLOT_ALIGN."""
     used = head_dim // 2 + SCALE_BYTES
+    if output_mode == OUTPUT_COMPACT_CORRECTED:
+        return used
     return (used + SLOT_ALIGN - 1) // SLOT_ALIGN * SLOT_ALIGN
 
 
@@ -40,12 +44,14 @@ class TurboQuantCompressLatentOpBuilder(OpBuilder):
         return [self.resolve_source("turbo_quant_compress_latent.cpp")]
 
     def schema(self) -> str:
-        return "turbo_quant_compress_latent(Tensor latent, Tensor centroids) -> Tensor"
+        return "turbo_quant_compress_latent(Tensor latent, Tensor centroids, int output_mode=0) -> Tensor"
 
     def register_meta(self):
         @impl(get_as_library(), self.name, "Meta")
         def turbo_quant_compress_latent_meta(
-            latent: torch.Tensor, centroids: torch.Tensor
+            latent: torch.Tensor,
+            centroids: torch.Tensor,
+            output_mode: int = OUTPUT_PADDED,
         ) -> torch.Tensor:
             torch._check(
                 latent.dim() == 2,
@@ -68,8 +74,14 @@ class TurboQuantCompressLatentOpBuilder(OpBuilder):
                 head_dim == SUPPORTED_HEAD_DIM,
                 lambda: f"headDim only supports {SUPPORTED_HEAD_DIM} for now, but got {head_dim}",
             )
+            torch._check(
+                output_mode in (OUTPUT_PADDED, OUTPUT_COMPACT_CORRECTED),
+                lambda: f"output_mode only supports 0 or 1, but got {output_mode}",
+            )
             return torch.empty(
-                (num_tokens, slot_size(head_dim)), dtype=torch.uint8, device="meta"
+                (num_tokens, slot_size(head_dim, output_mode)),
+                dtype=torch.uint8,
+                device="meta",
             )
 
 
@@ -79,14 +91,15 @@ builder._ensure_initialized()
 
 @impl(get_as_library(), builder.name, "PrivateUse1")
 def turbo_quant_compress_latent(
-    latent: torch.Tensor, centroids: torch.Tensor
+    latent: torch.Tensor, centroids: torch.Tensor, output_mode: int = OUTPUT_PADDED
 ) -> torch.Tensor:
     """
     NPU 上的 TurboQuant latent 压缩
 
     :param latent: [numTokens, headDim] float32，已完成 signed Hadamard 旋转且未归一化
     :param centroids: [16] float32，升序排列的 Lloyd-Max 码本
-    :return: [numTokens, slot_size(headDim)] uint8
+    :param output_mode: 0 生成 64B 对齐的兼容布局；1 生成 DS V4 使用的 258B compact corrected 布局
+    :return: [numTokens, slot_size(headDim, output_mode)] uint8
     """
     op_module = builder.load()
-    return op_module.turbo_quant_compress_latent(latent, centroids)
+    return op_module.turbo_quant_compress_latent(latent, centroids, output_mode)

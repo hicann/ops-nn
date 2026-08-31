@@ -26,6 +26,14 @@ static ge::graphStatus TilingFuncForTurboQuantCompressLatent(gert::TilingContext
     OP_CHECK_NULL_WITH_CONTEXT(context, latentShape);
     const gert::StorageShape* centroidsShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, centroidsShape);
+    const auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const int64_t* outputMode = attrs->GetAttrPointer<int64_t>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputMode);
+    if (*outputMode != TQ_COMPRESS_OUTPUT_PADDED && *outputMode != TQ_COMPRESS_OUTPUT_COMPACT_CORRECTED) {
+        OP_LOGE(context->GetNodeName(), "output_mode only supports 0 or 1, but got %ld", *outputMode);
+        return ge::GRAPH_FAILED;
+    }
 
     const gert::Shape& latent = latentShape->GetStorageShape();
     if (latent.GetDimNum() != TQ_COMPRESS_LATENT_DIM_NUM) {
@@ -66,7 +74,7 @@ static ge::graphStatus TilingFuncForTurboQuantCompressLatent(gert::TilingContext
     uint32_t tokensPerCore = (tokens + coreNum - 1) / coreNum;
     uint32_t blockDim = (tokens + tokensPerCore - 1) / tokensPerCore;
 
-    int64_t slotSize = TqCompressSlotSize(headDim);
+    int64_t slotSize = TqCompressOutputSlotSize(headDim, *outputMode);
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     int64_t budget = static_cast<int64_t>(ubSize) - TqCompressFixedBytes(headDim) - TQ_COMPRESS_UB_RESERVE;
@@ -91,6 +99,7 @@ static ge::graphStatus TilingFuncForTurboQuantCompressLatent(gert::TilingContext
     tilingData.set_headDim(static_cast<uint32_t>(headDim));
     tilingData.set_slotSize(static_cast<uint32_t>(slotSize));
     tilingData.set_tokensPerBatch(static_cast<uint32_t>(tokensPerBatch));
+    tilingData.set_outputMode(static_cast<uint32_t>(*outputMode));
 
     if (tilingData.GetDataSize() > context->GetRawTilingData()->GetCapacity()) {
         OP_LOGE(context->GetNodeName(), "tiling data size %zu exceeds capacity %zu", tilingData.GetDataSize(),

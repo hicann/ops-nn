@@ -38,6 +38,9 @@ public:
             .DataType({ge::DT_UINT8})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
+        // 0: 64-byte-aligned slot with the latent L2 norm (legacy GLM layout).
+        // 1: compact slot with a codebook-norm-corrected scale (DeepSeek V4 layout).
+        this->Attr("output_mode").AttrType(OPTIONAL).Int(0);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

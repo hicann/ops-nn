@@ -16,7 +16,8 @@ from golden import HEAD_DIM, SCALE_BYTES, slot_size
 
 def main():
     num_tokens = int(sys.argv[1]) if len(sys.argv) > 1 else 33
-    width = slot_size(HEAD_DIM)
+    output_mode = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    width = slot_size(HEAD_DIM, output_mode)
     packed = HEAD_DIM // 2
 
     if num_tokens == 0:
@@ -48,19 +49,23 @@ def main():
             )
         sys.exit(1)
 
-    # The stored norm is compared bit for bit when it is finite. Non-finite norms only have to agree on
-    # the IEEE class: a quiet NaN's payload is not architecturally fixed (hardware emits 0x7FFF where
-    # numpy emits 0x7E00), and the CPU simulator's scalar fp32->fp16 cast saturates non-finite values to
-    # FP16_MAX (0x7BFF) instead of propagating them, which hardware does not do.
-    got_norm = got[:, packed : packed + SCALE_BYTES].copy().view(np.float16).reshape(-1)
-    exp_norm = exp[:, packed : packed + SCALE_BYTES].copy().view(np.float16).reshape(-1)
+    # The stored scale (raw norm in mode 0, corrected scale in mode 1) is compared bit for bit when finite.
+    # Non-finite values only have to agree on the IEEE class: a quiet NaN's payload is not fixed
+    # (hardware emits 0x7FFF where numpy emits 0x7E00), and the CPU simulator's scalar fp32->fp16 cast
+    # saturates non-finite values to FP16_MAX (0x7BFF) instead of propagating them, which hardware does not do.
+    got_scale = (
+        got[:, packed : packed + SCALE_BYTES].copy().view(np.float16).reshape(-1)
+    )
+    exp_scale = (
+        exp[:, packed : packed + SCALE_BYTES].copy().view(np.float16).reshape(-1)
+    )
     FP16_MAX = np.float16(65504.0)
 
     bad = []
-    for i, (g, e) in enumerate(zip(got_norm, exp_norm)):
+    for i, (g, e) in enumerate(zip(got_scale, exp_scale)):
         if np.isfinite(e):
             if g.view(np.uint16) != e.view(np.uint16):
-                bad.append((i, g, e, "finite norm must match bit for bit"))
+                bad.append((i, g, e, "finite scale must match bit for bit"))
         elif np.isnan(e):
             if not (np.isnan(g) or g == FP16_MAX):
                 bad.append((i, g, e, "expected NaN (or the simulator's FP16_MAX)"))
@@ -68,7 +73,7 @@ def main():
             if not (np.isinf(g) or g == FP16_MAX):
                 bad.append((i, g, e, "expected INF (or the simulator's FP16_MAX)"))
     if bad:
-        print(f"[FAILED] {len(bad)} norm mismatches")
+        print(f"[FAILED] {len(bad)} scale mismatches")
         for i, g, e, why in bad[:16]:
             print(
                 f"  token {i}: got {g} (0x{g.view(np.uint16):04X}) expected {e} "

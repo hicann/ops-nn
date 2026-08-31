@@ -46,13 +46,22 @@ static ge::graphStatus InferShapeForTurboQuantCompressLatent(gert::InferShapeCon
 
     int64_t numTokens = latentShape->GetDim(TQ_COMPRESS_DIM_TOKEN);
     int64_t headDim = latentShape->GetDim(TQ_COMPRESS_DIM_HEAD);
+    const auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const int64_t* outputMode = attrs->GetAttrPointer<int64_t>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputMode);
+    if (*outputMode != optiling::TQ_COMPRESS_OUTPUT_PADDED &&
+        *outputMode != optiling::TQ_COMPRESS_OUTPUT_COMPACT_CORRECTED) {
+        OP_LOGE(context->GetNodeName(), "output_mode only supports 0 or 1, but got %ld", *outputMode);
+        return ge::GRAPH_FAILED;
+    }
 
     slotShape->SetDimNum(TQ_COMPRESS_LATENT_DIM_NUM);
     slotShape->SetDim(TQ_COMPRESS_DIM_TOKEN, numTokens);
     if (headDim == TQ_COMPRESS_UNKNOWN_DIM) {
         slotShape->SetDim(TQ_COMPRESS_DIM_HEAD, TQ_COMPRESS_UNKNOWN_DIM);
     } else {
-        slotShape->SetDim(TQ_COMPRESS_DIM_HEAD, optiling::TqCompressSlotSize(headDim));
+        slotShape->SetDim(TQ_COMPRESS_DIM_HEAD, optiling::TqCompressOutputSlotSize(headDim, *outputMode));
     }
 
     OP_LOGD(context, "End to do InferShapeForTurboQuantCompressLatent");

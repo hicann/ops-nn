@@ -37,7 +37,13 @@
           ]
         }
       ],
-      "attrs": []
+      "attrs": [
+        {
+          "name": "output_mode",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
     }
   ]
 }

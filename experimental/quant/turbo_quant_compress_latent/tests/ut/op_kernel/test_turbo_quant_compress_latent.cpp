@@ -27,6 +27,7 @@ extern "C" __global__ __aicore__ void turbo_quant_compress_latent(GM_ADDR latent
 namespace {
 constexpr uint32_t HEAD_DIM = 512;
 constexpr uint32_t SLOT_SIZE = 320;
+constexpr uint32_t COMPACT_SLOT_SIZE = 258;
 constexpr uint32_t N_CENT = 16;
 constexpr size_t WORKSPACE_SIZE = 32;
 constexpr char DATA_DIR[] = "./turbo_quant_compress_latent_data";
@@ -38,7 +39,8 @@ protected:
     static void TearDownTestCase() { std::cout << "turbo_quant_compress_latent_test TearDown\n" << std::endl; }
 };
 
-static void RunCase(uint32_t numTokens, uint32_t tokensPerCore, uint32_t tokensPerBatch, const char* dist = "gauss_lat")
+static void RunCase(uint32_t numTokens, uint32_t tokensPerCore, uint32_t tokensPerBatch, const char* dist = "gauss_lat",
+                    uint32_t outputMode = 0)
 {
     const uint32_t blockDim = numTokens == 0 ? 1 : (numTokens + tokensPerCore - 1) / tokensPerCore;
 
@@ -47,12 +49,13 @@ static void RunCase(uint32_t numTokens, uint32_t tokensPerCore, uint32_t tokensP
            "turbo_quant_compress_latent_data ./");
     system("chmod -R 755 ./turbo_quant_compress_latent_data/");
     std::string genCmd = std::string("cd ") + DATA_DIR + " && python3 gen_data.py " + std::to_string(numTokens) + " " +
-                         dist;
+                         dist + " " + std::to_string(outputMode);
     ASSERT_EQ(system(genCmd.c_str()), 0);
 
     size_t latentByteSize = static_cast<size_t>(numTokens) * HEAD_DIM * sizeof(float);
     size_t centByteSize = N_CENT * sizeof(float);
-    size_t slotByteSize = static_cast<size_t>(numTokens) * SLOT_SIZE;
+    const uint32_t outputSlotSize = outputMode == 1 ? COMPACT_SLOT_SIZE : SLOT_SIZE;
+    size_t slotByteSize = static_cast<size_t>(numTokens) * outputSlotSize;
 
     // GmAlloc(0) is not meaningful; the empty-tensor case still needs valid pointers to hand the kernel
     uint8_t* latent = (uint8_t*)AscendC::GmAlloc(latentByteSize == 0 ? 1 : latentByteSize);
@@ -70,8 +73,9 @@ static void RunCase(uint32_t numTokens, uint32_t tokensPerCore, uint32_t tokensP
     tilingData->numTokens = numTokens;
     tilingData->tokensPerCore = tokensPerCore;
     tilingData->headDim = HEAD_DIM;
-    tilingData->slotSize = SLOT_SIZE;
+    tilingData->slotSize = outputSlotSize;
     tilingData->tokensPerBatch = tokensPerBatch;
+    tilingData->outputMode = outputMode;
 
     ICPU_RUN_KF(turbo_quant_compress_latent, blockDim, latent, centroids, slot, workspace, (uint8_t*)(tilingData));
 
@@ -83,7 +87,8 @@ static void RunCase(uint32_t numTokens, uint32_t tokensPerCore, uint32_t tokensP
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    std::string cmpCmd = std::string("cd ") + DATA_DIR + " && python3 compare_data.py " + std::to_string(numTokens);
+    std::string cmpCmd = std::string("cd ") + DATA_DIR + " && python3 compare_data.py " + std::to_string(numTokens) +
+                         " " + std::to_string(outputMode);
     EXPECT_EQ(system(cmpCmd.c_str()), 0);
 }
 
@@ -105,6 +110,26 @@ TEST_F(turbo_quant_compress_latent_test, batched_ragged_tail) { RunCase(33, 8, 3
 
 // Batch at the compile-time maximum.
 TEST_F(turbo_quant_compress_latent_test, batched_max) { RunCase(24, 12, 12); }
+
+// Compact corrected mode uses the same split/batch machinery but adds centroid-norm correction and
+// writes a non-aligned 258-byte GM row. Cover each control-flow boundary independently.
+TEST_F(turbo_quant_compress_latent_test, compact_single_token) { RunCase(1, 1, 1, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_one_token_per_core) { RunCase(8, 1, 1, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_ragged_last_core) { RunCase(33, 8, 1, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_batched_ragged_tail) { RunCase(33, 8, 3, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_batched_max) { RunCase(24, 12, 12, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_empty_tensor) { RunCase(0, 1, 1, "gauss_lat", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_uniform_wide_range) { RunCase(33, 8, 8, "uniform", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_all_centroid_offsets) { RunCase(1, 1, 1, "all_centroids", 1); }
+
+TEST_F(turbo_quant_compress_latent_test, compact_non_finite) { RunCase(9, 4, 4, "mixinf", 1); }
 
 // Batch larger than the tokens a core owns: the count clamps on the very first batch.
 TEST_F(turbo_quant_compress_latent_test, batch_larger_than_tokens) { RunCase(5, 5, 12); }

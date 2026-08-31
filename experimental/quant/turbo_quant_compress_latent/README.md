@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：把MLA的KV latent按token压缩成TurboQuant 4bit slot。对每个token先求L2范数并做归一化，再把归一化后的每个元素量化到16个码本中心里最近的一个，得到的4bit索引按维度顺序两两打包进一个字节；范数本身以float16存放在打包区之后，供读取侧还原幅值。
+- 算子功能：把MLA的KV latent按token压缩成TurboQuant 4bit slot。对每个token先求L2范数并做归一化，再把归一化后的每个元素量化到16个码本中心里最近的一个，得到的4bit索引按维度顺序两两打包进一个字节。`output_mode=0`时存储原始L2范数并保持原320字节布局；`output_mode=1`时存储码本范数修正后的scale并输出258字节紧凑布局。
 
   输入`latent`要求是**已经完成量化基旋转（signed Hadamard）且未归一化**的张量。旋转矩阵本身正交，因此旋转前后的L2范数一致，算子内部重新计算范数不会引入额外误差。
 
@@ -33,6 +33,13 @@
 
   $$
   slot_{i,k} = nibble_{i,2k}\ |\ (nibble_{i,2k+1} \ll 4), \quad 0 \le k < headDim/2
+  $$
+
+  `output_mode=1`额外计算：
+
+  $$
+  correctedScale_i = \frac{norm_i}
+  {\sqrt{\sum_d centroids_{nibble_{i,d}}^2 + \epsilon}}
   $$
 
   由于`centroids`升序排列，相邻中心的中点构成15个单调递增的边界，统计`u`超过了多少个边界即等价于取最近的码本中心下标。
@@ -70,9 +77,16 @@
       <td>ND</td>
     </tr>
     <tr>
+      <td>output_mode</td>
+      <td>属性</td>
+      <td><ul><li>输出slot模式，支持0或1，默认值为0。</li><li>0：原320字节对齐布局，scale为latent的L2范数。</li><li>1：258字节紧凑布局，scale为latent范数除以所选码本向量范数。</li></ul></td>
+      <td>INT64</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>slot</td>
       <td>输出</td>
-      <td><ul><li>表示压缩后的slot，对应公式中的`slot`。shape为[numTokens, slotSize]，其中slotSize = ceil((headDim / 2 + 2) / 64) * 64，headDim为512时slotSize为320。</li><li>每个slot的布局为：[0, headDim/2)存放打包后的4bit索引，低位nibble对应偶数维；[headDim/2, headDim/2+2)存放float16的`norm`；其余字节为0填充。</li></ul></td>
+      <td><ul><li>表示压缩后的slot，对应公式中的`slot`。`output_mode=0`时shape为[numTokens, ceil((headDim / 2 + 2) / 64) * 64]，headDim为512时末维为320；`output_mode=1`时shape为[numTokens, headDim / 2 + 2]，headDim为512时末维为258。</li><li>[0, headDim/2)存放打包后的4bit索引，低位nibble对应偶数维；随后2字节存放float16 scale；模式0的其余字节为0填充。</li></ul></td>
       <td>UINT8</td>
       <td>ND</td>
     </tr>
@@ -83,6 +97,7 @@
 - `latent`的`headDim`当前仅支持512（MLA的kv_lora_rank）。slot布局的推导本身是按`headDim`泛化的，放开其他取值需要先补充硬件验证。
 - `centroids`元素总数必须为16：4bit索引与16个码本中心是一一对应关系，取值数量不可配置。
 - `centroids`必须升序排列，算子不对其做排序或校验。
+- `output_mode`仅支持0和1。默认值0保持既有调用及320字节slot布局不变；模式1须与读取258字节compact corrected slot的融合算子配套使用。
 - 归一化与Hadamard旋转的先后顺序不影响结果，但算子只接受旋转之后的张量；旋转矩阵与码本的生成不在本算子范围内。
 - 量化索引取"最近的码本中心"，平局（取值恰好落在两个中心的中点上）时取**较大**的索引。
 - 归一化后的取值超出码本首末中心的范围时按最近邻饱和到边界桶，不做截断报错。码本按`N(0, 1/headDim)`拟合，输入分布显著偏离时量化误差会增大，但行为是确定的。
@@ -102,6 +117,9 @@
 ## 性能
 
 测试环境：Atlas A2 训练系列产品（910B4，40 个 Vector 核，UB 192 KB），CANN 9.0.1。耗时取 `torch_npu.profiler` 落盘的 `kernel_details.csv` 中 `Duration(us)` 的最小值（warmup 5 次、active 10~15 次）。`headDim` 固定为 512。
+
+> 以下为既有 `output_mode=0`（320B slot）实测数据，不代表本次新增的
+> `output_mode=1`（258B compact corrected slot）性能；模式1需按 `TEST_GUIDE.md` 单独补测。
 
 ### 与 DynamicQuant（INT4）的对比
 

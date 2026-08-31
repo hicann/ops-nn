@@ -22,10 +22,13 @@ N_CENT = 16
 SCALE_BYTES = 2
 SLOT_ALIGN = 64
 NORM_EPS = np.float32(1e-16)
+OUTPUT_COMPACT_CORRECTED = 1
 
 
-def slot_size(head_dim):
+def slot_size(head_dim, output_mode=0):
     used = head_dim // 2 + SCALE_BYTES
+    if output_mode == OUTPUT_COMPACT_CORRECTED:
+        return used
     return (used + SLOT_ALIGN - 1) // SLOT_ALIGN * SLOT_ALIGN
 
 
@@ -57,15 +60,22 @@ def golden_nibbles(latent, centroids):
     return nib, norm
 
 
-def golden_compress(latent, centroids):
+def golden_compress(latent, centroids, output_mode=0):
     latent = np.ascontiguousarray(latent, dtype=np.float32)
     num_tokens, head_dim = latent.shape
     packed = head_dim // 2
     nib, norm = golden_nibbles(latent, centroids)
 
-    out = np.zeros((num_tokens, slot_size(head_dim)), dtype=np.uint8)
+    out = np.zeros((num_tokens, slot_size(head_dim, output_mode)), dtype=np.uint8)
     out[:, :packed] = (nib[:, 0::2] | (nib[:, 1::2] << 4)).astype(np.uint8)
+    scale = norm
+    if output_mode == OUTPUT_COMPACT_CORRECTED:
+        selected = centroids[nib]
+        centroid_norm = np.sqrt(
+            np.sum(selected * selected, axis=1, dtype=np.float32) + NORM_EPS
+        ).astype(np.float32)
+        scale = (norm / centroid_norm).astype(np.float32)
     out[:, packed : packed + SCALE_BYTES] = (
-        norm.astype(np.float16).view(np.uint8).reshape(num_tokens, SCALE_BYTES)
+        scale.astype(np.float16).view(np.uint8).reshape(num_tokens, SCALE_BYTES)
     )
     return out

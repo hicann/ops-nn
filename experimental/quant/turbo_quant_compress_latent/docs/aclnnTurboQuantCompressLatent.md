@@ -45,6 +45,7 @@
 aclnnStatus aclnnTurboQuantCompressLatentGetWorkspaceSize(
   const aclTensor* latent,
   const aclTensor* centroids,
+  int64_t          outputMode,
   const aclTensor* out,
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
@@ -105,10 +106,20 @@ aclnnStatus aclnnTurboQuantCompressLatent(
       <td>√</td>
     </tr>
     <tr>
+      <td>outputMode（int64_t）</td>
+      <td>输入</td>
+      <td>表示输出slot模式。</td>
+      <td><ul><li>支持0或1，默认值为0。</li><li>0：320字节对齐布局，scale为latent的L2范数。</li><li>1：258字节紧凑布局，scale为latent范数除以所选码本向量范数。</li></ul></td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示压缩后的slot。对应公式中的out。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[numTokens, slotSize]，其中slotSize = ceil((headDim / 2 + 2) / 64) * 64。</li><li>headDim为512时slotSize为320。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>outputMode为0时，slotSize = ceil((headDim / 2 + 2) / 64) * 64；outputMode为1时，slotSize = headDim / 2 + 2。</li><li>headDim为512时slotSize分别为320和258。</li></ul></td>
       <td>UINT8</td>
       <td>ND</td>
       <td>2</td>
@@ -162,8 +173,8 @@ aclnnStatus aclnnTurboQuantCompressLatent(
       <td>传入的latent、centroids、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>latent、centroids、out的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -171,7 +182,10 @@ aclnnStatus aclnnTurboQuantCompressLatent(
     </tr>
     <tr>
       <td>centroids的元素总数不等于16。</td>
-      </tr>
+    </tr>
+    <tr>
+      <td>outputMode不是0或1，或out的shape与outputMode不匹配。</td>
+    </tr>
   </tbody></table>
 
 ## aclnnTurboQuantCompressLatent
@@ -224,6 +238,7 @@ aclnnStatus aclnnTurboQuantCompressLatent(
 
 - headDim当前仅支持512（MLA的kv_lora_rank）。slot布局的推导本身是按headDim泛化的，放开其他取值需要先补充硬件验证。
 - centroids必须升序排列，算子不对其做排序或校验；乱序会导致中点边界不单调，量化结果不可预期。
+- outputMode默认值0保持原320字节slot布局；outputMode为1时输出258字节compact corrected slot，须与对应读取布局的融合算子配套使用。
 - 量化索引取最近的码本中心，平局时取较大的索引；归一化后超出码本范围的取值饱和到边界桶。
 - 非有限输入的行为由归一化流程自然导出且确定：该token含NaN时全部索引为0、范数存NaN；含±INF时INF所在维度索引为0、其余为8、范数存+INF。
 - slot只用2字节float16存放范数，若输入的L2范数超过65504，存储的范数为+INF，读取侧无法还原幅值。MLA的KV latent经RMSNorm后范数在1附近，不会触及该边界。
@@ -255,6 +270,7 @@ constexpr int64_t NUM_TOKENS = 2;
 constexpr int64_t HEAD_DIM = 512;
 constexpr int64_t SLOT_SIZE = 320; // alignUp(HEAD_DIM / 2 + 2, 64)
 constexpr int64_t N_CENT = 16;
+constexpr int64_t OUTPUT_MODE = 0;
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
@@ -362,7 +378,8 @@ int main()
     aclOpExecutor* executor;
 
     // 调用aclnnTurboQuantCompressLatent第一段接口
-    ret = aclnnTurboQuantCompressLatentGetWorkspaceSize(latent, centroids, slot, &workspaceSize, &executor);
+    ret = aclnnTurboQuantCompressLatentGetWorkspaceSize(
+        latent, centroids, OUTPUT_MODE, slot, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTurboQuantCompressLatentGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
 

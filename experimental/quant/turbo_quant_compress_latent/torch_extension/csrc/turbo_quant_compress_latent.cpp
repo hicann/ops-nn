@@ -19,14 +19,19 @@ constexpr int64_t N_CENT = 16;
 constexpr int64_t SCALE_BYTES = 2;
 constexpr int64_t SLOT_ALIGN = 64;
 constexpr int64_t SUPPORTED_HEAD_DIM = 512;
+constexpr int64_t OUTPUT_PADDED = 0;
+constexpr int64_t OUTPUT_COMPACT_CORRECTED = 1;
 
-int64_t SlotSize(int64_t head_dim)
+int64_t SlotSize(int64_t head_dim, int64_t output_mode)
 {
     int64_t used = head_dim / 2 + SCALE_BYTES;
+    if (output_mode == OUTPUT_COMPACT_CORRECTED) {
+        return used;
+    }
     return (used + SLOT_ALIGN - 1) / SLOT_ALIGN * SLOT_ALIGN;
 }
 
-at::Tensor turbo_quant_compress_latent(const at::Tensor& latent, const at::Tensor& centroids)
+at::Tensor turbo_quant_compress_latent(const at::Tensor& latent, const at::Tensor& centroids, int64_t output_mode)
 {
     TORCH_CHECK(latent.device().type() == at::kPrivateUse1, "latent must be on NPU device");
     TORCH_CHECK(centroids.device().type() == at::kPrivateUse1, "centroids must be on NPU device");
@@ -42,11 +47,13 @@ at::Tensor turbo_quant_compress_latent(const at::Tensor& latent, const at::Tenso
     const int64_t head_dim = latent.size(1);
     TORCH_CHECK(head_dim == SUPPORTED_HEAD_DIM, "headDim only supports ", SUPPORTED_HEAD_DIM, " for now, but got ",
                 head_dim);
+    TORCH_CHECK(output_mode == OUTPUT_PADDED || output_mode == OUTPUT_COMPACT_CORRECTED,
+                "output_mode only supports 0 or 1, but got ", output_mode);
 
-    at::Tensor slot = at::empty({num_tokens, SlotSize(head_dim)},
+    at::Tensor slot = at::empty({num_tokens, SlotSize(head_dim, output_mode)},
                                 at::TensorOptions().dtype(at::kByte).device(latent.device()));
 
-    ACLNN_CMD(aclnnTurboQuantCompressLatent, latent, centroids, slot);
+    ACLNN_CMD(aclnnTurboQuantCompressLatent, latent, centroids, output_mode, slot);
     return slot;
 }
 
@@ -56,5 +63,6 @@ at::Tensor turbo_quant_compress_latent(const at::Tensor& latent, const at::Tenso
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
     m.def("turbo_quant_compress_latent", &cann_ops_nn::quant::turbo_quant_compress_latent,
-          "TurboQuant 4-bit latent compression on NPU");
+          "TurboQuant 4-bit latent compression on NPU", pybind11::arg("latent"), pybind11::arg("centroids"),
+          pybind11::arg("output_mode") = cann_ops_nn::quant::OUTPUT_PADDED);
 }

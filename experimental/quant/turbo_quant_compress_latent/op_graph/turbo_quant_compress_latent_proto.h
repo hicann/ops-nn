@@ -37,6 +37,8 @@ namespace ge {
 *   - [0, headDim / 2): the packed nibbles, low nibble first.
 *   - [headDim / 2, headDim / 2 + 2): the L2 norm as float16.
 *   - the remaining bytes are zero padding.
+* - output_mode: Optional int. 0 keeps the padded layout above. 1 emits the compact [numTokens,
+*   headDim / 2 + 2] layout and stores norm(latent) / norm(selectedCentroids) as the fp16 scale.
 
 * @par Third-party framework compatibility:
 * Custom operator with no direct mapping in Caffe/ONNX/TensorFlow/PyTorch.
@@ -44,6 +46,7 @@ namespace ge {
 REG_OP(TurboQuantCompressLatent)
     .INPUT(latent, TensorType({DT_FLOAT}))
     .INPUT(centroids, TensorType({DT_FLOAT}))
+    .ATTR(output_mode, Int, 0)
     .OUTPUT(slot, TensorType({DT_UINT8}))
     .OP_END_FACTORY_REG(TurboQuantCompressLatent)
 } // namespace ge

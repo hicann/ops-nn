@@ -28,9 +28,13 @@ protected:
     static void TearDownTestCase() { std::cout << "turbo_quant_compress_latent infershape TearDown" << std::endl; }
 };
 
-static void RunInferShape(const std::vector<int64_t>& latentDims, const std::vector<int64_t>& expectSlotDims)
+static void RunInferShape(const std::vector<int64_t>& latentDims, const std::vector<int64_t>& expectSlotDims,
+                          int64_t outputMode = 0, bool setOutputMode = true)
 {
     ge::op::TurboQuantCompressLatent op;
+    if (setOutputMode) {
+        op.SetAttr("output_mode", outputMode);
+    }
 
     ge::TensorDesc latentDesc;
     ge::Shape latentShape(latentDims);
@@ -47,6 +51,7 @@ static void RunInferShape(const std::vector<int64_t>& latentDims, const std::vec
     op.UpdateInputDesc("centroids", centDesc);
 
     Runtime2TestParam param;
+    param.attrs = {"output_mode"};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expectSlotDims);
 }
@@ -55,6 +60,10 @@ static void RunInferShape(const std::vector<int64_t>& latentDims, const std::vec
 TEST_F(TurboQuantCompressLatentInferShapeTest, head_dim_512) { RunInferShape({128, 512}, {128, 320}); }
 
 TEST_F(TurboQuantCompressLatentInferShapeTest, single_token) { RunInferShape({1, 512}, {1, 320}); }
+
+TEST_F(TurboQuantCompressLatentInferShapeTest, default_output_mode) { RunInferShape({8, 512}, {8, 320}, 0, false); }
+
+TEST_F(TurboQuantCompressLatentInferShapeTest, compact_corrected) { RunInferShape({128, 512}, {128, 258}, 1); }
 
 // The slot-size derivation itself is head-dim generic even though tiling currently only enables 512.
 TEST_F(TurboQuantCompressLatentInferShapeTest, head_dim_128) { RunInferShape({8, 128}, {8, 128}); }
@@ -66,6 +75,18 @@ TEST_F(TurboQuantCompressLatentInferShapeTest, head_dim_1024) { RunInferShape({8
 TEST_F(TurboQuantCompressLatentInferShapeTest, dynamic_token_dim) { RunInferShape({-1, 512}, {-1, 320}); }
 
 TEST_F(TurboQuantCompressLatentInferShapeTest, dynamic_head_dim) { RunInferShape({8, -1}, {8, -1}); }
+
+TEST_F(TurboQuantCompressLatentInferShapeTest, invalid_output_mode)
+{
+    ge::op::TurboQuantCompressLatent op;
+    op.SetAttr("output_mode", 2);
+    ge::TensorDesc latentDesc(ge::Shape({8, 512}), ge::FORMAT_ND, ge::DT_FLOAT);
+    ge::TensorDesc centDesc(ge::Shape({16}), ge::FORMAT_ND, ge::DT_FLOAT);
+    op.UpdateInputDesc("latent", latentDesc);
+    op.UpdateInputDesc("centroids", centDesc);
+    Runtime2TestParam param;
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
+}
 
 TEST_F(TurboQuantCompressLatentInferShapeTest, invalid_rank)
 {

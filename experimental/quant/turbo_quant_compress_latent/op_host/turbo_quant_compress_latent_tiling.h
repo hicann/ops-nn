@@ -19,7 +19,6 @@
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
-#include "error_util.h"
 #include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
@@ -33,6 +32,8 @@ constexpr int64_t TQ_COMPRESS_SLOT_ALIGN = 64;
 // Only the MLA kv_lora_rank used in production is enabled for now. The whole implementation is
 // written against headDim, so widening this list is a validation exercise, not a rewrite.
 constexpr int64_t TQ_COMPRESS_SUPPORTED_HEAD_DIM = 512;
+constexpr int64_t TQ_COMPRESS_OUTPUT_PADDED = 0;
+constexpr int64_t TQ_COMPRESS_OUTPUT_COMPACT_CORRECTED = 1;
 
 // The codebook scan is a chain of narrow vector instructions whose fixed issue cost dominates, so the
 // kernel processes several tokens per instruction. Measured on Atlas A2: a 4x wider loop costs only
@@ -43,11 +44,17 @@ constexpr int64_t TQ_COMPRESS_MAX_TOKENS_PER_BATCH = 12;
 constexpr int64_t TQ_COMPRESS_NORM_SLOT_FLOATS = 16;
 constexpr int64_t TQ_COMPRESS_UB_RESERVE = 1024;
 
-// slot layout: [0, headDim/2) packed nibbles | [headDim/2, headDim/2+2) vecNorm fp16 | pad
+// Mode 0: packed nibbles | fp16 latent norm | pad. Mode 1: packed nibbles | fp16 corrected scale.
 inline int64_t TqCompressSlotSize(int64_t headDim)
 {
     int64_t used = headDim / 2 + TQ_COMPRESS_SCALE_BYTES;
     return (used + TQ_COMPRESS_SLOT_ALIGN - 1) / TQ_COMPRESS_SLOT_ALIGN * TQ_COMPRESS_SLOT_ALIGN;
+}
+
+inline int64_t TqCompressOutputSlotSize(int64_t headDim, int64_t outputMode)
+{
+    return outputMode == TQ_COMPRESS_OUTPUT_COMPACT_CORRECTED ? headDim / 2 + TQ_COMPRESS_SCALE_BYTES :
+                                                                TqCompressSlotSize(headDim);
 }
 
 inline int64_t TqCompressAlign64(int64_t value)
@@ -78,6 +85,7 @@ TILING_DATA_FIELD_DEF(uint32_t, tokensPerCore);
 TILING_DATA_FIELD_DEF(uint32_t, headDim);
 TILING_DATA_FIELD_DEF(uint32_t, slotSize);
 TILING_DATA_FIELD_DEF(uint32_t, tokensPerBatch);
+TILING_DATA_FIELD_DEF(uint32_t, outputMode);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(TurboQuantCompressLatent, TurboQuantCompressLatentTilingData)

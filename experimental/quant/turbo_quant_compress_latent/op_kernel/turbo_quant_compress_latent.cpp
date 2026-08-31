@@ -21,6 +21,6 @@ extern "C" __global__ __aicore__ void turbo_quant_compress_latent(GM_ADDR latent
 
     TurboQuantCompressLatent::KernelTurboQuantCompressLatent op;
     op.Init(latent, centroids, slot, tilingData.numTokens, tilingData.tokensPerCore, tilingData.headDim,
-            tilingData.slotSize, tilingData.tokensPerBatch);
+            tilingData.slotSize, tilingData.tokensPerBatch, tilingData.outputMode);
     op.Process();
 }

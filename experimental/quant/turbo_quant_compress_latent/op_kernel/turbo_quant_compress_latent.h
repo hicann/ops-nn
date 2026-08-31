@@ -14,11 +14,13 @@
  *
  * Input  latent    [numTokens, headDim] fp32, already rotated by the signed Hadamard and NOT normalized.
  * Input  centroids [16]                 fp32, the Lloyd-Max codebook, sorted ascending.
- * Output slot      [numTokens, slotSize] uint8, slotSize = alignUp(headDim / 2 + 2, 64).
+ * Output slot      [numTokens, slotSize] uint8. Mode 0 uses alignUp(headDim / 2 + 2, 64); mode 1 uses
+ *                  headDim / 2 + 2.
  *
  * Per token: norm = ||z|| ; u = z / norm ; nibble[d] = #{midpoint boundaries <= u[d]}, i.e. the index of
  * the nearest centroid ; the nibbles are packed two per byte in dim order into slot[0, headDim/2) and the
- * fp16 norm is stored at slot[headDim/2, headDim/2 + 2). The remaining pad bytes are zero.
+ * fp16 scale is stored at slot[headDim/2, headDim/2 + 2). Mode 0 stores the latent norm and zeroes the
+ * remaining pad bytes. Mode 1 stores norm(latent) / norm(selectedCentroids) without output padding.
  *
  * The nearest-centroid search is a chain of 15 dependent compare/select/add rounds whose per-instruction
  * issue cost dominates the actual arithmetic, so tokensPerBatch tokens are folded into every vector
@@ -43,6 +45,7 @@ constexpr uint32_t NORM_SLOT_FLOATS = 16;
 constexpr float NORM_EPS = 1e-16f;
 constexpr float NIBBLE_SIGN_THRESHOLD = 8.0f;
 constexpr float NIBBLE_SIGN_OFFSET = -16.0f;
+constexpr uint32_t OUTPUT_MODE_COMPACT_CORRECTED = 1;
 
 __aicore__ inline uint32_t AlignUpTo(uint32_t value, uint32_t align) { return (value + align - 1) / align * align; }
 
@@ -51,12 +54,15 @@ public:
     __aicore__ inline KernelTurboQuantCompressLatent() {}
 
     __aicore__ inline void Init(GM_ADDR latent, GM_ADDR centroids, GM_ADDR slotOut, uint32_t numTokens,
-                                uint32_t tokensPerCore, uint32_t headDim, uint32_t slotSize, uint32_t tokensPerBatch)
+                                uint32_t tokensPerCore, uint32_t headDim, uint32_t outputSlotSize,
+                                uint32_t tokensPerBatch, uint32_t outputMode)
     {
         numTokens_ = numTokens;
         headDim_ = headDim;
-        slotSize_ = slotSize;
         packedBytes_ = headDim / 2;
+        slotSize_ = AlignUpTo(packedBytes_ + SCALE_BYTES, ALIGN_BYTES);
+        outputSlotSize_ = outputSlotSize;
+        compactCorrected_ = outputMode == OUTPUT_MODE_COMPACT_CORRECTED;
         batch_ = tokensPerBatch < 1 ? 1 : tokensPerBatch;
         if (batch_ > MAX_TOKENS_PER_BATCH) {
             batch_ = MAX_TOKENS_PER_BATCH;
@@ -180,6 +186,49 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
+        if (compactCorrected_) {
+            // The read side reconstructs centroid[nibble] * scale. Correct the original latent norm by
+            // the selected codebook vector norm so the reconstructed row retains the intended magnitude.
+            LocalTensor<float> cent = centBuf_.Get<float>();
+            // Select the codebook value through vector masks so the index remains a vector value.
+            Duplicate(tmp, cent.GetValue(0), elems);
+            // Keep scalar thresholds as compile-time constants for aicore compilation.
+#define TQ_SELECT_CENTROID(C)                                             \
+    CompareScalar(mask, nib, static_cast<float>(C), CMPMODE::GE, elems);  \
+    PipeBarrier<PIPE_V>();                                                \
+    Duplicate(sel, cent.GetValue(C), elems);                              \
+    PipeBarrier<PIPE_V>();                                                \
+    Select(tmp, mask, sel, tmp, SELMODE::VSEL_TENSOR_TENSOR_MODE, elems); \
+    PipeBarrier<PIPE_V>();
+            TQ_SELECT_CENTROID(1)
+            TQ_SELECT_CENTROID(2)
+            TQ_SELECT_CENTROID(3)
+            TQ_SELECT_CENTROID(4)
+            TQ_SELECT_CENTROID(5)
+            TQ_SELECT_CENTROID(6)
+            TQ_SELECT_CENTROID(7)
+            TQ_SELECT_CENTROID(8)
+            TQ_SELECT_CENTROID(9)
+            TQ_SELECT_CENTROID(10)
+            TQ_SELECT_CENTROID(11)
+            TQ_SELECT_CENTROID(12)
+            TQ_SELECT_CENTROID(13)
+            TQ_SELECT_CENTROID(14)
+            TQ_SELECT_CENTROID(15)
+#undef TQ_SELECT_CENTROID
+            PipeBarrier<PIPE_V>();
+            Mul(tmp, tmp, tmp, elems);
+            PipeBarrier<PIPE_V>();
+            for (uint32_t i = 0; i < count; ++i) {
+                ReduceSum(norm[i * NORM_SLOT_FLOATS], tmp[i * headDim_], work, headDim_);
+            }
+            PipeBarrier<PIPE_V>();
+            WaitVectorToScalar();
+            for (uint32_t i = 0; i < count; ++i) {
+                normScalar_[i] /= sqrt(norm.GetValue(i * NORM_SLOT_FLOATS) + NORM_EPS);
+            }
+        }
+
         // int4b_t HW pack: nib(0..15, dim order) -> signed s(-8..7) -> half -> int4b_t (low nibble first).
         // s = (nib < 8) ? nib : nib - 16, i.e. the same 4 bits reinterpreted as two's complement.
         LocalTensor<half> packHalf = packHalfBuf_.Get<half>();
@@ -213,7 +262,14 @@ private:
     __aicore__ inline void CopyOut(uint32_t t, uint32_t count)
     {
         LocalTensor<uint8_t> slot = outQ_.DeQue<uint8_t>();
-        DataCopy(slotGm_[static_cast<uint64_t>(t) * slotSize_], slot, count * slotSize_);
+        if (compactCorrected_) {
+            for (uint32_t i = 0; i < count; ++i) {
+                DataCopyParams copyParams{1, static_cast<uint16_t>(outputSlotSize_), 0, 0};
+                DataCopyPad(slotGm_[static_cast<uint64_t>(t + i) * outputSlotSize_], slot[i * slotSize_], copyParams);
+            }
+        } else {
+            DataCopy(slotGm_[static_cast<uint64_t>(t) * outputSlotSize_], slot, count * slotSize_);
+        }
         outQ_.FreeTensor(slot);
     }
 
@@ -228,10 +284,12 @@ private:
     uint32_t numTokens_ = 0;
     uint32_t headDim_ = 0;
     uint32_t slotSize_ = 0;
+    uint32_t outputSlotSize_ = 0;
     uint32_t packedBytes_ = 0;
     uint32_t batch_ = 1;
     uint32_t tokStart_ = 0;
     uint32_t tokEnd_ = 0;
+    bool compactCorrected_ = false;
     float bnd_[N_CENT] = {};
     float normScalar_[MAX_TOKENS_PER_BATCH] = {};
 };

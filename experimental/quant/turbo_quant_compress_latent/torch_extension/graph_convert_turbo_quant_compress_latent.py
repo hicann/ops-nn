@@ -11,6 +11,7 @@
 
 try:
     import torch
+    from torchair.ge import attr
     from torchair.ge._ge_graph import Tensor, TensorSpec
     from torchair._ge_concrete_graph.compat_ir import ge_op, IrDef
     from torchair._ge_concrete_graph.fx2ge_converter import (
@@ -29,16 +30,18 @@ if _TORCHAIR_AVAILABLE:
     def convert_turbo_quant_compress_latent(
         latent: Tensor,
         centroids: Tensor,
+        output_mode: int = 0,
         meta_outputs: TensorSpec = None,
     ):
         return ge_op(
             op_type="TurboQuantCompressLatent",
             inputs={"latent": latent, "centroids": centroids},
-            attrs={},
+            attrs={"output_mode": attr.Int(output_mode)},
             outputs=["slot"],
             ir=IrDef("TurboQuantCompressLatent")
             .input("latent", "DT_FLOAT")
             .input("centroids", "DT_FLOAT")
+            .attr("output_mode", attr.Int(0))
             .output("slot", "DT_UINT8"),
         )
 
