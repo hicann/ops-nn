@@ -8,17 +8,13 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsBatchMatMul(const Message* opSrc, ge::Operator& opDst)
+static Status ParseParamsBatchMatMul(const ge::Operator&, ge::Operator& opDst)
 {
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(opSrc);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(opDst).c_str(), "Dynamic cast opSrc to NodeProto failed.");
-        return FAILED;
-    }
     // onnx doesn't have transpose attr
     opDst.SetAttr("adj_x1", false);
     opDst.SetAttr("adj_x2", false);
@@ -32,6 +28,6 @@ REGISTER_CUSTOM_OP("BatchMatMul")
                    ge::AscendString("ai.onnx::12::BatchMatMul"), ge::AscendString("ai.onnx::13::BatchMatMul"),
                    ge::AscendString("ai.onnx::14::BatchMatMul"), ge::AscendString("ai.onnx::15::BatchMatMul"),
                    ge::AscendString("ai.onnx::16::BatchMatMul")})
-    .ParseParamsFn(ParseParamsBatchMatMul)
+    .ParseParamsByOperatorFn(ParseParamsBatchMatMul)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

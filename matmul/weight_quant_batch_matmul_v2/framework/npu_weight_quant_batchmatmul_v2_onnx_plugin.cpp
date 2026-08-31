@@ -9,33 +9,45 @@
  */
 
 /*!
- * \file quant_batch_matmulV3_onnx_plugin.cpp
+ * \file npu_weight_quant_batchmatmul_v2_onnx_plugin.cpp
  * \brief
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
+using json = nlohmann::json;
 
-using NodeProto = ge::onnx::NodeProto;
-
-static Status ParseParamsWeightBatchQuantMatMulV2(const Message* opSrc, ge::Operator& opDst)
+static Status ParseParamsWeightBatchQuantMatMulV2(const ge::Operator& op_src, ge::Operator& opDst)
 {
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(opSrc);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(opDst).c_str(), "Dynamic cast opSrc to NodeProto failed.");
-        return FAILED;
-    }
     int antiquant_group_size = 0;
     int dtype = -1;
-    for (auto attr : node->attribute()) {
-        if (attr.name() == "antiquant_group_size" && attr.type() == ge::onnx::AttributeProto::INT) {
-            antiquant_group_size = attr.i();
-            continue;
-        }
-        if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
-            dtype = attr.i();
-            continue;
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    std::string attr_name = attr.value("name", "");
+                    if (attr_name == "antiquant_group_size" && attr.contains("i")) {
+                        antiquant_group_size = attr["i"].get<int>();
+                        continue;
+                    }
+                    if (attr_name == "dtype" && attr.contains("i")) {
+                        dtype = attr["i"].get<int>();
+                        continue;
+                    }
+                }
+            }
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(opDst).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(opDst).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
     // onnx doesn't have transpose attr
@@ -58,6 +70,6 @@ REGISTER_CUSTOM_OP("WeightQuantBatchMatmulV2")
                    ge::AscendString("ai.onnx::17::NPUWeightQuantBatchMatmulV2"),
                    ge::AscendString("ai.onnx::18::NPUWeightQuantBatchMatmulV2"),
                    ge::AscendString("ai.onnx::19::NPUWeightQuantBatchMatmulV2")})
-    .ParseParamsFn(ParseParamsWeightBatchQuantMatMulV2)
+    .ParseParamsByOperatorFn(ParseParamsWeightBatchQuantMatMulV2)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

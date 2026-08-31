@@ -9,41 +9,54 @@
  */
 
 /*!
- * \file ops\built-in\framework\onnx_plugin\custom\quant_batch_matmulV3_plugin.cc
+ * \file quant_batch_matmulV3_onnx_plugin.cpp
  * \brief
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsQuantBatchMatMulV3(const Message* opSrc, ge::Operator& opDst)
-{
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(opSrc);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(opDst).c_str(), "Dynamic cast opSrc to NodeProto failed.");
-        return FAILED;
-    }
+using json = nlohmann::json;
 
+static Status ParseParamsQuantBatchMatMulV3(const ge::Operator& op_src, ge::Operator& opDst)
+{
     int a_dtype = 1;
     bool trans_x1 = false;
     bool trans_x2 = false;
-    for (const auto& attr : node->attribute()) {
-        if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
-            a_dtype = attr.i();
-            continue;
-        }
-        if (attr.name() == "transpose_x1" && attr.type() == ge::onnx::AttributeProto::INT) {
-            if (attr.i() == 1) {
-                trans_x1 = true;
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    std::string attr_name = attr.value("name", "");
+                    if (attr_name == "dtype" && attr.contains("i")) {
+                        a_dtype = attr["i"].get<int>();
+                        continue;
+                    }
+                    if (attr_name == "transpose_x1" && attr.contains("i")) {
+                        if (attr["i"].get<int>() == 1) {
+                            trans_x1 = true;
+                        }
+                        continue;
+                    }
+                    if (attr_name == "transpose_x2" && attr.contains("i")) {
+                        if (attr["i"].get<int>() == 1) {
+                            trans_x2 = true;
+                        }
+                        continue;
+                    }
+                }
             }
-            continue;
-        }
-        if (attr.name() == "transpose_x2" && attr.type() == ge::onnx::AttributeProto::INT) {
-            if (attr.i() == 1) {
-                trans_x2 = true;
-            }
-            continue;
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(opDst).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(opDst).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
     opDst.SetAttr("dtype", a_dtype);
@@ -59,6 +72,6 @@ REGISTER_CUSTOM_OP("QuantBatchMatmulV3")
                    ge::AscendString("ai.onnx::12::QuantBatchMatMul"), ge::AscendString("ai.onnx::13::QuantBatchMatMul"),
                    ge::AscendString("ai.onnx::14::QuantBatchMatMul"), ge::AscendString("ai.onnx::15::QuantBatchMatMul"),
                    ge::AscendString("ai.onnx::16::QuantBatchMatMul")})
-    .ParseParamsFn(ParseParamsQuantBatchMatMulV3)
+    .ParseParamsByOperatorFn(ParseParamsQuantBatchMatMulV3)
     .ImplyType(ImplyType::TVM);
 } // namespace domi
