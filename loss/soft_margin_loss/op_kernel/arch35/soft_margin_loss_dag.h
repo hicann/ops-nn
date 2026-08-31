@@ -17,10 +17,14 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 #include "atvoss/reduce/reduce_operator.h"
+#include "soft_margin_loss_reduce.h"
 
 namespace SoftMarginLoss {
 using namespace Ops::Base;
 using namespace AscendC;
+
+constexpr int COMPARE_MODE_EQ = 2;
+constexpr int SELECT_MODE_T_T = 2;
 
 // L[i] = max(0, -target*self) + log(1 + exp(-|target*self|))
 template <typename T, typename PromoteT = float>
@@ -42,16 +46,21 @@ struct SoftMarginLossOp {
     using OpAbsTx = Bind<Vec::Abs<PromoteT>, OpMulTx>;
     // -|tx|
     using OpNegAbsTx = Bind<Vec::Muls<PromoteT>, OpAbsTx, ConstNegOne>;
-    // exp(-|tx|)
+    // e = exp(-|tx|)
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegAbsTx>;
-    // 1 + exp(-|tx|)
+    // Accurate log1p(e), aligned with SoftplusV2: when 1 + e rounds to 1, return e directly;
+    // otherwise compensate the rounded delta with log(1 + e) * e / ((1 + e) - 1).
     using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
-    // log(1 + exp(-|tx|))
+    using OpAddOneEqOne = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, OpAddOne, ConstOne>;
+    using OpAddOneMinusOne = Bind<Vec::Adds<PromoteT>, OpAddOne, ConstNegOne>;
     using OpLog = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    using OpExpOverDelta = Bind<Vec::Div<PromoteT>, OpExp, OpAddOneMinusOne>;
+    using OpCompensatedLog = Bind<Vec::Mul<PromoteT>, OpLog, OpExpOverDelta>;
+    using OpLog1p = Bind<Vec::Select<uint8_t, PromoteT, SELECT_MODE_T_T>, OpAddOneEqOne, OpExp, OpCompensatedLog>;
     // max(0, -tx)
     using OpMax = Bind<Vec::Maxs<PromoteT>, OpNegTx, ConstZero>;
-    // L = max(0, -tx) + log(1 + exp(-|tx|))
-    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog>;
+    // L = max(0, -tx) + log1p(exp(-|tx|))
+    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog1p>;
 
     using OpResultCast = Bind<Vec::Cast<T, PromoteT, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpResultCast>;
@@ -77,11 +86,16 @@ struct SoftMarginLossSumDag {
     using OpNegAbsTx = Bind<Vec::Muls<PromoteT>, OpAbsTx, ConstNegOne>;
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegAbsTx>;
     using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
+    using OpAddOneEqOne = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, OpAddOne, ConstOne>;
+    using OpAddOneMinusOne = Bind<Vec::Adds<PromoteT>, OpAddOne, ConstNegOne>;
     using OpLog = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    using OpExpOverDelta = Bind<Vec::Div<PromoteT>, OpExp, OpAddOneMinusOne>;
+    using OpCompensatedLog = Bind<Vec::Mul<PromoteT>, OpLog, OpExpOverDelta>;
+    using OpLog1p = Bind<Vec::Select<uint8_t, PromoteT, SELECT_MODE_T_T>, OpAddOneEqOne, OpExp, OpCompensatedLog>;
     using OpMax = Bind<Vec::Maxs<PromoteT>, OpNegTx, ConstZero>;
-    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog>;
+    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog1p>;
 
-    using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpResult>;
+    using ReduceOp0 = Bind<PairwiseReduceSumOp<PromoteT>, OpResult>;
     using Cast1 = Bind<Vec::Cast<T, PromoteT, 1>, ReduceOp0>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, Cast1>;
 
@@ -107,9 +121,14 @@ struct SoftMarginLossMeanDag {
     using OpNegAbsTx = Bind<Vec::Muls<PromoteT>, OpAbsTx, ConstNegOne>;
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegAbsTx>;
     using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
+    using OpAddOneEqOne = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, OpAddOne, ConstOne>;
+    using OpAddOneMinusOne = Bind<Vec::Adds<PromoteT>, OpAddOne, ConstNegOne>;
     using OpLog = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    using OpExpOverDelta = Bind<Vec::Div<PromoteT>, OpExp, OpAddOneMinusOne>;
+    using OpCompensatedLog = Bind<Vec::Mul<PromoteT>, OpLog, OpExpOverDelta>;
+    using OpLog1p = Bind<Vec::Select<uint8_t, PromoteT, SELECT_MODE_T_T>, OpAddOneEqOne, OpExp, OpCompensatedLog>;
     using OpMax = Bind<Vec::Maxs<PromoteT>, OpNegTx, ConstZero>;
-    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog>;
+    using OpResult = Bind<Vec::Add<PromoteT>, OpMax, OpLog1p>;
 
     using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpResult>;
     using Mul0 = Bind<Vec::Muls<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;

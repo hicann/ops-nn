@@ -50,6 +50,12 @@ static ge::graphStatus InferShapeSoftMarginLoss(gert::InferShapeContext* context
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SoftMarginLoss).InferShape(InferShapeSoftMarginLoss);
+static ge::graphStatus InferDataTypeSoftMarginLoss(gert::InferDataTypeContext* context)
+{
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    return GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(SoftMarginLoss).InferShape(InferShapeSoftMarginLoss).InferDataType(InferDataTypeSoftMarginLoss);
 
 } // namespace ops

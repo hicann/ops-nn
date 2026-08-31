@@ -31,21 +31,23 @@ __global__ __aicore__ void soft_margin_loss(GM_ADDR self, GM_ADDR target, GM_ADD
     REGISTER_TILING_DEFAULT(SoftMarginLossTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftMarginLossTilingData, tilingData, tiling);
     TPipe pipe;
-    using PromoteType = __reduceType::GetPromoteType<DTYPE_SELF>::T;
+    using PromoteType = __reduceType::GetPromoteType<DTYPE_INPUT_X>::T;
     if constexpr (Reduction == 0) {
-        ElementwiseSch<0UL, SoftMarginLoss::SoftMarginLossOp<DTYPE_SELF>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        ElementwiseSch<0UL, SoftMarginLoss::SoftMarginLossOp<DTYPE_INPUT_X>::OpDag> sch(&(tilingData.baseTiling),
+                                                                                        &pipe);
         sch.Init(self, target, loss);
         sch.Process();
     } else if constexpr (Reduction == 1) {
-        using Op = ReduceSch<REDUCE_TPL_VALUE, SoftMarginLoss::SoftMarginLossSumDag<DTYPE_SELF, PromoteType>::OpDag>;
+        using Op = ReduceSch<REDUCE_TPL_VALUE, SoftMarginLoss::SoftMarginLossSumDag<DTYPE_INPUT_X, PromoteType>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.Init(&pipe, self, target, loss, workspace);
         op.Process();
     } else if constexpr (Reduction == 2) {
-        using Op = ReduceSch<REDUCE_TPL_VALUE, SoftMarginLoss::SoftMarginLossMeanDag<DTYPE_SELF, PromoteType>::OpDag>;
+        using Op = ReduceSch<REDUCE_TPL_VALUE,
+                             SoftMarginLoss::SoftMarginLossMeanDag<DTYPE_INPUT_X, PromoteType>::OpDag>;
         Op op((ReduceOpTilingData*)&tilingData.reduceTiling);
         op.template SetVar<PromoteType, 0>(tilingData.reduceTiling.meanVar);
         op.Init(&pipe, self, target, loss, workspace);
-        op.Process(static_cast<DTYPE_SELF>(NAN));
+        op.Process(static_cast<DTYPE_INPUT_X>(NAN));
     }
 }
