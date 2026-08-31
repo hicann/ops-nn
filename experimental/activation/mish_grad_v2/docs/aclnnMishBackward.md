@@ -229,4 +229,4 @@ aclnnStatus aclnnMishBackward(
 
 ## 调用示例
 
-示例代码请参考 [test_aclnn_mish_grad_v2.cpp](../examples/test_aclnn_mish_grad_v2.cpp)。
+示例代码请参考[test_aclnn_mish_grad_v2.cpp](../examples/test_aclnn_mish_grad_v2.cpp)。

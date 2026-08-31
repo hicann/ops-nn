@@ -29,8 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)
-，必须先调用“aclnnMishBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnMishBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMishBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnMishBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMishBackwardGetWorkspaceSize(

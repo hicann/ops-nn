@@ -91,7 +91,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>threshold</td>
       <td>输入</td>
       <td>公式中的self。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系。</a></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
       <td>ND</td>
       <td>0-8</td>

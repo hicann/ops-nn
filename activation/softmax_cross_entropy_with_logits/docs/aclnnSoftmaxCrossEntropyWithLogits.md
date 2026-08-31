@@ -60,7 +60,7 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
   const aclrtStream stream)
 ```
 
-## aclnnSoftmaxCrossEntropyWithLogits
+## aclnnSoftmaxCrossEntropyWithLogitsGetWorkspaceSize
 
 - **参数说明：**
 

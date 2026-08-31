@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：计算[aclnnSmoothL1Loss](../../../../loss//smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md)的反向传播。
+- 接口功能：计算[aclnnSmoothL1Loss](../../../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md)的反向传播。
 - 计算公式：
   SmoothL1Loss 的反向传播可以通过求导计算。设 diff = x - y，beta 为超参数（默认为 1.0），其梯度的计算规则为：
 
