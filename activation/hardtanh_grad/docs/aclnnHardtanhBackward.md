@@ -350,25 +350,25 @@ int main() {
   aclTensor* gradOutput = nullptr;
   aclTensor* self = nullptr;
   aclTensor* out = nullptr;
-  aclScalar* clipValueMin = nullptr;
-  aclScalar* clipValueMax = nullptr;
+  aclScalar* minVal = nullptr;
+  aclScalar* maxVal = nullptr;
   std::vector<float> gradOutputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<float> selfHostData = {1, 1, 1, 2, 1, 2, 3, 3};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
-  float clipValueMinValue = 1.2f;
-  float clipValueMaxValue = 2.4f;
+  float minValue = 1.2f;
+  float maxValue = 2.4f;
   // 创建gradOutput aclTensor
   ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建clipValueMin aclScalar
-  clipValueMin = aclCreateScalar(&clipValueMinValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(clipValueMin != nullptr, return ret);
-  // 创建clipValueMax aclScalar
-  clipValueMax = aclCreateScalar(&clipValueMaxValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(clipValueMax != nullptr, return ret);
+  // 创建minVal aclScalar
+  minVal = aclCreateScalar(&minValue, aclDataType::ACL_FLOAT);
+  CHECK_RET(minVal != nullptr, return ret);
+  // 创建maxVal aclScalar
+  maxVal = aclCreateScalar(&maxValue, aclDataType::ACL_FLOAT);
+  CHECK_RET(maxVal != nullptr, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -377,7 +377,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnHardtanhBackward第一段接口
-  ret = aclnnHardtanhBackwardGetWorkspaceSize(gradOutput, self, clipValueMin, clipValueMax, out, &workspaceSize, &executor);
+  ret = aclnnHardtanhBackwardGetWorkspaceSize(gradOutput, self, minVal, maxVal, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardtanhBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
@@ -404,8 +404,8 @@ int main() {
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(gradOutput);
   aclDestroyTensor(self);
-  aclDestroyScalar(clipValueMin);
-  aclDestroyScalar(clipValueMax);
+  aclDestroyScalar(minVal);
+  aclDestroyScalar(maxVal);
   aclDestroyTensor(out);
 
   // 7. 释放device资源，需要根据具体API的接口定义修改
