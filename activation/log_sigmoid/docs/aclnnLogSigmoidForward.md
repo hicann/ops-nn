@@ -103,7 +103,7 @@ aclnnStatus aclnnLogSigmoidForward(
       <tr>
       <td>buffer（aclTensor*）</td>
       <td>输出</td>
-      <td>用于保存正向计算的中间结果，暂无用。</td>
+      <td>用于保存正向计算的中间结果，暂无用，可以传入nullptr。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

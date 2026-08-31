@@ -126,7 +126,8 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
 
     int64_t dimNum = self->GetViewShape().GetDimNum();
     if (dimNum == 0) {
-        dimNum = 1;
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support the input self is scalar. Dim num of self can not be 0.");
+        return false;
     }
 
     if ((-dimNum > dim) || ((dimNum - 1) < dim)) {
