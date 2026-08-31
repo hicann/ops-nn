@@ -1677,6 +1677,8 @@ REG_OP(AdaptiveMaxPool2d)
         *\n
         *
     */
+#ifndef OPS_PROTO_DEF_CONV2DTRANSPOSE
+#define OPS_PROTO_DEF_CONV2DTRANSPOSE
     REG_OP(Conv2DTranspose)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_INT8, DT_BF16}))
@@ -1692,6 +1694,7 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(output_padding, ListInt, {0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv2DTranspose)
+#endif
 
     /**
     *@brief Computes the transpose of convolution 3d with respect to the input.
@@ -1757,6 +1760,8 @@ REG_OP(AdaptiveMaxPool2d)
         * Analyze and rectify the fault based on the log information.
         * If the fault persists, visit https://www.hiascend.com/support for technical support.
     */
+#ifndef OPS_PROTO_DEF_CONV3DTRANSPOSE
+#define OPS_PROTO_DEF_CONV3DTRANSPOSE
     REG_OP(Conv3DTranspose)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
@@ -1772,6 +1777,7 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(output_padding, ListInt, {0, 0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv3DTranspose)
+#endif
 
     /**
      * @brief Computes rectified linear: "max(x, 0)".
