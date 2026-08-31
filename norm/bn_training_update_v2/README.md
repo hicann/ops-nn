@@ -11,7 +11,7 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练/推理系列、Atlas A3 训练/推理系列支持，Atlas 训练系列与 Atlas 推理系列仅 FLOAT16/FLOAT32。
+> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（NC1HWC0/NCDHW/NCHW/NDC1HWC0、rank 4~6）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅 FLOAT16/FLOAT32。
 
 ## 功能说明
 
@@ -55,8 +55,8 @@
       <td>x</td>
       <td>输入</td>
       <td><ul><li>表示待归一化的输入张量，对应公式中的<code>x</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[N, C, R...]，支持2~8维，dim0为N、dim1为C、后导维展平为归一化轴R。</li><li>其余产品：4/5/6维（5HD/6HD内部布局，或4维NCHW特例[N,C,1,W]走动态分支）。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算、单次舍入写回。</li></ul></td>
-      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2训练/推理系列、Atlas A3训练/推理系列</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列仅NC1HWC0/NDC1HWC0）</td>
+      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</td>
+      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0）</td>
     </tr>
     <tr>
       <td>sum</td>
@@ -126,9 +126,9 @@
 - batch_mean/batch_variance的shape与scale一致。
 - 不支持空tensor：x任一维为0时算子拒绝执行（num=N*R作为分母无法定义）。
 
-**其余产品（Atlas A2/A3训练/推理系列、Atlas 训练/推理系列）：**
+**其余产品（Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas 训练系列产品、Atlas 推理系列产品）：**
 
-- 数据格式为NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列仅NC1HWC0/NDC1HWC0），x为4/5/6维（或4维NCHW特例[N,C,1,W]）。
+- 数据格式为NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0），x为4/5/6维（或4维NCHW特例[N,C,1,W]）。
 - 统计量sum/square_sum/scale/offset与x同rank、恒为FLOAT32；NC1HWC0/NDC1HWC0下C按C0=16对齐，统计量元素数等于C1*C0。
 - 不支持空tensor（各产品proto同声明）。
 

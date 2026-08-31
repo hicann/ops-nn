@@ -11,7 +11,7 @@
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
-> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND/NHWC、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（输入4维NHWC/NCHW，内部NC1HWC0/NDC1HWC0布局）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练/推理系列、Atlas A3 训练/推理系列支持，Atlas 训练系列与 Atlas 推理系列仅 FLOAT16/FLOAT32。
+> 注：本表按算子在各产品的注册/交付支持面判定——Ascend 950PR/Ascend 950DT 为本仓 arch35 实现（ND/NHWC、rank 2~8，见参数说明与约束说明中的产品限定）；其余产品由 CANN 交付的 TBE 实现（输入4维NHWC/NCHW，内部NC1HWC0/NDC1HWC0布局）。数据类型 BFLOAT16 仅 Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品支持；Atlas 训练系列产品、Atlas 推理系列产品、Atlas 200I/500 A2 推理产品仅 FLOAT16/FLOAT32。
 
 ## 功能说明
 
@@ -71,7 +71,7 @@
       <td>x</td>
       <td>输入</td>
       <td><ul><li>表示待归一化的输入张量，对应公式中的<code>x</code>。</li><li>Ascend 950PR/Ascend 950DT：ND布局shape为[N, C, R...]，支持2~8维，dim0为N、dim1为C、后导维展平为归一化轴R；NHWC布局任意rank≥2，C=最后一维。</li><li>其余产品：4维（来源格式NHWC或NCHW，内部按5HD/6HD布局计算）。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算、单次舍入写回。</li></ul></td>
-      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2训练/推理系列、Atlas A3训练/推理系列</td>
+      <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</td>
       <td>Ascend 950PR/Ascend 950DT：ND/NHWC；其余产品：NC1HWC0/NCHW/NDC1HWC0/NHWC</td>
     </tr>
     <tr>
@@ -111,8 +111,8 @@
     </tr>
     <tr>
       <td>before_split_ori_shape / before_split_ori_format</td>
-      <td>不涉及（A5与A2差异点，历史背景说明）</td>
-      <td><ul><li><strong>A5（Ascend 950PR/Ascend 950DT）：无此入参/属性。</strong>该两参数不属于算子原型输入，且与FFTS切分特性强相关——FFTS为已废弃特性，A5代码与原型均不包含、不支持。</li><li>历史背景：A2侧（Atlas A2/A3训练/推理系列等）将其注册为可选属性（LIST_LIST_INT/LIST_INT，默认[[]]/[]），用于BN FFTS切分场景按切分前原始shape/format计算num；该特性已废弃，A5的num按实际输入shape计算，传入不生效（原型未注册，GE侧按未知属性忽略）。</li></ul></td>
+      <td>不涉及（Ascend 950PR/Ascend 950DT 与 Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品 差异点，历史背景说明）</td>
+      <td><ul><li><strong>Ascend 950PR/Ascend 950DT：无此入参/属性。</strong>该两参数不属于算子原型输入，且与FFTS切分特性强相关——FFTS为已废弃特性，Ascend 950PR/Ascend 950DT 代码与原型均不包含、不支持。</li><li>历史背景：Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品等将其注册为可选属性（LIST_LIST_INT/LIST_INT，默认[[]]/[]），用于BN FFTS切分场景按切分前原始shape/format计算num；该特性已废弃，Ascend 950PR/Ascend 950DT 的num按实际输入shape计算，传入不生效（原型未注册，GE侧按未知属性忽略）。</li></ul></td>
       <td>不涉及</td>
       <td>不涉及</td>
     </tr>
@@ -158,20 +158,19 @@
 **Ascend 950PR/Ascend 950DT：**
 
 - 支持ND与NCHW格式（tiling对两者都放行；dim0=N、dim1=C、后导维为归一化轴R，rank 2~8；图模式下NCHW标签会被框架归一化下发，布局相同）。
-- 支持NHWC格式（x任意rank≥2，C=最后一维，num=numel/C；统计量仍按元素数=C校验）。NHWC下通道数C无上限：C为64的倍数时按向量窗口流式处理，C非64倍数且整行预算内按整行tile处理，超大C按c窗口流式处理（系数按窗重建，UB占用与C无关）。NC1HWC0/NDC1HWC0来源格式在本产品被tiling拒收（GRAPH_FAILED）——A2/A3上按这些格式下发的BN图迁移到950前需先转ND/NCHW/NHWC。
+- 支持NHWC格式（x任意rank≥2，C=最后一维，num=numel/C；统计量仍按元素数=C校验）。NHWC下通道数C无上限：C为64的倍数时按向量窗口流式处理，C非64倍数且整行预算内按整行tile处理，超大C按c窗口流式处理（系数按窗重建，UB占用与C无关）。NC1HWC0/NDC1HWC0来源格式在本产品被tiling拒收（GRAPH_FAILED）——Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品 上按这些格式下发的BN图迁移到 Ascend 950PR/Ascend 950DT 前需先转ND/NCHW/NHWC。
 - x维度数须≥2；x为FLOAT16/FLOAT32/BFLOAT16。
 - tiling阶段要求shape全为确定正值：任一维为0拒绝（空tensor），任一维为负/未知动态维报"dynamic shape dim is not supported in tiling"拒绝。
-- 不支持BN FFTS切分场景（A5与A2差异点）：before_split_ori_shape/before_split_ori_format不属于算子原型输入，与FFTS切分特性强相关且该特性已废弃——A5的代码与原型不包含这两个入参，num按实际输入shape计算。历史背景：A2侧将其注册为可选属性用于按切分前原始shape计算num，详见参数表该行说明。
+- 不支持BN FFTS切分场景（Ascend 950PR/Ascend 950DT 与 Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品 差异点）：before_split_ori_shape/before_split_ori_format不属于算子原型输入，与FFTS切分特性强相关且该特性已废弃——Ascend 950PR/Ascend 950DT 的代码与原型不包含这两个入参，num按实际输入shape计算。历史背景：Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品 侧将其注册为可选属性用于按切分前原始shape计算num，详见参数表该行说明。
 - sum/square_sum/scale/offset恒为FLOAT32，元素数必须等于通道数C（ND/NCHW布局下即x的dim1，NHWC布局下为x的最后一维；shape推荐为[C]，按元素数校验）。
 - batch_mean/batch_variance/reserve_1/reserve_2的shape与scale一致。
 - 不支持空tensor：x任一维为0时算子拒绝执行（num=N*R作为分母无法定义）。
 
-**其余产品（Atlas A2/A3训练/推理系列、Atlas 训练/推理系列）：**
+**其余产品（Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas 训练系列产品、Atlas 推理系列产品）：**
 
 - 数据格式为NC1HWC0/NCHW/NDC1HWC0/NHWC，x为5/6维。
 - 统计量sum/square_sum/scale/offset与x同rank、恒为FLOAT32；NC1HWC0/NDC1HWC0下C按C0=16对齐，统计量元素数等于C1*C0。
 - 不支持空tensor（各产品proto同声明）。
-- **精度告警（Atlas 200/300/500 推理产品）**：受square root指令精度限制，该系列产品上结果精度达不到1/1000（A2 IR原型@attention原文，适用于本算子）。
 - 可选属性before_split_ori_shape（listListInt，默认[[]]）/before_split_ori_format（listInt，默认[]）：BN FFTS切分场景（已废弃特性）遗留注册，此时num按切分前原始shape计算。
 
 **通用：** epsilon取值应大于0（host不校验，见参数说明）。
