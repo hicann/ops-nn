@@ -145,8 +145,9 @@ static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* par
 }
 
 static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool train,
-                                   aclTensor* output, aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut,
-                                   aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
+                                   const aclTensor* output, const aclTensor* hy, const aclTensorList* rOut,
+                                   const aclTensorList* zOut, const aclTensorList* nOut, const aclTensorList* hnOut,
+                                   const aclTensorList* hOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
     auto data_type = input->GetDataType();
@@ -183,8 +184,9 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
 
 //  校验tensorList长度
 static bool CheckDimsSize(const aclTensorList* params, [[maybe_unused]] const aclTensor* hx, bool hasBias,
-                          int64_t numLayers, bool train, bool bidirection, aclTensorList* rOut, aclTensorList* zOut,
-                          aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
+                          int64_t numLayers, bool train, bool bidirection, const aclTensorList* rOut,
+                          const aclTensorList* zOut, const aclTensorList* nOut, const aclTensorList* hnOut,
+                          const aclTensorList* hOut)
 {
     uint64_t dScale = bidirection ? 2 : 1;
     uint64_t bScale = hasBias ? 2 : 1;
@@ -234,9 +236,9 @@ static bool CheckDimsSize(const aclTensorList* params, [[maybe_unused]] const ac
 
 //  校验tensor维度
 static bool CheckDims(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
-                      int64_t numLayers, bool train, bool bidirection, aclTensor* output, aclTensor* hy,
-                      aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut, aclTensorList* hnOut,
-                      aclTensorList* hOut)
+                      int64_t numLayers, bool train, bool bidirection, const aclTensor* output, const aclTensor* hy,
+                      const aclTensorList* rOut, const aclTensorList* zOut, const aclTensorList* nOut,
+                      const aclTensorList* hnOut, const aclTensorList* hOut)
 {
     OP_CHECK_WRONG_DIMENSION(input, INPUT_DIMS, return false);
     uint64_t bScale = hasBias ? 2 : 1;
@@ -282,9 +284,9 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
 }
 
 static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
-                       int64_t numLayers, bool train, bool bidirection, bool batchFirst, aclTensor* output,
-                       aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
-                       aclTensorList* hnOut, aclTensorList* hOut)
+                       int64_t numLayers, bool train, bool bidirection, bool batchFirst, const aclTensor* output,
+                       const aclTensor* hy, const aclTensorList* rOut, const aclTensorList* zOut,
+                       const aclTensorList* nOut, const aclTensorList* hnOut, const aclTensorList* hOut)
 {
     //  根据batchFirst确定T和B的位置
     auto timeStep = batchFirst ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
