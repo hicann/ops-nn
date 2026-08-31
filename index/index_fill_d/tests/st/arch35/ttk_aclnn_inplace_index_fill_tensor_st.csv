@@ -1,0 +1,6 @@
+﻿testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,output_inplace_indexes,scalar_dtypes,scalar_data_ranges,input_data_ranges,precision_tolerances,is_enabled
+aclnnInplaceIndexFillTensor_fp16_N_000001,aclnnInplaceIndexFillTensor,"('float32',)","('ND',)","{'dim':-2,'index':[1, 2]}","((7,52),)","(0,)","('float32', )","((79,79),)","((-2,-1))","((0.001, 0.001),)",1
+aclnnInplaceIndexFillTensor_fp16_N_000002,aclnnInplaceIndexFillTensor,"('float16',)","('ND',)","{'dim':0,'index':[0]}","((4,8,16),)","(0,)","('float16', )","((10,10),)","((0,1))","((0.001, 0.001),)",1
+aclnnInplaceIndexFillTensor_int32_N_000003,aclnnInplaceIndexFillTensor,"('int32',)","('ND',)","{'dim':1,'index':[0,1,2]}","((5,10,20),)","(0,)","('int32', )","((100,100),)","((-100,100))","((0.001, 0.001),)",1
+aclnnInplaceIndexFillTensor_int64_N_000004,aclnnInplaceIndexFillTensor,"('int64',)","('ND',)","{'dim':-1,'index':[3]}","((8,16,32),)","(0,)","('int64', )","((50,50),)","((-50,50))","((0.001, 0.001),)",1
+aclnnInplaceIndexFillTensor_fp16_N_000005,aclnnInplaceIndexFillTensor,"('float16',)","('ND',)","{'dim':0,'index':[0,2,4]}","((6,12,24),)","(0,)","('float16', )","((-5,-5),)","((-1,1))","((0.001, 0.001),)",1

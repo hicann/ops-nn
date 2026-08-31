@@ -7,20 +7,23 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-'''
+"""
 gelu golden function
-'''
+"""
+
 import numpy as np
+import torch
 
 __golden__ = {
-    "kernel": {
-        "gelu": "gelu_golden"
-    }
+    "aclnn": {
+        "aclnnGelu": "aclnn_gelu_golden",
+    },
+    "kernel": {"gelu": "gelu_golden"},
 }
 
 
 def gelu_golden(x, approximate="tanh", **kwargs):
-    '''
+    """
     Golden function for gelu.
     All the parameters (names and order) follow @gelu_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -31,16 +34,26 @@ def gelu_golden(x, approximate="tanh", **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
-    
+
     input_dtype = x.dtype
-    
+
     # Promote float16 and bfloat16 to float32 for computation
     if input_dtype.name == "float16" or input_dtype.name == "bfloat16":
         x = x.astype(np.float32)
-    
+
     m = torch.nn.GELU(approximate=approximate)
     res = m(torch.from_numpy(x)).numpy()
-    
+
     return res.astype(input_dtype, copy=False)
+
+
+def aclnn_gelu_golden(self, out, **kwargs):
+    orig_dtype = self.dtype
+    x = self
+    if x.dtype != torch.float64:
+        x = x.to(torch.float32)
+    m = torch.nn.GELU(approximate="tanh")
+    result = m(x).to(orig_dtype)
+    return [result]

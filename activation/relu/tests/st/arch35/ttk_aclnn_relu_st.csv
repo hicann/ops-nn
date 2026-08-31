@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_dtypes,absolute_precision
+Relu_float32_ND_fuzz_1,aclnnRelu,"('float32', 'float32')","('ND',)","((196, 2, 1, 76, 1, 1), (196, 2, 1, 76, 1, 1))","((-1000, -10),)","(-1,)","('float32',)",0.0001
+Relu_float16_ND_fuzz_2,aclnnRelu,"('float16', 'float16')","('ND',)","((192, 64, 1, 1, 1, 5, 1), (192, 64, 1, 1, 1, 5, 1))","((0, 0),)","(-1,)","('float16',)",0.001
+Relu_float32_ND_fuzz_3,aclnnRelu,"('float32', 'float32')","('ND',)","((1, 1, 4, 11, 48, 17), (1, 1, 4, 11, 48, 17))","((-3.4e+38, 3.4e+38),)","(-1,)","('float32',)",0.0001
+Relu_float16_ND_fuzz_4,aclnnRelu,"('float16', 'float16')","('ND',)","((139, 3, 1, 1, 1, 192), (139, 3, 1, 1, 1, 192))","((-10, -2),)","(-1,)","('float16',)",0.001
+Relu_float16_ND_fuzz_5,aclnnRelu,"('float16', 'float16')","('ND',)","((1, 139, 1, 28, 1, 22, 1), (1, 139, 1, 28, 1, 22, 1))","((-1, 1),)","(-1,)","('float16',)",0.001

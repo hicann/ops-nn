@@ -11,12 +11,18 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"sigmoid_grad": "sigmoid_grad_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnSigmoidBackward": "aclnn_sigmoid_backward_golden",
+    },
+    "kernel": {"sigmoid_grad": "sigmoid_grad_golden"},
+}
 
 
 def sigmoid_grad_golden(y, dy, **kwargs):
-    '''
+    """
     Golden function for sigmoid_grad.
     All the parameters (names and order) follow @sigmoid_grad_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,15 +33,24 @@ def sigmoid_grad_golden(y, dy, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     dtype = y.dtype
-    
-    if 'float16' in str(dtype):
+
+    if "float16" in str(dtype):
         y = y.astype("float32")
         dy = dy.astype("float32")
-    
+
     tensor_sub = np.subtract(1.0, y)
     tensor_mul = np.multiply(tensor_sub, dy)
     res = np.multiply(tensor_mul, y)
-    
+
     return res.astype(dtype, copy=False)
+
+
+def aclnn_sigmoid_backward_golden(gradOutput, output, gradInput=None, **kwargs):
+    orig_dtype = gradOutput.dtype
+    if orig_dtype in (torch.float16, torch.bfloat16):
+        gradOutput = gradOutput.to(torch.float32)
+        output = output.to(torch.float32)
+    result = gradOutput * output * (1 - output)
+    return [result.to(orig_dtype)]

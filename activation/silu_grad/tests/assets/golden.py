@@ -12,11 +12,16 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"silu_grad": "silu_grad_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnSiluBackward": "aclnn_silu_backward_golden",
+    },
+    "kernel": {"silu_grad": "silu_grad_golden"},
+}
 
 
 def silu_grad_golden(dy, x, **kwargs):
-    '''
+    """
     Golden function for silu_grad.
     All the parameters (names and order) follow @silu_grad_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,11 +32,11 @@ def silu_grad_golden(dy, x, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
 
     def _to_torch(arr):
-        if arr.dtype.name == 'bfloat16':
+        if arr.dtype.name == "bfloat16":
             return torch.from_numpy(arr.view(np.int16)).view(torch.bfloat16)
         return torch.from_numpy(arr)
 
@@ -40,6 +45,17 @@ def silu_grad_golden(dy, x, **kwargs):
     dx = torch.ops.aten.silu_backward(dy_torch, x_torch)
 
     if dx.dtype == torch.bfloat16:
-        return dx.view(torch.int16).numpy().view(np.dtype('bfloat16'))
+        return dx.view(torch.int16).numpy().view(np.dtype("bfloat16"))
     else:
         return dx.numpy()
+
+
+def aclnn_silu_backward_golden(gradOutput, self, gradInput=None, **kwargs):
+    """
+    Aclnn golden for aclnnSiluBackward.
+    Parameters follow @aclnnSiluBackwardGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    return [torch.ops.aten.silu_backward(gradOutput, self)]

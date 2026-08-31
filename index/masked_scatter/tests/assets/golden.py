@@ -10,13 +10,18 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-import numpy as np
+import torch
 
-__golden__ = {"kernel": {"masked_scatter": "masked_scatter_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnInplaceMaskedScatter": "aclnn_inplace_masked_scatter_golden",
+    },
+    "kernel": {"masked_scatter": "masked_scatter_golden"},
+}
 
 
 def masked_scatter_golden(input0, input1, input2, **kwargs):
-    '''
+    """
     Golden function for masked_scatter.
     All the parameters (names and order) follow @masked_scatter_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,8 +32,7 @@ def masked_scatter_golden(input0, input1, input2, **kwargs):
 
     Returns:
         Output tensor
-    '''
-    import torch
+    """
 
     dtype = input0.dtype
     if "bfloat16" in str(dtype):
@@ -44,3 +48,9 @@ def masked_scatter_golden(input0, input1, input2, **kwargs):
     if "bfloat16" in str(dtype):
         res = res.view(dtype)
     return res
+
+
+def aclnn_inplace_masked_scatter_golden(selfRef, mask, source, **kwargs):
+    result = selfRef.clone()
+    result.masked_scatter_(mask.bool(), source)
+    return [result]

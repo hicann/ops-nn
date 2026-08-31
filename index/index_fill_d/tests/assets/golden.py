@@ -10,17 +10,20 @@
 
 
 import numpy as np
+import torch
 
 
 __golden__ = {
-    "kernel": {
-        "index_fill_d": "index_fill_d_golden"
-    }
+    "aclnn": {
+        "aclnnInplaceIndexFillTensor": "aclnn_inplace_index_fill_tensor_golden",
+        "aclnnIndexFillTensor": "aclnn_index_fill_tensor_golden",
+    },
+    "kernel": {"index_fill_d": "index_fill_d_golden"},
 }
 
 
 def index_fill_d_golden(x, assist1, assist2, **kwargs):
-    '''
+    """
     Golden function for index_fill_d.
     All the parameters (names and order) follow @index_fill_d_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -31,6 +34,30 @@ def index_fill_d_golden(x, assist1, assist2, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     output_y = np.where(assist1 > 0, x, assist2)
     return output_y
+
+
+def aclnn_index_fill_tensor_golden(self, dim, index, value, out=None, **kwargs):
+    if hasattr(dim, "item"):
+        dim = dim.item()
+    if hasattr(value, "item"):
+        value = value.item()
+    if not isinstance(index, torch.Tensor):
+        index = torch.tensor(index)
+    result = self.clone()
+    result.index_fill_(dim, index.long(), value)
+    return [result]
+
+
+def aclnn_inplace_index_fill_tensor_golden(selfRef, dim, index, value, **kwargs):
+    if hasattr(dim, "item"):
+        dim = dim.item()
+    if hasattr(value, "item"):
+        value = value.item()
+    if not isinstance(index, torch.Tensor):
+        index = torch.tensor(index)
+    result = selfRef.clone()
+    result.index_fill_(dim, index.long(), value)
+    return [result]

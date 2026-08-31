@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,output_tensor_indexes,input_data_ranges,attributes
+aclnnBucketize_int8_bf16_ND_infnan_random_000000,aclnnBucketize,"['int8', 'bf16', 'int64']","('ND',)","[[3, 9, 4, 1, 5, 4, 6, 4], [31628], [3, 9, 4, 1, 5, 4, 6, 4]]","(-1,)","[[inf, inf], [-5375, 67165]]","{'outInt32':False , 'right':False}"
+aclnnBucketize_fp32_fp16_ND_infnan_random_000002,aclnnBucketize,"['fp32', 'fp16', 'int32']","('ND',)","[[9875], [13917], [9875]]","(-1,)","[[-inf, -inf], [-68700, 36819]]","{'outInt32':True , 'right':False}"
+aclnnBucketize_int8_int64_ND_infnan_random_000003,aclnnBucketize,"['int8', 'int64', 'int32']","('ND',)","[[3, 5, 2, 610, 7, 3], [9262], [3, 5, 2, 610, 7, 3]]","(-1,)","[[nan, nan], [-81938, 50073]]","{'outInt32':True , 'right':False}"
+aclnnBucketize_int64_ND_infnan_random_000004,aclnnBucketize,"['int64', 'int64', 'int32']","('ND',)","[[5, 2, 5, 5, 7], [14382], [5, 2, 5, 5, 7]]","(-1,)","[[0, 1], [-92999, 94508]]","{'outInt32':True , 'right':False}"
+aclnnBucketize_int8_fp64_ND_infnan_random_000006,aclnnBucketize,"['int8', 'fp64', 'int64']","('ND',)","[[2, 91, 2, 2888, 2], [36828], [2, 91, 2, 2888, 2]]","(-1,)","[[-inf, -inf], [-96569, 84815]]","{'outInt32':False , 'right':True}"

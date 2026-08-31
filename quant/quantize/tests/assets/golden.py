@@ -11,8 +11,14 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"quantize": "quantize_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnQuantize": "aclnn_quantize_golden",
+    },
+    "kernel": {"quantize": "quantize_golden"},
+}
 
 
 def quantize_golden(x, scales, zero_points=None, *, dtype, axis=1, **kwargs):
@@ -84,3 +90,25 @@ def quantize_golden(x, scales, zero_points=None, *, dtype, axis=1, **kwargs):
         round_data = round_data.astype(hifloat8, copy=False)
 
     return round_data
+
+
+def aclnn_quantize_golden(x, scales, zeroPoints, dtype, axis, out, **kwargs):
+    if hasattr(dtype, "item"):
+        dtype = dtype.item()
+    if hasattr(axis, "item"):
+        axis = axis.item()
+    x_f = x.to(torch.float32)
+    scale = scales.to(torch.float32)
+    offset = zeroPoints.to(torch.float32) if zeroPoints is not None else None
+    x_shape = x_f.shape
+    scale_shape = scale.shape
+    if len(x_shape) != len(scale_shape):
+        tmp_scale_shape = [1] * len(x_shape)
+        tmp_scale_shape[axis] = scale_shape[0]
+        scale = scale.reshape(tmp_scale_shape)
+    scale_rst = x_f / scale
+    if offset is not None:
+        offset = offset.reshape(scale.shape)
+        scale_rst = scale_rst + offset
+    round_data = torch.round(scale_rst).clamp(-128, 127).to(torch.int8)
+    return [round_data]

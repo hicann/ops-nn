@@ -1,0 +1,2 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,attributes,input_data_ranges,output_tensor_indexes,absolute_precision
+aclnnAscendQuantV3_float16_ND_fuzz_1,aclnnAscendQuantV3,"('float16', 'float16', 'float16', 'int8')","('ND',)","((16, 1024),(1024,),(1024,),(16, 1024))","{'dstType': 2, 'sqrtMode':False, 'roundMode':'round', 'axis':1}","((-2, 2), (-2, 2), (-2, 2))","(-1,)",0.0001

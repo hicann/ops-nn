@@ -1,0 +1,4 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_dtypes,scalar_dtypes,scalar_data_ranges,absolute_precision
+aclnn_swish_fuzz_1,aclnnSwish,"('float32', 'float32')","('ND',)","((19, 2, 5, 8), (19, 2, 5, 8))","((-1000, 1000),)","(-1,)","('float32',)","('float32',)","(1, 1)",0.0001
+aclnn_swish_fuzz_2,aclnnSwish,"('float16', 'float16')","('ND',)","((19, 2, 5, 8), (19, 2, 5, 8))","((-1000, 1000),)","(-1,)","('float16',)","('float32',)","(1, 1)",0.0001
+aclnn_swish_fuzz_6,aclnnSwish,"('bfloat16', 'bfloat16')","('ND',)","((19, 2, 5, 8), (19, 2, 5, 8))","((-1000, 1000),)","(-1,)","('bfloat16',)","('float32',)","(1, 1)",0.0001

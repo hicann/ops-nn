@@ -11,7 +11,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"embedding": "embedding_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnEmbedding": "aclnn_embedding_golden",
+    },
+    "kernel": {"embedding": "embedding_golden"},
+}
 
 
 def embedding_golden(x, indices, **kwargs):
@@ -53,3 +58,14 @@ def embedding_golden(x, indices, **kwargs):
         )
 
     return res
+
+
+def aclnn_embedding_golden(weight, indices, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnEmbedding.
+    Parameters follow @aclnnEmbeddingGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    return torch.nn.functional.embedding(indices, weight)

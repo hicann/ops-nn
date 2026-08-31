@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_dtypes,scalar_dtypes,scalar_data_ranges,attributes,absolute_precision
+InplaceLeakyRelu_float32_ND_fuzz_1,aclnnInplaceLeakyRelu,('float32'),"('ND',)","((196, 2, 1, 76, 1, 1))","((-1000, -10),)","(-1,)","('float32',)",('float16'),"(0, 1)",{'negative_slope': 0.0006944149602797177},0.0001
+InplaceLeakyRelu_float16_ND_fuzz_2,aclnnInplaceLeakyRelu,('float16'),"('ND',)","((192, 64, 1, 1, 1, 5, 1))","((0, 0),)","(-1,)","('float16',)",('float16'),"(0, 1)",{'negative_slope': 0.007353729707176569},0.001
+InplaceLeakyRelu_float32_ND_fuzz_3,aclnnInplaceLeakyRelu,('float32'),"('ND',)","((1, 1, 4, 11, 48, 17))","((-3.4e+38, 3.4e+38),)","(-1,)","('float32',)",('float16'),"(0, 1)",{'negative_slope': 0.003578863762855549},0.0001
+InplaceLeakyRelu_float16_ND_fuzz_4,aclnnInplaceLeakyRelu,('float16'),"('ND',)","((139, 3, 1, 1, 1, 192))","((-10, -2),)","(-1,)","('float16',)",('float16'),"(0, 1)",{'negative_slope': 0.001118463241933789},0.001
+InplaceLeakyRelu_float16_ND_fuzz_5,aclnnInplaceLeakyRelu,('float16'),"('ND',)","((1, 139, 1, 28, 1, 22, 1))","((-1, 1),)","(-1,)","('float16',)",('float16'),"(0, 1)",{'negative_slope': 0.006011051318991595},0.001

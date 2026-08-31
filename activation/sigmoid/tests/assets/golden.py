@@ -11,12 +11,19 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"sigmoid": "sigmoid_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnSigmoid": "aclnn_sigmoid_golden",
+        "aclnnInplaceSigmoid": "aclnn_inplace_sigmoid_golden",
+    },
+    "kernel": {"sigmoid": "sigmoid_golden"},
+}
 
 
 def sigmoid_golden(x, **kwargs):
-    '''
+    """
     Golden function for sigmoid.
     All the parameters (names and order) follow @sigmoid_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,7 +34,7 @@ def sigmoid_golden(x, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     input_dtype = x.dtype
     if input_dtype.name in ("bfloat16",):
         x = x.astype("float32")
@@ -36,3 +43,25 @@ def sigmoid_golden(x, **kwargs):
     tensor_add = tensor_exp + 1
     res = 1 / tensor_add
     return res.astype(input_dtype, copy=False)
+
+
+def aclnn_inplace_sigmoid_golden(selfRef=None, **kwargs):
+    """
+    Aclnn golden for aclnnInplaceSigmoid.
+    Parameters follow @aclnnInplaceSigmoidGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    return [
+        torch.nn.functional.sigmoid(selfRef)
+        if hasattr(torch.nn.functional, "sigmoid")
+        else torch.sigmoid(selfRef)
+    ]
+
+
+def aclnn_sigmoid_golden(self, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnSigmoid.
+    Parameters follow @aclnnSigmoidGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    return [torch.sigmoid(self)]

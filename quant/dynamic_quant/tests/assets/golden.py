@@ -11,8 +11,15 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"dynamic_quant": "dynamic_quant_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnDynamicQuantV3": "aclnn_dynamic_quant_v3_golden",
+        "aclnnDynamicQuant": "aclnn_dynamic_quant_golden",
+    },
+    "kernel": {"dynamic_quant": "dynamic_quant_golden"},
+}
 
 
 def _dynamic_quant_common(
@@ -247,3 +254,82 @@ def dynamic_quant_golden(
         is_symmetrical,
         output_dtype_str,
     )
+
+
+def aclnn_dynamic_quant_golden(x, smoothScalesOptional, yOut, scaleOut, **kwargs):
+    """
+    Aclnn golden for aclnnDynamicQuant.
+    """
+    x_f = x.to(torch.float32) if x.dtype != torch.float32 else x
+    smooth_scales = (
+        smoothScalesOptional.to(torch.float32)
+        if smoothScalesOptional is not None
+        else None
+    )
+    x_scaled = x_f * smooth_scales if smooth_scales is not None else x_f
+    amax = torch.amax(
+        torch.abs(x_scaled).view(-1, x_scaled.shape[-1]), dim=-1, keepdim=True
+    )
+    scale = amax / 127.0
+    scale = torch.where(scale == 0, torch.ones_like(scale), scale)
+    quantized = torch.round(x_scaled / scale)
+    quantized = quantized.clamp(-128, 127).to(torch.int8)
+    return [quantized, scale]
+
+
+def aclnn_dynamic_quant_v3_golden(
+    x,
+    smoothScalesOptional,
+    groupIndexOptional,
+    dstType,
+    isSymmetrical,
+    quantMode,
+    yOut,
+    scaleOut,
+    offsetOut,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnDynamicQuantV3.
+    """
+    if hasattr(dstType, "item"):
+        dstType = dstType.item()
+    if hasattr(isSymmetrical, "item"):
+        isSymmetrical = bool(isSymmetrical.item())
+    if hasattr(quantMode, "item"):
+        quantMode = quantMode.item()
+    x_f = x.to(torch.float32) if x.dtype != torch.float32 else x
+    smooth_scales = (
+        smoothScalesOptional.to(torch.float32)
+        if smoothScalesOptional is not None
+        else None
+    )
+    x_scaled = x_f * smooth_scales if smooth_scales is not None else x_f
+    scale_max = 127.0
+    scale_max_no_sym = 255.0
+    offset = None
+    if not isSymmetrical:
+        input_max = torch.max(x_scaled, dim=-1, keepdim=True).values
+        input_min = torch.min(x_scaled, dim=-1, keepdim=True).values
+        scale = (input_max - input_min) / scale_max_no_sym
+        scale = torch.where(scale == 0, torch.ones_like(scale), scale)
+        offset = scale_max - (input_max / scale)
+        input_scaled = x_scaled / scale + offset
+    else:
+        input_abs = torch.abs(x_scaled)
+        input_max = torch.max(input_abs, dim=-1, keepdim=True).values
+        scale = input_max / scale_max
+        scale = torch.where(scale == 0, torch.ones_like(scale), scale)
+        input_scaled = x_scaled / scale
+    round_data = torch.round(input_scaled)
+    if dstType == 2:
+        if isSymmetrical:
+            round_data = round_data.clamp(-128, 127).to(torch.int8)
+        else:
+            round_data = round_data.clamp(0, 255).to(torch.uint8)
+    scale_out = scale.squeeze(-1)
+    if offset is not None:
+        offset_out = offset.squeeze(-1)
+    else:
+        offset_out = torch.zeros_like(scale_out)
+    return [round_data, scale_out, offset_out]

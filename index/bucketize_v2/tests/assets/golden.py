@@ -11,7 +11,14 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"bucketize_v2": "bucketize_v2_golden"}}
+import torch
+
+__golden__ = {
+    "aclnn": {
+        "aclnnBucketize": "aclnn_bucketize_golden",
+    },
+    "kernel": {"bucketize_v2": "bucketize_v2_golden"},
+}
 
 
 def bucketize_v2_golden(x, boundaries, out_int32=False, right=False, **kwargs):
@@ -29,3 +36,15 @@ def bucketize_v2_golden(x, boundaries, out_int32=False, right=False, **kwargs):
     boundaries_t = torch.from_numpy(boundaries)
     res = torch.bucketize(data_t, boundaries_t, out_int32=out_int32, right=right)
     return res.numpy()
+
+
+def aclnn_bucketize_golden(self, boundaries, outInt32=0, right=0, out=None, **kwargs):
+    if hasattr(outInt32, "item"):
+        outInt32 = bool(outInt32.item())
+    elif isinstance(outInt32, int):
+        outInt32 = bool(outInt32)
+    if hasattr(right, "item"):
+        right = bool(right.item())
+    elif isinstance(right, int):
+        right = bool(right)
+    return [torch.bucketize(self, boundaries, out_int32=outInt32, right=right)]

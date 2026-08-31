@@ -11,11 +11,17 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"leaky_relu": "leaky_relu_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnLeakyRelu": "aclnn_leaky_relu_golden",
+        "aclnnInplaceLeakyRelu": "aclnn_inplace_leaky_relu_golden",
+    },
+    "kernel": {"leaky_relu": "leaky_relu_golden"},
+}
 
 
 def leaky_relu_golden(x, *, negative_slope=0, **kwargs):
-    '''
+    """
     Golden function for leaky_relu.
     All the parameters (names and order) follow @leaky_relu_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -28,7 +34,7 @@ def leaky_relu_golden(x, *, negative_slope=0, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
 
     if "bfloat16" in x.dtype.name:
@@ -40,3 +46,29 @@ def leaky_relu_golden(x, *, negative_slope=0, **kwargs):
     if "bfloat16" in x.dtype.name:
         return result.view(torch.int16).numpy().view(x.dtype)
     return result.numpy()
+
+
+def aclnn_inplace_leaky_relu_golden(selfRef, negativeSlope, **kwargs):
+    """
+    Aclnn golden for aclnnInplaceLeakyRelu.
+    Parameters follow @aclnnInplaceLeakyReluGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    if hasattr(negativeSlope, "item"):
+        negativeSlope = negativeSlope.item()
+    return [torch.nn.functional.leaky_relu(selfRef, negative_slope=negativeSlope)]
+
+
+def aclnn_leaky_relu_golden(self, negativeSlope, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnLeakyRelu.
+    Parameters follow @aclnnLeakyReluGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    if hasattr(negativeSlope, "item"):
+        negativeSlope = negativeSlope.item()
+    return [torch.nn.functional.leaky_relu(self, negative_slope=negativeSlope)]

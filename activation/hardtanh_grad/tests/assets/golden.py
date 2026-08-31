@@ -12,7 +12,12 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"hardtanh_grad": "hardtanh_grad_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnHardtanhBackward": "aclnn_hardtanh_backward_golden",
+    },
+    "kernel": {"hardtanh_grad": "hardtanh_grad_golden"},
+}
 
 
 def hardtanh_grad_golden(result, grad, *, min_val=-1.0, max_val=1.0, **kwargs):
@@ -38,3 +43,12 @@ def hardtanh_grad_golden(result, grad, *, min_val=-1.0, max_val=1.0, **kwargs):
     if str(in_data_type) == "float16" or str(in_data_type) == "bfloat16":
         res = res.astype(in_data_type, copy=False)
     return res
+
+
+def aclnn_hardtanh_backward_golden(gradOutput, self, min, max, out, **kwargs):
+    if hasattr(min, "item"):
+        min = min.item()
+    if hasattr(max, "item"):
+        max = max.item()
+    mask = (self > min) & (self < max)
+    return [gradOutput * mask.to(gradOutput.dtype)]

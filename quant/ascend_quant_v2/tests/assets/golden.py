@@ -11,8 +11,14 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"ascend_quant_v2": "ascend_quant_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnAscendQuantV3": "aclnn_ascend_quant_v3_golden",
+    },
+    "kernel": {"ascend_quant_v2": "ascend_quant_v2_golden"},
+}
 
 
 def ascend_quant_v2_golden(
@@ -83,3 +89,28 @@ def ascend_quant_v2_golden(
         round_data = round_data.astype(hifloat8, copy=False)
 
     return round_data
+
+
+def aclnn_ascend_quant_v3_golden(
+    x, scale, offset, sqrtMode, roundMode, dstType, axis, y, **kwargs
+):
+    if hasattr(sqrtMode, "item"):
+        sqrtMode = bool(sqrtMode.item())
+    if hasattr(roundMode, "decode"):
+        roundMode = roundMode.decode()
+    x_f = x.to(torch.float32)
+    scale_f = scale.to(torch.float32)
+    offset_f = offset.to(torch.float32) if offset is not None else None
+    scale_rst = x_f * (scale_f**2) if sqrtMode else x_f * scale_f
+    if offset_f is not None:
+        scale_rst = scale_rst + offset_f
+    if roundMode == "round":
+        round_data = torch.round(scale_rst)
+    elif roundMode == "floor":
+        round_data = torch.floor(scale_rst)
+    elif roundMode == "ceil":
+        round_data = torch.ceil(scale_rst)
+    else:
+        round_data = torch.round(scale_rst)
+    round_data = round_data.clamp(-128, 127).to(torch.int8)
+    return [round_data]

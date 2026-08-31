@@ -1,0 +1,5 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,input_data_ranges,output_dtypes,output_tensor_indexes
+aclnnInplaceScatterUpdate_test_case_0,aclnnInplaceScatterUpdate,"('float32', 'int64', 'float32')","('ND',)",{ 'axis': -5},"((4, 3, 2, 5, 6, 5, 6, 5), (4,), (4, 3, 2, 2, 6, 5, 6, 5))","((-1, -0.01), (0, 3), (-2, -1))",('float32'),"(0,)"
+aclnnInplaceScatterUpdate_test_case_1,aclnnInplaceScatterUpdate,"('float16', 'int32', 'float16')","('ND',)",{ 'axis': -4},"((1, 1, 1, 1, 1), (1,), (1, 1, 1, 1, 1))","((-65504.0, -65504.0), (0, 0), (-1, -0.01))",('float16'),"(0,)"
+aclnnInplaceScatterUpdate_test_case_2,aclnnInplaceScatterUpdate,"('float16', 'int32', 'float16')","('ND',)",{ 'axis': -1},"((1, 1), (1, 2), (1, 1))","((-2, -1), (0, 0), (-2, -1))",('float16'),"(0,)"
+aclnnInplaceScatterUpdate_test_case_3,aclnnInplaceScatterUpdate,"('bfloat16', 'int64', 'bfloat16')","('ND',)",{ 'axis': 5},"((7, 7, 8, 8, 7, 9, 9, 7), (1, 2), (1, 7, 8, 8, 7, 9, 9, 7))","((-10, -2), (0, 0), (-1000, -10))",('bfloat16'),"(0,)"

@@ -1,0 +1,4 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_dtypes
+gather_elements_test_case_0,aclnnGather,"('bfloat16', 'int64', 'bfloat16')","('ND',)",{ 'dim': -4},"((1, 41, 1, 1, 1), (1, 35, 1, 1, 1), (1, 35, 1, 1, 1))","((0, 0.001), (0, 1))","(2,)",('bfloat16')
+gather_elements_test_case_1,aclnnGather,"('int32', 'int64', 'int32')","('ND',)",{ 'dim': 0},"((1, 1, 1, 1, 1, 127, 1, 1), (1, 1, 1, 1, 1, 127, 1, 1), (1, 1, 1, 1, 1, 127, 1, 1))","((-1147483648, 2147483647), (0, 0))","(2,)",('int32')
+gather_elements_test_case_2,aclnnGather,"('float32', 'int64', 'float32')","('ND',)",{ 'dim': 0},"((1, 1, 11, 1, 1, 1), (1, 1, 11, 1, 1, 1), (1, 1, 11, 1, 1, 1))","((2, 10), (0, 0))","(2,)",('float32')

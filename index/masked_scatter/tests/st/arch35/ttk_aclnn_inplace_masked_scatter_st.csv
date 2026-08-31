@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,output_tensor_indexes,precision_tolerances,input_data_ranges,is_enabled
+aclnnMaskedScatter_001,aclnnInplaceMaskedScatter,"((3, 4), (3, 4), (3, 4))","('float', 'bool', 'float')","(0,)",,,
+aclnnMaskedScatter_002,aclnnInplaceMaskedScatter,"((3, 4, 5), (3, 4, 5), (3, 4, 5))","('float16', 'bool', 'float16')","(0,)",,,
+aclnnMaskedScatter_003,aclnnInplaceMaskedScatter,"((3, 4), (3, 4), (3, 4))","('double', 'bool', 'double')","(0,)",,,
+aclnnMaskedScatter_004,aclnnInplaceMaskedScatter,"((3, 4), (3, 4), (3, 4))","('uint8', 'bool', 'uint8')","(0,)",,,
+aclnnMaskedScatter_005,aclnnInplaceMaskedScatter,"((3, 4), (3, 4), (3, 4))","('int8', 'bool', 'int8')","(0,)",,,

@@ -13,7 +13,12 @@ import torch
 from ttk.utilities.dtypes import numpy_to_torch_tensor, torch_to_numpy_tensor
 
 
-__golden__ = {"kernel": {"threshold_grad_v2_d": "threshold_grad_v2_d_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnThresholdBackward": "aclnn_threshold_backward_golden",
+    },
+    "kernel": {"threshold_grad_v2_d": "threshold_grad_v2_d_golden"},
+}
 
 
 def threshold_grad_v2_d_golden(grad_output, self_tensor, *, threshold=1.0, **kwargs):
@@ -32,3 +37,10 @@ def threshold_grad_v2_d_golden(grad_output, self_tensor, *, threshold=1.0, **kwa
     mask = self_t.to(torch.float32) > float(threshold)
     result = torch.where(mask, grad_output_t, torch.zeros_like(grad_output_t))
     return torch_to_numpy_tensor(result.cpu())
+
+
+def aclnn_threshold_backward_golden(gradOutput, self, threshold, out, **kwargs):
+    if hasattr(threshold, "item"):
+        threshold = threshold.item()
+    mask = (self > threshold).to(gradOutput.dtype)
+    return [gradOutput * mask]

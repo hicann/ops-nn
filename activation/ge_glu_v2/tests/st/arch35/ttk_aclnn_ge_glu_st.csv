@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,attributes,absolute_precision
+Geglu_float32_ND_fuzz_1,aclnnGeGlu,"('float32', 'float32', 'float32')","('ND',)","((1, 1, 1, 1, 1, 1, 2, 2), (1, 1, 1, 1, 1, 1, 1, 2), (1, 1, 1, 1, 1, 1, 1, 2))","((-1000, -10),)","(-2,-1)","{'dim': 6, 'approximate': 1}",0.0001
+Geglu_float16_ND_fuzz_2,aclnnGeGlu,"('float16', 'float16', 'float16')","('ND',)","((2, 1, 271, 1, 1, 1, 2), (1, 1, 271, 1, 1, 1, 2), (1, 1, 271, 1, 1, 1, 2))","((0, 0),)","(-2,-1)","{'dim': 0, 'approximate': 1}",0.001
+Geglu_float32_ND_fuzz_3,aclnnGeGlu,"('float32', 'float32', 'float32')","('ND',)","((1, 4), (1,2), (1,2))","((-3.4e+38, 3.4e+38),)","(-2,-1)","{'dim': -1, 'approximate': 1}",0.0001
+Geglu_float16_ND_fuzz_4,aclnnGeGlu,"('float16', 'float16', 'float16')","('ND',)","((1, 3461, 172), (1, 3461, 86), (1, 3461, 86))","((-10, -2),)","(-2,-1)","{'dim': -1, 'approximate': 1}",0.001
+Geglu_bfloat16_ND_fuzz_7,aclnnGeGlu,"('bfloat16', 'bfloat16', 'bfloat16')","('ND',)","((4,), (2,), (2,))","((-1, 1),)","(-2,-1)","{'dim': 0, 'approximate': 1}",0.0001

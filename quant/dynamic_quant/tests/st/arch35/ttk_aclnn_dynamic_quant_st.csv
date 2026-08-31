@@ -1,0 +1,2 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,absolute_precision
+aclnnDynamicQuant_float16_ND_fuzz_1,aclnnDynamicQuant,"('float16', 'float16', 'int8', 'float32')","('ND',)","((16, 1024),(1024,),(16, 1024),(16,))","((-2, 2), (-2, 2))","(2, 3)",0.0001

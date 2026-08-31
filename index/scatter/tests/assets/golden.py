@@ -11,12 +11,18 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"scatter": "scatter_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnInplaceScatterUpdate": "aclnn_inplace_scatter_update_golden",
+    },
+    "kernel": {"scatter": "scatter_golden"},
+}
 
 
 def scatter_golden(var, indices, update_value, *, axis=0, **kwargs):
-    '''
+    """
     Golden function for scatter.
     All the parameters (names and order) follow @scatter_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,32 +33,43 @@ def scatter_golden(var, indices, update_value, *, axis=0, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import copy
-    
-    dtype_dict = {"float32": 4, "int8": 1, "int32": 4, "float16": 2, "int64": 8, "bfloat16": 2}
+
+    dtype_dict = {
+        "float32": 4,
+        "int8": 1,
+        "int32": 4,
+        "float16": 2,
+        "int64": 8,
+        "bfloat16": 2,
+    }
     all_shape = len(var.shape)
     abs_axis = axis
     if axis < 0:
         abs_axis = all_shape + axis
-    
-    if not (all_shape == 4 and abs_axis == 3 and var.shape[2] % dtype_dict.get(str(var.dtype), 1) == 0
-            and var.shape[3] % dtype_dict.get(str(var.dtype), 1) == 0):
+
+    if not (
+        all_shape == 4
+        and abs_axis == 3
+        and var.shape[2] % dtype_dict.get(str(var.dtype), 1) == 0
+        and var.shape[3] % dtype_dict.get(str(var.dtype), 1) == 0
+    ):
         trans_shape_0 = var.shape[0]
         update_shape_0 = update_value.shape[0]
-        
+
         seceond_dim = 1
         update_second_dim = 1
-        
+
         for i in range(1, abs_axis):
             seceond_dim *= var.shape[i]
             update_second_dim *= update_value.shape[i]
         trans_shape_1 = seceond_dim
         update_shape_1 = update_second_dim
-        
+
         trans_shape_2 = var.shape[abs_axis]
         update_shape_2 = update_value.shape[abs_axis]
-        
+
         fourth_dim = 1
         update_fourth_dim = 1
         for i in range(abs_axis + 1, all_shape):
@@ -60,27 +77,33 @@ def scatter_golden(var, indices, update_value, *, axis=0, **kwargs):
             update_fourth_dim *= update_value.shape[i]
         trans_shape_3 = fourth_dim
         update_shape_3 = update_fourth_dim
-        
+
         var = var.reshape(trans_shape_0, trans_shape_1, trans_shape_2, trans_shape_3)
-        update_value = update_value.reshape(update_shape_0, update_shape_1, update_shape_2, update_shape_3)
-        
+        update_value = update_value.reshape(
+            update_shape_0, update_shape_1, update_shape_2, update_shape_3
+        )
+
         axis = 2
-    
+
     shape_0 = update_value.shape[0]
     shape_2 = update_value.shape[2]
     shape_3 = update_value.shape[3]
     output = copy.deepcopy(var)
     indices_value = indices.astype(np.int64)
-    
+
     if len(indices.shape) == 2:
         if axis == -2 or axis == 2:
             for i in range(indices.shape[0]):
                 for k in range(shape_2):
-                    output[indices_value[i][0], :, indices_value[i][1] + k, :] = update_value[i, :, k, :]
+                    output[indices_value[i][0], :, indices_value[i][1] + k, :] = (
+                        update_value[i, :, k, :]
+                    )
         elif axis == -1 or axis == 3:
             for i in range(indices.shape[0]):
-                for l in range(shape_3):
-                    output[indices_value[i][0], :, :, indices_value[i][1] + l] = update_value[i, :, :, l]
+                for idx_l in range(shape_3):
+                    output[indices_value[i][0], :, :, indices_value[i][1] + idx_l] = (
+                        update_value[i, :, :, idx_l]
+                    )
     else:
         if axis == -2 or axis == 2:
             for i in range(shape_0):
@@ -90,7 +113,28 @@ def scatter_golden(var, indices, update_value, *, axis=0, **kwargs):
         elif axis == -1 or axis == 3:
             for i in range(shape_0):
                 indices_key = indices_value[i]
-                for l in range(shape_3):
-                    output[i, :, :, indices_key + l] = update_value[i, :, :, l]
-    
+                for idx_l in range(shape_3):
+                    output[i, :, :, indices_key + idx_l] = update_value[i, :, :, idx_l]
+
     return output
+
+
+def aclnn_inplace_scatter_update_golden(data, indices, updates, axis, **kwargs):
+    if hasattr(axis, "item"):
+        axis = axis.item()
+
+    orig_dtype = data.dtype
+
+    if orig_dtype == torch.bfloat16:
+        data_np = data.to(torch.float32).numpy()
+        updates_np = updates.to(torch.float32).numpy()
+    else:
+        data_np = data.numpy()
+        updates_np = updates.numpy()
+
+    indices_np = indices.to(torch.int64).numpy()
+
+    result_np = scatter_golden(data_np, indices_np, updates_np, axis=axis)
+
+    result = torch.from_numpy(result_np).to(orig_dtype)
+    return [result]

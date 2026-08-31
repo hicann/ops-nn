@@ -13,9 +13,10 @@ import numpy as np
 
 
 __golden__ = {
-    "kernel": {
-        "gelu_grad": "gelu_grad_golden"
-    }
+    "aclnn": {
+        "aclnnGeluBackward": "aclnn_gelu_backward_golden",
+    },
+    "kernel": {"gelu_grad": "gelu_grad_golden"},
 }
 
 _MIN_FP32 = np.float32(2 ** (-126))
@@ -83,7 +84,7 @@ def _result_grad_compute(data_x):
 
 
 def gelu_grad_golden(dy, x, y, **kwargs):
-    '''
+    """
     Golden function for gelu_grad.
     All the parameters (names and order) follow @gelu_grad_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -94,19 +95,19 @@ def gelu_grad_golden(dy, x, y, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
     from packaging import version
 
     input_dtype = dy.dtype
     has_improve_precision = False
-    
+
     if version.parse(torch.__version__) >= version.parse("1.12.0"):
         if input_dtype.name in ["float16", "bfloat16"]:
             dy = dy.astype(np.float32)
             x = x.astype(np.float32)
             y = y.astype(np.float32)
-        
+
         dy_torch = torch.from_numpy(dy)
         x_torch = torch.from_numpy(x)
         result = torch.ops.aten.gelu_backward(dy_torch, x_torch, approximate="tanh")
@@ -127,3 +128,19 @@ def gelu_grad_golden(dy, x, y, **kwargs):
         if has_improve_precision:
             result = result.astype(input_dtype, copy=False)
         return result
+
+
+def aclnn_gelu_backward_golden(gradOutput, self, gradInput, **kwargs):
+    """
+    Aclnn golden for aclnnGeluBackward.
+    Parameters follow @aclnnGeluBackwardGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    input_dy = gradOutput
+    input_x = self
+
+    result = torch.ops.aten.gelu_backward(input_dy, input_x, approximate="tanh")
+
+    return result

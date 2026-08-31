@@ -11,12 +11,18 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"swish": "swish_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnSwish": "aclnn_swish_golden",
+    },
+    "kernel": {"swish": "swish_golden"},
+}
 
 
 def swish_golden(x, *, scale=1.0, **kwargs):
-    '''
+    """
     Golden function for swish.
     All the parameters (names and order) follow @swish_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,13 +33,13 @@ def swish_golden(x, *, scale=1.0, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
-    
+
     dtype = x.dtype
-    if dtype.name in ('float16', 'bfloat16'):
+    if dtype.name in ("float16", "bfloat16"):
         x = x.astype(np.float32)
-    
+
     if scale == 1.0:
         x_torch = torch.from_numpy(x)
         m = torch.nn.SiLU()
@@ -44,11 +50,11 @@ def swish_golden(x, *, scale=1.0, **kwargs):
 
 
 def _swish_overflow(data_input, scale, dtype, **kwargs):
-    short_soc_version = kwargs.get('short_soc_version', '')
-    
-    if dtype.name in ('float16', 'bfloat16'):
+    short_soc_version = kwargs.get("short_soc_version", "")
+
+    if dtype.name in ("float16", "bfloat16"):
         data_input = data_input.astype(np.float32)
-    
+
     if short_soc_version in ("Ascend950",):
         scale_arr = np.array([scale], dtype=data_input.dtype)
         multi = data_input * scale_arr * -1.0
@@ -59,15 +65,25 @@ def _swish_overflow(data_input, scale, dtype, **kwargs):
         scale_arr = np.array([scale], dtype=data_input.dtype)
         scale_input = np.multiply(data_input, scale_arr)
         abs_scale_input = np.abs(scale_input)
-        minus_abs = np.multiply(abs_scale_input, np.array([-1.0], dtype=data_input.dtype))
+        minus_abs = np.multiply(
+            abs_scale_input, np.array([-1.0], dtype=data_input.dtype)
+        )
         sign_diff = np.add(scale_input, minus_abs)
         half_sign_diff = np.multiply(sign_diff, np.array([0.5], dtype=data_input.dtype))
-        
+
         exp_top = np.exp(half_sign_diff)
         exp_bottom = np.exp(minus_abs)
         one_plus_exp = np.add(exp_bottom, np.array([1.0], dtype=data_input.dtype))
-        
+
         input_mul_exp = np.multiply(data_input, exp_top)
         res = np.divide(input_mul_exp, one_plus_exp)
-    
+
     return res.astype(dtype, copy=False)
+
+
+def aclnn_swish_golden(self, betaOptional=0, out=None, **kwargs):
+    if hasattr(betaOptional, "item"):
+        betaOptional = betaOptional.item()
+    if betaOptional == 1.0 or betaOptional == 0:
+        return [torch.nn.functional.silu(self)]
+    return [self * torch.sigmoid(self) ** betaOptional]

@@ -11,8 +11,14 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"elu_grad_v2": "elu_grad_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnEluBackward": "aclnn_elu_backward_golden",
+    },
+    "kernel": {"elu_grad_v2": "elu_grad_v2_golden"},
+}
 
 
 def elu_grad_v2_golden(
@@ -54,3 +60,17 @@ def elu_grad_v2_golden(
     if grads_dtype.name in ("bfloat16", "float16"):
         result = result.astype(grads_dtype, copy=False)
     return result
+
+
+def aclnn_elu_backward_golden(
+    gradOutput, alpha, scale, inputScale, isResult, selfOrResult, gradInput, **kwargs
+):
+    alpha_val = alpha.item() if hasattr(alpha, "item") else alpha
+    scale_val = scale.item() if hasattr(scale, "item") else scale
+    input_scale_val = inputScale.item() if hasattr(inputScale, "item") else inputScale
+    is_result = bool(isResult.item()) if hasattr(isResult, "item") else bool(isResult)
+    return [
+        torch.ops.aten.elu_backward(
+            gradOutput, alpha_val, scale_val, input_scale_val, is_result, selfOrResult
+        )
+    ]

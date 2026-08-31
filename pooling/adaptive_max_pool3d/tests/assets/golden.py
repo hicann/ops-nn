@@ -11,9 +11,15 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
 
-__golden__ = {"kernel": {"adaptive_max_pool3d": "adaptive_max_pool3d_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnAdaptiveMaxPool3d": "aclnn_adaptive_max_pool3d_golden",
+    },
+    "kernel": {"adaptive_max_pool3d": "adaptive_max_pool3d_golden"},
+}
 
 
 def adaptive_max_pool3d_golden(x, output_size, indices_dtype=3, **kwargs):
@@ -41,3 +47,16 @@ def adaptive_max_pool3d_golden(x, output_size, indices_dtype=3, **kwargs):
     indices = indices.to(torch.int32).numpy()  ## 与竞品差异
 
     return output, indices
+
+
+def aclnn_adaptive_max_pool3d_golden(
+    self, outputSize=0, outputOut=None, indicesOut=None, **kwargs
+):
+    if hasattr(outputSize, "tolist"):
+        outputSize = outputSize.tolist()
+    elif isinstance(outputSize, int):
+        outputSize = [outputSize] * 3
+    result = torch.nn.functional.adaptive_max_pool3d(
+        self, outputSize, return_indices=True
+    )
+    return [result[0], result[1]]

@@ -1,0 +1,4 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,scalar_dtypes,scalar_data_ranges
+aclnnHardtanhBackward_1,aclnnHardtanhBackward,"((1,2,3),(1,2,3),(1,2,3))","('bfloat16','bfloat16','bfloat16')","('float16','float16')","((-1, -1),(2, 2))"
+aclnnHardtanhBackward_2,aclnnHardtanhBackward,"((1,2,3),(1,2,3),(1,2,3))","('float16','float16','float16')","('float16','float16')","((-2, -2),(3, 3))"
+aclnnHardtanhBackward_3,aclnnHardtanhBackward,"((1,2,3),(1,2,3),(1,2,3))","('float32','float32','float32')","('float16','float16')","((10, 10),(20, 20))"
