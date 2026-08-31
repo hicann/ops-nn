@@ -292,12 +292,12 @@
 | [aclnnIndex](../../index/index/docs/aclnnIndex.md) | 根据索引indices将输入x对应坐标的数据取出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexAdd](../../index/inplace_scatter_add/docs/aclnnIndexAdd.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexAddV2](../../index/inplace_scatter_add/docs/aclnnIndexAddV2.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。支持开启高性能计算模式。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
-| [aclnnIndexCopy&aclnnInplaceIndexCopy](../../index/scatter_update/docs/aclnnIndexCopy&aclnnInplaceIndexCopy.md) | 将index张量中元素值作为索引，针对指定轴dim，把source中元素复制到selfRef的对应位置上。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnIndexCopy&aclnnInplaceIndexCopy](../../index/scatter_update/docs/aclnnIndexCopy&aclnnInplaceIndexCopy.md) | 将index张量中元素值作为索引，针对指定轴dim，把source中元素复制到selfRef的对应位置上。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexFill&aclnnInplaceIndexFill](../../index/index_fill_d/docs/aclnnIndexFill&aclnnInplaceIndexFill.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexFillTensor&aclnnInplaceIndexFillTensor](../../index/index_fill_d/docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexPutImpl](../../index/index_put_v2/docs/aclnnIndexPutImpl.md) | 根据索引indices将输入x对应坐标的数据与输入value进行替换或累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
-| [aclnnInplacePut](../../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnInplaceScatterUpdate](../../index/scatter/docs/aclnnInplaceScatterUpdate.md) | 将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。该算子为自定义算子语义，无对应的tensorflow或pytorch接口。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnInplacePut](../../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
+| [aclnnInplaceScatterUpdate](../../index/scatter/docs/aclnnInplaceScatterUpdate.md) | 将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。该算子为自定义算子语义，无对应的tensorflow或pytorch接口。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexSelect](../../index/gather_v2/docs/aclnnIndexSelect.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceAddRmsNorm](../../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) | 根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。 | 默认确定性实现 | 默认确定性实现 |
@@ -398,8 +398,8 @@
 | [aclnnScatter&aclnnInplaceScatter](../../index/scatter_elements_v2/docs/aclnnScatter&aclnnInplaceScatter.md) | 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) | 将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性 |
-| [aclnnScatterNd](../../index/scatter_nd/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnScatterNd](../../index/scatter_nd/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
+| [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnScatterMax](../../index/scatter_max/docs/aclnnScatterMax.md) | 实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。 | - | 默认确定性实现 |
 | [aclnnScatterMin](../../index/scatter_min/docs/aclnnScatterMin.md) | 实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。 | - | 默认确定性实现 |
@@ -441,7 +441,7 @@
 | [aclnnSwishBackward](../../activation/swish_grad/docs/aclnnSwishBackward.md) | aclnnSwishBackward是aclnnSwish激活函数的反向传播，用于计算Swish激活函数的梯度。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSyncBatchNormGatherStats](../../norm/sync_batch_norm_gather_stats/docs/aclnnSyncBatchNormGatherStats.md) | 收集所有device的均值和方差，更新全局的均值和方差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTake](../../index/gather_v2/docs/aclnnTake.md) | 将输入的self张量视为一维数组，把index的值当作索引，从self中取值，输出shape与index一致的Tensor。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md) | 实现兼容tf.scatter\_add和tf.scatter\_nd\_add的功能，将updates中的值按指定的索引加到varRef的切片上。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md) | 实现兼容tf.scatter\_add和tf.scatter\_nd\_add的功能，将updates中的值按指定的索引加到varRef的切片上。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md) | 完成LSTM单元前向计算中，矩阵乘法后的后续计算。 | 默认确定性实现 | - |
 | [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 | - |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | 默认确定性实现 |

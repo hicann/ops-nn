@@ -205,9 +205,6 @@ aclnnStatus aclnnScatterNdUpdate(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnScatterNdUpdate默认确定性实现。
-
 - 输入shape限制：
   - varRef支持8维，varRef.rank为[1,8]。
   - indices至少是2维，indices最后1维rank表示索引的维度数，rank取值范围为[1, 7],且必须满足rank <= varRef.rank,即索引维度数不能超过varRef的维度数。
@@ -219,6 +216,15 @@ aclnnStatus aclnnScatterNdUpdate(
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：varRef支持首轴非连续（即第0维的stride大于其按连续布局计算的期望值，其余各维均连续）的场景，算子可直接基于该非连续视图完成更新，无需先将varRef转换为连续Tensor。
 
   <!-- end id7 -->
+
+- 确定性计算：
+
+  <!-- npu="950" id9 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性，支持通过`aclrtSetSysParamOpt`开启确定性。
+  <!-- end id9 -->
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。
+  <!-- end id10 -->
 
 ## 调用示例
 

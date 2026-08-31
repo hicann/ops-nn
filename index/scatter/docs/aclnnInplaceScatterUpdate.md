@@ -263,9 +263,6 @@ aclnnStatus aclnnInplaceScatterUpdate(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnInplaceScatterUpdate默认确定性实现。
-
 - updates shape的0轴与indices shape的0轴一致。
 - indices为0维时，updates shape的0轴为1。
 - updates shape的0轴小于等于data shape的0轴。
@@ -273,6 +270,14 @@ aclnnStatus aclnnInplaceScatterUpdate(
 - 当indices shape为二维时，shape的1轴需要等于2。
 - indices数据类型为INT32时，DtypeSize=4，为INT64时，DtypeSize=8，IndicesShapeSize为indices的shape乘积，需要使用的ub = IndicesShapeSize * DtypeSize + 224，当ub大于对应可以获取到的AI处理器版本总ub大小时，不支持。
 - 当indices有重复时，重复位置的结果不保证。
+- 确定性计算：
+
+  <!-- npu="950" id9 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性，支持通过`aclrtSetSysParamOpt`开启确定性。
+  <!-- end id9 -->
+  <!-- npu="A3,910b,910" id10 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 训练系列产品</term>：默认确定性。
+  <!-- end id10 -->
 
 ## 调用示例
 
