@@ -366,6 +366,7 @@ bool RmsNormDynamicQuantTilingHelper::CheckOutputShapes()
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context_->GetNodeName(), "scale and x", shapeMsg.c_str(),
                 "The shape of output scale must be the same as the shape of input x excluding the last dimension");
+            return false;
         }
     }
     return true;
