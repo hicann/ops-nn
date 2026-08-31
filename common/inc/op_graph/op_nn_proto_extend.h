@@ -395,25 +395,27 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .OP_END_FACTORY_REG(GlobalLpPool)
 #endif
 
-    /**
-     *@brief GroupNorm and Reul operator \n
-     *  calculating: x, gamma, beta \n
-     *  y = relu(gamma*((x - mean) / np.sqrt(variance + 0.001)) + beta)
-     * @par Inputs:
-     * Three inputs, including:
-     * @li x: A Tensor. Must be one of the following types: float16, float32.
-     * @li gamma: A Tensor. Must be one of the following types: float16, float32.
-     * @li beta: A Tensor. Must be one of the following types: float16, float32 . \n
-     * @par Attributes:
-     * @li num_groups: A require attribute, the type is int32.
-     * @li eps: A optional attribute, the type is float32. Defaults to 0.00001. \n
-     * @par Outputs:
-     * One outputs, including:
-     * @li y: A Tensor. Must be one of the following types: float16, float32.
-     * @par Restrictions:
-     * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use/
-     */
-    REG_OP(GroupNormRelu)
+/**
+ *@brief GroupNorm and Reul operator \n
+ *  calculating: x, gamma, beta \n
+ *  y = relu(gamma*((x - mean) / np.sqrt(variance + 0.001)) + beta)
+ * @par Inputs:
+ * Three inputs, including:
+ * @li x: A Tensor. Must be one of the following types: float16, float32.
+ * @li gamma: A Tensor. Must be one of the following types: float16, float32.
+ * @li beta: A Tensor. Must be one of the following types: float16, float32 . \n
+ * @par Attributes:
+ * @li num_groups: A require attribute, the type is int32.
+ * @li eps: A optional attribute, the type is float32. Defaults to 0.00001. \n
+ * @par Outputs:
+ * One outputs, including:
+ * @li y: A Tensor. Must be one of the following types: float16, float32.
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use/
+ */
+#ifndef OPS_PROTO_DEF_GROUPNORMRELU
+#define OPS_PROTO_DEF_GROUPNORMRELU
+        REG_OP(GroupNormRelu)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(beta, TensorType({DT_FLOAT, DT_FLOAT16}))
@@ -421,31 +423,34 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .REQUIRED_ATTR(num_groups, Int)
     .ATTR(eps, Float, 0.00001f)
     .OP_END_FACTORY_REG(GroupNormRelu)
+#endif
 
-    /**
-     * @brief Common GRU calculation.
-     * @par Inputs:
-     * Eight inputs, including:
-     * @li x: The input sequences packed (and pontentially padded) into on 3D Tesnor(float16).
-     * @li w: The weight tensor for the gates is 3D Tensor(float16).
-     * @li r: The recurrence weight tesnor is 3D Tensor(float16).
-     * @li b: The bias tensor for the gates. The format must be ND
-     * @li sequence_lens: Optional tensor specifying lengths of sequences(int32). The format must be ND
-     * @li init_h: Optional initial value of the hidden(float16,float32).
-     * @par Attributes:
-     * @li activation_alpha: Optional scaling values used by some activation functions.  \n
-     * @li activation_beta: Optional scaling values used by some activation functions.  \n
-     * @li activations: A list of 2 (or 4 if bidirectional) activation functions for update, reset, and hidden gates. \n
-     * @li clip: Cell clip threshold. \n
-     * @li direction: Specify if the RNN is forward, reverse, or bidirectional. \n
-     * @li hidden_size: Number of neurons in the hidden layer. \n
-     * @li linear_before_reset: When computing the output of the hidden gate, apply the linear transformation before
-     * multiplying by the output of the reset gate. \n
-     * @par Outputs:
-     * @li y: A Tensor that concats all the intermediate output values of the hidden(float16,float32).
-     * @li y_h: The last output value of the hidden(float16,float32).
-     */
-    REG_OP(CommonGRU)
+/**
+ * @brief Common GRU calculation.
+ * @par Inputs:
+ * Eight inputs, including:
+ * @li x: The input sequences packed (and pontentially padded) into on 3D Tesnor(float16).
+ * @li w: The weight tensor for the gates is 3D Tensor(float16).
+ * @li r: The recurrence weight tesnor is 3D Tensor(float16).
+ * @li b: The bias tensor for the gates. The format must be ND
+ * @li sequence_lens: Optional tensor specifying lengths of sequences(int32). The format must be ND
+ * @li init_h: Optional initial value of the hidden(float16,float32).
+ * @par Attributes:
+ * @li activation_alpha: Optional scaling values used by some activation functions.  \n
+ * @li activation_beta: Optional scaling values used by some activation functions.  \n
+ * @li activations: A list of 2 (or 4 if bidirectional) activation functions for update, reset, and hidden gates. \n
+ * @li clip: Cell clip threshold. \n
+ * @li direction: Specify if the RNN is forward, reverse, or bidirectional. \n
+ * @li hidden_size: Number of neurons in the hidden layer. \n
+ * @li linear_before_reset: When computing the output of the hidden gate, apply the linear transformation before
+ * multiplying by the output of the reset gate. \n
+ * @par Outputs:
+ * @li y: A Tensor that concats all the intermediate output values of the hidden(float16,float32).
+ * @li y_h: The last output value of the hidden(float16,float32).
+ */
+#ifndef OPS_PROTO_DEF_COMMONGRU
+#define OPS_PROTO_DEF_COMMONGRU
+        REG_OP(CommonGRU)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(w, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(r, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -462,60 +467,67 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .REQUIRED_ATTR(hidden_size, Int)
     .ATTR(linear_before_reset, Int, 0)
     .OP_END_FACTORY_REG(CommonGRU)
+#endif
 
-    /**
-     *@brief Hardmax(element in input, axis) = 1 if the element is the first maximum value along the specified axis, 0
-     *otherwise The input does not need to explicitly be a 2D vector.The "axis" attribute indicates the dimension along
-     *which Hardmax will be performed.The output tensor has the same shape and contains the Hardmax values of the
-     *corresponding input.
-     *
-     *@par Inputs:
-     *one input including:
-     *x: input A ND Tensor.Must be one of the following types:float32,float16
-     *
-     *@par Attributes:
-     *axis:A required int attribute that decides which dimension will be used to cal the hard_max
-     *
-     *@par Outputs:
-     *one output including:
-     *y:A ND Tensor of the same dtype as x
-     *
-     */
-    REG_OP(HardMax)
+/**
+ *@brief Hardmax(element in input, axis) = 1 if the element is the first maximum value along the specified axis, 0
+ *otherwise The input does not need to explicitly be a 2D vector.The "axis" attribute indicates the dimension along
+ *which Hardmax will be performed.The output tensor has the same shape and contains the Hardmax values of the
+ *corresponding input.
+ *
+ *@par Inputs:
+ *one input including:
+ *x: input A ND Tensor.Must be one of the following types:float32,float16
+ *
+ *@par Attributes:
+ *axis:A required int attribute that decides which dimension will be used to cal the hard_max
+ *
+ *@par Outputs:
+ *one output including:
+ *y:A ND Tensor of the same dtype as x
+ *
+ */
+#ifndef OPS_PROTO_DEF_HARDMAX
+#define OPS_PROTO_DEF_HARDMAX
+        REG_OP(HardMax)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(axis, Int, -1)
     .OP_END_FACTORY_REG(HardMax)
+#endif
 
-    /**
-     * @brief Select one of the subgraphs to pass the input tensors and return the output tensors.
-     *       If "cond" means True, the selected subgraph is "then_branch".
-     *       Otherwise, the selected subgraph is "else_branch" . \n
-     * @par Inputs:
-     * @li cond: A Tensor. If "cond" is not a scalar of boolean type,
-     *          it will be converted to a boolean according to the following rule:
-     *          if "cond" is a numerical scalar, non-zero means True and zero means False;
-     *          if "cond" is a string scalar, non-empty means True and empty means False;
-     *          if "cond" is not a scalar, non-empty means True and empty means False.
-     * @li input: The input tensors . It's a dynamic input. \n
-     * @par Graphs:
-     * @li then_branch: A subgraph takes 'input' and returns a list of tensors,
-     *                 whose types are the same as what else_branch returns.
-     * @li else_branch: A subgraph takes 'input' and returns a list of tensors,
-     *                 whose types are the same as what then_branch returns . \n
-     * @par Outputs:
-     * output: The output tensors returned by either then_branch(input) or else_branch(input).
-     *        It's a dynamic output. \n
-     * @par Third-party framework compatibility
-     * Compatible with the TensorFlow operator If.
-     */
-    REG_OP(If)
+/**
+ * @brief Select one of the subgraphs to pass the input tensors and return the output tensors.
+ *       If "cond" means True, the selected subgraph is "then_branch".
+ *       Otherwise, the selected subgraph is "else_branch" . \n
+ * @par Inputs:
+ * @li cond: A Tensor. If "cond" is not a scalar of boolean type,
+ *          it will be converted to a boolean according to the following rule:
+ *          if "cond" is a numerical scalar, non-zero means True and zero means False;
+ *          if "cond" is a string scalar, non-empty means True and empty means False;
+ *          if "cond" is not a scalar, non-empty means True and empty means False.
+ * @li input: The input tensors . It's a dynamic input. \n
+ * @par Graphs:
+ * @li then_branch: A subgraph takes 'input' and returns a list of tensors,
+ *                 whose types are the same as what else_branch returns.
+ * @li else_branch: A subgraph takes 'input' and returns a list of tensors,
+ *                 whose types are the same as what then_branch returns . \n
+ * @par Outputs:
+ * output: The output tensors returned by either then_branch(input) or else_branch(input).
+ *        It's a dynamic output. \n
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator If.
+ */
+#ifndef OPS_PROTO_DEF_IF
+#define OPS_PROTO_DEF_IF
+        REG_OP(If)
     .INPUT(cond, TensorType::ALL())
     .DYNAMIC_INPUT(input, TensorType::ALL())
     .DYNAMIC_OUTPUT(output, TensorType::ALL())
     .GRAPH(then_branch)
     .GRAPH(else_branch)
     .OP_END_FACTORY_REG(If)
+#endif
 
     /**
      *@brief Local Response Normalization .
@@ -551,31 +563,33 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .ATTR(norm_region, String, "ACROSS_CHANNELS")
     .OP_END_FACTORY_REG(LRN)
 
-    /**
-     * @brief:LSTMP calculation
-     * @par Inputs:
-     * eight inputs:
-     * @li x:A required Tensor(seq, batch, dim). Must be one of the following types: float16, float32.
-     * @li real_mask:A optional Tensor(seq, batch). Must be one of the following types: float16, float32.
-     * @li init_h:A optional Tensor(batch, state). Must be one of the following types: float16, float32.
-     * @li init_c:A optional Tensor(batch, hidden). Must be one of the following types: float16, float32.
-     * @li wx:A required Tensor(4*hidden, dim). Must be one of the following types: float16, float32.
-     * @li wr:A required Tensor(4*hidden, state). Must be one of the following types: float16, float32.
-     * @li bias:A optional Tensor(hidden). Must be one of the following types: float16, float32. The format must be ND.
-     * @li project: A optional Tensor. Must be one of the following types: float16, float32.
-     *
-     * @par Outputs:
-     * three outputs:
-     * @li y:A Tensor. Must be one of the following types: float16, float32.
-     * @li output_h:A Tensor. Must be one of the following types: float16, float32.
-     * @li output_c:A Tensor. Must be one of the following types: float16, float32.
-     *
-     *@par Attributes:
-     * time_major:An bool identifying the time major in the op. Default to false.
-     * @par Restrictions:
-     * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-     */
-    REG_OP(LSTMP)
+/**
+ * @brief:LSTMP calculation
+ * @par Inputs:
+ * eight inputs:
+ * @li x:A required Tensor(seq, batch, dim). Must be one of the following types: float16, float32.
+ * @li real_mask:A optional Tensor(seq, batch). Must be one of the following types: float16, float32.
+ * @li init_h:A optional Tensor(batch, state). Must be one of the following types: float16, float32.
+ * @li init_c:A optional Tensor(batch, hidden). Must be one of the following types: float16, float32.
+ * @li wx:A required Tensor(4*hidden, dim). Must be one of the following types: float16, float32.
+ * @li wr:A required Tensor(4*hidden, state). Must be one of the following types: float16, float32.
+ * @li bias:A optional Tensor(hidden). Must be one of the following types: float16, float32. The format must be ND.
+ * @li project: A optional Tensor. Must be one of the following types: float16, float32.
+ *
+ * @par Outputs:
+ * three outputs:
+ * @li y:A Tensor. Must be one of the following types: float16, float32.
+ * @li output_h:A Tensor. Must be one of the following types: float16, float32.
+ * @li output_c:A Tensor. Must be one of the following types: float16, float32.
+ *
+ *@par Attributes:
+ * time_major:An bool identifying the time major in the op. Default to false.
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+ */
+#ifndef OPS_PROTO_DEF_LSTMP
+#define OPS_PROTO_DEF_LSTMP
+        REG_OP(LSTMP)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(wx, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(bias, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -589,41 +603,44 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .OUTPUT(output_c, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(time_major, Bool, false)
     .OP_END_FACTORY_REG(LSTMP)
+#endif
 
-    /**
-     * @brief CommonLSTM calculation.
-     * @par Inputs:
-     * eight inputs: \n
-     * @li x:Each time step is a 4D Tensor. Must be one of the following types: float16, float32.
-     * @li w:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
-     * @li r:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
-     * @li b:An optional input. Each direction is a 1D Tensor. Must be one of the following types: float16, float32. The
-     * format must be ND.
-     * @li sequence_lens:An optional input. A 1D Tensor.Must be one of the following types: int32. The format must be
-     * ND.
-     * @li initial_h:An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16,
-     * float32.
-     * @li initial_c:An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16,
-     * float32.
-     * @li p:An optional input. Each direction is a 1D Tensor.Must be one of the following types: float16, float32. The
-     * format must be ND.
-     * @par Attributes:
-     * @li activation_alpha:Optional scaling values used by some activation functions. Empty is currently supported.
-     * @li activation_beta:Optional scaling values used by some activation functions. Empty is currently supported.
-     * @li activations:The list of activation functions. Empty is currently supported.
-     * @li clip:An float identifying the cell clip in the op. Default to -1.
-     * @li direction:Specify if the RNN is forward, reverse, or bidirectional. Must be one of forward(default), reverse,
-     * or bidirectional.
-     * @li hidden_size:Number of neurons in the hidden layer. Reserved.
-     * @li input_forget:Couple the input and forget gates if 1. Reserved.
-     * @par Outputs:
-     * three outputs: \n
-     * @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
-     * following types: float16, float32.
-     * @li y_h:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
-     * @li y_c:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
-     */
-    REG_OP(CommonLSTM)
+/**
+ * @brief CommonLSTM calculation.
+ * @par Inputs:
+ * eight inputs: \n
+ * @li x:Each time step is a 4D Tensor. Must be one of the following types: float16, float32.
+ * @li w:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+ * @li r:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+ * @li b:An optional input. Each direction is a 1D Tensor. Must be one of the following types: float16, float32. The
+ * format must be ND.
+ * @li sequence_lens:An optional input. A 1D Tensor.Must be one of the following types: int32. The format must be
+ * ND.
+ * @li initial_h:An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16,
+ * float32.
+ * @li initial_c:An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16,
+ * float32.
+ * @li p:An optional input. Each direction is a 1D Tensor.Must be one of the following types: float16, float32. The
+ * format must be ND.
+ * @par Attributes:
+ * @li activation_alpha:Optional scaling values used by some activation functions. Empty is currently supported.
+ * @li activation_beta:Optional scaling values used by some activation functions. Empty is currently supported.
+ * @li activations:The list of activation functions. Empty is currently supported.
+ * @li clip:An float identifying the cell clip in the op. Default to -1.
+ * @li direction:Specify if the RNN is forward, reverse, or bidirectional. Must be one of forward(default), reverse,
+ * or bidirectional.
+ * @li hidden_size:Number of neurons in the hidden layer. Reserved.
+ * @li input_forget:Couple the input and forget gates if 1. Reserved.
+ * @par Outputs:
+ * three outputs: \n
+ * @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
+ * following types: float16, float32.
+ * @li y_h:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+ * @li y_c:Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+ */
+#ifndef OPS_PROTO_DEF_COMMONLSTM
+#define OPS_PROTO_DEF_COMMONLSTM
+        REG_OP(CommonLSTM)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(w, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(r, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -643,6 +660,7 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .REQUIRED_ATTR(hidden_size, Int)
     .ATTR(input_forget, Int, 0)
     .OP_END_FACTORY_REG(CommonLSTM)
+#endif
 
 /**
  * @brief Multiplies matrix "a" by matrix "b", producing "a @ b" .
@@ -711,23 +729,26 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .REQUIRED_ATTR(ksize, Int)
     .OP_END_FACTORY_REG(MovingSumWithSigmoid)
 
-    /**
-    *@brief Returns the size of a tensor, that is, an integer of the number of elements of the tensor. \n
-    *@par Inputs:
-    *x: A tensor. Must be one of the following types: float32、float16、int8、
-    int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、string. \n
-    *@par Attributes:
-    *dtype: An optional int32 or int64. The output data type. Defaults to "int32". \n
-    *@par Outputs:
-    *y: A tensor. The size of the input tensor. \n
-    *@par Third-party framework compatibility
-    *Compatible with the TensorFlow operator Size.
-    */
-    REG_OP(Size)
+/**
+*@brief Returns the size of a tensor, that is, an integer of the number of elements of the tensor. \n
+*@par Inputs:
+*x: A tensor. Must be one of the following types: float32、float16、int8、
+int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、string. \n
+*@par Attributes:
+*dtype: An optional int32 or int64. The output data type. Defaults to "int32". \n
+*@par Outputs:
+*y: A tensor. The size of the input tensor. \n
+*@par Third-party framework compatibility
+*Compatible with the TensorFlow operator Size.
+*/
+#ifndef OPS_PROTO_DEF_SIZE
+#define OPS_PROTO_DEF_SIZE
+        REG_OP(Size)
     .INPUT(x, TensorType::ALL())
     .OUTPUT(y, TensorType({DT_INT32, DT_INT64}))
     .ATTR(dtype, Int, DT_INT32)
     .OP_END_FACTORY_REG(Size)
+#endif
 
     /**
     * @brief BasicLSTMInplaceFillWindowCache calculation.
@@ -1542,30 +1563,32 @@ Reserved.
     .ATTR(is_training, Bool, true)
     .OP_END_FACTORY_REG(DynamicGRUV2)
 
-    /**
-    * @brief Function axpy with softmax and dropoutdomask . \n
+/**
+* @brief Function axpy with softmax and dropoutdomask . \n
 
-    * @par Inputs:
-    * Three inputs, including:
-    * @li x1: A mutable tensor. The type supports float16 and float32.
-    * @li x2: A mutable tensor. The type supports float16 and float32. Has the same type and shape as "x1".
-    * @li mask: A mutable tensor. The type supports uint8. Has the same shape as "x1". \n
+* @par Inputs:
+* Three inputs, including:
+* @li x1: A mutable tensor. The type supports float16 and float32.
+* @li x2: A mutable tensor. The type supports float16 and float32. Has the same type and shape as "x1".
+* @li mask: A mutable tensor. The type supports uint8. Has the same shape as "x1". \n
 
-    * @par Attributes:
-    * @li alpha: A attribute used to scale tensor. The type is float . \n
-    * @li input_keep_prob: A attribute used to judge which units should be keep.
-    *     The type is float . \n
-    * @li axis: A list of int. The dimension softmax would be performed on. Defaults
-    *     to "[-1]" . \n
+* @par Attributes:
+* @li alpha: A attribute used to scale tensor. The type is float . \n
+* @li input_keep_prob: A attribute used to judge which units should be keep.
+*     The type is float . \n
+* @li axis: A list of int. The dimension softmax would be performed on. Defaults
+*     to "[-1]" . \n
 
-    * @par Outputs:
-    * @li y1: A mutable tensor. Has the same type as "x1". \n
-    * @li y2: A mutable tensor. Has the same type as "x1". \n
+* @par Outputs:
+* @li y1: A mutable tensor. Has the same type as "x1". \n
+* @li y2: A mutable tensor. Has the same type as "x1". \n
 
-    * @par Restrictions:
-    * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-    */
-    REG_OP(AxpyWithSoftmaxAndDropOutDoMask)
+* @par Restrictions:
+* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+*/
+#ifndef OPS_PROTO_DEF_AXPYWITHSOFTMAXANDDROPOUTDOMASK
+#define OPS_PROTO_DEF_AXPYWITHSOFTMAXANDDROPOUTDOMASK
+        REG_OP(AxpyWithSoftmaxAndDropOutDoMask)
     .INPUT(x1, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(x2, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(mask, TensorType({DT_UINT8}))
@@ -1575,6 +1598,7 @@ Reserved.
     .REQUIRED_ATTR(input_keep_prob, Float)
     .ATTR(axis, ListInt, {-1})
     .OP_END_FACTORY_REG(AxpyWithSoftmaxAndDropOutDoMask)
+#endif
 
     /**
     * @brief Return the unique elements of the input tensor with counts and sorted elements. \n
@@ -1609,30 +1633,33 @@ Reserved.
     .ATTR(out_idx, Type, DT_INT64)
     .OP_END_FACTORY_REG(UniqueWithCountsAndSorting)
 
-    /**
-    *@brief Creates a tensor with the given "shape" and "dtype". \n
+/**
+*@brief Creates a tensor with the given "shape" and "dtype". \n
 
-    *@par Inputs:
-    *shape: The shape of the output tensor. \n
+*@par Inputs:
+*shape: The shape of the output tensor. \n
 
-    *@par Attributes:
-    *@li dtype: Optional. The data type of the output tensor. Defaults to "int32".
-    *@li init: An optional bool. If true, initializes the returned tensor with the default value of "dtype". Defaults to
-    "false". \n
+*@par Attributes:
+*@li dtype: Optional. The data type of the output tensor. Defaults to "int32".
+*@li init: An optional bool. If true, initializes the returned tensor with the default value of "dtype". Defaults to
+"false". \n
 
-    *@par Outputs:
-    *y: A tensor. \n
+*@par Outputs:
+*y: A tensor. \n
 
-    *@par Third-party framework compatibility
-    *Compatible with the TensorFlow operator Empty.
-    */
-    REG_OP(Empty)
+*@par Third-party framework compatibility
+*Compatible with the TensorFlow operator Empty.
+*/
+#ifndef OPS_PROTO_DEF_EMPTY
+#define OPS_PROTO_DEF_EMPTY
+        REG_OP(Empty)
     .INPUT(shape, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_INT16, DT_UINT16, DT_UINT8, DT_INT32, DT_INT64, DT_UINT32,
                            DT_UINT64, DT_BOOL, DT_DOUBLE, DT_BF16, DT_STRING, DT_COMPLEX64, DT_COMPLEX128}))
     .ATTR(dtype, Int, DT_INT32)
     .ATTR(init, Bool, false)
     .OP_END_FACTORY_REG(Empty)
+#endif
 
 /**
 * @brief Multiplies matrix "a" by matrix "b", producing "a @ b".
