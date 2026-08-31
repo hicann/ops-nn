@@ -20,6 +20,9 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 #include "foreach_minimum_scalar_list_tiling_data.h"
 #include "foreach_minimum_scalar_list_tiling_key.h"
 
@@ -32,7 +35,7 @@ using namespace AscendC;
 constexpr uint32_t THREAD_NUM = 1024;
 
 template <typename T>
-__simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
+__aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
 {
     __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
     uint64_t tensorPtrOffset = *dataAddr;
@@ -44,14 +47,17 @@ template <typename T>
 struct ComputeType {
     using type = T;
 };
+
 template <>
 struct ComputeType<half> {
     using type = float;
 };
+
 template <>
 struct ComputeType<bfloat16_t> {
     using type = float;
 };
+
 template <>
 struct ComputeType<int32_t> {
     using type = int64_t;
@@ -67,45 +73,45 @@ __simt_callee__ inline C MinimumWithNaN(C a, C b)
 }
 
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachMinimumScalarListSimt(
-    int32_t tensorCount, __gm__ int64_t* tensorElements, GM_ADDR xList, GM_ADDR scalars, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachMinimumScalarListSimt(int64_t count,
+                                                                                           __gm__ T* xData, S scalarVal,
+                                                                                           __gm__ T* yData)
 {
     using C = typename ComputeType<T>::type;
 
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
+    C scalarComputeVal = static_cast<C>(scalarVal);
 
-        __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
-        S scalarVal = scalarsGm[t];
-
-        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                             AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            yData[idx] = static_cast<T>(MinimumWithNaN(static_cast<C>(xData[idx]), static_cast<C>(scalarVal)));
-        }
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        C xVal = static_cast<C>(xData[idx]);
+        yData[idx] = static_cast<T>(MinimumWithNaN(xVal, scalarComputeVal));
     }
 }
 
 template <typename T, typename S>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
-                               const __gm__ ForeachMinimumScalarListTilingData* tilingGm)
+                               const ForeachMinimumScalarListTilingData* tilingData)
 {
-    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachMinimumScalarListTilingData*>(tilingGm)) +
-        offsetof(ForeachMinimumScalarListTilingData, tensorElements));
+    int32_t tensorCount = tilingData->tensorCount;
+    GlobalTensor<S> scalarsGm;
+    scalarsGm.SetGlobalBuffer(reinterpret_cast<__gm__ S*>(scalars));
 
-    int32_t tensorCount = tilingGm->tensorCount;
+    for (int32_t t = 0; t < tensorCount; t++) {
+        int64_t count = tilingData->tensorElements[t];
+        if (count <= 0) {
+            continue;
+        }
 
-    AscendC::Simt::VF_CALL<OpForeachMinimumScalarListSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount,
-                                                                 elemCounts, x, scalars, y);
+        __gm__ T* xData = GetTensorAddr<T>(x, t);
+        __gm__ T* yData = GetTensorAddr<T>(y, t);
+        S scalarVal = scalarsGm.GetValue(t);
+
+        AscendC::Simt::VF_CALL<OpForeachMinimumScalarListSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), count, xData,
+                                                                     scalarVal, yData);
+    }
 }
 
 } // namespace NsForeachMinimumScalarList

@@ -31,16 +31,13 @@ __global__ __aicore__ void foreach_minimum_scalar_list(GM_ADDR x, GM_ADDR scalar
     REGISTER_TILING_DEFAULT(ForeachMinimumScalarListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachMinimumScalarListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachMinimumScalarListTilingData*
-        tilingGm = reinterpret_cast<const __gm__ ForeachMinimumScalarListTilingData*>(tiling);
-
     if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarListTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachMinimumScalarList::Process<float, float>(x, scalars, y, tilingGm);
+        NsForeachMinimumScalarList::Process<float, float>(x, scalars, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachMinimumScalarList::Process<half, float>(x, scalars, y, tilingGm);
+        NsForeachMinimumScalarList::Process<half, float>(x, scalars, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarListTilingKey::TILING_KEY_INT32)) {
-        NsForeachMinimumScalarList::Process<int32_t, int64_t>(x, scalars, y, tilingGm);
+        NsForeachMinimumScalarList::Process<int32_t, int64_t>(x, scalars, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarListTilingKey::TILING_KEY_BF16)) {
-        NsForeachMinimumScalarList::Process<bfloat16_t, float>(x, scalars, y, tilingGm);
+        NsForeachMinimumScalarList::Process<bfloat16_t, float>(x, scalars, y, &tilingData);
     }
 }
