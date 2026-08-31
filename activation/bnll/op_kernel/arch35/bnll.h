@@ -139,13 +139,11 @@ __aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Compute(int64_t
     constexpr uint32_t COMPARE_ALIGN_ELEMENTS = 256 / static_cast<uint32_t>(sizeof(T_COMPUTE));
     uint32_t alignedCount = (elemCount + COMPARE_ALIGN_ELEMENTS - 1) / COMPARE_ALIGN_ELEMENTS * COMPARE_ALIGN_ELEMENTS;
 
-    // Numerically stable BNLL: BNLL(x) = max(x,0) + f(-|x|)
-    // where f(y) = ln(1+exp(y)) for |y| small, f(y) = exp(y) for y very negative.
-    // For |x| > T, exp(-|x|) is tiny and ln(1+tiny) ~ tiny, so f ~ exp(-|x|).
-    // Using exp directly avoids Ascend Ln() precision issues near Ln(1.0).
-    constexpr T_COMPUTE THRESHOLD = static_cast<T_COMPUTE>(10);
-    constexpr T_COMPUTE NEG_THRESHOLD = static_cast<T_COMPUTE>(-10);
-
+    // Numerically stable BNLL (softplus): BNLL(x) = max(x,0) + log1p(exp(-|x|))
+    // Uses compensated log1p algorithm (aligned with CANN softplus_v2):
+    //   log1p(e) = log(1+e) * e / ((1+e) - 1), with fallback to e when 1+e==1.0.
+    // This avoids catastrophic cancellation in Adds(1, small_e) that causes
+    // ~5170 ULP error with the naive log(1+e) approach.
     LocalTensor<T_COMPUTE> inputFp32;
     if constexpr (NEED_CAST) {
         inputFp32 = castBuf_.Get<T_COMPUTE>();
@@ -173,24 +171,28 @@ __aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Compute(int64_t
     Exp(work3, work2, elemCount);
     // work3 = exp(-|x|)     (exp branch result, also needed for Ln branch)
 
-    // -- Step 3: Compute ln(1 + exp(-|x|)) into work2 --
-    Adds(work2, work3, static_cast<T_COMPUTE>(1), elemCount); // work2 = 1 + exp(-|x|)
-    Ln(work2, work2, elemCount);                              // work2 = ln(1 + exp(-|x|))
+    // -- Step 3: Compute compensated log1p(exp(-|x|)) into work2 --
+    // Algorithm (aligned with CANN softplus_v2 log1p):
+    //   u = 1 + e           (Adds)
+    //   mask1 = (u == 1.0)  (Compare EQ — e too small, fallback to e)
+    //   v = u - 1           (Adds -1, recovers e with different rounding)
+    //   log_u = log(u)      (Ln)
+    //   result = log_u * e / v  (Mul then Div, avoids dst=src1 aliasing in Div)
+    //   select(mask1, e, result)
+    Adds(work2, work3, static_cast<T_COMPUTE>(1), elemCount); // work2 = u = 1 + e
 
-    // -- Step 4: Select between exp and ln branches based on |x| --
-    // For |x| > THRESHOLD: use exp(-|x|) [work3]
-    // For |x| <= THRESHOLD: use ln(1+exp(-|x|)) [work2]
-    // Check: input > THRESHOLD (positive large)
-    Duplicate<T_COMPUTE>(work1, THRESHOLD, elemCount); // reuse work1 temporarily
-    Compare(cmpMask, inputFp32, work1, CMPMODE::GT, alignedCount);
+    Duplicate<T_COMPUTE>(work1, static_cast<T_COMPUTE>(1), elemCount);
+    Compare(cmpMask, work2, work1, CMPMODE::EQ, alignedCount); // mask1 = (u == 1.0)
+
+    Adds(work1, work2, static_cast<T_COMPUTE>(-1), elemCount); // work1 = v = u - 1
+    Ln(work2, work2, elemCount);                               // work2 = log(u)
+    Mul(work2, work2, work3, elemCount);                       // work2 = log(u) * e
+    Div(work2, work2, work1, elemCount);                       // work2 = log(u) * e / v
     Select(work2, cmpMask, work3, work2, SELMODE::VSEL_TENSOR_TENSOR_MODE, elemCount);
 
-    // Check: input < -THRESHOLD (negative large)
-    Duplicate<T_COMPUTE>(work1, NEG_THRESHOLD, elemCount);
-    Compare(cmpMask, inputFp32, work1, CMPMODE::LT, alignedCount);
-    Select(work2, cmpMask, work3, work2, SELMODE::VSEL_TENSOR_TENSOR_MODE, elemCount);
+    // -- Step 4: work2 now holds accurate log1p(exp(-|x|)) for all elements --
 
-    // -- Step 5: Recompute max(x, 0) since work1 was clobbered --
+    // -- Step 5: Compute max(x, 0) --
     Duplicate<T_COMPUTE>(work3, static_cast<T_COMPUTE>(0), elemCount);
     Maxs(work1, inputFp32, static_cast<T_COMPUTE>(0), elemCount);
 
