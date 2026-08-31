@@ -31,19 +31,21 @@ namespace Conv {
 bool GetFusionMode(Conv3dBpInputV2RunInfo& runInfoV2, const char* opName, const gert::TilingContext* context,
                    optiling::OpTypeV2 opType)
 {
-    if (opType != optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType != optiling::OpTypeV2::kExtendConvTranspose && opType != optiling::OpTypeV2::kExtendConvTransposeV2) {
         return true;
     }
     auto attrs = context->GetAttrs();
     OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_ATTR(opName, "attrs", "null", "non_empty_value"), return false);
     size_t idx = K_FUSION_MODE_CONV3D_TRANSPOSE_IDX;
     if (idx < attrs->GetAttrNum()) {
-        const int32_t* fusionMode = attrs->GetAttrPointer<int32_t>(idx);
-        if (fusionMode != nullptr && *fusionMode == 1) {
-            runInfoV2.enRelu = 1;
+        const int64_t* fusionMode = attrs->GetAttrPointer<int64_t>(idx);
+        if (fusionMode != nullptr) {
+            runInfoV2.enRelu0 = (*fusionMode & 0x1) ? 1 : 0;
+            runInfoV2.enRelu1 = (*fusionMode & 0x2) ? 1 : 0;
         } else {
             OP_LOGW(opName, "relu flag is not support, so we set 0 as default");
-            runInfoV2.enRelu = 0; // for extendConvTranspose fixpipe fusion pass, default value is 0
+            runInfoV2.enRelu0 = 0; // for extendConvTranspose fixpipe fusion pass, default value is 0
+            runInfoV2.enRelu1 = 0;
         }
     }
     return true;
@@ -52,7 +54,7 @@ bool GetFusionMode(Conv3dBpInputV2RunInfo& runInfoV2, const char* opName, const 
 bool GetImplMode(Conv3dBpInputV2RunInfo& runInfoV2, const char* opName, const gert::TilingContext* context,
                  optiling::OpTypeV2 opType)
 {
-    if (opType == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType == optiling::OpTypeV2::kExtendConvTranspose || opType == optiling::OpTypeV2::kExtendConvTransposeV2) {
         return true;
     }
 
@@ -842,7 +844,8 @@ void SetInitOutput(Conv3dBpInputV2RunInfo& runInfoV2, const optiling::OpTypeV2 o
     int32_t doModulo = (otherParams.fmap_d_padding - otherParams.filter_d_dilation) % runInfoV2.stride_d;
     int32_t hoModulo = (otherParams.fmap_h_padding - otherParams.filter_h_dilation) % runInfoV2.stride_h;
     if (doModulo > runInfoV2.pad_t || hoModulo > runInfoV2.pad_d || runInfoV2.stride_h > otherParams.b_shape.h ||
-        ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) &&
+        ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
+          opType == optiling::OpTypeV2::kExtendConvTransposeV2) &&
          (otherParams.output_padding.output_padding_d > 0 || otherParams.output_padding.output_padding_h > 0)) ||
         runInfoV2.dilation_d > 1) {
         // 1 is init output with l0C, 2 is init output with l1, defualt is 0 means not init output

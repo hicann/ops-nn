@@ -89,9 +89,10 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
-    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.reluEn = Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 : self->ctx.tiling_->enRelu0;
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+    fixPipeParams.preReluMode = static_cast<ReluMode>(Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 :
+                                                                             self->ctx.tiling_->enRelu0);
 #endif
     uint64_t dstOffset = ComputeDstOffset(self, fixPipeParams);
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
@@ -183,10 +184,11 @@ static __aicore__ inline void LoadL0c2GmRowForKernelSplitHFixPipe(
     LocalTensor<typename Intf::L0cT>& useC1Buf, FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        Convolution3DBackprop::GetOutputQuantMode<Intf>(self) ==
+            static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(
-            output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+            output[dstOffset], useC1Buf[srcOffset], GetScaleL1Buf<Intf>(self)[scaleAddr], fixPipeParams);
     } else {
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[dstOffset], useC1Buf[srcOffset],
                                                                          fixPipeParams);
@@ -216,9 +218,10 @@ static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(Intf* self, const Glob
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element, c
     fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
-    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.reluEn = Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 : self->ctx.tiling_->enRelu0;
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+    fixPipeParams.preReluMode = static_cast<ReluMode>(Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 :
+                                                                             self->ctx.tiling_->enRelu0);
 #endif
     int64_t srcOffset = 0;
     // fixpipe->gm 需要分首块，中间块，尾块分别对齐到16，然后再搬到gm
@@ -278,9 +281,10 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const Glob
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element, c
     fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
-    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.reluEn = Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 : self->ctx.tiling_->enRelu0;
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+    fixPipeParams.preReluMode = static_cast<ReluMode>(Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 :
+                                                                             self->ctx.tiling_->enRelu0);
 #endif
     int64_t srcOffset = 0;
     if (self->ctx.headWi_ != 0) {             // 需要首块

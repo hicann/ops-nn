@@ -143,10 +143,17 @@ __aicore__ inline void LoadBiasScaleL1(uint32_t nStart, uint32_t curN)
         LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), GetBiasL1ElemCount());
         LoadChannelWiseL1<biasType>(biasL1, biasGm_[nStart], curN);
     }
-    if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-        if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            LocalTensor<scaleType> scaleL1(TPosition::A1, GetScaleL1OffBytes(), tiling_->singleCoreCin);
-            LoadChannelWiseL1<scaleType>(scaleL1, scaleGm_[nStart], curN);
+    if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(), tiling_->singleCoreCin);
+            LoadChannelWiseL1<scale0Type>(scaleL1, scale0Gm_[nStart], curN);
+        }
+    }
+    if constexpr (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (hasSecondOutput_ &&
+            tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(), tiling_->singleCoreCin);
+            LoadChannelWiseL1<scale1Type>(scale1L1, scale1Gm_[nStart], curN);
         }
     }
 }
@@ -243,36 +250,43 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
     }
 }
 
+template <bool output1>
+__aicore__ inline auto GetFixpipeDeqScalar()
+{
+    if constexpr (output1) {
+        return scale1Gm_.GetValue(0);
+    } else {
+        return scale0Gm_.GetValue(0);
+    }
+}
+
+template <bool output1, QuantMode_t vectorMode, QuantMode_t scalarMode>
+__aicore__ inline void SetFixpipeScaleQuant(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& params)
+{
+    constexpr auto scaleFormat = output1 ? GetScaleFormat(scale1Format) : GetScaleFormat(scale0Format);
+    params.quantPre = scalarMode;
+    params.deqScalar = CONV3D_DX_SMALL_DQ_SCALAR_QF_ONE;
+    if constexpr (scaleFormat != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        const uint8_t quantMode = output1 ? tiling_->quantMode1 : tiling_->quantMode0;
+        if (quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            params.quantPre = vectorMode;
+        } else if (quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
+            params.deqScalar = GetFixpipeDeqScalar<output1>();
+        }
+    }
+}
+
+template <typename outputType, bool output1 = false>
 __aicore__ inline void SetFixpipeQuant(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& params)
 {
-    if constexpr (std::is_same<yType, bfloat16_t>::value) {
+    if constexpr (std::is_same<outputType, bfloat16_t>::value) {
         params.quantPre = QuantMode_t::F322BF16;
-    } else if constexpr (std::is_same<yType, half>::value && std::is_same<L0cT, int32_t>::value) {
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                params.quantPre = QuantMode_t::VDEQF16;
-            } else {
-                params.quantPre = QuantMode_t::DEQF16;
-                params.deqScalar = scaleGm_.GetValue(0);
-            }
-        } else {
-            params.quantPre = QuantMode_t::DEQF16;
-            params.deqScalar = CONV3D_DX_SMALL_DQ_SCALAR_QF_ONE;
-        }
-    } else if constexpr (std::is_same<yType, half>::value) {
+    } else if constexpr (std::is_same<outputType, half>::value && std::is_same<L0cT, int32_t>::value) {
+        SetFixpipeScaleQuant<output1, QuantMode_t::VDEQF16, QuantMode_t::DEQF16>(params);
+    } else if constexpr (std::is_same<outputType, half>::value) {
         params.quantPre = QuantMode_t::F322F16;
-    } else if constexpr (std::is_same<yType, int8_t>::value) {
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                params.quantPre = QuantMode_t::VREQ8;
-            } else {
-                params.quantPre = QuantMode_t::REQ8;
-                params.deqScalar = scaleGm_.GetValue(0);
-            }
-        } else {
-            params.quantPre = QuantMode_t::REQ8;
-            params.deqScalar = CONV3D_DX_SMALL_DQ_SCALAR_QF_ONE;
-        }
+    } else if constexpr (std::is_same<outputType, int8_t>::value) {
+        SetFixpipeScaleQuant<output1, QuantMode_t::VREQ8, QuantMode_t::REQ8>(params);
     } else {
         params.quantPre = QuantMode_t::NoQuant;
     }
@@ -291,20 +305,35 @@ __aicore__ inline void CopyOut(const LocalTensor<L0cT>& c0, uint32_t batchIdx, u
     params.srcStride = curMAlign;
     params.dstStride = diHiWi_;
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-    params.preReluMode = static_cast<ReluMode>(tiling_->enRelu);
+    params.preReluMode = static_cast<ReluMode>(tiling_->enRelu0);
     if constexpr (std::is_same<dedyType, half>::value && std::is_same<filterType, half>::value) {
         params.fixShiftVal = SHIFT_VALUE_LEN - static_cast<uint8_t>(tiling_->fixedShiftVal);
     }
 #endif
-    SetFixpipeQuant(params);
+    SetFixpipeQuant<yType>(params);
     uint64_t batchOffset = static_cast<uint64_t>(batchIdx) * tiling_->cin * diHiWi_;
     uint64_t dstOffset = batchOffset + static_cast<uint64_t>(nStart) * diHiWi_ + mStart;
-    if (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-        tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        LocalTensor<scaleType> scaleL1(TPosition::A1, GetScaleL1OffBytes(), tiling_->singleCoreCin);
+    if (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(), tiling_->singleCoreCin);
         Fixpipe<yType, L0cT, CFG_COLUMN_MAJOR>(yGm_[dstOffset], c0, scaleL1, params);
     } else {
         Fixpipe<yType, L0cT, CFG_COLUMN_MAJOR>(yGm_[dstOffset], c0, params);
+    }
+    if (hasSecondOutput_) {
+        FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> params1 = params;
+        SetFixpipeQuant<y1Type, true>(params1);
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+        // 第二路输出（y1）独立 relu：覆盖为 enRelu1（params 继承的是 y0 的 enRelu）。
+        params1.preReluMode = static_cast<ReluMode>(tiling_->enRelu1);
+#endif
+        if (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+            tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(), tiling_->singleCoreCin);
+            Fixpipe<y1Type, L0cT, CFG_COLUMN_MAJOR>(y1Gm_[dstOffset], c0, scale1L1, params1);
+        } else {
+            Fixpipe<y1Type, L0cT, CFG_COLUMN_MAJOR>(y1Gm_[dstOffset], c0, params1);
+        }
     }
 }
 

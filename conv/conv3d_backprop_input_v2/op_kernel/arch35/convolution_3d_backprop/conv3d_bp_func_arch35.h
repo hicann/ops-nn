@@ -394,12 +394,23 @@ __aicore__ inline void InitBiasTque(Intf* self)
 template <class Intf>
 __aicore__ inline void InitScaleTque(Intf* self)
 {
-    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint32_t scaleSize = DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::ScaleT), ONE_BLK_SIZE) *
-                             ONE_BLK_SIZE;
-        self->ctx.pipe_.InitBuffer(self->ctx.scaleL1Que_, 1, scaleSize);
+    uint32_t scaleSize = DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::ScaleT0), ONE_BLK_SIZE) *
+                         ONE_BLK_SIZE;
+    if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            self->ctx.pipe_.InitBuffer(self->ctx.scale0L1Que_, 1, scaleSize);
+        }
     }
+#ifdef DTYPE_Y1
+    using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+    if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.hasSecondOutput_) {
+            if (self->ctx.tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                self->ctx.pipe_.InitBuffer(self->ctx.scale1L1Que_, 1, scaleSize);
+            }
+        }
+    }
+#endif
 }
 
 template <class Intf>
@@ -747,13 +758,24 @@ static __aicore__ inline void CalcInWorkspace(Intf* self, const GlobalTensor<typ
 template <class Intf>
 static __aicore__ inline void SetDequantScale(Intf* self)
 {
+    bool hasVectorScale = false;
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-        if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::FIX_MTE2));
-            SetFlag<HardEvent::FIX_MTE2>(eventId);
-            WaitFlag<HardEvent::FIX_MTE2>(eventId);
-            Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
-        }
+        hasVectorScale = self->ctx.tiling_->quantMode0 ==
+                         static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT);
+    }
+#ifdef DTYPE_Y1
+    using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+    if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        hasVectorScale = hasVectorScale || (self->ctx.hasSecondOutput_ &&
+                                            self->ctx.tiling_->quantMode1 ==
+                                                static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT));
+    }
+#endif
+    if (hasVectorScale) {
+        event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::FIX_MTE2));
+        SetFlag<HardEvent::FIX_MTE2>(eventId);
+        WaitFlag<HardEvent::FIX_MTE2>(eventId);
+        Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
     }
 }
 
@@ -795,9 +817,12 @@ struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf* self, const Conv3DBackpropInputArch35TilingData& tiling,
-                                       const bool hasBias)
+                                       const bool hasBias, const bool hasSecondOutput = false)
     {
         self->ctx.hasBias_ = hasBias;
+#ifdef DTYPE_Y1
+        self->ctx.hasSecondOutput_ = hasSecondOutput;
+#endif
         // kernel侧通过ctx持有tiling指针，供后续全流程访问，避免向kernel内部逐层传递引用
         self->ctx.tiling_ = &(tiling);
         self->ctx.curEnableFullLoad_ = self->ctx.tiling_->enableFullLoad;
@@ -854,9 +879,9 @@ struct SetBias {
 template <class Intf>
 struct SetScale {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::ScaleT>& scale)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::ScaleT0>& scale)
     {
-        self->ctx.scaleGlobal_ = scale;
+        self->ctx.scale0Global_ = scale;
     }
 };
 
@@ -1082,11 +1107,23 @@ struct IterateAll {
             self->template IterateAllForKernelSplit<sync>(output, enAtomic);
         }
 
-        if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-            self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            if ASCEND_IS_AIC_SCALAR {
-                self->ctx.scaleL1Que_.FreeTensor(self->ctx.scaleL1Buf_);
+        if ASCEND_IS_AIC_SCALAR {
+            if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if (self->ctx.tiling_->quantMode0 ==
+                    static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                    self->ctx.scale0L1Que_.FreeTensor(self->ctx.scale0L1Buf_);
+                }
             }
+#ifdef DTYPE_Y1
+            using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+            if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if (self->ctx.hasSecondOutput_ &&
+                    self->ctx.tiling_->quantMode1 ==
+                        static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                    self->ctx.scale1L1Que_.FreeTensor(self->ctx.scale1L1Buf_);
+                }
+            }
+#endif
         }
         self->ctx.isFirstIter_ = true;
     }
@@ -1171,10 +1208,20 @@ struct End {
             self->ctx.biasBTQue_.FreeAllEvent();
         }
 
-        if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-            self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            self->ctx.scaleL1Que_.FreeAllEvent();
+        if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (self->ctx.tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                self->ctx.scale0L1Que_.FreeAllEvent();
+            }
         }
+#ifdef DTYPE_Y1
+        using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+        if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (self->ctx.hasSecondOutput_ &&
+                self->ctx.tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                self->ctx.scale1L1Que_.FreeAllEvent();
+            }
+        }
+#endif
 
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(false);

@@ -115,19 +115,26 @@ __aicore__ constexpr Conv3dConfig GetDefaultConfig()
 constexpr Conv3dConfig CONV3D_CFG_DEFAULT = GetDefaultConfig();
 
 // 打包字段，内部实现的上下文，包含了用户构造的ConvBpParam
-template <class A, class B, class C, class D, class E, class F>
+template <class A, class B, class C, class D, class E, class F, class G = D, class H = F>
 struct ConvBpContext {
+    // 标识当前 Intf 是否对应第二路输出（y1）。基类为 false，Output1Intf 覆盖为 true。
+    // Kernel 写回路径据此区分 enRelu(0)/enRelu1(1)，实现 y0/y1 独立 relu 控制。
+    constexpr static bool IsSecondOutput = false;
     using xType = A;
     using cType = C;
     using dType = D;
     using eType = E;
     using fType = F;
+    using f1Type = H;
     using SrcT = typename A::Type;
     using SrcAT = typename C::Type; // dedy Type
     using SrcBT = typename A::Type; // filter Type
     using DstT = typename D::Type;
     using BiasT = typename E::Type;
-    using ScaleT = typename F::Type;
+    using ScaleT0 = typename F::Type;
+    using Scale1T = typename H::Type;
+    using Dst1T = typename G::Type;
+    using d1Type = G;
     using L0cT = typename GetDstType<SrcAT>::Type;
 
     constexpr static auto formatA = A::format;
@@ -148,5 +155,36 @@ struct ConvBpContext {
         __aicore__ inline _() {}
     };
 };
+
+template <class Intf>
+struct Output1Config : public Intf::Config {
+    using DstT = typename Intf::Dst1T;
+    using dType = typename Intf::Config::d1Type;
+    using fType = typename Intf::Config::f1Type;
+    using ScaleT0 = typename Intf::Scale1T;
+};
+
+template <class Intf>
+struct Output1Intf {
+    // 第二路输出（y1）视图：复用基类 ctx 内存，但 relu 控制走 tiling_->enRelu1。
+    constexpr static bool IsSecondOutput = true;
+    using Config = Output1Config<Intf>;
+    using SrcT = typename Intf::SrcT;
+    using SrcAT = typename Intf::SrcAT;
+    using SrcBT = typename Intf::SrcBT;
+    using DstT = typename Intf::Dst1T;
+    using L0cT = typename Intf::L0cT;
+    using BiasT = typename Intf::BiasT;
+    using ScaleT0 = typename Intf::Scale1T;
+    using ContextData = typename Intf::ContextData;
+    ContextData ctx;
+    constexpr static Conv3dConfig conv3dConfig = Intf::conv3dConfig;
+};
+
+template <class Intf>
+__aicore__ inline uint8_t GetOutputQuantMode(const Intf* self)
+{
+    return Intf::IsSecondOutput ? self->ctx.tiling_->quantMode1 : self->ctx.tiling_->quantMode0;
+}
 } // namespace Convolution3DBackprop
 #endif

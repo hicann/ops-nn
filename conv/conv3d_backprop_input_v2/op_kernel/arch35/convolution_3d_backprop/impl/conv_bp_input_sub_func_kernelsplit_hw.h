@@ -167,9 +167,10 @@ static __aicore__ inline void LoadL0c2OutForKernelSplitHW(Intf* self, const Loca
     SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.params.srcNzC0Stride = 1;    // src M stride, loop0_src_stride (unit: 32B)
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
-    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.reluEn = Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 : self->ctx.tiling_->enRelu0;
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+    fixPipeParams.preReluMode = static_cast<ReluMode>(Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 :
+                                                                             self->ctx.tiling_->enRelu0);
 #endif
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)

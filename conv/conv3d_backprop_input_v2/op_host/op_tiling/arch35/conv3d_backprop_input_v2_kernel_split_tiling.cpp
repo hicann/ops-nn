@@ -245,8 +245,9 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
         availableL1size -= biasSize;
     }
 
-    if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
-        uint64_t scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin_g;
+    const uint32_t vectorScaleCount = GetVectorScaleCount();
+    if (vectorScaleCount != 0U) {
+        uint64_t scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin_g * vectorScaleCount;
         availableL1size -= scaleSize;
     }
 
@@ -348,7 +349,8 @@ bool Conv3DDXV2KernelSplitTiling::CheckDtypeCompatibility()
 
     size_t filterIndex = FILTER_INDEX;
     size_t outputBackpropIndex = OUTPUT_BP_INDEX;
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
         outputBackpropIndex = FILTER_INDEX;
         filterIndex = OUTPUT_BP_INDEX;
     }
@@ -454,7 +456,8 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
 
     constexpr uint32_t bestBaseMN = 256;
 
-    if (TryKernelSplitHW(bestBaseMN)) {
+    // 开启双输出不支持KernelSplitHW场景
+    if (!hasDualOutput_ && TryKernelSplitHW(bestBaseMN)) {
         return true;
     }
 
@@ -686,8 +689,9 @@ bool Conv3DDXV2KernelSplitTiling::IsL1ParamsValid(const L1TilingParams& l1Params
         // biasL1 size 需按 64B 对齐：kernel 侧 InitBiasTque 按 64B 分配（L1→BT DataCopy 按 64B 粒度）。
         biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin_g, BYTE_64);
     }
-    if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
-        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin_g;
+    const uint32_t vectorScaleCount = GetVectorScaleCount();
+    if (vectorScaleCount != 0U) {
+        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin_g * vectorScaleCount;
     }
     return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
 }

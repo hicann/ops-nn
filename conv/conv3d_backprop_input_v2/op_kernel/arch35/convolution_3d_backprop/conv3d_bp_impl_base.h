@@ -79,7 +79,10 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPong_, TPosition::CO1, 1);
         DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasL1Que_, TPosition::A1, 1);
-        DEFINE_STUCT_TEMPLATE_FIELD(TQue, scaleL1Que_, TPosition::A1, 1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TQue, scale0L1Que_, TPosition::A1, 1);
+#ifdef DTYPE_Y1
+        DEFINE_STUCT_TEMPLATE_FIELD(TQue, scale1L1Que_, TPosition::A1, 1);
+#endif
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasBTQue_, TPosition::C2, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0bBuf_, TPosition::B2);
@@ -173,8 +176,15 @@ public:
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::BiasT>, biasGlobal_);
         DEFINE_STUCT_FIELD(LocalTensor<typename Intf::BiasT>, biasL1Buf_);
         DEFINE_STUCT_FIELD(LocalTensor<typename Intf::L0cT>, biasBTBuf_);
-        DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::ScaleT>, scaleGlobal_);
-        DEFINE_STUCT_FIELD(LocalTensor<typename Intf::ScaleT>, scaleL1Buf_);
+        DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::ScaleT0>, scale0Global_);
+#ifdef DTYPE_Y1
+        DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::Scale1T>, scale1Global_);
+#endif
+        DEFINE_STUCT_FIELD(LocalTensor<typename Intf::ScaleT0>, scale0L1Buf_);
+#ifdef DTYPE_Y1
+        DEFINE_STUCT_FIELD(LocalTensor<typename Intf::Scale1T>, scale1L1Buf_);
+        DEFINE_STUCT_FIELD(bool, hasSecondOutput_);
+#endif
         DEFINE_STUCT_FIELD(GlobalTensor<float>, l0cOutGm_); // tmp workspace to store result data with fp32
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::DstT>, l0cOutWorkspace_); // tmp workspace for kernel split
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__

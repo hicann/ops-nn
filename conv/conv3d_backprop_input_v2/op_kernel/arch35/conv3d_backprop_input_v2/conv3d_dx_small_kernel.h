@@ -39,8 +39,9 @@ constexpr uint32_t SMALL_KERNEL_BIAS_L1_ALIGN_BYTES = 64;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
-          int scaleFormat = FORMAT_MAX>
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
+          int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
+          int scale1Format = scale0Format>
 class Conv3dDxSmallKernel {
 public:
     using L0cT = typename Convolution3DBackprop::GetDstType<dedyType>::Type;
@@ -49,7 +50,7 @@ public:
 
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
                                 const Conv3DBackpropInputArch35TilingData& tilingData, GM_ADDR bias = nullptr,
-                                GM_ADDR scale = nullptr)
+                                GM_ADDR scale0 = nullptr, GM_ADDR y1 = nullptr, GM_ADDR scale1 = nullptr)
     {
         (void)workSpace;
         hasBias_ = bias != nullptr;
@@ -57,11 +58,20 @@ public:
         filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);
         dedyGm_.SetGlobalBuffer((__gm__ dedyType*)dedy);
         yGm_.SetGlobalBuffer((__gm__ yType*)y);
+        if (tilingData.dualOutput != 0 && y1 != nullptr) {
+            y1Gm_.SetGlobalBuffer((__gm__ y1Type*)y1);
+            hasSecondOutput_ = true;
+        }
         if (unlikely(hasBias_)) {
             biasGm_.SetGlobalBuffer((__gm__ biasType*)bias);
         }
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
+        if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            scale0Gm_.SetGlobalBuffer((__gm__ scale0Type*)scale0);
+        }
+        if constexpr (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (scale1 != nullptr) {
+                scale1Gm_.SetGlobalBuffer((__gm__ scale1Type*)scale1);
+            }
         }
         ComputeScalarTiling();
     }
@@ -86,10 +96,13 @@ private:
     GlobalTensor<filterType> filterGm_;
     GlobalTensor<dedyType> dedyGm_;
     GlobalTensor<yType> yGm_;
+    GlobalTensor<y1Type> y1Gm_;
     GlobalTensor<biasType> biasGm_;
-    GlobalTensor<scaleType> scaleGm_;
+    GlobalTensor<scale0Type> scale0Gm_;
+    GlobalTensor<scale1Type> scale1Gm_;
 
     bool hasBias_ = false;
+    bool hasSecondOutput_ = false;
     uint64_t hiWi_ = 0;
     uint64_t diHiWi_ = 0;
     uint64_t doHoWo_ = 0;
@@ -172,11 +185,22 @@ private:
 
     __aicore__ inline uint32_t GetBiasL1ElemCount() const { return GetBiasL1SizeBytes() / sizeof(biasType); }
 
-    __aicore__ inline uint32_t GetScaleL1OffBytes() const
+    __aicore__ inline uint32_t GetScale0L1OffBytes() const
     {
         uint32_t biasL1OffBytes = GetBiasL1OffBytes();
         uint32_t afterBias = hasBias_ ? biasL1OffBytes + GetBiasL1SizeBytes() : biasL1OffBytes;
         return (afterBias + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
+    }
+
+    __aicore__ inline uint32_t GetScale1L1OffBytes() const
+    {
+        uint32_t afterScale0 = GetScale0L1OffBytes();
+        if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                afterScale0 += tiling_->singleCoreCin * sizeof(scale0Type);
+            }
+        }
+        return (afterScale0 + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
     }
 
     __aicore__ inline void InitStaticL1(uint32_t nIdx)
@@ -316,11 +340,13 @@ private:
         if (hasBias_) {
             LoadBiasToBT(curN);
         }
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                SetFlag<HardEvent::MTE2_FIX>(EVENT_ID_MTE2_FIX);
-                WaitFlag<HardEvent::MTE2_FIX>(EVENT_ID_MTE2_FIX);
-            }
+        bool hasVectorScale = tiling_->quantMode0 ==
+                                  static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT) ||
+                              tiling_->quantMode1 ==
+                                  static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT);
+        if (hasVectorScale) {
+            SetFlag<HardEvent::MTE2_FIX>(EVENT_ID_MTE2_FIX);
+            WaitFlag<HardEvent::MTE2_FIX>(EVENT_ID_MTE2_FIX);
         }
     }
 

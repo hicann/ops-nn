@@ -50,14 +50,17 @@ const size_t OUTPUT_BP_INDEX = 2;
 const size_t TRANSPOSE_X_INDEX = 1;
 const size_t TRANSPOSE_FILTER_INDEX = 2;
 const size_t BAIS_INDEX = 3;
-const size_t SCALE_INDEX = 4;
+const size_t SCALE0_INDEX = 4;
+const size_t SCALE1_INDEX = 5; // MDC双输出场景下的第二个output对应的Scale1 input索引
 const size_t ENABLE_HF32_INDEX = 5;
 const size_t OUTPUT_PADDING_INDEX = 5;
 const size_t OFFSET_X_INDEX = 6;
 const size_t TRANSPOSE_ENABLE_HF32_INDEX = 7;
 const size_t K_FUSION_MODE_CONV3D_TRANSPOSE_IDX = 7;
 const size_t K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX = 8;
-const size_t FIXED_SHIFT_VAL_INDEX = 10;
+
+const size_t FIXED_SHIFT_VAL_INDEX = 10;                   // MDC定点数量化fixedShiftVal Attr索引
+const size_t DUAL_OUTPUT_EXTEND_CONV_TRANSPOSE_INDEX = 11; // MDC双输出场景标识符 Attr索引
 
 struct DtypeFlags {
     bool hif8flag = false;
@@ -110,6 +113,7 @@ protected:
     bool GetShapeFormatInfo();
     bool AnalyzeDtype() const;
     ge::graphStatus GetPublicShapeAttrsInfo();
+    void SetFuseTilingRunInfo();
     bool CheckDtypeFormatAttrs(size_t aMatrixesIndex, size_t bMatrixesIndex, bool hif8flag, bool fp8e4m3flag) const;
     void EqualL1MatchStepMNKCore(L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize,
                                  bool isNeedShrinkStepKa = false);
@@ -164,12 +168,18 @@ protected:
     void PrintTilingSummary();
     bool PrintInputsAttrs(optiling::Conv3DBackpropInputArch35TilingData& tiling);
     void PrintOpAttrs(const std::string& opName, optiling::Conv3DBackpropInputArch35TilingData& tiling);
+    uint32_t GetVectorScaleCount() const
+    {
+        const uint32_t scale0Count = runInfo_.quantMode0 == static_cast<uint8_t>(QuantMode::VECTOR_QUANT) ? 1U : 0U;
+        const uint32_t scale1Count = runInfo_.quantMode1 == static_cast<uint8_t>(QuantMode::VECTOR_QUANT) ? 1U : 0U;
+        return scale0Count + scale1Count;
+    }
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;
     bool c0DbFlag_ = false;
     bool hasBiasFlag_ = false;
-    bool hasScaleFlag_ = false;
+    bool hasDualOutput_ = false;
     uint8_t loadB2Condition_ = 0;
     uint8_t loadB1Condition_ = 0;
     uint8_t kernelSplitMode_ = 0;

@@ -27,13 +27,17 @@ template <class Config_, template <typename, class> class Impl>
 struct ConvBpIntf {
     using Config = Config_;
     using Ext = Impl<ConvBpIntf, Config>;
+    // 透传 Config 的 IsSecondOutput（基类 ConvBpContext 为 false；Output1Intf 覆盖为 true）。
+    constexpr static bool IsSecondOutput = Config::IsSecondOutput;
     using SrcT = typename Config::SrcT;
     using SrcBT = typename Config::SrcBT;
     using SrcAT = typename Config::SrcAT;
     using DstT = typename Config::DstT;
+    using Dst1T = typename Config::Dst1T;
     using L0cT = typename Config::L0cT;
     using BiasT = typename Config::BiasT;
-    using ScaleT = typename Config::ScaleT;
+    using ScaleT0 = typename Config::ScaleT0;
+    using Scale1T = typename Config::Scale1T;
     using IndexT = typename AscendC::Conditional<AscendC::IsSameType<SrcBT, float>::value, uint32_t, uint16_t>::type;
     using ContextData = typename Ext::ContextData;
 
@@ -44,12 +48,13 @@ public:
 public:
     __aicore__ inline ConvBpIntf() {}
 
-    __aicore__ inline void Init(const Conv3DBackpropInputArch35TilingData& tiling, const bool hasBias = false)
+    __aicore__ inline void Init(const Conv3DBackpropInputArch35TilingData& tiling, const bool hasBias = false,
+                                const bool hasSecondOutput = false)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling, hasBias)) {
-            Local::call(this, tiling, hasBias);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling, hasBias, hasSecondOutput)) {
+            Local::call(this, tiling, hasBias, hasSecondOutput);
         }
     }
 
@@ -85,12 +90,20 @@ public:
         }
     }
 
-    __aicore__ inline void SetScale(const GlobalTensor<ScaleT>& scale)
+    __aicore__ inline void SetScale(const GlobalTensor<ScaleT0>& scale)
     {
         using Local = typename Ext::SetScale;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, scale)) {
             Local::call(this, scale);
         }
+    }
+
+    __aicore__ inline void SetScale1(const GlobalTensor<Scale1T>& scale)
+    {
+#ifdef DTYPE_Y1
+        ctx.scale1Global_ = scale;
+        ctx.hasSecondOutput_ = true;
+#endif
     }
 
     __aicore__ inline void SetKernelSplitParams(uint32_t kSCoutFullLoad, uint32_t kSUseWorkSpace)
@@ -190,6 +203,58 @@ public:
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
             Local::call(this, output, enAtomic, enSequentialWrite);
         }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void IterateAll(const GlobalTensor<DstT>& output0, const GlobalTensor<Dst1T>& output1,
+                                      uint8_t enAtomic = 0, bool fullLoadBiasFlag_ = false, bool freeBiasFlag_ = false)
+    {
+        bool hasBias = ctx.hasBias_;
+        if (unlikely(hasBias && ctx.tiling_->isBiasFullLoad)) {
+            if (freeBiasFlag_) {
+                FreeBiasTensor();
+            }
+            if (fullLoadBiasFlag_) {
+                Convolution3DBackpropFunc::FullLoadBias<ConvBpIntf<Config_, Impl>>(this);
+            }
+        }
+        Convolution3DBackpropFunc::SetDequantScale<ConvBpIntf<Config_, Impl>>(this);
+        if (ctx.enableSplitK_) {
+            Convolution3DBackpropFunc::CalcSplitK_<ConvBpIntf<Config_, Impl>, sync>(this, enAtomic, output0, hasBias);
+            if (ctx.useUbAccumForSplitK_ && ctx.needComputeFlag_) {
+                using Intf1 = Convolution3DBackprop::Output1Intf<ConvBpIntf<Config_, Impl>>;
+                auto* self1 = reinterpret_cast<Intf1*>(this);
+                Convolution3DBackpropFunc::AccumulateSegmentOnWorkspace<Intf1>(self1, output1);
+            }
+        } else {
+            while (Iterate<sync>(false, hasBias)) {
+                VecPreProcess<sync>(output0, enAtomic);
+                GetTensorC<sync>(output0, output1, enAtomic);
+                VecPostProcess<sync>(output0, enAtomic);
+            }
+        }
+        if ASCEND_IS_AIC_SCALAR {
+            if constexpr (Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if (ctx.tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                    ctx.scale0L1Que_.FreeTensor(ctx.scale0L1Buf_);
+                }
+            }
+            using Intf1 = Convolution3DBackprop::Output1Intf<ConvBpIntf<Config_, Impl>>;
+            if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if (ctx.hasSecondOutput_ &&
+                    ctx.tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                    ctx.scale1L1Que_.FreeTensor(ctx.scale1L1Buf_);
+                }
+            }
+        }
+        ctx.isFirstIter_ = true;
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void GetTensorC(const GlobalTensor<DstT>& output0, const GlobalTensor<Dst1T>& output1,
+                                      uint8_t enAtomic = 0, bool enSequentialWrite = false)
+    {
+        Convolution3DBackpropFunc::LoadL0c2GmDual(this, output0, output1, enAtomic, enSequentialWrite);
     }
 
     template <bool sync = true>

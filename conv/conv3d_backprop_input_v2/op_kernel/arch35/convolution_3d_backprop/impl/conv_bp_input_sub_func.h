@@ -279,15 +279,33 @@ __aicore__ inline void FullLoadToScaleL1(Intf* self)
     if ASCEND_IS_AIV_SHOULD_RETURN {
         return;
     }
-    LocalTensor<typename Intf::ScaleT> useScaleL1 = self->ctx.scaleL1Que_.template AllocTensor<typename Intf::ScaleT>();
-    uint16_t blockLen = self->ctx.singleShapeCin_ * sizeof(typename Intf::ScaleT);
+    uint16_t blockLen = self->ctx.singleShapeCin_ * sizeof(typename Intf::ScaleT0);
     DataCopyParams dataCopyParams(1, blockLen, 0, 0);
     // 4 is B64 data num per block, currently scale is always uint64
     uint8_t rightPadding = DivCeil(self->ctx.singleShapeCin_, 4) * 4 - self->ctx.singleShapeCin_;
     DataCopyPadParams padParams(true, 0, rightPadding, 0);
-    DataCopyPad<typename Intf::ScaleT>(useScaleL1, self->ctx.scaleGlobal_, dataCopyParams, padParams);
-    self->ctx.scaleL1Que_.EnQue(useScaleL1);
-    self->ctx.scaleL1Buf_ = self->ctx.scaleL1Que_.template DeQue<typename Intf::ScaleT>();
+    if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            LocalTensor<typename Intf::ScaleT0> useScaleL1 = self->ctx.scale0L1Que_
+                                                                 .template AllocTensor<typename Intf::ScaleT0>();
+            DataCopyPad<typename Intf::ScaleT0>(useScaleL1, self->ctx.scale0Global_, dataCopyParams, padParams);
+            self->ctx.scale0L1Que_.EnQue(useScaleL1);
+            self->ctx.scale0L1Buf_ = self->ctx.scale0L1Que_.template DeQue<typename Intf::ScaleT0>();
+        }
+    }
+#ifdef DTYPE_Y1
+    using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+    if constexpr (Intf1::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.hasSecondOutput_ &&
+            self->ctx.tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            LocalTensor<typename Intf::Scale1T> useScale1L1 = self->ctx.scale1L1Que_
+                                                                  .template AllocTensor<typename Intf::Scale1T>();
+            DataCopyPad<typename Intf::Scale1T>(useScale1L1, self->ctx.scale1Global_, dataCopyParams, padParams);
+            self->ctx.scale1L1Que_.EnQue(useScale1L1);
+            self->ctx.scale1L1Buf_ = self->ctx.scale1L1Que_.template DeQue<typename Intf::Scale1T>();
+        }
+    }
+#endif
 }
 
 } // namespace Convolution3DBackpropFunc

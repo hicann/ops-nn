@@ -62,32 +62,40 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
-          int scaleFormat = FORMAT_MAX>
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
+          int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
+          int scale1Format = scale0Format>
 class Conv3dDxBase {
 protected:
     static constexpr Convolution3DBackprop::CubeFormat filterCubeFormat = GetFormat(filterFormat);
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
     static constexpr Convolution3DBackprop::CubeFormat biasCubeFormat = GetFormat(biasFormat);
-    static constexpr Convolution3DBackprop::CubeFormat scaleCubeFormat = GetScaleFormat(scaleFormat);
     using filterDxType = Convolution3DBackprop::ConvType<TPosition::GM, filterCubeFormat, filterType>;
     using inputSizeDxType = Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND,
                                                             int32_t>;
     using dedyDxType = Convolution3DBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
     using yDxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
+    using y1DxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, y1Type>;
     using biasDxType = Convolution3DBackprop::ConvType<TPosition::GM, biasCubeFormat, biasType>;
-    using scaleDxType = Convolution3DBackprop::ConvType<TPosition::GM, scaleCubeFormat, scaleType>;
+    using scale0DxType = Convolution3DBackprop::ConvType<TPosition::GM, GetScaleFormat(scale0Format), scale0Type>;
+    using scale1DxType = Convolution3DBackprop::ConvType<TPosition::GM, GetScaleFormat(scale1Format), scale1Type>;
     static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag};
     Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType,
-                                               scaleDxType, conv3dConfig>
+                                               scale0DxType, conv3dConfig, y1DxType, scale1DxType>
         dedx_;
 
     GlobalTensor<filterType> filterGm_;
     GlobalTensor<dedyType> dedyGm_;
     GlobalTensor<yType> yGm_;
+#ifdef DTYPE_Y1
+    GlobalTensor<y1Type> y1Gm_;
+#endif
     GlobalTensor<biasType> biasGm_;
-    GlobalTensor<scaleType> scaleGm_;
+    GlobalTensor<scale0Type> scale0Gm_;
+#ifdef DTYPE_Y1
+    GlobalTensor<scale1Type> scale1Gm_;
+#endif
 
     uint64_t batchStrideA_ = 1;
     uint64_t batchStrideC_ = 1;
@@ -122,6 +130,9 @@ protected:
     bool hasBias_ = false;
     bool fullLoadBiasFlag_ = false;
     bool freeBiasFlag_ = false;
+#ifdef DTYPE_Y1
+    bool hasSecondOutput_ = false;
+#endif
 
     const Conv3DBackpropInputArch35TilingData* tiling_;
 
@@ -263,10 +274,12 @@ protected:
 
     __aicore__ inline void CalcScaleOffset(uint32_t groupIdx)
     {
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT ||
+                      GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT) ||
+                tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
                 offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
-            } else if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
+            } else {
                 offsetScale_ = 0;
             }
         }

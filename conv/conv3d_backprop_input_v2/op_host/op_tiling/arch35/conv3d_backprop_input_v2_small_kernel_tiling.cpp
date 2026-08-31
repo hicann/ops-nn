@@ -323,8 +323,9 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelL1FixedSize() const
         biasSize = Ops::Base::CeilAlign(cinAlign * dtypeByteBtBuffer, BYTE_64);
     }
     uint64_t scaleSize = 0;
-    if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
-        scaleSize = cinAlign * ge::GetSizeByDataType(ge::DT_INT64);
+    const uint32_t vectorScaleCount = GetVectorScaleCount();
+    if (vectorScaleCount != 0U) {
+        scaleSize = cinAlign * ge::GetSizeByDataType(ge::DT_INT64) * vectorScaleCount;
     }
     return b1Size + biasSize + scaleSize;
 }

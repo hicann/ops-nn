@@ -314,17 +314,17 @@ bool CheckTransposeAttr(gert::TilingContext* context, OtherParams& otherParams)
     }
     if (IsSocVersionFuse(context)) {
         if (attrs->GetAttrNum() > K_FUSION_MODE_CONV3D_TRANSPOSE_IDX) {
-            const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
+            const auto fusion_mode = attrs->GetAttrPointer<int64_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
             OP_CHECK_IF(fusion_mode == nullptr,
                         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get fusion_mode attrs"), return false);
-            OP_CHECK_IF(*fusion_mode != 0 && *fusion_mode != 1,
+            OP_CHECK_IF(*fusion_mode < 0 || *fusion_mode > 3,
                         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "fusion_mode",
                                                               std::to_string(*fusion_mode).c_str(),
-                                                              "The value of fusion_mode must be in {0, 1}"),
+                                                              "The value of fusion_mode must be in {0, 1, 2, 3}"),
                         return false);
         }
         if (attrs->GetAttrNum() > K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX) {
-            const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
+            const auto y_quant_mode = attrs->GetAttrPointer<int64_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
             OP_CHECK_IF(y_quant_mode == nullptr,
                         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get quant_mode attrs"), return false);
             OP_CHECK_IF(*y_quant_mode != 0,
@@ -407,7 +407,8 @@ bool UpdateDtypeParams(const gert::TilingContext* context, Conv3dBpInputV2RunInf
 {
     const auto op_name = context->GetNodeName();
 
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         // Conv3DTranspose, index of x is 1, index of filter is 2
         otherParams.a_dtype = context->GetInputDesc(FILTER_INDEX)->GetDataType();
         otherParams.b_dtype = context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType();
@@ -510,7 +511,9 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
     const auto op_name = context->GetNodeName();
 
     std::unordered_set<ge::Format> valid_out_bp_format;
-    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
+        (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+         op_type == optiling::OpTypeV2::kExtendConvTransposeV2)) {
         valid_out_bp_format = {ge::FORMAT_NCDHW};
     } else {
         valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
@@ -519,14 +522,17 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
     std::unordered_set<ge::Format> valid_filter_format;
     if (IsSocVersionFuse(context)) {
         valid_filter_format = {ge::FORMAT_NDHWC, ge::FORMAT_FRACTAL_Z};
-    } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+               op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         valid_filter_format = {ge::FORMAT_NCDHW};
     } else {
         valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
     }
 
     std::unordered_set<ge::Format> valid_y_format;
-    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
+        (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+         op_type == optiling::OpTypeV2::kExtendConvTransposeV2)) {
         valid_y_format = {ge::FORMAT_NCDHW};
     } else {
         valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
@@ -702,7 +708,8 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     size_t out_backprop_input_index = static_cast<size_t>(OUT_BACKPROP_INDEX);
     size_t filter_input_index = static_cast<size_t>(FILTER_INDEX);
     // 转置的话，filter和out_backprop进行交换
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         out_backprop_input_index = FILTER_INDEX;
         filter_input_index = OUT_BACKPROP_INDEX;
     }
@@ -764,7 +771,8 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
                         "The formats of out_backprop and filter must be NDC1HWC0 and FRACTAL_Z_3D"),
                     return false);
         if (!isV2Impl || op_type == optiling::OpTypeV2::kConv3DTransposeV2 ||
-            op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+            op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+            op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
             OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0,
                         OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(),
                                                    "NDC1HWC0"),
@@ -946,7 +954,8 @@ bool CheckCalPads(const gert::TilingContext* context, const Conv3dBpInputV2RunIn
                             runInfoV2.stride_w +
                         1;
     std::string check_input_name = (op_type == optiling::OpTypeV2::kConv3DTransposeV2 ||
-                                    op_type == optiling::OpTypeV2::kExtendConvTranspose) ?
+                                    op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+                                    op_type == optiling::OpTypeV2::kExtendConvTransposeV2) ?
                                        "x" :
                                        "out_backprop";
     OP_CHECK_IF(
@@ -978,7 +987,8 @@ bool CalPads(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, op
 {
     auto attrs = context->GetAttrs();
     size_t padding_attr_idx = kPaddingConv3dBpInputIdx;
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         if (IsSocVersionFuse(context)) {
             padding_attr_idx = kPaddingExtendConvTransposeIdx;
         } else {
@@ -1019,7 +1029,8 @@ bool CalPads(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, op
         runInfoV2.pad_r = pad_right;
     }
 
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         OP_CHECK_IF(!HandleConv3DTranspose(context, runInfoV2, otherParams),
                     OP_LOGE(context, "Failed to process Conv3DTranspose."), return false);
     }
@@ -1548,7 +1559,8 @@ bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo&
     Shape strides_ncdhw;
     Shape dilations_ncdhw;
     ge::Format data_format = context->GetInputDesc(OUT_BACKPROP_INDEX)->GetOriginFormat();
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         OP_CHECK_IF(!CheckTransposeAttr(context, otherParams), OP_LOGW(context, "check transpose attr failed"),
                     return false);
         data_format = context->GetInputDesc(FILTER_INDEX)->GetOriginFormat();
@@ -1564,7 +1576,8 @@ bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo&
                 OP_LOGE_FOR_INVALID_VALUE(op_name, "strides C", std::to_string(strides_ncdhw.c), "1"), return false);
 
     SetConvAttrs(runInfoV2, pads_data, strides_ncdhw, dilations_ncdhw, groups, otherParams);
-    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose ||
+        op_type == optiling::OpTypeV2::kExtendConvTransposeV2) {
         OP_CHECK_IF(!CheckTransposeOutputdingRange(context, runInfoV2, otherParams),
                     OP_LOGW(context, "check transpose attr failed"), return false);
     }
@@ -1578,7 +1591,8 @@ bool GetInputOutputFormat(const gert::TilingContext* context, Conv3dBpInputV2Run
     size_t bMatrixIndex = FILTER_INDEX;
     const char* opName = context->GetNodeName(); // 日志打印用，允许为空
 
-    if (opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType == optiling::OpTypeV2::kExtendConvTransposeV2) {
         aMatrixIndex = FILTER_INDEX;
         bMatrixIndex = OUT_BACKPROP_INDEX;
     }
@@ -1686,7 +1700,8 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
         return false;
     }
 
-    if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) &&
+    if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose ||
+         opType == optiling::OpTypeV2::kExtendConvTransposeV2) &&
         (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams))) {
         OP_LOGW(context, "params is invalid");
         return false;

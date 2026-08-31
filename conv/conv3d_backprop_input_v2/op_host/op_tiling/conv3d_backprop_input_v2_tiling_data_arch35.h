@@ -41,7 +41,7 @@ TILING_DATA_FIELD_DEF(uint8_t, initOutputFlag);
 TILING_DATA_FIELD_DEF(uint8_t, isBiasFullLoad);
 TILING_DATA_FIELD_DEF(uint8_t, enableVecTrans);
 TILING_DATA_FIELD_DEF(uint8_t, enableFullLoad);
-TILING_DATA_FIELD_DEF(uint8_t, quantMode);
+TILING_DATA_FIELD_DEF(uint8_t, quantMode0);
 TILING_DATA_FIELD_DEF(uint32_t, batch);
 TILING_DATA_FIELD_DEF(uint32_t, cin);
 TILING_DATA_FIELD_DEF(uint32_t, cout);
@@ -91,7 +91,7 @@ TILING_DATA_FIELD_DEF(uint32_t, stepKb);
 TILING_DATA_FIELD_DEF(uint32_t, singleIterateDk);
 TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
 TILING_DATA_FIELD_DEF(uint64_t, singleCoreM);
-TILING_DATA_FIELD_DEF(uint64_t, enRelu);
+TILING_DATA_FIELD_DEF(uint64_t, enRelu0);
 TILING_DATA_FIELD_DEF(uint64_t, kSegment);
 TILING_DATA_FIELD_DEF(uint64_t, kSegmentTail);
 TILING_DATA_FIELD_DEF(uint64_t, kValueSegment);
@@ -107,12 +107,16 @@ TILING_DATA_FIELD_DEF(uint32_t, woExpand);
 TILING_DATA_FIELD_DEF(uint64_t, dkHkWk);
 TILING_DATA_FIELD_DEF(uint64_t, hkWk);
 TILING_DATA_FIELD_DEF(uint8_t, fixedShiftVal);
-TILING_DATA_FIELD_DEF_ARR(uint8_t, 8, reserved);
+TILING_DATA_FIELD_DEF(uint8_t, dualOutput);
+TILING_DATA_FIELD_DEF(uint8_t, enRelu1);
+TILING_DATA_FIELD_DEF(uint8_t, quantMode1);
+TILING_DATA_FIELD_DEF_ARR(uint8_t, 5, reserved);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Conv3DBackpropInputV2, Conv3DBackpropInputArch35TilingData);
 REGISTER_TILING_DATA_CLASS(Conv3DTransposeV2, Conv3DBackpropInputArch35TilingData);
 REGISTER_TILING_DATA_CLASS(ExtendConvTranspose, Conv3DBackpropInputArch35TilingData);
+REGISTER_TILING_DATA_CLASS(ExtendConvTransposeV2, Conv3DBackpropInputArch35TilingData);
 } // namespace optiling
 
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV3D_BACKPROP_INPUT_V2_TILING_DATA_ARCH35_H

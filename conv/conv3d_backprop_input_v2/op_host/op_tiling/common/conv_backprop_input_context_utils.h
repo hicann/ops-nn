@@ -88,8 +88,10 @@ struct Conv3dBpInputV2RunInfo {
     int32_t b_dtype_bytes = 2;
     int32_t c_dtype_bytes = 2;
     int32_t initOutputFlag = 0;
-    uint8_t enRelu = 0;
-    uint8_t quantMode = 0;
+    uint8_t enRelu0 = 0;
+    uint8_t enRelu1 = 0;
+    uint8_t quantMode0 = 0;
+    uint8_t quantMode1 = 0;
     int8_t offsetX = 0;
     uint8_t fixedShiftVal = 0;
 

@@ -28,16 +28,18 @@ constexpr int BLOCK_CUBE_ALIGN_BITS = 4;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
-          int scaleFormat = FORMAT_MAX>
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
+          int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
+          int scale1Format = scale0Format>
 class Conv3dDxOswBlock
     : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-                          b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
+                          b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scale0Type, scale0Format,
+                          y1Type, scale1Type, scale1Format> {
 public:
     __aicore__ inline Conv3dDxOswBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
                                 const Conv3DBackpropInputArch35TilingData& tilingData, GM_ADDR bias = nullptr,
-                                GM_ADDR scale = nullptr)
+                                GM_ADDR scale0 = nullptr, GM_ADDR y1 = nullptr, GM_ADDR scale1 = nullptr)
     {
         InitTilingData(tilingData);
 
@@ -66,9 +68,22 @@ public:
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType*)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType*)y);
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
+#ifdef DTYPE_Y1
+        if (tilingData.dualOutput != 0 && y1 != nullptr) {
+            this->y1Gm_.SetGlobalBuffer((__gm__ y1Type*)y1);
+            this->hasSecondOutput_ = true;
         }
+#endif
+        if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            this->scale0Gm_.SetGlobalBuffer((__gm__ scale0Type*)scale0);
+        }
+#ifdef DTYPE_Y1
+        if constexpr (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if (scale1 != nullptr) {
+                this->scale1Gm_.SetGlobalBuffer((__gm__ scale1Type*)scale1);
+            }
+        }
+#endif
 
         if (unlikely(bias != nullptr)) {
             this->hasBias_ = true;
@@ -77,7 +92,11 @@ public:
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
         InitMixCoreBuffer(workSpace);
 #endif
+#ifdef DTYPE_Y1
+        this->dedx_.Init(tilingData, this->hasBias_, this->hasSecondOutput_);
+#else
         this->dedx_.Init(tilingData, this->hasBias_);
+#endif
     }
 
     __aicore__ inline void Process()
@@ -321,7 +340,16 @@ protected:
     {
         this->CalcBiasFullLoadFlag();
         this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
-        this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
+#ifdef DTYPE_Y1
+        if (this->hasSecondOutput_) {
+            this->dedx_.IterateAll(this->yGm_[this->offsetC_], this->y1Gm_[this->offsetC_], 0, this->fullLoadBiasFlag_,
+                                   this->freeBiasFlag_);
+        } else {
+#endif
+            this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
+#ifdef DTYPE_Y1
+        }
+#endif
         if (this->fullLoadBiasFlag_) {
             firstloadbias = true;
         }
@@ -366,9 +394,16 @@ protected:
 
             this->CheckFullLoadEnable();
 
-            if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-                this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
+            if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                this->dedx_.SetScale(this->scale0Gm_[this->offsetScale_]);
             }
+#ifdef DTYPE_Y1
+            if constexpr (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if (this->hasSecondOutput_) {
+                    this->dedx_.SetScale1(this->scale1Gm_[this->offsetScale_]);
+                }
+            }
+#endif
 
             if (j == 0) {
                 this->CrossCoreWaitVecTrans();
@@ -378,7 +413,15 @@ protected:
                 this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
                 this->IterateAllForBias(firstloadbias);
             } else {
-                this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
+#ifdef DTYPE_Y1
+                if (this->hasSecondOutput_) {
+                    this->dedx_.IterateAll(this->yGm_[this->offsetC_], this->y1Gm_[this->offsetC_], 0, false, false);
+                } else {
+#endif
+                    this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
+#ifdef DTYPE_Y1
+                }
+#endif
             }
         }
     }

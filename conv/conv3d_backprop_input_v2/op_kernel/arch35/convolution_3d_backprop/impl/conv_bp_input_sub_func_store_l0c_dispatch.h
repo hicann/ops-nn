@@ -124,7 +124,8 @@ static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename
     LocalTensor<typename Intf::L0cT> useC1Buf;
     L0CDeQue<Intf>(self, useC1Buf);
     SetEnAtomic<Intf>(self, enAtomic);
-    if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+    if (Convolution3DBackprop::GetOutputQuantMode<Intf>(self) ==
+        static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::MTE2_FIX));
         SetFlag<HardEvent::MTE2_FIX>(eventId);
         WaitFlag<HardEvent::MTE2_FIX>(eventId);
@@ -142,6 +143,56 @@ static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename
         if (enAtomic == 1) {
             SetAtomicNone();
         }
+    }
+    FreeTensorC1Buf(self, useC1Buf);
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0c2GmDual(Intf* self, const GlobalTensor<typename Intf::DstT>& output0,
+                                             const GlobalTensor<typename Intf::Dst1T>& output1, uint8_t enAtomic = 0,
+                                             bool enSequentialWrite = false)
+{
+    if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
+        if ASCEND_IS_AIV_SHOULD_RETURN {
+            return;
+        }
+    }
+    if (!self->ctx.needComputeFlag_) {
+        return;
+    }
+
+    LocalTensor<typename Intf::L0cT> useC1Buf;
+    L0CDeQue<Intf>(self, useC1Buf);
+    SetEnAtomic<Intf>(self, enAtomic);
+    using Intf1 = Convolution3DBackprop::Output1Intf<Intf>;
+    bool hasVectorScale = self->ctx.tiling_->quantMode0 ==
+                              static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT) ||
+                          self->ctx.tiling_->quantMode1 ==
+                              static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT);
+    if (hasVectorScale) {
+        event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::MTE2_FIX));
+        SetFlag<HardEvent::MTE2_FIX>(eventId);
+        WaitFlag<HardEvent::MTE2_FIX>(eventId);
+    }
+    if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
+        LoadL0c2OutForNz2Dn<Intf>(self, output0, useC1Buf);
+    } else {
+#if !__CUBE_VECTOR_FUSION_ONLY__
+        LoadL0c2OutForNz2Nd<Intf>(self, output0, useC1Buf);
+#endif
+    }
+
+    auto* self1 = reinterpret_cast<Intf1*>(self);
+    if constexpr (Intf1::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
+        LoadL0c2OutForNz2Dn<Intf1>(self1, output1, useC1Buf);
+    } else {
+#if !__CUBE_VECTOR_FUSION_ONLY__
+        LoadL0c2OutForNz2Nd<Intf1>(self1, output1, useC1Buf);
+#endif
+    }
+
+    if (enAtomic == 1) {
+        SetAtomicNone();
     }
     FreeTensorC1Buf(self, useC1Buf);
 }

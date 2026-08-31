@@ -64,6 +64,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPlatformInfo() { return ge::GRA
 
 void Conv3DDXV2InnerProductTiling::Reset()
 {
+    hasBiasFlag_ = false;
+    hasDualOutput_ = false;
     OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 1,
                              context_->GetRawTilingData()->GetCapacity()) != EOK,
                     CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
@@ -90,7 +92,8 @@ void Conv3DDXV2InnerProductTiling::Reset()
     dxt.set_isBiasFullLoad(1);
     dxt.set_enableVecTrans(1);
     dxt.set_enableFullLoad(0);
-    dxt.set_quantMode(0);
+    dxt.set_quantMode0(0);
+    dxt.set_quantMode1(0);
     dxt.set_batch(1);
     dxt.set_cin(1);
     dxt.set_cout(1);
@@ -200,6 +203,25 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
     return ge::GRAPH_SUCCESS;
 }
 
+void Conv3DDXV2InnerProductTiling::SetFuseTilingRunInfo()
+{
+    const auto fixedShiftVal = context_->GetAttrs()->GetAttrPointer<int64_t>(FIXED_SHIFT_VAL_INDEX);
+    const auto fixedShiftValDefault = runInfo_.b_dtype_bytes == 1 ? DEFAULT_FIXED_SHIFT_VAL_A16W8 :
+                                                                    DEFAULT_FIXED_SHIFT_VAL;
+    if (fixedShiftVal == nullptr || *fixedShiftVal <= 0 ||
+        *fixedShiftVal > static_cast<int64_t>(fixedShiftValDefault)) {
+        runInfo_.fixedShiftVal = fixedShiftValDefault;
+    } else {
+        runInfo_.fixedShiftVal = static_cast<uint8_t>(*fixedShiftVal);
+    }
+
+    if (opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
+        const auto dualOutput = context_->GetAttrs()->GetAttrPointer<bool>(DUAL_OUTPUT_EXTEND_CONV_TRANSPOSE_INDEX);
+        hasDualOutput_ = dualOutput != nullptr && *dualOutput;
+        tilingData_.set_dualOutput(hasDualOutput_);
+    }
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 {
     // 输入输出 dtype校验等
@@ -214,29 +236,27 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     }
 
     auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
-    auto scaleShape = context_->GetOptionalInputShape(SCALE_INDEX);
+    auto scale0Shape = context_->GetOptionalInputShape(SCALE0_INDEX);
+    const auto scale1Shape = opType_ == optiling::OpTypeV2::kExtendConvTransposeV2 ?
+                                 context_->GetOptionalInputShape(SCALE1_INDEX) :
+                                 nullptr;
     hasBiasFlag_ = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
-    hasScaleFlag_ = scaleShape != nullptr && scaleShape->GetStorageShape().GetShapeSize() != 0;
-    if (hasScaleFlag_) {
-        if (scaleShape->GetStorageShape().GetDim(0) == 1) {
-            runInfo_.quantMode = static_cast<uint8_t>(QuantMode::SCALAR_QUANT);
-        } else {
-            runInfo_.quantMode = static_cast<uint8_t>(QuantMode::VECTOR_QUANT);
-        }
+    if (scale0Shape != nullptr && scale0Shape->GetStorageShape().GetShapeSize() != 0) {
+        runInfo_.quantMode0 = scale0Shape->GetStorageShape().GetDim(0) == 1 ?
+                                  static_cast<uint8_t>(QuantMode::SCALAR_QUANT) :
+                                  static_cast<uint8_t>(QuantMode::VECTOR_QUANT);
+    }
+    if (scale1Shape != nullptr && scale1Shape->GetStorageShape().GetShapeSize() != 0) {
+        runInfo_.quantMode1 = scale1Shape->GetStorageShape().GetDim(0) == 1 ?
+                                  static_cast<uint8_t>(QuantMode::SCALAR_QUANT) :
+                                  static_cast<uint8_t>(QuantMode::VECTOR_QUANT);
     }
 
     const auto offset = context_->GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
     runInfo_.offsetX = (offset != nullptr) ? static_cast<int8_t>(*offset) : 0;
     runInfo_.fixedShiftVal = 0;
     if (IsSocVersionFuse(context_)) {
-        auto fixedShiftVal = context_->GetAttrs()->GetAttrPointer<int64_t>(FIXED_SHIFT_VAL_INDEX);
-        auto fixedShiftValDefault = runInfo_.b_dtype_bytes == 1 ? DEFAULT_FIXED_SHIFT_VAL_A16W8 :
-                                                                  DEFAULT_FIXED_SHIFT_VAL;
-        if (fixedShiftVal == nullptr || static_cast<uint8_t>(*fixedShiftVal) == 0) {
-            runInfo_.fixedShiftVal = fixedShiftValDefault;
-        } else {
-            runInfo_.fixedShiftVal = static_cast<uint8_t>(*fixedShiftVal);
-        }
+        SetFuseTilingRunInfo();
     }
     blockSize_ = BYTE_BLOCK / runInfo_.b_dtype_bytes;
     dtypeByteL0a_ = runInfo_.a_dtype_bytes;
@@ -250,7 +270,6 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
                               coreNum_),
         return ge::GRAPH_FAILED);
     SetRunInfoTiling(tilingData_);
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -353,7 +372,8 @@ bool Conv3DDXV2InnerProductTiling::GetShapeFormatInfo()
     size_t aMatrixIndex = OUTPUT_BP_INDEX;
     size_t bMatrixIndex = FILTER_INDEX;
 
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
         aMatrixIndex = FILTER_INDEX;
         bMatrixIndex = OUTPUT_BP_INDEX;
     }
@@ -444,7 +464,8 @@ bool Conv3DDXV2InnerProductTiling::AnalyzeDtype() const
     size_t outputBackpropIndex = OUTPUT_BP_INDEX;
     size_t filterIndex = FILTER_INDEX;
 
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
         outputBackpropIndex = FILTER_INDEX;
         filterIndex = OUTPUT_BP_INDEX;
     }
@@ -478,7 +499,8 @@ bool Conv3DDXV2InnerProductTiling::AnalyzeDtype() const
     }
 
     OP_TILING_CHECK(
-        (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) &&
+        (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+         opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) &&
             inputSizeDtype != ge::DT_INT32 && inputSizeDtype != ge::DT_INT64,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "input_size",
                                               ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str(),
@@ -1006,7 +1028,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_isBiasFullLoad(tunerTiling->isBiasFullLoad);
     dxt.set_enableVecTrans(tunerTiling->enableVecTrans);
     dxt.set_enableFullLoad(tunerTiling->enableFullLoad);
-    dxt.set_quantMode(tunerTiling->quantMode);
+    dxt.set_quantMode0(tunerTiling->quantMode0);
     dxt.set_cinG(tunerTiling->cinG);
     dxt.set_coutG(tunerTiling->coutG);
     dxt.set_cout1(tunerTiling->cout1);
@@ -1030,7 +1052,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_singleIterateDk(tunerTiling->singleIterateDk);
     dxt.set_singleCoreBatch(tunerTiling->singleCoreBatch);
     dxt.set_singleCoreM(tunerTiling->singleCoreM);
-    dxt.set_enRelu(tunerTiling->enRelu);
+    dxt.set_enRelu0(tunerTiling->enRelu0);
     dxt.set_kSegment(tunerTiling->kSegment);
     dxt.set_kSegmentTail(tunerTiling->kSegmentTail);
     dxt.set_kValueSegment(tunerTiling->kValueSegment);
@@ -1228,8 +1250,9 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
 
     uint64_t biasSize = 0;
     uint64_t scaleSize = 0;
-    if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
-        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * l0Params.baseN;
+    const uint32_t vectorScaleCount = GetVectorScaleCount();
+    if (vectorScaleCount != 0U) {
+        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * l0Params.baseN * vectorScaleCount;
     }
     if (hasBiasFlag_) {
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
@@ -1286,8 +1309,8 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     if (runInfo_.kernel_h == ENABLE_TILING_HK_WK && runInfo_.kernel_w == ENABLE_TILING_HK_WK &&
         l0Params.baseM == BASIC_BLOCK_SIZE_512 && l0Params.baseK <= BASIC_BLOCK_SIZE_16 &&
         totalCnt >= coreNum_ * TOTAL_CNT_LOWER_RATIO && totalCnt <= coreNum_ * TOTAL_CNT_UPPER_RATIO) {
-        if ((opType_ != optiling::OpTypeV2::kConv3DTransposeV2 &&
-             opType_ != optiling::OpTypeV2::kExtendConvTranspose) &&
+        if ((opType_ != optiling::OpTypeV2::kConv3DTransposeV2 && opType_ != optiling::OpTypeV2::kExtendConvTranspose &&
+             opType_ != optiling::OpTypeV2::kExtendConvTransposeV2) &&
             hwi >= BASIC_BLOCK_SIZE_512 &&
             (alignedWiAl1 * mCnt < tilingRunInfo_.mValue || alignedWiAl1 >= BASIC_BLOCK_SIZE_512)) {
             l0Params.baseM = BASIC_BLOCK_SIZE_256;
@@ -1856,8 +1879,10 @@ void Conv3DDXV2InnerProductTiling::SetRunInfoTiling(optiling::Conv3DBackpropInpu
     dxt.set_initOutputFlag(runInfo_.initOutputFlag);
     dxt.set_isBiasFullLoad(isBiasFullLoad_);
     dxt.set_singleIterateDk(singleIterateDk_);
-    dxt.set_enRelu(runInfo_.enRelu);
-    dxt.set_quantMode(runInfo_.quantMode);
+    dxt.set_enRelu0(runInfo_.enRelu0);
+    dxt.set_enRelu1(runInfo_.enRelu1);
+    dxt.set_quantMode0(runInfo_.quantMode0);
+    dxt.set_quantMode1(runInfo_.quantMode1);
     dxt.set_offsetX(runInfo_.offsetX);
     dxt.set_fixedShiftVal(runInfo_.fixedShiftVal);
 }
@@ -1939,11 +1964,13 @@ bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(optiling::Conv3DBackpropInpu
 {
     const auto op_name = context_->GetNodeName();
     size_t weight_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 ||
-                           opType_ == optiling::OpTypeV2::kExtendConvTranspose) ?
+                           opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+                           opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) ?
                               TRANSPOSE_FILTER_INDEX :
                               FILTER_INDEX; // dx filter idx 1 | transpose filter idx 2
     size_t dedy_x_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 ||
-                           opType_ == optiling::OpTypeV2::kExtendConvTranspose) ?
+                           opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+                           opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) ?
                               TRANSPOSE_X_INDEX :
                               OUTPUT_BP_INDEX; // dx dedy idx 2 | transpose x idx 1
     auto inputSizeInfo = GetTensorInfo(context_, INPUT_SIZE_INDEX, true, kInputSizeDim); // input_size dim=1
@@ -1986,24 +2013,26 @@ void Conv3DDXV2InnerProductTiling::PrintOpAttrs(const std::string& opName,
     auto attrs = context_->GetAttrs();
     const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
     size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 ||
-                                opType_ == optiling::OpTypeV2::kExtendConvTranspose) ?
+                                opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+                                opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) ?
                                    TRANSPOSE_ENABLE_HF32_INDEX :
                                    ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
     const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
     OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(opName, "get groups from context fail."), return);
     if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
         auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
-        const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
+        const auto offset = attrs->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
         OP_LOGD(
             opName,
             "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld",
             DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(),
             *groups, *enableHf32, DebugString(output_paddingShape).c_str(), *offset);
-    } else if (opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+    } else if (opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+               opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
         auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
-        const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
-        const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
-        const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
+        const auto offset = attrs->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
+        const auto fusion_mode = attrs->GetAttrPointer<int64_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
+        const auto y_quant_mode = attrs->GetAttrPointer<int64_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
         OP_LOGD(opName,
                 "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, output_padding: %s, offset_x: %ld, "
                 "fusion_mode: %s, y_quant_mode: %s",
@@ -2049,7 +2078,6 @@ void Conv3DDXV2InnerProductTiling::PrintTilingData()
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.get_enableVecTrans())
        << " kSCoutFullLoad: " << tiling.get_kSCoutFullLoad() << " kSUseWorkSpace: " << tiling.get_kSUseWorkSpace()
        << " enableFullLoad: " << static_cast<uint32_t>(tiling.get_enableFullLoad())
-       << " quantMode: " << static_cast<uint32_t>(tiling.get_quantMode()) << " enRelu: " << tiling.get_enRelu()
        << " enableSplitK: " << static_cast<uint32_t>(tiling.get_enableSplitK())
        << " useUbAccumForSplitK: " << static_cast<uint32_t>(tiling.get_useUbAccumForSplitK())
        << " kSegment: " << tiling.get_kSegment() << " kSegmentTail: " << tiling.get_kSegmentTail()
@@ -2079,8 +2107,13 @@ void Conv3DDXV2InnerProductTiling::PrintRunInfoData()
        << " dilation_w:" << runInfo_.dilation_w << " enlarge: " << runInfo_.enlarge
        << " hf32_flag: " << runInfo_.hf32_flag << " a_dtype_bytes:" << runInfo_.a_dtype_bytes
        << " b_dtype_bytes: " << runInfo_.b_dtype_bytes << " c_dtype_bytes: " << runInfo_.c_dtype_bytes
-       << " initOutputFlag: " << runInfo_.initOutputFlag << " enRelu: " << static_cast<uint32_t>(runInfo_.enRelu)
-       << " quantMode: " << static_cast<uint32_t>(runInfo_.quantMode)
+       << " initOutputFlag: " << runInfo_.initOutputFlag << " enRelu0: " << static_cast<uint32_t>(runInfo_.enRelu0)
+       << " enRelu1: " << static_cast<uint32_t>(runInfo_.enRelu1)
+       << " quantMode0: " << static_cast<uint32_t>(runInfo_.quantMode0)
+       << " quantMode1: " << static_cast<uint32_t>(runInfo_.quantMode1)
+       << " hasDualOutput: " << static_cast<uint32_t>(hasDualOutput_)
+       << " offsetX: " << static_cast<int32_t>(runInfo_.offsetX)
+       << " fixedShiftVal: " << static_cast<uint32_t>(runInfo_.fixedShiftVal)
        << " outBackpropFormat: " << static_cast<uint32_t>(runInfo_.outBackpropFormat)
        << " filterFormat: " << static_cast<uint32_t>(runInfo_.filterFormat)
        << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat)

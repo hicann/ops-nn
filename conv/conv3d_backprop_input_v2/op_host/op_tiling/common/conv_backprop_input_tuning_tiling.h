@@ -82,7 +82,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint8_t, initOutputFlag);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, isBiasFullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, enableVecTrans);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, enableFullLoad);
-TUNING_TILING_DATA_FIELD_DEF(uint8_t, quantMode);
+TUNING_TILING_DATA_FIELD_DEF(uint8_t, quantMode0);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, cinG);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, coutG);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, cout1);
@@ -106,7 +106,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint32_t, stepKb);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleIterateDk);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreM);
-TUNING_TILING_DATA_FIELD_DEF(uint64_t, enRelu);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, enRelu0);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, coreNum);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, kSCoutFullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, kSUseWorkSpace);
@@ -144,7 +144,7 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropInputTunerTiling, c0BitsA), FIELD(Conv3DBackpropInputTunerTiling, c0BitsB),
     FIELD(Conv3DBackpropInputTunerTiling, enlarge), FIELD(Conv3DBackpropInputTunerTiling, initOutputFlag),
     FIELD(Conv3DBackpropInputTunerTiling, isBiasFullLoad), FIELD(Conv3DBackpropInputTunerTiling, enableVecTrans),
-    FIELD(Conv3DBackpropInputTunerTiling, enableFullLoad), FIELD(Conv3DBackpropInputTunerTiling, quantMode),
+    FIELD(Conv3DBackpropInputTunerTiling, enableFullLoad), FIELD(Conv3DBackpropInputTunerTiling, quantMode0),
     FIELD(Conv3DBackpropInputTunerTiling, cinG), FIELD(Conv3DBackpropInputTunerTiling, coutG),
     FIELD(Conv3DBackpropInputTunerTiling, cout1), FIELD(Conv3DBackpropInputTunerTiling, cin1),
     FIELD(Conv3DBackpropInputTunerTiling, cout1G), FIELD(Conv3DBackpropInputTunerTiling, cin1G),
@@ -156,7 +156,7 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropInputTunerTiling, baseK), FIELD(Conv3DBackpropInputTunerTiling, baseN),
     FIELD(Conv3DBackpropInputTunerTiling, stepKa), FIELD(Conv3DBackpropInputTunerTiling, stepKb),
     FIELD(Conv3DBackpropInputTunerTiling, singleIterateDk), FIELD(Conv3DBackpropInputTunerTiling, singleCoreBatch),
-    FIELD(Conv3DBackpropInputTunerTiling, singleCoreM), FIELD(Conv3DBackpropInputTunerTiling, enRelu),
+    FIELD(Conv3DBackpropInputTunerTiling, singleCoreM), FIELD(Conv3DBackpropInputTunerTiling, enRelu0),
     FIELD(Conv3DBackpropInputTunerTiling, coreNum), FIELD(Conv3DBackpropInputTunerTiling, kSCoutFullLoad),
     FIELD(Conv3DBackpropInputTunerTiling, kSUseWorkSpace), FIELD(Conv3DBackpropInputTunerTiling, loadB2Condition),
     FIELD(Conv3DBackpropInputTunerTiling, loadB1Condition), FIELD(Conv3DBackpropInputTunerTiling, kernelSplitMode),
