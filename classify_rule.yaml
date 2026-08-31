@@ -1245,6 +1245,7 @@ matmul-quant@ops-nn:
       - ops/ops-nn/matmul/*/tests/
       - ops/ops-nn/matmul/*/op_kernel/
       - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
+      - ops/ops-nn/matmul/*/op_graph/*_fallback.cpp
 
 matmul-weight-quant@ops-nn:
   src:

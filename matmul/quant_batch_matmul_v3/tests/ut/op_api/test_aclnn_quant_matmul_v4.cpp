@@ -47,6 +47,7 @@ struct QuantBatchMatmulV4TestParam {
 
 struct QuantBatchMatmulV4SpecialTestParam {
     string caseName;
+    string socVersion;
     vector<int64_t> x1;
     aclDataType x1Type;
     aclFormat x1Format;
@@ -224,6 +225,7 @@ static vector<QuantBatchMatmulV4SpecialTestParam> GetSpecialParams()
         }
         QuantBatchMatmulV4SpecialTestParam p;
         p.caseName = row.caseName;
+        p.socVersion = row.socVersion;
         p.x1 = row.x1;
         p.x1Type = row.x1Type;
         p.x1Format = row.x1Format;
@@ -349,6 +351,12 @@ TEST_P(l2_QuantBatchMatmulV4_test_950, ascend950_generalTest)
 TEST_P(l2_QuantBatchMatmulV4_special_test, ascend_special_csv_test)
 {
     const auto& param = GetParam();
+    SocVersion socVersion = SocVersion::ASCEND910B;
+    if (param.socVersion == "Ascend310P3") {
+        socVersion = SocVersion::ASCEND310P;
+    } else if (param.socVersion == "Ascend950") {
+        socVersion = SocVersion::ASCEND950;
+    }
     TensorDesc x1_desc = param.x1StorageShape.empty() ?
                              TensorDesc(param.x1, param.x1Type, param.x1Format).ValueRange(-1, 1) :
                              TensorDesc(param.x1, param.x1Type, param.x1Format, {1, 1}, 0, param.x1StorageShape)

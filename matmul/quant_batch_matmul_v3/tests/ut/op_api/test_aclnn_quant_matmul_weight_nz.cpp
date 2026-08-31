@@ -229,6 +229,13 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
                           (static_cast<uint32_t>(param.yOffsetNull) << 1U) | static_cast<uint32_t>(param.biasNull);
 
     switch (mask) {
+        case 15U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yScaleDesc, nullptr, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
         case 29U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
                                 INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc,
@@ -247,6 +254,13 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
                                 INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
                                       nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 78U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, yScaleDesc, nullptr, nullptr, nullptr,
+                                      biasDesc, param.transposeX1, param.transposeX2, param.groupSize),
                                 OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
@@ -274,6 +288,13 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
         case 95U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
                                 INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                      param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 111U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, x2Desc, nullptr, nullptr, yScaleDesc, nullptr, nullptr, nullptr, nullptr,
                                       param.transposeX1, param.transposeX2, param.groupSize),
                                 OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
