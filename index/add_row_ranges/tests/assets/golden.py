@@ -137,5 +137,5 @@ class AddRowRangesComposeSpec:
 # Explicit registration: class names use *Spec suffix (not *TestSpec),
 # so __spec__ dict is needed for discovery.
 __spec__ = {
-    "add_row_ranges": AddRowRangesComposeSpec,
+    "add_row_ranges": "AddRowRangesComposeSpec",
 }

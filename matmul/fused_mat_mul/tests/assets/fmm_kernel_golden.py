@@ -37,6 +37,8 @@ def _kernel_compute(
     transpose_x2=False,
     fused_op_type="",
     enable_hf32=False,
+    alpha=1.0,
+    beta=1.0,
     **kwargs,
 ):
     """Core fused_mat_mul numpy simulation.  x1/x2 already in ND format."""
@@ -83,6 +85,9 @@ def _kernel_compute(
         mm_out = np.maximum(mm_out, 0)
     elif fused_op_type == "add":
         mm_out = mm_out + x3
+    elif fused_op_type == "scale_add":
+        x3 = x3.astype(comp_dtype)
+        mm_out = alpha * mm_out + beta * x3
     elif fused_op_type == "mul":
         mm_out = mm_out * x3
     elif fused_op_type == "gelu_erf":
@@ -116,6 +121,8 @@ class FusedMatMulTestSpec:
         fused_op_type="",
         opImplMode=0,
         enable_hf32=False,
+        alpha=1.0,
+        beta=1.0,
         **kwargs,
     ):
         """Kernel golden: NZ->ND conversion + core matmul + fused op."""
@@ -136,6 +143,8 @@ class FusedMatMulTestSpec:
             transpose_x2=transpose_x2,
             fused_op_type=fused_op_type,
             enable_hf32=enable_hf32,
+            alpha=alpha,
+            beta=beta,
             **kwargs,
         )
 

@@ -4,3 +4,5 @@ e2e_fmm_fp16_add,torch_npu.npu_fused_matmul,"((96,64),(64,80),(80,),(96,80))","(
 e2e_fmm_fp16_gelu_erf,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,,,,{'fused_op_type': 'gelu_erf'},,"((-5,5),)","((0.001,0.001),)",0.001,
 e2e_fmm_fp16_gelu_tanh,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,,,,{'fused_op_type': 'gelu_tanh'},,"((-5,5),)","((0.001,0.001),)",0.001,
 e2e_fmm_fp16_16cast32,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,,,,{'fused_op_type': '16cast32'},,"((-5,5),)","((0.001,0.001),)",0.001,
+e2e_cann_ops_fmm_fp16_basic,torch.ops.cann_ops_nn.fused_matmul,"((96,64),(64,80))","('float16','float16')",,,,,{'fused_op_type': ''},,"((-5,5),)","((0.001,0.001),)",0.001,
+e2e_cann_ops_fmm_fp16_scale_add,torch.ops.cann_ops_nn.fused_matmul,"((2,32,64),(2,64,48),None,(2,32,48))","('float16','float16',None,'float16')",,,,,"{'alpha': 0.5, 'beta': 1.5, 'fused_op_type': 'add'}",,"((-1,1),)","((0.001,0.001),)",0.001,

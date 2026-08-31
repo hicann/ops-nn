@@ -42,6 +42,37 @@ class TorchNpuFusedMatmulTestSpec:
         )
 
 
+class CannOpsNnFusedMatmulTestSpec:
+    @staticmethod
+    def golden(
+        x,
+        x2,
+        *,
+        bias=None,
+        x3=None,
+        alpha=None,
+        beta=None,
+        fused_op_type="",
+        **kwargs,
+    ):
+        """torch.ops.cann_ops_nn.fused_matmul: y = alpha*(x@x2) + beta*x3 (via aclnnFusedMatmulV2)."""
+        out_dtype = torch.float32 if fused_op_type == "16cast32" else x.dtype
+        alpha_value = 1.0 if alpha is None else float(alpha)
+        beta_value = 1.0 if beta is None else float(beta)
+        return torch_fused_matmul_core(
+            x,
+            x2,
+            bias,
+            x3,
+            fused_op_type=fused_op_type,
+            out_dtype=out_dtype,
+            cube_math_type=None,
+            alpha=alpha_value,
+            beta=beta_value,
+        )
+
+
 __spec__ = {
     "torch_npu.npu_fused_matmul": "TorchNpuFusedMatmulTestSpec",
+    "torch.ops.cann_ops_nn.fused_matmul": "CannOpsNnFusedMatmulTestSpec",
 }

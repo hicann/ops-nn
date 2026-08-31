@@ -48,7 +48,16 @@ def _apply_cube_precision(tensors, cube_math_type):
 
 
 def torch_fused_matmul_core(
-    x1, x2, bias=None, x3=None, *, fused_op_type="", out_dtype, cube_math_type=None
+    x1,
+    x2,
+    bias=None,
+    x3=None,
+    *,
+    fused_op_type="",
+    out_dtype,
+    cube_math_type=None,
+    alpha=1.0,
+    beta=1.0,
 ):
     """Core fused matmul for aclnn goldens.
 
@@ -74,11 +83,14 @@ def torch_fused_matmul_core(
         mm_out = mm_out + bias.to(torch.float32)
 
     if fused_op_type in ("add", "mul") and out_dtype is not None:
-        mm_out = mm_out.to(out_dtype)
-        if fused_op_type == "add":
-            mm_out = mm_out + x3.to(out_dtype)
+        if fused_op_type == "add" and (alpha != 1.0 or beta != 1.0):
+            mm_out = alpha * mm_out + beta * x3.to(torch.float32)
         else:
-            mm_out = mm_out * x3.to(out_dtype)
+            mm_out = mm_out.to(out_dtype)
+            if fused_op_type == "add":
+                mm_out = mm_out + x3.to(out_dtype)
+            else:
+                mm_out = mm_out * x3.to(out_dtype)
     elif fused_op_type == "relu":
         mm_out = torch.clamp(mm_out, min=0)
     elif fused_op_type == "gelu_erf":
@@ -115,6 +127,36 @@ class AclnnFusedMatmulTestSpec:
         )
 
 
+class AclnnFusedMatmulV2TestSpec:
+    @staticmethod
+    def golden(
+        x1,
+        x2,
+        bias=None,
+        x3=None,
+        alphaOptional=1.0,
+        betaOptional=1.0,
+        fusedOpType="",
+        cubeMathType=0,
+        y=None,
+        **kwargs,
+    ):
+        """aclnnFusedMatmulV2: y = alpha*(x1@x2) + beta*x3 (scale_add via add + scales)."""
+        out_dtype = y.dtype if y is not None else x1.dtype
+        return torch_fused_matmul_core(
+            x1,
+            x2,
+            bias,
+            x3,
+            fused_op_type=fusedOpType,
+            out_dtype=out_dtype,
+            cube_math_type=cubeMathType,
+            alpha=float(alphaOptional) if alphaOptional is not None else 1.0,
+            beta=float(betaOptional) if betaOptional is not None else 1.0,
+        )
+
+
 __spec__ = {
     "aclnnFusedMatmul": "AclnnFusedMatmulTestSpec",
+    "aclnnFusedMatmulV2": "AclnnFusedMatmulV2TestSpec",
 }
