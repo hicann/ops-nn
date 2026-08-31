@@ -4280,6 +4280,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_came_part2/README.md">apply_came_part2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行CAME优化器（置信度引导的自适应内存高效随机优化器）4-Part拆分的第2段：对Part1产出的梯度行/列/总和统计与上一step的行/列二阶矩r/c做EMA更新，并用置信度归一化计算归一化更新方向u及平方和sum_square_u，原地更新r、c，供Part3/Part4继续消费。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/adam_apply_one/README.md">adam_apply_one</a></td>
     <td>✓</td>
     <td>✓</td>
