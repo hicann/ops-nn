@@ -60,11 +60,10 @@ private:
     void ConcatXhBlockCalculate();
     void SetTilingData();
 
-    CutBatchTiling CalculateCutBatchTiling(int64_t ubParaNum, int64_t alignedSize, int64_t actualSize,
-                                           int64_t copyMLinesMax, int64_t batch);
+    CutBatchTiling CalculateCutBatchTiling(int64_t ub, int64_t al, int64_t act, int64_t ml, int64_t b);
 
-    bool ValidateInputShape(int index, const std::vector<int64_t>& expected_dims);
-    bool ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims);
+    bool ValidateInputShape(int idx, const std::vector<int64_t>& e);
+    bool ValidateOutputShape(int idx, const std::vector<int64_t>& e);
     void LogShapeCheck(bool isInput, int index, const std::vector<int64_t>& expected, const char* name, bool ok);
 
 private:

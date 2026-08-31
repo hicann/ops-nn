@@ -199,7 +199,7 @@ bool GruGradTiling::ValidateInputShape(int idx, const std::vector<int64_t>& e)
     if (!in)
         return false;
     auto s = in->GetStorageShape();
-    if (s.GetDimNum() != (int64_t)e.size())
+    if (s.GetDimNum() != static_cast<int64_t>(e.size()))
         return false;
     for (size_t i = 0; i < e.size(); i++)
         if (e[i] != s.GetDim(i))
@@ -213,7 +213,7 @@ bool GruGradTiling::ValidateOutputShape(int idx, const std::vector<int64_t>& e)
     if (!out)
         return false;
     auto s = out->GetStorageShape();
-    if (s.GetDimNum() != (int64_t)e.size())
+    if (s.GetDimNum() != static_cast<int64_t>(e.size()))
         return false;
     for (size_t i = 0; i < e.size(); i++)
         if (e[i] != s.GetDim(i))
@@ -261,12 +261,12 @@ bool GruGradTiling::CheckParamsShape()
             B, I, H, TS, tilingData_.isSeqLength);
 
     bool ret = true;
-    auto ci = [&](int i, auto& e, const char* n) {
+    auto ci = [this](int i, auto& e, const char* n) {
         bool ok = ValidateInputShape(i, e);
         LogShapeCheck(true, i, e, n, ok);
         return ok;
     };
-    auto co = [&](int i, auto& e, const char* n) {
+    auto co = [this](int i, auto& e, const char* n) {
         bool ok = ValidateOutputShape(i, e);
         LogShapeCheck(false, i, e, n, ok);
         return ok;

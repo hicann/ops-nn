@@ -111,12 +111,12 @@ static bool CheckTensorListDtype(const aclTensorList* list, const char* name, ge
         OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
         if (tensor->GetDataType() != baseDtype) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] dtype inconsistent, expected %s, actual %s.", name,
-                    (unsigned long long)i, op::ToString(baseDtype).GetString(),
+                    static_cast<unsigned long long>(i), op::ToString(baseDtype).GetString(),
                     op::ToString(tensor->GetDataType()).GetString());
             return false;
         }
         if (!IsFormatSupported(tensor, name)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, (unsigned long long)i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, static_cast<unsigned long long>(i));
             return false;
         }
     }
@@ -130,7 +130,6 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
                             aclTensorList* dparamsOut)
 {
     ge::DataType baseDtype = input->GetDataType();
-
     if (!CheckDtypeConsistent(input, "input", baseDtype))
         return false;
     if (!CheckDtypeConsistent(hx, "hx", baseDtype))
@@ -265,10 +264,12 @@ static bool CheckGateLists(const aclTensorList* r, const aclTensorList* z, const
     std::vector<int64_t> gateExpected = isPacked ? std::vector<int64_t>{totalSteps, H} : std::vector<int64_t>{T, B, H};
     const char* gateNames[] = {"r", "z", "n", "hn", "h"};
     const aclTensorList* gateLists[] = {r, z, n, hn, h};
-    for (int g = 0; g < 5; ++g) {
+    constexpr size_t GATE_LIST_COUNT = sizeof(gateLists) / sizeof(gateLists[0]);
+    for (size_t g = 0; g < GATE_LIST_COUNT; ++g) {
         if (gateLists[g]->Size() != expectedGateLen) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s list size mismatch, expected %llu, actual %llu.", gateNames[g],
-                    (unsigned long long)expectedGateLen, (unsigned long long)gateLists[g]->Size());
+                    static_cast<unsigned long long>(expectedGateLen),
+                    static_cast<unsigned long long>(gateLists[g]->Size()));
             return false;
         }
         for (uint64_t i = 0; i < gateLists[g]->Size(); ++i) {
@@ -289,13 +290,13 @@ static bool CheckOutputsShape(const aclTensor* input, const aclTensorList* param
     uint64_t expectedParamsLen = static_cast<uint64_t>(paramsPerLayer * numLayers);
     if (params->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "params list size mismatch, expected %llu, actual %llu.",
-                (unsigned long long)expectedParamsLen, (unsigned long long)params->Size());
+                static_cast<unsigned long long>(expectedParamsLen), static_cast<unsigned long long>(params->Size()));
         return false;
     }
 
     auto xShape = input->GetViewShape();
-    std::vector<int64_t> xShapeVec(xShape.GetDimNum());
-    for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
+    std::vector<int64_t> xShapeVec(static_cast<size_t>(xShape.GetDimNum()));
+    for (size_t i = 0; i < static_cast<size_t>(xShape.GetDimNum()); ++i) {
         xShapeVec[i] = xShape.GetDim(i);
     }
     if (!ValidateShape(dxOut, xShapeVec, "dxOut"))
@@ -307,7 +308,8 @@ static bool CheckOutputsShape(const aclTensor* input, const aclTensorList* param
 
     if (dparamsOut->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dparamsOut list size mismatch, expected %llu, actual %llu.",
-                (unsigned long long)expectedParamsLen, (unsigned long long)dparamsOut->Size());
+                static_cast<unsigned long long>(expectedParamsLen),
+                static_cast<unsigned long long>(dparamsOut->Size()));
         return false;
     }
     return true;
