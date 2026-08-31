@@ -173,9 +173,10 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void InplaceAddAccum
 }
 
 // COMP_T is the flat element index type. Every offset in both phases is bounded
-// by max(n, k) * rowSize, so a single 32-bit test covers them all; the 64-bit
-// instantiation exists for the shapes that genuinely exceed it, where the wider
-// UintDiv is the cheaper of the two problems.
+// by max(n, k) * rowSize. The grid-stride loop additionally needs enough room
+// for its final increment; otherwise a uint32_t element near UINT32_MAX wraps
+// around and the loop never terminates. Only that narrow boundary region and
+// genuinely wider shapes use the 64-bit instantiation.
 template <typename T, typename COMP_T>
 __aicore__ inline void LaunchAccumulate(int64_t accTotal, int64_t rowSize, int32_t n, int64_t coreIdx, int64_t coreNum,
                                         __gm__ int32_t* indicesGm, __gm__ T* vGm, __gm__ T* yGm)
@@ -227,7 +228,10 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR v, GM_ADDR y,
     if (accTotal <= 0) {
         return;
     }
-    if (widest <= static_cast<int64_t>(std::numeric_limits<uint32_t>::max())) {
+    const int64_t uint32Max = static_cast<int64_t>(std::numeric_limits<uint32_t>::max());
+    const int64_t accumulateStride = coreNum * static_cast<int64_t>(THREAD_NUM);
+    const int64_t uint32SafeAccTotal = uint32Max - accumulateStride + 1;
+    if (widest <= uint32Max && accTotal <= uint32SafeAccTotal) {
         LaunchAccumulate<T, uint32_t>(accTotal, rowSize, tilingData->n, coreIdx, coreNum, indicesGm, vGm, yGm);
     } else {
         LaunchAccumulate<T, uint64_t>(accTotal, rowSize, tilingData->n, coreIdx, coreNum, indicesGm, vGm, yGm);
