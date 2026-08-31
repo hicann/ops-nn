@@ -149,10 +149,6 @@ void Conv3DDXV2KernelSplitTiling::SetParamForKernelSplit(bool isKernelSplitOnlyH
 
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
 {
-    // 有 bias 场景暂不支持 1*1 kernel 拆分
-    if (hasBiasFlag_) {
-        return false;
-    }
     uint64_t mValueForCheck = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
     uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;

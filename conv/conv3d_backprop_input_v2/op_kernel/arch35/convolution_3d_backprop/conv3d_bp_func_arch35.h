@@ -992,18 +992,23 @@ template <class Intf>
 static __aicore__ inline bool ProcessKernelSplitIteration(Intf* self, bool hasBias)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        if (IterateForKernelSplit<Intf>(self)) {
-            UpdateFullLoadL1Status<Intf>(self);
-            if (unlikely(self->ctx.tiling_->hk == 1)) {
-                return true;
-            }
-            if (unlikely(hasBias)) {
+        if (!IterateForKernelSplit<Intf>(self)) {
+            return false;
+        }
+        UpdateFullLoadL1Status<Intf>(self);
+        if (unlikely(self->ctx.tiling_->hk == 1)) {
+            if (unlikely(hasBias && self->ctx.needComputeFlag_)) {
+                self->ctx.needComputeFlag_ = false;
                 Compute<Intf, true>(self);
-            } else {
-                Compute<Intf, false>(self);
             }
             return true;
         }
+        if (unlikely(hasBias)) {
+            Compute<Intf, true>(self);
+        } else {
+            Compute<Intf, false>(self);
+        }
+        return true;
     }
     return false;
 }

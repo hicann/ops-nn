@@ -277,7 +277,7 @@ __aicore__ inline void InterleaveUbOutForKernelSplit(Intf* self, int64_t dataLen
     uint32_t doubleVfLen = (vfLen << crossBlockNum);
     uint16_t repeatTimes = (dataLen + vfLen - 1) / vfLen;
     uint64_t twoBlockLen = (dataLen << crossBlockNum);
-    bool kernelFlag1 = (self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1);
+    bool kernelFlag1 = (self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1 && !self->ctx.hasBias_);
     auto src0Ptr = (__ubuf__ ReDstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
     auto src1Ptr = (__ubuf__ ReDstT*)self->ctx.vecOutBuf_[dataLen].GetPhyAddr();
     auto dst0Ptr = (__ubuf__ ReDstT*)self->ctx.vecOutBuf_[twoBlockLen].GetPhyAddr();
@@ -321,7 +321,7 @@ __aicore__ inline void LoadWorkSpaceDataToUb(Intf* self, const int64_t hwSize, c
     mte2Param.srcStride = 0;
     mte2Param.dstStride = 0;
     LoadWorkSpaceDataToUbInner(self, srcOffset, 0, mte2Param);
-    if (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1) { // kernel=1*1 只需要搬一块
+    if (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1 || self->ctx.hasBias_) { // kernel=1*1 只需要搬一块
         srcOffset += hwSize * self->ctx.baseUseN_;
         int64_t dstOffset = hwSize * curUseN;
         LoadWorkSpaceDataToUbInner(self, srcOffset, dstOffset, mte2Param);

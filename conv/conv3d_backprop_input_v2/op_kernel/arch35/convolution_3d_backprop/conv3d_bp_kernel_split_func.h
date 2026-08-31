@@ -401,14 +401,14 @@ struct IterateAllForKernelSplit {
         const uint32_t lastRearrangeW = self->ctx.tiling_->strideW - 1;
         bool hasBias = self->ctx.hasBias_;
         while (self->template Iterate<sync>(false, hasBias)) {
-            if (unlikely(isKernel1x1 && self->ctx.rearrangeHIndex_ != 0)) {
+            if (unlikely(isKernel1x1 && !hasBias && self->ctx.rearrangeHIndex_ != 0)) {
                 continue;
             }
             if ASCEND_IS_AIC_SCALAR {
                 if (self->ctx.rearrangeWIndex_ == 0) {
                     CrossCoreCWaitVForKS<Intf>(self);
                 }
-                if (!isKernel1x1 || self->ctx.rearrangeWIndex_ == 0) {
+                if (!isKernel1x1 || hasBias || self->ctx.rearrangeWIndex_ == 0) {
                     self->template GetTensorC<sync>(output, enAtomic);
                 }
                 if (self->ctx.rearrangeWIndex_ == lastRearrangeW) {
