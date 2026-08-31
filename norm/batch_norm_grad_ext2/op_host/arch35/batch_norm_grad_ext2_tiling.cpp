@@ -41,8 +41,7 @@ static constexpr int64_t BASIC_FACTOR = 64;
 
 static std::vector<std::array<ge::DataType, INPUT_NUM>> validInputDtype = {
     {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
 ge::graphStatus BatchNormGradExt2TilingBase::GetPlatformInfo()
 {

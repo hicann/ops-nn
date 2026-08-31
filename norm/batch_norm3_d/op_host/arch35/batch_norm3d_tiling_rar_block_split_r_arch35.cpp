@@ -69,6 +69,10 @@ protected:
                 "BatchNorm3DRARBlockSplitRTiling IsCapable: enter IsCapable function to judge.");
         // 不按 format 过滤：基类已把五种 format 统一折算成 (r1_, a_, r0_)，本模板往下只用这三个值，
         // 同 dims 的 ND 与 NCHW 在这里不可区分。
+        // R0 多核切分场景下该模板的 tail A 通道统计量存在错误，交由 Welford 模板处理。
+        if (r1_ < static_cast<int64_t>(aicoreParams_.blockDim)) {
+            return false;
+        }
         if (a_ * NUM_TWO >= static_cast<int64_t>(aicoreParams_.blockDim)) {
             return false;
         }
@@ -218,13 +222,13 @@ ge::graphStatus BatchNorm3DRARBlockSplitRTiling::DoOpTiling()
     // Step1: ubsize减去固定ubffer大小部分，得到ubSizeCanUse
     int64_t elemSize = FP32_BYTE;
     int64_t T2ElemSize = FP32_BYTE;
-    if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+    if (xDtype_ == ge::DT_FLOAT16) {
         elemSize = FP16_BYTE;
     }
     auto weightDesc = context_->GetInputDesc(WEIGHT_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
     auto weightDataType = weightDesc->GetDataType();
-    if (weightDataType == ge::DT_FLOAT16 || weightDataType == ge::DT_BF16) {
+    if (weightDataType == ge::DT_FLOAT16) {
         T2ElemSize = FP16_BYTE;
     }
 

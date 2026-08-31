@@ -14,6 +14,7 @@
  */
 
 #include <cstdint>
+#include <string>
 #include "batch_norm3d_grad_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 #include "batch_norm3d_grad_tiling_infer_base.h"
@@ -39,9 +40,8 @@ protected:
         // R1AR0, R0 == 1时走RA模板
         OP_CHECK_IF(
             r0Dim == 1,
-            OP_LOGE_WITHOUT_REPORT(
-                context_, "BatchNorm3DGradInferTiling RAR template is not capable, fused shape: (%ld, %ld, %ld)", r1Dim,
-                aDim, r0Dim),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "r0Dim", std::to_string(r0Dim).c_str(),
+                                                  "RAR template is not capable when r0Dim is 1"),
             return false);
 
         CalcBasicInfo();

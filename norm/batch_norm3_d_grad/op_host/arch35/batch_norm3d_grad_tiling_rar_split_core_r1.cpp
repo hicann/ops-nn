@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <string>
 #include "batch_norm3d_grad_tiling.h"
 #include "register/op_impl_registry.h"
 #include "op_host/tiling_templates_registry.h"
@@ -155,10 +156,8 @@ ge::graphStatus BatchNorm3DGradRARSplitCoreR1::DoOpTilingStage0()
 
     OP_CHECK_IF(
         factorMax <= 0,
-        OP_LOGE_WITHOUT_REPORT(context_,
-                               "BatchNorm3DGrad RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-                               "factorMax in baseTilingData is %ld .",
-                               r1Dim, aDim, r0Dim, factorMax),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "factorMax", std::to_string(factorMax).c_str(),
+                                              "RAR R1 split core template is not capable in stage0"),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Dim, dyBaseLen_);
@@ -264,10 +263,8 @@ ge::graphStatus BatchNorm3DGradRARSplitCoreR1::DoOpTilingStage1()
 
     OP_CHECK_IF(
         factorMax <= 0,
-        OP_LOGE_WITHOUT_REPORT(context_,
-                               "BatchNorm3DGrad RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-                               "factorMax in baseTilingData is %ld .",
-                               r1Dim, aDim, r0Dim, factorMax),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "factorMax", std::to_string(factorMax).c_str(),
+                                              "RAR R1 split core template is not capable in stage1"),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t aFactorMax = Ops::Base::CeilDiv(aDim, weightBaseLen);
@@ -299,10 +296,8 @@ ge::graphStatus BatchNorm3DGradRARSplitCoreR1::DoOpTilingStage2()
 
     OP_CHECK_IF(
         factorMax <= 0,
-        OP_LOGE_WITHOUT_REPORT(context_,
-                               "BatchNorm3DGrad RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-                               "factorMax in stage2 is %ld .",
-                               r1Dim, aDim, r0Dim, factorMax),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "factorMax", std::to_string(factorMax).c_str(),
+                                              "RAR R1 split core template is not capable in stage2"),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Dim, dyBaseLen_);

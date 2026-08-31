@@ -46,7 +46,7 @@ protected:
         // 本模板往下只用这三个值，同 dims 的 ND 与 NCHW 在这里不可区分。
         // NHWC / NDHWC 折算后 r0_ 恒为 1，会先被 r0_ == 1 的模板（优先级 10000/12000/15000）接走。
         int64_t elemSize = FLOAT32_BYTES;
-        if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+        if (xDtype_ == ge::DT_FLOAT16) {
             elemSize = FLOAT16_BYTES;
         }
         int64_t r1r0 = r0_ * r1_;

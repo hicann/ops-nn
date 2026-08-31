@@ -95,7 +95,7 @@ ge::graphStatus BNTrainingReduceGradTiling::GetShapeAndDtype()
     }
     // numRecip = 1/(N*R)：fp64 计算后舍入 fp32，与 A2 TBE tvm.const(1.0/num, float32) 语义一致；
     // negNumRecip 为 fp32 取负（IEEE 取负精确，对齐 A2 tvm.const(-num_bw, float32)）
-    numRecip_ = static_cast<float>(1.0 / static_cast<double>(numN_ * innerSize_));
+    numRecip_ = static_cast<float>(1.0 / static_cast<double>(reduceNum_));
     negNumRecip_ = -numRecip_;
     return ge::GRAPH_SUCCESS;
 }
@@ -176,6 +176,7 @@ ge::graphStatus BNTrainingReduceGradTiling::CheckGradsDescAndShape()
         innerSize_ *= gradsStorageShape.GetDim(i);
     }
     units_ = numN_ * numC_;
+    reduceNum_ = numN_ * innerSize_;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -276,9 +277,9 @@ ge::graphStatus BNTrainingReduceGradTiling::FillTilingData()
 
     OP_LOGI(context_,
             "BNTrainingReduceGrad tiling: N=%ld, C=%ld, inner=%ld, units=%ld, unitCores=%ld, innerCores=%ld, "
-            "usedCores=%ld, ubTile=%ld, eps=%f, numRecip=%e, negNumRecip=%e",
-            numN_, numC_, innerSize_, units_, unitCores_, innerCores_, usedCores, ubTileSize_, epsilon_, numRecip_,
-            negNumRecip_);
+            "usedCores=%ld, ubTile=%ld, eps=%f, reduceNum=%ld, numRecip=%e, negNumRecip=%e",
+            numN_, numC_, innerSize_, units_, unitCores_, innerCores_, usedCores, ubTileSize_, epsilon_, reduceNum_,
+            numRecip_, negNumRecip_);
     return ge::GRAPH_SUCCESS;
 }
 

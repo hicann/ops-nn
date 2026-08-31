@@ -88,7 +88,7 @@ protected:
 protected:
     const char* opName_ = "BatchNorm3DGradInferBase";
 
-    ge::Format dyFormat_;
+    ge::Format dyFormat_{ge::FORMAT_RESERVED};
 
     int64_t usedCoreNums_;
 

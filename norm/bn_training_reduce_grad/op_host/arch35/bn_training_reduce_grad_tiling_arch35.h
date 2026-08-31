@@ -51,6 +51,7 @@ private:
     int64_t numC_ = 0;      // C（dim1）
     int64_t innerSize_ = 0; // R = prod(d2:)
     int64_t units_ = 0;
+    int64_t reduceNum_ = 0; // 公式分母 N*R
     int64_t xDtypeSize_ = 4;
     float epsilon_ = 0.0f;
     float numRecip_ = 0.0f;

@@ -440,7 +440,7 @@ private:
             for (int64_t j = 0; j < dxLoopTimes_; j++) {
                 int64_t offset = baseOffset + j * dxLoopFactor_ * tilingData_->aDim;
                 int64_t rLength = (j == dxLoopTimes_ - 1) ? dxLoopTail_ : dxLoopFactor_;
-                if (aLength <= EIGHT) {
+                if (aLength <= EIGHT && aFactorAlign_ <= VL_FP32) {
                     CalDxVFSmallA(offset, rLength, aLength, dbeta, dgamma, gamma);
                 } else {
                     CalDxVF(offset, rLength, aLength, dbeta, dgamma, gamma);
@@ -576,7 +576,7 @@ private:
 
         LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template DeQue<DY_TYPE>();
         DataCopyPad<DY_TYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyParams);
-        dbetaOutQue_.FreeTensor(dxTensor);
+        dxOutQue_.FreeTensor(dxTensor);
     }
 
     __aicore__ inline void LoadDyXToUb(const int64_t offset, const uint32_t rowSize, const uint32_t colSize,

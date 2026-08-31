@@ -99,7 +99,7 @@ protected:
     uint64_t blockSize{0};
     uint64_t vlFp32{0};
 
-    ge::Format dyFormat;
+    ge::Format dyFormat{ge::FORMAT_RESERVED};
     ge::DataType dyDtype{ge::DataType::DT_FLOAT};
     ge::DataType weightDtype{ge::DataType::DT_FLOAT};
     int64_t r1Dim{0};          // R1AR0 R外轴

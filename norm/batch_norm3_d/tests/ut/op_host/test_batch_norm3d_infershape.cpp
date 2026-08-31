@@ -28,6 +28,15 @@ protected:
     static void TearDownTestCase() { std::cout << "BatchNorm3DTest TearDown" << std::endl; }
 };
 
+static std::vector<int64_t> ShapeToVec(const gert::Shape& shape)
+{
+    std::vector<int64_t> dims;
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        dims.push_back(shape.GetDim(i));
+    }
+    return dims;
+}
+
 TEST_F(BatchNorm3DInfershapeTest, batch_norm3d_infershape_test_0)
 {
     fe::PlatformInfo platformInfo;
@@ -72,6 +81,57 @@ TEST_F(BatchNorm3DInfershapeTest, batch_norm3d_infershape_test_0)
     ASSERT_EQ(Ops::Base::ToString(*output0), "[2, 3, 4, 5, 6]");
     ASSERT_EQ(Ops::Base::ToString(*output1), "[3]");
     ASSERT_EQ(Ops::Base::ToString(*output4), "[3]");
+}
+
+TEST_F(BatchNorm3DInfershapeTest, batch_norm3d_infershape_unknown_rank_test_0)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchNorm3D"), nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchNorm3D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape input_x_shape = {-2};
+    gert::Shape input_scale_shape = {-2};
+    gert::Shape y_shape = {};
+    gert::Shape batch_mean_shape = {};
+    gert::Shape batch_variance_shape = {};
+    gert::Shape reserve_space1_shape = {};
+    gert::Shape reserve_space2_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(5, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1}, {1, 1, 1, 1, 1})
+                      .InputShapes({&input_x_shape, &input_scale_shape, &input_scale_shape, &input_scale_shape,
+                                    &input_scale_shape})
+                      .OutputShapes({&y_shape, &batch_mean_shape, &batch_variance_shape, &reserve_space1_shape,
+                                     &reserve_space2_shape})
+                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto ctx = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(ShapeToVec(*ctx->GetOutputShape(0)), (std::vector<int64_t>{-2}));
+    EXPECT_EQ(ShapeToVec(*ctx->GetOutputShape(1)), (std::vector<int64_t>{-2}));
+    EXPECT_EQ(ShapeToVec(*ctx->GetOutputShape(2)), (std::vector<int64_t>{-2}));
+    EXPECT_EQ(ShapeToVec(*ctx->GetOutputShape(3)), (std::vector<int64_t>{-2}));
+    EXPECT_EQ(ShapeToVec(*ctx->GetOutputShape(4)), (std::vector<int64_t>{-2}));
 }
 
 TEST_F(BatchNorm3DInfershapeTest, batch_norm3d_inferdtype_test_0)

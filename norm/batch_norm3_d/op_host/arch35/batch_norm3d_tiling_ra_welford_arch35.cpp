@@ -131,7 +131,7 @@ ge::graphStatus BatchNorm3DRAWelfordTilingBase::DoOpTiling()
     SetInputInfo();
     // core num
     int64_t elemSize = FLOAT32_BYTES;
-    if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+    if (xDtype_ == ge::DT_FLOAT16) {
         elemSize = FLOAT16_BYTES;
     }
     int64_t theLeastAPerCore = blockSize_ / elemSize;

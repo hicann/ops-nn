@@ -52,14 +52,14 @@ protected:
             return false;
         }
         int64_t elemSize = FLOAT32_BYTES;
-        if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+        if (xDtype_ == ge::DT_FLOAT16) {
             elemSize = FLOAT16_BYTES;
         }
 
         int64_t ubCanUseSize = (((aicoreParams_.ubSize / DOUBLE_BUFFER) / blockSize_) * blockSize_);
         int64_t ubSizePerA = (LARGE_BUFFER_NUM * r1_ + 1) * elemSize + SMALL_BUFFER_NUM_T * elemSize +
                              SMALL_BUFFER_NUM_FP32 * FLOAT32_BYTES;
-        if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+        if (xDtype_ == ge::DT_FLOAT16) {
             ubSizePerA = LARGE_BUFFER_NUM * r1_ * elemSize + (r1_ + 1) * FLOAT32_BYTES + SMALL_BUFFER_NUM_T * elemSize +
                          SMALL_BUFFER_NUM_FP32 * FLOAT32_BYTES;
         }
@@ -140,7 +140,7 @@ ge::graphStatus BatchNorm3DRAFullReduceTilingBase::DoOpTiling()
 
     // core num
     int64_t elemSize = FLOAT32_BYTES;
-    if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+    if (xDtype_ == ge::DT_FLOAT16) {
         elemSize = FLOAT16_BYTES;
     }
     int64_t theLeastAPerCore = blockSize_ / elemSize;

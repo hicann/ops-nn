@@ -56,7 +56,8 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint64_t& tilingKey,
                           int64_t* blockDim = nullptr, ge::DataType gradsDt = ge::DT_FLOAT,
                           ge::DataType statDt = ge::DT_FLOAT, ge::Format fmt = ge::FORMAT_ND, bool hasEpsilon = true,
-                          ge::DataType xDt = ge::DT_FLOAT, bool xShapeDiff = false)
+                          ge::DataType xDt = ge::DT_FLOAT, bool xShapeDiff = false,
+                          BNTrainingReduceGradTilingData* tilingDataOut = nullptr)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -155,6 +156,13 @@ ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint
         tilingKey = tiling_context->GetTilingKey();
         if (blockDim != nullptr) {
             *blockDim = static_cast<int64_t>(tiling_context->GetBlockDim());
+        }
+        if (tilingDataOut != nullptr) {
+            auto rawTilingData = tiling_context->GetRawTilingData();
+            if (rawTilingData == nullptr || rawTilingData->GetData() == nullptr) {
+                return ge::GRAPH_FAILED;
+            }
+            *tilingDataOut = *reinterpret_cast<const BNTrainingReduceGradTilingData*>(rawTilingData->GetData());
         }
     }
     return ret;

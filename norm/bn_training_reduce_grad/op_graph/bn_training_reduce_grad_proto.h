@@ -43,8 +43,7 @@ namespace ge {
 * Has the same format as "grads".
 * @li batch_mean: A 1D tensor of type float32, the shape is same as dim C of input grads, for the mean of "x".
 * Has the same format as "grads".
-* @li batch_variance: A 1D tensor of type float32, the shape is same as dim C of input grads, for the variance of
-"x".
+* @li batch_variance: A 1D tensor of type float32, the shape is same as dim C of input grads, for the variance of "x".
 * Has the same format as "grads". \n
 
 * @par Attributes:

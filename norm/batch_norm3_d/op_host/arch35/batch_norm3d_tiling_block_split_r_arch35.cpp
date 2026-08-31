@@ -121,7 +121,7 @@ ge::graphStatus BatchNorm3DBlockSplitRTiling::DoOpTiling()
     int64_t gammaBetaNodeNum = GAMMA_BETA_NODE_NUM;
     int64_t runningMeanVarNodeNum = RUNNING_MEAN_VAR_NODE_NUM;
     int64_t inOutNodeNum = X_IN_OUT_NODE_NUM * DOUBLE_BUFFER_NUM;
-    if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
+    if (xDtype_ == ge::DT_FLOAT16) {
         elemSize = FLOAT16_BYTES;
         gammaBetaNodeNum = gammaBetaNodeNum / (FLOAT32_BYTES / FLOAT16_BYTES);
         inOutNodeNum = inOutNodeNum / (FLOAT32_BYTES / FLOAT16_BYTES);

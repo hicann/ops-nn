@@ -14,7 +14,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "op_api/runtime2_util_nn.h"
+#include "op_common/op_host/util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -44,6 +44,21 @@ static ge::graphStatus BatchNorm3DInferShape(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, reserveSpace1Shape);
     gert::Shape* reserveSpace2Shape = context->GetOutputShape(RESERVE_SPACE_2_OUTPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, reserveSpace2Shape);
+
+    if (Ops::Base::IsUnknownRank(*xShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+        Ops::Base::SetUnknownRank(*batchMeanShape);
+        Ops::Base::SetUnknownRank(*batchVarianceShape);
+        Ops::Base::SetUnknownRank(*reserveSpace1Shape);
+        Ops::Base::SetUnknownRank(*reserveSpace2Shape);
+        return GRAPH_SUCCESS;
+    }
+    if (Ops::Base::IsUnknownRank(*scaleShape)) {
+        Ops::Base::SetUnknownRank(*batchMeanShape);
+        Ops::Base::SetUnknownRank(*batchVarianceShape);
+        Ops::Base::SetUnknownRank(*reserveSpace1Shape);
+        Ops::Base::SetUnknownRank(*reserveSpace2Shape);
+    }
 
     *yShape = *xShape;
     *batchMeanShape = *scaleShape;

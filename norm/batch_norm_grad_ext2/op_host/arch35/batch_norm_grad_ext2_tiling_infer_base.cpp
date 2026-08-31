@@ -24,8 +24,7 @@ constexpr int64_t VL_DOUBLE = 2;
 // ASCEND950/DAV_3510: this infer tiling is wired by the ascend950 regbase AddConfig path.
 static std::vector<std::array<ge::DataType, INPUT_NUM>> validInferInputDtype = {
     {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
-    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
 
 void BatchNormGradExt2InferBase::Reset()
 {

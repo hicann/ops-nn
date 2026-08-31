@@ -390,5 +390,6 @@ def bn_training_reduce_grad_golden(
 # the repository provides neither op_api files nor an aclnn interface document.
 # 【不存在】e2e 通路：canndev 无 BNTrainingReduceGrad 的 aclnn 接口
 # （该算子为 GE 图内 FusedBatchNormGrad 融合展开产物），torch_npu 无单算子调用。
-# 【不存在】tf/onnx 端到端通路：canndev framework/ 有 tf_plugin（A2 TF 图映射），
-# 但 A5 交付不含 framework 插件源。
+# 【不存在】onnx 端到端通路：当前仓库未提供 onnx plugin。
+# 【存在】tf 端到端通路：framework/bn_training_reduce_grad_tf_plugin.cpp 提供
+# TensorFlow 自动映射，和 A2 的 TF 图映射口径一致。

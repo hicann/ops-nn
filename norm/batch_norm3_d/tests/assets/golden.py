@@ -21,7 +21,6 @@ __golden__ = {"kernel": {"batch_norm3d": "batch_norm3d_golden"}}
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "cross_check", "level": "L1"},
 }
 
 

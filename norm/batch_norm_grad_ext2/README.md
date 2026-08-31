@@ -7,7 +7,7 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2 推理产品|×|
+|Atlas 200I/500 A2 推理产品|√|
 |Atlas 推理系列产品|√|
 |Atlas 训练系列产品|√|
 
@@ -44,4 +44,4 @@ BatchNormGradExt2对BatchNorm的反向梯度进行计算，输出输入梯度、
 
 | 调用方式 | 样例代码 | 说明 |
 | --- | --- | --- |
-| 图模式调用 | [batch_norm_grad_ext2_proto.h](op_graph/batch_norm_grad_ext2_proto.h) | 通过[算子IR](op_graph/batch_norm_grad_ext2_proto.h)构图方式调用BatchNormGradExt2算子。 |
+| 图模式调用 | [test_geir_batch_norm_grad_ext2](examples/test_geir_batch_norm_grad_ext2.cpp) | 通过[算子IR](op_graph/batch_norm_grad_ext2_proto.h)构图方式调用BatchNormGradExt2算子。 |

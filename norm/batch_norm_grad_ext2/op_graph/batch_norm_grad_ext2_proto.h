@@ -20,68 +20,53 @@
 
 namespace ge {
 /**
-*@brief Performs the backpropagation of BatchNorm.
+*@brief Performs the backpropagation of BatchNorm .
 
 *@par Inputs:
-* Six inputs, including:
-*@li y_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, for the
-gradient.
-*@li x: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, the same shape
-with "y_backprop".
-*@li scale: A 1D Tensor of type float32, with format ND, shape must be C channel.
-*@li reserve_space_1: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of
-BatchNorm.
-* When in training mode, it represents the saved mean of "x". And in inference mode, it represents the running mean of
-"x".
-*@li reserve_space_2: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of
-BatchNorm.
-*@li reserve_space_3: A 1D optional Tensor of type float32, with format ND. Not used and not involved in calculations.
-When in training mode,
-* it represents the saved inverse standard deviation of "x" And in inference mode, it represents the running variance of
-"x".  \n
+* Five inputs, including:
+*@li y_backprop: A 4D Tensor of type float16 or float32, with format NHWC or NCHW, for the gradient.
+*@li x: A 4D Tensor of type float16 or float32, with format NHWC or NCHW, the shape is same as input y_backprop.
+*@li scale: A 4D Tensor of type float32, with format NHWC or NCHW, the shape is same as input y_backprop.
+*@li reserve_space_1: A 4D Tensor of type float32, with format NHWC or NCHW, the shape is same as input y_backprop,
+* it is an output of BatchNormExt2.
+*@li reserve_space_2: A 4D Tensor of type float32, with format NHWC or NCHW, the shape is same as input y_backprop,
+* it is an output of BatchNormExt2 . \n
 
 *@par Attributes:
-*@li epsilon: An optional float32. Defaults to "1e-4". A small float number used to add with running variance of "x" in
-inference mode.
-*@li data_format: An optional string. Defaults to "NHWC". Should be same as y_backprop/x/x_backprop's dtype.
-*@li is_training: An optional bool. Defaults to "true". Specifies the operation is for training (default) or inference.
-* the outputs "x_backprop", "scale_backprop" and "offset_backprop" contain actual reseluts. \n
+*@li epsilon: A required float32. A small float number added to the variance of "x".
+*@li data_format: A required string for the format.
+*@li is_training: A required bool for specifying the operation is for training (true) or inference (false) . \n
 
 *@par Outputs:
-*@li x_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW. For the
-offset of "x".
-* the same shape with "x".
-*@li scale_backprop: A Tensor of type float32, with format ND, for the offset of "scale", the same shape format with
-scale.
-*@li offset_backprop: A Tensor of type float32, with format ND, for the offset of "offset", the same shape format with
-scale.
-*@li reserve_space_3: A Tensor of type float32, with shape ND. The same shape format with scale.
-*@li reserve_space_4: A Tensor of type float32, with shape ND. The same shape format with scale. \n
+*@li x_backprop: A Tensor of type float16 or float32, with format NHWC or NCHW, for the offset of "x".
+*@li scale_backprop: A Tensor of type float32, with format NHWC or NCHW, for the offset of "scale".
+*@li offset_backprop: A Tensor of type float32, with format NHWC or NCHW, for the offset of "offset".
+*@li reserve_space_3: A Tensor of type float32, with format NHWC or NCHW.
+*@li reserve_space_4: A Tensor of type float32, with format NHWC or NCHW . \n
 
 *@attention Constraints:
-* The preceding layer of this operator must be operator BatchNorm . \n
+* The preceding layer of this operator must be BatchNormExt2 . \n
 
-*@see BatchNorm
+*@see BatchNormExt2
 *@par Third-party framework compatibility
-* Compatible with the TensorFlow operators FusedBatchNormGradExt2, FusedBatchNormGradExt2V2 and
-FusedBatchNormGradExt2V3.
+* Compatible with the TensorFlow operator FusedBatchNormGradV2.
 */
 #ifndef OPS_PROTO_DEF_BATCHNORMGRADEXT2
 #define OPS_PROTO_DEF_BATCHNORMGRADEXT2
 REG_OP(BatchNormGradExt2)
-    .INPUT(y_backprop, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(y_backprop, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(scale, TensorType({DT_FLOAT}))
     .INPUT(reserve_space_1, TensorType({DT_FLOAT}))
     .INPUT(reserve_space_2, TensorType({DT_FLOAT}))
-    .OUTPUT(x_backprop, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .ATTR(epsilon, Float, 0.0001f)
+    .ATTR(data_format, String, "NHWC")
+    .ATTR(is_training, Bool, true)
+    .OUTPUT(x_backprop, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(scale_backprop, TensorType({DT_FLOAT}))
     .OUTPUT(offset_backprop, TensorType({DT_FLOAT}))
     .OUTPUT(reserve_space_3, TensorType({DT_FLOAT}))
     .OUTPUT(reserve_space_4, TensorType({DT_FLOAT}))
-    .ATTR(epsilon, Float, 1e-4)
-    .ATTR(data_format, String, "NHWC")
-    .ATTR(is_training, Bool, true)
     .OP_END_FACTORY_REG(BatchNormGradExt2)
 #endif // OPS_PROTO_DEF_BATCHNORMGRADEXT2
 

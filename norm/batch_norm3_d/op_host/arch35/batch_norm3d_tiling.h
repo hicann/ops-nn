@@ -131,8 +131,8 @@ protected:
     float exponentialAvgFactor_{0};
     bool isTraining_{true};
 
-    ge::DataType xDtype_;
-    ge::Format xFormat_;
+    ge::DataType xDtype_{ge::DT_UNDEFINED};
+    ge::Format xFormat_{ge::FORMAT_RESERVED};
 };
 
 class BatchNorm3DTilingInferBase : public BatchNorm3DTilingBase {

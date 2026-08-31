@@ -330,6 +330,7 @@ public:
         LocalTensor<float> batchMeanTensor = batchMeanQueue.AllocTensor<float>();
         LocalTensor<float> batchRstdTensor = batchRstdQueue.AllocTensor<float>();
         LastFinalize(batchMeanTensor, batchRstdTensor, allMeanTensor, alllVarTensor, countTensor2, tmpTensor);
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
 
         LocalTensor<T2> gammaTensor = gammaQueue.AllocTensor<T2>();
         LocalTensor<T2> betaTensor = betaQueue.AllocTensor<T2>();
@@ -369,6 +370,7 @@ public:
         // 需要等runningMeanVar计算完成后，才能计算成Rstd
         NormCommon::ComputeRstdNewtonRaphson<false>(batchRstdTensor, batchRstdTensor, static_cast<uint32_t>(currentA),
                                                     tilingData->epsilon, 1.0f, VL_F32);
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
 
         NormalizeX(batchMeanTensor, batchRstdTensor, gammaTensor, betaTensor);
 
