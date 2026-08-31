@@ -313,18 +313,21 @@ static bool CheckGradInputAndIndicesShape(const aclTensor* gradOutput, const acl
         width = is3d ? self->GetViewShape().GetDim(DIM_INX_1) : self->GetViewShape().GetDim(DIM_INX_2);
     }
     OP_CHECK(((nInputPlane != 0) && (height != 0) && (width != 0)),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor\
-        with optional 0 dim batch size, but got nInputPlane:%ld, height:%ld, width:%ld",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Expected tensor "
+                     "with optional 0 dim batch size, but got nInputPlane:%ld, height:%ld, width:%ld",
                      nInputPlane, height, width),
              return false);
     OP_CHECK(padH <= ((kH - 1) * dilationH + 1) / 2,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad should be at most half of\
-        effective kernel size, but got padH=%ld, kH=%ld and dilationH=%ld",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "pad should be at most half of "
+                     "effective kernel size, but got padH=%ld, kH=%ld and dilationH=%ld",
                      padH, kH, dilationH),
              return false);
     OP_CHECK(padW <= ((kW - 1) * dilationW + 1) / 2,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad should be at most half of\
-        effective kernel size, but got padW=%ld, kW=%ld and dilationW=%ld",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "pad should be at most half of "
+                     "effective kernel size, but got padW=%ld, kW=%ld and dilationW=%ld",
                      padW, kW, dilationW),
              return false);
 
@@ -605,13 +608,13 @@ static const aclTensor* OutputProcess(const aclTensor* gradInput, const aclTenso
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradInput TransDataSpecial return nullptr."), return nullptr);
 
         auto castGradInput = l0op::Cast(gradInputTrans, self->GetDataType(), executor);
-        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradInput Cast return nullptr."),
                  return nullptr);
 
         return castGradInput;
     } else {
         auto castGradInput = l0op::Cast(gradInput, self->GetDataType(), executor);
-        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradInput Cast return nullptr."),
                  return nullptr);
 
         return castGradInput;
@@ -883,8 +886,9 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(const aclTensor* grad
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(gradOutput, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK(CheckAttrSize1Or2(kernelSize),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "param size must be a single int, or a tuple of two ints.\
-                    stride can be empty. kernelSize:%zu, stride:%zu, padding:%zu dilation:%zu",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "param size must be a single int, or a tuple of two ints. "
+                     "stride can be empty. kernelSize:%zu, stride:%zu, padding:%zu, dilation:%zu",
                      kernelSize->Size(), stride->Size(), padding->Size(), dilation->Size()),
              return ACLNN_ERR_PARAM_NULLPTR);
     const aclIntArray& kernelRef = *kernelSize;

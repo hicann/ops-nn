@@ -42,7 +42,7 @@ const aclTensor* AdaptiveAvgPool2d(const aclTensor* self, const aclIntArray* out
         outShape.SetDim(size + SUB_H, (*outputSize)[0]);
         outShape.SetDim(size + SUB_W, (*outputSize)[1]);
     } else {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dAiCore only support ascendC950 failed.");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dAiCore only support ascendC950.");
     }
     auto out = executor->AllocTensor(outShape, self->GetDataType(), self->GetStorageFormat());
     if (out == nullptr) {

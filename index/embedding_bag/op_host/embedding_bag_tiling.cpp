@@ -169,7 +169,8 @@ ge::graphStatus EmbeddingBagTiling::Init()
 
     getTilingKeyAndComputeRepTime(weightDatatype, mode);
 
-    OP_CHECK_IF((computeRepTime_ <= 0), OP_LOGE(tilingContext_, "computeRepTime  less than 0"),
+    OP_CHECK_IF((computeRepTime_ <= 0),
+                OP_LOGE(tilingContext_, "computeRepTime [%ld] should be greater than 0", computeRepTime_),
                 return ge::GRAPH_FAILED);
 
     size_t sysWorkspaceSize = compileInfo->sysWorkspaceSize;

@@ -203,7 +203,9 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseOptionalInputs()
         OP_CHECK_IF(yOriginShape.GetDimNum() < 1, OP_LOGE(tilingContext->GetNodeName(), "y_origin must be at least 1D"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(yOriginShape.GetDim(yOriginShape.GetDimNum() - 1) != hiddenSize_,
-                    OP_LOGE(tilingContext->GetNodeName(), "y_origin H mismatch"), return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "y_origin.shape[-1]=%ld must equal H=%ld",
+                            yOriginShape.GetDim(yOriginShape.GetDimNum() - 1), hiddenSize_),
+                    return ge::GRAPH_FAILED);
         int64_t yOriginTotalRows = 1;
         for (size_t i = 0; i < yOriginShape.GetDimNum() - 1; ++i) {
             yOriginTotalRows *= yOriginShape.GetDim(i);
@@ -217,7 +219,9 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseOptionalInputs()
     if (isGroupIndex_ == 1) {
         const gert::Shape& groupIndexShape = groupIndexStorageShape->GetStorageShape();
         OP_CHECK_IF(groupIndexShape.GetDimNum() != 1 || groupIndexShape.GetDim(0) < 1,
-                    OP_LOGE(tilingContext->GetNodeName(), "group_index must be a non-empty 1D tensor"),
+                    OP_LOGE(tilingContext->GetNodeName(),
+                            "group_index must be a non-empty 1D tensor, got dimNum=%ld, dim[0]=%ld",
+                            groupIndexShape.GetDimNum(), groupIndexShape.GetDim(0)),
                     return ge::GRAPH_FAILED);
         groupIndexG_ = groupIndexShape.GetDim(0);
     }

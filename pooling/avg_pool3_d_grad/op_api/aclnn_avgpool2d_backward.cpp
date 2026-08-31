@@ -117,7 +117,7 @@ static bool CheckPaddingValidAvgPool2D(const aclIntArray* kernelSize, const aclI
     if (kernelW < MULTIPLIER * paddingW) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "value of paddingW should be at most half of kernelW. Actual: paddingW is [%ld],"
-                "kernelW is [%ld].",
+                " kernelW is [%ld].",
                 paddingW, kernelW);
         return false;
     }
@@ -427,9 +427,8 @@ static bool CheckCubeMathTypeValid(int8_t cubeMathType)
 {
     if (cubeMathType != KEEP_DTYPE && cubeMathType != ALLOW_FP32_DOWN_PRECISION && cubeMathType != USE_FP16 &&
         cubeMathType != USE_HF32) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "value of cubeMathType cann't be is not in [KEEP_DTYPE, ALLOW_FP32_DOWN_PRECISION, USE_FP16, USE_HF32].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "value of cubeMathType is not in [KEEP_DTYPE, ALLOW_FP32_DOWN_PRECISION, USE_FP16, USE_HF32].");
         return false;
     }
     return true;
@@ -438,7 +437,7 @@ static bool CheckCubeMathTypeValid(int8_t cubeMathType)
 static bool CheckOutputShape(const aclTensor* self, const aclTensor* gradInput)
 {
     if (self->GetViewShape() != gradInput->GetViewShape()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor's shape[%s] is not equel with inferOut shape[%s]",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor's shape[%s] is not equal to inferOut shape[%s]",
                 op::ToString(self->GetViewShape()).GetString(), op::ToString(gradInput->GetViewShape()).GetString());
         return false;
     }

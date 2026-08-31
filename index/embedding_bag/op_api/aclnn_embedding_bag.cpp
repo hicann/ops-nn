@@ -97,7 +97,7 @@ static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* indices, c
     // 检查indices和offsets的数据类型是否有一个达到了INT32/INT64
     if (!CheckType(indices->GetDataType(), INT_DTYPE_LIST) && !CheckType(offsets->GetDataType(), INT_DTYPE_LIST)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "indices or offsets must has one dtype in [int32, int64], "
+                "indices or offsets must have one dtype in [int32, int64], "
                 "but get indices dtype %s, offsets dtype %s.",
                 op::ToString(indices->GetDataType()).GetString(), op::ToString(offsets->GetDataType()).GetString());
         return false;
@@ -105,7 +105,7 @@ static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* indices, c
 
     // 检查perSampleWeights的数据类型是否与weight相同
     if (perSampleWeights != nullptr && weight->GetDataType() != perSampleWeights->GetDataType()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "perSampleWeights dtype %s should be in same with weight dtype %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "perSampleWeights dtype %s should be the same as weight dtype %s.",
                 op::ToString(perSampleWeights->GetDataType()).GetString(),
                 op::ToString(weight->GetDataType()).GetString());
         return false;
@@ -113,7 +113,7 @@ static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* indices, c
 
     // 检查weight和output的数据类型一致
     if (weight->GetDataType() != output->GetDataType()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output dtype %s should be in same with weight dtype %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output dtype %s should be the same as weight dtype %s.",
                 op::ToString(output->GetDataType()).GetString(), op::ToString(weight->GetDataType()).GetString());
         return false;
     }
@@ -230,21 +230,21 @@ static bool CheckShape(const aclTensor* weight, const aclTensor* indices, const 
 
     if (offset2bag->GetViewShape().GetShapeSize() != 0 &&
         offset2bag->GetViewShape().GetShapeSize() != indices->GetViewShape().GetShapeSize()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offset2bag shape size should be %ld,but got %ld.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offset2bag shape size should be %ld, but got %ld.",
                 indices->GetViewShape().GetShapeSize(), offset2bag->GetViewShape().GetShapeSize());
         return false;
     }
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
                     offsets->GetViewShape().GetShapeSize(), bagSize->GetViewShape().GetShapeSize());
             return false;
         }
     } else {
         if (includeLastOffset) {
             if (bagSize->GetViewShape().GetShapeSize() != offsets->GetViewShape().GetDim(0) - 1) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld,but got %ld.",
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bagSize shape size should be %ld, but got %ld.",
                         offsets->GetViewShape().GetShapeSize() - 1, bagSize->GetViewShape().GetShapeSize());
                 return false;
             }

@@ -266,7 +266,7 @@ static ge::graphStatus InferShape4MaxPoolV3(gert::InferShapeContext* context)
                            });
     if (it == kFuncMap.end()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padding_mode", padding_mode,
-                                              "must in (CALCULATED, VALID, SAME)");
+                                              "must be in (CALCULATED, VALID, SAME)");
         return GRAPH_FAILED;
     }
 

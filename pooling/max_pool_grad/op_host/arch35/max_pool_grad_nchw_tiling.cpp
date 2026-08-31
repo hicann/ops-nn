@@ -98,7 +98,7 @@ void MaxPoolGradNCHWTilingHelper::DoBufferCalculate()
 bool MaxPoolGradNCHWTiling::IsCapable()
 {
     if (inputData.inputFormat != ge::Format::FORMAT_NCHW) {
-        OP_LOGI("IsCapable", "inputFormat error, expected NCHW");
+        OP_LOGW("IsCapable", "inputFormat invalid, expected NCHW");
         return false;
     }
     if (inputData.hDilation != 1 || inputData.wDilation != 1) {
@@ -134,7 +134,7 @@ ge::graphStatus MaxPoolGradNCHWTiling::GetShapeAttrsInfo()
     }
 
     if (inputData.inputFormat != ge::Format::FORMAT_NCHW) {
-        OP_LOGI("GetShapeAttrsInfo", "inputFormat error, expected NCHW");
+        OP_LOGW("GetShapeAttrsInfo", "inputFormat invalid, expected NCHW");
         return ge::GRAPH_PARAM_INVALID;
     }
 

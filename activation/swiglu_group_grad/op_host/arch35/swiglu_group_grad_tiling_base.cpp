@@ -160,7 +160,9 @@ static ge::graphStatus ParseOptionalInputs(gert::TilingContext* context, SwigluG
         OP_CHECK_IF(yOriginShape->GetDimNum() < 1, OP_LOGE(context->GetNodeName(), "y_origin must be at least 1D"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(yOriginShape->GetDim(yOriginShape->GetDimNum() - 1) != inputData.H,
-                    OP_LOGE(context->GetNodeName(), "y_origin H mismatch"), return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "y_origin.shape[-1]=%ld must equal H=%ld",
+                            yOriginShape->GetDim(yOriginShape->GetDimNum() - 1), inputData.H),
+                    return ge::GRAPH_FAILED);
         int64_t yOriginTotalRows = 1;
         for (size_t i = 0; i < yOriginShape->GetDimNum() - 1; ++i) {
             yOriginTotalRows *= yOriginShape->GetDim(i);

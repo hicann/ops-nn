@@ -117,11 +117,12 @@ ge::graphStatus AdaptiveAvgPool3dGradTiling::Init()
     }
     auto const yGradShape = context->GetInputShape(0)->GetStorageShape();
     OP_CHECK_IF(yGradShape.GetDimNum() != Y_GRAD_DIMS,
-                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4."), return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal to 4."),
+                return ge::GRAPH_FAILED);
 
     auto const xShapeVal = context->GetInputShape(1)->GetStorageShape();
     OP_CHECK_IF((xShapeVal.GetDimNum() != X_DIMS_4 && xShapeVal.GetDimNum() != X_DIMS_5),
-                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4 or 5."),
+                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal to 4 or 5."),
                 return ge::GRAPH_FAILED);
 
     auto const yGradDtype = context->GetInputDesc(0)->GetDataType();

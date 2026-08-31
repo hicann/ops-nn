@@ -23,7 +23,7 @@ const int64_t DIM_TWO = 2;
 
 static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "infershape is begin");
+    OP_LOGD(context->GetNodeName(), "infershape begins");
     auto xShape = context->GetInputShape(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     int64_t xDim = xShape->GetDimNum();

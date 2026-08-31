@@ -179,10 +179,10 @@ static bool Avg_NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cube
 
     if (cubeMathType == USE_HF32) {
         if (cubeTensorPromoteType == DataType::DT_BF16) {
-            OP_LOGW("The cubeMathType cann't be set to USE_HF32 when the dtype is BF16.");
+            OP_LOGW("The cubeMathType cannot be set to USE_HF32 when the dtype is BF16.");
         }
         if (cubeTensorPromoteType == DataType::DT_FLOAT16) {
-            OP_LOGW("The cubeMathType cann't be set to USE_HF32 when the dtype is FP16.");
+            OP_LOGW("The cubeMathType cannot be set to USE_HF32 when the dtype is FP16.");
         }
     }
 

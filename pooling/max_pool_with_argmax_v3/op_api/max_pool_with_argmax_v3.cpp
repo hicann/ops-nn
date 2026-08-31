@@ -121,7 +121,7 @@ const std::tuple<const aclTensor*, const aclTensor*> MaxPoolWithArgmaxV3(
     }
 
     // 当前没有匹配的aicpu算子
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "no dtype not supported on ai cpu");
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype not supported on AICPU");
     return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
 }
 } // namespace l0op

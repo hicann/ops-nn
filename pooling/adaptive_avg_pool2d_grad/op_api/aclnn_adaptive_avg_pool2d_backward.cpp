@@ -78,13 +78,15 @@ static bool CheckInputDims(const aclTensor* gradOutput, const aclTensor* self, c
     }
     for (size_t i = 0; i < selfDimNum; i++) {
         if (selfShape.GetDim(i) < 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is [%d].", i + 1, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is [%ld].", i + 1,
+                    selfShape.GetDim(i));
             return false;
         }
     }
     for (size_t i = 0; i < gradOutputDimNum; i++) {
         if (gradOutputShape.GetDim(i) < 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput'dims is invalid, self No.[%lu] dim is [%d].", i + 1, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput'dims is invalid, self No.[%lu] dim is [%ld].", i + 1,
+                    gradOutputShape.GetDim(i));
             return false;
         }
     }

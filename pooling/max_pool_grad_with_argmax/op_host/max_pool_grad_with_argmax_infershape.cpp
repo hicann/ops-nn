@@ -91,7 +91,7 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
     std::string padding(padsPtr);
     if (padding != "SAME" && padding != "VALID") {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "pads", padding.c_str(), "Pads attritube must be SAME or VALID");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "pads", padding.c_str(), "Pads attribute must be SAME or VALID");
         return GRAPH_FAILED;
     }
 
@@ -116,7 +116,7 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
             return GRAPH_FAILED;
         }
         if (strides_data[INDEX_ONE] != KSIZE_STRIDES_VALUE) {
-            OP_LOGE_FOR_INVALID_VALUE(opName_, "strides[3]", std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(opName_, "strides[1]", std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
             return GRAPH_FAILED;
         }
     }

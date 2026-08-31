@@ -24,7 +24,7 @@ bool MaxPool3DGradNCDHWSmallKernelTiling::IsCapable()
 {
     base->InitializationVars(context_, ubSize_, coreNum_);
     if (inputData.inputFormat != ge::Format::FORMAT_NCDHW) {
-        OP_LOGI("IsCapable", "inputFormat error");
+        OP_LOGW("IsCapable", "inputFormat invalid");
         return false;
     }
     if (inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {

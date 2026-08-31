@@ -49,7 +49,7 @@ static ge::graphStatus EmbeddingDenseGradTiling(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepareForEmbeddingDenseGrad(gert::TilingParseContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "TilingPrepareForEmeddingDenseGrad running.");
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForEmbeddingDenseGrad running.");
     auto compile_info = context->GetCompiledInfo<EmbeddingDenseGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 

@@ -114,7 +114,7 @@ static bool CheckDimension(const aclTensor* out, const aclTensor* indices)
     size_t indicesDimNum = indicesShape.GetDimNum();
     for (size_t i = 0; i < indicesDimNum; i++) {
         if (outShape.GetDim(i) != indicesShape.GetDim(i)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out shape [%s] is not match with indices shape [%s].",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out shape [%s] does not match indices shape [%s].",
                     op::ToString(out->GetViewShape()).GetString(), op::ToString(indices->GetViewShape()).GetString());
             return false;
         }

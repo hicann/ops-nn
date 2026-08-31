@@ -267,7 +267,7 @@ static ge::graphStatus Tiling4AdaptiveAvgPool3d(gert::TilingContext* context)
     auto compileInfo = static_cast<const AdaptiveAvgPool3dCompileInfo*>(context->GetCompileInfo());
 
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
-    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
+    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal to 5."),
                 return ge::GRAPH_FAILED);
 
     auto dataType = context->GetInputDesc(X_INDEX)->GetDataType();
@@ -281,7 +281,7 @@ static ge::graphStatus Tiling4AdaptiveAvgPool3d(gert::TilingContext* context)
     auto outputSizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(OUTPUT_SIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputSizePtr);
     OP_CHECK_IF(outputSizePtr->GetSize() != OUTPUT_SIZE_DIMS,
-                OP_LOGE(nodeName, "Check output_size failed, the size of output_size not equal 3."),
+                OP_LOGE(nodeName, "Check output_size failed, the size of output_size not equal to 3."),
                 return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
     OP_CHECK_IF(outputSize[DIM0] <= 0 || outputSize[DIM1] <= 0 || outputSize[DIM2] <= 0,

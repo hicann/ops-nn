@@ -374,29 +374,30 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::GetShapeAttrsInfo()
     OP_LOGD(context_->GetNodeName(), "Enter MaxPool3DGradWithArgmaxTilingBaseV35 GetShapeAttrsInfo.");
     const char* opName_ = "MaxPool3DGradWithArgmax";
     if (ge::GRAPH_SUCCESS != CheckInputDtype()) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, grad, argmax", "invalid_dtypes",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, grad, argmax",
+                                               ge::TypeUtils::DataTypeToSerialString(inputData.inputDtype).c_str(),
                                                "The input dtype is invalid.");
         return ge::GRAPH_FAILED;
     }
     if (!CheckInputShape()) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, grad, argmax", "invalid_shapes",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, grad, argmax", "shape check failed",
                                                "The input relationship is invalid.");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != CheckAttrShape()) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of attr", "invalid_size", "3, 1, or 0");
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of attr", "check failed", "3, 1, or 0");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != SetInputParams()) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "input", "invalid_shape", "Set input shape failed.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "input", "set failed", "Set input shape failed.");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != SetAttrParams()) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "attr", "invalid_value", "Set attr shape failed.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "attr", "set failed", "Set attr shape failed.");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != CheckInputValid()) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "d, h, w", "invalid_values", "The input shape is invalid.");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "d, h, w", "check failed", "The input shape is invalid.");
         return ge::GRAPH_FAILED;
     }
     SetOtherInputParams();

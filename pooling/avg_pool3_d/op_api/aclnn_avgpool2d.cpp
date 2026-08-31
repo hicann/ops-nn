@@ -368,7 +368,7 @@ static bool CheckPaddingValidAvgPool2D(const aclIntArray* kernelSize, const aclI
     if (kernelW < MULTIPLIER * paddingW) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "value of paddingW should be at most half of kernelW. Actual: paddingW is [%ld],"
-                "kernelW is [%ld].",
+                " kernelW is [%ld].",
                 paddingW, kernelW);
         return false;
     }
@@ -487,7 +487,7 @@ static bool CheckValue(const aclTensor* self, const aclIntArray* kernel, const a
 
     for (size_t i = 0; i < padding->Size(); i++) {
         if ((*padding)[i] < 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of padding is negtive.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of padding is negative.");
             return false;
         }
     }
@@ -497,7 +497,7 @@ static bool CheckValue(const aclTensor* self, const aclIntArray* kernel, const a
 static bool CheckAvgPool2dCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType)
 {
     if (cubeMathType == USE_HF32) {
-        OP_LOGW("The function remains the same as 0(KEEP_DTYPE) when the cubeMathType is 3(USE_HF32)."
+        OP_LOGW("The function remains the same as 0(KEEP_DTYPE) when the cubeMathType is 3(USE_HF32). "
                 "This configuration is not recommended and will be deprecated in a future release.");
     }
     return CheckCubeMathType(cubeTensorDtype, cubeMathType);

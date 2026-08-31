@@ -46,20 +46,20 @@ ge::graphStatus EmbeddingNoContiguousTiling::GetPlatformInfo()
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         totalCoreNum_ = static_cast<int64_t>(compileInfoPtr->coreNum);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ubSize);
-        OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", totalCoreNum_);
+        OP_LOGD(opName_, "Get aivNum from compileInfo is: %ld", totalCoreNum_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         totalCoreNum_ = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
-        OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", totalCoreNum_);
+        OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", totalCoreNum_);
     }
     OP_CHECK_IF(
         (totalCoreNum_ <= 0 || ubSize_ <= 0),
         OP_LOGE(
             opName_,
-            "coreNum and ubSize should not be samller than 0, but got coreNum [%ld] and ubSize [%ld], please check.",
+            "coreNum and ubSize should not be smaller than 0, but got coreNum [%ld] and ubSize [%ld], please check.",
             totalCoreNum_, ubSize_),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

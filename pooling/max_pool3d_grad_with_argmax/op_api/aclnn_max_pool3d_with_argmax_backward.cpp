@@ -187,8 +187,9 @@ static bool CheckParamsValid(const aclIntArray* kernelSize, const aclIntArray* s
              return false);
     OP_CHECK(((paddingD <= (kernelD / ratioKernelPad)) && (paddingH <= (kernelH / ratioKernelPad)) &&
               (paddingW <= (kernelW / ratioKernelPad))),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding should be smaller than or equal to half of kernel size,\
-                    but got kernelD:%ld, kernelH:%ld, kernelW:%ld, paddingD:%ld, paddingH:%ld, paddingW:%ld",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "padding should be smaller than or equal to half of kernel size, "
+                     "but got kernelD:%ld, kernelH:%ld, kernelW:%ld, paddingD:%ld, paddingH:%ld, paddingW:%ld",
                      kernelD, kernelH, kernelW, paddingD, paddingH, paddingW),
              return false);
 
@@ -222,7 +223,7 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK((selfSize <= MAX_INT32),
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "The size of self should be less than or equal to 2^32 - 1, but got selfSize:%ld", selfSize),
+                         "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld", selfSize),
                  return false);
     }
 

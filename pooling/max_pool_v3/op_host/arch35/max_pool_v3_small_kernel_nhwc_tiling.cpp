@@ -174,7 +174,7 @@ void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
 void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
 {
     if (minInRows <= 0) {
-        OP_LOGE(context_, "MaxPool minInRows is 0.");
+        OP_LOGE(context_, "MaxPool minInRows is %ld.", minInRows);
         return;
     }
     int64_t outColsLower = 1;
@@ -213,7 +213,7 @@ void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
 void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxBatch(int64_t oneBacthBuffer, int64_t oneBatchInputSize)
 {
     if (oneBatchInputSize <= 0 || oneBacthBuffer <= 0) {
-        OP_LOGI(context_, "MaxPool oneBatchInputSize is %ld, oneBacthBuffer id %ld", oneBatchInputSize, oneBacthBuffer);
+        OP_LOGI(context_, "MaxPool oneBatchInputSize is %ld, oneBatchBuffer is %ld", oneBatchInputSize, oneBacthBuffer);
         nLoop_ = ubFactorN_;
         hLoop_ = 1;
         wLoop_ = 1;

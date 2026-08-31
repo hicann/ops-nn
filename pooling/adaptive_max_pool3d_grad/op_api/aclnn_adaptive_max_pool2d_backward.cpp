@@ -52,7 +52,8 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
 
     if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(gradInput->GetStorageFormat()) ||
         op::IsPrivateFormat(gradOutput->GetStorageFormat()) || op::IsPrivateFormat(indices->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCHW or NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCHW or NCL, actual format is [%s].",
+                op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
 

@@ -130,7 +130,7 @@ static inline int64_t PoolingOutShape(const int64_t inputSize, const int64_t ker
 static bool CheckAttrValue(const int64_t kernel, const int64_t stride, const int64_t pad, const int64_t input)
 {
     if (kernel <= 0 || kernel > input) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernel value(%ld) is invaild, must be (0, %ld].", kernel, input);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernel value(%ld) is invalid, must be (0, %ld].", kernel, input);
         return false;
     }
 
@@ -140,7 +140,7 @@ static bool CheckAttrValue(const int64_t kernel, const int64_t stride, const int
     }
 
     if (!(pad >= 0 && pad <= kernel / 2)) { // 2: double
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding value(%ld) is invaild, must be [0, kernel/2].", pad);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding value(%ld) is invalid, must be [0, kernel/2].", pad);
         return false;
     }
 

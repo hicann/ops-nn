@@ -36,7 +36,7 @@ bool MaxPool3DGradWithArgmaxTilingBase::CheckInputShape()
     // xDimNum should be 5(format:NCDHW)
     OP_CHECK_IF((xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM) || (argmaxDimNum != NCDHW_DIM_NUM),
                 OP_LOGE(context_->GetNodeName(),
-                        "Input dim num should equal = %lu, actual is xDim: %lu, gradDim: %lu, argmaxDim: %lu.",
+                        "Input dim num should be %lu, actual is xDim: %lu, gradDim: %lu, argmaxDim: %lu.",
                         NCDHW_DIM_NUM, xDimNum, gradDimNum, argmaxDimNum),
                 return false);
     for (uint32_t i = 0; i < xDimNum; i++) {
@@ -223,13 +223,13 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputValid()
 
     // check 1
     OP_CHECK_IF((pDTop > (kd / 2)) || (pHTop > (kh / 2)) || (pWTop > (kw / 2)),
-                OP_LOGE(context_->GetNodeName(), "Attr size invalid, padSize should smaller than kernelSize div 2"),
+                OP_LOGE(context_->GetNodeName(), "Attr size invalid, padSize should be smaller than kernelSize div 2"),
                 return ge::GRAPH_FAILED);
     // check 2
     OP_CHECK_IF((pDTop > ((kd - 1) * dilationD + 1) / 2) || (pHTop > ((kh - 1) * dilationH + 1) / 2) ||
                     (pWTop > ((kw - 1) * dilationW + 1) / 2),
                 OP_LOGE(context_->GetNodeName(),
-                        "Attr size invalid, padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2."),
+                        "Attr size invalid, padSize should be smaller than ((kernelSize - 1) * dilation + 1) / 2."),
                 return ge::GRAPH_FAILED);
     // check 3
     // Check outerDim invaild
@@ -260,7 +260,7 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputValid()
     // Check index range
     OP_CHECK_IF(maxPoolGradParams.diDim * maxPoolGradParams.hiDim * maxPoolGradParams.wiDim > MAX_INT32,
                 OP_LOGE(context_->GetNodeName(),
-                        "Shape too big, diDim * hiDim * wiDim should not bigger than max range of int32."),
+                        "Shape too big, diDim * hiDim * wiDim should not be bigger than max range of int32."),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

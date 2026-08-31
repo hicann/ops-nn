@@ -52,7 +52,7 @@ static int64_t DivRtn(int64_t x, int64_t y)
         return GRAPH_FAILED;
     }
     if (x < 0) {
-        OP_LOGE("MaxPool3DWithArgmaxV2", "x value cannot small than zero.");
+        OP_LOGE("MaxPool3DWithArgmaxV2", "x value cannot be smaller than zero.");
         return GRAPH_FAILED;
     }
     int64_t q = x / y;

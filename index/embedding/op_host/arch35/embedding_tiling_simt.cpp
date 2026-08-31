@@ -104,16 +104,16 @@ ge::graphStatus EmbeddingTilingBase::GetPlatformInfo()
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         aivNum_ = compileInfoPtr->coreNum;
         ubSize_ = compileInfoPtr->ubSize;
-        OP_LOGD(opName_, "Get ubSize form compileInfo is: %ld", ubSize_);
-        OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", aivNum_);
+        OP_LOGD(opName_, "Get ubSize from compileInfo is: %ld", ubSize_);
+        OP_LOGD(opName_, "Get aivNum from compileInfo is: %ld", aivNum_);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         aivNum_ = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
         ubSize_ = static_cast<int64_t>(ubSizePlatform);
-        OP_LOGD(opName_, "Get ubSize form ascendcPlatform is: %ld", ubSize_);
-        OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", aivNum_);
+        OP_LOGD(opName_, "Get ubSize from ascendcPlatform is: %ld", ubSize_);
+        OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", aivNum_);
     }
     aicoreParams_.blockDim = aivNum_;
     return ge::GRAPH_SUCCESS;

@@ -197,7 +197,8 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* out)
 
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(gradOutput->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only don't support private format.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support private format, actual format is [%s].",
+                op::ToString(gradOutput->GetStorageFormat()).GetString());
         return false;
     }
     return true;

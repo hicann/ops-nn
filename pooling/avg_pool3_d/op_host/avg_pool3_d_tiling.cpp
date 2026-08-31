@@ -316,7 +316,7 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode)
         mode = MODE_BIG_KERNEL;
         return;
     } else if (params.dataFormat == "NCDHW") {
-        //走Nornal模板
+        // 走Nornal模板
         bool isNormal = IsCapbale(params);
         if (isNormal) {
             Tilling4NCDHWNormal(params);
@@ -548,7 +548,7 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
     auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo*>(context->GetCompileInfo());
 
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
-    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
+    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal to 5."),
                 return ge::GRAPH_FAILED);
 
     auto dataType = context->GetInputDesc(X_INDEX)->GetDataType();
@@ -558,7 +558,7 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
 
     const gert::Shape yShape = context->GetOutputShape(Y_INDEX)->GetStorageShape();
-    OP_CHECK_IF(yShape.GetDimNum() != Y_DIMS, OP_LOGE(nodeName, "Check y shape failed, the dims of y not equal 5."),
+    OP_CHECK_IF(yShape.GetDimNum() != Y_DIMS, OP_LOGE(nodeName, "Check y shape failed, the dims of y not equal to 5."),
                 return ge::GRAPH_FAILED);
 
     auto attrPtr = context->GetAttrs();
@@ -567,21 +567,22 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
     auto ksizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(KSIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksizePtr);
     OP_CHECK_IF(ksizePtr->GetSize() != 5 && ksizePtr->GetSize() != 3 && ksizePtr->GetSize() != 1,
-                OP_LOGE(nodeName, "Check kernel_size failed, the size of kernel_size not equal 5, 3 or 1."),
+                OP_LOGE(nodeName, "Check kernel_size failed, the size of kernel_size not equal to 5, 3 or 1."),
                 return ge::GRAPH_FAILED);
     auto ksize = static_cast<const int64_t*>(ksizePtr->GetData());
 
     auto stridesPtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(STRIDES_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, stridesPtr);
     OP_CHECK_IF(stridesPtr->GetSize() != 5 && stridesPtr->GetSize() != 3 && stridesPtr->GetSize() != 1,
-                OP_LOGE(nodeName, "Check stride failed, the size of strides not equal 5, 3 or 1."),
+                OP_LOGE(nodeName, "Check stride failed, the size of strides not equal to 5, 3 or 1."),
                 return ge::GRAPH_FAILED);
     auto strides = static_cast<const int64_t*>(stridesPtr->GetData());
 
     auto padsPtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(PADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
     OP_CHECK_IF(padsPtr->GetSize() != COMPATIABLE_PAD_DIM && padsPtr->GetSize() != 3 && padsPtr->GetSize() != 1,
-                OP_LOGE(nodeName, "Check pad failed, the size of pad not equal 6, 3 or 1."), return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName, "Check pad failed, the size of pad not equal to 6, 3 or 1."),
+                return ge::GRAPH_FAILED);
     auto pads = static_cast<const int64_t*>(padsPtr->GetData());
 
     const bool* ceilMode = attrPtr->GetAttrPointer<bool>(CEIL_MODE_INDEX);

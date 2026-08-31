@@ -113,7 +113,7 @@ const aclTensor* MaxPoolV3(const aclTensor* self, const aclIntArray* kernelShape
     }
 
     // 当前没有匹配的aicpu算子
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "No dtype not supported on AICPU");
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype not supported on AICPU");
     return nullptr;
 }
 } // namespace l0op

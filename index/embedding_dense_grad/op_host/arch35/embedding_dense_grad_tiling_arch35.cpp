@@ -394,7 +394,7 @@ static ge::graphStatus TilingUB4Cast(EmbeddingDenseGradACTilingParam& tilingPara
         return ge::GRAPH_SUCCESS;
     }
 
-    OP_LOGE("EmbeddingDenseGrad", "[Freq] Cal tiling failed, can not find one way to cut UB.");
+    OP_LOGE("EmbeddingDenseGrad", "[Cast] Cal tiling failed, can not find one way to cut UB.");
     return ge::GRAPH_FAILED;
 }
 
@@ -513,7 +513,7 @@ static ge::graphStatus DoOpTiling(const gert::TilingContext* context, EmbeddingD
 ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext* context, uint32_t maxCoreNum,
                                               uint32_t ubSizePlatform, uint32_t maxThreadNum)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd is begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd begins");
     EmbeddingDenseGradSimdTilingData tiling;
     EmbeddingDenseGradACTilingParam tilingParams;
 
@@ -630,7 +630,7 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext* context, uint
                          0;
     size_t* workspace = context->GetWorkspaceSizes(1);
     workspace[0] = usrSize + ASCENDC_TOOLS_WORKSPACE;
-    OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd is end");
+    OP_LOGD(context->GetNodeName(), "Tiling4EmbeddingDenseGradSimd ended");
     return ge::GRAPH_SUCCESS;
 }
 } // namespace optiling

@@ -71,7 +71,7 @@ const aclTensor* Pooling5Hd(const aclTensor* x, const aclTensor* weight, int64_t
     L0_DFX(Pooling5Hd, x, weight, mode, globalPooling, window, stride, pad, ceilMode, dataFormat);
 
     if (!IsAiCoreSupport(x)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "data type not supports.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "data type does not support.");
         return nullptr;
     }
 

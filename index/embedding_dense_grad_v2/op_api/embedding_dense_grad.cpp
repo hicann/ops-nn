@@ -91,7 +91,7 @@ const aclTensor* EmbeddingDenseGrad(const aclTensor* grad, const aclTensor* indi
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(EmbeddingDenseGrad, OP_INPUT(grad, indices), OP_OUTPUT(out),
                                            OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradAiCcore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return out;
 }

@@ -45,7 +45,8 @@ static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+    OP_CHECK_IF(output_shape == nullptr,
+                OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccessful"),
                 return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {

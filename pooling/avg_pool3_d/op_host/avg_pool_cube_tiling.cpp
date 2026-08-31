@@ -472,7 +472,7 @@ ge::graphStatus CubeTiling(const int64_t* input_shape, size_t intput_shape_dim_n
 
     if (tiling_id == kInvalidTilingId) {
         if (compile_info.correct_range_flag) {
-            OP_LOGE(op_name, "The original range does not meet requirements,"
+            OP_LOGE(op_name, "The original range does not meet requirements, "
                              "new range is generated during op compile, but the shape is not covered by new range");
         }
 

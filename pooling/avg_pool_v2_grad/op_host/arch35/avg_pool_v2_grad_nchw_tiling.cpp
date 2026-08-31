@@ -348,7 +348,7 @@ void AvgPoolV2GradCommonNCHWTiling::PrintBaseData() const
     info << ", baseData.inputNCSize: " << baseData.inputNCSize;
     info << ", padTopH: " << inputData.pad[TOP_PAD_INDEX];
     info << ", padDownH: " << inputData.pad[BOTTOM_PAD_INDEX];
-    info << ", padLfetW: " << inputData.pad[LEFT_PAD_INDEX];
+    info << ", padLeftW: " << inputData.pad[LEFT_PAD_INDEX];
     info << ", padRightW: " << inputData.pad[RIGHT_PAD_INDEX];
     info << ", divisorOverride: " << inputData.divisorOverride;
 
@@ -444,7 +444,7 @@ ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
     bool bankConfilictGrad = (baseData.wProBatchSize * baseData.inputBytes) % BANK_FACTOR == 0;
     bool bankConfilictOut = (baseData.wProBatchSize * inputData.stride[W_DIM] * sizeof(float)) % BANK_FACTOR == 0;
     OP_CHECK_IF(bankConfilictGrad || bankConfilictOut,
-                OP_LOGI(context_->GetNodeName(), "nchw template is not capable because of bank Confilict."),
+                OP_LOGI(context_->GetNodeName(), "nchw template is not capable because of bank Conflict."),
                 return ge::GRAPH_PARAM_INVALID);
 
     DoBlockTiling();

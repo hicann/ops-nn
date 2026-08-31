@@ -159,8 +159,7 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
     }
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(gradOutput->GetStorageFormat())) {
-        printf("wyh invalid format\n");
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCDHW、ND.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCDHW, ND.");
         return false;
     }
 
