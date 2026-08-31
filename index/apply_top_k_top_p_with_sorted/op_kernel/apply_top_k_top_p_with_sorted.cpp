@@ -13,13 +13,17 @@
  * \brief
  */
 
+#if __CCE_AICORE__ == 200
+#include "arch20/apply_top_k_top_p_with_sorted.h"
+#else
 #include "apply_top_k_top_p_with_sorted.h"
 #include "apply_top_p_with_sorted.h"
 #include "apply_top_k_top_p_opt.h"
-using namespace AscendC;
-using namespace ApplyTopKTopPWithSortedOp;
 using namespace ApplyTopPWithSortedOp;
 using namespace ApplyTopKTopPOptOp;
+#endif
+using namespace AscendC;
+using namespace ApplyTopKTopPWithSortedOp;
 
 extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sorted_value, GM_ADDR sorted_indices,
                                                                     GM_ADDR p, GM_ADDR k, GM_ADDR logits, GM_ADDR out,
@@ -38,6 +42,13 @@ extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sort
         op.InitBuffer(&pipe);
         op.ProcessTopK();
     } else if (TILING_KEY_IS(2)) {
+#if __CCE_AICORE__ == 200
+        ApplyTopKTopPWithSortedOp::ApplyTopKTopPWithSorted<DTYPE_OUT, float, DTYPE_OUT> op;
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out, workSpace);
+        op.InitBuffer(&pipe);
+        op.SetMode(2);
+        op.Process();
+#else
         ApplyTopPWithSortedOp::ApplyTopPWithSorted<DTYPE_OUT, float, DTYPE_OUT> op;
         op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
         op.InitBuffer(&pipe);
@@ -57,5 +68,6 @@ extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sort
         op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
         op.InitBuffer(&pipe);
         op.ProcessTopPOpt();
+#endif
     }
 }

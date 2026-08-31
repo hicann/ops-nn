@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 
 using namespace AscendC;
+
 namespace ApplyTopPWithSortedOp {
 constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;    // -inf 64512
 constexpr uint16_t BF16_NEG_INF = 0xFF80;       // -inf 65408

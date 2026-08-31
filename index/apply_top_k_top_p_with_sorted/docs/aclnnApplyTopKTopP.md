@@ -15,7 +15,7 @@
 - <term>Atlas 200I/500 A2 推理产品</term>：不支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas 推理系列产品</term>：不支持
+- <term>Atlas 推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
 - <term>Atlas 训练系列产品</term>：不支持

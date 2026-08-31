@@ -160,7 +160,12 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape()
     auto logitsShapePtr = tilingcontext->GetOptionalInputShape(LOGITS_INPUT_INDEX);
     bool logitsAvailable = (logitsShapePtr != nullptr && logitsShapePtr->GetStorageShape().GetDimNum() > 0 &&
                             batchSize_ > 0 && vocabSize_ > 0);
-    optKey_ = logitsAvailable ? OPT_TOP_K_TOP_P_KEY : 0;
+    if (socVersion_ == NpuArch::DAV_2002) {
+        // 310P: DataCopyPad 不可用（运行写 0），opt 路径依赖 DataCopyPad，必须强制走 scatter 旧路径
+        optKey_ = 0;
+    } else {
+        optKey_ = logitsAvailable ? OPT_TOP_K_TOP_P_KEY : 0;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -229,6 +234,9 @@ void ApplyTopKTopPWithSortedTiling::CalDataPerCore()
     uint32_t pBytes = dataPerBlock * inputDataTypeByte;
     uint32_t kBytes = DATA_PER_BLOCK_B32 * BYTES_B32;
     uint32_t outTensorBytes = ubFactorElementAligned_ * inputDataTypeByte;
+    if (socVersion_ == NpuArch::DAV_2002) {
+        outTensorBytes = BLOCK_BYTES * dataNumInit_;
+    }
 
     calUbSize_ = calUbSize_ - sortedValueBytes - sortedIndicesBytes - pBytes - kBytes - outTensorBytes;
     if (onlyTopP_ > 0 || optKey_ > 0) {
@@ -283,7 +291,9 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
 
     uint32_t syncWorkspaceSize = SYS_WORKSPACESIZE;
     size_t* currentWorkspace = tilingcontext->GetWorkspaceSizes(1);
-    if (tilingKey_ == OPT_TOP_P_KEY || tilingKey_ == OPT_TOP_K_TOP_P_KEY || tilingKey_ == OPT_TOP_K_KEY) {
+    if (socVersion_ == NpuArch::DAV_2002) {
+        currentWorkspace[0] = syncWorkspaceSize + batchSize_ * BLOCK_BYTES * 2;
+    } else if (tilingKey_ == OPT_TOP_P_KEY || tilingKey_ == OPT_TOP_K_TOP_P_KEY || tilingKey_ == OPT_TOP_K_KEY) {
         currentWorkspace[0] = 0;
     } else if (tilingKey_ == ONLY_TOP_P_KEY) {
         currentWorkspace[0] = syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES;
