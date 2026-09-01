@@ -229,6 +229,9 @@ protected:
             int64_t copyNum = MAX_CHANNEL_SIZE;
             if (loopId == CeilDiv(this->totalChannel, MAX_CHANNEL_SIZE) - 1) {
                 copyNum = this->totalChannel % MAX_CHANNEL_SIZE;
+                if (copyNum == 0) {
+                    copyNum = MAX_CHANNEL_SIZE;
+                }
             }
 
             DataCopyExtParams extParam;
@@ -290,6 +293,9 @@ protected:
         int64_t copyNum = MAX_CHANNEL_SIZE;
         if (loopId == CeilDiv(this->totalChannel, MAX_CHANNEL_SIZE) - 1) {
             copyNum = this->totalChannel % MAX_CHANNEL_SIZE;
+            if (copyNum == 0) {
+                copyNum = MAX_CHANNEL_SIZE;
+            }
         }
         meanTensor.SetValue(mod, reduceUbTensor.GetValue(0));
         if (mod == copyNum - 1) {
@@ -317,6 +323,9 @@ protected:
         int64_t copyNum = MAX_CHANNEL_SIZE;
         if (loopId == CeilDiv(this->totalChannel, MAX_CHANNEL_SIZE) - 1) {
             copyNum = this->totalChannel % MAX_CHANNEL_SIZE;
+            if (copyNum == 0) {
+                copyNum = MAX_CHANNEL_SIZE;
+            }
         }
         varTensor.SetValue(mod, reduceInputUbTensor.GetValue(0) * rVar);
 
