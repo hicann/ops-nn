@@ -25,8 +25,6 @@ constexpr static int64_t AGGREGATION_COUNT = 256;
 constexpr static uint32_t DEFAULT_WORKSPACE = 16 * 1024 * 1024;
 constexpr static int64_t B32_SIZE = 4;
 constexpr static int64_t B16_SIZE = 2;
-constexpr static int64_t B32_ALIGN_NUM = 32 / sizeof(float);
-constexpr static int64_t BLOCK_BYTES = 32;
 
 static inline int64_t CeilDiv(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b; }
 
@@ -132,11 +130,10 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::DoOpTiling()
     td_.set_nullptrBeta(commonParams.betaNullPtr);
     td_.set_epsilon(commonParams.eps);
 
-    // r0Align: r0 aligned to 32B boundary in elements
     int64_t tensorTypeSize = (commonParams.tensorDtype == ge::DT_FLOAT16 || commonParams.tensorDtype == ge::DT_BF16) ?
                                  B16_SIZE :
                                  B32_SIZE;
-    int64_t r0AlignedBytes = CeilDiv(r0 * tensorTypeSize, BLOCK_BYTES) * BLOCK_BYTES;
+    int64_t r0AlignedBytes = CeilDiv(r0 * tensorTypeSize, commonParams.blockSize) * commonParams.blockSize;
     int64_t r0Align = r0AlignedBytes / tensorTypeSize;
     td_.set_r0Align(r0Align);
 

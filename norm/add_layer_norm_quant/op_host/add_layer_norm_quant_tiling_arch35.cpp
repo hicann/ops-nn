@@ -23,7 +23,6 @@ constexpr int32_t CONST_32 = 32;
 constexpr uint64_t KERNEL_BUFFER_NUM = 2;
 constexpr uint64_t USR_WORKSPACE_SIZE_910B = 1;
 
-constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint64_t UB_RESERVED_BYTE = 256;
 constexpr int32_t MAX_ROW_STEP = 255;
 
@@ -310,8 +309,7 @@ bool AddLayerNormQuantRegbaseTiling::GetShapeInfo()
     }
     this->rows_ = numRow;
     this->cols_ = numCol;
-    this->colsAligned_ = Ops::Base::CeilDiv(this->cols_, static_cast<int64_t>(BLOCK_SIZE)) *
-                         BLOCK_SIZE; // 32 element aligned
+    this->colsAligned_ = Ops::Base::CeilDiv(this->cols_, static_cast<int64_t>(this->blockSize_)) * this->blockSize_;
     this->avgFactor_ = 1.0f / (static_cast<float>(this->cols_));
 
     OP_LOGW("GetShapeInfo", "[M, N] = [%ld, %ld], dtSizeX1=%lu, avgFactor_=%f", this->rows_, this->cols_,
@@ -416,7 +414,7 @@ bool AddLayerNormQuantRegbaseTiling::DoUbTiling()
 
 bool AddLayerNormQuantRegbaseTiling::CheckDynQuantFullLoadTiling()
 {
-    int64_t blkFp32Nums = BLOCK_SIZE / sizeof(float);
+    int64_t blkFp32Nums = this->blockSize_ / sizeof(float);
     int64_t tmpBinaryAddNum = (this->cols_ > this->vlFp32_) ? FindFloorPowerTwo(this->cols_) : this->vlFp32_;
 
     int64_t binaryAddUbSize = Ops::Base::CeilDiv((tmpBinaryAddNum / this->vlFp32_), blkFp32Nums) * blkFp32Nums *
@@ -472,7 +470,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckDynQuantWelfordTiling()
     int64_t tmpSliceNums = sizeof(float) * (this->bufferNum_ * this->outQuantNums_ + 1);
 
     // COUNT(tmpMean, tmpRstd, tmpMax1, tmpMax2) = 4
-    int64_t constTmpBufSize = this->bufferNum_ * this->outQuantNums_ * BLOCK_SIZE + BLOCK_SIZE * 4;
+    int64_t constTmpBufSize = this->bufferNum_ * this->outQuantNums_ * this->blockSize_ + this->blockSize_ * 4;
     int64_t ubAvaliable = static_cast<int64_t>(this->ubSize_) - UB_RESERVED_BYTE - constTmpBufSize;
 
     this->colsPerLoop_ = ubAvaliable / (quantSliceNums + weightSliceNums + elewiseSliceNums + tmpSliceNums);
@@ -499,7 +497,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckDynQuantWelfordTiling()
 
 bool AddLayerNormQuantRegbaseTiling::CheckStcQuantFullLoadTiling()
 {
-    int64_t blkFp32Nums = BLOCK_SIZE / sizeof(float);
+    int64_t blkFp32Nums = this->blockSize_ / sizeof(float);
     int64_t tmpBinaryAddNum = (this->cols_ > this->vlFp32_) ? FindFloorPowerTwo(this->cols_) : this->vlFp32_;
 
     int64_t binaryAddUbSize = Ops::Base::CeilDiv((tmpBinaryAddNum / this->vlFp32_), blkFp32Nums) * blkFp32Nums *

@@ -86,7 +86,7 @@ constexpr AscendC::Reg::DivSpecificMode divHighPrecMode = {
     true,
 };
 
-constexpr uint32_t FLOAT_BLOCK_ELEM = 8;
+constexpr uint32_t FLOAT_BLOCK_ELEM = blockSize_ / sizeof(float);
 constexpr float ZERO_ME = 0.0;
 
 template <HardEvent ent>

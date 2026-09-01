@@ -21,11 +21,6 @@
 #include "../../norm_common/reduce_common_regbase.h"
 #include "layer_norm_grad_api.h"
 
-/**
- * Get the block size of unified buffer in bytes
- */
-__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
-
 namespace LayerNormGrad {
 using namespace AscendC;
 using AscendC::Reg::LoadDist;
@@ -239,8 +234,8 @@ __aicore__ inline void LayerNormGradBase::CopyIn(const LocalTensor<T>& dstTensor
     params.blockLen = colSize * sizeof(T);
     params.srcStride = srcStride * sizeof(T) - params.blockLen;
     params.dstStride = (dstStride * sizeof(T) -
-                        Aligned(static_cast<int64_t>(params.blockLen), static_cast<int64_t>(GetUbBlockSize()))) /
-                       GetUbBlockSize();
+                        Aligned(static_cast<int64_t>(params.blockLen), static_cast<int64_t>(BLOCK_SIZE))) /
+                       BLOCK_SIZE;
     DataCopyPadExtParams<T> padParams;
     padParams.isPad = false;
     DataCopyPad(dstTensor, srcTensor, params, padParams);
@@ -281,8 +276,8 @@ __aicore__ inline void LayerNormGradBase::CopyOut(const GlobalTensor<T>& dstTens
     params.blockLen = colSize * sizeof(T);
     params.dstStride = dstStride * sizeof(T) - params.blockLen;
     params.srcStride = (srcStride * sizeof(T) -
-                        Aligned(static_cast<int64_t>(params.blockLen), static_cast<int64_t>(GetUbBlockSize()))) /
-                       GetUbBlockSize();
+                        Aligned(static_cast<int64_t>(params.blockLen), static_cast<int64_t>(BLOCK_SIZE))) /
+                       BLOCK_SIZE;
     DataCopyPad(dstTensor, srcTensor, params);
 }
 
@@ -291,7 +286,7 @@ __aicore__ inline void LayerNormGradBase::CopyUB2UB(const LocalTensor<float>& ds
 {
     // CopyUB2UB
     DataCopy(dstTensor, srcTensor,
-             Aligned(static_cast<int64_t>(count), static_cast<int64_t>(GetUbBlockSize() / sizeof(float))));
+             Aligned(static_cast<int64_t>(count), static_cast<int64_t>(BLOCK_SIZE / sizeof(float))));
 }
 
 template <typename T>
@@ -571,7 +566,7 @@ __aicore__ inline void LayerNormGradBase::LastReduceSum(const LocalTensor<float>
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
     uint32_t outerLoopDstStride = Aligned(static_cast<int64_t>(foldPoint),
-                                          static_cast<int64_t>(GetUbBlockSize() / sizeof(float)));
+                                          static_cast<int64_t>(BLOCK_SIZE / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;

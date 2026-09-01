@@ -352,7 +352,7 @@ private:
     constexpr static int64_t AGGREGATION_COUNT = 256;
     constexpr static uint32_t VL_F32 = VECTOR_REG_WIDTH / sizeof(float);
     constexpr static uint32_t VL_MEAN = VECTOR_REG_WIDTH / sizeof(M);
-    constexpr static int64_t BLOCK_SIZE = 32;
+    constexpr static int64_t BLOCK_SIZE = platform::GetUbBlockSize();
 
     // TQue
     TQue<QuePosition::VECIN, 1> inQueueX;

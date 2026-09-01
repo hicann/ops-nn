@@ -16,6 +16,7 @@
 #include "layer_norm_v3_tiling.h"
 #include "layer_norm_v3_tiling_arch35.h"
 #include "norm/layer_norm/op_host/arch35/layer_norm_tiling_arch35.h"
+#include "op_common/op_host/util/platform_util.h"
 
 using namespace Ops::Base;
 
@@ -28,7 +29,6 @@ constexpr size_t OUTPUT_IDX_MEAN = 1;
 constexpr size_t OUTPUT_IDX_RSTD = 2;
 constexpr float DEFAULT_EPSILON_V3 = 1e-5;
 constexpr uint64_t BASE_WSP_SIZE = 32;
-constexpr uint64_t BLOCK_SIZE = 32;
 constexpr float DEFAULT_EPSILON_V1 = 1e-7;
 const gert::Shape g_vec_1_shape = {1};
 
@@ -358,15 +358,16 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
     commonParams.coefficient = static_cast<float>(1.0) / static_cast<float>(commonParams.rowSize);
     uint64_t alignment = 16;
     uint64_t gammaBetaAlignment = 16;
+    const uint64_t blockSize = Ops::Base::GetUbBlockSize(context_);
     if (LN_DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != LN_DTYPE_SIZE_MAP.end()) {
-        alignment = BLOCK_SIZE / LN_DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
+        alignment = blockSize / LN_DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ToString(commonParams.tensorDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     if (LN_DTYPE_SIZE_MAP.find(commonParams.paramDtype) != LN_DTYPE_SIZE_MAP.end()) {
-        gammaBetaAlignment = BLOCK_SIZE / LN_DTYPE_SIZE_MAP.at(commonParams.paramDtype);
+        gammaBetaAlignment = blockSize / LN_DTYPE_SIZE_MAP.at(commonParams.paramDtype);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "gamma and beta", ToString(commonParams.paramDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");

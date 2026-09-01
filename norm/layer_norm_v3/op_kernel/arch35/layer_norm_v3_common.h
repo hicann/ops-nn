@@ -25,7 +25,7 @@ using namespace AscendC;
 using AscendC::Reg::LoadAlign;
 using AscendC::Reg::StoreAlign;
 
-constexpr static int64_t BLOCK_SIZE = 32;
+constexpr static int64_t BLOCK_SIZE = platform::GetUbBlockSize();
 constexpr static uint32_t FLOAT_BYTES = 4;
 constexpr static int64_t MAX_STRIDE = 65535;
 constexpr static int64_t DOUBLE_BUFFER = 2;

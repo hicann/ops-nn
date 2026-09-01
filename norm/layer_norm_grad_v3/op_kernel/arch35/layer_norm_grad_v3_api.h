@@ -17,11 +17,12 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
 
 namespace LayerNormGradV3 {
 using namespace AscendC;
 
-constexpr static int64_t BLOCK_SIZE = 32;
+constexpr static int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 namespace Arith {
 /**

@@ -20,8 +20,6 @@ namespace optiling {
 static constexpr int64_t LNV3_DOUBLE_BUFFER = 2;
 static constexpr uint32_t LNV3_MINIMAL_WORKSPACE = 32;
 static constexpr int64_t LNV3_NUM_TWO = 2;
-static constexpr int64_t LNV3_BLOCK_SIZE = 32;
-static constexpr int64_t LNV3_B32_ALIGN_NUM = LNV3_BLOCK_SIZE / sizeof(float);
 
 int64_t LayerNormV3RegBaseNormNotEqualParamsTiling::GetUBCanUseSize()
 {
@@ -48,7 +46,8 @@ int64_t LayerNormV3RegBaseNormNotEqualParamsTiling::GetRowWeight(bool isFullB)
 
 bool LayerNormV3RegBaseNormNotEqualParamsTiling::CanFitInBuffer(int64_t curAxisNum, bool isFullB)
 {
-    int64_t curAxisNumAlign = (curAxisNum + LNV3_B32_ALIGN_NUM - 1) / LNV3_B32_ALIGN_NUM * LNV3_B32_ALIGN_NUM;
+    int64_t b32AlignNum = commonParams.blockSize / sizeof(float);
+    int64_t curAxisNumAlign = (curAxisNum + b32AlignNum - 1) / b32AlignNum * b32AlignNum;
     int64_t ubCanUseSize = GetUBCanUseSize();
     int64_t rowWeight = GetRowWeight(isFullB);
 
@@ -102,7 +101,7 @@ uint64_t LayerNormV3RegBaseNormNotEqualParamsTiling::GetTilingKey() const
 
 static inline int64_t CeilDiv(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b; }
 
-static inline int64_t AlignB32(int64_t val) { return CeilDiv(val, LNV3_B32_ALIGN_NUM) * LNV3_B32_ALIGN_NUM; }
+static inline int64_t AlignB32(int64_t val, int64_t alignNum) { return CeilDiv(val, alignNum) * alignNum; }
 
 void LayerNormV3RegBaseNormNotEqualParamsTiling::SetBasicTilingParams()
 {
@@ -129,7 +128,7 @@ bool LayerNormV3RegBaseNormNotEqualParamsTiling::UpdateTiling()
     }
 
     int64_t a = commonParams.colSize;
-    ubFactorAlignB32 = AlignB32(ubFactor);
+    ubFactorAlignB32 = AlignB32(ubFactor, commonParams.blockSize / sizeof(float));
     formerBlockUbLoops = CeilDiv(blockFactor, ubFactor);
     tailBlockUbLoops = CeilDiv(a - blockFactor * (blockNum_ - 1), ubFactor);
 
@@ -146,7 +145,7 @@ bool LayerNormV3RegBaseNormNotEqualParamsTiling::ComputeTiling()
 
     blockFactor = CeilDiv(a, commonParams.coreNum);
     blockNum_ = CeilDiv(a, blockFactor);
-    ubFactorAlignB32 = AlignB32(ubFactor);
+    ubFactorAlignB32 = AlignB32(ubFactor, commonParams.blockSize / sizeof(float));
 
     formerBlockUbLoops = CeilDiv(blockFactor, ubFactor);
     tailBlockUbLoops = CeilDiv(a - blockFactor * (blockNum_ - 1), ubFactor);

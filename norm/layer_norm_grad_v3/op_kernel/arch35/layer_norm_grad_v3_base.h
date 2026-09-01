@@ -24,7 +24,7 @@
 /**
  * Get the block size of unified buffer in bytes
  */
-__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return Ops::Base::GetUbBlockSize(); }
 
 namespace LayerNormGradV3 {
 using namespace AscendC;

@@ -19,8 +19,6 @@ namespace optiling {
 static constexpr int64_t LN_DOUBLE_BUFFER = 2;
 static constexpr uint32_t LN_MINIMAL_WORKSPACE = 32;
 static constexpr int64_t LN_NUM_TWO = 2;
-static constexpr int64_t LN_BLOCK_SIZE = 32;
-static constexpr int64_t LN_B32_ALIGN_NUM = LN_BLOCK_SIZE / sizeof(float);
 static constexpr int64_t LN_ROW_THRESHOLD = 4096;
 static constexpr int64_t LN_COL_THRESHOLD = 8192;
 
@@ -46,7 +44,8 @@ int64_t LayerNormV4RegBaseTwoPassPerfTiling::GetRowWeight()
 
 bool LayerNormV4RegBaseTwoPassPerfTiling::CanFitInBuffer(int64_t curA)
 {
-    int64_t curAAlign = (curA + LN_B32_ALIGN_NUM - 1) / LN_B32_ALIGN_NUM * LN_B32_ALIGN_NUM;
+    int64_t b32AlignNum = commonParams.blockSize / sizeof(float);
+    int64_t curAAlign = (curA + b32AlignNum - 1) / b32AlignNum * b32AlignNum;
     int64_t ubCanUseSize = GetUBCanUseSize();
     int64_t rowWeight = GetRowWeight();
 
@@ -123,7 +122,8 @@ ge::graphStatus LayerNormV4RegBaseTwoPassPerfTiling::DoOpTiling()
         aUbFactor--;
     }
     td_.set_aUbFactor(aUbFactor);
-    int64_t aUbFactorAlignB32 = (aUbFactor + LN_B32_ALIGN_NUM - 1) / LN_B32_ALIGN_NUM * LN_B32_ALIGN_NUM;
+    int64_t b32AlignNum = commonParams.blockSize / sizeof(float);
+    int64_t aUbFactorAlignB32 = (aUbFactor + b32AlignNum - 1) / b32AlignNum * b32AlignNum;
     td_.set_aUbFactorAlignB32(aUbFactorAlignB32);
 
     int64_t formerBlockUbLoops = (aBlockFactor + aUbFactor - 1) / aUbFactor;

@@ -17,6 +17,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
 
 namespace LayerNormGrad {
 using namespace AscendC;
@@ -24,8 +25,8 @@ using AscendC::Reg::LoadAlign;
 using AscendC::Reg::Move;
 using AscendC::Reg::StoreAlign;
 
-constexpr static int64_t BLOCK_SIZE = 32;
-
+constexpr static int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
+constexpr static int64_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
 namespace Arith {
 /**
  * Computes the minimum of two 64-bit integers (aicore)
@@ -151,7 +152,7 @@ namespace CalcOp {
 __aicore__ inline void VectorAdd(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
                                  const LocalTensor<float>& src1Tensor, const int64_t count)
 {
-    constexpr static int64_t VREG_SIZE = 256;
+    constexpr static int64_t VREG_SIZE = VECTOR_LENGTH;
     constexpr static int64_t VL_FP32 = VREG_SIZE / sizeof(float);
     uint16_t loopTimes = Arith::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(VREG_SIZE));
     __VEC_SCOPE__
@@ -202,7 +203,7 @@ __aicore__ inline int64_t GetCacheID(const int64_t idx)
 __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                    const int64_t cacheID, const int64_t stride, const int64_t count)
 {
-    constexpr static int64_t VREG_SIZE = 256;
+    constexpr static int64_t VREG_SIZE = VECTOR_LENGTH;
     constexpr static int64_t VL_FP32 = VREG_SIZE / sizeof(float);
     uint16_t outerLoopTimes = Arith::CeilDiv(count * sizeof(float), VREG_SIZE);
     uint16_t innerLoopTimes = cacheID;

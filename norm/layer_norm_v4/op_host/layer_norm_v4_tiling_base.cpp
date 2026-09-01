@@ -23,7 +23,6 @@ constexpr size_t K_INPUT_IDX_X = 0;
 constexpr size_t K_INPUT_IDX_NORM_SHAPE = 1;
 constexpr size_t K_INPUT_IDX_GAMMA = 2;
 constexpr size_t K_INPUT_IDX_BETA = 3;
-constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t SIZE_OF_FLOAT = 4;
 constexpr uint64_t SIZE_OF_HALF = 2;
 constexpr uint64_t BASE_WSP_SIZE = 32;
@@ -98,7 +97,7 @@ ge::graphStatus GetCommonShapeAttrsInfo(gert::TilingContext* context, uint64_t c
     commonParams.coefficient = static_cast<float>(1.0) / static_cast<float>(commonParams.rowSize);
     uint64_t alignment = 16;
     if (DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != DTYPE_SIZE_MAP.end()) {
-        alignment = BLOCK_SIZE / DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
+        alignment = Ops::Base::GetUbBlockSize(context) / DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(commonParams.tensorDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");

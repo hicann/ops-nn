@@ -24,7 +24,6 @@ namespace optiling {
 static constexpr int64_t LNV3_DOUBLE_BUFFER = 2;
 static constexpr uint32_t LNV3_MINIMAL_WORKSPACE = 32;
 static constexpr int64_t LNV3_NUM_TWO = 2;
-static constexpr int64_t LNV3_BLOCK_SIZE = 32;
 static constexpr int64_t MIN_TILING_BITS_SIZE_PER_CORE = 32768; // 4KB
 static constexpr int64_t CACHE_LINE_BYTE_LENGTH = 512;
 
@@ -92,7 +91,7 @@ ge::graphStatus LayerNormV3RegBaseNoReduceTiling::DoOpTiling()
     blockNum_ = (a + aBlockFactor - 1) / aBlockFactor;
     td_.set_aBlockFactor(aBlockFactor);
 
-    int64_t aUbFactor = (commonParams.ubSizePlatForm - LNV3_BLOCK_SIZE * LNV3_NUM_TWO) /
+    int64_t aUbFactor = (commonParams.ubSizePlatForm - commonParams.blockSize * LNV3_NUM_TWO) /
                         (LNV3_DOUBLE_BUFFER * (xElemSize * LNV3_NUM_TWO + betaElemSize * LNV3_NUM_TWO) + tmpSize);
     aUbFactor = (aUbFactor * xElemSize) / CACHE_LINE_BYTE_LENGTH * CACHE_LINE_BYTE_LENGTH / xElemSize;
     td_.set_aUbFactor(aUbFactor);

@@ -531,10 +531,10 @@ __aicore__ inline void LayerNormGradGroupedReduceBigMBackward<T, U>::Init(
     MainFoldCount = Nloop - BasicBlockLoop;
 
     NfactorBlockAligned = Aligned(static_cast<int64_t>(backwardNfactor * sizeof(float)),
-                                  static_cast<int64_t>(GetUbBlockSize())) /
+                                  static_cast<int64_t>(BLOCK_SIZE)) /
                           sizeof(float);
     MfactorBlockAligned = Aligned(static_cast<int64_t>(backwardMfactor * sizeof(float)),
-                                  static_cast<int64_t>(GetUbBlockSize())) /
+                                  static_cast<int64_t>(BLOCK_SIZE)) /
                           sizeof(float);
 
     if (BasicBlockLoop == 0) {
