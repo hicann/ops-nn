@@ -512,8 +512,4 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     return true;
 }
 
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-REG_FUSION_PASS(PadConv2dFusionPass).Stage(CustomPassStage::kCompatibleInherited);
-#endif
-
 } // namespace Ops
