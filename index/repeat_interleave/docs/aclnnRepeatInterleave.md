@@ -29,7 +29,7 @@
 
 - 示例：
   假设input tensor是([[a, b], [c, d], [e, f]])，repeats为([1, 2, 2, 1, 1, 1])。
-  那么最后生成的tensor为tensor([a, b, b, c, c, d, e, f])，输出tensor的元素个数为8，与repeats中所有元素之和相同
+  那么最后生成的tensor为tensor([a, b, b, c, c, d, e, f])，输出tensor的元素个数为8，与repeats中所有元素之和相同。
   将tensor进行flatten后，input转变为([a, b, c, d, e, f])。该tensor与repeats一一对应进行复制，a重复1次、b重复2次、c重复2次，以此类推。
 
   假设input tensor是([[a, b], [c, d], [e, f]])，repeats为([2])。那么最后生成的tensor为tensor([a, a, b, b, c, c, d, d, e, e, f, f])。

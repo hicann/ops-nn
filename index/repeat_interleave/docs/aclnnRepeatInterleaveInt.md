@@ -25,16 +25,16 @@
 
 ## 功能说明
 
-- 接口功能：将tensor self进行flatten后，每个元素复制repeats的相应次数。
+- 接口功能：将 tensor self 进行 flatten 后，每个元素复制 repeats 的相应次数。
 
 - 示例：
-  假设input tensor是([[a, b], [c, d], [e, f]]), repeats为2。
-  那么最后生成的tensor为tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
-  将tensor进行flatten后，input转变为([a, b, c, d, e, f])。该tensor中的每个元素复制repeats次数，也就是每个元素复制2次。
+  假设 input tensor 是([[a, b], [c, d], [e, f]])，repeats 为 2。
+  那么最后生成的 tensor 为 tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
+  将 tensor 进行 flatten 后，input 转变为([a, b, c, d, e, f])。该 tensor 中的每个元素复制 repeats 次数，也就是每个元素复制 2 次。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnRepeatInterleaveIntGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnRepeatInterleaveInt”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用 `aclnnRepeatInterleaveIntGetWorkspaceSize` 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 `aclnnRepeatInterleaveInt` 接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(
@@ -77,14 +77,14 @@ aclnnStatus aclnnRepeatInterleaveInt(
         <th>数据类型</th>
         <th>数据格式</th>
         <th>维度(shape)</th>
-        <th>非连续Tensor</th>
+        <th>非连续 Tensor</th>
       </tr></thead>
     <tbody>
       <tr>
         <td>self（aclTensor*）</td>
         <td>输入</td>
-        <td>功能说明中待被数据复制的输入tensor。</td>
-        <td>支持空Tensor。</td>
+        <td>功能说明中待被数据复制的输入 tensor。</td>
+        <td>支持空 Tensor。</td>
         <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
         <td>ND</td>
         <td>0-8</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
         <td>repeats（int64_t）</td>
         <td>输入</td>
         <td>复制的次数。</td>
-        <td>repeats的值必须为非负数。</td>
+        <td>repeats 的值必须为非负数。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -103,8 +103,8 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>outputSize（int64_t）</td>
         <td>输入</td>
-        <td>进行复制后的tensor最终大小。</td>
-        <td>outputSize必须等于self的元素个数 * repeats的值。</td>
+        <td>进行复制后的 tensor 最终大小。</td>
+        <td>outputSize 必须等于 self 的元素个数 * repeats 的值。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -113,8 +113,8 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>out（aclTensor*）</td>
         <td>输出</td>
-        <td>功能说明中数据复制完成的输出tensor。</td>
-        <td>支持空Tensor。<br>数据类型需要与self一致。<br>shape为1D Tensor，shape大小与outputSize相同。</td>
+        <td>功能说明中数据复制完成的输出 tensor。</td>
+        <td>支持空 Tensor。<br>数据类型需要与 self 一致。<br>shape 为 1D Tensor，shape 大小与 outputSize 相同。</td>
         <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
         <td>ND</td>
         <td>1</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>返回需要在 Device 侧申请的 workspace 大小。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>返回 op 执行器，包含了算子计算流程。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnRepeatInterleaveInt(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn 返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -163,21 +163,21 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
         <td>161001</td>
-        <td>self或out存在空指针。</td>
+        <td>self 或 out 存在空指针。</td>
       </tr>
       <tr>
         <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="4">161002</td>
-        <td>self的数据类型不在支持范围内。</td>
+        <td>self 的数据类型不在支持范围内。</td>
       </tr>
       <tr>
-        <td>self、out的数据类型不一致。</td>
+        <td>self、out 的数据类型不一致。</td>
       </tr>
       <tr>
-        <td>repeats不为自然数。</td>
+        <td>repeats 不为自然数。</td>
       </tr>
       <tr>
-        <td>self的维度数超过8。</td>
+        <td>self 的维度数超过8。</td>
       </tr>
     </tbody></table>
 
@@ -200,34 +200,34 @@ aclnnStatus aclnnRepeatInterleaveInt(
       <tr>
         <td>workspace</td>
         <td>输入</td>
-        <td>在Device侧申请的workspace内存地址。</td>
+        <td>在 Device 侧申请的 workspace 内存地址。</td>
       </tr>
       <tr>
         <td>workspaceSize</td>
         <td>输入</td>
-        <td>在Device侧申请的workspace大小，由第一段接口aclnnRepeatInterleaveIntGetWorkspaceSize获取。</td>
+        <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnRepeatInterleaveIntGetWorkspaceSize 获取。</td>
       </tr>
       <tr>
         <td>executor</td>
         <td>输入</td>
-        <td>op执行器，包含了算子计算流程。</td>
+        <td>op 执行器，包含了算子计算流程。</td>
       </tr>
       <tr>
         <td>stream</td>
         <td>输入</td>
-        <td>指定执行任务的Stream。</td>
+        <td>指定执行任务的 Stream。</td>
       </tr>
     </tbody></table>
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn 返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
 - 确定性计算：
-  - aclnnRepeatInterleaveInt默认确定性实现。
-- 其他限制：outputSize的值必须等于repeats的值 * 元素个数。
+  - aclnnRepeatInterleaveInt 默认确定性实现。
+- 其他限制：outputSize 的值必须等于 repeats 的值 * 元素个数。
 
 ## 调用示例
 
@@ -274,34 +274,34 @@ template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                     aclDataType dataType, aclTensor** tensor) {
   auto size = GetShapeSize(shape) * sizeof(T);
-  // 调用aclrtMalloc申请device侧内存
+  // 调用 aclrtMalloc 申请 device 侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-  // 调用aclrtMemcpy将host侧数据拷贝到device侧内存
+  // 调用 aclrtMemcpy 将 host 侧数据拷贝到 device 侧内存
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // 计算连续tensor的strides
+  // 计算连续 tensor 的 strides
   std::vector<int64_t> strides(shape.size(), 1);
   for (int64_t i = shape.size() - 2; i >= 0; i--) {
     strides[i] = shape[i + 1] * strides[i + 1];
   }
 
-  // 调用aclCreateTensor接口创建aclTensor
+  // 调用 aclCreateTensor 接口创建 aclTensor
   *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
 
 int main() {
-  // 1.（固定写法）device/stream初始化，参考acl API手册
-  // 根据自己的实际device填写deviceId
+  // 1.（固定写法）device/stream 初始化，参考 acl API 手册
+  // 根据自己的实际 device 填写 deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
+  // 2. 构造输入与输出，需要根据 API 的接口自定义构造
   std::vector<int64_t> selfShape = {2, 3};
   std::vector<int64_t> outShape = {12};
   void* selfDeviceAddr = nullptr;
@@ -313,26 +313,26 @@ int main() {
   std::vector<float> selfHostData = {3, 4, 5, -3, -4, -5};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  // 创建self aclTensor
+  // 创建 self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建out aclTensor
+  // 创建 out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的API名称
+  // 3. 调用 CANN 算子库 API，需要修改为具体的 API 名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // 调用aclnnRepeatInterleaveInt第一段接口
+  // 调用 aclnnRepeatInterleaveInt 第一段接口
   ret = aclnnRepeatInterleaveIntGetWorkspaceSize(self, repeats, output_size, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRepeatInterleaveIntGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
+  // 根据第一段接口计算出的 workspaceSize 申请 device 内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnRepeatInterleaveInt第二段接口
+  // 调用 aclnnRepeatInterleaveInt 第二段接口
   ret = aclnnRepeatInterleaveInt(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRepeatInterleaveInt failed. ERROR: %d\n", ret); return ret);
 
@@ -340,7 +340,7 @@ int main() {
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+  // 5. 获取输出的值，将 device 侧内存上的结果拷贝至 host 侧，需要根据具体 API 的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
@@ -350,11 +350,11 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+  // 6. 释放 aclTensor 和 aclScalar，需要根据具体 API 的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
 
-  // 7. 释放device资源，需要根据具体API的接口定义修改
+  // 7. 释放 device 资源，需要根据具体 API 的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
