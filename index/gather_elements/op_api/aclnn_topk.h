@@ -34,6 +34,23 @@ ACLNN_API aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k
 ACLNN_API aclnnStatus aclnnTopk(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                 const aclrtStream stream);
 
+/**
+ * @brief aclnnTopkV2的第一段接口，根据具体的计算流程，计算workspace大小。
+ *
+ * 算子功能：完成计算输入的k个极值及下标，新增sortPolicy字段。
+ */
+ACLNN_API aclnnStatus aclnnTopkV2GetWorkspaceSize(const aclTensor* self, int64_t k, int64_t dim, bool largest,
+                                                  bool sorted, int64_t sortPolicy, aclTensor* valuesOut,
+                                                  aclTensor* indicesOut, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor);
+/**
+ * @brief aclnnTopkV2的第二段接口，用于执行计算。
+ *
+ * 算子功能：完成计算输入的k个极值及下标。
+ */
+ACLNN_API aclnnStatus aclnnTopkV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                  const aclrtStream stream);
+
 #ifdef __cplusplus
 }
 #endif

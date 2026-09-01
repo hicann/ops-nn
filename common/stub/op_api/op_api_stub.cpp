@@ -365,6 +365,13 @@ std::tuple<aclTensor*, aclTensor*> Topk(const aclTensor* self, int64_t /*k*/, in
     return std::make_tuple(const_cast<aclTensor*>(self), // 移除 const，转为 aclTensor*
                            const_cast<aclTensor*>(self));
 }
+std::tuple<aclTensor*, aclTensor*> Topk(const aclTensor* self, int64_t /*k*/, int64_t /*dim*/, bool /*largest*/,
+                                        bool /*sorted*/, op::DataType /*indicesDType*/, int64_t /*sortPolicy*/,
+                                        aclOpExecutor* /*executor*/)
+{
+    return std::make_tuple(const_cast<aclTensor*>(self), // 移除 const，转为 aclTensor*
+                           const_cast<aclTensor*>(self));
+}
 const aclTensor* Abs(const aclTensor* self, aclOpExecutor* executor) { return self; }
 aclTensor* AdjacentDifference(const aclTensor* x, op::DataType yDtype, aclOpExecutor* executor) { return nullptr; }
 const aclTensor* Arange(const aclScalar* start, const aclScalar* end, const aclScalar* step, const aclTensor* out,

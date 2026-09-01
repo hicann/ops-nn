@@ -76,6 +76,10 @@ static const int64_t NON_TRANSPOSE_DIM_MAX = 8;
 const int64_t TOPK_NON_TRANSPOSE_AXIS_THRESHOLD = 2048;
 constexpr int64_t SMALL_ROW_LARGE_OUTER_THRESHOLD = 1024;
 constexpr int64_t MIN_DIM_LEN = 2;
+constexpr int32_t BITONIC_SORT_MAX_K_THRESTHOD = 32;
+constexpr int32_t BITONIC_SORT_MIN_K_THRESTHOD = 2;
+constexpr int32_t TOP_K_DEFAULT_SORT_POLICY = 0;
+constexpr int32_t TOP_K_BITONIC_SORT_POLICY = 1;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -569,6 +573,11 @@ static bool IsDataTypeDouble(op::DataType xDataType)
     return op::DataType::DT_DOUBLE == xDataType;
 }
 
+// 判断当前输入是否满足 Radix TopK 算子的使用条件，需同时满足以下四项：
+//   1. SoC 版本为 ASCEND910B 或 ASCEND910_93（仅这些芯片支持 Radix TopK）
+//   2. 输入数据类型为 FP16 或 BF16（Radix TopK 仅支持这两种低精度类型）
+//   3. 最后一维长度 sortLen 与 k 的比例满足阈值要求（见下方 shapeCheck 分支）
+//   4. k > 1000（Radix TopK 仅在大 k 场景下相比排序方案有收益）
 static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
 {
     SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
@@ -655,12 +664,43 @@ static bool IsTopKUseNoTranspose(const aclTensor* self, int64_t dim)
     return IsNoTransposeProfitable(self, dim);
 }
 
-aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t dim, bool largest, bool sorted,
-                                      aclTensor* valuesOut, aclTensor* indicesOut, uint64_t* workspaceSize,
-                                      aclOpExecutor** executor)
+static bool IsBitonicSort(int64_t k, bool sorted, int64_t sortPolicy)
 {
-    L2_DFX_PHASE_1(aclnnTopk, DFX_IN(self, k, dim, largest, sorted), DFX_OUT(valuesOut, indicesOut));
+    return k >= BITONIC_SORT_MIN_K_THRESTHOD && k <= BITONIC_SORT_MAX_K_THRESTHOD && sorted &&
+           sortPolicy == TOP_K_BITONIC_SORT_POLICY;
+}
 
+using TopkWithPolicyFn = std::tuple<aclTensor*, aclTensor*> (*)(const aclTensor*, int64_t, int64_t, bool, bool,
+                                                                op::DataType, int64_t, aclOpExecutor*);
+
+static std::tuple<const aclTensor*, const aclTensor*> TopkWithPolicyCheck(const aclTensor* self, int64_t k, int64_t dim,
+                                                                          bool largest, bool sorted,
+                                                                          op::DataType indicesDType, int64_t sortPolicy,
+                                                                          aclOpExecutor* executor)
+{
+    auto topkNewFn = static_cast<TopkWithPolicyFn>(&l0op::Topk);
+    if (reinterpret_cast<void*>(topkNewFn) != nullptr) {
+        return topkNewFn(self, k, dim, largest, sorted, indicesDType, sortPolicy, executor);
+    }
+    if (sortPolicy == TOP_K_BITONIC_SORT_POLICY) {
+        OP_LOGW("sortPolicy=1 (bitonic sort) requires newer ops-math, fall back to default strategy.");
+    }
+    return l0op::Topk(self, k, dim, largest, sorted, indicesDType, executor);
+}
+
+aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, int64_t dim, bool largest, bool sorted,
+                                            int64_t sortPolicy, aclTensor* valuesOut, aclTensor* indicesOut,
+                                            uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_LOGD("topk get workspace sortPolicy=[%ld].", sortPolicy);
+    if (sortPolicy != TOP_K_DEFAULT_SORT_POLICY && sortPolicy != TOP_K_BITONIC_SORT_POLICY) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "sortPolicy must be 0 or 1, but got %ld.", sortPolicy);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (sortPolicy == TOP_K_BITONIC_SORT_POLICY && !Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_LOGW("sortPolicy=1 (bitonic sort) is only supported on Regbase(950), fall back to default strategy.");
+        sortPolicy = TOP_K_DEFAULT_SORT_POLICY;
+    }
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -731,7 +771,8 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
         OP_LOGD("topk non transpose positiveDim=%ld, lastDim=%ld, indexType=%d", positiveDim, lastDim,
                 static_cast<int32_t>(indicesDType));
         std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-        topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
+        topkOut = TopkWithPolicyCheck(selfCast, k, positiveDim, largest, sorted, indicesDType, sortPolicy,
+                                      uniqueExecutor.get());
         valuesTopkOut = std::get<0>(topkOut);
         indicesCastInt32 = std::get<1>(topkOut);
     } else if (positiveDim != lastDim) {
@@ -745,11 +786,13 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
         // 进行top计算
         // sort不支持double，double不能走sort的任何处理，topk的aicore也不支持double，aicpu支持double
         std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-        if (IsSort(sortDimValue, k, selfTranspose) && !IsDataTypeDouble(xDType)) {
+        if (IsSort(sortDimValue, k, selfTranspose) && !IsDataTypeDouble(xDType) &&
+            !IsBitonicSort(k, sorted, sortPolicy)) {
             OP_LOGD("sort, positiveDim not equal lastDim.");
             topkOut = l0op::Sort(selfTranspose, -1, largest, true, indicesDType, uniqueExecutor.get());
             isHasCasted = true;
-        } else if (IsSortAndTopK(sorted, k, sortDimValue, xDType) && !IsDataTypeDouble(xDType)) {
+        } else if (IsSortAndTopK(sorted, k, sortDimValue, xDType) && !IsDataTypeDouble(xDType) &&
+                   !IsBitonicSort(k, sorted, sortPolicy)) {
             OP_LOGD("sort and topk, positiveDim not equal lastDim.");
             topkOut = SortAndTopK(selfTranspose, k, lastDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
             isHasCasted = true;
@@ -767,7 +810,8 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
             topkOut = std::tie(valuesTopkOut, indicesCastInt32);
         } else {
             OP_LOGD("topk, positiveDim not equal lastDim.");
-            topkOut = l0op::Topk(selfTranspose, k, lastDim, largest, sorted, indicesDType, uniqueExecutor.get());
+            topkOut = TopkWithPolicyCheck(selfTranspose, k, lastDim, largest, sorted, indicesDType, sortPolicy,
+                                          uniqueExecutor.get());
         }
 
         CHECK_RET(std::get<0>(topkOut) != nullptr && std::get<1>(topkOut) != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -794,11 +838,13 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
             indicesCastInt32 = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
         } else {
             std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-            if (IsSort(sortDimValue, k, selfCast) && !IsDataTypeDouble(xDType)) {
+            if (IsSort(sortDimValue, k, selfCast) && !IsDataTypeDouble(xDType) &&
+                !IsBitonicSort(k, sorted, sortPolicy)) {
                 OP_LOGD("sort, positiveDim equal lastDim.");
                 topkOut = l0op::Sort(selfCast, -1, largest, true, indicesDType, uniqueExecutor.get());
                 isHasCasted = true;
-            } else if (IsSortAndTopK(sorted, k, sortDimValue, xDType) && !IsDataTypeDouble(xDType)) {
+            } else if (IsSortAndTopK(sorted, k, sortDimValue, xDType) && !IsDataTypeDouble(xDType) &&
+                       !IsBitonicSort(k, sorted, sortPolicy)) {
                 OP_LOGD("sort and topk, positiveDim equal lastDim.");
                 topkOut = SortAndTopK(selfCast, k, positiveDim, sortDimValue, largest, indicesDType,
                                       uniqueExecutor.get());
@@ -817,7 +863,8 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
                 topkOut = std::tie(valuesTopkOut, indicesCastInt32);
             } else {
                 OP_LOGD("topk, positiveDim equal lastDim.");
-                topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
+                topkOut = TopkWithPolicyCheck(selfCast, k, positiveDim, largest, sorted, indicesDType, sortPolicy,
+                                              uniqueExecutor.get());
             }
             valuesTopkOut = std::get<0>(topkOut);
             indicesCastInt32 = std::get<1>(topkOut);
@@ -855,9 +902,34 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
     return ACLNN_SUCCESS;
 }
 
+aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t dim, bool largest, bool sorted,
+                                      aclTensor* valuesOut, aclTensor* indicesOut, uint64_t* workspaceSize,
+                                      aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnTopk, DFX_IN(self, k, dim, largest, sorted), DFX_OUT(valuesOut, indicesOut));
+    return aclnnTopkGetWorkspaceSizeCommon(self, k, dim, largest, sorted, TOP_K_DEFAULT_SORT_POLICY, valuesOut,
+                                           indicesOut, workspaceSize, executor);
+}
+
 aclnnStatus aclnnTopk(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnTopk);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnTopkV2GetWorkspaceSize(const aclTensor* self, int64_t k, int64_t dim, bool largest, bool sorted,
+                                        int64_t sortPolicy, aclTensor* valuesOut, aclTensor* indicesOut,
+                                        uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnTopkV2, DFX_IN(self, k, dim, largest, sorted, sortPolicy), DFX_OUT(valuesOut, indicesOut));
+    return aclnnTopkGetWorkspaceSizeCommon(self, k, dim, largest, sorted, sortPolicy, valuesOut, indicesOut,
+                                           workspaceSize, executor);
+}
+
+aclnnStatus aclnnTopkV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnTopkV2);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
