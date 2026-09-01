@@ -28,10 +28,10 @@
 #include "platform/platform_infos_def.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
-#include "pool_tiling_templates_registry.h"
+#include "avg_pool_tiling_templates_registry.h"
 #include "op_host/tiling_util.h"
 
-using optiling::PoolTilingRegistry;
+using optiling::AvgPoolTilingRegistry;
 
 namespace {
 constexpr int32_t SHAPE_SIZE_6D = 6;
@@ -186,7 +186,7 @@ inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseConte
 
 ge::graphStatus Tiling4AvgPool3DNNRegBase(gert::TilingContext* context)
 {
-    return PoolTilingRegistry::GetInstance().DoTilingImpl(context);
+    return AvgPoolTilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static void ComputeCoreTilingStrategy(TilingParams& params, int32_t& usedCoreNum)

@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file pool_tiling_templates_registry.h
+ * \file avg_pool_tiling_templates_registry.h
  * \brief
  */
 
-#ifndef POOL_TILING_TEMPLATES_REGISTRY
-#define POOL_TILING_TEMPLATES_REGISTRY
+#ifndef AVG_POOL_TILING_TEMPLATES_REGISTRY
+#define AVG_POOL_TILING_TEMPLATES_REGISTRY
 
 #include <map>
 #include <string>
@@ -32,21 +32,21 @@ std::unique_ptr<TilingBaseClass> TILING_CLASS(gert::TilingContext* context)
 
 using TilingClassCase = std::unique_ptr<TilingBaseClass> (*)(gert::TilingContext*);
 
-class PoolTilingCases {
+class AvgPoolTilingCases {
 public:
-    explicit PoolTilingCases(std::string op_type) : op_type_(std::move(op_type)) {}
+    explicit AvgPoolTilingCases(std::string op_type) : op_type_(std::move(op_type)) {}
 
     template <typename T>
     void AddTiling(int32_t priority)
     {
         OP_CHECK_IF(cases_.find(priority) != cases_.end(), OP_LOGE(op_type_, "There are duplicate registrations."),
-                    return );
+                    return);
         cases_[priority] = TILING_CLASS<T>;
         OP_CHECK_IF(cases_[priority] == nullptr,
-                    OP_LOGE(op_type_, "PoolRegister op tiling func failed, please check the class name."), return );
+                    OP_LOGE(op_type_, "AvgPoolRegister op tiling func failed, please check the class name."), return);
     }
 
-    const std::map<int32_t, TilingClassCase>& GetPoolTilingCases() { return cases_; }
+    const std::map<int32_t, TilingClassCase>& GetAvgPoolTilingCases() { return cases_; }
 
 private:
     std::map<int32_t, TilingClassCase> cases_;
@@ -54,27 +54,28 @@ private:
 };
 
 // --------------------------------Interfacce without soc version --------------------------------
-class PoolTilingRegistry {
+class AvgPoolTilingRegistry {
 public:
-    PoolTilingRegistry() = default;
+    AvgPoolTilingRegistry() = default;
 
 #ifdef ASCENDC_OP_TEST
-    static PoolTilingRegistry& GetInstance();
+    static AvgPoolTilingRegistry& GetInstance();
 #else
-    static PoolTilingRegistry& GetInstance()
+    static AvgPoolTilingRegistry& GetInstance()
     {
-        static PoolTilingRegistry registry_impl_;
+        static AvgPoolTilingRegistry registry_impl_;
         return registry_impl_;
     }
 #endif
 
-    std::shared_ptr<PoolTilingCases> RegisterOp(const std::string& op_type)
+    std::shared_ptr<AvgPoolTilingCases> RegisterOp(const std::string& op_type)
     {
         if (registry_map_.find(op_type) == registry_map_.end()) {
-            registry_map_[op_type] = std::make_shared<PoolTilingCases>(PoolTilingCases(op_type));
+            registry_map_[op_type] = std::make_shared<AvgPoolTilingCases>(AvgPoolTilingCases(op_type));
         }
         OP_CHECK_IF(registry_map_[op_type] == nullptr,
-                    OP_LOGE(op_type, "PoolRegister tiling func failed, please check the class name."), return nullptr);
+                    OP_LOGE(op_type, "AvgPoolRegister tiling func failed, please check the class name."),
+                    return nullptr);
         return registry_map_[op_type];
     }
 
@@ -125,25 +126,25 @@ public:
         OP_CHECK_IF(registry_map_.find(op_type) == registry_map_.end(),
                     OP_LOGE(op_type, "Get op tiling func failed, please check the op name."),
                     return empty_tiling_case_);
-        return registry_map_[op_type]->GetPoolTilingCases();
+        return registry_map_[op_type]->GetAvgPoolTilingCases();
     }
 
 private:
-    std::map<std::string, std::shared_ptr<PoolTilingCases>> registry_map_;
+    std::map<std::string, std::shared_ptr<AvgPoolTilingCases>> registry_map_;
     const std::map<int32_t, TilingClassCase> empty_tiling_case_;
 };
 
-class PoolRegister {
+class AvgPoolRegister {
 public:
-    explicit PoolRegister(std::string op_type) : op_type_(std::move(op_type)) {}
+    explicit AvgPoolRegister(std::string op_type) : op_type_(std::move(op_type)) {}
 
     template <typename T>
-    PoolRegister& tiling(int32_t priority)
+    AvgPoolRegister& tiling(int32_t priority)
     {
-        auto PoolTilingCases = PoolTilingRegistry::GetInstance().RegisterOp(op_type_);
-        OP_CHECK_IF(PoolTilingCases == nullptr, OP_LOGE(op_type_, "PoolRegister op tiling failed, please the op name."),
-                    return *this);
-        PoolTilingCases->AddTiling<T>(priority);
+        auto AvgPoolTilingCases = AvgPoolTilingRegistry::GetInstance().RegisterOp(op_type_);
+        OP_CHECK_IF(AvgPoolTilingCases == nullptr,
+                    OP_LOGE(op_type_, "AvgPoolRegister op tiling failed, please the op name."), return *this);
+        AvgPoolTilingCases->AddTiling<T>(priority);
         return *this;
     }
 
@@ -153,17 +154,17 @@ private:
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
-#define REGISTER_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                \
-    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);               \
-    static PoolRegister VAR_UNUSED##op_type_##class_name##priority_register = PoolRegister(op_type) \
-                                                                                  .tiling<class_name>(priority)
+#define REGISTER_AVG_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                  \
+    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                     \
+    static AvgPoolRegister VAR_UNUSED##op_type_##class_name##priority_register = AvgPoolRegister(op_type) \
+                                                                                     .tiling<class_name>(priority)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
-#define REGISTER_OPS_POOL_TILING_TEMPLATE(op_type, class_name, priority)          \
+#define REGISTER_OPS_AVG_POOL_TILING_TEMPLATE(op_type, class_name, priority)      \
     GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__); \
-    static PoolRegister __attribute__((unused))                                   \
-    tiling_##op_type##_##class_name##_##priority##_register = PoolRegister(#op_type).tiling<class_name>(priority)
+    static AvgPoolRegister __attribute__((unused))                                \
+    tiling_##op_type##_##class_name##_##priority##_register = AvgPoolRegister(#op_type).tiling<class_name>(priority)
 } // namespace optiling
-#endif // CONV_TILING_TEMPLATES_REGISTRY
+#endif // AVG_POOL_TILING_TEMPLATES_REGISTRY
