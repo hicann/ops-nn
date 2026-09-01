@@ -23,6 +23,10 @@
 #include "../op_kernel/arch35/arg_max_grad_tiling_key.h"
 
 namespace optiling {
+// 说明: 本文件里 `OPS_CHECK_NULL_WITH_CONTEXT` 展开出的拒收分支均**不可达**(输入描述/形状/属性
+// 由 GE 框架保证非空, faker 也造不出), 保留为防御。真正可达的拒收分支都有对应 UT:
+// dtype 非法 / updates dtype 不一致 / indices 非 int32 / updates 与 indices 形状不一致 / rank 为 0 /
+// dimension 越界 / indices 元素数不匹配 / 平台核数为 0 / UB 不大于 dcache 预留 / UB 装不下一个向量整宽。
 using namespace Ops::Base;
 
 namespace {
@@ -43,12 +47,42 @@ constexpr int64_t INT8_SEL_BUF_NUM = 3;
 // 掩码 1 bit/元素, 记账按 1 字节保守预留
 constexpr int64_t MASK_BYTES_PER_POINT = 1;
 // 与 op_kernel/arch35/arg_max_grad_nd.h 的 BUFFER_NUM 一致
-constexpr int64_t BUFFER_NUM = 1;
+constexpr int64_t BUFFER_NUM = 2;
 // UB / GM 的搬运块大小: DataCopyPad 写不足一块时按块读-改-写
 constexpr int64_t BITS_PER_BYTE = 8;
 constexpr int64_t UB_BLOCK_BYTES = 32;
+// 多行合并的四种形态, 与 op_kernel 的同名常量一一对应:
+//   PAD           行在 UB 里补齐到 32B 边界, 每行一个 burst
+//   COMPACT_DIRECT紧排 + 逐行直算(轴下标是标量常量留在寄存器, indices/updates 原地重复读, 不复制操作数)
+//   COMPACT_FILL  紧排 + 先把操作数铺成多行再整段选择(UB→UB 拷贝)
+//   COMPACT_STREAM紧排 + 铺法改用非对齐流式写(行长不是 32B 整数倍时行起点落不到寄存器块边界)
+constexpr int64_t MERGE_PAD = 0;
+constexpr int64_t MERGE_COMPACT_DIRECT = 1;
+constexpr int64_t MERGE_COMPACT_FILL = 2;
+constexpr int64_t MERGE_COMPACT_STREAM = 3;
+// 铺 tile 路径要对整段数据走的遍数: indices 铺 + updates 铺 + 轴下标铺 + 比较选择。
+// 逐行直算每元素代价 ∝ 1/min(inner, 车道数)(一行一组指令, 车道用不满按比例摊薄),
+// 铺 tile 每元素代价 ∝ FILL_PASSES/车道数, 两者相等处即 min(inner, 车道数) = 车道数 / FILL_PASSES。
+constexpr int64_t FILL_PASSES = 4;
 // SIMD/SIMT 共用的 dcache, 与参照算子一致预留
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
+
+// 一段(colsPerChunk 个元素)在 UB 上的完整占用。字段与内核 InitBuffer 的调用一一对应,
+// Total() 即该段的真实 UB 需求 —— 段长由它反解出来, 不再"先定尺寸再回头检查是否超"。
+struct UbLayout {
+    int64_t tBufBytes = 0;
+    int64_t i32BufBytes = 0;
+    int64_t idxBufBytes = 0;
+    int64_t updBufBytes = 0;
+    int64_t maskBufBytes = 0;
+    int64_t selBufBytes = 0;
+
+    int64_t Total() const
+    {
+        return BUFFER_NUM * (2 * tBufBytes) + i32BufBytes + maskBufBytes + selBufBytes +
+               BUFFER_NUM * (idxBufBytes + updBufBytes);
+    }
+};
 } // namespace
 
 class ArgMaxGradTiling {
@@ -63,6 +97,9 @@ private:
     ge::graphStatus CheckShape();
     ge::graphStatus CheckAttrAndSplitLayout();
     ge::graphStatus CalUbSplit();
+    UbLayout MakeUbLayout(int64_t cols, bool rowDirect) const;
+    int64_t SolveColsPerChunk(bool rowDirect, int64_t upperCols) const;
+    void CalMergeParams(int64_t cols);
     void CalCoreSplit();
     void PrintTilingData();
 
@@ -204,53 +241,155 @@ void ArgMaxGradTiling::CalCoreSplit()
     realCoreNum_ = Ops::Base::CeilDiv(total, perCore);
 }
 
+// 一段(cols 个元素)在 UB 上的真实占用: 每个字段对应内核 InitBuffer 的一次调用。
+UbLayout ArgMaxGradTiling::MakeUbLayout(int64_t cols, bool rowDirect) const
+{
+    const int64_t innerElems = tilingData_->inner > 0 ? tilingData_->inner : 1;
+    UbLayout layout;
+    layout.tBufBytes = cols * varDtypeLen_;
+    // 轴下标(assist)只有"一个寄存器块跨多行"的两档才需要物化到 UB(紧排铺 tile / 按行补齐);
+    // inner==1 与逐行直算档的 k 由内核在寄存器内生成(Reg::Arange / Duplicate), 这块整块省掉,
+    // 每元素少 4B —— fp16 形状的段长因此接近翻倍。
+    const bool assistInUb = (tilingData_->inner != 1) && !rowDirect;
+    layout.i32BufBytes = assistInUb ? cols * DTYPE_LEN_INT32 : 0;
+    if (rowDirect) {
+        // 逐行直算: indices/updates 只驻留一行, 是与段长无关的固定块
+        layout.idxBufBytes = Ops::Base::CeilAlign(innerElems * DTYPE_LEN_INT32, vlInt32_ * DTYPE_LEN_INT32);
+        layout.updBufBytes = Ops::Base::CeilAlign(innerElems * varDtypeLen_, vlMax_ * varDtypeLen_);
+    } else if (tilingData_->inner == 1) {
+        // inner==1: 一段装 m 个 outer, 每个 outer 只带一个标量 indices/updates(m 的上界与 rowsPerChunk 同口径)
+        const int64_t d = tilingData_->dimSize > 0 ? tilingData_->dimSize : 1;
+        const int64_t maxOuters = cols / d + 1;
+        layout.idxBufBytes = Ops::Base::CeilAlign(maxOuters * DTYPE_LEN_INT32, vlInt32_ * DTYPE_LEN_INT32);
+        layout.updBufBytes = Ops::Base::CeilAlign(maxOuters * varDtypeLen_, vlMax_ * varDtypeLen_);
+    } else {
+        layout.idxBufBytes = cols * DTYPE_LEN_INT32;
+        layout.updBufBytes = cols * varDtypeLen_;
+    }
+    layout.maskBufBytes = Ops::Base::CeilAlign(cols / BITS_PER_BYTE, UB_BLOCK_BYTES);
+    layout.selBufBytes = isInt8_ ? (INT8_SEL_BUF_NUM * cols * DTYPE_LEN_HALF) : 0;
+    return layout;
+}
+
+// 由 UB 容量反解段长: Total() 对 cols 单调不减(各块要么正比于 cols, 要么与 cols 无关),
+// 故可二分取满足 Total() <= ubSize_ 的最大整宽段长。段长必须是 vlMax_ 的整数倍, 否则后续
+// buffer 的起点会偏离向量寄存器整宽边界(errcode 340)。返回 0 表示一个整宽都放不下。
+int64_t ArgMaxGradTiling::SolveColsPerChunk(bool rowDirect, int64_t upperCols) const
+{
+    int64_t lo = 0; // 单位: vlMax_ 个元素
+    int64_t hi = upperCols / vlMax_;
+    while (lo < hi) {
+        const int64_t mid = lo + (hi - lo + 1) / 2;
+        if (MakeUbLayout(mid * vlMax_, rowDirect).Total() <= static_cast<int64_t>(ubSize_)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return lo * vlMax_;
+}
+
+// ── 多行合并的 UB 布局参数: host 一次算准, 内核直接取用 ──────────────────────────────
+void ArgMaxGradTiling::CalMergeParams(int64_t cols)
+{
+    int64_t alignElems = UB_BLOCK_BYTES / DTYPE_LEN_INT32;
+    if (UB_BLOCK_BYTES / varDtypeLen_ > alignElems) {
+        alignElems = UB_BLOCK_BYTES / varDtypeLen_;
+    }
+    // 行跨度取 T 域与 int32 域的公共 32B 对齐粒度, 使同一 lane 在两个域里指向同一个元素;
+    // 由此 assist 逐行写的目的地址 r*rowElems*4 必然落在 32B 边界(内核侧曾自行按 inner 推导,
+    // inner 非 8 整数倍时触发 aivec errcode 340: VEC 访问 UB 地址未对齐)。
+    if (tilingData_->inner != 1) {
+        const int64_t inner = tilingData_->inner > 0 ? tilingData_->inner : 1;
+        const int64_t rowElems = Ops::Base::CeilAlign(inner, alignElems);
+        const int64_t occT = Ops::Base::CeilAlign(inner * varDtypeLen_, UB_BLOCK_BYTES);
+        const int64_t occI = Ops::Base::CeilAlign(inner * DTYPE_LEN_INT32, UB_BLOCK_BYTES);
+        tilingData_->rowElems = rowElems;
+        tilingData_->dstStrideT = (rowElems * varDtypeLen_ - occT) / UB_BLOCK_BYTES;
+        tilingData_->dstStrideI = (rowElems * DTYPE_LEN_INT32 - occI) / UB_BLOCK_BYTES;
+        if (rowElems == inner) {
+            // 行长是 32B 整数倍 → 行起点落在寄存器块边界, 可以逐行直算; 但一行短于 车道数/FILL_PASSES 时
+            // 直算的车道浪费超过铺 tile 多走的几遍, 这一档仍走铺 tile(相等处判给铺 tile: 它每条指令都是满车道)。
+            tilingData_->mergeMode = (inner * FILL_PASSES > vlInt32_) ? MERGE_COMPACT_DIRECT : MERGE_COMPACT_FILL;
+            // ⚠️ 紧排 + 非对齐流式铺设当前不启用: 该铺法写入目的地址所在 32B 块时会连带覆盖块内前导
+            // 车道。indices/updates 各行内容相同, 覆盖不可见; 轴下标每行取值不同, 会在行边界处产生少量
+            // 错值(实测 binary_equal 下每例错 1~3 个元素, 集中在 inner 小且 D 不大的形状)。要启用需先把
+            // 轴下标改成"对齐单元倍增 + 头部算术构造", 使所有写入偏移都是向量整宽的整数倍。判据本身成立。
+        } else if (false && inner <= vlInt32_) {
+            // 两条路径的代价都是"每行若干条指令", 按每行指令数选:
+            //   按行补齐 = 每行 1 个 DMA burst(与 inner 无关);
+            //   紧排     = 每行 ceil(inner / 车道数) 条向量指令铺 tile, int32 域车道最窄故为绑定项。
+            // inner 不超过一个向量寄存器的 int32 车道数时, 紧排每行只需一条指令, 不多于补齐,
+            // 且省掉把整段拆成 rows 个 burst; 超过则补齐更省。车道数由平台 VRegSize 得出, 跨芯片自适应。
+            tilingData_->mergeMode = MERGE_COMPACT_STREAM;
+        } else {
+            tilingData_->mergeMode = MERGE_PAD;
+        }
+        // 紧排时行在 UB 里不留空隙, 合并行数按 inner 算; 补齐时按补齐后的行跨度算。
+        const int64_t stride = (tilingData_->mergeMode == MERGE_PAD) ? rowElems : inner;
+        tilingData_->rowsPerChunk = (stride > 0 && stride <= cols) ? (cols / stride) : 1;
+    } else {
+        // inner==1: 一段能装几个 outer。每个 outer 在 UB 里的起点是 j*D, 要求 D 在 T 域与 int32 域
+        // 都落在 32B 边界, 否则逐 outer 的向量读写会落到非对齐地址上(errcode 340)。
+        const int64_t d = tilingData_->dimSize > 0 ? tilingData_->dimSize : 1;
+        const bool dAligned = ((d * varDtypeLen_) % UB_BLOCK_BYTES == 0) &&
+                              ((d * DTYPE_LEN_INT32) % UB_BLOCK_BYTES == 0);
+        tilingData_->rowElems = 1;
+        tilingData_->rowsPerChunk = (dAligned && d <= cols) ? (cols / d) : 1;
+        tilingData_->dstStrideT = 0;
+        tilingData_->dstStrideI = 0;
+        tilingData_->mergeMode = MERGE_COMPACT_DIRECT;
+    }
+}
+
 ge::graphStatus ArgMaxGradTiling::CalUbSplit()
 {
-    bool innerIsOne = (tilingData_->inner == 1);
-    // 每个元素的 UB 占用: var + 轴下标(int32, 自生成) + out + 掩码; inner>1 时另加 indices(int32) 与 updates
-    // 记账份数与内核的 BUFFER_NUM 一致(当前 1, 见本文件顶部常量与 op_kernel 同名常量)
-    int64_t bytesPerPoint = BUFFER_NUM * (2 * varDtypeLen_ + DTYPE_LEN_INT32) + MASK_BYTES_PER_POINT;
-    if (!innerIsOne) {
-        bytesPerPoint += BUFFER_NUM * (DTYPE_LEN_INT32 + varDtypeLen_);
+    const bool innerIsOne = (tilingData_->inner == 1);
+    int64_t alignElems = UB_BLOCK_BYTES / DTYPE_LEN_INT32;
+    if (UB_BLOCK_BYTES / varDtypeLen_ > alignElems) {
+        alignElems = UB_BLOCK_BYTES / varDtypeLen_;
     }
-    if (isInt8_) {
-        bytesPerPoint += INT8_SEL_BUF_NUM * DTYPE_LEN_HALF;
-    }
+    const int64_t innerElems = tilingData_->inner > 0 ? tilingData_->inner : 1;
+    // 逐行直算档: 行长是整宽的整数倍(行起点落在寄存器块边界)且一行够肥, 此时 indices/updates
+    // 只需一行常驻, 不随段长增长。
+    const bool rowDirectShape = !innerIsOne && (Ops::Base::CeilAlign(innerElems, alignElems) == innerElems) &&
+                                (innerElems * FILL_PASSES > vlInt32_);
 
-    OP_CHECK_IF((static_cast<int64_t>(ubSize_) <= bytesPerPoint * vlMax_),
+    // 单次驻留 UB 的上限 = 一个 outer 覆盖的元素数(再多也用不上, indices/updates 按 outer 变):
+    //   inner == 1 : 一段可以装多个 outer(每个 outer 只带一个标量 indices/updates), 上限按整张量算;
+    //   inner  > 1 : indices/updates 是整行数据, 一段不能跨 outer, 上限是 D×inner —— 【不能】按
+    //                "一行(inner)"设上限: 实测 inner=16 时按行设限会把段长钳到 64 个元素, 每段只够
+    //                并 4 行, 搬运与同步的固定开销吃掉全部收益(合并前后 G/N 中位仅 1.04x)。
+    const int64_t spanElems = innerIsOne ? tilingData_->totalElems : tilingData_->dimSize * tilingData_->inner;
+    const int64_t upperCols = Ops::Base::CeilAlign(spanElems > 0 ? spanElems : vlMax_, vlMax_);
+
+    // 先按"操作数整段驻留"的保守口径反解一次: 只有当一行本身装得进这个段长时, 才谈得上逐行直算。
+    const int64_t colsProbe = SolveColsPerChunk(false, upperCols);
+    OP_CHECK_IF((colsProbe <= 0),
                 OP_LOGE(context_->GetNodeName(), "ub size %lu is too small for one vector of elements", ubSize_),
                 return ge::GRAPH_FAILED);
-
-    int64_t budget = static_cast<int64_t>(ubSize_) / bytesPerPoint;
-    int64_t colsPerChunk = budget / vlMax_ * vlMax_; // 向下取整宽对齐(见 vlMax_ 说明)
-    // 单次驻留 UB 的上限 = 一个 outer 覆盖的元素数(再多也用不上, indices/updates 按 outer 变):
-    //   inner == 1 : 一个 outer 就是 D 个元素;
-    //   inner  > 1 : 一个 outer 是 D×inner 个元素 —— 核内会把同一个 outer 的多行并成一段处理,
-    //                所以这里【不能】按"一行(inner)"设上限。实测 inner=16 时按行设限会把
-    //                colsPerChunk 钳到 64 个元素, 每段只够并 4 行, 搬运与同步的固定开销
-    //                吃掉全部收益(合并前后 G/N 中位仅 1.04x)。
-    int64_t spanElems = innerIsOne ? tilingData_->dimSize : tilingData_->dimSize * tilingData_->inner;
-    int64_t alignSpan = Ops::Base::CeilAlign(spanElems > 0 ? spanElems : vlMax_, vlMax_);
-    if (colsPerChunk >= alignSpan) {
-        colsPerChunk = alignSpan; // 一个 outer 全载, 再大也用不上
+    bool rowDirect = false;
+    int64_t colsPerChunk = colsProbe;
+    if (rowDirectShape && innerElems <= colsProbe) {
+        const int64_t directCols = SolveColsPerChunk(true, upperCols);
+        if (directCols > 0) {
+            rowDirect = true;
+            colsPerChunk = directCols;
+        }
     }
     tilingData_->colsPerChunk = colsPerChunk;
 
-    // 各 buffer 字节数在此一次算准, 内核直接透传给 InitBuffer, 不再做任何对齐/补齐。
-    tilingData_->tBufBytes = colsPerChunk * varDtypeLen_;
-    tilingData_->i32BufBytes = colsPerChunk * DTYPE_LEN_INT32;
-    tilingData_->maskBufBytes = Ops::Base::CeilAlign(colsPerChunk / BITS_PER_BYTE, UB_BLOCK_BYTES);
-    tilingData_->selBufBytes = isInt8_ ? (INT8_SEL_BUF_NUM * colsPerChunk * DTYPE_LEN_HALF) : 0;
+    // 各 buffer 字节数即反解时用的那份布局, 内核直接透传给 InitBuffer, 不再做任何对齐/补齐;
+    // 段长由 Total() <= ubSize_ 反解而来, 故无需再回头校验总量。
+    const UbLayout layout = MakeUbLayout(colsPerChunk, rowDirect);
+    tilingData_->tBufBytes = layout.tBufBytes;
+    tilingData_->i32BufBytes = layout.i32BufBytes;
+    tilingData_->idxBufBytes = layout.idxBufBytes;
+    tilingData_->updBufBytes = layout.updBufBytes;
+    tilingData_->maskBufBytes = layout.maskBufBytes;
+    tilingData_->selBufBytes = layout.selBufBytes;
 
-    // 总量自检: 记账口径与内核 InitBuffer 的调用一一对应, 超了直接失败而不是让内核去踩 UB。
-    int64_t ubUsed = BUFFER_NUM * (2 * tilingData_->tBufBytes) + tilingData_->i32BufBytes + tilingData_->maskBufBytes +
-                     tilingData_->selBufBytes;
-    if (!innerIsOne) {
-        ubUsed += BUFFER_NUM * (tilingData_->i32BufBytes + tilingData_->tBufBytes);
-    }
-    OP_CHECK_IF((ubUsed > static_cast<int64_t>(ubSize_)),
-                OP_LOGE(context_->GetNodeName(), "ub buffers %ld bytes exceed ub size %lu", ubUsed, ubSize_),
-                return ge::GRAPH_FAILED);
+    CalMergeParams(colsPerChunk);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -282,8 +421,10 @@ ge::graphStatus ArgMaxGradTiling::Init()
     if (vlMax_ < vlInt32_) {
         vlMax_ = vlInt32_;
     }
+    // 不可达(平台常量): GetVRegSize 在 arch35 上是编译期常量 256, 保留仅为防御跨代改动
     OP_CHECK_IF((vlInt32_ <= 0), OP_LOGE(context_->GetNodeName(), "GetVRegSize failed"), return ge::GRAPH_FAILED);
 
+    // 以下两条不可达(框架保证): tiling data 缓冲由框架按注册大小分配, memset_s 参数固定合法
     tilingData_ = context_->GetTilingData<ArgMaxGradArch35TilingData>();
     OP_CHECK_IF((tilingData_ == nullptr), OP_LOGE(context_->GetNodeName(), "get tilingdata ptr failed"),
                 return ge::GRAPH_FAILED);
@@ -326,6 +467,7 @@ ge::graphStatus ArgMaxGradTiling::DoTiling()
 
 static ge::graphStatus Tiling4ArgMaxGrad(gert::TilingContext* context)
 {
+    // 不可达(框架保证 context 非空), 保留为接口层防御
     if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }

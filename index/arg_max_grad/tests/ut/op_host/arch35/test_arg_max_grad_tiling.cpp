@@ -35,10 +35,13 @@ protected:
 };
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
-                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics, int64_t ubSize = 253952,
+                         int64_t coreNum = 64)
 {
+    // 平台参数可覆盖: 用于验证 tiling 对异常平台信息的拒收(见 test_tiling_platform_* 三例)
     string hardwareInfo = R"({
-        "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64}
+        "hardware_info": {"UB_SIZE": )" +
+                          std::to_string(ubSize) + R"(, "CORE_NUM": )" + std::to_string(coreNum) + R"(}
                           })";
     GetPlatFormInfos(hardwareInfo.c_str(), socInfos, aicoreSpec, intrinsics);
     platFormInfo.Init();
@@ -162,13 +165,14 @@ static ge::graphStatus RunTiling(TilingFunc tilingFunc, HolderT& holder, map<str
 }
 
 static ge::graphStatus DoArgMaxGradTilingCase(const ArgMaxGradCase& c, uint64_t& tilingKey, uint32_t& blockDim,
-                                              ArgMaxGradArch35TilingData* tdOut = nullptr)
+                                              ArgMaxGradArch35TilingData* tdOut = nullptr, int64_t ubSize = 253952,
+                                              int64_t coreNum = 64)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
+    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, ubSize, coreNum);
 
     struct ArgMaxGradCompileInfo {};
     ArgMaxGradCompileInfo compileInfo;
@@ -426,6 +430,57 @@ TEST_F(ArgMaxGradTiling, test_tiling_rank_full_range)
 }
 
 // 多核切分: elemsPerCore 必须 32B 对齐(跨核不共享搬运块), 且能覆盖全部元素
+// inner==1 且 D 很小、outer 很大: 每段能装 colsPerChunk/D 个 outer, indices/updates 各要
+// 一个与之等长的标量缓冲, 但 bytesPerPoint 对 inner==1 把这两块记成 0 —— 段长按不含它们的
+// 口径算满 UB 后再分配, 总量必然超。这类形状在支持面之内, 不该被 tiling 拒收。
+TEST_F(ArgMaxGradTiling, test_tiling_inner_one_small_axis_large_outer)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    ArgMaxGradArch35TilingData td{};
+    for (int64_t d : {2, 4, 8}) {
+        EXPECT_EQ(DoArgMaxGradTilingCase({{1000000, d, 1}, 1, ge::DT_FLOAT}, tilingKey, blockDim, &td),
+                  ge::GRAPH_SUCCESS)
+            << "d=" << d;
+    }
+}
+
+// 平台信息异常时必须干净拒收(而不是拿非法值继续算)。这三条对应 tiling 里三处拒收分支:
+//   核数为 0 / UB 不大于 SIMD-SIMT dcache 预留 / UB 扣掉预留后装不下一个向量整宽的元素
+// rank 为 0(标量 var)必须拒收: 被选轴不存在, 语义不成立
+TEST_F(ArgMaxGradTiling, test_tiling_rank0_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    EXPECT_EQ(DoArgMaxGradTilingCase({{}, 0, ge::DT_FLOAT}, tilingKey, blockDim), ge::GRAPH_FAILED);
+}
+
+TEST_F(ArgMaxGradTiling, test_tiling_platform_zero_core_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    EXPECT_EQ(DoArgMaxGradTilingCase({{4, 16, 8}, 1, ge::DT_FLOAT}, tilingKey, blockDim, nullptr, 253952, 0),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ArgMaxGradTiling, test_tiling_platform_ub_not_above_dcache_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    // 32 KB 恰好等于 SIMD/SIMT 共用 dcache 的预留量, 扣完一个字节都不剩
+    EXPECT_EQ(DoArgMaxGradTilingCase({{4, 16, 8}, 1, ge::DT_FLOAT}, tilingKey, blockDim, nullptr, 32 * 1024, 64),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ArgMaxGradTiling, test_tiling_platform_ub_too_small_for_one_vector_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    // 比 dcache 多 512 B: 过得了 Init 的门槛, 但一个向量整宽(64 个 fp32 元素)的各路 buffer 放不下
+    EXPECT_EQ(DoArgMaxGradTilingCase({{4, 16, 8}, 1, ge::DT_FLOAT}, tilingKey, blockDim, nullptr, 32 * 1024 + 512, 64),
+              ge::GRAPH_FAILED);
+}
+
 TEST_F(ArgMaxGradTiling, test_tiling_core_split_is_block_aligned)
 {
     uint64_t tilingKey = 0;

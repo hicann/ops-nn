@@ -41,6 +41,9 @@ public:
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
                                 const ArgMaxGradArch35TilingData* tiling, TPipe* pipe);
     __aicore__ inline void Process();
+    // 每次处理一段, 返回本段消费的元素数(0 不可能: 段长至少 1)
+    __aicore__ inline int64_t ProcessOuterSeg(int64_t g, int64_t o, int64_t k, int64_t rem);
+    __aicore__ inline int64_t ProcessRowSeg(int64_t g, int64_t o, int64_t inRow, int64_t rem);
 
 private:
     using SelT = typename SelectTypeTrait<T>::Type;
@@ -49,12 +52,15 @@ private:
     __aicore__ inline void CopyInCommon(int64_t varOffset, int64_t len);
     __aicore__ inline void CopyInIdxUpd(int64_t idxOffset, int64_t len);
     __aicore__ inline void GenAssist(int64_t kStart, int64_t rows, int64_t rowLen, int64_t rowStride);
+    __aicore__ inline void CopyInRowsPad(int64_t varOffset, int64_t rows);
     __aicore__ inline void CopyInIdxUpdRepeat(int64_t idxOffset, int64_t rows);
     __aicore__ inline void CopyOutRowsPad(int64_t varOffset, int64_t rows);
     __aicore__ inline void ComputePad(int64_t rows);
     __aicore__ inline void ComputePacked(int64_t rows, int64_t totalLen);
-    __aicore__ inline void ComputeRows(int64_t rows, int64_t rowLen, int64_t alignRowLen);
-    __aicore__ inline void ComputeSeg(int64_t len, int64_t alignLen, int32_t idxValue, T updValue);
+    __aicore__ inline void ComputeRowsDirect(int64_t kStart, int64_t rows);
+    __aicore__ inline void ComputeOuters(int64_t outers);
+    __aicore__ inline void ComputeRows(int64_t rows, int64_t rowLen, int64_t alignRowLen, int64_t kStart);
+    __aicore__ inline void ComputeSeg(int64_t len, int64_t alignLen, int32_t idxValue, T updValue, int64_t kStart);
     __aicore__ inline void CopyOut(int64_t varOffset, int64_t len);
 
     __aicore__ inline int64_t CeilAlign(int64_t x, int64_t base) const { return (x + base - 1) / base * base; }
@@ -82,15 +88,22 @@ private:
     int64_t totalElems_ = 0;
     int64_t colsPerChunk_ = 0;
     int64_t rowElems_ = 0; // 行在 UB 里的跨度(元素): 使 T 域与 int32 域的行起点同时落在 32B 边界
-    int64_t dstStrideT_ = 0;   // T 域(var/updates/y)的 burst 间隔, 单位 32B 块
-    int64_t dstStrideI_ = 0;   // int32 域(indices)的 burst 间隔, 单位 32B 块
-    bool packedRows_ = false;  // 行长是 32B 整数倍 → 走连续搬运 + UB 内倍增铺 idx/updates
+    int64_t dstStrideT_ = 0; // T 域(var/updates/y)的 burst 间隔, 单位 32B 块
+    int64_t dstStrideI_ = 0; // int32 域(indices)的 burst 间隔, 单位 32B 块
+    bool directRows_ = false; // 逐行直算: 轴下标留在寄存器, indices/updates 原地重复读, 不复制操作数
+    bool alignedFill_ = false; // 铺 tile 时行起点是否 32B 对齐(是则 UB→UB 拷贝, 否则非对齐流式写)
+    bool compactRows_ = false; // 行在 UB 里紧排(一次连续搬运); false 为按行补齐(每行一个 burst)
     int64_t rowsPerChunk_ = 1; // inner 较小时一次合并搬运多少行(摊薄每行的 GM 事务开销)
     int64_t maxChunk_ = 0;     // selBuf_ 每段(var/out/updates)的容量, 单位: 元素
     int64_t startElem_ = 0;
     int64_t endElem_ = 0;
 
 protected:
+    // 与 op_host 的 MergeMode 一一对应
+    constexpr static int64_t MERGE_MODE_PAD = 0;
+    constexpr static int64_t MERGE_MODE_COMPACT_DIRECT = 1;
+    constexpr static int64_t MERGE_MODE_COMPACT_FILL = 2;
+    constexpr static int64_t MERGE_MODE_COMPACT_STREAM = 3;
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_INT32 = platform::GetVRegSize() / sizeof(int32_t);
     constexpr static uint32_t VL_T = platform::GetVRegSize() / sizeof(T); // T 域车道数(铺 tile 用)
@@ -98,7 +111,7 @@ protected:
     //   ① indices/updates 若不同样双缓冲会有 WAR 竞态; ② float16 走 Compare<int32> 产出的掩码 +
     //   Select<half> 时两侧 lane 宽度不一致, 深流水下才显形。
     // 两者都需要连带改造(见 02_design.md §9.1), 本次交付取确定正确的单缓冲。
-    constexpr static uint32_t BUFFER_NUM = 1;
+    constexpr static uint32_t BUFFER_NUM = 2;
 };
 
 template <typename T, bool INNER_IS_ONE>
@@ -132,40 +145,26 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::Init(GM_ADDR var, GM_ADDR 
     // 后续 buffer 偏移整体变化)时暴露。
     int64_t chunkAlign = colsPerChunk_;
     pipe_->InitBuffer(varQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->tBufBytes));
-    pipe_->InitBuffer(assistBuf_, static_cast<uint32_t>(tiling->i32BufBytes));
-    pipe_->InitBuffer(outQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->tBufBytes));
-    if constexpr (!INNER_IS_ONE) {
-        pipe_->InitBuffer(idxQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->i32BufBytes));
-        pipe_->InitBuffer(updQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->tBufBytes));
+    // i32BufBytes==0 表示本形状的轴下标全部由寄存器生成(inner==1 或逐行直算档), 不开这块缓冲
+    if (tiling->i32BufBytes > 0) {
+        pipe_->InitBuffer(assistBuf_, static_cast<uint32_t>(tiling->i32BufBytes));
     }
+    pipe_->InitBuffer(outQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->tBufBytes));
+    // inner>1 时是整行/多行的 indices/updates; inner==1 时是一段内 m 个 outer 各自的标量
+    pipe_->InitBuffer(idxQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->idxBufBytes));
+    pipe_->InitBuffer(updQue_, BUFFER_NUM, static_cast<uint32_t>(tiling->updBufBytes));
     pipe_->InitBuffer(maskBuf_, static_cast<uint32_t>(tiling->maskBufBytes));
     maxChunk_ = chunkAlign;
-    // 多行合并: 每行在 UB 里按 32B 边界落位(DataCopyPad 的每个 burst 占整块), 行跨度取
-    // T 域与 int32 域的公共对齐粒度, 使同一 lane 在两个域里指向同一个元素。
-    // 这样对【任意 inner】都能合并, 不再要求 inner*sizeof(T) 是 32B 整数倍。
-    if constexpr (!INNER_IS_ONE) {
-        int64_t alignElems = BLOCK_SIZE / static_cast<int64_t>(sizeof(int32_t));
-        int64_t alignElemsT = BLOCK_SIZE / static_cast<int64_t>(sizeof(T));
-        if (alignElemsT > alignElems) {
-            alignElems = alignElemsT;
-        }
-        rowElems_ = CeilAlign(inner_ > 0 ? inner_ : 1, alignElems);
-        int64_t occT = CeilAlign(inner_ * static_cast<int64_t>(sizeof(T)), BLOCK_SIZE);
-        int64_t occI = CeilAlign(inner_ * static_cast<int64_t>(sizeof(int32_t)), BLOCK_SIZE);
-        dstStrideT_ = (rowElems_ * static_cast<int64_t>(sizeof(T)) - occT) / BLOCK_SIZE;
-        dstStrideI_ = (rowElems_ * static_cast<int64_t>(sizeof(int32_t)) - occI) / BLOCK_SIZE;
-        // 多行合并只在 assist 的行跨度 32B 对齐时才启用。
-        // 根因: 合并路径下 GenAssist 逐行写 Duplicate(assistL[r * inner_], ...), 目的地址是
-        // r * inner_ * sizeof(int32_t) 字节; inner_ 不是 8 的整数倍时该地址不落在 32B 边界,
-        // 触发 aivec errcode 340 "The address for VEC to access UB is not aligned"(真机实测,
-        // 且只在 inner>1 出现 —— inner==1 走 CreateVecIndex, 偏移恒为 0)。
-        // 行跨度不对齐时退回单行路径(偏移恒为 0, 天然对齐), 功能正确优先。
-        const bool assistRowAligned = ((inner_ * static_cast<int64_t>(sizeof(int32_t))) % BLOCK_SIZE == 0);
-        rowsPerChunk_ = (assistRowAligned && rowElems_ > 0 && rowElems_ <= chunkAlign) ? (chunkAlign / rowElems_) : 1;
-        // 行长本身就是 32B 整数倍时, 补齐后与紧排一致 → 可以走"一次大块连续搬运"的打包路径;
-        // 否则只能一行一个 burst(多 burst 路径), 那是为覆盖任意 inner 付的代价。
-        packedRows_ = (rowElems_ == inner_);
-    }
+    // 多行合并的布局参数一律取 host 算好的值, 内核不再自行推导:
+    // 曾在内核侧按 inner_ 推导行跨度, 导致 assist 逐行写 Duplicate(assistL[r*inner_], ...)
+    // 的目的地址在 inner_ 非 8 整数倍时偏离 32B 边界(真机 aivec errcode 340)。
+    rowElems_ = tiling->rowElems;
+    dstStrideT_ = tiling->dstStrideT;
+    dstStrideI_ = tiling->dstStrideI;
+    rowsPerChunk_ = tiling->rowsPerChunk;
+    directRows_ = (tiling->mergeMode == MERGE_MODE_COMPACT_DIRECT);
+    alignedFill_ = (tiling->mergeMode != MERGE_MODE_PAD) && (tiling->mergeMode != MERGE_MODE_COMPACT_STREAM);
+    compactRows_ = (tiling->mergeMode != MERGE_MODE_PAD);
     if constexpr (NEED_CAST) {
         // var / out / updates 三段 half 暂存(字节数同样由 host 算好)
         pipe_->InitBuffer(selBuf_, static_cast<uint32_t>(tiling->selBufBytes));
@@ -212,31 +211,44 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::CopyInIdxUpd(int64_t idxOf
 }
 
 // 生成 A2 融合 pass 里那个 assist 张量的等价内容: assist[o,k,i] == k(沿 dimension 轴的下标)。
-// INNER_IS_ONE 时一段覆盖连续的 k, 用一条 CreateVecIndex 出等差数列; 否则一行内 k 是常量,
-// 逐行 Duplicate。两者都只动 UB, 相比 A2 由图侧传入整块 int32 省掉一整条 GM→UB 流。
+// **只服务"一个寄存器块跨多行"的两档**(紧排铺 tile / 按行补齐): 这两档里 k 在一个寄存器内
+// 逐行变, 算不出闭式, 只能物化到 UB。其余路径的 k 已由 VF 内的 Reg::Arange / Duplicate 直接
+// 在寄存器里生成(见 AssistSrc), 既不占 UB 也不多走一趟写。
 template <typename T, bool INNER_IS_ONE>
 __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::GenAssist(int64_t kStart, int64_t rows, int64_t rowLen,
                                                                 int64_t rowStride)
 {
     LocalTensor<int32_t> assistL = assistBuf_.template Get<int32_t>();
-    if constexpr (INNER_IS_ONE) {
-        AscendC::CreateVecIndex(assistL, static_cast<int32_t>(kStart), static_cast<uint32_t>(rowLen));
-    } else {
-        // 一行之内轴下标恒等于该行的 k, 逐行填常量即可。
-        // 曾尝试两种"减少指令数"的优化, 实测都是负优化, 已回退(详见 02 设计文档):
-        //   ① 另开一块 chunk 大小的模板缓冲 + 每 chunk 一次 Adds —— 缓冲进 UB 预算后 colsPerChunk
-        //      变小、chunk 数变多, 固定开销远超省下的指令(最差例 11.4us→33.4us);
-        //   ② 在 assistBuf_ 上做增量 Adds —— 模板被单行/INNER_IS_ONE 路径反复置无效, 每次重建要
-        //      循环 rowsPerChunk_ 次(多于 rows 次), 更慢(11.4us→41.5us)。
-        for (int64_t r = 0; r < rows; ++r) {
-            AscendC::Duplicate(assistL[r * rowStride], static_cast<int32_t>(kStart + r), static_cast<int32_t>(rowLen));
+    {
+        // 多行: 第 0 行填 kStart, 其余行用倍增复制 + 一次常量偏移铺满 —— 指令数 O(log2 rows) 而非
+        // O(rows), 且每条都是成段满车道。逐行一条 Duplicate 时每行的指令发射固定成本会随行数线性
+        // 累加, 在 inner 小、行数多的形状上压倒有效计算(实测占总时延 83%~96%)。
+        // 行跨度 rowStride 由 host 取 32B 公倍数(见 tiling), 故 filled * rowStride 处的目的偏移恒对齐。
+        AscendC::Duplicate(assistL, static_cast<int32_t>(kStart), static_cast<int32_t>(rowLen));
+        for (int64_t filled = 1; filled < rows; filled *= 2) {
+            int64_t copyRows = Min(filled, rows - filled);
+            int64_t cur = filled * rowStride;
+            int64_t cnt = copyRows * rowStride;
+            AscendC::PipeBarrier<PIPE_V>();
+            if ((cur * static_cast<int64_t>(sizeof(int32_t))) % BLOCK_SIZE == 0) {
+                // 行跨度是 32B 整数倍: 目的偏移天然对齐, UB→UB 搬 + 一次整体加常量
+                AscendC::DataCopy(assistL[cur], assistL[0], static_cast<uint32_t>(cnt));
+                AscendC::PipeBarrier<PIPE_V>();
+                AscendC::Adds(assistL[cur], assistL[cur], static_cast<int32_t>(filled), static_cast<int32_t>(cnt));
+            } else {
+                // 非对齐: 复制与加常量合成一条非对齐流式写
+                uint16_t loops = static_cast<uint16_t>((cnt + VL_INT32 - 1) / VL_INT32);
+                TileAppendAddsUnalignVF<int32_t>((__ubuf__ int32_t*)assistL.GetPhyAddr(), static_cast<uint32_t>(cur),
+                                                 static_cast<uint32_t>(cnt), static_cast<int32_t>(filled), VL_INT32,
+                                                 loops);
+            }
         }
     }
     AscendC::PipeBarrier<PIPE_V>();
 }
 
-// 打包路径(行长是 32B 整数倍): var 由一次连续搬运载入, 轴下标在 UB 内生成, indices/updates 只搬一行,
-// 在 UB 内倍增铺满(log2(rows) 次 UB→UB, 走 PIPE_V), 然后整段一次比较 + 一次选择。
+// 紧排但行长非 32B 整数倍时的路径: 行起点不落在寄存器块边界, 无法逐行直算, 只能先把 indices/updates
+// 倍增铺成多行(非对齐流式写), 配合同样铺出来的轴下标, 再对整段做一次比较 + 一次选择。
 // 与多 burst 路径的取舍: 这里省掉了 m 个小 burst 的 DMA 固定开销 —— inner 小时那是主要成本。
 template <typename T, bool INNER_IS_ONE>
 __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputePacked(int64_t rows, int64_t totalLen)
@@ -251,7 +263,7 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputePacked(int64_t rows
         int64_t copyRows = Min(filled, rows - filled);
         int64_t cur = filled * inner_;
         int64_t cnt = copyRows * inner_;
-        if (packedRows_) {
+        if (alignedFill_) {
             // 行长是 32B 整数倍 → 目的偏移天然对齐, 直接 UB→UB 搬
             AscendC::DataCopy(idxL[cur], idxL[0], static_cast<uint32_t>(cnt));
             AscendC::DataCopy(updL[cur], updL[0], static_cast<uint32_t>(cnt));
@@ -272,6 +284,78 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputePacked(int64_t rows
                                  (__ubuf__ T*)updL.GetPhyAddr(), (__ubuf__ int32_t*)assistL.GetPhyAddr(),
                                  (__ubuf__ int32_t*)idxL.GetPhyAddr(), 0, ScalarZero<T>(), 0.0f,
                                  static_cast<uint32_t>(totalLen), VL_INT32, repeatTimes);
+
+    outQue_.template EnQue<T>(outL);
+    varQue_.FreeTensor(varL);
+    idxQue_.FreeTensor(idxL);
+    updQue_.FreeTensor(updL);
+}
+
+// var 的 m 行一次搬入, UB 侧按 rowElems_ 跨度落位(每行占整数个 32B 块), 与 idx/updates/assist
+// 的行起点对齐 —— 这是"按行补齐(pad)"合并路径的搬入端, 对任意 inner 都成立。
+template <typename T, bool INNER_IS_ONE>
+__aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::CopyInRowsPad(int64_t varOffset, int64_t rows)
+{
+    LocalTensor<T> varL = varQue_.template AllocTensor<T>();
+    DataCopyPadExtParams<T> padT{true, 0, 0, ScalarZero<T>()};
+    DataCopyExtParams params;
+    params.blockCount = static_cast<uint16_t>(rows);
+    params.blockLen = static_cast<uint32_t>(inner_ * sizeof(T));
+    params.srcStride = 0;           // GM 侧 rows 行连续
+    params.dstStride = dstStrideT_; // UB 侧按 32B 块补齐
+    AscendC::DataCopyPad(varL, varGm_[varOffset], params, padT);
+    varQue_.template EnQue<T>(varL);
+}
+
+// inner==1 且一段能装下多个 outer 时的主路径: var 一次连续搬入 m 个 outer, indices/updates 各 m 个
+// 标量也一次搬入, 轴下标 0..D-1 对每个 outer 都相同故只生成一次, 然后逐 outer 一条 VF(用各自的标量)。
+// 相比"一段一个 outer", 每个 outer 省掉一整条 MTE2→V→MTE3 的段固定成本与两次 GM 标量读。
+template <typename T, bool INNER_IS_ONE>
+__aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeOuters(int64_t outers)
+{
+    LocalTensor<T> varL = varQue_.template DeQue<T>();
+    LocalTensor<int32_t> idxL = idxQue_.template DeQue<int32_t>();
+    LocalTensor<T> updL = updQue_.template DeQue<T>();
+    LocalTensor<T> outL = outQue_.template AllocTensor<T>();
+
+    // 轴下标不再物化到 UB: 每个 outer 沿被选轴是 0..D-1 的等差数列, VF 内一条 Reg::Arange 生成
+    // 标量要从 UB 读: 队列的 DeQue 只给出 MTE2→V, 标量口径需另外补 MTE2→S
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(EVENT_ID0);
+
+    uint16_t repeatTimes = static_cast<uint16_t>((dimSize_ + VL_INT32 - 1) / VL_INT32);
+    __ubuf__ T* outAddr = (__ubuf__ T*)outL.GetPhyAddr();
+    __ubuf__ T* varAddr = (__ubuf__ T*)varL.GetPhyAddr();
+    for (int64_t j = 0; j < outers; ++j) {
+        int32_t idxValue = idxL.GetValue(j);
+        T updValue = updL.GetValue(j);
+        ArgMaxGradSelectVF<T, true, AssistSrc::ARANGE>(outAddr + j * dimSize_, varAddr + j * dimSize_, nullptr, nullptr,
+                                                       nullptr, idxValue, updValue, ScalarToFloat<T>(updValue),
+                                                       static_cast<uint32_t>(dimSize_), VL_INT32, repeatTimes, 0);
+    }
+
+    outQue_.template EnQue<T>(outL);
+    varQue_.FreeTensor(varL);
+    idxQue_.FreeTensor(idxL);
+    updQue_.FreeTensor(updL);
+}
+
+// 行长是 32B 整数倍时的主路径: 不生成轴下标、不把 indices/updates 铺成多行。
+// 每个向量寄存器块必然落在同一行内, 该行的轴下标是标量常量(留在寄存器里), indices/updates
+// 每行都从同一份原地重复读 —— 相比"先复制操作数再整段选择", 省掉三遍对整段数据的 UB 读写。
+template <typename T, bool INNER_IS_ONE>
+__aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeRowsDirect(int64_t kStart, int64_t rows)
+{
+    LocalTensor<T> varL = varQue_.template DeQue<T>();
+    LocalTensor<int32_t> idxL = idxQue_.template DeQue<int32_t>();
+    LocalTensor<T> updL = updQue_.template DeQue<T>();
+    LocalTensor<T> outL = outQue_.template AllocTensor<T>();
+
+    uint16_t repeatsPerRow = static_cast<uint16_t>((inner_ + VL_INT32 - 1) / VL_INT32);
+    ArgMaxGradSelectRowsVF<T>((__ubuf__ T*)outL.GetPhyAddr(), (__ubuf__ T*)varL.GetPhyAddr(),
+                              (__ubuf__ T*)updL.GetPhyAddr(), (__ubuf__ int32_t*)idxL.GetPhyAddr(),
+                              static_cast<int32_t>(kStart), ScalarZero<T>(), static_cast<uint32_t>(rows),
+                              static_cast<uint32_t>(inner_), VL_INT32, repeatsPerRow);
 
     outQue_.template EnQue<T>(outL);
     varQue_.FreeTensor(varL);
@@ -344,11 +428,11 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputePad(int64_t rows)
 // rows 行 × rowLen 列: var 已按 rows*rowLen 连续搬入, 轴下标在 UB 内生成, indices/updates 只有 rowLen 个、各行复用。
 // 逐行做 Compare/Select(向量开销远小于每行 4 次 GM 事务), GM 搬运在外层已合并。
 template <typename T, bool INNER_IS_ONE>
-__aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeRows(int64_t rows, int64_t rowLen, int64_t alignRowLen)
+__aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeRows(int64_t rows, int64_t rowLen, int64_t alignRowLen,
+                                                                  int64_t kStart)
 {
     (void)rows;
     LocalTensor<T> varL = varQue_.template DeQue<T>();
-    LocalTensor<int32_t> assistL = assistBuf_.template Get<int32_t>();
     LocalTensor<int32_t> idxL = idxQue_.template DeQue<int32_t>();
     LocalTensor<T> updL = updQue_.template DeQue<T>();
     LocalTensor<T> outL = outQue_.template AllocTensor<T>();
@@ -356,11 +440,12 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeRows(int64_t rows, 
     // 元素数按 VL 取整: 每轮都是整寄存器读写, 不出现半个寄存器的尾轮(实测尾轮会触发
     // errcode 340 "VEC 访问 UB 地址未对齐")。尾部算出来的是脏值, 但 CopyOut 只写回前
     // rowLen 个元素, 不影响结果; buffer 容量由 host 保证 >= 一个整寄存器。
+    // 单行段: 整段同一个 k, VF 内一条 Duplicate 进寄存器, 不落 UB
     uint16_t repeatTimes = static_cast<uint16_t>((alignRowLen + VL_INT32 - 1) / VL_INT32);
-    ArgMaxGradSelectVF<T, false>((__ubuf__ T*)outL.GetPhyAddr(), (__ubuf__ T*)varL.GetPhyAddr(),
-                                 (__ubuf__ T*)updL.GetPhyAddr(), (__ubuf__ int32_t*)assistL.GetPhyAddr(),
-                                 (__ubuf__ int32_t*)idxL.GetPhyAddr(), 0, ScalarZero<T>(), 0.0f,
-                                 static_cast<uint32_t>(alignRowLen), VL_INT32, repeatTimes);
+    ArgMaxGradSelectVF<T, false, AssistSrc::SCALAR>(
+        (__ubuf__ T*)outL.GetPhyAddr(), (__ubuf__ T*)varL.GetPhyAddr(), (__ubuf__ T*)updL.GetPhyAddr(), nullptr,
+        (__ubuf__ int32_t*)idxL.GetPhyAddr(), 0, ScalarZero<T>(), 0.0f, static_cast<uint32_t>(alignRowLen), VL_INT32,
+        repeatTimes, static_cast<int32_t>(kStart));
 
     outQue_.template EnQue<T>(outL);
     varQue_.FreeTensor(varL);
@@ -370,17 +455,17 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeRows(int64_t rows, 
 
 template <typename T, bool INNER_IS_ONE>
 __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::ComputeSeg(int64_t len, int64_t alignLen, int32_t idxValue,
-                                                                 T updValue)
+                                                                 T updValue, int64_t kStart)
 {
     (void)alignLen;
     LocalTensor<T> varL = varQue_.template DeQue<T>();
-    LocalTensor<int32_t> assistL = assistBuf_.template Get<int32_t>();
     LocalTensor<T> outL = outQue_.template AllocTensor<T>();
 
+    // 本段沿被选轴连续: k = kStart + 车道号, VF 内一条 Reg::Arange 生成, 不落 UB
     uint16_t repeatTimes = static_cast<uint16_t>((len + VL_INT32 - 1) / VL_INT32);
-    ArgMaxGradSelectVF<T, true>((__ubuf__ T*)outL.GetPhyAddr(), (__ubuf__ T*)varL.GetPhyAddr(), nullptr,
-                                (__ubuf__ int32_t*)assistL.GetPhyAddr(), nullptr, idxValue, updValue,
-                                ScalarToFloat<T>(updValue), static_cast<uint32_t>(len), VL_INT32, repeatTimes);
+    ArgMaxGradSelectVF<T, true, AssistSrc::ARANGE>(
+        (__ubuf__ T*)outL.GetPhyAddr(), (__ubuf__ T*)varL.GetPhyAddr(), nullptr, nullptr, nullptr, idxValue, updValue,
+        ScalarToFloat<T>(updValue), static_cast<uint32_t>(len), VL_INT32, repeatTimes, static_cast<int32_t>(kStart));
 
     outQue_.template EnQue<T>(outL);
     varQue_.FreeTensor(varL);
@@ -406,54 +491,89 @@ __aicore__ inline void ArgMaxGradND<T, INNER_IS_ONE>::Process()
     if (totalElems_ <= 0 || startElem_ >= endElem_) {
         return;
     }
-    int64_t oStride = dimSize_ * inner_; // 一个 outer 覆盖的元素数
+    const int64_t oStride = dimSize_ * inner_; // 一个 outer 覆盖的元素数
     int64_t g = startElem_;
     while (g < endElem_) {
-        int64_t o = g / oStride;
-        int64_t rem = endElem_ - g;
-        int64_t len = 0;
-        int64_t idxOffset = 0;
+        const int64_t o = g / oStride;
+        const int64_t inO = g - o * oStride; // 段起点在本 outer 内的偏移
+        const int64_t rem = endElem_ - g;
         if constexpr (INNER_IS_ONE) {
-            // inner==1: 同一个 outer 的元素沿被选轴连续, indices/updates 各只有一个值
-            int64_t k = g - o * oStride;
-            len = Min(Min(dimSize_ - k, rem), colsPerChunk_);
-            int32_t idxValue = indicesGm_.GetValue(o);
-            T updValue = updatesGm_.GetValue(o);
-            int64_t alignLen = CeilAlign(len, static_cast<int64_t>(VL_INT32));
-            CopyInCommon(g, len);
-            GenAssist(k, 1, alignLen, 0); // 本段覆盖连续的 k: 等差数列
-            ComputeSeg(len, alignLen, idxValue, updValue);
-            CopyOut(g, len);
+            g += ProcessOuterSeg(g, o, inO, rem);
         } else {
-            // inner>1: 落在整行起点时把多行并成一段(多 burst 搬运, 每行在 UB 里 32B 对齐落位);
-            // 头/尾不完整的行单独走一次单段处理。
-            int64_t inRow = (g - o * oStride) % inner_;
-            int64_t rows = 1;
-            if (inRow == 0 && rowsPerChunk_ > 1 && rem >= inner_) {
-                int64_t rowsLeftInO = (oStride - (g - o * oStride)) / inner_;
-                rows = Min(Min(rem / inner_, rowsLeftInO), rowsPerChunk_);
-            }
-            if (rows > 1) {
-                // 无论行长是否 32B 对齐, 都走"一次连续搬运 + UB 内铺 tile + 整段一次选择";
-                // 两者只差铺 tile 的手段(对齐用 UB→UB 搬, 非对齐用非对齐流式写)。
-                len = rows * inner_;
-                CopyInCommon(g, len);
-                CopyInIdxUpd(o * inner_, inner_);
-                GenAssist((g - o * oStride) / inner_, rows, inner_, inner_); // 每行一个常量 k
-                ComputePacked(rows, len);
-                CopyOut(g, len);
-            } else {
-                len = Min(Min(inner_ - inRow, rem), colsPerChunk_);
-                int64_t alignLen = CeilAlign(len, static_cast<int64_t>(VL_INT32));
-                CopyInCommon(g, len);
-                CopyInIdxUpd(o * inner_ + inRow, len);
-                GenAssist((g - o * oStride) / inner_, 1, alignLen, 0); // 单行: 整段同一个 k
-                ComputeRows(1, len, alignLen);
-                CopyOut(g, len);
-            }
+            g += ProcessRowSeg(g, o, inO % inner_, rem);
         }
-        g += len;
     }
+}
+
+// inner==1: 同一个 outer 的元素沿被选轴连续, indices/updates 各只有一个值
+template <typename T, bool INNER_IS_ONE>
+__aicore__ inline int64_t ArgMaxGradND<T, INNER_IS_ONE>::ProcessOuterSeg(int64_t g, int64_t o, int64_t k, int64_t rem)
+{
+    if (k == 0 && rowsPerChunk_ > 1 && rem >= dimSize_) {
+        // 一段装下多个 outer: 合并搬运 + 逐 outer 直算, 摊薄每段的固定成本
+        const int64_t outers = Min(rem / dimSize_, rowsPerChunk_);
+        const int64_t len = outers * dimSize_;
+        CopyInCommon(g, len);
+        CopyInIdxUpd(o, outers);
+        ComputeOuters(outers);
+        CopyOut(g, len);
+        return len;
+    }
+    const int64_t len = Min(Min(dimSize_ - k, rem), colsPerChunk_);
+    const int32_t idxValue = indicesGm_.GetValue(o);
+    const T updValue = updatesGm_.GetValue(o);
+    const int64_t alignLen = CeilAlign(len, static_cast<int64_t>(VL_INT32));
+    CopyInCommon(g, len);
+    ComputeSeg(len, alignLen, idxValue, updValue, k); // 轴下标在 VF 内按 k 起的等差数列生成
+    CopyOut(g, len);
+    return len;
+}
+
+// inner>1: 落在整行起点时把多行并成一段(合并形态由 host 的 mergeMode 定);
+// 头/尾不完整的行单独走一次单段处理。
+template <typename T, bool INNER_IS_ONE>
+__aicore__ inline int64_t ArgMaxGradND<T, INNER_IS_ONE>::ProcessRowSeg(int64_t g, int64_t o, int64_t inRow, int64_t rem)
+{
+    const int64_t oStride = dimSize_ * inner_;
+    const int64_t kStart = (g - o * oStride) / inner_; // 段起点所在行在被选轴上的下标
+    int64_t rows = 1;
+    if (inRow == 0 && rowsPerChunk_ > 1 && rem >= inner_) {
+        const int64_t rowsLeftInO = (oStride - (g - o * oStride)) / inner_;
+        rows = Min(Min(rem / inner_, rowsLeftInO), rowsPerChunk_);
+    }
+    if (rows <= 1) {
+        const int64_t len = Min(Min(inner_ - inRow, rem), colsPerChunk_);
+        const int64_t alignLen = CeilAlign(len, static_cast<int64_t>(VL_INT32));
+        CopyInCommon(g, len);
+        CopyInIdxUpd(o * inner_ + inRow, len);
+        ComputeRows(1, len, alignLen, kStart); // 单行: 整段同一个 k, 寄存器内 Duplicate
+        CopyOut(g, len);
+        return len;
+    }
+    const int64_t len = rows * inner_;
+    if (directRows_) {
+        // 一次连续搬运 + 逐行直算(轴下标留在寄存器, 操作数不复制)
+        CopyInCommon(g, len);
+        CopyInIdxUpd(o * inner_, inner_);
+        ComputeRowsDirect(kStart, rows);
+        CopyOut(g, len);
+    } else if (compactRows_) {
+        // 一行占不满寄存器(或行起点不落在块边界): 先把操作数铺成多行, 再对整段做一次选择。
+        CopyInCommon(g, len);
+        CopyInIdxUpd(o * inner_, inner_);
+        GenAssist(kStart, rows, inner_, inner_); // 每行一个常量 k
+        ComputePacked(rows, len);
+        CopyOut(g, len);
+    } else {
+        // 按行补齐(pad)合并: 每行一个 burst, UB 内按 rowElems_ 落位。行长够肥时 burst 的
+        // 固定开销已被摊薄, 比紧排少付一遍 UB 内铺 tile 的向量开销。
+        CopyInRowsPad(g, rows);
+        CopyInIdxUpdRepeat(o * inner_, rows);
+        GenAssist(kStart, rows, inner_, rowElems_);
+        ComputePad(rows);
+        CopyOutRowsPad(g, rows);
+    }
+    return len;
 }
 
 } // namespace ArgMaxGrad

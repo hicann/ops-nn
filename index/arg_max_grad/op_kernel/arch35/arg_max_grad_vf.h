@@ -156,16 +156,45 @@ __simd_vf__ inline void TileAppendUnalignVF(__ubuf__ T* base, uint32_t curElems,
     AscendC::Reg::StoreUnAlignPost<T>(dst, ureg, 0);
 }
 
+// 与 TileAppendUnalignVF 同构, 但追加时给每个元素加一个常量: 轴下标 assist 的第 r 行等于第 0 行加 r,
+// 倍增铺设时正好是"复制 filled 行 + 整体加 filled"。合成一条指令省掉一次独立的 Adds 遍历。
+template <typename T>
+__simd_vf__ inline void TileAppendAddsUnalignVF(__ubuf__ T* base, uint32_t curElems, uint32_t copyElems, T addend,
+                                                uint32_t lane, uint16_t loops)
+{
+    AscendC::Reg::UnalignRegForStore ureg;
+    __ubuf__ T* dst = base + curElems;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remain = copyElems;
+    for (uint16_t t = 0; t < loops; ++t) {
+        uint32_t before = remain;
+        mask = AscendC::Reg::UpdateMask<T>(remain);
+        uint32_t step = before - remain;
+        AscendC::Reg::RegTensor<T> reg;
+        AscendC::Reg::LoadAlign(reg, base + t * lane);
+        AscendC::Reg::Adds(reg, reg, addend, mask);
+        AscendC::Reg::StoreUnAlign(dst, reg, ureg, step);
+    }
+    AscendC::Reg::StoreUnAlignPost<T>(dst, ureg, 0);
+}
+
 // ── regbase VF: mask = (轴下标 == idx), out = mask ? updates : var ──────────────
 // 掩码全程留在 MaskReg 里(不落 UB), 比较恒在 int32 的 64 车道上做; T 宽度不等于 4 字节时
 // 随路拆包到 32bit 车道、选完再打包回去。范式照 loss/chamfer_distance 的 ChamferDistVF。
+// 轴下标(assist)的来源。**能在寄存器里算出来的就不落 UB**:
+//   ARANGE: 本段沿被选轴连续(inner==1), k = kStart + 车道号 —— 一条 vci(Reg::Arange)搞定;
+//   SCALAR: 整段同一个 k(inner>1 的单行段) —— 一条 Duplicate 进寄存器;
+//   UB    : 一个寄存器块里跨多行、k 逐行变(紧排/补齐合并档) —— 只有这一档还需要物化到 UB。
+// 前两档省掉的不只是指令: assist 的整块 UB 缓冲(每元素 4B)一并消失, 段长随之变大。
+enum class AssistSrc : int { ARANGE = 0, SCALAR = 1, UB = 2 };
+
 // 写法要点: 必须是 __simd_vf__ 自由函数 + 裸 __ubuf__ 指针推进; 塞进成员函数会触发后端
 // "Unsupported Inst must be hoisted"。
-template <typename T, bool IDX_IS_SCALAR>
+template <typename T, bool IDX_IS_SCALAR, AssistSrc ASSIST = AssistSrc::UB>
 __simd_vf__ inline void ArgMaxGradSelectVF(__ubuf__ T* outAddr, __ubuf__ T* varAddr, __ubuf__ T* updAddr,
                                            __ubuf__ int32_t* assistAddr, __ubuf__ int32_t* idxAddr, int32_t idxScalar,
                                            T updScalar, float updScalarF, uint32_t count, uint32_t lane,
-                                           uint16_t repeatTimes)
+                                           uint16_t repeatTimes, int32_t kStart = 0)
 {
     AscendC::Reg::RegTensor<int32_t> assistReg;
     AscendC::Reg::RegTensor<int32_t> idxReg;
@@ -176,9 +205,16 @@ __simd_vf__ inline void ArgMaxGradSelectVF(__ubuf__ T* outAddr, __ubuf__ T* varA
     if constexpr (IDX_IS_SCALAR) {
         AscendC::Reg::Duplicate(idxReg, idxScalar);
     }
+    if constexpr (ASSIST == AssistSrc::SCALAR) {
+        AscendC::Reg::Duplicate(assistReg, kStart); // 整段同一个 k, 循环外一次
+    }
     for (uint16_t i = 0; i < repeatTimes; ++i) {
         mask = AscendC::Reg::UpdateMask<int32_t>(remain);
-        AscendC::Reg::LoadAlign(assistReg, assistAddr + i * lane);
+        if constexpr (ASSIST == AssistSrc::ARANGE) {
+            AscendC::Reg::Arange(assistReg, kStart + static_cast<int32_t>(i * lane));
+        } else if constexpr (ASSIST == AssistSrc::UB) {
+            AscendC::Reg::LoadAlign(assistReg, assistAddr + i * lane);
+        }
         if constexpr (!IDX_IS_SCALAR) {
             AscendC::Reg::LoadAlign(idxReg, idxAddr + i * lane);
         }
@@ -193,6 +229,41 @@ __simd_vf__ inline void ArgMaxGradSelectVF(__ubuf__ T* outAddr, __ubuf__ T* varA
         } else {
             SelectLaneB8<T, IDX_IS_SCALAR>(outAddr + i * lane, varAddr + i * lane,
                                            IDX_IS_SCALAR ? updAddr : updAddr + i * lane, updScalar, hit, mask);
+        }
+    }
+}
+
+// ── 多行直算: 不物化轴下标, 也不把 indices/updates 复制成多行 ────────────────────
+// 行长是 32B 整数倍时, 每个向量寄存器块必然落在同一行内 —— 该行的轴下标就是个标量常量,
+// Duplicate 进寄存器即可(不落 UB); indices/updates 只有一行, 每行都从同一份原地重复读。
+// 于是"复制操作数"这件事整个消失, 只剩一遍比较 + 一遍选择。
+template <typename T>
+__simd_vf__ inline void ArgMaxGradSelectRowsVF(__ubuf__ T* outAddr, __ubuf__ T* varAddr, __ubuf__ T* updAddr,
+                                               __ubuf__ int32_t* idxAddr, int32_t kStart, T zeroScalar, uint32_t rows,
+                                               uint32_t innerElems, uint32_t lane, uint16_t repeatsPerRow)
+{
+    AscendC::Reg::RegTensor<int32_t> assistReg;
+    AscendC::Reg::RegTensor<int32_t> idxReg;
+    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::MaskReg hit;
+    for (uint32_t m = 0; m < rows; ++m) {
+        AscendC::Reg::Duplicate(assistReg, static_cast<int32_t>(kStart) + static_cast<int32_t>(m));
+        uint32_t remain = innerElems; // UpdateMask 每轮自减, 尾块自动收窄
+        uint32_t rowBase = m * innerElems;
+        for (uint16_t t = 0; t < repeatsPerRow; ++t) {
+            mask = AscendC::Reg::UpdateMask<int32_t>(remain);
+            AscendC::Reg::LoadAlign(idxReg, idxAddr + t * lane);
+            AscendC::Reg::Compare<int32_t, AscendC::CMPMODE::EQ>(hit, assistReg, idxReg, mask);
+            if constexpr (IsSameType<T, float>::value || IsSameType<T, int32_t>::value) {
+                SelectLane32<T, false>(outAddr + rowBase + t * lane, varAddr + rowBase + t * lane, updAddr + t * lane,
+                                       zeroScalar, hit, mask);
+            } else if constexpr (sizeof(T) == B16_BYTES) {
+                SelectLaneB16<T, false>(outAddr + rowBase + t * lane, varAddr + rowBase + t * lane, updAddr + t * lane,
+                                        0.0f, hit, mask);
+            } else {
+                SelectLaneB8<T, false>(outAddr + rowBase + t * lane, varAddr + rowBase + t * lane, updAddr + t * lane,
+                                       zeroScalar, hit, mask);
+            }
         }
     }
 }

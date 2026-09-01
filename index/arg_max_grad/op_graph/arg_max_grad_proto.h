@@ -46,6 +46,8 @@ namespace ge {
 * @attention Constraints:
 * The operator will not be enhanced in the future.
 */
+#ifndef OPS_PROTO_DEF_ARGMAXGRAD
+#define OPS_PROTO_DEF_ARGMAXGRAD
 REG_OP(ArgMaxGrad)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8}))
     .INPUT(indices, TensorType({DT_INT32}))
@@ -53,6 +55,7 @@ REG_OP(ArgMaxGrad)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8}))
     .REQUIRED_ATTR(dimension, Int)
     .OP_END_FACTORY_REG(ArgMaxGrad)
+#endif // OPS_PROTO_DEF_ARGMAXGRAD
 } // namespace ge
 
 #endif // OPS_INDEX_ARG_MAX_GRAD_PROTO_H_
