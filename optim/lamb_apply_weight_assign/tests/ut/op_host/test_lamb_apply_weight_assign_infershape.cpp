@@ -74,3 +74,31 @@ TEST_F(LambApplyWeightAssignProtoTest, lamb_apply_weight_assign_case_fp16_4d)
     auto od0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*od0), Ops::Base::ToString(expShape));
 }
+
+TEST_F(LambApplyWeightAssignProtoTest, lambapplyweightassign_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LambApplyWeightAssign"), nullptr);
+    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambApplyWeightAssign")->infer_datatype;
+    ASSERT_NE(dataTypeFunc, nullptr);
+    ge::DataType in0 = ge::DT_FLOAT;
+    ge::DataType in1 = ge::DT_FLOAT;
+    ge::DataType in2 = ge::DT_FLOAT;
+    ge::DataType in3 = ge::DT_FLOAT;
+    ge::DataType in4 = ge::DT_FLOAT;
+    ge::DataType expOut0 = ge::DT_FLOAT;
+    auto contextHolder = gert::InferDataTypeContextFaker()
+                             .NodeIoNum(5, 1)
+                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .InputDataTypes({&in0, &in1, &in2, &in3, &in4})
+                             .OutputDataTypes({&expOut0})
+                             .Build();
+    auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+}

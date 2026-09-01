@@ -151,3 +151,25 @@ TEST_F(PoissonNllLossInfershapeTest, unknown_rank_sum_is_scalar)
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDimNum(), 0);
 }
+
+TEST_F(PoissonNllLossInfershapeTest, poissonnllloss_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("PoissonNllLoss"), nullptr);
+    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("PoissonNllLoss")->infer_datatype;
+    ASSERT_NE(dataTypeFunc, nullptr);
+    ge::DataType in0 = ge::DT_FLOAT;
+    ge::DataType in1 = ge::DT_FLOAT;
+    ge::DataType expOut0 = ge::DT_FLOAT;
+    auto contextHolder = gert::InferDataTypeContextFaker()
+                             .NodeIoNum(2, 1)
+                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .InputDataTypes({&in0, &in1})
+                             .OutputDataTypes({&expOut0})
+                             .Build();
+    auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+}

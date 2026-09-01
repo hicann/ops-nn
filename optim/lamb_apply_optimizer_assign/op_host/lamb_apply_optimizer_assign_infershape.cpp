@@ -72,5 +72,23 @@ static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeConte
 
     return GRAPH_SUCCESS;
 }
-IMPL_OP_INFERSHAPE(LambApplyOptimizerAssign).InferShape(InferShape4LambApplyOptimizerAssign);
+static ge::graphStatus InferDataType4LambApplyOptimizerAssign(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambApplyOptimizerAssign enter");
+    // output0 与 grad 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    // inputv 为同名 ref 输出
+    context->SetOutputDataType(1, context->GetInputDataType(1));
+    // inputm 为同名 ref 输出
+    context->SetOutputDataType(2, context->GetInputDataType(2));
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambApplyOptimizerAssign end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(LambApplyOptimizerAssign)
+    .InferShape(InferShape4LambApplyOptimizerAssign)
+    .InferDataType(InferDataType4LambApplyOptimizerAssign);
 } // namespace ops

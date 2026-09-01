@@ -41,5 +41,19 @@ static ge::graphStatus InferShape4LambNextRight(gert::InferShapeContext* context
     }
     return GRAPH_SUCCESS;
 }
-IMPL_OP_INFERSHAPE(LambNextRight).InferShape(InferShape4LambNextRight);
+static ge::graphStatus InferDataType4LambNextRight(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambNextRight enter");
+    // y1 与 input_square 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    // y2 与 input_square 同类型
+    context->SetOutputDataType(1, context->GetInputDataType(0));
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambNextRight end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(LambNextRight).InferShape(InferShape4LambNextRight).InferDataType(InferDataType4LambNextRight);
 } // namespace ops

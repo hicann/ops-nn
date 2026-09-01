@@ -39,5 +39,19 @@ static ge::graphStatus InferShape4LambUpdateWithLr(gert::InferShapeContext* cont
                 return ge::GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }
-IMPL_OP_INFERSHAPE(LambUpdateWithLr).InferShape(InferShape4LambUpdateWithLr);
+static ge::graphStatus InferDataType4LambUpdateWithLr(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambUpdateWithLr enter");
+    // y 与 input_greater1 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambUpdateWithLr end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(LambUpdateWithLr)
+    .InferShape(InferShape4LambUpdateWithLr)
+    .InferDataType(InferDataType4LambUpdateWithLr);
 } // namespace ops

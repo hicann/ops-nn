@@ -110,3 +110,57 @@ TEST_F(LambNextMVWithDecayProtoTest, lamb_next_mv_with_decay_case_fp16_4d)
     auto od3 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(3);
     ASSERT_EQ(Ops::Base::ToString(*od3), Ops::Base::ToString(expShape));
 }
+
+TEST_F(LambNextMVWithDecayProtoTest, lambnextmvwithdecay_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LambNextMVWithDecay"), nullptr);
+    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambNextMVWithDecay")->infer_datatype;
+    ASSERT_NE(dataTypeFunc, nullptr);
+    ge::DataType in0 = ge::DT_FLOAT;
+    ge::DataType in1 = ge::DT_FLOAT;
+    ge::DataType in2 = ge::DT_FLOAT;
+    ge::DataType in3 = ge::DT_FLOAT;
+    ge::DataType in4 = ge::DT_FLOAT;
+    ge::DataType in5 = ge::DT_FLOAT;
+    ge::DataType in6 = ge::DT_FLOAT;
+    ge::DataType in7 = ge::DT_FLOAT;
+    ge::DataType in8 = ge::DT_FLOAT;
+    ge::DataType in9 = ge::DT_FLOAT;
+    ge::DataType in10 = ge::DT_FLOAT;
+    ge::DataType in11 = ge::DT_FLOAT;
+    ge::DataType in12 = ge::DT_FLOAT;
+    ge::DataType expOut0 = ge::DT_FLOAT;
+    ge::DataType expOut1 = ge::DT_FLOAT;
+    ge::DataType expOut2 = ge::DT_FLOAT;
+    ge::DataType expOut3 = ge::DT_FLOAT;
+    auto contextHolder = gert::InferDataTypeContextFaker()
+                             .NodeIoNum(13, 4)
+                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(11, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(12, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .InputDataTypes(
+                                 {&in0, &in1, &in2, &in3, &in4, &in5, &in6, &in7, &in8, &in9, &in10, &in11, &in12})
+                             .OutputDataTypes({&expOut0, &expOut1, &expOut2, &expOut3})
+                             .Build();
+    auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
+    EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT);
+    EXPECT_EQ(context->GetOutputDataType(3), ge::DT_FLOAT);
+}

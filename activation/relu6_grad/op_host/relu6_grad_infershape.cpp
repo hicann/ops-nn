@@ -25,6 +25,18 @@ static ge::graphStatus InferShape4Relu6Grad(gert::InferShapeContext* context)
     return Ops::Base::InferShape4Broadcast(context);
 }
 
-IMPL_OP_INFERSHAPE(Relu6Grad).InferShape(InferShape4Relu6Grad);
+static ge::graphStatus InferDataType4Relu6Grad(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4Relu6Grad enter");
+    // backprops 与 gradients 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    OP_LOGD(context->GetNodeName(), "InferDataType4Relu6Grad end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(Relu6Grad).InferShape(InferShape4Relu6Grad).InferDataType(InferDataType4Relu6Grad);
 
 } // namespace ops

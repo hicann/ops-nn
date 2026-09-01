@@ -74,5 +74,21 @@ static ge::graphStatus InferShapeMultilabelMarginLoss(gert::InferShapeContext* c
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MultilabelMarginLoss).InferShape(InferShapeMultilabelMarginLoss);
+static ge::graphStatus InferDataType4MultilabelMarginLoss(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4MultilabelMarginLoss enter");
+    // y 与 x 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    // is_target 为 INT32，与 target 同类型（不能跟随 x）
+    context->SetOutputDataType(1, context->GetInputDataType(1));
+    OP_LOGD(context->GetNodeName(), "InferDataType4MultilabelMarginLoss end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(MultilabelMarginLoss)
+    .InferShape(InferShapeMultilabelMarginLoss)
+    .InferDataType(InferDataType4MultilabelMarginLoss);
 } // namespace ops

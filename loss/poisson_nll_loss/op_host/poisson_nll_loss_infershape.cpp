@@ -87,5 +87,17 @@ static ge::graphStatus InferShapePoissonNllLoss(gert::InferShapeContext* context
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(PoissonNllLoss).InferShape(InferShapePoissonNllLoss);
+static ge::graphStatus InferDataType4PoissonNllLoss(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4PoissonNllLoss enter");
+    // loss 与 input_x 同类型
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    OP_LOGD(context->GetNodeName(), "InferDataType4PoissonNllLoss end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(PoissonNllLoss).InferShape(InferShapePoissonNllLoss).InferDataType(InferDataType4PoissonNllLoss);
 } // namespace ops

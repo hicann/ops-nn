@@ -82,3 +82,36 @@ TEST_F(LambNextRightProtoTest, lamb_next_right_case_fp16_4d)
     auto od1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
     ASSERT_EQ(Ops::Base::ToString(*od1), Ops::Base::ToString(expShape));
 }
+
+TEST_F(LambNextRightProtoTest, lambnextright_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LambNextRight"), nullptr);
+    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambNextRight")->infer_datatype;
+    ASSERT_NE(dataTypeFunc, nullptr);
+    ge::DataType in0 = ge::DT_FLOAT;
+    ge::DataType in1 = ge::DT_FLOAT;
+    ge::DataType in2 = ge::DT_FLOAT;
+    ge::DataType in3 = ge::DT_FLOAT;
+    ge::DataType in4 = ge::DT_FLOAT;
+    ge::DataType in5 = ge::DT_FLOAT;
+    ge::DataType expOut0 = ge::DT_FLOAT;
+    ge::DataType expOut1 = ge::DT_FLOAT;
+    auto contextHolder = gert::InferDataTypeContextFaker()
+                             .NodeIoNum(6, 2)
+                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .InputDataTypes({&in0, &in1, &in2, &in3, &in4, &in5})
+                             .OutputDataTypes({&expOut0, &expOut1})
+                             .Build();
+    auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
+}

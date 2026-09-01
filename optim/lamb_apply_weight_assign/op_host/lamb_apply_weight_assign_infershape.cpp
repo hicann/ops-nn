@@ -47,5 +47,19 @@ static ge::graphStatus InferShape4LambApplyWeightAssign(gert::InferShapeContext*
 
     return GRAPH_SUCCESS;
 }
-IMPL_OP_INFERSHAPE(LambApplyWeightAssign).InferShape(InferShape4LambApplyWeightAssign);
+static ge::graphStatus InferDataType4LambApplyWeightAssign(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambApplyWeightAssign enter");
+    // input_param 为同名 ref 输出，取第 5 个输入
+    context->SetOutputDataType(0, context->GetInputDataType(4));
+    OP_LOGD(context->GetNodeName(), "InferDataType4LambApplyWeightAssign end");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(LambApplyWeightAssign)
+    .InferShape(InferShape4LambApplyWeightAssign)
+    .InferDataType(InferDataType4LambApplyWeightAssign);
 } // namespace ops

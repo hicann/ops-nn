@@ -337,3 +337,28 @@ TEST_F(relu6grad, relu6grad_infer_shape_dynamic)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(relu6grad, relu6grad_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad"), nullptr);
+    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_datatype;
+    ASSERT_NE(dataTypeFunc, nullptr);
+    // backprops 跟随 gradients，覆盖 def 中声明的 fp16/fp32/bf16
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16}) {
+        ge::DataType in0 = dtype;
+        ge::DataType in1 = dtype;
+        ge::DataType expOut0 = ge::DT_UNDEFINED;
+        auto contextHolder = gert::InferDataTypeContextFaker()
+                                 .NodeIoNum(2, 1)
+                                 .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes({&in0, &in1})
+                                 .OutputDataTypes({&expOut0})
+                                 .Build();
+        auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
+        ASSERT_NE(context, nullptr);
+        EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(context->GetOutputDataType(0), dtype);
+    }
+}
