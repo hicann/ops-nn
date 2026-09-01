@@ -317,16 +317,16 @@ aclnnStatus aclnnBatchMatMulGetWorkspaceSize(const aclTensor* self, const aclTen
 {
     L2_DFX_PHASE_1(aclnnBatchMatMul, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 
-    // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 固定写法，参数检查
     auto ret = CheckParamsV2(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 空tensor场景
     if (CheckBmmResIsEmpty(self, mat2)) {
@@ -364,16 +364,16 @@ aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* self, cons
 {
     L2_DFX_PHASE_1(aclnnBatchMatMulWeightNz, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 
-    // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 固定写法，参数检查
     auto ret = CheckParamsWeightNz(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 从最初的接口进入bmm计算
     auto bmmOut = ExecBmmOp(self, mat2, out, cubeMathType, uniqueExecutor.get());

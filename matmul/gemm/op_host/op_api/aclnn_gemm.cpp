@@ -246,14 +246,14 @@ aclnnStatus aclnnGemmGetWorkspaceSize(const aclTensor* A, const aclTensor* B, co
 {
     L2_DFX_PHASE_1(aclnnGemm, DFX_IN(A, B, C, alpha, beta, transA, transB, cubeMathType), DFX_OUT(out));
 
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     auto ret = CheckParams(A, B, C, transA, transB, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 如果C是空tensor，返回空tensor。如果A 和B是空tensor，则乘积也是空tensor，返回空tensor
     if (C->IsEmpty() || CheckMulResIsEmpty(A, B, transA, transB)) {

@@ -101,14 +101,14 @@ aclnnStatus aclnnMvGetWorkspaceSize(const aclTensor* self, const aclTensor* vec,
 {
     L2_DFX_PHASE_1(aclnnMv, DFX_IN(self, vec, cubeMathType), DFX_OUT(out));
 
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     auto ret = CheckInputParams(self, vec, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // mv (n x m, m) -> n 。n为0时，返回空tensor
     if (out->IsEmpty()) {

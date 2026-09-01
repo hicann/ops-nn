@@ -827,13 +827,14 @@ aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(const aclTensor* self, const acl
                                                 int8_t cubeMathType, size_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmulWeightNz, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
-    // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 入参检查
     auto ret = CheckWeightNzParam(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 构建matmul计算图
     auto matmulOut = BuildMatMulWeightNzGraph(self, mat2, out, cubeMathType, uniqueExecutor.get());

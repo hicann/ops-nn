@@ -332,3 +332,61 @@ TEST_F(l2_einsum_test, case_unmatched_equation)
     aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// ================== CheckAxB2AB 覆盖测试 (a,b->ab) ==================
+
+TEST_F(l2_einsum_test, case_axb_output_dim0_mismatch)
+{
+    auto input1 = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({3}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "a,b->ab";
+    auto out = TensorDesc({1, 3}, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_einsum_test, case_axb_output_dim1_mismatch)
+{
+    auto input1 = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({3}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "a,b->ab";
+    auto out = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_einsum_test, case_axb_tensor0_dim0_zero)
+{
+    auto input1 = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({3}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "a,b->ab";
+    auto out = TensorDesc({0, 3}, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_einsum_test, case_axb_tensor1_dim0_zero)
+{
+    auto input1 = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "a,b->ab";
+    auto out = TensorDesc({2, 0}, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

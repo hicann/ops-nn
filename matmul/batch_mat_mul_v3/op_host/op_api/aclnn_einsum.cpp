@@ -126,14 +126,14 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList* tensors, aclTensor* outpu
     CHECK_RET((*tensors)[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET((*tensors)[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(output != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     OP_CHECK_WRONG_DIMENSION((*tensors)[0], 4,
                              return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为4
     OP_CHECK_WRONG_DIMENSION((*tensors)[1], 5,
                              return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为5
     OP_CHECK_WRONG_DIMENSION(output, 4, return ACLNN_ERR_PARAM_INVALID); // 校验Tensor output的dimNum为4
+
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     auto ret = CheckABCDxABCED2ABCE(tensors, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -181,6 +181,35 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList* tensors, aclTensor* outpu
     return ACLNN_SUCCESS;
 }
 
+aclnnStatus CheckAxB2AB(const aclTensorList* tensors, const aclTensor* output)
+{
+    auto const& tensor0Shape = (*tensors)[0]->GetViewShape();
+    auto const& tensor1Shape = (*tensors)[1]->GetViewShape();
+    auto const& outputShape = output->GetViewShape();
+    if (tensor0Shape.GetDim(DIM_ZERO) != outputShape.GetDim(DIM_ZERO)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim0 [%ld] and output shape dim0 [%ld] should be same",
+                tensor0Shape.GetDim(DIM_ZERO), outputShape.GetDim(DIM_ZERO));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (tensor1Shape.GetDim(DIM_ZERO) != outputShape.GetDim(DIM_ONE)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor1 shape dim0 [%ld] and output shape dim1 [%ld] should be same",
+                tensor1Shape.GetDim(DIM_ZERO), outputShape.GetDim(DIM_ONE));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    for (size_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
+        if (tensor0Shape.GetDim(i) == DIM_ZERO) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim%ld [0] should not be zero", i);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    if (tensor1Shape.GetDim(DIM_ZERO) == DIM_ZERO) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor1 shape dim0 [0] should not be zero");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus HandleAxB2AB(const aclTensorList* tensors, aclTensor* output, uint64_t* workspaceSize,
                          aclOpExecutor** executor)
 {
@@ -188,14 +217,17 @@ aclnnStatus HandleAxB2AB(const aclTensorList* tensors, aclTensor* output, uint64
     CHECK_RET((*tensors)[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET((*tensors)[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(output != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
     OP_CHECK_WRONG_DIMENSION((*tensors)[0], 1,
                              return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第1个Tensor的dimNum为1
     OP_CHECK_WRONG_DIMENSION((*tensors)[1], 1,
                              return ACLNN_ERR_PARAM_INVALID); // 校验tensorList中第2个Tensor的dimNum为1
     OP_CHECK_WRONG_DIMENSION(output, 2, return ACLNN_ERR_PARAM_INVALID); // 校验Tensor output的dimNum为2
+
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    auto ret = CheckAxB2AB(tensors, output);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto tensor0Contiguous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
     CHECK_RET(tensor0Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -203,8 +235,11 @@ aclnnStatus HandleAxB2AB(const aclTensorList* tensors, aclTensor* output, uint64
     CHECK_RET(tensor1Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto leftMatrix = l0op::UnsqueezeNd(tensor0Contiguous, DIM_ONE, uniqueExecutor.get());
+    CHECK_RET(leftMatrix != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto rightMatrix = l0op::UnsqueezeNd(tensor1Contiguous, DIM_ZERO, uniqueExecutor.get());
+    CHECK_RET(rightMatrix != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto result = l0op::Mul(leftMatrix, rightMatrix, uniqueExecutor.get());
+    CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出 output output可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(result, output, uniqueExecutor.get());
@@ -238,7 +273,7 @@ static bool CheckNotNull(const aclTensorList* tensors, aclTensor* output, const 
     }
     OP_CHECK_NULL(output, return false);
     if (equation == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The equation cannot be nullptr");
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The equation cannot be nullptr");
         return false;
     }
     return true;
