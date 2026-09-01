@@ -44,6 +44,7 @@ static constexpr size_t MAX_DIM_LEN = 8;
 static constexpr int64_t MAX_SORT_SHAPE_DIM = 2139095040;
 // 索引数量超过该值时 tiling 会失败，需走 AICPU 兜底（对齐 index_put 的 IsAiCPUSupportCheckIndicesArch3510）
 static constexpr int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000;
+static constexpr int64_t INT32_MAX_LIMIT = 2147483647;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
@@ -282,14 +283,12 @@ static const aclTensor* DoIndexAddWithIndexPut(const aclTensor* self, const int6
     masks[wrappedDim] = 1;
     OP_LOGD("[IndexAddIndexPut] definedStride=%ld, definedValueSize=%ld.", definedStride[0], definedValueSize[0]);
 
-    // 对齐 index_put 的 AicpuProcess：IndexPutWithSortV2 不支持 double/int16，以及索引数量超限
-    // （tiling 会失败），这些场景走 index_put 的 AICPU 兜底（与 op-plugin 中 index_put_ 内部的 AICPU 兜底一致）。
     if (self->GetDataType() == op::DataType::DT_DOUBLE || self->GetDataType() == op::DataType::DT_INT16 ||
-        index->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM) {
-        OP_LOGD("[IndexAddIndexPut] self dtype %s or index num %ld not supported by IndexPutWithSortV2, fallback to "
-                "IndexPut(AICPU).",
+        index->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM || definedValueSize[0] > INT32_MAX_LIMIT) {
+        OP_LOGD("[IndexAddIndexPut] self dtype %s or index num %ld or indexed dim size %ld not supported by "
+                "IndexPutWithSortV2, fallback to IndexPut(AICPU).",
                 op::ToString(self->GetDataType()).GetString(),
-                static_cast<int64_t>(index->GetViewShape().GetShapeSize()));
+                static_cast<int64_t>(index->GetViewShape().GetShapeSize()), definedValueSize[0]);
         auto indicesList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
         CHECK_RET(indicesList != nullptr, nullptr);
         auto maskArray = executor->AllocIntArray(masks.data(), masks.size());
