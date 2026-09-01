@@ -31,7 +31,7 @@
 
 using namespace op;
 
-enum Reduction { None, Mean, Sum, END };
+enum class Reduction { None, Mean, Sum, END };
 
 static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
@@ -98,7 +98,7 @@ static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self,
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                            const aclTensor* weightOptional, aclTensor* out)
+                            const aclTensor* weightOptional, const aclTensor* out)
 {
     const auto& supportList = GetDtypeSupportListV2(DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16, DTYPE_DTYPE_SUPPORT_LIST);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
@@ -133,7 +133,7 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* target, const ac
 }
 
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                       const aclTensor* weightOptional, aclTensor* out)
+                       const aclTensor* weightOptional, const aclTensor* out)
 {
     if (self->IsEmpty()) {
         return true;
@@ -158,7 +158,7 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
 
 static bool CheckReduction(int64_t reduction)
 {
-    if (reduction > Sum || reduction < None) {
+    if (reduction > static_cast<int64_t>(Reduction::Sum) || reduction < static_cast<int64_t>(Reduction::None)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld", reduction);
         return false;
     }

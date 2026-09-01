@@ -119,7 +119,7 @@ static void CheckFormat(const aclTensor* self)
     }
 }
 
-static bool CheckShape(const aclTensor* self, const aclTensor* target, int64_t reduction, aclTensor* result)
+static bool CheckShape(const aclTensor* self, const aclTensor* target, int64_t reduction, const aclTensor* result)
 {
     // tensor维度不超过8维
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);

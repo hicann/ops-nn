@@ -278,13 +278,13 @@ static const aclTensor* logProbsReshapeAndContiguous(const aclTensor* logProbs, 
 }
 
 aclnnStatus aclnnCtcLossGetWorkspaceSize(const aclTensor* logProbs, const aclTensor* targets,
-                                         const aclIntArray* inputLengths, const aclIntArray* targetLengths,
+                                         const aclIntArray* inputLengths, const aclIntArray* targetlengths,
                                          int64_t blank, bool zeroInfinity, aclTensor* negLogLikelihoodOut,
                                          aclTensor* logAlphaOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(aclnnCtcLoss, DFX_IN(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+    L2_DFX_PHASE_1(aclnnCtcLoss, DFX_IN(logProbs, targets, inputLengths, targetlengths, blank, zeroInfinity),
                    DFX_OUT(negLogLikelihoodOut, logAlphaOut));
 
     // 固定写法，创建OpExecutor
@@ -292,12 +292,12 @@ aclnnStatus aclnnCtcLossGetWorkspaceSize(const aclTensor* logProbs, const aclTen
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 1、检查三个入参参数是否为空指针
-    CHECK_RET(CheckNotNull(logProbs, targets, inputLengths, targetLengths, negLogLikelihoodOut, logAlphaOut),
+    CHECK_RET(CheckNotNull(logProbs, targets, inputLengths, targetlengths, negLogLikelihoodOut, logAlphaOut),
               ACLNN_ERR_PARAM_NULLPTR);
 
     // 2、固定写法，参数检查
     int64_t maxTargetLengths = 0;
-    auto ret = CheckParams(logProbs, targets, inputLengths, targetLengths, blank, negLogLikelihoodOut, logAlphaOut,
+    auto ret = CheckParams(logProbs, targets, inputLengths, targetlengths, blank, negLogLikelihoodOut, logAlphaOut,
                            maxTargetLengths);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -330,7 +330,7 @@ aclnnStatus aclnnCtcLossGetWorkspaceSize(const aclTensor* logProbs, const aclTen
     // 将inputLengths和targetLengths转化成Tensor
     auto inputLengthsTensor = uniqueExecutor.get()->ConvertToTensor(inputLengths,
                                                                     targetsContiguousCasted->GetDataType());
-    auto targetLengthsTensor = uniqueExecutor.get()->ConvertToTensor(targetLengths,
+    auto targetLengthsTensor = uniqueExecutor.get()->ConvertToTensor(targetlengths,
                                                                      targetsContiguousCasted->GetDataType());
 
     // 调用CTCLossV2算子kernel

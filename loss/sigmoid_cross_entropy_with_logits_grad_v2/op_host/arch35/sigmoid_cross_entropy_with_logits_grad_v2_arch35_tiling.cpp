@@ -19,38 +19,38 @@ using namespace ge;
 using namespace SigmoidCrossEntropyWithLogitsGradV2Op;
 using namespace SigmoidCrossEntropyWithLogitsGradV2Struct;
 
-#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(DTYPE)                             \
-    if (hasWeight_) {                                                                                    \
-        if (hasPosWeight_) {                                                                             \
-            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagWeightPosWight); \
-        } else {                                                                                         \
-            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagWeight);         \
-        }                                                                                                \
-    } else {                                                                                             \
-        if (hasPosWeight_) {                                                                             \
-            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagPosWeight);      \
-        } else {                                                                                         \
-            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, Dag);               \
-        }                                                                                                \
+#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(DTYPE, RET)                             \
+    if (hasWeight_) {                                                                                         \
+        if (hasPosWeight_) {                                                                                  \
+            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagWeightPosWight, RET); \
+        } else {                                                                                              \
+            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagWeight, RET);         \
+        }                                                                                                     \
+    } else {                                                                                                  \
+        if (hasPosWeight_) {                                                                                  \
+            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DagPosWeight, RET);      \
+        } else {                                                                                              \
+            SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, Dag, RET);               \
+        }                                                                                                     \
     }
 
-#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DAG)           \
-    if (isMean_) {                                                                              \
-        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITH_MEAN(DTYPE, DAG);    \
-    } else {                                                                                    \
-        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITHOUT_MEAN(DTYPE, DAG); \
+#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_DAG(DTYPE, DAG, RET)           \
+    if (isMean_) {                                                                                   \
+        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITH_MEAN(DTYPE, DAG, RET);    \
+    } else {                                                                                         \
+        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITHOUT_MEAN(DTYPE, DAG, RET); \
     }
 
-#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITH_MEAN(DTYPE, DAG)                         \
+#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITH_MEAN(DTYPE, DAG, RET)                    \
     BroadcastBaseTiling<SigmoidCrossEntropyWithLogitsGradV2##DAG<DTYPE, ATTR_MEAN>::OpDag> brcBaseTiling(context_); \
-    SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING
+    SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING(RET)
 
-#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITHOUT_MEAN(DTYPE, DAG)                       \
+#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING_WITHOUT_MEAN(DTYPE, DAG, RET)                  \
     BroadcastBaseTiling<SigmoidCrossEntropyWithLogitsGradV2##DAG<DTYPE, ATTR_OTHER>::OpDag> brcBaseTiling(context_); \
-    SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING
+    SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING(RET)
 
-#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING                               \
-    ret = brcBaseTiling.DoTiling();                                                                  \
+#define SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_CAL_BROADCAST_TILING(RET)                          \
+    RET = brcBaseTiling.DoTiling();                                                                  \
     tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), hasWeight_, hasPosWeight_, isMean_); \
     brcBaseTiling.SetScalar<float>(scale_)
 
@@ -175,11 +175,11 @@ ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2Tiling::DoOpTiling()
 {
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
     if (dtype_ == ge::DT_FLOAT) {
-        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(float);
+        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(float, ret);
     } else if (dtype_ == ge::DT_FLOAT16) {
-        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(half);
+        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(half, ret);
     } else if (dtype_ == ge::DT_BF16) {
-        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(Ops::Base::bfloat16_t);
+        SIGMOID_CROSS_ENTROPY_WITH_LOGITS_GRAD_V2_DO_BROADCAST_TILING(Ops::Base::bfloat16_t, ret);
     }
     DumpTilingInfo();
 

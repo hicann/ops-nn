@@ -151,7 +151,7 @@ void FusedSgdTiling::CheckOptionalInputs()
     }
 }
 
-static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t useMomentum_)
+static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, uint32_t useMomentum_)
 {
     auto dtypeInput = context->GetDynamicInputDesc(INPUT_PARAMS_IDX, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);

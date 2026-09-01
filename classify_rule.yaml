@@ -1767,7 +1767,6 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/binary_cross_entropy_grad/README.md
         - ops/ops-nn/loss/binary_cross_entropy_grad/op_api/
         - ops/ops-nn/loss/binary_cross_entropy_grad/op_graph/
-        - ops/ops-nn/loss/chamfer_distance/
         - ops/ops-nn/loss/chamfer_distance_grad/
         - ops/ops-nn/loss/cross_entropy_loss/docs/
         - ops/ops-nn/loss/cross_entropy_loss/README.md
@@ -1825,7 +1824,7 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/mse_loss_grad/op_graph/
         - ops/ops-nn/loss/mse_loss_grad_v2/
         - ops/ops-nn/loss/mse_loss_v2/
-        - ops/ops-nn/loss/multilabel_margin_loss/
+        - ops/ops-nn/loss/multilabel_margin_loss/op_api/
         - ops/ops-nn/loss/nll_loss/docs/
         - ops/ops-nn/loss/nll_loss/README.md
         - ops/ops-nn/loss/nll_loss/op_api/
@@ -1847,8 +1846,8 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/smooth_l1_loss_v2/README.md
         - ops/ops-nn/loss/smooth_l1_loss_v2/op_api/
         - ops/ops-nn/loss/smooth_l1_loss_v2/op_graph/
-        - ops/ops-nn/loss/soft_margin_loss/
-        - ops/ops-nn/loss/soft_margin_loss_grad/
+        - ops/ops-nn/loss/soft_margin_loss/op_api/
+        - ops/ops-nn/loss/soft_margin_loss_grad/op_api/
         - ops/ops-nn/optim/apply_adam_w_quant/docs/
         - ops/ops-nn/optim/apply_adam_w_quant/README.md
         - ops/ops-nn/optim/apply_adam_w_quant/op_host/
@@ -1889,6 +1888,8 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/chamfer_distance/tests/
         - ops/ops-nn/loss/chamfer_distance_grad/examples/
         - ops/ops-nn/loss/chamfer_distance_grad/tests/
+        - ops/ops-nn/loss/chamfer_distance_grad/op_kernel/arch35/
+        - ops/ops-nn/loss/chamfer_distance_grad/op_host/arch35/
         - ops/ops-nn/loss/cross_entropy_loss/examples/
         - ops/ops-nn/loss/cross_entropy_loss/tests/
         - ops/ops-nn/loss/cross_entropy_loss_grad/examples/
@@ -1922,6 +1923,8 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/mse_loss_grad_v2/tests/
         - ops/ops-nn/loss/mse_loss_v2/examples/
         - ops/ops-nn/loss/mse_loss_v2/tests/
+        - ops/ops-nn/loss/mse_loss_v2/op_kernel/arch35/
+        - ops/ops-nn/loss/mse_loss_v2/op_host/arch35/
         - ops/ops-nn/loss/multilabel_margin_loss/examples/
         - ops/ops-nn/loss/multilabel_margin_loss/tests/
         - ops/ops-nn/loss/nll_loss/examples/

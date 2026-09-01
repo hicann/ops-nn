@@ -34,11 +34,11 @@ struct ChamferDistanceGradTilingData {
 #undef GET_TILING_DATA
 #define GET_TILING_DATA(tilingData, tilingPointer)                                                         \
     ChamferDistanceGradTilingData tilingData;                                                              \
-    {                                                                                                      \
+    do {                                                                                                   \
         const ChamferDistanceGradTilingData* ptr = reinterpret_cast<const ChamferDistanceGradTilingData*>( \
             tilingPointer);                                                                                \
         tilingData = *ptr;                                                                                 \
-    }
+    } while (0)
 #endif
 
 template <typename T>

@@ -237,7 +237,6 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(const aclTensor* self, const aclTensor*
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     // 固定写法，参数检查
     auto ret = CheckParams(self, target, weight, reduction, out, totalWeightOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

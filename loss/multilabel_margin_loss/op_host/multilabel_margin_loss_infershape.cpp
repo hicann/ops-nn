@@ -21,6 +21,7 @@ using namespace ge;
 namespace ops {
 
 static constexpr int64_t UNKNOWN_RANK_DIM_VALUE = -2LL;
+const size_t DIM_NUM_TWO = 2;
 
 static inline bool IsUnknownRank(const gert::Shape* shape)
 {
@@ -63,7 +64,7 @@ static ge::graphStatus InferShapeMultilabelMarginLoss(gert::InferShapeContext* c
 
     // reduction == none: per-sample loss, output 1D (N) for a 2D (N, C) input,
     // scalar for a 1D (C) input. reduction == mean/sum: scalar. Dynamic dims (-1) propagate via SetDim.
-    if (strcmp(reductionStr, "none") == 0 && x1_shape->GetDimNum() >= 2) {
+    if (strcmp(reductionStr, "none") == 0 && x1_shape->GetDimNum() >= DIM_NUM_TWO) {
         y_shape->SetDimNum(1);
         y_shape->SetDim(0, x1_shape->GetDim(0));
     } else {

@@ -119,13 +119,11 @@ __simt_callee__ inline float FloatAddIeee(float lhs, float rhs)
 {
     const uint32_t lhsBits = FloatToBits(lhs), rhsBits = FloatToBits(rhs);
     const bool lhsNan = FloatBitsIsNan(lhsBits), rhsNan = FloatBitsIsNan(rhsBits);
-
     if (lhsNan || rhsNan) {
         return MakeQuietNan();
     }
 
     const bool lhsInf = FloatBitsIsInf(lhsBits), rhsInf = FloatBitsIsInf(rhsBits);
-
     if (lhsInf && rhsInf) {
         if (((lhsBits ^ rhsBits) & FP32_SIGN_MASK) != 0U) {
             return MakeQuietNan();
@@ -150,14 +148,12 @@ __simt_callee__ inline float FloatMulIeee(float lhs, float rhs)
 {
     const uint32_t lhsBits = FloatToBits(lhs), rhsBits = FloatToBits(rhs);
     const bool lhsNan = FloatBitsIsNan(lhsBits), rhsNan = FloatBitsIsNan(rhsBits);
-
     if (lhsNan || rhsNan) {
         return MakeQuietNan();
     }
 
     const bool lhsInf = FloatBitsIsInf(lhsBits), rhsInf = FloatBitsIsInf(rhsBits);
     const bool lhsZero = FloatBitsIsZero(lhsBits), rhsZero = FloatBitsIsZero(rhsBits);
-
     if ((lhsInf && rhsZero) || (rhsInf && lhsZero)) {
         return MakeQuietNan();
     }

@@ -245,7 +245,6 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTenso
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     op::DataType promoteType2D;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         promoteType2D = self->GetDataType();
