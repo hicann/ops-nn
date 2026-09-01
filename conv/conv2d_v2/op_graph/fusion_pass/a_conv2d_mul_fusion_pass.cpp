@@ -187,7 +187,6 @@ bool AConv2dMulFusion::CheckScaleShapeConv3d() const
     FUSION_PASS_CHECK(ConvFusionUtilsPass::IsUnknownShape(scaleDesc),
                       OP_LOGD(convDescInfo.nodeNameStr, "scale has unknown shape, no fusion."), return false);
     auto scaleDims = scaleDesc.GetShape().GetDims();
-
     if (scaleDims.size() == 1) {
         FUSION_PASS_CHECK(scaleDims[0] != outputC, OP_LOGD(convDescInfo.nodeNameStr, "scale 1D C mismatch, no fusion."),
                           return false);

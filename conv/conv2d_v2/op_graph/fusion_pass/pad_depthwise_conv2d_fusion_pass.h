@@ -70,7 +70,7 @@ private:
     bool CheckFilterVsPadding(const ge::GNode& convNode) const;
     bool CheckPadOutputsAllDepthwise() const;
     bool BuildPadsVector();
-    bool IsAscend950();
+    bool IsAscend950() const;
 
     ge::GNodePtr padNode = nullptr;
     ge::GNodePtr padXProducer = nullptr;

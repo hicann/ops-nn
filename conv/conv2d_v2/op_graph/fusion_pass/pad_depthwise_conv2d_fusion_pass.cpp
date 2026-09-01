@@ -63,7 +63,7 @@ bool PadDepthwiseConv2dFusionPass::CheckMatchStructure(const GNode& matchNode)
     return true;
 }
 
-bool PadDepthwiseConv2dFusionPass::IsAscend950()
+bool PadDepthwiseConv2dFusionPass::IsAscend950() const
 {
     NpuArch curArch = NpuArch::DAV_RESV;
     return ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, curArch) && curArch == NpuArch::DAV_3510;
@@ -101,7 +101,7 @@ bool PadDepthwiseConv2dFusionPass::GetPaddingsFromConst()
         return false;
     }
 
-    for (size_t i = 1; i < padValue.size(); i += 2) {
+    for (size_t i = 1; i < padValue.size(); i += static_cast<size_t>(DIRECTION_COUNT)) {
         paddings.push_back({padValue[i - 1], padValue[i]});
     }
     FUSION_PASS_CHECK(paddings.size() < static_cast<size_t>(DIM_NUM4),
