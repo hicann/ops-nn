@@ -129,7 +129,7 @@ int main()
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
     }
-    // 调用aclnnAdd第二段接口
+    // 调用aclnnUniqueConsecutive第二段接口
     ret = aclnnUniqueConsecutive(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnUniqueConsecutive failed. ERROR: %d\n", ret); return ret);
     // 4. （固定写法）同步等待任务执行结束
@@ -150,7 +150,6 @@ int main()
     aclDestroyTensor(valueOut);
     aclDestroyTensor(inverseOut);
     aclDestroyTensor(countsOut);
-    return 0;
 
     // 7.释放device资源，需要根据具体API的接口定义修改
     aclrtFree(selfDeviceAddr);
