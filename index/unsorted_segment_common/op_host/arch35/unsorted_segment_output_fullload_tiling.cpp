@@ -21,6 +21,21 @@ static constexpr uint32_t MAX_LAST_DIM_RANG = 1024;
 static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint64_t BUFFER_ADD_NUM = 2;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
+static constexpr uint64_t SIMT_BLOCK_DIM_MAX = 2048;
+static constexpr uint64_t PARALLEL_NUM_CAP = 1024;
+static constexpr uint64_t ROW_UB_LOOPS_TARGET = 1024;
+
+static uint32_t FloorPow2(uint32_t x)
+{
+    if (x == 0U) {
+        return 0U;
+    }
+    uint32_t r = 1U;
+    while ((r << 1U) <= x && (r << 1U) != 0U) {
+        r <<= 1U;
+    }
+    return r;
+}
 
 bool UnsortedSegmentOutFlTiling::IsCapable()
 {
@@ -76,10 +91,71 @@ ge::graphStatus UnsortedSegmentOutFlTiling::UbAddBranch()
         usedCoreNum_ = std::min(Ops::Base::CeilDiv(inputOuterDim_, maxIndexNum_), totalCoreNum_);
     }
     uint64_t oneRowinnerDimSize = innerDim_ * dataTypeBytes_;
-    uint64_t outTailSize = Ops::Base::CeilAlign(outputOuterDim_ * innerDim_ * dataTypeBytes_, ubBlockSize_) * ROW_NUM;
-    uint64_t remainUbSize = (ubSize_ - outTailSize) / BUFFER_ADD_NUM;
-    // one ubBlockSize_ is left for input align
-    rowNumUb_ = (remainUbSize - ubBlockSize_ - ubBlockSize_) / (oneRowinnerDimSize + idTypeBytes_);
+
+    uint64_t outSize = outputOuterDim_ * innerDim_;
+    uint64_t oneRowOutNumAlignBytes = Ops::Base::CeilAlign(outSize * dataTypeBytes_, ubBlockSize_);
+    oneRowOutNumAlign_ = oneRowOutNumAlignBytes / dataTypeBytes_;
+    uint64_t accStrideBytes = oneRowOutNumAlignBytes;
+    if ((accStrideBytes / ubBlockSize_) % 2UL == 0UL) {
+        accStrideBytes += ubBlockSize_;
+    }
+    accStride_ = accStrideBytes / dataTypeBytes_;
+
+    uint32_t pThreadRaw = innerDim_ > 0UL ? static_cast<uint32_t>(SIMT_BLOCK_DIM_MAX / innerDim_) : 1U;
+    uint32_t pThread = FloorPow2(std::min(pThreadRaw, static_cast<uint32_t>(PARALLEL_NUM_CAP)));
+
+    uint32_t pRow = FloorPow2(static_cast<uint32_t>(std::max(maxIndexNum_, static_cast<uint64_t>(ROW_NUM))));
+    uint32_t pCap = std::min(pThread, pRow);
+    if (pCap < ROW_NUM) {
+        pCap = ROW_NUM;
+    }
+
+    uint32_t chosenP = ROW_NUM;
+    uint64_t chosenRowUb = 0UL;
+    constexpr uint32_t P_LOOP1_CAP = 128U;
+    uint32_t pCapLoop1 = std::min(pCap, P_LOOP1_CAP);
+    for (uint32_t p = pCapLoop1; p >= ROW_NUM; p >>= 1U) {
+        uint64_t tmpBufSize = accStrideBytes * p;
+        if (tmpBufSize >= ubSize_) {
+            continue;
+        }
+        uint64_t remainUbSize = (ubSize_ - tmpBufSize) / BUFFER_ADD_NUM;
+        uint64_t rowUb = 0UL;
+        if (remainUbSize > ubBlockSize_ + ubBlockSize_) {
+            rowUb = (remainUbSize - ubBlockSize_ - ubBlockSize_) / (oneRowinnerDimSize + idTypeBytes_);
+        }
+        if (rowUb >= maxIndexNum_) {
+            chosenP = p;
+            chosenRowUb = maxIndexNum_;
+            break;
+        }
+    }
+    if (chosenRowUb == 0UL) {
+        for (uint32_t p = pCap; p >= ROW_NUM; p >>= 1U) {
+            uint64_t tmpBufSize = accStrideBytes * p;
+            if (tmpBufSize >= ubSize_) {
+                continue;
+            }
+            uint64_t remainUbSize = (ubSize_ - tmpBufSize) / BUFFER_ADD_NUM;
+            uint64_t rowUb = 0UL;
+            if (remainUbSize > ubBlockSize_ + ubBlockSize_) {
+                rowUb = (remainUbSize - ubBlockSize_ - ubBlockSize_) / (oneRowinnerDimSize + idTypeBytes_);
+            }
+            if (rowUb > maxIndexNum_) {
+                rowUb = maxIndexNum_;
+            }
+            if (rowUb >= ROW_UB_LOOPS_TARGET || p == ROW_NUM) {
+                chosenP = p;
+                chosenRowUb = rowUb;
+                break;
+            }
+        }
+    }
+    if (chosenRowUb == 0UL) {
+        chosenRowUb = 1UL;
+    }
+    parallelNum_ = chosenP;
+    rowNumUb_ = chosenRowUb;
     oneCoreUbLoopTimes_ = (maxIndexNum_ + rowNumUb_ - 1UL) / rowNumUb_;
     return ge::GRAPH_SUCCESS;
 }
@@ -101,6 +177,9 @@ void UnsortedSegmentOutFlTiling::SetTilingData()
     tilingData->maxIndexNum = maxIndexNum_;
     tilingData->oneCoreUbLoopTimes = oneCoreUbLoopTimes_;
     tilingData->rowNumUb = rowNumUb_;
+    tilingData->parallelNum = parallelNum_;
+    tilingData->oneRowOutNumAlign = oneRowOutNumAlign_;
+    tilingData->accStride = accStride_;
 }
 
 ge::graphStatus UnsortedSegmentOutFlTiling::PostTiling()
@@ -125,6 +204,9 @@ void UnsortedSegmentOutFlTiling::DumpTilingInfo()
     info << ", maxIndexNum: " << tilingData->maxIndexNum;
     info << ", oneCoreUbLoopTimes: " << tilingData->oneCoreUbLoopTimes;
     info << ", rowNumUb: " << tilingData->rowNumUb;
+    info << ", parallelNum: " << tilingData->parallelNum;
+    info << ", oneRowOutNumAlign: " << tilingData->oneRowOutNumAlign;
+    info << ", accStride: " << tilingData->accStride;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

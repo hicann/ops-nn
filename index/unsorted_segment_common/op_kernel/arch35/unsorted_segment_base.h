@@ -138,11 +138,23 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Co
 template <typename TX, typename Index, typename SimtGatherFunc>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void SimtGatherValue(
     __ubuf__ TX* midResPtr, __ubuf__ TX* xUbLocalPtr, __ubuf__ Index* indexUb, const uint32_t outputOuterDimSize,
-    const uint32_t innerDimSize, const uint32_t needIndexOneUb, const uint32_t outputOffset)
+    const uint32_t innerDimSize, const uint32_t needIndexOneUb, const uint32_t outputOffset, const uint32_t parallelNum)
 {
+    if (innerDimSize == 1U) {
+        uint32_t offset32 = static_cast<uint32_t>(threadIdx.y);
+        uint32_t midBase32 = static_cast<uint32_t>(threadIdx.y) * outputOffset;
+        for (; offset32 < needIndexOneUb; offset32 += parallelNum) {
+            Index indexVal = indexUb[offset32];
+            if (indexVal >= 0 && indexVal < outputOuterDimSize) {
+                uint32_t dstOffset = midBase32 + static_cast<uint32_t>(indexVal);
+                midResPtr[dstOffset] = SimtGatherFunc()(midResPtr[dstOffset], xUbLocalPtr[offset32]);
+            }
+        }
+        return;
+    }
     Index midBaseOffset = threadIdx.y * outputOffset;
     Index offset = threadIdx.y;
-    for (; offset < needIndexOneUb; offset += ROW_NUM) {
+    for (; offset < needIndexOneUb; offset += parallelNum) {
         Index indexVal = indexUb[offset];
         if (indexVal >= 0 && indexVal < outputOuterDimSize) {
             Index midResOffSet = indexVal * innerDimSize;

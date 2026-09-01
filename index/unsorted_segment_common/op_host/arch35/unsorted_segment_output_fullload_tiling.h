@@ -39,6 +39,9 @@ protected:
     uint64_t maxIndexNum_{0};
     uint64_t oneCoreUbLoopTimes_{0};
     uint64_t rowNumUb_{0};
+    uint64_t parallelNum_{16};
+    uint64_t oneRowOutNumAlign_{0};
+    uint64_t accStride_{0};
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_OUTPUT_FULLLOAD_TILING_H

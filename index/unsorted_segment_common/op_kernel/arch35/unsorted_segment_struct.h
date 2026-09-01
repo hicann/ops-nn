@@ -34,6 +34,7 @@ struct UnsortedSegmentSortSimtTilingData {
     uint64_t usedCoreNum;
     uint64_t sortTmpSize;
     uint64_t tailIndexNum;
+    uint64_t narrowSortKey;
 };
 
 struct UnsortedSegmentSimdSplitColTilingData {
@@ -85,6 +86,9 @@ struct UnsortedSegmentOutFlTilingData {
     uint64_t maxIndexNum;
     uint64_t oneCoreUbLoopTimes;
     uint64_t rowNumUb;
+    uint64_t parallelNum;
+    uint64_t oneRowOutNumAlign;
+    uint64_t accStride;
 };
 
 } // namespace UnsortedSegment

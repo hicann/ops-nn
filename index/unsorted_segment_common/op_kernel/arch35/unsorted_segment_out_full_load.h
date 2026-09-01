@@ -35,6 +35,9 @@ public:
         this->maxIndexNum = tiling->maxIndexNum;
         this->oneCoreUbLoop = tiling->oneCoreUbLoopTimes;
         this->rowNumOneUb = tiling->rowNumUb;
+        this->parallelNum = tiling->parallelNum;
+        this->oneRowOutNumAlign = tiling->oneRowOutNumAlign;
+        this->accStride = tiling->accStride;
         this->innerDimSizeAlign = RoundUpOneBlock(innerDimSize * sizeof(TX)) / sizeof(TX);
 
         if (inputOuterDimSize * innerDimSize == 0) {
@@ -47,7 +50,7 @@ public:
         uint32_t currUbRowNum = (rowNumOneUb < maxIndexNum) ? rowNumOneUb : maxIndexNum;
         pipe_->InitBuffer(inQueueX, BUFFER_ADD_NUM, RoundUpOneBlock(innerDimSize * sizeof(TX) * currUbRowNum));
         pipe_->InitBuffer(inQueueIndex, BUFFER_ADD_NUM, RoundUpOneBlock(sizeof(Index) * currUbRowNum));
-        pipe_->InitBuffer(tmpBuf, RoundUpOneBlock(innerDimSize * sizeof(TX) * outputOuterDimSize) * ROW_NUM);
+        pipe_->InitBuffer(tmpBuf, accStride * sizeof(TX) * parallelNum);
     }
 
     __aicore__ inline void CopyInIndex(uint64_t offset, uint32_t extent)
@@ -98,8 +101,7 @@ public:
 
         __gm__ TX* output = (__gm__ TX*)outputGm.GetPhyAddr();
         uint32_t oneRowOutNum = innerDimSize * outputOuterDimSize;
-        uint32_t oneRowOutNumAlign = RoundUpOneBlock(oneRowOutNum * sizeof(TX)) / sizeof(TX);
-        uint32_t bufAlign32 = oneRowOutNumAlign * ROW_NUM;
+        uint32_t bufAlign32 = accStride * parallelNum;
         LocalTensor<TX> midRes = tmpBuf.Get<TX>();
         Duplicate(midRes, InitValueType::Get(), bufAlign32);
         PipeBarrier<PIPE_V>();
@@ -126,21 +128,20 @@ public:
             __ubuf__ TX* midResPtr = (__ubuf__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
             asc_vf_call<SimtGatherValue<TX, Index, SimtGatherFunc>>(
-                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)}, midResPtr, xUbLocalPtr,
-                (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize, needIndexOneUb,
-                oneRowOutNumAlign);
+                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(parallelNum)}, midResPtr, xUbLocalPtr,
+                (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize, needIndexOneUb, accStride,
+                parallelNum);
             inQueueX.FreeTensor(xUbLocal);
             inQueueIndex.FreeTensor(indexUb);
         }
-        // rownum lines reduces to one line
-        int32_t stepStride = ROW_NUM / TWO;
-        for (int32_t i = 0; i < HALFTIME; ++i) {
+        int32_t stepStride = static_cast<int32_t>(parallelNum) / static_cast<int32_t>(TWO);
+        while (stepStride >= 1) {
             for (int32_t first = 0; first < stepStride; ++first) {
-                int32_t OneOffset = first * oneRowOutNumAlign;
-                int32_t TwoOffset = (first + stepStride) * oneRowOutNumAlign;
-                VectorComputeFunc()(midRes, midRes, OneOffset, TwoOffset, oneRowOutNumAlign);
+                int32_t OneOffset = first * static_cast<int32_t>(accStride);
+                int32_t TwoOffset = (first + stepStride) * static_cast<int32_t>(accStride);
+                VectorComputeFunc()(midRes, midRes, OneOffset, TwoOffset, static_cast<int32_t>(oneRowOutNumAlign));
             }
-            stepStride /= TWO;
+            stepStride /= static_cast<int32_t>(TWO);
         }
         event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventId);
@@ -173,6 +174,9 @@ private:
     uint32_t maxIndexNum{1};
     uint32_t oneCoreUbLoop{1};
     uint32_t rowNumOneUb{1};
+    uint32_t parallelNum{ROW_NUM};
+    uint32_t oneRowOutNumAlign{1};
+    uint32_t accStride{1};
 };
 } // namespace UnsortedSegment
 #endif

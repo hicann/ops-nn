@@ -22,6 +22,7 @@ static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint32_t MAX_INDEX_NUM = 1024;
 static constexpr int64_t DOUBLE = 2;
 static constexpr uint32_t ALIGN_SIZE = 128;
+static constexpr uint32_t BITS_PER_BYTE = 8;
 
 bool UnsortedSegmentSortSimtTiling::IsCapable()
 {
@@ -47,12 +48,24 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
     int64_t mid = 0;
     int64_t sortTmpSize = 0;
     ubSize_ = ubSize_ - DCACHE_SIZE;
+
+    bool narrowSortKey = (idTypeBytes_ == static_cast<uint32_t>(sizeof(int64_t))) &&
+                         (outputOuterDim_ <= static_cast<uint64_t>(INT32_MAX));
+    uint64_t sortKeyBytes = narrowSortKey ? static_cast<uint64_t>(sizeof(int32_t)) :
+                                            static_cast<uint64_t>(idTypeBytes_);
+    ge::DataType sortKeyType = narrowSortKey ? ge::DT_INT32 : idType_;
     while (end - start > 1) {
         mid = (end + start) / DOUBLE;
         int64_t totalIndexSize = Ops::Base::CeilAlign(mid * idTypeBytes_, ubBlockSize_) * DOUBLE +
-                                 Ops::Base::CeilAlign(mid * idTypeBytes_, ubBlockSize_) + ubBlockSize_ * DOUBLE +
+                                 Ops::Base::CeilAlign(mid * sortKeyBytes, ubBlockSize_) + ubBlockSize_ * DOUBLE +
                                  Ops::Base::CeilAlign(mid * sizeof(uint32_t), ubBlockSize_);
-        sortTmpSize = GetSortTmpSize(idType_, mid, false);
+        if (narrowSortKey) {
+            totalIndexSize += Ops::Base::CeilAlign(mid * sortKeyBytes, ubBlockSize_);
+            totalIndexSize += Ops::Base::CeilAlign(mid / static_cast<int64_t>(BITS_PER_BYTE) + 1,
+                                                   static_cast<int64_t>(ubBlockSize_)) +
+                              static_cast<int64_t>(ubBlockSize_);
+        }
+        sortTmpSize = GetSortTmpSize(sortKeyType, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, static_cast<int64_t>(ubBlockSize_));
         int64_t tmpTotalSize = totalIndexSize + sortTmpSize +
                                Ops::Base::CeilAlign(mid * innerDim_ * dataTypeBytes_, ubBlockSize_) * DOUBLE;
@@ -92,6 +105,7 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
     tilingData->usedCoreNum = usedCoreNum_;
     tilingData->sortTmpSize = sortTmpSize;
     tilingData->tailIndexNum = tailIndexNum;
+    tilingData->narrowSortKey = narrowSortKey ? 1UL : 0UL;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -125,6 +139,7 @@ void UnsortedSegmentSortSimtTiling::DumpTilingInfo()
     info << ", usedCoreNum: " << tilingData->usedCoreNum;
     info << ", sortTmpSize: " << tilingData->sortTmpSize;
     info << ", tailIndexNum: " << tilingData->tailIndexNum;
+    info << ", narrowSortKey: " << tilingData->narrowSortKey;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
