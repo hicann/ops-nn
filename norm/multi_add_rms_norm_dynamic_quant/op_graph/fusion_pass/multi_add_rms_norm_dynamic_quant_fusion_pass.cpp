@@ -58,6 +58,23 @@ static const std::string SOC_ASCEND910_93 = "Ascend910_93";
 using UniqueGraphPtr = std::unique_ptr<Graph>;
 static const std::string PASS_NAME = "MultiAddRmsNormDynamicQuantFusionPass";
 
+// AddRmsNorm out0 的期望消费者数 = DynamicQuant 数(smooth_num) + 1 (y 输出)。
+// reshape 路径下 AddRmsNorm out0 仅 1 个 Reshape 消费者，Reshape out0 的消费者数同上。
+constexpr int64_t kRmsNormOutputPort = 0;        // AddRmsNorm / Reshape 的输出端口
+constexpr int64_t kReshapeOnlyConsumerCount = 1; // 有 reshape 时 AddRmsNorm out0 仅 Reshape 一个消费者
+
+static int64_t GetExpectedConsumerCount(int64_t smooth_num)
+{
+    // 期望消费者数 = smooth_num(DynamicQuant) + 1(y 输出)
+    return smooth_num + 1;
+}
+
+static int64_t GetDynamicQuantCount(int64_t smooth_num)
+{
+    // 需校验为 DynamicQuant 的消费者数 = smooth_num
+    return smooth_num;
+}
+
 static es::EsTensorHolder BuildPatternConstNode(es::EsGraphBuilder& builder)
 {
     static int counter = 0;
@@ -386,6 +403,49 @@ static bool IsMaxSmooth(const std::vector<NodeIo>& input_nodes, int64_t& patern_
     return true;
 }
 
+static bool IsAddRmsNormOutputValid(const std::vector<NodeIo>& matched_addrns, int64_t smooth_num, bool has_reshape)
+{
+    const int64_t expect_dq_count = GetDynamicQuantCount(smooth_num);
+    const int64_t expect_consumer_count = GetExpectedConsumerCount(smooth_num);
+    for (const auto& addrns : matched_addrns) {
+        auto out_nodes = addrns.node.GetOutDataNodesAndPortIndexs(kRmsNormOutputPort);
+        if (has_reshape) {
+            if (static_cast<int64_t>(out_nodes.size()) != kReshapeOnlyConsumerCount || out_nodes[0].first == nullptr) {
+                return false;
+            }
+            AscendString reshape_type;
+            out_nodes[0].first->GetType(reshape_type);
+            if (reshape_type != "Reshape") {
+                return false;
+            }
+            auto reshape_out = out_nodes[0].first->GetOutDataNodesAndPortIndexs(kRmsNormOutputPort);
+            if (static_cast<int64_t>(reshape_out.size()) != expect_consumer_count || reshape_out[0].first == nullptr) {
+                return false;
+            }
+            AscendString first_dq_type;
+            reshape_out[0].first->GetType(first_dq_type);
+            if (first_dq_type != "DynamicQuant") {
+                return false;
+            }
+        } else {
+            if (static_cast<int64_t>(out_nodes.size()) != expect_consumer_count) {
+                return false;
+            }
+            for (int64_t i = 0; i < expect_dq_count; i++) {
+                if (out_nodes[i].first == nullptr) {
+                    return false;
+                }
+                AscendString dq_type;
+                out_nodes[i].first->GetType(dq_type);
+                if (dq_type != "DynamicQuant") {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 static bool IsMaxSubGraph(const std::vector<NodeIo>& input_nodes, int64_t& patern_add_num, int64_t& patern_smooth_num,
                           bool& out_has_reshape)
 {
@@ -403,6 +463,10 @@ static bool IsMaxSubGraph(const std::vector<NodeIo>& input_nodes, int64_t& pater
     }
     if (!IsMaxSmooth(input_nodes, patern_smooth_num)) {
         OP_LOGW_IF(true, PASS_NAME.c_str(), "Check IsMaxSmooth failed.");
+        return false;
+    }
+    if (!IsAddRmsNormOutputValid(matched_addrns, patern_smooth_num, has_reshape)) {
+        OPS_LOG_I(PASS_NAME.c_str(), "Check IsAddRmsNormOutputValid failed, skip MultiAdd fusion.");
         return false;
     }
 
