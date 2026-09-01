@@ -207,6 +207,14 @@ TEST_F(BNTrainingUpdateV2TilingUT, accept_nchw_tag)
     EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NCHW), ge::GRAPH_SUCCESS);
 }
 
+// NCDHW 标签放行（5D；内存布局与 ND 同构,对齐 A2 通用格式支持面）
+TEST_F(BNTrainingUpdateV2TilingUT, accept_ncdhw_format)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 4, 3, 5, 6}, 4, key, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NCDHW),
+              ge::GRAPH_SUCCESS);
+}
+
 // ---------------- 反向：非法输入必须被拦截 ----------------
 
 // x dtype 非法（int32）

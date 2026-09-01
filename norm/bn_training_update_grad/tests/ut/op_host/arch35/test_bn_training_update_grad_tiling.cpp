@@ -488,6 +488,16 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nd_r1_huge_c_reroute)
     EXPECT_GT(blockDim, 0);
 }
 
+// NCDHW 标签放行（5D；内存布局与 ND 同构——dim0=N、dim1=C、后导维归约，对齐 A2 通用格式支持面）
+TEST_F(BNTrainingUpdateGradTilingUT, accept_ncdhw_format)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 4, 3, 5, 6}, 4, key, nullptr, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                        ge::FORMAT_NCDHW, true, nullptr, ge::FORMAT_NCDHW),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0U);
+}
+
 // NHWC 格式标签放行（原 reject_invalid_format 用 NHWC 拒收，移植后反转）
 TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_format)
 {

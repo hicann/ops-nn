@@ -100,9 +100,10 @@ ge::graphStatus BNTrainingUpdateGradTiling::GetShapeAndDtype()
 
 ge::graphStatus BNTrainingUpdateGradTiling::CheckGradsXDescAndShape()
 {
-    // grads/x desc：支持 ND/NCHW（二者同为 plane 连续语义：dim0=N、dim1=C、后导维为归一化轴 R；
-    // GE 图模式可能把 ND 归一化成 NCHW 标签下发，须一并接受）与 NHWC（C=最后一维，A2 同款支持面）；
-    // grads/x 必须同布局（ND/NCHW 同组或同为 NHWC），dtype 必须同型
+    // grads/x desc：支持 ND/NCHW/NCDHW（三者同为 plane 连续语义：dim0=N、dim1=C、后导维为归一化轴 R；
+    // GE 图模式可能把 ND 归一化成 NCHW 标签下发，须一并接受；NCDHW 内存与 ND 同构（5D），
+    // 对齐 A2 契约的通用格式支持面——A2 binary_config 实证 NCDHW 为其 5D 支持槽）与 NHWC
+    // （C=最后一维，A2 同款支持面）；grads/x 必须同布局（plane 组或同为 NHWC），dtype 必须同型
     auto gradsDesc = context_->GetInputDesc(INPUT_GRADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradsDesc);
     auto xDesc = context_->GetInputDesc(INPUT_X_INDEX);
@@ -120,7 +121,9 @@ ge::graphStatus BNTrainingUpdateGradTiling::CheckGradsXDescAndShape()
                                           "must be the same as grads"),
                 return ge::GRAPH_FAILED);
     xDtypeSize_ = (gradsDtype == ge::DT_FLOAT) ? 4 : 2;
-    auto isPlaneFormat = [](ge::Format fmt) { return fmt == ge::FORMAT_ND || fmt == ge::FORMAT_NCHW; };
+    auto isPlaneFormat = [](ge::Format fmt) {
+        return fmt == ge::FORMAT_ND || fmt == ge::FORMAT_NCHW || fmt == ge::FORMAT_NCDHW;
+    };
     OP_CHECK_IF(!isPlaneFormat(gradsFormat) && gradsFormat != ge::FORMAT_NHWC,
                 OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "grads", Ops::Base::ToString(gradsFormat).c_str(),
                                            "ND, NCHW or NHWC"),
@@ -171,6 +174,17 @@ ge::graphStatus BNTrainingUpdateGradTiling::CheckGradsXDescAndShape()
                     return ge::GRAPH_FAILED);
     }
 
+    if (gradsFormat == ge::FORMAT_NCDHW) {
+        // NCDHW 与 ND 内存同构,仅当 storage 与 origin 一致时布局可按 [N,C,R...] 直算;不同源宁拒不猜
+        // （实测 TTK/GE 单算子图下发时 storage format 保持 NCDHW、shape 与 origin 一致,无 C0 对齐/重排）
+        auto gradsOriginShape = gradsShape->GetOriginShape();
+        OP_CHECK_IF(gradsOriginShape.GetDimNum() != dimNum ||
+                        gradsOriginShape.GetShapeSize() != gradsStorageShape.GetShapeSize(),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "grads",
+                                                          Ops::Base::ToString(gradsOriginShape).c_str(),
+                                                          "NCDHW requires storage shape equal to origin shape"),
+                    return ge::GRAPH_FAILED);
+    }
     if (gradsFormat == ge::FORMAT_NHWC) {
         // NHWC：C=最后一维（逻辑序）。origin 与 storage shape 不同源时内存实际序不可推断，宁拒不猜
         auto gradsOriginShape = gradsShape->GetOriginShape();

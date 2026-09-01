@@ -10,7 +10,7 @@
 
 /*!
  * \file bn_training_update_v2_tiling_arch35.cpp
- * \brief BNTrainingUpdateV2 arch35 tiling（ND-only；GE 图模式可能下发 NCHW 标签，一并接受）
+ * \brief BNTrainingUpdateV2 arch35 tiling（ND 布局；GE 图模式可能下发 NCHW/NCDHW 标签，一并接受）
  *        统一切分模型：N=d0, C=d1, inner=R=prod(d2:)，units=N*C 个连续 plane；
  *        统计量恒为 [C] 逻辑布局，元素数=C 校验；numRecip=fp32(1/(N*R))；无 workspace。
  */
@@ -120,8 +120,9 @@ ge::graphStatus BNTrainingUpdateV2Tiling::GetShapeAndDtype()
 
 ge::graphStatus BNTrainingUpdateV2Tiling::CheckXDescAndShape()
 {
-    // x desc：仅支持 ND/NCHW（二者同为 plane 连续语义：dim0=N、dim1=C、后导维为归一化轴 R；
-    // GE 图模式可能把 ND 归一化成 NCHW 标签下发，须一并接受）
+    // x desc：支持 ND/NCHW/NCDHW（三者同为 plane 连续语义：dim0=N、dim1=C、后导维为归一化轴 R；
+    // GE 图模式可能把 ND 归一化成 NCHW 标签下发，须一并接受；NCDHW 内存与 ND 同构（5D），
+    // 对齐 A2 契约的通用格式支持面——A2 binary_config 实证 NCDHW 为其 5D 支持槽）
     auto xDesc = context_->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xFormat = xDesc->GetOriginFormat();
@@ -136,10 +137,10 @@ ge::graphStatus BNTrainingUpdateV2Tiling::CheckXDescAndShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = xShape->GetStorageShape();
     size_t dimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF(
-        xFormat != ge::FORMAT_ND && xFormat != ge::FORMAT_NCHW,
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", Ops::Base::ToString(xFormat).c_str(), "ND or NCHW"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xFormat != ge::FORMAT_ND && xFormat != ge::FORMAT_NCHW && xFormat != ge::FORMAT_NCDHW,
+                OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", Ops::Base::ToString(xFormat).c_str(),
+                                           "ND, NCHW or NCDHW"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         dimNum < 2,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
@@ -159,6 +160,15 @@ ge::graphStatus BNTrainingUpdateV2Tiling::CheckXDescAndShape()
                     return ge::GRAPH_FAILED);
     }
 
+    if (xFormat == ge::FORMAT_NCDHW) {
+        // NCDHW 与 ND 内存同构,仅当 storage 与 origin 一致时布局可按 [N,C,R...] 直算;不同源宁拒不猜
+        auto xOriginShape = xShape->GetOriginShape();
+        OP_CHECK_IF(xOriginShape.GetDimNum() != dimNum || xOriginShape.GetShapeSize() != xStorageShape.GetShapeSize(),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                          Ops::Base::ToString(xOriginShape).c_str(),
+                                                          "NCDHW requires storage shape equal to origin shape"),
+                    return ge::GRAPH_FAILED);
+    }
     numN_ = xStorageShape.GetDim(0);
     numC_ = xStorageShape.GetDim(1);
     innerSize_ = 1;

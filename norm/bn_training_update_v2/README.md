@@ -56,7 +56,7 @@
       <td>输入</td>
       <td><ul><li>表示待归一化的输入张量，对应公式中的<code>x</code>。</li><li>Ascend 950PR/Ascend 950DT：shape为[N, C, R...]，支持2~8维，dim0为N、dim1为C、后导维展平为归一化轴R。</li><li>其余产品：4/5/6维（5HD/6HD内部布局，或4维NCHW特例[N,C,1,W]走动态分支）。</li><li>不支持空tensor（各维必须为正数）。</li><li>fp16/bf16输入在算子内升fp32计算、单次舍入写回。</li></ul></td>
       <td>FLOAT32、FLOAT16；BFLOAT16仅Ascend 950PR/Ascend 950DT、Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</td>
-      <td>Ascend 950PR/Ascend 950DT：ND；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0）</td>
+      <td>Ascend 950PR/Ascend 950DT：ND（含NCDHW标签，5D时布局相同）；其余产品：NC1HWC0/NCDHW/NCHW/NDC1HWC0（Atlas 推理系列产品仅NC1HWC0/NDC1HWC0）</td>
     </tr>
     <tr>
       <td>sum</td>
@@ -120,7 +120,7 @@
 
 **Ascend 950PR/Ascend 950DT：**
 
-- 仅支持ND格式（dim0=N、dim1=C、后导维为归一化轴R，rank 2~8；图模式下NCHW标签会被框架归一化下发，布局相同）。
+- 仅支持ND格式（dim0=N、dim1=C、后导维为归一化轴R，rank 2~8；图模式下NCHW/NCDHW标签会被框架归一化下发或直接透传，NCDHW为5D标签、内存布局与ND相同）。
 - x维度数须≥2；x为FLOAT16/FLOAT32/BFLOAT16。
 - sum/square_sum/scale/offset恒为FLOAT32，元素数必须等于x的dim1（C）（shape推荐为[C]，按元素数校验）。
 - batch_mean/batch_variance的shape与scale一致。
