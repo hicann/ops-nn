@@ -45,9 +45,9 @@ namespace ge {
  * @par Outputs:
  * @li y: A tensor with the same shape, data type, and format as x.
  */
+// clang-format off
 #ifndef OPS_PROTO_DEF_BNINFERENCE
 #define OPS_PROTO_DEF_BNINFERENCE
-// clang-format off
 REG_OP(BNInference)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(mean, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
@@ -60,8 +60,8 @@ REG_OP(BNInference)
     .ATTR(use_global_stats, Bool,true)
     .ATTR(mode, Int,1)
     .OP_END_FACTORY_REG(BNInference)
-// clang-format on
 #endif // OPS_PROTO_DEF_BNINFERENCE
+// clang-format on
 } // namespace ge
 
 #endif // OPS_NORM_BN_INFERENCE_PROTO_H_
