@@ -593,10 +593,10 @@ int aclnnConvolutionTest(int32_t deviceId, aclrtStream& stream)
   std::vector<float> inputData(GetShapeSize(shapeInput), 1);
   std::vector<float> weightData(GetShapeSize(shapeWeight), 1);
   std::vector<float> outputData(GetShapeSize(shapeResult), 1);
-  convStrides = {1, 1, 1, 1};
-  convPads = {0, 0, 0, 0};
-  convOutPads = {0, 0, 0, 0};
-  convDilations = {1, 1, 1, 1};
+  convStrides = {1, 1};
+  convPads = {0, 0};
+  convOutPads = {0, 0};
+  convDilations = {1, 1};
 
   // 创建input aclTensor
   ret = CreateAclTensor(inputData, shapeInput, &deviceDataA, aclDataType::ACL_FLOAT, &input);
