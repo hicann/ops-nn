@@ -50,6 +50,15 @@ static const int NZ_K0_VALUE_16 = 16;
 static const int NZ_K0_VALUE_32 = 8;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 8;
+static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS_DEFAULT = 6;
+
+static inline size_t GetMaxSupportMatmulDims()
+{
+    // 8D is only for A2/A3 (910B/910C), which share DAV_2201. Other chips keep 6D.
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return (npuArch == NpuArch::DAV_2201) ? MAX_SUPPORT_MATMUL_DIMS_NUMS : MAX_SUPPORT_MATMUL_DIMS_NUMS_DEFAULT;
+}
+
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                        DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {DataType::DT_FLOAT,
@@ -154,9 +163,10 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     int64_t selfKDim = 0;
     int64_t mat2KDim = 0;
 
-    // 超出最大支持维度返回
-    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_MATMUL_DIMS_NUMS, return false);
-    OP_CHECK_MAX_DIM(mat2, MAX_SUPPORT_MATMUL_DIMS_NUMS, return false);
+    // 超出最大支持维度返回。仅 A2/A3（910B/910C）支持 8 维，其余芯片为 6 维。
+    const size_t maxDims = GetMaxSupportMatmulDims();
+    OP_CHECK_MAX_DIM(self, maxDims, return false);
+    OP_CHECK_MAX_DIM(mat2, maxDims, return false);
 
     // Tensor1 dims number is 0 OR error dims number is 0
     if (dimTensor1 == 0 || dimTensor2 == 0) {
