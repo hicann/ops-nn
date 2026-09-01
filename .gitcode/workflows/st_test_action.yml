@@ -74,7 +74,7 @@ jobs:
             echo "Installing compiled package: ${{ env.run_package_name }}"
             chmod +x "${{ env.run_package_name }}"
             source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
-            echo 'y' | bash "${{ env.run_package_name }}" --full --quiet
+            echo 'y' | bash "${{ env.run_package_name }}" --quiet
           else
             echo "ERROR: compiled package not found: ${{ env.run_package_name }}"
             exit 1
