@@ -139,8 +139,7 @@ ge::graphStatus BatchMatMulV3BasicStreamKTiling::DoOpTiling()
 
 std::vector<size_t> BatchMatMulV3BasicStreamKTiling::GetWorkspaceSize() const
 {
-    size_t workspaceSize = compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32 +
-                           RPC_WORKSIZE * MB_SIZE;
+    size_t workspaceSize = compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32;
     OP_LOGI(args_.opName, "BatchMatMulV3 tiling workspace size is %lu", workspaceSize);
     return {workspaceSize};
 }
