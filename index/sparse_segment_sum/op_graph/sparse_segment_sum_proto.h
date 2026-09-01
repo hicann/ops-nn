@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 #ifndef OPS_OP_PROTO_INC_SPARSE_SEGMENT_SUM_H_
 #define OPS_OP_PROTO_INC_SPARSE_SEGMENT_SUM_H_
 
@@ -33,6 +32,9 @@ namespace ge {
  * @par Third-party framework compatibility
  * Compatible with the TensorFlow operator SparseSegmentSum.
  */
+
+#ifndef OPS_PROTO_DEF_SPARSESEGMENTSUM
+#define OPS_PROTO_DEF_SPARSESEGMENTSUM
 REG_OP(SparseSegmentSum)
     .INPUT(x, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_DOUBLE,
                           DT_FLOAT, DT_FLOAT16}))
@@ -41,7 +43,7 @@ REG_OP(SparseSegmentSum)
     .OUTPUT(y, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_DOUBLE,
                            DT_FLOAT, DT_FLOAT16}))
     .OP_END_FACTORY_REG(SparseSegmentSum)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSE_SEGMENT_SUM_H_

@@ -37,6 +37,8 @@ namespace ge {
  * @li reverse_index_map: A 1D tensor of type int64. Maps original input values
  * to output positions.
  */
+#ifndef OPS_PROTO_DEF_SPARSEFILLEMPTYROWS
+#define OPS_PROTO_DEF_SPARSEFILLEMPTYROWS
 REG_OP(SparseFillEmptyRows)
     .INPUT(indices, TensorType({DT_INT64}))
     .INPUT(values, TensorType({DT_BOOL, DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16,
@@ -50,7 +52,7 @@ REG_OP(SparseFillEmptyRows)
     .OUTPUT(empty_row_indicator, TensorType({DT_BOOL}))
     .OUTPUT(reverse_index_map, TensorType({DT_INT64}))
     .OP_END_FACTORY_REG(SparseFillEmptyRows)
-
+#endif
 } // namespace ge
 
 #endif // OPS_NN_SPARSE_FILL_EMPTY_ROWS_PROTO_H_

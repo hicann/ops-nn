@@ -28,6 +28,8 @@ namespace ge {
  * @li value: Updated value tensor.
  * @li index: Updated index tensor, supports DT_INT32.
  */
+#ifndef OPS_PROTO_DEF_NONZEROWITHVALUESHAPEV2
+#define OPS_PROTO_DEF_NONZEROWITHVALUESHAPEV2
 REG_OP(NonZeroWithValueShapeV2)
     .INPUT(value, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32,
                               DT_UINT32, DT_INT64, DT_UINT64, DT_BOOL}))
@@ -37,7 +39,7 @@ REG_OP(NonZeroWithValueShapeV2)
                                DT_UINT32, DT_INT64, DT_UINT64, DT_BOOL}))
     .OUTPUT(index, TensorType({DT_INT32}))
     .OP_END_FACTORY_REG(NonZeroWithValueShapeV2)
-
+#endif
 } // namespace ge
 
 #endif // OPS_NN_INDEX_NON_ZERO_WITH_VALUE_SHAPE_V2_PROTO_H_

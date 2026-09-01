@@ -34,6 +34,8 @@ namespace ge {
  * @par Outputs:
  * @li addrs_table: Address table tensor, supports DT_INT64 and DT_UINT64.
  */
+#ifndef OPS_PROTO_DEF_INDEXTOADDR
+#define OPS_PROTO_DEF_INDEXTOADDR
 REG_OP(IndexToAddr)
     .INPUT(base_addr, TensorType({DT_INT64, DT_UINT64}))
     .INPUT(x, TensorType({DT_INT64, DT_UINT64}))
@@ -45,7 +47,7 @@ REG_OP(IndexToAddr)
     .ATTR(rank_id, Int, 0)
     .ATTR(dtype, Type, DT_FLOAT)
     .OP_END_FACTORY_REG(IndexToAddr)
-
+#endif
 } // namespace ge
 
 #endif // OPS_NN_INDEX_INDEX_TO_ADDR_PROTO_H_
