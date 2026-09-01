@@ -33,10 +33,12 @@ namespace batch_mat_mul_v3 {
 const std::vector<uint64_t> SUPPORT_ND2NZ_GM2L0_WITHOUT32B = {64, 96, 128, 160, 192, 224, 256, 384};
 constexpr uint64_t BLOCK_CUBE = 16;
 constexpr uint64_t NO_BATCH_SHAPE_DIM = 2;
-constexpr uint64_t ONE_BATCH_SHAPE_DIM = 3;
-constexpr uint64_t TWO_BATCH_SHAPE_DIM = 4;
-constexpr uint64_t THREE_BATCH_SHAPE_DIM = 5;
-constexpr uint64_t FOUR_BATCH_SHAPE_DIM = 6;
+
+template <typename ShapeT>
+static inline uint64_t GetBatchAxisFromEnd(const ShapeT& shape, size_t dims, size_t fromEnd)
+{
+    return dims >= fromEnd ? static_cast<uint64_t>(shape.GetDim(dims - fromEnd)) : 1UL;
+}
 constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 constexpr uint64_t ALIGNMENT_32 = 32;
 constexpr uint64_t DEFAULT_SIZE = 32;
@@ -108,21 +110,31 @@ bool BatchMatmulV3BaseTiling::GetBatchInfo()
     if (args_.outFormat == ge::FORMAT_FRACTAL_NZ) {
         cDims = context_->GetOutputShape(0)->GetStorageShape().GetDimNum() - ND_NZ_DIM_DIFF;
     }
-    batchInfo_.batchA3 = aDims > NO_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - ONE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchA2 = aDims > ONE_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - TWO_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchA1 = aDims > TWO_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - THREE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchA0 = aDims > THREE_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - FOUR_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchB3 = bDims > NO_BATCH_SHAPE_DIM ? bShape.GetDim(bDims - ONE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchB2 = bDims > ONE_BATCH_SHAPE_DIM ? bShape.GetDim(bDims - TWO_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchB1 = bDims > TWO_BATCH_SHAPE_DIM ? bShape.GetDim(bDims - THREE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchB0 = bDims > THREE_BATCH_SHAPE_DIM ? bShape.GetDim(bDims - FOUR_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchC3 = cDims > NO_BATCH_SHAPE_DIM ? cShape.GetDim(cDims - ONE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchC2 = cDims > ONE_BATCH_SHAPE_DIM ? cShape.GetDim(cDims - TWO_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchC1 = cDims > TWO_BATCH_SHAPE_DIM ? cShape.GetDim(cDims - THREE_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchC0 = cDims > THREE_BATCH_SHAPE_DIM ? cShape.GetDim(cDims - FOUR_BATCH_SHAPE_DIM) : 1;
-    batchInfo_.batchA = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3;
-    batchInfo_.batchB = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3;
-    batchInfo_.batchC = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3;
+    // Host a0..a5 = tensor dim0..dim5 (pad 1 if missing). Blob mapping is in SetBatchDimInfo.
+    batchInfo_.batchA0 = GetBatchAxisFromEnd(aShape, aDims, 8);
+    batchInfo_.batchA1 = GetBatchAxisFromEnd(aShape, aDims, 7);
+    batchInfo_.batchA2 = GetBatchAxisFromEnd(aShape, aDims, 6);
+    batchInfo_.batchA3 = GetBatchAxisFromEnd(aShape, aDims, 5);
+    batchInfo_.batchA4 = GetBatchAxisFromEnd(aShape, aDims, 4);
+    batchInfo_.batchA5 = GetBatchAxisFromEnd(aShape, aDims, 3);
+    batchInfo_.batchB0 = GetBatchAxisFromEnd(bShape, bDims, 8);
+    batchInfo_.batchB1 = GetBatchAxisFromEnd(bShape, bDims, 7);
+    batchInfo_.batchB2 = GetBatchAxisFromEnd(bShape, bDims, 6);
+    batchInfo_.batchB3 = GetBatchAxisFromEnd(bShape, bDims, 5);
+    batchInfo_.batchB4 = GetBatchAxisFromEnd(bShape, bDims, 4);
+    batchInfo_.batchB5 = GetBatchAxisFromEnd(bShape, bDims, 3);
+    batchInfo_.batchC0 = GetBatchAxisFromEnd(cShape, cDims, 8);
+    batchInfo_.batchC1 = GetBatchAxisFromEnd(cShape, cDims, 7);
+    batchInfo_.batchC2 = GetBatchAxisFromEnd(cShape, cDims, 6);
+    batchInfo_.batchC3 = GetBatchAxisFromEnd(cShape, cDims, 5);
+    batchInfo_.batchC4 = GetBatchAxisFromEnd(cShape, cDims, 4);
+    batchInfo_.batchC5 = GetBatchAxisFromEnd(cShape, cDims, 3);
+    batchInfo_.batchA = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3 *
+                        batchInfo_.batchA4 * batchInfo_.batchA5;
+    batchInfo_.batchB = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3 *
+                        batchInfo_.batchB4 * batchInfo_.batchB5;
+    batchInfo_.batchC = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3 *
+                        batchInfo_.batchC4 * batchInfo_.batchC5;
     // Check if batch info is valid, if batch is M broadcast to N, return failed.
     bool batch3Invalid = batchInfo_.batchA3 != batchInfo_.batchB3 && batchInfo_.batchA3 != 1UL &&
                          batchInfo_.batchB3 != 1UL;
@@ -132,7 +144,11 @@ bool BatchMatmulV3BaseTiling::GetBatchInfo()
                          batchInfo_.batchB1 != 1UL;
     bool batch0Invalid = batchInfo_.batchA0 != batchInfo_.batchB0 && batchInfo_.batchA0 != 1UL &&
                          batchInfo_.batchB0 != 1UL;
-    if (batch3Invalid || batch2Invalid || batch1Invalid || batch0Invalid) {
+    bool batch4Invalid = batchInfo_.batchA4 != batchInfo_.batchB4 && batchInfo_.batchA4 != 1UL &&
+                         batchInfo_.batchB4 != 1UL;
+    bool batch5Invalid = batchInfo_.batchA5 != batchInfo_.batchB5 && batchInfo_.batchA5 != 1UL &&
+                         batchInfo_.batchB5 != 1UL;
+    if (batch3Invalid || batch2Invalid || batch1Invalid || batch0Invalid || batch4Invalid || batch5Invalid) {
         OP_LOGE("[BatchMatMulV3]", "Is M broadcast to N situation, do not support!");
         return false;
     }
@@ -162,20 +178,15 @@ bool BatchMatmulV3BaseTiling::GetBiasWithBatchInfo()
         return false;
     }
 
-    uint64_t batchBias3 = biasDims > NO_BATCH_SHAPE_DIM ?
-                              static_cast<uint64_t>(biasShape.GetDim(biasDims - ONE_BATCH_SHAPE_DIM)) :
-                              1;
-    uint64_t batchBias2 = biasDims > ONE_BATCH_SHAPE_DIM ?
-                              static_cast<uint64_t>(biasShape.GetDim(biasDims - TWO_BATCH_SHAPE_DIM)) :
-                              1;
-    uint64_t batchBias1 = biasDims > TWO_BATCH_SHAPE_DIM ?
-                              static_cast<uint64_t>(biasShape.GetDim(biasDims - THREE_BATCH_SHAPE_DIM)) :
-                              1;
-    uint64_t batchBias0 = biasDims > THREE_BATCH_SHAPE_DIM ?
-                              static_cast<uint64_t>(biasShape.GetDim(biasDims - FOUR_BATCH_SHAPE_DIM)) :
-                              1;
-    bool biasBatchValid = batchBias3 == batchInfo_.batchC3 && batchBias2 == batchInfo_.batchC2 &&
-                          batchBias1 == batchInfo_.batchC1 && batchBias0 == batchInfo_.batchC0;
+    uint64_t batchBias0 = GetBatchAxisFromEnd(biasShape, biasDims, 8);
+    uint64_t batchBias1 = GetBatchAxisFromEnd(biasShape, biasDims, 7);
+    uint64_t batchBias2 = GetBatchAxisFromEnd(biasShape, biasDims, 6);
+    uint64_t batchBias3 = GetBatchAxisFromEnd(biasShape, biasDims, 5);
+    uint64_t batchBias4 = GetBatchAxisFromEnd(biasShape, biasDims, 4);
+    uint64_t batchBias5 = GetBatchAxisFromEnd(biasShape, biasDims, 3);
+    bool biasBatchValid = batchBias0 == batchInfo_.batchC0 && batchBias1 == batchInfo_.batchC1 &&
+                          batchBias2 == batchInfo_.batchC2 && batchBias3 == batchInfo_.batchC3 &&
+                          batchBias4 == batchInfo_.batchC4 && batchBias5 == batchInfo_.batchC5;
     if (batchInfo_.biasWithBatch && !biasBatchValid) {
         OP_LOGE("[BatchMatMulV3]", "Batch of Bias  must be equal to C !");
         return false;
@@ -199,11 +210,15 @@ void BatchMatmulV3BaseTiling::MergeBatchAndMAxis()
         batchInfo_.batchA2 = 1UL;
         batchInfo_.batchA1 = 1UL;
         batchInfo_.batchA0 = 1UL;
+        batchInfo_.batchA4 = 1UL;
+        batchInfo_.batchA5 = 1UL;
         batchInfo_.batchA = 1UL;
         batchInfo_.batchC3 = 1UL;
         batchInfo_.batchC2 = 1UL;
         batchInfo_.batchC1 = 1UL;
         batchInfo_.batchC0 = 1UL;
+        batchInfo_.batchC4 = 1UL;
+        batchInfo_.batchC5 = 1UL;
         batchInfo_.batchC = 1UL;
     }
     return;
@@ -215,14 +230,20 @@ bool BatchMatmulV3BaseTiling::CheckBMMTilingDataIsValid() const
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA2, args_.opName, "batchInfo_.batchA2") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA1, args_.opName, "batchInfo_.batchA1") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA0, args_.opName, "batchInfo_.batchA0") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA4, args_.opName, "batchInfo_.batchA4") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchA5, args_.opName, "batchInfo_.batchA5") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB3, args_.opName, "batchInfo_.batchB3") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB2, args_.opName, "batchInfo_.batchB2") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB1, args_.opName, "batchInfo_.batchB1") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB0, args_.opName, "batchInfo_.batchB0") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB4, args_.opName, "batchInfo_.batchB4") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchB5, args_.opName, "batchInfo_.batchB5") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC3, args_.opName, "batchInfo_.batchC3") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC2, args_.opName, "batchInfo_.batchC2") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC1, args_.opName, "batchInfo_.batchC1") ||
             optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC0, args_.opName, "batchInfo_.batchC0") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC4, args_.opName, "batchInfo_.batchC4") ||
+            optiling::matmul_v3::CheckNumberIsValid(batchInfo_.batchC5, args_.opName, "batchInfo_.batchC5") ||
             optiling::matmul_v3::CheckNumberIsValid(aBatchDimAll_, args_.opName, "batchInfo_.aBatchDimAll") ||
             optiling::matmul_v3::CheckNumberIsValid(bBatchDimAll_, args_.opName, "batchInfo_.bBatchDimAll") ||
             optiling::matmul_v3::CheckNumberIsValid(cBatchDimAll_, args_.opName, "batchInfo_.cBatchDimAll"));
@@ -307,25 +328,36 @@ void BatchMatmulV3BaseTiling::DoL2CacheAndCalOrderTiling()
 void BatchMatmulV3BaseTiling::SetBatchDimInfo()
 {
     bmmTilingData_.multiBatchInfo.batchUsedCoreNum = bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum;
-    bmmTilingData_.multiBatchInfo.aBatchDim3 = static_cast<uint32_t>(batchInfo_.batchA3);
-    bmmTilingData_.multiBatchInfo.aBatchDim2 = static_cast<uint32_t>(batchInfo_.batchA2);
-    bmmTilingData_.multiBatchInfo.aBatchDim1 = static_cast<uint32_t>(batchInfo_.batchA1);
-    bmmTilingData_.multiBatchInfo.aBatchDim0 = static_cast<uint32_t>(batchInfo_.batchA0);
-    bmmTilingData_.multiBatchInfo.bBatchDim3 = static_cast<uint32_t>(batchInfo_.batchB3);
-    bmmTilingData_.multiBatchInfo.bBatchDim2 = static_cast<uint32_t>(batchInfo_.batchB2);
-    bmmTilingData_.multiBatchInfo.bBatchDim1 = static_cast<uint32_t>(batchInfo_.batchB1);
-    bmmTilingData_.multiBatchInfo.bBatchDim0 = static_cast<uint32_t>(batchInfo_.batchB0);
-    bmmTilingData_.multiBatchInfo.cBatchDim3 = static_cast<uint32_t>(batchInfo_.batchC3);
-    bmmTilingData_.multiBatchInfo.cBatchDim2 = static_cast<uint32_t>(batchInfo_.batchC2);
-    bmmTilingData_.multiBatchInfo.cBatchDim1 = static_cast<uint32_t>(batchInfo_.batchC1);
-    bmmTilingData_.multiBatchInfo.cBatchDim0 = static_cast<uint32_t>(batchInfo_.batchC0);
+    // Host a0..a5 = tensor dim0..dim5. Blob Dim* are slots, not axis ids (aN != DimN).
+    //   a0->D5, a1->D4, a2->D0, a3->D1, a4->D2, a5->D3  (see MultiBatchInfo).
+    bmmTilingData_.multiBatchInfo.aBatchDim0 = static_cast<uint32_t>(batchInfo_.batchA2);
+    bmmTilingData_.multiBatchInfo.aBatchDim1 = static_cast<uint32_t>(batchInfo_.batchA3);
+    bmmTilingData_.multiBatchInfo.aBatchDim2 = static_cast<uint32_t>(batchInfo_.batchA4);
+    bmmTilingData_.multiBatchInfo.aBatchDim3 = static_cast<uint32_t>(batchInfo_.batchA5);
+    bmmTilingData_.multiBatchInfo.aBatchDim4 = static_cast<uint32_t>(batchInfo_.batchA1);
+    bmmTilingData_.multiBatchInfo.aBatchDim5 = static_cast<uint32_t>(batchInfo_.batchA0);
+    bmmTilingData_.multiBatchInfo.bBatchDim0 = static_cast<uint32_t>(batchInfo_.batchB2);
+    bmmTilingData_.multiBatchInfo.bBatchDim1 = static_cast<uint32_t>(batchInfo_.batchB3);
+    bmmTilingData_.multiBatchInfo.bBatchDim2 = static_cast<uint32_t>(batchInfo_.batchB4);
+    bmmTilingData_.multiBatchInfo.bBatchDim3 = static_cast<uint32_t>(batchInfo_.batchB5);
+    bmmTilingData_.multiBatchInfo.bBatchDim4 = static_cast<uint32_t>(batchInfo_.batchB1);
+    bmmTilingData_.multiBatchInfo.bBatchDim5 = static_cast<uint32_t>(batchInfo_.batchB0);
+    bmmTilingData_.multiBatchInfo.cBatchDim0 = static_cast<uint32_t>(batchInfo_.batchC2);
+    bmmTilingData_.multiBatchInfo.cBatchDim1 = static_cast<uint32_t>(batchInfo_.batchC3);
+    bmmTilingData_.multiBatchInfo.cBatchDim2 = static_cast<uint32_t>(batchInfo_.batchC4);
+    bmmTilingData_.multiBatchInfo.cBatchDim3 = static_cast<uint32_t>(batchInfo_.batchC5);
+    bmmTilingData_.multiBatchInfo.cBatchDim4 = static_cast<uint32_t>(batchInfo_.batchC1);
+    bmmTilingData_.multiBatchInfo.cBatchDim5 = static_cast<uint32_t>(batchInfo_.batchC0);
 }
 
 void BatchMatmulV3BaseTiling::CalcBatchDimAll()
 {
-    aBatchDimAll_ = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3;
-    bBatchDimAll_ = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3;
-    cBatchDimAll_ = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3;
+    aBatchDimAll_ = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3 *
+                    batchInfo_.batchA4 * batchInfo_.batchA5;
+    bBatchDimAll_ = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3 *
+                    batchInfo_.batchB4 * batchInfo_.batchB5;
+    cBatchDimAll_ = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3 *
+                    batchInfo_.batchC4 * batchInfo_.batchC5;
     bmmTilingData_.multiBatchInfo.aBatchDimAll = static_cast<uint32_t>(aBatchDimAll_);
     bmmTilingData_.multiBatchInfo.bBatchDimAll = static_cast<uint32_t>(bBatchDimAll_);
     bmmTilingData_.multiBatchInfo.cBatchDimAll = static_cast<uint32_t>(cBatchDimAll_);
@@ -620,8 +652,7 @@ bool BatchMatmulV3BaseTiling::DoMultiBatchOutTiling()
 
 void BatchMatmulV3BaseTiling::DoMultiBatchTiling()
 {
-    bool isEqualBatch = batchInfo_.batchA0 == batchInfo_.batchB0 && batchInfo_.batchA1 == batchInfo_.batchB1 &&
-                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; // 广播
+    bool isEqualBatch = batchInfo_.IsEqualBatch();                       // 广播
     if (!isEqualBatch || (args_.hasBias && !batchInfo_.biasWithBatch)) { // 不支持broadcast\非多batch bias
         return;
     }
@@ -687,8 +718,7 @@ void BatchMatmulV3BaseTiling::DoMultiBatchTiling()
 bool BatchMatmulV3BaseTiling::IsMultiBatchAL1FullLoad()
 {
     // 白名单:((1500,1,128),(1500,512,128)) || !(!args_.isATrans && args_.isBTrans)
-    bool isEqualBatch = batchInfo_.batchA0 == batchInfo_.batchB0 && batchInfo_.batchA1 == batchInfo_.batchB1 &&
-                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3;
+    bool isEqualBatch = batchInfo_.IsEqualBatch();
     constexpr uint64_t BATCH_DIM_ALL = 1500;
     constexpr uint64_t M_VALUE = 1;
     constexpr uint64_t K_VALUE_128 = 128;
@@ -734,9 +764,8 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTilingImpl()
 
 void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
 {
-    bool isEqualBatch = batchInfo_.batchA0 == batchInfo_.batchB0 && batchInfo_.batchA1 == batchInfo_.batchB1 &&
-                        batchInfo_.batchA2 == batchInfo_.batchB2 && batchInfo_.batchA3 == batchInfo_.batchB3; // 广播
-    if (!isEqualBatch || args_.hasBias) { // 暂时不支持bias
+    bool isEqualBatch = batchInfo_.IsEqualBatch(); // 广播
+    if (!isEqualBatch || args_.hasBias) {          // 暂时不支持bias
         return;
     }
     uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.M), BLOCK_CUBE);

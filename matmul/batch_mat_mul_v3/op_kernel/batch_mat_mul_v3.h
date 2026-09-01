@@ -120,18 +120,26 @@ __aicore__ inline void BatchMatMulUnalignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_T
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     const TCubeTiling& tiling = tilingPtr_->matmulTiling.matmulTiling;
-    const uint32_t& batchA1 = tilingPtr_->multiBatchInfo.aBatchDim0;
-    const uint32_t& batchA2 = tilingPtr_->multiBatchInfo.aBatchDim1;
-    const uint32_t& batchA3 = tilingPtr_->multiBatchInfo.aBatchDim2;
-    const uint32_t& batchA4 = tilingPtr_->multiBatchInfo.aBatchDim3;
-    const uint32_t& batchB1 = tilingPtr_->multiBatchInfo.bBatchDim0;
-    const uint32_t& batchB2 = tilingPtr_->multiBatchInfo.bBatchDim1;
-    const uint32_t& batchB3 = tilingPtr_->multiBatchInfo.bBatchDim2;
-    const uint32_t& batchB4 = tilingPtr_->multiBatchInfo.bBatchDim3;
-    const uint32_t& batchC1 = tilingPtr_->multiBatchInfo.cBatchDim0;
-    const uint32_t& batchC2 = tilingPtr_->multiBatchInfo.cBatchDim1;
-    const uint32_t& batchC3 = tilingPtr_->multiBatchInfo.cBatchDim2;
-    const uint32_t& batchC4 = tilingPtr_->multiBatchInfo.cBatchDim3;
+    // Locals a0..a5 = tensor dim0..dim5. Blob Dim* are slots: a0=D5, a1=D4, a2=D0 .. a5=D3.
+    // Dim4/5 are appended; callers that omit them leave 0 (loop skip / divide-by-zero). Treat as missing axis (=1).
+    uint32_t batchA0 = tilingPtr_->multiBatchInfo.aBatchDim5 == 0 ? 1 : tilingPtr_->multiBatchInfo.aBatchDim5;
+    uint32_t batchA1 = tilingPtr_->multiBatchInfo.aBatchDim4 == 0 ? 1 : tilingPtr_->multiBatchInfo.aBatchDim4;
+    uint32_t batchA2 = tilingPtr_->multiBatchInfo.aBatchDim0;
+    uint32_t batchA3 = tilingPtr_->multiBatchInfo.aBatchDim1;
+    uint32_t batchA4 = tilingPtr_->multiBatchInfo.aBatchDim2;
+    uint32_t batchA5 = tilingPtr_->multiBatchInfo.aBatchDim3;
+    uint32_t batchB0 = tilingPtr_->multiBatchInfo.bBatchDim5 == 0 ? 1 : tilingPtr_->multiBatchInfo.bBatchDim5;
+    uint32_t batchB1 = tilingPtr_->multiBatchInfo.bBatchDim4 == 0 ? 1 : tilingPtr_->multiBatchInfo.bBatchDim4;
+    uint32_t batchB2 = tilingPtr_->multiBatchInfo.bBatchDim0;
+    uint32_t batchB3 = tilingPtr_->multiBatchInfo.bBatchDim1;
+    uint32_t batchB4 = tilingPtr_->multiBatchInfo.bBatchDim2;
+    uint32_t batchB5 = tilingPtr_->multiBatchInfo.bBatchDim3;
+    uint32_t batchC0 = tilingPtr_->multiBatchInfo.cBatchDim5 == 0 ? 1 : tilingPtr_->multiBatchInfo.cBatchDim5;
+    uint32_t batchC1 = tilingPtr_->multiBatchInfo.cBatchDim4 == 0 ? 1 : tilingPtr_->multiBatchInfo.cBatchDim4;
+    uint32_t batchC2 = tilingPtr_->multiBatchInfo.cBatchDim0;
+    uint32_t batchC3 = tilingPtr_->multiBatchInfo.cBatchDim1;
+    uint32_t batchC4 = tilingPtr_->multiBatchInfo.cBatchDim2;
+    uint32_t batchC5 = tilingPtr_->multiBatchInfo.cBatchDim3;
 
     uint64_t offsetA = static_cast<uint64_t>(tiling.M) * tiling.Ka * sizeof(A_T);
     uint64_t offsetB = static_cast<uint64_t>(tiling.Kb) * tiling.N * sizeof(B_T);
@@ -140,6 +148,8 @@ __aicore__ inline void BatchMatMulUnalignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_T
     if (tilingPtr_->multiBatchInfo.biasWithBatch) {
         batchBiasOffset = static_cast<uint64_t>(tiling.N) * sizeof(BiasT);
     }
+    bool isBatchA0One = (batchA0 == 1);
+    bool isBatchB0One = (batchB0 == 1);
     bool isBatchA1One = (batchA1 == 1);
     bool isBatchB1One = (batchB1 == 1);
     bool isBatchA2One = (batchA2 == 1);
@@ -148,34 +158,49 @@ __aicore__ inline void BatchMatMulUnalignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_T
     bool isBatchB3One = (batchB3 == 1);
     bool isBatchA4One = (batchA4 == 1);
     bool isBatchB4One = (batchB4 == 1);
-    for (uint64_t i1 = 0; i1 < batchC1; i1++) {
-        uint64_t iA1 = isBatchA1One ? 0 : (i1 * batchA2 * batchA3 * batchA4);
-        uint64_t iB1 = isBatchB1One ? 0 : (i1 * batchB2 * batchB3 * batchB4);
-        uint64_t iC1 = i1 * batchC2 * batchC3 * batchC4;
-        for (uint64_t i2 = 0; i2 < batchC2; i2++) {
-            uint64_t iA2 = isBatchA2One ? 0 : (i2 * batchA3 * batchA4);
-            uint64_t iB2 = isBatchB2One ? 0 : (i2 * batchB3 * batchB4);
-            uint64_t iC2 = i2 * batchC3 * batchC4;
-            for (uint64_t i3 = 0; i3 < batchC3; i3++) {
-                uint64_t iA3 = isBatchA3One ? 0 : (i3 * batchA4);
-                uint64_t iB3 = isBatchB3One ? 0 : (i3 * batchB4);
-                uint64_t iC3 = i3 * batchC4;
-                for (uint64_t i4 = 0; i4 < batchC4; i4++) {
-                    uint64_t iA4 = isBatchA4One ? 0 : i4;
-                    uint64_t iB4 = isBatchB4One ? 0 : i4;
-                    uint64_t iA = iA1 + iA2 + iA3 + iA4;
-                    uint64_t iB = iB1 + iB2 + iB3 + iB4;
-                    uint64_t iC = iC1 + iC2 + iC3 + i4;
-                    mm_.UpdateGlobalTensor(aGM_ + offsetA * iA, bGM_ + offsetB * iB, cGM_ + offsetC * iC,
-                                           biasGM_ + batchBiasOffset * iC, offsetWGM_, workspaceGM_);
-                    mm_.Process();
-                    if ASCEND_IS_AIC {
-                        NotifyEvent<PIPE_FIX>(4);
-                    }
-                    if ASCEND_IS_AIV {
-                        WaitEvent(4);
-                        SyncAll();
-                        PipeBarrier<PIPE_ALL>();
+    bool isBatchA5One = (batchA5 == 1);
+    bool isBatchB5One = (batchB5 == 1);
+    uint64_t aInner4 = static_cast<uint64_t>(batchA2) * batchA3 * batchA4 * batchA5;
+    uint64_t bInner4 = static_cast<uint64_t>(batchB2) * batchB3 * batchB4 * batchB5;
+    uint64_t cInner4 = static_cast<uint64_t>(batchC2) * batchC3 * batchC4 * batchC5;
+    for (uint64_t i0 = 0; i0 < batchC0; i0++) {
+        uint64_t iA0 = isBatchA0One ? 0 : (i0 * batchA1 * aInner4);
+        uint64_t iB0 = isBatchB0One ? 0 : (i0 * batchB1 * bInner4);
+        uint64_t iC0 = i0 * batchC1 * cInner4;
+        for (uint64_t i1 = 0; i1 < batchC1; i1++) {
+            uint64_t iA1 = isBatchA1One ? 0 : (i1 * aInner4);
+            uint64_t iB1 = isBatchB1One ? 0 : (i1 * bInner4);
+            uint64_t iC1 = i1 * cInner4;
+            for (uint64_t i2 = 0; i2 < batchC2; i2++) {
+                uint64_t iA2 = isBatchA2One ? 0 : (i2 * batchA3 * batchA4 * batchA5);
+                uint64_t iB2 = isBatchB2One ? 0 : (i2 * batchB3 * batchB4 * batchB5);
+                uint64_t iC2 = i2 * batchC3 * batchC4 * batchC5;
+                for (uint64_t i3 = 0; i3 < batchC3; i3++) {
+                    uint64_t iA3 = isBatchA3One ? 0 : (i3 * batchA4 * batchA5);
+                    uint64_t iB3 = isBatchB3One ? 0 : (i3 * batchB4 * batchB5);
+                    uint64_t iC3 = i3 * batchC4 * batchC5;
+                    for (uint64_t i4 = 0; i4 < batchC4; i4++) {
+                        uint64_t iA4 = isBatchA4One ? 0 : (i4 * batchA5);
+                        uint64_t iB4 = isBatchB4One ? 0 : (i4 * batchB5);
+                        uint64_t iC4 = i4 * batchC5;
+                        for (uint64_t i5 = 0; i5 < batchC5; i5++) {
+                            uint64_t iA5 = isBatchA5One ? 0 : i5;
+                            uint64_t iB5 = isBatchB5One ? 0 : i5;
+                            uint64_t iA = iA0 + iA1 + iA2 + iA3 + iA4 + iA5;
+                            uint64_t iB = iB0 + iB1 + iB2 + iB3 + iB4 + iB5;
+                            uint64_t iC = iC0 + iC1 + iC2 + iC3 + iC4 + i5;
+                            mm_.UpdateGlobalTensor(aGM_ + offsetA * iA, bGM_ + offsetB * iB, cGM_ + offsetC * iC,
+                                                   biasGM_ + batchBiasOffset * iC, offsetWGM_, workspaceGM_);
+                            mm_.Process();
+                            if ASCEND_IS_AIC {
+                                NotifyEvent<PIPE_FIX>(4);
+                            }
+                            if ASCEND_IS_AIV {
+                                WaitEvent(4);
+                                SyncAll();
+                                PipeBarrier<PIPE_ALL>();
+                            }
+                        }
                     }
                 }
             }

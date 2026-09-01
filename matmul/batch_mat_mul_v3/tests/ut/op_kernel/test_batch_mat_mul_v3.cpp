@@ -132,6 +132,12 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0)
     tiling_data->multiBatchInfo.aBatchDim3 = 1;
     tiling_data->multiBatchInfo.bBatchDim3 = 1;
     tiling_data->multiBatchInfo.cBatchDim3 = 1;
+    tiling_data->multiBatchInfo.aBatchDim4 = 1;
+    tiling_data->multiBatchInfo.bBatchDim4 = 1;
+    tiling_data->multiBatchInfo.cBatchDim4 = 1;
+    tiling_data->multiBatchInfo.aBatchDim5 = 1;
+    tiling_data->multiBatchInfo.bBatchDim5 = 1;
+    tiling_data->multiBatchInfo.cBatchDim5 = 1;
     tiling_data->multiBatchInfo.iterBatch = 1;
     ICPU_SET_TILING_KEY(10000000000000001001UL);
 
@@ -253,6 +259,12 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1)
     tiling_data->multiBatchInfo.aBatchDim3 = 16;
     tiling_data->multiBatchInfo.bBatchDim3 = 16;
     tiling_data->multiBatchInfo.cBatchDim3 = 16;
+    tiling_data->multiBatchInfo.aBatchDim4 = 1;
+    tiling_data->multiBatchInfo.bBatchDim4 = 1;
+    tiling_data->multiBatchInfo.cBatchDim4 = 1;
+    tiling_data->multiBatchInfo.aBatchDim5 = 1;
+    tiling_data->multiBatchInfo.bBatchDim5 = 1;
+    tiling_data->multiBatchInfo.cBatchDim5 = 1;
     tiling_data->multiBatchInfo.iterBatch = 0;
     tiling_data->multiBatchInfo.biasWithBatch = 0;
     tiling_data->multiBatchInfo.mOri = 1830;

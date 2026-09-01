@@ -49,7 +49,7 @@ static constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 static const int NZ_K0_VALUE_16 = 16;
 static const int NZ_K0_VALUE_32 = 8;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
-static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 6;
+static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 8;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                        DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {DataType::DT_FLOAT,

@@ -684,7 +684,7 @@ static TilingTestParam ascend910B_cases_params[] = {
      65537,
      "24 1 128 512 512 1 128 512 16 128 64 64 8 1 1 0 0 0 0 65536 1024 0 1 1 1 1 32 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 "
      "0 0 0 0 1 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 "
-     "1500 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
+     "1500 7 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"BatchMatMulV3_MultiBatch_AL1FullLoad_general_test_02",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true,"offset_x":0,"enable_hf32":0},
@@ -712,7 +712,7 @@ static TilingTestParam ascend910B_cases_params[] = {
      65537,
      "24 1 512 128 128 1 512 128 16 64 128 16 8 1 1 0 0 0 0 24576 2048 0 1 1 1 1 8 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 "
      "0 0 0 1 0 1 1 1 16 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 "
-     "31 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "}};
+     "31 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "}};
 
 static TilingTestParam ascend950_cases_params[] = {
     {"BatchMatMulV3_950_test_iterbatch_1",

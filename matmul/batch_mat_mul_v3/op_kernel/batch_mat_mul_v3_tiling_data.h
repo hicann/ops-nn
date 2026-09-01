@@ -32,6 +32,11 @@ struct alignas(8) MultiBatchInfo {
     uint32_t aBatchDimAll;
     uint32_t bBatchDimAll;
     uint32_t cBatchDimAll;
+    // a0..a5 = tensor batch axes left-to-right (dim0=a0, nearest-M=a5). Missing axes pad 1.
+    // aBatchDim0..5 are blob SLOT names, not axis numbers. Do not assign DimN = aN.
+    //   tensor axis  a0  a1  a2  a3  a4  a5
+    //   blob slot    D5  D4  D0  D1  D2  D3
+    // Dim0..3 keep 6D offsets (8D's dim2..dim5). Dim4/5 are appended (8D dim1/dim0).
     uint32_t aBatchDim0;
     uint32_t bBatchDim0;
     uint32_t cBatchDim0;
@@ -50,6 +55,13 @@ struct alignas(8) MultiBatchInfo {
     uint32_t batchTileBlock;
     uint32_t aBatch;
     uint32_t bBatch;
+    // Appended 8D slots: D4=a1, D5=a0. See table above aBatchDim0.
+    uint32_t aBatchDim4;
+    uint32_t bBatchDim4;
+    uint32_t cBatchDim4;
+    uint32_t aBatchDim5;
+    uint32_t bBatchDim5;
+    uint32_t cBatchDim5;
 };
 #pragma pack(pop)
 

@@ -108,24 +108,34 @@ template <class C_TYPE>
 __aicore__ inline void BatchMatMulCommonBaseBlock::InitBatchCount()
 {
     params_.isHf32 = batchMatmulTilingData_->matmulTiling.matmulRunInfo.isHf32;
-    params_.batchA1 = batchMatmulTilingData_->multiBatchInfo.aBatchDim0;
-    params_.batchA2 = batchMatmulTilingData_->multiBatchInfo.aBatchDim1;
-    params_.batchA3 = batchMatmulTilingData_->multiBatchInfo.aBatchDim2;
-    params_.batchA4 = batchMatmulTilingData_->multiBatchInfo.aBatchDim3;
-    params_.batchB1 = batchMatmulTilingData_->multiBatchInfo.bBatchDim0;
-    params_.batchB2 = batchMatmulTilingData_->multiBatchInfo.bBatchDim1;
-    params_.batchB3 = batchMatmulTilingData_->multiBatchInfo.bBatchDim2;
-    params_.batchB4 = batchMatmulTilingData_->multiBatchInfo.bBatchDim3;
-    params_.batchC1 = batchMatmulTilingData_->multiBatchInfo.cBatchDim0;
-    params_.batchC2 = batchMatmulTilingData_->multiBatchInfo.cBatchDim1;
-    params_.batchC3 = batchMatmulTilingData_->multiBatchInfo.cBatchDim2;
-    params_.batchC4 = batchMatmulTilingData_->multiBatchInfo.cBatchDim3;
-    params_.aBatchDimAll = batchMatmulTilingData_->multiBatchInfo.aBatchDimAll;
-    params_.bBatchDimAll = batchMatmulTilingData_->multiBatchInfo.bBatchDimAll;
-    params_.cBatchDimAll = batchMatmulTilingData_->multiBatchInfo.cBatchDimAll;
-    params_.biasWithBatch = batchMatmulTilingData_->multiBatchInfo.biasWithBatch;
+    const MultiBatchInfo& multiBatch = batchMatmulTilingData_->multiBatchInfo;
+    // Locals a0..a5 = tensor dim0..dim5. Blob Dim* are slots: a0=D5, a1=D4, a2=D0 .. a5=D3.
+    // Dim4/5 are appended; callers that omit them leave 0 (loop skip / divide-by-zero). Treat as missing axis (=1).
+    params_.batchA0 = multiBatch.aBatchDim5 == 0 ? 1 : multiBatch.aBatchDim5;
+    params_.batchA1 = multiBatch.aBatchDim4 == 0 ? 1 : multiBatch.aBatchDim4;
+    params_.batchA2 = multiBatch.aBatchDim0;
+    params_.batchA3 = multiBatch.aBatchDim1;
+    params_.batchA4 = multiBatch.aBatchDim2;
+    params_.batchA5 = multiBatch.aBatchDim3;
+    params_.batchB0 = multiBatch.bBatchDim5 == 0 ? 1 : multiBatch.bBatchDim5;
+    params_.batchB1 = multiBatch.bBatchDim4 == 0 ? 1 : multiBatch.bBatchDim4;
+    params_.batchB2 = multiBatch.bBatchDim0;
+    params_.batchB3 = multiBatch.bBatchDim1;
+    params_.batchB4 = multiBatch.bBatchDim2;
+    params_.batchB5 = multiBatch.bBatchDim3;
+    params_.batchC0 = multiBatch.cBatchDim5 == 0 ? 1 : multiBatch.cBatchDim5;
+    params_.batchC1 = multiBatch.cBatchDim4 == 0 ? 1 : multiBatch.cBatchDim4;
+    params_.batchC2 = multiBatch.cBatchDim0;
+    params_.batchC3 = multiBatch.cBatchDim1;
+    params_.batchC4 = multiBatch.cBatchDim2;
+    params_.batchC5 = multiBatch.cBatchDim3;
+    params_.aBatchDimAll = multiBatch.aBatchDimAll;
+    params_.bBatchDimAll = multiBatch.bBatchDimAll;
+    params_.cBatchDimAll = multiBatch.cBatchDimAll;
+    params_.biasWithBatch = multiBatch.biasWithBatch;
 
-    params_.batchCnt = params_.batchC1 * params_.batchC2 * params_.batchC3 * params_.batchC4;
+    params_.batchCnt = params_.batchC0 * params_.batchC1 * params_.batchC2 * params_.batchC3 * params_.batchC4 *
+                       params_.batchC5;
     params_.mCnt = MMV3DivCeil(
         batchMatmulTilingData_->matmulTiling.matmulTiling.M,
         static_cast<uint64_t>(batchMatmulTilingData_->matmulTiling.matmulTiling.singleCoreM)); // m方向上分多少个base块
@@ -350,11 +360,15 @@ __aicore__ inline void BatchMatMulCommonBaseBlock::CalcGMOffset(uint64_t mTileIn
     uint64_t totalBmTileIndex = bmTileStartIndex + tileInnerMIndex;
 
     // batch维度合并到M轴一起使用，先解析再重新计算
-    uint64_t batchC1Index = totalBmTileIndex / (params_.batchC2 * params_.batchC3 * params_.batchC4);
-    uint64_t batchC2Index = totalBmTileIndex % (params_.batchC2 * params_.batchC3 * params_.batchC4) /
-                            (params_.batchC3 * params_.batchC4);
-    uint64_t batchC3Index = totalBmTileIndex % (params_.batchC3 * params_.batchC4) / params_.batchC4;
-    uint64_t batchC4Index = totalBmTileIndex % params_.batchC4;
+    uint64_t cInner4 = params_.batchC2 * params_.batchC3 * params_.batchC4 * params_.batchC5;
+    uint64_t batchC0Index = totalBmTileIndex / (params_.batchC1 * cInner4);
+    uint64_t batchC1Index = (totalBmTileIndex / cInner4) % params_.batchC1;
+    uint64_t low4Index = totalBmTileIndex % cInner4;
+    uint64_t batchC2Index = low4Index / (params_.batchC3 * params_.batchC4 * params_.batchC5);
+    uint64_t batchC3Index = low4Index % (params_.batchC3 * params_.batchC4 * params_.batchC5) /
+                            (params_.batchC4 * params_.batchC5);
+    uint64_t batchC4Index = low4Index % (params_.batchC4 * params_.batchC5) / params_.batchC5;
+    uint64_t batchC5Index = low4Index % params_.batchC5;
     uint64_t batchCIndex = totalBmTileIndex;
 
     // Tile 内 mIndex
@@ -364,22 +378,30 @@ __aicore__ inline void BatchMatMulCommonBaseBlock::CalcGMOffset(uint64_t mTileIn
                                  static_cast<uint64_t>(batchMatmulTilingData_->matmulTiling.matmulTiling.M);
     CalcCOffset<C_TYPE>(batchCIndex, mCntIndex, nCntIndex, mInnerBatchOffset);
 
+    uint64_t batchA0Index = batchC0Index % params_.batchA0;
     uint64_t batchA1Index = batchC1Index % params_.batchA1;
     uint64_t batchA2Index = batchC2Index % params_.batchA2;
     uint64_t batchA3Index = batchC3Index % params_.batchA3;
     uint64_t batchA4Index = batchC4Index % params_.batchA4;
-    uint64_t batchAIndex = batchA1Index * (params_.batchA2 * params_.batchA3 * params_.batchA4) +
-                           batchA2Index * (params_.batchA3 * params_.batchA4) + batchA3Index * params_.batchA4 +
-                           batchA4Index;
+    uint64_t batchA5Index = batchC5Index % params_.batchA5;
+    uint64_t aInner4 = params_.batchA2 * params_.batchA3 * params_.batchA4 * params_.batchA5;
+    uint64_t batchAIndex = batchA0Index * (params_.batchA1 * aInner4) + batchA1Index * aInner4 +
+                           batchA2Index * (params_.batchA3 * params_.batchA4 * params_.batchA5) +
+                           batchA3Index * (params_.batchA4 * params_.batchA5) + batchA4Index * params_.batchA5 +
+                           batchA5Index;
     CalcAOffset<A_TYPE>(batchAIndex, mCntIndex, mInnerBatchOffset);
 
+    uint64_t batchB0Index = batchC0Index % params_.batchB0;
     uint64_t batchB1Index = batchC1Index % params_.batchB1;
     uint64_t batchB2Index = batchC2Index % params_.batchB2;
     uint64_t batchB3Index = batchC3Index % params_.batchB3;
     uint64_t batchB4Index = batchC4Index % params_.batchB4;
-    uint64_t batchBIndex = batchB1Index * (params_.batchB2 * params_.batchB3 * params_.batchB4) +
-                           batchB2Index * (params_.batchB3 * params_.batchB4) + batchB3Index * params_.batchB4 +
-                           batchB4Index;
+    uint64_t batchB5Index = batchC5Index % params_.batchB5;
+    uint64_t bInner4 = params_.batchB2 * params_.batchB3 * params_.batchB4 * params_.batchB5;
+    uint64_t batchBIndex = batchB0Index * (params_.batchB1 * bInner4) + batchB1Index * bInner4 +
+                           batchB2Index * (params_.batchB3 * params_.batchB4 * params_.batchB5) +
+                           batchB3Index * (params_.batchB4 * params_.batchB5) + batchB4Index * params_.batchB5 +
+                           batchB5Index;
     CalcBOffset<B_TYPE>(batchBIndex, nCntIndex);
 
     if (batchMatmulTilingData_->matmulTiling.matmulTiling.isBias) {

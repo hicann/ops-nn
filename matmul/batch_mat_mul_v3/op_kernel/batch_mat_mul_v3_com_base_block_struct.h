@@ -23,18 +23,25 @@ struct CommonKernelBlockOffset {
 };
 
 struct CommonKernelBaseBlockArgs {
+    // a0..a5 = tensor dim0..dim5. Filled from blob slots D5,D4,D0,D1,D2,D3 (not DimN=aN).
+    uint64_t batchA0;
     uint64_t batchA1;
     uint64_t batchA2;
     uint64_t batchA3;
     uint64_t batchA4;
+    uint64_t batchA5;
+    uint64_t batchB0;
     uint64_t batchB1;
     uint64_t batchB2;
     uint64_t batchB3;
     uint64_t batchB4;
+    uint64_t batchB5;
+    uint64_t batchC0;
     uint64_t batchC1;
     uint64_t batchC2;
     uint64_t batchC3;
     uint64_t batchC4;
+    uint64_t batchC5;
     uint64_t aBatchDimAll;
     uint64_t bBatchDimAll;
     uint64_t cBatchDimAll;

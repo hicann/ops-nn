@@ -23,21 +23,34 @@ namespace optiling {
 namespace batch_mat_mul_v3 {
 struct BatchShapeInfo {
     uint64_t batchA = 1;
+    // a0..a5 = tensor dim0..dim5 (nearest-M is a5). Not blob aBatchDim0..5; mapping in SetBatchDimInfo.
     uint64_t batchA0 = 1;
     uint64_t batchA1 = 1;
     uint64_t batchA2 = 1;
     uint64_t batchA3 = 1;
+    uint64_t batchA4 = 1;
+    uint64_t batchA5 = 1;
     uint64_t batchB = 1;
     uint64_t batchB0 = 1;
     uint64_t batchB1 = 1;
     uint64_t batchB2 = 1;
     uint64_t batchB3 = 1;
+    uint64_t batchB4 = 1;
+    uint64_t batchB5 = 1;
     uint64_t batchC = 1;
     uint64_t batchC0 = 1;
     uint64_t batchC1 = 1;
     uint64_t batchC2 = 1;
     uint64_t batchC3 = 1;
+    uint64_t batchC4 = 1;
+    uint64_t batchC5 = 1;
     bool biasWithBatch = false;
+
+    bool IsEqualBatch() const
+    {
+        return batchA0 == batchB0 && batchA1 == batchB1 && batchA2 == batchB2 && batchA3 == batchB3 &&
+               batchA4 == batchB4 && batchA5 == batchB5;
+    }
 };
 
 enum class TilingCalcSelect // 选择不同的计算Tiling的方法

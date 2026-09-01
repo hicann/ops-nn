@@ -175,16 +175,12 @@ static aclnnStatus CreateBatchMatmulOpInfo(const aclTensor* self, const aclTenso
 static inline FVector<int64_t> GetBatchDim(const aclTensor* inputTensor)
 {
     size_t tensorDim = inputTensor->GetViewShape().GetDimNum();
-    // When dimension > 2 , the case pattern is [B, M, K]
-    int64_t batchA3 = tensorDim > 2 ? inputTensor->GetViewShape().GetDim(tensorDim - 3) : 1;
-    // When dimension > 3 , the case pattern is [B1, B2, M, K]
-    int64_t batchA2 = tensorDim > 3 ? inputTensor->GetViewShape().GetDim(tensorDim - 4) : 1;
-    // When dimension > 4 , the case pattern is [B1, B2, B3, M, K]
-    int64_t batchA1 = tensorDim > 4 ? inputTensor->GetViewShape().GetDim(tensorDim - 5) : 1;
-    // When dimension > 5 , the case pattern is [B1, B2, B3, B4, M, K]
-    int64_t batchA0 = tensorDim > 5 ? inputTensor->GetViewShape().GetDim(tensorDim - 6) : 1;
-    FVector<int64_t> batchDim = {batchA0, batchA1, batchA2, batchA3};
-
+    auto dimFromEnd = [inputTensor, tensorDim](size_t fromEnd) -> int64_t {
+        return tensorDim >= fromEnd ? inputTensor->GetViewShape().GetDim(tensorDim - fromEnd) : 1;
+    };
+    // Outermost to closest-to-M: rank-8 .. rank-3. Missing axes pad 1.
+    FVector<int64_t> batchDim = {dimFromEnd(8), dimFromEnd(7), dimFromEnd(6),
+                                 dimFromEnd(5), dimFromEnd(4), dimFromEnd(3)};
     return batchDim;
 }
 
@@ -241,11 +237,16 @@ static bool CheckAscendCScenario(const aclTensor* x1, const aclTensor* x2, const
         return false;
     }
 
+    size_t x1DimNum = x1->GetViewShape().GetDimNum();
+    size_t x2DimNum = x2->GetViewShape().GetDimNum();
+    if (x1DimNum > 6 || x2DimNum > 6) {
+        OP_LOGI("Hit batch_mat_mul_v3 for rank 7/8.");
+        return true;
+    }
+
     // vector kernel scenario: effective N dim of x2 is 1
     // 当nDim = 1时，触发vector kernel场景
-    size_t x2DimNum = x2->GetViewShape().GetDimNum();
     int64_t nDim = x2->GetViewShape().GetDim(x2DimNum - 2);
-    size_t x1DimNum = x1->GetViewShape().GetDimNum();
     int64_t mDim = x1->GetViewShape().GetDim(x1DimNum - 2);
     int64_t kDim = x1->GetViewShape().GetDim(x1DimNum - 1);
     int64_t MAX_MK_DIM = 8;
@@ -262,15 +263,15 @@ static bool CheckAscendCScenario(const aclTensor* x1, const aclTensor* x2, const
 const aclIntArray* GetOutputSize(const aclTensor* x1, const aclTensor* x2, const bool adjX1, const bool adjX2,
                                  aclOpExecutor* executor)
 {
-    constexpr size_t maxDim = 6;
+    constexpr size_t maxDim = 8;
     constexpr size_t minDim = 2;
-    constexpr size_t maxBatchDim = 4;
+    constexpr size_t maxBatchDim = 6;
     size_t x1DimSize = x1->GetViewShape().GetDimNum();
     size_t x2DimSize = x2->GetViewShape().GetDimNum();
     if ((x1DimSize < minDim || x1DimSize > maxDim) || (x2DimSize < minDim || x2DimSize > maxDim)) {
         OP_LOGE(
             ACLNN_ERR_INNER_NULLPTR,
-            "Calculate BatchMatMul out unsuccessfully, one of input dim belows 2 or exceeds 6, which is %zu and %zu.",
+            "Calculate BatchMatMul out unsuccessfully, one of input dim belows 2 or exceeds 8, which is %zu and %zu.",
             x1DimSize, x2DimSize);
         return nullptr;
     }
@@ -281,7 +282,7 @@ const aclIntArray* GetOutputSize(const aclTensor* x1, const aclTensor* x2, const
     FVector<int64_t> batchDimForX2 = GetBatchDim(x2);
 
     std::vector<int64_t> outShape;
-    for (size_t i = maxDim - outDimSize; i < maxBatchDim; i++) { // outDimSize is 2~6, i is 0~3
+    for (size_t i = maxDim - outDimSize; i < maxBatchDim; i++) { // outDimSize is 2~8, i is 0~5
         outShape.emplace_back(std::max(batchDimForX1[i], batchDimForX2[i]));
     }
     outShape.emplace_back(outM);

@@ -436,6 +436,46 @@ TEST_F(l2_matmul_test, test_max_dimentions_fp32_d8_d9)
     MatMulCommonTest(a_t_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(l2_matmul_test, test_bmm_fp32_d8_d8)
+{
+    TensorDesc a_t_desc = TensorDesc({1, 1, 2, 1, 2, 1, 4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({1, 1, 1, 2, 1, 1, 8, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1, 2, 2, 2, 1, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_bmm_fp32_d8_d2)
+{
+    TensorDesc a_t_desc = TensorDesc({1, 2, 1, 1, 2, 1, 4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({8, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 2, 1, 1, 2, 1, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_bmm_fp32_d2_d8)
+{
+    TensorDesc a_t_desc = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({1, 2, 1, 1, 2, 1, 8, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 2, 1, 1, 2, 1, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_bmm_fp32_d7_d7)
+{
+    TensorDesc a_t_desc = TensorDesc({1, 2, 1, 1, 2, 4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 1, 1, 2, 1, 8, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 2, 1, 2, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_bmm_fp16_d8_d6_broadcast)
+{
+    TensorDesc a_t_desc = TensorDesc({2, 1, 1, 1, 1, 1, 4, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({1, 2, 1, 1, 8, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 1, 1, 2, 1, 1, 4, 3}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
 TEST_F(l2_matmul_test, test_broadcast_fp32_d3_d3)
 {
     // 使用**Desc描述host api输入输出

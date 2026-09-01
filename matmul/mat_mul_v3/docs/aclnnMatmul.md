@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量self与张量mat2的矩阵乘计算（支持1维到6维作为输入的矩阵乘）。
+- 接口功能：完成张量self与张量mat2的矩阵乘计算（支持1维到8维作为输入的矩阵乘）。
   相似接口有aclnnMm（支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatmul（仅支持3维的矩阵乘，其中第1维为batch）。
 - 计算公式：
 
@@ -86,7 +86,7 @@ aclnnStatus aclnnMatmul(
       <li>需要与mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1~6</td>
+      <td>1~8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -97,7 +97,7 @@ aclnnStatus aclnnMatmul(
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1~6</td>
+      <td>1~8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -107,7 +107,7 @@ aclnnStatus aclnnMatmul(
       <td>数据类型需要与self与mat2推导之后的数据类型满足推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1~6</td>
+      <td>1~8</td>
       <td>-</td>
     </tr>
     <tr>
