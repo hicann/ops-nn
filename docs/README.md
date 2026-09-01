@@ -24,8 +24,10 @@ Docs目录结构说明如下：
   │   ├── quick_op_invocation.md
   │   ├── ...
   ├── menu_aclnn_api.md                  # 全量aclnn接口索引文件
-  ├── op_api_list.md                     # 全量aclnn接口列表
+  ├── menu_torch_api.md                  # 全量torch_extension接口索引文件
+  ├── op_api_list.md                     # aclnn接口列表
   ├── op_list.md                         # 全量算子列表
+  └── torch_api_list.md                  # torch_extension接口列表
 ├── CONTRIBUTING_DOCS.md                 # 文档贡献说明
 ├── QUICKSTART.md                        # 快速入门
 └── README.md
@@ -48,7 +50,8 @@ Docs目录结构说明如下：
 | 文档        | 说明                  |
 | ----------------------- | ---------------------- |
 | [算子列表](zh/op_list.md)                        | 介绍项目包含的所有算子清单。                                 |
-| [aclnn列表](zh/op_api_list.md)                   | 介绍项目包含的所有算子aclnn API清单。为方便用户在Host侧调用算子，提供了C语言API，即aclnn前缀的API。 |
+| [aclnn API列表](zh/op_api_list.md)               | 介绍项目包含的所有算子aclnn API清单。为方便用户在Host侧调用算子，提供了C语言API，即aclnn前缀的API。 |
+| [PyTorch API列表](zh/torch_api_list.md) | 介绍项目提供的torch_extension API清单，通过JIT编译桥接PyTorch与aclnn API，并通过GE Converter支持TorchAir图模式。 |
 
 ### 工具类文档
 
