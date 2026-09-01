@@ -70,17 +70,17 @@ fi
 
 case "${task_name}" in
     x86_compile)
-        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     x86_compile_ubuntu24)
         sed -i "1i set(CMAKE_EXPORT_COMPILE_COMMANDS ON)" "CMakeLists.txt"
-        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     X86_monitor_910b)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend910b
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend910b
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910b]"
         else
             echo "not need build monitor"
@@ -90,7 +90,7 @@ case "${task_name}" in
         ;;
     X86_monitor_910c)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend910_93
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend910_93
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910_93]"
         else
             echo "not need build monitor"
@@ -100,7 +100,7 @@ case "${task_name}" in
         ;;
     X86_monitor_950)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend950
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend950
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend950]"
         else
             echo "not need build monitor"
@@ -137,7 +137,7 @@ case "${task_name}" in
         fi
         ;;
     arm_compile*)
-        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     Compile_Ascend_experimental)
