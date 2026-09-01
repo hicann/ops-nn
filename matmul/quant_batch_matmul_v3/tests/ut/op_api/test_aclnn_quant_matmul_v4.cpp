@@ -357,6 +357,7 @@ TEST_P(l2_QuantBatchMatmulV4_special_test, ascend_special_csv_test)
     } else if (param.socVersion == "Ascend950") {
         socVersion = SocVersion::ASCEND950;
     }
+    op::SocVersionManager socVersionManager(socVersion);
     TensorDesc x1_desc = param.x1StorageShape.empty() ?
                              TensorDesc(param.x1, param.x1Type, param.x1Format).ValueRange(-1, 1) :
                              TensorDesc(param.x1, param.x1Type, param.x1Format, {1, 1}, 0, param.x1StorageShape)
