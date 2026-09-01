@@ -146,7 +146,7 @@ static aclnnStatus CheckRoundMode(int64_t dstType, const char* roundMode)
     // roundMode 不能为 nullptr
     if (roundMode == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "roundMode", "nullptr", "roundMode cannot be nullptr");
-        return ACLNN_ERR_PARAM_INVALID;
+        return ACLNN_ERR_PARAM_NULLPTR;
     }
 
     // roundMode 不能为空字符串
