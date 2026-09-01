@@ -66,7 +66,9 @@ TEST_F(BatchNormExt2InfershapeTest, batch_norm_ext2_infershape_test_0)
                       .InputShapes({&input_x_shape, &input_scale_shape, &input_scale_shape, &input_scale_shape,
                                     &input_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-4f)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -117,7 +119,9 @@ TEST_F(BatchNormExt2InfershapeTest, batch_norm_ext2_infershape_unknown_rank_test
                       .InputShapes({&input_x_shape, &input_scale_shape, &input_scale_shape, &input_scale_shape,
                                     &input_scale_shape})
                       .OutputShapes({&y_shape, &mean_shape, &variance_shape, &rs1_shape, &rs2_shape})
-                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-4f)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -168,7 +172,9 @@ TEST_F(BatchNormExt2InfershapeTest, batch_norm_ext2_inferdtype_test_0)
                               .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                              .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-4f)},
+                                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")},
+                                          {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                               .InputDataTypes({&dfp16, &dfp32, &dfp32, &dfp32, &dfp32})
                               .OutputDataTypes({&dfp16, &dfp32, &dfp32, &dfp32, &dfp32})
                               .Build();

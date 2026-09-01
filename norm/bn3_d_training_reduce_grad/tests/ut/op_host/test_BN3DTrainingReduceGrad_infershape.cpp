@@ -158,6 +158,83 @@ TEST_F(BN3DTrainingReduceGradInfershapeTest, zero_dim_input)
 }
 
 // ============================================================================
+// InferShape — 空 tensor 逐轴枚举（0 依次置于 dim0..dim4）：GRAPH_FAILED
+// ============================================================================
+TEST_F(BN3DTrainingReduceGradInfershapeTest, zero_dim_each_axis)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BN3DTrainingReduceGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    for (int axis = 0; axis < 5; ++axis) {
+        int64_t dims[5] = {2, 3, 4, 5, 6};
+        dims[axis] = 0;
+        gert::StorageShape gradsShape = {{dims[0], dims[1], dims[2], dims[3], dims[4]},
+                                         {dims[0], dims[1], dims[2], dims[3], dims[4]}};
+        gert::StorageShape xShape = gradsShape;
+        gert::StorageShape paramShape = {{3}, {3}};
+        gert::StorageShape yShape = {{}, {}};
+
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(7, 1)
+                          .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                          .InputShapes(
+                              {&gradsShape, &xShape, &paramShape, &paramShape, &paramShape, &paramShape, &paramShape})
+                          .OutputShapes({&yShape})
+                          .Build();
+
+        ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED) << "axis=" << axis;
+    }
+}
+
+// ============================================================================
+// InferShape — 多轴同时为 0（空 tensor 任一维为 0 即拒）：GRAPH_FAILED
+// ============================================================================
+TEST_F(BN3DTrainingReduceGradInfershapeTest, zero_dim_multi_axis)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BN3DTrainingReduceGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradsShape = {{0, 0, 4, 5, 6}, {0, 0, 4, 5, 6}};
+    gert::StorageShape xShape = {{0, 0, 4, 5, 6}, {0, 0, 4, 5, 6}};
+    gert::StorageShape paramShape = {{3}, {3}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&gradsShape, &xShape, &paramShape, &paramShape, &paramShape, &paramShape, &paramShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// ============================================================================
+// InferShape — 参数张量 (0,)（长度 0 ≠ C）：GRAPH_FAILED
+// ============================================================================
+TEST_F(BN3DTrainingReduceGradInfershapeTest, param_shape_zero)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BN3DTrainingReduceGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradsShape = {{2, 3, 4, 5, 6}, {2, 3, 4, 5, 6}};
+    gert::StorageShape xShape = {{2, 3, 4, 5, 6}, {2, 3, 4, 5, 6}};
+    gert::StorageShape paramShape = {{0}, {0}}; // 参数张量为空，长度 0 != C
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&gradsShape, &xShape, &paramShape, &paramShape, &paramShape, &paramShape, &paramShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// ============================================================================
 // InferShape — 未知秩输入：输出传播 UNKNOWN_RANK
 // ============================================================================
 TEST_F(BN3DTrainingReduceGradInfershapeTest, unknown_rank_propagate)

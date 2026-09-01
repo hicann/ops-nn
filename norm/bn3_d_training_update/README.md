@@ -44,12 +44,17 @@
   $$
 
   其中 $\sigma^2_{unbiased} = \frac{num}{num - 1} \cdot \sigma^2_{biased}$（Bessel修正）；
-  当 `num == 1` 时Bessel修正分母为0，显式置无偏batch variance为0，此时running variance不更新
-  （保留旧值），`batch_variance`（有偏）正常输出。
+  当 `num == 1` 时Bessel修正分母为0，显式置无偏batch variance为0，此时running variance不并入
+  本batch统计量，仅按EMA衰减：$variance\_out = (1 - factor) \cdot variance$，`batch_variance`
+  （有偏）正常输出。
 
   $$
   batch\_mean = \mu, \quad batch\_variance = \sigma^2_{biased}
   $$
+
+  当 `num == 0`（x任一非通道轴为0，即空batch）时，按零统计契约输出：`batch_mean`、
+  `batch_variance`均为0，`mean_out = (1 - factor) \cdot mean`、
+  `variance_out = (1 - factor) \cdot variance`，y无元素输出。
 
 ## 参数说明
 
@@ -121,14 +126,14 @@
 <tr>
   <td>factor</td>
   <td>属性</td>
-  <td>EMA权重，等价于PyTorch的momentum，取值范围(0, 1]。</td>
+  <td>EMA权重，等价于PyTorch的momentum，建议取值范围[0, 1]。</td>
   <td>FLOAT32</td>
   <td>-</td>
 </tr>
 <tr>
   <td>epsilon</td>
   <td>属性</td>
-  <td>归一化分母的防除零小常数，参与sqrt(var + epsilon)，必须大于0。</td>
+  <td>归一化分母的防除零小常数，参与sqrt(var + epsilon)，要求不得小于0。</td>
   <td>FLOAT32</td>
   <td>-</td>
 </tr>
@@ -180,6 +185,7 @@
 ## 约束说明
 
 - 通道轴C由x的数据格式决定。
+- Ascend 950PR/950DT：x的维度rank仅支持4（NCHW/NHWC）与5（NCDHW/NDHWC）。
 - y的数据类型、数据格式与shape均与x保持一致。
 - mean、variance、batch_mean、batch_variance的shape须与sum一致。
 - mean、variance为inplace输入输出：调用完成后原tensor内容被EMA更新后的running统计量覆盖。

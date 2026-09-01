@@ -21,14 +21,35 @@ using namespace ge;
 namespace ops {
 static constexpr int64_t X_INPUT_IDX = 0;
 static constexpr int64_t SCALE_INPUT_IDX = 1;
+static constexpr int64_t MEAN_INPUT_IDX = 3;
+static constexpr int64_t VARIANCE_INPUT_IDX = 4;
 static constexpr int64_t Y_OUTPUT_IDX = 0;
 static constexpr int64_t MEAN_OUTPUT_IDX = 1;
 static constexpr int64_t VARIANCE_OUTPUT_IDX = 2;
 static constexpr int64_t RESERVE_SPACE_1_OUTPUT_IDX = 3;
 static constexpr int64_t RESERVE_SPACE_2_OUTPUT_IDX = 4;
+// def 属性顺序: epsilon(0) / data_format(1) / is_training(2)
+static constexpr int64_t IS_TRAINING_ATTR_IDX = 2;
 
 static ge::graphStatus BatchNormExt2InferShape(gert::InferShapeContext* context)
 {
+    // 对标 A2 TBE _shape_check(canndev batch_norm_ext2.py:176-180):
+    // 训练模式下 input_mean/input_variance 必须为空,传入即报错。
+    // 校验放 infershape(形状/参数校验层),tiling 不重复拦截。
+    const gert::Shape* meanInShape = context->GetOptionalInputShape(MEAN_INPUT_IDX);
+    const gert::Shape* varianceInShape = context->GetOptionalInputShape(VARIANCE_INPUT_IDX);
+    bool isTraining = true; // def 默认 true
+    if (context->GetAttrs() != nullptr) {
+        const bool* isTrainingPtr = context->GetAttrs()->GetBool(IS_TRAINING_ATTR_IDX);
+        if (isTrainingPtr != nullptr) {
+            isTraining = *isTrainingPtr;
+        }
+    }
+    if (isTraining && (meanInShape != nullptr || varianceInShape != nullptr)) {
+        OP_LOGE(context->GetNodeName(), "input_mean/input_variance must be None in training mode.");
+        return GRAPH_FAILED;
+    }
+
     const gert::Shape* xShape = context->GetInputShape(X_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     const gert::Shape* scaleShape = context->GetInputShape(SCALE_INPUT_IDX);

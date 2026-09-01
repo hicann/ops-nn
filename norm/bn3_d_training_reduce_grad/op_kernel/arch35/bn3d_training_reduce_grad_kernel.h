@@ -794,7 +794,7 @@ __aicore__ inline void BN3DTrainingReduceGradKernel<T, RANK>::Init(GM_ADDR input
         gmOut_[i].SetGlobalBuffer((__gm__ T*)outputs[i]);
     // TBuf 分配: PHYS_NODES=8 个槽位（批量 CopyIn 扁平布局）+ 1 个 256B scratch
     // （suspect 幅值标量专用; 256B=64 f32 使 LoadAlign 续读不越界）；perBufBytes
-    //   由 host 按 (UB − 320)/8 预留 scratch 与 masked 块过读余量后下发
+    //   由 host 按 (UB − 1024)/8 预留 scratch 与 masked 块过读余量后下发
     for (int i = 0; i < PHYS_NODES; i++)
         pipe_.InitBuffer(buf_[i], td_->perBufBytes);
     pipe_.InitBuffer(scratchBuf_, 256);
@@ -825,7 +825,8 @@ __aicore__ inline void BN3DTrainingReduceGradKernel<T, RANK>::Init(GM_ADDR input
             if (C >= 12 && C % kAlignElems == 0 && 5 * C * 4 <= td_->perBufBytes) {
                 p1Enabled_ = true;
                 p1C_ = C;
-                p1CB_ = (C + 63) / 64;
+                constexpr int64_t kCBlockElems = 64; // Pass1 c-block 大小：64 通道元素/块
+                p1CB_ = (C + (kCBlockElems - 1)) / kCBlockElems;
             }
         }
     }

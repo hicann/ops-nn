@@ -40,18 +40,18 @@ bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& inputShapes,
                    std::vector<std::vector<int64_t>>& normalInputShapes,
                    std::vector<std::vector<int64_t>>& normalOutputShapes)
 {
-    int64_t numInputs = (int64_t)inputShapes.size();
-    int64_t numOutputs = (int64_t)outputShapes.size();
+    int64_t numInputs = static_cast<int64_t>(inputShapes.size());
+    int64_t numOutputs = static_cast<int64_t>(outputShapes.size());
     int64_t maxRank = 0;
     for (auto& s : inputShapes)
-        maxRank = std::max(maxRank, (int64_t)s.size());
+        maxRank = std::max(maxRank, static_cast<int64_t>(s.size()));
     for (auto& s : outputShapes)
-        maxRank = std::max(maxRank, (int64_t)s.size());
+        maxRank = std::max(maxRank, static_cast<int64_t>(s.size()));
 
     // 只能最前面补 1
     auto pad = [&](const std::vector<int64_t>& s) {
         std::vector<int64_t> p;
-        p.assign(maxRank - (int64_t)s.size(), 1);
+        p.assign(maxRank - static_cast<int64_t>(s.size()), 1);
         p.insert(p.end(), s.begin(), s.end());
         return p;
     };
@@ -139,7 +139,7 @@ bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& paddedIn,
 
 bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t perBufElems, SplitResult& out)
 {
-    int64_t rank = (int64_t)maxBroShape.size();
+    int64_t rank = static_cast<int64_t>(maxBroShape.size());
     int64_t inner = 1;
     for (int64_t k = rank - 1; k >= 0; k--) {
         if (maxBroShape[k] * inner > perBufElems) {
@@ -190,7 +190,7 @@ bool MultiCoreSplit(const std::vector<int64_t>& maxBroShape, const SplitResult& 
 
 bool PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t>& strides)
 {
-    int64_t rank = (int64_t)s.size();
+    int64_t rank = static_cast<int64_t>(s.size());
     strides.assign(rank, 0);
     for (int64_t d = rank - 1; d >= 0; d--) {
         if (s[d] == 1) {
@@ -263,13 +263,25 @@ PublicTilingError ComputePublicTiling(const PublicTilingInputs& in, PublicTiling
     }
 
     // ===== 5. shape 校验：空 tensor → null_input（T14）先于 grads == x（T13） =====
+    // grads/x/y 任一维为 0 均拒收——输出 y 的 shape 虽由 InferShape 强制等于 grads，
+    // tiling 侧独立复检，避免绕 shape 推导时防线退化。
     for (int32_t d = 0; d < 5; d++) {
-        if (in.shapes[kGrads][d] == 0 || in.shapes[kX][d] == 0) {
+        if (in.shapes[kGrads][d] == 0 || in.shapes[kX][d] == 0 || in.shapes[kY][d] == 0) {
             return PublicTilingError::kNullInput;
         }
     }
     for (int32_t d = 0; d < 5; d++) {
         if (in.shapes[kGrads][d] != in.shapes[kX][d]) {
+            return PublicTilingError::kShapeMismatch;
+        }
+    }
+
+    // ===== 5.5 参数长度校验：5 个 1D 参数的长度必须等于通道数 C =====
+    // 不依赖 CheckBroadcastShape 的 size-1 广播语义——param_len==1 而 C>1 时广播会
+    // 静默放行，把单一参数值广播到全部通道，产生错误结果而不报错；README 约束
+    // 「长度等于通道数C」在此显式强制（channelAxis 已由第 2 步按 format 确定）。
+    for (int32_t i = 2; i <= 6; i++) {
+        if (in.shapes[i][0] != in.shapes[kGrads][channelAxis]) {
             return PublicTilingError::kShapeMismatch;
         }
     }
@@ -296,7 +308,7 @@ PublicTilingError ComputePublicTiling(const PublicTilingInputs& in, PublicTiling
     std::vector<int64_t> maximumBroShape;
     std::vector<std::vector<int64_t>> normalInputShapes, normalOutputShapes;
     bn3_d_training_reduce_grad::PadAndSqueeze(broIn, broOut, maximumBroShape, normalInputShapes, normalOutputShapes);
-    const int32_t rank = (int32_t)maximumBroShape.size();
+    const int32_t rank = static_cast<int32_t>(maximumBroShape.size());
 
     // CheckBroadcastShape
 
@@ -348,7 +360,7 @@ void ComputeBranch0Tiling(const Branch0TilingInputs& in, BN3DTrainingReduceGradT
 
     // ===== UB 切分 + 多核切分 =====
     std::vector<int64_t> maxBroShape(in.maxBroShape, in.maxBroShape + rank);
-    const int64_t perBufElems = in.perBufBytes / (int64_t)sizeof(float);
+    const int64_t perBufElems = in.perBufBytes / static_cast<int64_t>(sizeof(float));
     bn3_d_training_reduce_grad::FindSplitAxis(maxBroShape, perBufElems, out.split);
     bn3_d_training_reduce_grad::MultiCoreSplit(maxBroShape, out.split, in.coreNum, out.multicore);
 
@@ -422,7 +434,7 @@ void ComputeBranch1Tiling(const Branch1TilingInputs& in, BN3DTrainingReduceGradT
 
     // ===== UB 切分 + 多核切分 =====
     std::vector<int64_t> maxBroShape(in.maxBroShape, in.maxBroShape + rank);
-    const int64_t perBufElems = in.perBufBytes / (int64_t)sizeof(float);
+    const int64_t perBufElems = in.perBufBytes / static_cast<int64_t>(sizeof(float));
     bn3_d_training_reduce_grad::FindSplitAxis(maxBroShape, perBufElems, out.split);
     bn3_d_training_reduce_grad::MultiCoreSplit(maxBroShape, out.split, in.coreNum, out.multicore);
 
@@ -550,7 +562,7 @@ private:
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(node, "epsilon", "out of range", "epsilon must be > 0");
                 break;
             default:
-                OP_LOGE(node, "unknown public tiling error %d", (int32_t)err);
+                OP_LOGE(node, "unknown public tiling error %d", static_cast<int32_t>(err));
                 break;
         }
     }
@@ -568,12 +580,12 @@ private:
         fe::PlatFormInfos* platformInfo = ctx_->GetPlatformInfo();
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, platformInfo);
         auto ap = platform_ascendc::PlatformAscendC(platformInfo);
-        coreNum_ = (int64_t)ap.GetCoreNumAiv();
+        coreNum_ = static_cast<int64_t>(ap.GetCoreNumAiv());
         ap.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize_);
         // 返回值非 0 校验
         OP_CHECK_IF(coreNum_ == 0 || ubSize_ == 0,
                     OP_LOGE(ctx_->GetNodeName(), "invalid platform info: coreNum=%ld ubSize=%lu", coreNum_,
-                            (unsigned long)ubSize_),
+                            static_cast<unsigned long>(ubSize_)),
                     return ge::GRAPH_FAILED);
 
         static const char* kInputNames[7] = {"grads", "x",          "diff_scale",    "diff_offset",
@@ -589,7 +601,7 @@ private:
                         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ctx_->GetNodeName(), "inputs/outputs", "mismatch",
                                                                "shape_mismatch: rank must be <= 5"),
                         return ge::GRAPH_FAILED);
-            in.ranks[i] = (int32_t)s.GetDimNum();
+            in.ranks[i] = static_cast<int32_t>(s.GetDimNum());
             for (size_t d = 0; d < s.GetDimNum(); d++)
                 in.shapes[i][d] = s.GetDim(d);
             auto desc = ctx_->GetInputDesc(i);
@@ -606,7 +618,7 @@ private:
                         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ctx_->GetNodeName(), "inputs/outputs", "mismatch",
                                                                "shape_mismatch: rank must be <= 5"),
                         return ge::GRAPH_FAILED);
-            in.ranks[7] = (int32_t)s.GetDimNum();
+            in.ranks[7] = static_cast<int32_t>(s.GetDimNum());
             for (size_t d = 0; d < s.GetDimNum(); d++)
                 in.shapes[7][d] = s.GetDim(d);
             auto desc = ctx_->GetOutputDesc(0);
@@ -631,8 +643,8 @@ private:
                 Arr2String(in.shapes[7], in.ranks[7]).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(in.dtypes[7]).c_str(),
                 ge::TypeUtils::FormatToSerialString(in.formats[7]).c_str());
-        OP_LOGI(ctx_->GetNodeName(), "attr epsilon=%g coreNum=%ld ubSize=%lu", (double)in.epsilon, coreNum_,
-                (unsigned long)ubSize_);
+        OP_LOGI(ctx_->GetNodeName(), "attr epsilon=%g coreNum=%ld ubSize=%lu", static_cast<double>(in.epsilon),
+                coreNum_, static_cast<unsigned long>(ubSize_));
 
         // ===== 前置校验
 
@@ -673,11 +685,12 @@ private:
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, tiling);
         // 平台信息已在 GetShapeInfo 运行时读取
 
-        int64_t ubPerCore = (int64_t)ubSize_;
-        // per_buf_bytes = ((ubSize - 64) / P) & ~31（P = 8 批量 CopyIn 槽位, 预留 64B scratch）
+        int64_t ubPerCore = static_cast<int64_t>(ubSize_);
+        // per_buf_bytes = ((ubSize - 1024) / P) & ~31
+        // （P = 8 批量 CopyIn 槽位, 预留 1024B：含 256B scratch + masked 块过读余量）
         int64_t perBufBytes = ((ubPerCore - 1024) / PHYS_NODES) & ~31LL;
-        int64_t numIn = (int64_t)normalInputShapes_.size();
-        int64_t numOut = (int64_t)normalOutputShapes_.size();
+        int64_t numIn = static_cast<int64_t>(normalInputShapes_.size());
+        int64_t numOut = static_cast<int64_t>(normalOutputShapes_.size());
 
         if constexpr (R == 4) {
             // ===== RANK=4：接入分支纯公式
@@ -717,7 +730,7 @@ private:
 
         // ===== SetBlockDim（numCores ∈ [1, coreNum]，空 tensor 已在 GetShapeInfo
         //       前置报错，无 SetBlockDim(0) 风险）+ INFO 全量日志 =====
-        ctx_->SetBlockDim((uint32_t)tiling->multicore.numCores);
+        ctx_->SetBlockDim(static_cast<uint32_t>(tiling->multicore.numCores));
         LogTilingData<R>(tiling, numIn, numOut);
         return ge::GRAPH_SUCCESS;
     }
@@ -731,10 +744,10 @@ private:
                 "TilingData: perBufBytes=%ld rank=%ld->R=%d maxBroShape=%s "
                 "split(axis=%ld aI=%ld aO=%ld aITail=%ld) "
                 "multi(cores=%ld tiles=%ld main=%ld coresTail=%ld) numIn=%ld numOut=%ld epsilon=%g num=%ld",
-                tiling->perBufBytes, rank_, (int)R, Arr2String(tiling->maxBroShape, R).c_str(), tiling->split.axis,
-                tiling->split.aI, tiling->split.aO, tiling->split.aITail, tiling->multicore.numCores,
-                tiling->multicore.totalTiles, tiling->multicore.tilesMain, tiling->multicore.coresTail, numIn, numOut,
-                (double)tiling->epsilon, tiling->num);
+                tiling->perBufBytes, rank_, static_cast<int>(R), Arr2String(tiling->maxBroShape, R).c_str(),
+                tiling->split.axis, tiling->split.aI, tiling->split.aO, tiling->split.aITail,
+                tiling->multicore.numCores, tiling->multicore.totalTiles, tiling->multicore.tilesMain,
+                tiling->multicore.coresTail, numIn, numOut, static_cast<double>(tiling->epsilon), tiling->num);
         for (int64_t i = 0; i < numIn; i++)
             OP_LOGI(ctx_->GetNodeName(), "TilingData input[%ld]: shape=%s stride=%s", i,
                     Arr2String(tiling->inputShapes[i], R).c_str(), Arr2String(tiling->inputStrides[i], R).c_str());

@@ -119,14 +119,7 @@ ge::graphStatus TilingFuncBN3DTrainingUpdate(gert::TilingContext* context)
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    // Dual-die launch caveat: on ascend950 the runtime splits blockDim>16 into
-    // per-die groups (groupBlockDim=16) and the kernel's GetBlockIdx() is
-    // DIE-LOCAL — both dies execute the same block ids, so blocks beyond the
-    // first 16 can never address distinct tiles. Cap the tile schedule to the
-    // single-group block capacity (16) so the launch stays one group and every
-    // tile gets exactly one core (verified: blockDim=40 was clamped to
-    // 32 = 2×16 and tiles 24..39 were silently never processed).
-    const int64_t max_cores = std::min(static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv()), static_cast<int64_t>(16));
+    const int64_t max_cores = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
 
     // ----------------------------------------------------------------------
     // 2. Read input/output shapes + dtype + format
@@ -231,6 +224,11 @@ ge::graphStatus TilingFuncBN3DTrainingUpdate(gert::TilingContext* context)
         if (epsilonPtr != nullptr)
             epsilon = *epsilonPtr;
     }
+    if (epsilon < 0.0f) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(epsilon).c_str(),
+                                              "The value of attribute epsilon cannot be less than 0");
+        return ge::GRAPH_FAILED;
+    }
     const float one_minus_factor = 1.0f - factor;
 
     // ----------------------------------------------------------------------
@@ -320,18 +318,9 @@ ge::graphStatus TilingFuncBN3DTrainingUpdate(gert::TilingContext* context)
 
     // ----------------------------------------------------------------------
     // 8. SetBlockDim(num_cores) + workspace.
-    //    Workspace holds per-core multiplier_b[count_tile_max] + addend_b[count_tile_max]
-    //    scratch (fp32, broadcast from the (C,) computed in segment A so segment B
-    //    can read them as a flat array — no UB-side broadcast needed, which
-    //    avoids the 32B-alignment constraint that previously caused 507035).
-    //    Size per core = 2 * max_count_tile * sizeof(float), 32B-aligned per end.
-    //    max_count_tile = per_buf_bytes (max elements across all dtype paths).
     // ----------------------------------------------------------------------
     context->SetBlockDim(num_cores);
     constexpr int64_t kAlign = 32;
-    // max_count_tile bounded by per_buf_elems (FP32 path is most per-element-heavy
-    // for stat buffers; user-dtype path uses 2 bytes for fp16/bf16 but stat is
-    // always 4 bytes — so the broadcast scratch is sized by per_buf_bytes/4).
     const int64_t maxCountTile = ub_split.a_i; // single-tile max element count
     const int64_t perEndBytes = ((maxCountTile * static_cast<int64_t>(sizeof(float)) + kAlign - 1) / kAlign) * kAlign;
     const int64_t perCoreBytes = 2 * perEndBytes;

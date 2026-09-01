@@ -141,6 +141,27 @@ private:
     // size (channel-major) or 1 (channel-last).
     __aicore__ inline void SegmentBFallbackPerPoint(int64_t start, int64_t end, int64_t step, int64_t chanStride,
                                                     int64_t C, int64_t Cpad, const Bn3dSegBEvents& ev);
+    // ── big-C (C > 6552) helpers ─────────────────────────────────────────
+    // NDDMA compact slice copies (element-granular GM addressing, so unaligned
+    // offsets are safe — same pattern as CopyInXPointGatherT).
+    __aicore__ inline void CopyInXSliceT(int inputIdx, int slot, int64_t gmOff, int64_t count);
+    __aicore__ inline void CopyOutYSliceT(int64_t gmOff, int slot, int64_t ubOff, int64_t count);
+    __aicore__ inline void CopyInStatsSlice(int inputIdx, int slot, int64_t c0, int64_t ct);
+    __aicore__ inline void CopyOutStatsSlice(int outputIdx, int slot, int64_t c0, int64_t ct);
+    // Chunked Segment A for C > 6552: recomputes batch_mean / save_variance on
+    // C slices (cCap = per_buf/4 each) and writes the 4 (C,) statistics outputs
+    // (block 0 only). No mult/add staging — the C-tiled Segment B recomputes
+    // its per-tile mult/add from the (C,) inputs directly (workspace unused).
+    __aicore__ inline void SegmentAOutputsBigC(int64_t C, int32_t evM2V, int32_t evV2M, int32_t evV3, int32_t evM3M2);
+    // C-tiled Segment B (one tile [c0, c0+ct), ct <= per_buf/8 = 6552 so the
+    // tile's mult/add fit slot0 together with the streaming buffers).
+    //   channel-major: planes whose channel ch = plane%C falls in the tile.
+    //   channel-last: per-point channel slice [pt*C+c0, pt*C+c0+ct).
+    __aicore__ inline void ComputeMultAddTile(int64_t c0, int64_t ct, int64_t cpadT, int32_t evM2V, int32_t evV2M);
+    __aicore__ inline void SegmentBChannelMajorBigC(int64_t start, int64_t end, int64_t C, int64_t S, int64_t c0,
+                                                    int64_t ct, int64_t cpadT, const Bn3dSegBEvents& ev);
+    __aicore__ inline void SegmentBChannelLastBigC(int64_t start, int64_t end, int64_t C, int64_t c0, int64_t ct,
+                                                   int64_t cpadT, const Bn3dSegBEvents& ev);
     // Empty-batch statistics contract (tiling num_rec = 0): plain (C,)-shaped
     // copies only — split/a_i are pathological for empty shapes (N=0 → a_i=0,
     // zero inner dims → inner_count = 0) and must not be consulted.
@@ -194,7 +215,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::Init(GM_ADDR inputs[kM
                                                                const BN3DTrainingUpdateTilingData<RANK>* td)
 {
     td_ = td;
-    (void)workspace; // workspace unused by this kernel
+    (void)workspace; // workspace unused by this kernel (big-C recomputes per-tile mult/add)
     for (int i = 0; i < kMaxInputSlots; i++) {
         gmIn_[i].SetGlobalBuffer((__gm__ T*)inputs[i]);
         gmInF_[i].SetGlobalBuffer((__gm__ float*)inputs[i]);
@@ -386,6 +407,83 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::CopyOutYPointScatterT(
 }
 
 // ============================================================
+// NDDMA compact slice helpers (big-C path). NDDMA strides are element-level,
+// so unaligned GM offsets/counts are safe (no 32B-alignment requirement on
+// the GM side — same pattern as CopyInXPointGatherT). ND=2 keeps bisheng's
+// ND=1 ICE away. These read/write exactly `count` elements (no pad over-run).
+// ============================================================
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::CopyInXSliceT(int inputIdx, int slot, int64_t gmOff,
+                                                                        int64_t count)
+{
+    AscendC::MultiCopyParams<T, 2> params;
+    params.loopInfo.loopSize[0] = count;
+    params.loopInfo.loopSrcStride[0] = 1;
+    params.loopInfo.loopDstStride[0] = 1;
+    params.loopInfo.loopLpSize[0] = 0;
+    params.loopInfo.loopRpSize[0] = 0;
+    params.loopInfo.loopSize[1] = 1;
+    params.loopInfo.loopSrcStride[1] = 0;
+    params.loopInfo.loopDstStride[1] = count;
+    params.loopInfo.loopLpSize[1] = 0;
+    params.loopInfo.loopRpSize[1] = 0;
+    static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad, AscendC::NdDmaConfig::unsetPad,
+                                                 false};
+    AscendC::DataCopy<T, 2, cfg>(buf_[slot].Get<T>(), gmIn_[inputIdx][gmOff], params);
+}
+
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::CopyOutYSliceT(int64_t gmOff, int slot, int64_t ubOff,
+                                                                         int64_t count)
+{
+    // MTE3 DataCopyPad UB→GM. NDDMA has no UB→GM MultiCopyParams form, and the
+    // plain blockCount=1 DataCopyPad needs 32B-aligned GM offsets — the big-C
+    // path writes at arbitrary (S or C) strides, so use per-element Compact
+    // blocks (blockLen = sizeof(T), srcStride/dstStride = 0) which handle any
+    // alignment and write exactly `count` elements (no pad over-run).
+    AscendC::DataCopyExtParams ext;
+    ext.blockCount = static_cast<uint16_t>(count);
+    ext.blockLen = static_cast<uint32_t>(sizeof(T));
+    ext.srcStride = 0;
+    ext.dstStride = 0;
+    AscendC::DataCopyPad<T, AscendC::PaddingMode::Compact>(gmOut_[0][gmOff],
+                                                           buf_[slot].Get<T>()[static_cast<uint32_t>(ubOff)], ext);
+}
+
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::CopyInStatsSlice(int inputIdx, int slot, int64_t c0,
+                                                                           int64_t ct)
+{
+    // CopyInBrcF-style: copy the member NDDMA params (proven -O2 pattern) and
+    // override every dim so dim0 = ct contiguous channels, upper dims = 1.
+    auto params = nddmaParamsF_[inputIdx];
+    for (int64_t nd = 0; nd < ND; ++nd) {
+        params.loopInfo.loopSize[nd] = (nd == 0) ? ct : 1;
+        params.loopInfo.loopSrcStride[nd] = (nd == 0) ? 1 : 0;
+        params.loopInfo.loopDstStride[nd] = (nd == 0) ? 1 : ct;
+        params.loopInfo.loopLpSize[nd] = 0;
+        params.loopInfo.loopRpSize[nd] = 0;
+    }
+    static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad, AscendC::NdDmaConfig::unsetPad,
+                                                 false};
+    AscendC::DataCopy<float, ND, cfg>(buf_[slot].Get<float>(), gmInF_[inputIdx][c0], params);
+}
+
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::CopyOutStatsSlice(int outputIdx, int slot, int64_t c0,
+                                                                            int64_t ct)
+{
+    // Stats outputs are (C,) fp32 tensors; every c0 is 32B-aligned (multiple of
+    // 8), so the plain blockCount=1 DataCopyPad (same as CopyOutOneF) applies.
+    AscendC::DataCopyExtParams ext;
+    ext.blockCount = 1;
+    ext.blockLen = static_cast<uint32_t>(ct * sizeof(float));
+    ext.srcStride = 0;
+    ext.dstStride = 0;
+    AscendC::DataCopyPad(gmOutF_[outputIdx][c0], buf_[slot].Get<float>(), ext);
+}
+
+// ============================================================
 // SegmentBChannelMajor — NCHW/NCDHW (channel_axis != RANK-1) streaming.
 //   The tensor is contiguous in (n,c,s) order; every (n,c) plane is a
 //   contiguous S-element run whose channel is (plane % C). Chunks are single-
@@ -501,7 +599,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelMajor(i
             VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xf.GetPhyAddr(),
                                (__ubuf__ float*)mb.GetPhyAddr(), static_cast<uint32_t>(len));
             AscendC::PipeBarrier<PIPE_V>();
-            AscendC::Cast(yT, yf, AscendC::RoundMode::CAST_ROUND, static_cast<uint32_t>(len));
+            AscendC::Cast(yT, yf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(len));
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
             AscendC::DataCopyExtParams eOut;
@@ -628,7 +726,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelMajorSm
                 AscendC::Adds(xf[static_cast<uint32_t>(i * S_al)], xf[static_cast<uint32_t>(i * S_al)], curAdd,
                               static_cast<uint32_t>(plen));
                 AscendC::Cast(yT[static_cast<uint32_t>(i * S_al)], xf[static_cast<uint32_t>(i * S_al)],
-                              AscendC::RoundMode::CAST_ROUND, static_cast<uint32_t>(plen));
+                              AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(plen));
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
                 AscendC::DataCopyExtParams eOut;
@@ -680,6 +778,20 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLast(in
     int64_t Lb = ((slotElems / 2) / cAl) * cAl;
     if (Lb < C)
         Lb = C; // at least one full point per chunk (defensive)
+    // Work-adaptive chunk: the periodic mult_b/add_b build costs WcMax = Lb/C
+    // replicas (S-pipe GetValue/SetValue for C%8!=0). For cores with little
+    // flat work, a large Lb makes the build dominate (case00162/186/188:
+    // ~125us of a 145us kernel). Shrink Lb toward ~8 chunks per core so the
+    // build cost tracks the actual work; large-work cores keep a large Lb.
+    // Lb stays a multiple of cAl (so chunk offsets keep the 32B/point alignment).
+    {
+        const int64_t flatWork = end - start;
+        const int64_t LbAdapt = ((flatWork / 8 + cAl - 1) / cAl) * cAl;
+        if (LbAdapt < Lb)
+            Lb = LbAdapt;
+        if (Lb < C)
+            Lb = C;
+    }
     // fp16/bf16: yf lives in slot0 after mult/add — cap so 8C + 4Lb fits.
     if constexpr (!kIsFp32) {
         const int64_t cap = slotElems - 2 * Cpad;
@@ -696,9 +808,13 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLast(in
     if constexpr (!kIsFp32) {
         // xf occupies bytes [0, 4*Lb) = T-elems [0, 2*Lb); yT must start AFTER
         // it (byte 4*Lb = T-elem 2*Lb), else chunk k+1's cast into xf clobbers
-        // yT[k] while MTE3(k) still reads it.
-        yT[0] = buf_[4].Get<T>()[static_cast<uint32_t>(2 * Lb)];
-        yT[1] = buf_[4].Get<T>()[static_cast<uint32_t>(3 * Lb)];
+        // yT[k] while MTE3(k) still reads it. The yT base must ALSO be 32B-
+        // aligned (the fp32→T Cast dst and the MTE3 src both need it): with a
+        // tiny Lb (work-adaptive clamp to Lb=C, C=1/3) byte 4*Lb = 4/12 is
+        // misaligned → VECTOR_CORE_EXCEPTION (VEC_ERROR). Round the T-elem
+        // offsets up to 16 (32B). yT[1] is unused today but kept aligned.
+        yT[0] = buf_[4].Get<T>()[static_cast<uint32_t>(((2 * Lb + 15) / 16) * 16)];
+        yT[1] = buf_[4].Get<T>()[static_cast<uint32_t>(((3 * Lb + 15) / 16) * 16)];
     }
     AscendC::LocalTensor<float> yf = buf_[0].Get<float>()[static_cast<uint32_t>(2 * Cpad)];
     const AscendC::LocalTensor<float> multB = buf_[0].Get<float>();
@@ -767,7 +883,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLast(in
             VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xf.GetPhyAddr(),
                                (__ubuf__ float*)multB.GetPhyAddr(), static_cast<uint32_t>(C));
             AscendC::PipeBarrier<PIPE_V>();
-            AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_ROUND, static_cast<uint32_t>(C));
+            AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(C));
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
             AscendC::DataCopyExtParams eOut;
@@ -826,7 +942,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLast(in
                 VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xf.GetPhyAddr(),
                                    (__ubuf__ float*)multBB.GetPhyAddr(), static_cast<uint32_t>(curLen));
                 AscendC::PipeBarrier<PIPE_V>();
-                AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_ROUND, static_cast<uint32_t>(curLen));
+                AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(curLen));
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
                 AscendC::DataCopyExtParams eOut;
@@ -876,7 +992,7 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLast(in
             VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xf.GetPhyAddr(),
                                (__ubuf__ float*)multB.GetPhyAddr(), static_cast<uint32_t>(C));
             AscendC::PipeBarrier<PIPE_V>();
-            AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_ROUND, static_cast<uint32_t>(C));
+            AscendC::Cast(yT[0], yf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(C));
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
             AscendC::DataCopyExtParams eOut;
@@ -942,6 +1058,333 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBFallbackPerPoi
     }
 }
 // ============================================================
+// SegmentAOutputsBigC — chunked Segment A for C > 6552.
+//   The 4 (C,) statistics outputs (mean_out / variance_out / batch_mean /
+//   batch_variance) are elementwise independent in c, so they are computed on
+//   C slices of cCap = per_buf/4 channels (each intermediate (ct,) fits one UB
+//   slot). Only block 0 writes the outputs (same contract as the C<=6552
+//   chain). The per-tile mult/add for Segment B are NOT staged here — the
+//   C-tiled Segment B recomputes them from the (C,) inputs per tile (correctness-
+//   only; workspace is left unused).
+// ============================================================
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentAOutputsBigC(int64_t C, int32_t evM2V, int32_t evV2M,
+                                                                              int32_t evV3, int32_t evM3M2)
+{
+    const int64_t cCap = td_->per_buf_bytes / 4; // 13104 fp32 per slot
+    constexpr int IN_SUM = 1, IN_SQ = 2, IN_MEAN = 5, IN_VAR = 6;
+    constexpr int OUT_MEAN = 1, OUT_VAR = 2, OUT_BM = 3, OUT_BV = 4;
+    constexpr int UB0 = 0, UB1 = 1, UB2 = 2, UB3 = 3, UB4 = 4;
+
+    for (int64_t c0 = 0; c0 < C; c0 += cCap) {
+        const int64_t ct = (C - c0 < cCap) ? (C - c0) : cCap;
+
+        // ── batch_mean = sum * num_rec → UB1 ──
+        CopyInStatsSlice(IN_SUM, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB1].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, ct);
+
+        // ── save_variance = sq*num_rec - bm² → UB4 ──
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        CopyInStatsSlice(IN_SQ, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB2].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, ct);          // sq*num_rec UB2
+        AscendC::Mul(buf_[UB3].Get<float>(), buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), ct); // bm² UB3
+        AscendC::Sub(buf_[UB4].Get<float>(), buf_[UB2].Get<float>(), buf_[UB3].Get<float>(), ct); // save_var UB4
+
+        // ── mean_out = mean*(1-f) + bm*f → UB2 ──
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        CopyInStatsSlice(IN_MEAN, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB2].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, ct); // mean*(1-f) UB2
+        AscendC::Muls(buf_[UB3].Get<float>(), buf_[UB1].Get<float>(), td_->factor, ct);           // bm*factor UB3
+        AscendC::Add(buf_[UB2].Get<float>(), buf_[UB2].Get<float>(), buf_[UB3].Get<float>(), ct); // mean_out UB2
+
+        // ── variance_out = var*(1-f) + uv*f → UB3 ──
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+        CopyInStatsSlice(IN_VAR, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, ct); // var*(1-f) UB0
+        AscendC::Muls(buf_[UB3].Get<float>(), buf_[UB4].Get<float>(), td_->bessel_scaler, ct);    // unbiased_var UB3
+        AscendC::Muls(buf_[UB3].Get<float>(), buf_[UB3].Get<float>(), td_->factor, ct);           // uv*factor UB3
+        AscendC::Add(buf_[UB3].Get<float>(), buf_[UB0].Get<float>(), buf_[UB3].Get<float>(), ct); // var_out UB3
+
+        // ── stats outputs (block 0 only) ──
+        if (AscendC::GetBlockIdx() == 0) {
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            CopyOutStatsSlice(OUT_MEAN, UB2, c0, ct);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            CopyOutStatsSlice(OUT_VAR, UB3, c0, ct);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            CopyOutStatsSlice(OUT_BM, UB1, c0, ct);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+            CopyOutStatsSlice(OUT_BV, UB4, c0, ct);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        }
+    }
+}
+
+// ============================================================
+// ComputeMultAddTile — recompute mult[c0:c0+ct] + add[c0:c0+ct] for one big-C
+//   tile from the (C,) inputs (no workspace needed). The per-channel statistics
+//   chain (sum→bm, sq→save_var, sqrt/div→inv_std, mult=scale*inv_std,
+//   add=offset-mult*bm) is recomputed per tile; every core computes identical
+//   values so no cross-core sync is required. Result staged in slot0:
+//   mult at [0:ct], add at [cpadT:cpadT+ct] (ct <= per_buf/8 so they fit).
+// ============================================================
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::ComputeMultAddTile(int64_t c0, int64_t ct, int64_t cpadT,
+                                                                             int32_t evM2V, int32_t evV2M)
+{
+    constexpr int IN_SUM = 1, IN_SQ = 2, IN_SCALE = 3, IN_OFFSET = 4;
+    constexpr int UB0 = 0, UB1 = 1, UB2 = 2, UB3 = 3, UB4 = 4;
+
+    // ── batch_mean = sum * num_rec → UB1 ──
+    CopyInStatsSlice(IN_SUM, UB0, c0, ct);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::Muls(buf_[UB1].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, ct);
+
+    // ── save_variance = sq*num_rec - bm² → UB4 ──
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    CopyInStatsSlice(IN_SQ, UB0, c0, ct);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::Muls(buf_[UB2].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, ct);          // sq*num_rec UB2
+    AscendC::Mul(buf_[UB3].Get<float>(), buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), ct); // bm² UB3
+    AscendC::Sub(buf_[UB4].Get<float>(), buf_[UB2].Get<float>(), buf_[UB3].Get<float>(), ct); // save_var UB4
+
+    // ── inv_std = 1/sqrt(save_var + eps) → UB3 ──
+    AscendC::Adds(buf_[UB2].Get<float>(), buf_[UB4].Get<float>(), td_->epsilon, ct);
+    static constexpr AscendC::SqrtConfig sqrt0Ulp = {AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
+    AscendC::Sqrt<float, sqrt0Ulp>(buf_[UB2].Get<float>(), buf_[UB2].Get<float>(), ct);
+    AscendC::Duplicate(buf_[UB3].Get<float>(), 1.0f, ct);
+    static constexpr AscendC::DivConfig div0Ulp = {AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+    AscendC::Div<float, div0Ulp>(buf_[UB3].Get<float>(), buf_[UB3].Get<float>(), buf_[UB2].Get<float>(),
+                                 ct); // inv_std UB3
+
+    // ── multiplier = scale * inv_std → UB3 ──
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    CopyInStatsSlice(IN_SCALE, UB0, c0, ct);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::Mul(buf_[UB3].Get<float>(), buf_[UB0].Get<float>(), buf_[UB3].Get<float>(), ct); // mult UB3
+
+    // ── addend = offset - mult*bm → UB0 ──
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evV2M);
+    CopyInStatsSlice(IN_OFFSET, UB0, c0, ct);
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+    AscendC::Mul(buf_[UB2].Get<float>(), buf_[UB3].Get<float>(), buf_[UB1].Get<float>(), ct); // mult*bm UB2
+    AscendC::Sub(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), buf_[UB2].Get<float>(), ct); // addend UB0
+
+    // ── stage into slot0: add → [cpadT], mult → [0] (add first, then mult
+    //      overwrites [0:ct]; cpadT >= ct so the copies never overlap) ──
+    AscendC::Adds(buf_[UB0].Get<float>()[static_cast<uint32_t>(cpadT)], buf_[UB0].Get<float>(), 0.0f, ct);
+    AscendC::Adds(buf_[UB0].Get<float>(), buf_[UB3].Get<float>(), 0.0f, ct);
+    // V→S fence: the channel-major processing reads the staged mult/add back
+    // with S-pipe GetValue — V_S is the canonical Vector→Scalar ordering.
+    {
+        int32_t evVS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_S));
+        AscendC::SetFlag<AscendC::HardEvent::V_S>(evVS);
+        AscendC::WaitFlag<AscendC::HardEvent::V_S>(evVS);
+    }
+    AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+// ============================================================
+// SegmentBChannelMajorBigC — one C-tile [c0, c0+ct) of the big-C channel-major
+//   (NCHW/NCDHW) path. For each plane in [start/S, ceil(end/S)) whose channel
+//   ch = plane%C falls in the tile, streams the plane (chunked) with the proven
+//   bit-exact VF chain (Cast→Duplicate mult/add→VfMulAddDst→Cast back), reading
+//   the per-plane scalar mult/add from the tile's slot0 slice. Planes outside
+//   the tile are skipped — the tile loop covers every channel exactly once.
+//   The C<=6552 SegmentBChannelMajor path is untouched.
+// ============================================================
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelMajorBigC(int64_t start, int64_t end,
+                                                                                   int64_t C, int64_t S, int64_t c0,
+                                                                                   int64_t ct, int64_t cpadT,
+                                                                                   const Bn3dSegBEvents& ev)
+{
+    constexpr bool kIsFp32 = std::is_same_v<T, float>;
+    constexpr int IN_X = 0, OUT_Y = 0;
+    const int64_t slotElems = td_->per_buf_bytes / 4; // 13104 fp32 per slot
+    // L = safe per-chunk element count.
+    int64_t L = slotElems - 16;
+    if constexpr (!kIsFp32) {
+        // xb (T) + yT (T) share slot1: 2*sizeof(T)*L <= per_buf_bytes.
+        const int64_t cap = slotElems / 2;
+        if (L > cap)
+            L = cap;
+    }
+    L = (L / (32 / static_cast<int64_t>(sizeof(T)))) * (32 / static_cast<int64_t>(sizeof(T)));
+
+    AscendC::LocalTensor<T> xb = buf_[1].Get<T>();
+    AscendC::LocalTensor<T> yT;
+    AscendC::LocalTensor<float> xf;
+    AscendC::LocalTensor<float> mb;
+    AscendC::LocalTensor<float> yf;
+    AscendC::LocalTensor<float> multScr;
+    AscendC::LocalTensor<float> addScr;
+    if constexpr (kIsFp32) {
+        mb = buf_[3].Get<float>();
+        yf = buf_[4].Get<float>();
+    } else {
+        xf = buf_[2].Get<float>();
+        mb = buf_[3].Get<float>();
+        yf = buf_[4].Get<float>();
+        yT = buf_[1].Get<T>()[static_cast<uint32_t>(L)];
+    }
+    // S-pipe mult/add staging scratch in slot2 (free for fp32; unused by the
+    // non-fp32 Muls/Adds branch which applies curMult/curAdd directly).
+    multScr = buf_[2].Get<float>()[0];
+    addScr = buf_[2].Get<float>()[8];
+    // Recompute this tile's mult/add from the (C,) inputs into slot0.
+    ComputeMultAddTile(c0, ct, cpadT, ev.m2v[0], ev.v2m[0]);
+    const AscendC::LocalTensor<float> multT = buf_[0].Get<float>();
+    const AscendC::LocalTensor<float> addT = buf_[0].Get<float>()[static_cast<uint32_t>(cpadT)];
+    int64_t plane = start / S;
+    int64_t off = plane * S;
+    float curMult = 0.0f, curAdd = 0.0f;
+    while (off < end) {
+        const int64_t ch = plane % C;
+        int64_t planeEnd = (plane + 1) * S;
+        if (planeEnd > end)
+            planeEnd = end;
+        if (ch >= c0 && ch < c0 + ct) {
+            curMult = multT.GetValue(static_cast<uint32_t>(ch - c0));
+            curAdd = addT.GetValue(static_cast<uint32_t>(ch - c0));
+            int64_t poff = off;
+            while (poff < planeEnd) {
+                const int64_t len = ((planeEnd - poff) < L) ? (planeEnd - poff) : L;
+                CopyInXSliceT(IN_X, 1, poff, len);
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ev.m2v[0]);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ev.m2v[0]);
+                AscendC::PipeBarrier<PIPE_ALL>();
+                if constexpr (kIsFp32) {
+                    multScr.SetValue(0u, curMult);
+                    addScr.SetValue(0u, curAdd);
+                    AscendC::PipeBarrier<PIPE_ALL>();
+                    AscendC::Duplicate(mb, multScr, static_cast<int32_t>(len));
+                    AscendC::Duplicate(yf, addScr, static_cast<int32_t>(len));
+                    AscendC::PipeBarrier<PIPE_V>();
+                    VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xb.GetPhyAddr(),
+                                       (__ubuf__ float*)mb.GetPhyAddr(), static_cast<uint32_t>(len));
+                    AscendC::PipeBarrier<PIPE_V>();
+                    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                    CopyOutYSliceT(poff, 4, 0, len);
+                } else {
+                    AscendC::Cast(xf, xb, AscendC::RoundMode::CAST_NONE, static_cast<uint32_t>(len));
+                    AscendC::Muls(xf, xf, curMult, static_cast<uint32_t>(len));
+                    AscendC::Adds(xf, xf, curAdd, static_cast<uint32_t>(len));
+                    AscendC::Cast(yT, xf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(len));
+                    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                    CopyOutYSliceT(poff, 1, L, len);
+                }
+                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ev.m3m2[0]);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ev.m3m2[0]);
+                poff += len;
+            }
+        }
+        off = planeEnd;
+        ++plane;
+    }
+}
+
+// ============================================================
+// SegmentBChannelLastBigC — one C-tile [c0, c0+ct) of the big-C channel-last
+//   (NHWC/NDHWC) path. Each spatial point's C channels are contiguous; per
+//   point the tile slice [pt*C+c0, pt*C+c0+ct) is gathered (in Lc=1024 chunks),
+//   computed with the periodic mult/add slices (seed yf with add, then
+//   VfMulAddDst / Mul+Add), and scattered back. Whole points from start/C to
+//   ceil(end/C) are processed — overlapping cores write identical values
+//   (benign duplicates; ch0 stays a multiple of Lc so the VF src stays 32B
+//   aligned).
+// ============================================================
+template <typename T, int64_t RANK>
+__aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBChannelLastBigC(int64_t start, int64_t end, int64_t C,
+                                                                                  int64_t c0, int64_t ct, int64_t cpadT,
+                                                                                  const Bn3dSegBEvents& ev)
+{
+    constexpr bool kIsFp32 = std::is_same_v<T, float>;
+    constexpr int IN_X = 0, OUT_Y = 0;
+    // Per-point channel slice is processed in chunks of Lc (the VF + fp16-cast
+    // combo faults on the 950 at 8-element block boundaries for large counts,
+    // and the fp32 VF / fp16 Mul+Add are bit-exact per element anyway).
+    const int64_t Lc = 1024;
+    AscendC::LocalTensor<T> xb = buf_[1].Get<T>();
+    AscendC::LocalTensor<T> yT;
+    AscendC::LocalTensor<float> xf;
+    AscendC::LocalTensor<float> yf = buf_[4].Get<float>();
+    if constexpr (!kIsFp32) {
+        yT = buf_[1].Get<T>()[static_cast<uint32_t>(Lc)];
+        xf = buf_[2].Get<float>();
+    }
+    // Recompute this tile's mult/add from the (C,) inputs into slot0.
+    ComputeMultAddTile(c0, ct, cpadT, ev.m2v[0], ev.v2m[0]);
+    const AscendC::LocalTensor<float> multT = buf_[0].Get<float>();
+    const AscendC::LocalTensor<float> addT = buf_[0].Get<float>()[static_cast<uint32_t>(cpadT)];
+
+    const int64_t pt0 = start / C;
+    const int64_t ptEnd = (end + C - 1) / C;
+    for (int64_t pt = pt0; pt < ptEnd; ++pt) {
+        const int64_t pbase = pt * C + c0;
+        for (int64_t ch0 = 0; ch0 < ct; ch0 += Lc) {
+            const int64_t clen = (ct - ch0 < Lc) ? (ct - ch0) : Lc;
+            const int64_t base = pbase + ch0;
+            CopyInXSliceT(IN_X, 1, base, clen);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ev.m2v[0]);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ev.m2v[0]);
+            AscendC::PipeBarrier<PIPE_V>();
+            if constexpr (kIsFp32) {
+                AscendC::Adds(yf, addT[static_cast<uint32_t>(ch0)], 0.0f, static_cast<uint32_t>(clen));
+                AscendC::PipeBarrier<PIPE_V>();
+                VfMulAddDst<float>((__ubuf__ float*)yf.GetPhyAddr(), (__ubuf__ float*)xb.GetPhyAddr(),
+                                   (__ubuf__ float*)multT[static_cast<uint32_t>(ch0)].GetPhyAddr(),
+                                   static_cast<uint32_t>(clen));
+                AscendC::PipeBarrier<PIPE_V>();
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                CopyOutYSliceT(base, 4, 0, clen);
+            } else {
+                AscendC::Cast(xf, xb, AscendC::RoundMode::CAST_NONE, static_cast<uint32_t>(clen));
+                AscendC::Mul(xf, xf, multT[static_cast<uint32_t>(ch0)], static_cast<uint32_t>(clen));
+                AscendC::Add(xf, xf, addT[static_cast<uint32_t>(ch0)], static_cast<uint32_t>(clen));
+                AscendC::Cast(yT, xf, AscendC::RoundMode::CAST_RINT, static_cast<uint32_t>(clen));
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ev.v3[0]);
+                CopyOutYSliceT(base, 1, Lc, clen);
+            }
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ev.m3m2[0]);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ev.m3m2[0]);
+        }
+    }
+}
+// ============================================================
 // SegmentAEmpty — empty-batch statistics contract (num_rec = 0):
 //   batch_mean = sum·num_rec, batch_variance = sq·num_rec − bm²,
 //   mean_out = mean·(1−f) (+f·bm = +0), variance_out = var·(1−f)
@@ -951,70 +1394,64 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentBFallbackPerPoi
 //   parameters are pathological for empty shapes (N=0 → a_i=0, zero inner
 //   dims → inner_count=0) and must not be consulted. blockDim is clamped
 //   to ≥1, so exactly one core runs here (single writer, no duplicates).
+//   Chunked over C (cCap = per_buf/4) so C > 13104 cannot overflow a slot.
 // ============================================================
 template <typename T, int64_t RANK>
 __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::SegmentAEmpty(int32_t evM2V, int32_t evV3, int32_t evM3M2)
 {
     const int64_t C = td_->C;
+    const int64_t cCap = td_->per_buf_bytes / 4;
     constexpr int IN_SUM = 1, IN_SQ = 2, IN_MEAN = 5, IN_VAR = 6;
     constexpr int OUT_MEAN = 1, OUT_VAR = 2, OUT_BM = 3, OUT_BV = 4;
     constexpr int UB0 = 0, UB1 = 1, UB2 = 2;
-    AscendC::DataCopyExtParams ext;
-    ext.blockCount = 1;
-    ext.blockLen = C * sizeof(float);
-    ext.srcStride = 0;
-    ext.dstStride = 0;
-    const AscendC::DataCopyPadExtParams<float> pad; // isPad=false: in-bounds plain copy
+    for (int64_t c0 = 0; c0 < C; c0 += cCap) {
+        const int64_t ct = (C - c0 < cCap) ? (C - c0) : cCap;
+        // batch_mean = sum · num_rec  (num_rec = 0 from the tiling) → UB0.
+        CopyInStatsSlice(IN_SUM, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, ct);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        CopyOutStatsSlice(OUT_BM, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
 
-    // batch_mean = sum · num_rec  (num_rec = 0 from the tiling) → UB0.
-    AscendC::DataCopyPad(buf_[UB0].Get<float>(), gmInF_[IN_SUM][0], ext, pad);
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->num_rec, C);
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::DataCopyPad(gmOutF_[OUT_BM][0], buf_[UB0].Get<float>(), ext);
-    AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        // batch_variance = sq·num_rec − bm²  → UB1 (bm kept in UB0).
+        CopyInStatsSlice(IN_SQ, UB1, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), td_->num_rec, ct);
+        AscendC::Mul(buf_[UB2].Get<float>(), buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), ct); // bm²
+        AscendC::Sub(buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), buf_[UB2].Get<float>(), ct);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        CopyOutStatsSlice(OUT_BV, UB1, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
 
-    // batch_variance = sq·num_rec − bm²  → UB1 (bm kept in UB0).
-    AscendC::DataCopyPad(buf_[UB1].Get<float>(), gmInF_[IN_SQ][0], ext, pad);
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::Muls(buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), td_->num_rec, C);
-    AscendC::Mul(buf_[UB2].Get<float>(), buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), C); // bm²
-    AscendC::Sub(buf_[UB1].Get<float>(), buf_[UB1].Get<float>(), buf_[UB2].Get<float>(), C);
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::DataCopyPad(gmOutF_[OUT_BV][0], buf_[UB1].Get<float>(), ext);
-    AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        // mean_out = mean·(1−f)  (bm = 0 makes the +f·bm term an exact +0) → UB0.
+        CopyInStatsSlice(IN_MEAN, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, ct);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        CopyOutStatsSlice(OUT_MEAN, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
 
-    // mean_out = mean·(1−f)  (bm = 0 makes the +f·bm term an exact +0) → UB0.
-    AscendC::DataCopyPad(buf_[UB0].Get<float>(), gmInF_[IN_MEAN][0], ext, pad);
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, C);
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::DataCopyPad(gmOutF_[OUT_MEAN][0], buf_[UB0].Get<float>(), ext);
-    AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
-
-    // variance_out = var·(1−f)  (uv = bv·scaler contributes +0) → UB0.
-    AscendC::DataCopyPad(buf_[UB0].Get<float>(), gmInF_[IN_VAR][0], ext, pad);
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
-    AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, C);
-    AscendC::PipeBarrier<PIPE_V>();
-    AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
-    AscendC::DataCopyPad(gmOutF_[OUT_VAR][0], buf_[UB0].Get<float>(), ext);
-    AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        // variance_out = var·(1−f)  (uv = bv·scaler contributes +0) → UB0.
+        CopyInStatsSlice(IN_VAR, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evM2V);
+        AscendC::Muls(buf_[UB0].Get<float>(), buf_[UB0].Get<float>(), td_->one_minus_factor, ct);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evV3);
+        CopyOutStatsSlice(OUT_VAR, UB0, c0, ct);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evM3M2);
+    }
 }
 // ============================================================
 // Process — Segment A (statistics chain, once per core) +
@@ -1027,6 +1464,10 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::Process()
     int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
     int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
     int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+    // V→S fence: Segment B reads the staged mult/add back with S-pipe GetValue;
+    // the V_S event is the canonical Vector→Scalar ordering on 950 (PIPE_ALL
+    // alone does not reliably fence the S-pipe reads).
+    int32_t evVtoS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_S));
     // NOTE: FetchEventID returns the SAME id for repeated calls with the same
     // HardEvent (it does not mark the id occupied), so the parity-split double-
     // buffered event ids MUST come from AllocEventID, which marks each id
@@ -1074,6 +1515,45 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::Process()
     const int64_t Cpad = ((C + 7) / 8) * 8;
     const int64_t N = (RANK > 0 && td_->max_bro_shape[0] > 0) ? td_->max_bro_shape[0] : 1;
     const int64_t S = (C > 0) ? (totalElems / (C * N)) : totalElems; // (n,c)-plane size
+
+    // ════════════════════ Big-C path (C > 6552) ════════════════════
+    // slot0 holds mult[Cpad]+add[Cpad] — 2*Cpad*4 > per_buf_bytes once
+    // C > 6552, so both Segment A and B must be C-tiled. Segment A computes
+    // the 4 (C,) stats outputs on C slices; Segment B recomputes each tile's
+    // mult/add from the (C,) inputs (tile width segCTile = per_buf/8 = 6552,
+    // so the tile's mult+add fit slot0) and streams the planes / points whose
+    // channel falls in the tile. The C<=6552 path below is untouched.
+    const int64_t bigCTile = td_->per_buf_bytes / 8; // 6552
+    const bool chLast = (td_->channel_axis == RANK - 1);
+    // SegmentBChannelLast 的 cAl = lcm(C,16) 块起点对齐在 C*16 > slotElems/2
+    // （即 C>=410 且 C%16!=0）时失效：Lb 被 0 强置/除零、第二块起 2 字节错位
+    // （MTE2 DataCopyPad 需 32B 对齐）。该几何脆弱的 channel-last C 一律走
+    // big-C（SegmentBChannelLastBigC 逐点×1024 通道，无对齐约束）。此条件也
+    // 覆盖 C=6552（6552%16==8）——原 yf 在 slot0 边界的 OOB 特例一并规避。
+    const bool chLastBroken = chLast && (C >= 410 && (C % 16) != 0);
+    const bool useBigC = (C > bigCTile) || chLastBroken;
+    if (useBigC) {
+        SegmentAOutputsBigC(C, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
+        // Drain Segment A before Segment B: non-block-0 cores end Segment A on
+        // V-pipe ops (no MTE3) — a following MTE2 (ComputeMultAddTile's stat
+        // read) must not overwrite UB0..UB4 while those V-pipe ops still read them.
+        AscendC::PipeBarrier<PIPE_ALL>();
+        const int64_t segCTile = td_->per_buf_bytes / 8; // 6552
+        if (td_->channel_axis == RANK - 1) {
+            for (int64_t c0 = 0; c0 < C; c0 += segCTile) {
+                const int64_t ct = (C - c0 < segCTile) ? (C - c0) : segCTile;
+                const int64_t cpadT = ((ct + 7) / 8) * 8;
+                SegmentBChannelLastBigC(start, end, C, c0, ct, cpadT, ev);
+            }
+        } else {
+            for (int64_t c0 = 0; c0 < C; c0 += segCTile) {
+                const int64_t ct = (C - c0 < segCTile) ? (C - c0) : segCTile;
+                const int64_t cpadT = ((ct + 7) / 8) * 8;
+                SegmentBChannelMajorBigC(start, end, C, S, c0, ct, cpadT, ev);
+            }
+        }
+        return;
+    }
 
     // UB slot map.
     //   Segment A: UB0..UB4 used as scratch for the stats chain.
@@ -1210,7 +1690,13 @@ __aicore__ inline void BN3DTrainingUpdateKernel<T, RANK>::Process()
     AscendC::Adds(buf_[UB0].Get<float>()[static_cast<uint32_t>(Cpad)], buf_[UB0].Get<float>(), 0.0f,
                   C);                                                       // add → slot0+Cpad
     AscendC::Adds(buf_[UB0].Get<float>(), buf_[UB3].Get<float>(), 0.0f, C); // mult → slot0+0
-    AscendC::PipeBarrier<PIPE_V>();
+    // V→S fence: Segment B reads mult/add back via S-pipe GetValue. The V_S
+    // event is the canonical Vector→Scalar ordering on 950 (PIPE_ALL alone does
+    // not reliably fence S-pipe reads — Issue 2: C=6552 boundary occasionally
+    // read stale mult/add → wrong y).
+    AscendC::SetFlag<AscendC::HardEvent::V_S>(evVtoS);
+    AscendC::WaitFlag<AscendC::HardEvent::V_S>(evVtoS);
+    AscendC::PipeBarrier<PIPE_ALL>();
 
     // ═══════ Segment B: y = x · mult + add  (streaming) ═══════
     if (C <= 6552) {

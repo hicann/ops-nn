@@ -45,16 +45,16 @@
       <td>input_x</td>
       <td>输入</td>
       <td>
-      <ul><li>进行批量归一化的输入张量，对应公式中的`x`。</li><li>一个4D张量，shape为(N, C, H, W)或(N, H, W, C)；ND 格式时按 data_format 属性解释 C 轴位置（NCHW→dim1、NHWC→dim3）。</li></ul>
+      <ul><li>进行批量归一化的输入张量，对应公式中的<code>x</code>。</li><li>一个4D张量，shape为(N, C, H, W)或(N, H, W, C)；ND格式时按data_format属性解释C轴位置（NCHW→dim1、NHWC→dim3）。</li></ul>
       </td>
       <td>FLOAT16、FLOAT32</td>
-      <td>NCHW/NHWC/ND</td>
+      <td>NCHW、NHWC、ND、NC1HWC0</td>
     </tr>
     <tr>
       <td>input_scale</td>
       <td>输入</td>
       <td>
-      <ul><li>进行批量归一化的权重，对应公式中的`γ`。</li><li>一个1D张量，shape与输入input_x的通道维C相同。</li></ul>
+      <ul><li>进行批量归一化的权重，对应公式中的<code>γ</code>。</li><li>一个1D张量，shape与输入input_x的通道维C相同。</li></ul>
       </td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -62,28 +62,28 @@
     <tr>
       <td>input_offset</td>
       <td>输入</td>
-      <td><ul><li>进行批量归一化的偏置值，对应公式中的`β`。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
+      <td><ul><li>进行批量归一化的偏置值，对应公式中的<code>β</code>。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mean</td>
       <td>可选输入</td>
-      <td><ul><li>训练场景：须为空；推理场景：推理期间使用的均值，为必选输入，对应公式中的`E(x)`。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
+      <td><ul><li>训练场景：须为空；推理场景：推理期间使用的均值，为必选输入，对应公式中的<code>E(x)</code>。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_variance</td>
       <td>可选输入</td>
-      <td><ul><li>训练场景：须为空；推理场景：推理期间使用的方差，为必选输入，对应公式中的`Var(x)`。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
+      <td><ul><li>训练场景：须为空；推理场景：推理期间使用的方差，为必选输入，对应公式中的<code>Var(x)</code>。</li><li>一个1D张量，shape与入参input_scale保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到方差中的小值以避免除以零，对应公式中的`ε`。</li><li>默认值为1e-4f。</li></ul></td>
+      <td><ul><li>添加到方差中的小值以避免除以零，对应公式中的<code>ε</code>。</li><li>默认值为1e-4f。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
@@ -104,9 +104,9 @@
     <tr>
       <td>output_y</td>
       <td>输出</td>
-      <td><ul><li>表示批量归一化后的输出结果，对应公式中的`y`。</li><li>数据类型、数据格式、shape与输入input_x保持一致。</li></ul></td>
+      <td><ul><li>表示批量归一化后的输出结果，对应公式中的<code>y</code>。</li><li>数据类型、数据格式、shape与输入input_x保持一致。</li></ul></td>
       <td>FLOAT16、FLOAT32</td>
-      <td>NCHW/NHWC/ND</td>
+      <td>NCHW、NHWC、ND、NC1HWC0</td>
     </tr>
     <tr>
       <td>output_mean</td>
@@ -138,10 +138,17 @@
     </tr>
   </tbody></table>
 
+- <term>Ascend 950PR/Ascend 950DT</term>：数据格式支持NCHW、NHWC、ND。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据格式支持NC1HWC0、ND。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据格式支持NC1HWC0、ND。
+- <term>Atlas 200I/500 A2 推理产品</term>：数据格式支持NC1HWC0、ND。
+- <term>Atlas 推理系列产品</term>：数据格式支持NC1HWC0、ND。
+- <term>Atlas 训练系列产品</term>：数据格式支持NC1HWC0、ND。
+
 ## 约束说明
 
-- 输入input_x仅支持4D张量，数据格式支持NCHW、NHWC 和 ND（ND 输入按 data_format 属性解释 C 轴位置）。
-- 输入input_x为具体格式（NCHW/NHWC）时必须与 data_format 属性一致；ND 输入不受此限制。
+- 输入input_x仅支持4D张量，数据格式支持NCHW、NHWC和ND（ND输入按data_format属性解释C轴位置）。
+- 输入input_x为具体格式（NCHW/NHWC）时必须与data_format属性一致；ND输入不受此限制。
 - 训练模式下，输入input_mean、input_variance必须为空；推理模式下，输入input_mean、input_variance必须提供。
 - 不支持空张量。
 

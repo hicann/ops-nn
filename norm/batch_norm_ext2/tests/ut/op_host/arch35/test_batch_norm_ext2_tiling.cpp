@@ -807,3 +807,36 @@ TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_scale_c_axis_mismatch_fai
     gert::StorageShape xShape = {{2, 3, 4, 5}, {2, 3, 4, 5}};
     RunBatchNormExt2InferTilingForTest(xShape, ge::FORMAT_NCHW, 5, 0, nullptr, nullptr, "NCHW", true);
 }
+
+// G16：空张量(任一维为 0)必须在 tiling 阶段被拒收 —— GetXYShapesAndCheckValid 逐维校验
+// dim<=0 返回 GRAPH_FAILED(README「不支持空张量」)。逐轴枚举 N/H/W/C=0 × 训练/推理，
+// 并覆盖 NCHW/NHWC/ND 三种格式，补上负向用例守护该拒绝路径。
+TEST_F(BatchNormExt2TilingTest, batch_norm_ext2_tiling_empty_tensor_rejected_arch35)
+{
+    // NCHW：逐轴为 0
+    gert::StorageShape n0Shape = {{0, 512, 4, 1}, {0, 512, 4, 1}};
+    RunBatchNormExt2TrainingTilingForTest(n0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, 245760, true);
+    RunBatchNormExt2InferTilingForTest(n0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, nullptr, "NCHW", true);
+
+    gert::StorageShape h0Shape = {{8, 512, 0, 1}, {8, 512, 0, 1}};
+    RunBatchNormExt2TrainingTilingForTest(h0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, 245760, true);
+    RunBatchNormExt2InferTilingForTest(h0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, nullptr, "NCHW", true);
+
+    gert::StorageShape w0Shape = {{8, 512, 4, 0}, {8, 512, 4, 0}};
+    RunBatchNormExt2TrainingTilingForTest(w0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, 245760, true);
+    RunBatchNormExt2InferTilingForTest(w0Shape, ge::FORMAT_NCHW, 512, 0, nullptr, nullptr, "NCHW", true);
+
+    gert::StorageShape c0Shape = {{8, 0, 4, 1}, {8, 0, 4, 1}};
+    RunBatchNormExt2TrainingTilingForTest(c0Shape, ge::FORMAT_NCHW, 0, 0, nullptr, 245760, true);
+    RunBatchNormExt2InferTilingForTest(c0Shape, ge::FORMAT_NCHW, 0, 0, nullptr, nullptr, "NCHW", true);
+
+    // NHWC：N=0
+    gert::StorageShape n0NhShape = {{0, 4, 1, 512}, {0, 4, 1, 512}};
+    RunBatchNormExt2TrainingTilingForTest(n0NhShape, ge::FORMAT_NHWC, 512, 0, nullptr, 245760, true, "NHWC");
+    RunBatchNormExt2InferTilingForTest(n0NhShape, ge::FORMAT_NHWC, 512, 0, nullptr, nullptr, "NHWC", true);
+
+    // ND：N=0(ND 按 data_format=NCHW 解释 C 轴)
+    gert::StorageShape n0NdShape = {{0, 512, 4, 1}, {0, 512, 4, 1}};
+    RunBatchNormExt2TrainingTilingForTest(n0NdShape, ge::FORMAT_ND, 512, 0, nullptr, 245760, true, "NCHW");
+    RunBatchNormExt2InferTilingForTest(n0NdShape, ge::FORMAT_ND, 512, 0, nullptr, nullptr, "NCHW", true);
+}

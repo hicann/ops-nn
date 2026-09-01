@@ -54,14 +54,14 @@
       <td>输入</td>
       <td>损失对BN前向输出y的梯度，公式中的grads。shape、数据格式、数据类型需与x完全一致。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>NCDHW、NDHWC</td>
+      <td>NCDHW、NDHWC、NDC1HWC0</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
       <td>BN前向输入，公式中的x。shape、数据格式、数据类型需与grads完全一致。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>NCDHW、NDHWC</td>
+      <td>NCDHW、NDHWC、NDC1HWC0</td>
     </tr>
     <tr>
       <td>diff_scale</td>
@@ -110,17 +110,26 @@
       <td>输出</td>
       <td>损失对前向输入x的梯度dx，公式中的y。shape、数据格式、数据类型与grads一致。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
-      <td>NCDHW、NDHWC</td>
+      <td>NCDHW、NDHWC、NDC1HWC0</td>
     </tr>
   </tbody></table>
 
+- <term>Ascend 950PR/Ascend 950DT</term>：数据格式不支持NDC1HWC0。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据格式不支持NDHWC。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据格式不支持NDHWC。
+- <term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
+- <term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NDHWC。
+- <term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16，数据格式不支持NCDHW、NDHWC。
+
 ## 约束说明
 
-- grads，x和y必须同为5维且shape、数据格式、数据类型完全一致。
-- diff_scale、diff_offset、scale、batch_mean、batch_variance必须为1维，长度等于通道数C，数据类型必须为FLOAT。NCDHW布局通道轴为dim1，NDHWC布局通道轴为dim4。
-- grads、x、y不支持空Tensor（任一维为0时返回错误）。
-- epsilon必须大于0。
-- batch_variance必须使用有偏方差口径（E[x²]−E[x]²）。
+  - grads、x和y的shape、数据格式、数据类型须完全一致。
+  - diff_scale、diff_offset、scale、batch_mean、batch_variance必须为1维，长度等于通道数C，数据类型必须为FLOAT。
+  - batch_variance必须使用有偏方差口径（E[x²]−E[x]²）。
+- **Ascend 950（A5/arch35）侧约束**：
+  - grads、x、y必须同为5维；数据格式支持NCDHW与NDHWC（通道轴分别位于dim1与dim4）。
+  - grads、x、y不支持空Tensor（任一维为0时返回错误）。
+  - epsilon必须大于0。
 
 ## 调用说明
 

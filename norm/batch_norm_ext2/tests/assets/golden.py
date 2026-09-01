@@ -87,8 +87,30 @@ def _normalize_dtype(dt):
     return name
 
 
+def _spatial_mean_var(xt, data_format):
+    """Per-channel mean/biased-var over the spatial dims via a single flattened axis.
+
+    torch/numpy multi-axis reductions (e.g. dim=(0,2,3)) accumulate the strided leading
+    axis without the accurate pairwise path, losing fp32 precision on extreme shapes
+    (huge N + tiny C/HW: N=2^20, C=2, H*W=2 observed ~2.5e-4 relative error on
+    output_variance). Collapsing the reduced dims into one contiguous axis keeps the
+    reference accurate (matches fp64 to ~1e-7) for every shape.
+    """
+    if data_format == "NHWC":
+        c = xt.shape[3]
+        flat = xt.permute(3, 0, 1, 2).reshape(c, -1)  # (C, N*H*W)
+        out_shape = (1, 1, 1, c)
+    else:  # NCHW
+        c = xt.shape[1]
+        flat = xt.permute(1, 0, 2, 3).reshape(c, -1)  # (C, N*H*W)
+        out_shape = (1, c, 1, 1)
+    mean = flat.mean(dim=1, keepdim=True)
+    var = ((flat - mean) ** 2).mean(dim=1, keepdim=True)
+    return mean.reshape(out_shape), var.reshape(out_shape)
+
+
 def _golden_batch_norm_ext2(
-    input_x, input_scale, input_offset, input_mean, input_variance, **kwargs
+    input_x, input_scale, input_offset, input_mean=None, input_variance=None, **kwargs
 ):
     """Kernel/GEIR adapter: NumPy inputs and a NumPy output list.
 
@@ -109,8 +131,9 @@ def _golden_batch_norm_ext2(
         np.asarray(input_variance).reshape(-1) if input_variance is not None else None
     )
 
-    data_format = str(_attr(kwargs, "data_format", "")).upper()
+    data_format = str(_attr(kwargs, "data_format", "NHWC")).upper()
     # 严格校验(与 tiling 一致,不做启发式 C 轴推断):data_format 必须为 NCHW/NHWC。
+    # 默认值取 def 的 data_format 默认 "NHWC",使 golden 可被 TTK 直接调用(不显式传该属性时也能跑)。
     if data_format not in ("NCHW", "NHWC"):
         raise ValueError(f"data_format must be NCHW/NHWC, got {data_format!r}")
 
@@ -133,10 +156,8 @@ def _golden_batch_norm_ext2(
     compute_dtype = _reference_dtype(x, scale, offset, mean_in, var_in)
 
     if data_format == "NHWC":
-        axis = (0, 1, 2)
         num = int(np.prod(x.shape[:3]))
     else:  # NCHW
-        axis = (0, 2, 3)
         num = int(np.prod([x.shape[0], x.shape[2], x.shape[3]]))
 
     xt = torch.from_numpy(x.astype(compute_dtype))
@@ -144,9 +165,9 @@ def _golden_batch_norm_ext2(
     ot = torch.from_numpy(offset.astype(compute_dtype))
 
     if is_training:
-        # batch mean / biased var over spatial dims, per channel
-        mean_t = torch.mean(xt, dim=axis, keepdim=True)
-        var_t = torch.mean((xt - mean_t) ** 2, dim=axis, keepdim=True)
+        # batch mean / biased var over spatial dims, per channel (single flattened
+        # reduce axis; multi-axis dim=(0,2,3) loses fp32 precision on extreme shapes)
+        mean_t, var_t = _spatial_mean_var(xt, data_format)
         rstd_t = torch.rsqrt(var_t + eps)
         # y = scale * (x - mean) * rstd + offset  (competing-op composition, same algorithm)
         y_t = torch.addcmul(
@@ -227,7 +248,9 @@ class _BatchNormExt2Compose:
         self.is_training = _as_bool(_attr(kwargs, "is_training", True), True)
         self._compiled = None
 
-    def _impl(self, input_x, input_scale, input_offset, input_mean, input_variance):
+    def _impl(
+        self, input_x, input_scale, input_offset, input_mean=None, input_variance=None
+    ):
         if self.data_format == "NHWC":
             axis = (0, 1, 2)
             bshape = (1, 1, 1, -1)
@@ -245,18 +268,26 @@ class _BatchNormExt2Compose:
         eps_t = torch.tensor(self.epsilon, dtype=torch.float32, device=input_x.device)
 
         if self.is_training:
-            mean_t = x_f32.mean(dim=axis, keepdim=True)
-            var_t = torch.mean((x_f32 - mean_t) ** 2, dim=axis, keepdim=True)
+            # single flattened reduce axis — multi-axis dim=(0,2,3) loses fp32
+            # precision on extreme shapes (huge N + tiny C/HW), see _spatial_mean_var
+            if self.data_format == "NHWC":
+                flat = x_f32.permute(3, 0, 1, 2).reshape(x_f32.shape[3], -1)
+            else:  # NCHW
+                flat = x_f32.permute(1, 0, 2, 3).reshape(x_f32.shape[1], -1)
+            mean_flat = flat.mean(dim=1, keepdim=True)  # (C, 1)
+            var_flat = ((flat - mean_flat) ** 2).mean(dim=1, keepdim=True)
+            mean_t = mean_flat.reshape(bshape)
+            var_t = var_flat.reshape(bshape)
             rstd_t = torch.rsqrt(var_t + eps_t)
             y = (x_f32 - mean_t) * rstd_t * s_f32.reshape(bshape) + o_f32.reshape(
                 bshape
             )
-            out_mean = mean_t.reshape(-1)
+            out_mean = mean_flat.reshape(-1)
             if num > 1:
-                out_var = var_t.reshape(-1) * (float(num) / (num - 1))
+                out_var = var_flat.reshape(-1) * (float(num) / (num - 1))
             else:
-                out_var = var_t.reshape(-1) * float("inf")
-            out_rs1 = mean_t.reshape(-1)
+                out_var = var_flat.reshape(-1) * float("inf")
+            out_rs1 = mean_flat.reshape(-1)
             out_rs2 = rstd_t.reshape(-1)
         else:
             m_f32 = input_mean.to(dtype=torch.float32).reshape(-1)
@@ -280,7 +311,13 @@ class _BatchNormExt2Compose:
         ]
 
     def __call__(
-        self, input_x, input_scale, input_offset, input_mean, input_variance, **kwargs
+        self,
+        input_x,
+        input_scale,
+        input_offset,
+        input_mean=None,
+        input_variance=None,
+        **kwargs,
     ):
         del kwargs
         if self._compiled is None:

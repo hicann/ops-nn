@@ -149,7 +149,8 @@ class _Bn3dThirdPartyCompose:
         x_f32 = x.float()
         C = sum_t.shape[0]
         numel = x.numel()
-        num = numel // C
+        # 空 tensor 守卫:与 _compute 对齐,C==0 时 num 置 0 走零统计契约,避免整除零。
+        num = (numel // C) if C > 0 else 0
 
         num_rec = (1.0 / num) if num > 0 else 0.0  # 空 batch 契约,与 _compute 同款
         batch_mean = sum_t * num_rec

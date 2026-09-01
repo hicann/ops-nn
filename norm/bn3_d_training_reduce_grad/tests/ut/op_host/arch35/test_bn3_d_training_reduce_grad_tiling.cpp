@@ -50,17 +50,17 @@ optiling::PublicTilingInputs MakePublicInputs(ge::DataType dtype, ge::Format for
 // 构造 Branch0 Tiling 纯公式输入（rank ∈ [1,4]）
 void FillNormalShapes(optiling::Branch0TilingInputs& in, const vector<int64_t>& bro, const vector<int64_t>& paramBro)
 {
-    in.rank = (int32_t)bro.size();
-    for (int32_t d = 0; d < (int32_t)bro.size(); d++) {
+    in.rank = static_cast<int32_t>(bro.size());
+    for (int32_t d = 0; d < static_cast<int32_t>(bro.size()); d++) {
         in.maxBroShape[d] = bro[d];
     }
     for (int32_t i = 0; i < 7; i++) {
         const vector<int64_t>& src = (i < 2) ? bro : paramBro;
-        for (int32_t d = 0; d < (int32_t)bro.size(); d++) {
+        for (int32_t d = 0; d < static_cast<int32_t>(bro.size()); d++) {
             in.normalInputShapes[i][d] = src[d];
         }
     }
-    for (int32_t d = 0; d < (int32_t)bro.size(); d++) {
+    for (int32_t d = 0; d < static_cast<int32_t>(bro.size()); d++) {
         in.normalOutputShapes[0][d] = bro[d];
     }
 }
@@ -165,6 +165,25 @@ TEST_F(Bn3DTrainingReduceGradTilingTest, public_tiling_params_format_ignored)
     EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kOk);
 }
 
+// ============================================================================
+// 公共 Tiling：bf16 / fp16 dtype 正例（def 注册三档 dtype，tiling dtype 校验须放行）
+// ============================================================================
+TEST_F(Bn3DTrainingReduceGradTilingTest, public_tiling_bf16)
+{
+    auto in = MakePublicInputs(ge::DT_BF16, ge::FORMAT_NCDHW, {2, 3, 4, 5, 6}, 3, 0.0001f);
+    optiling::PublicTilingOutput out{};
+    EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kOk);
+    EXPECT_EQ(out.channelAxis, 1);
+}
+
+TEST_F(Bn3DTrainingReduceGradTilingTest, public_tiling_fp16)
+{
+    auto in = MakePublicInputs(ge::DT_FLOAT16, ge::FORMAT_NCDHW, {2, 3, 4, 5, 6}, 3, 0.0001f);
+    optiling::PublicTilingOutput out{};
+    EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kOk);
+    EXPECT_EQ(out.channelAxis, 1);
+}
+
 // 公共 Tiling：错误码（空 tensor / shape 不一致 / dtype / format / attr）
 // ============================================================================
 TEST_F(Bn3DTrainingReduceGradTilingTest, error_null_input)
@@ -177,6 +196,53 @@ TEST_F(Bn3DTrainingReduceGradTilingTest, error_null_input)
 TEST_F(Bn3DTrainingReduceGradTilingTest, error_shape_mismatch)
 {
     auto in = MakePublicInputs(ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 3, 4, 5, 6}, 4, 0.0001f);
+    optiling::PublicTilingOutput out{};
+    EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kShapeMismatch);
+}
+
+// ============================================================================
+// 公共 Tiling：空 tensor 逐轴枚举（0 依次置于 dim0..dim4）→ kNullInput
+//   README「任一维为 0 时返回错误」需逐轴回归，不只通道轴。
+// ============================================================================
+TEST_F(Bn3DTrainingReduceGradTilingTest, error_null_input_each_axis)
+{
+    for (int32_t axis = 0; axis < 5; ++axis) {
+        vector<int64_t> shape = {2, 3, 4, 5, 6};
+        shape[axis] = 0;
+        auto in = MakePublicInputs(ge::DT_FLOAT, ge::FORMAT_NCDHW, shape, 3, 0.0001f);
+        optiling::PublicTilingOutput out{};
+        EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kNullInput) << "axis=" << axis;
+    }
+}
+
+// ============================================================================
+// 公共 Tiling：输出 y 空 tensor（任一维为 0）→ kNullInput
+//   y 的 shape 由 InferShape 强制等于 grads，tiling 侧独立复检（防线不退化）。
+// ============================================================================
+TEST_F(Bn3DTrainingReduceGradTilingTest, error_null_input_output_y)
+{
+    auto in = MakePublicInputs(ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 3, 4, 5, 6}, 3, 0.0001f);
+    in.shapes[7][3] = 0; // 仅输出 y 的 dim3 置 0
+    optiling::PublicTilingOutput out{};
+    EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kNullInput);
+}
+
+// ============================================================================
+// 公共 Tiling：参数长度 != 通道数 C（format-aware）→ kShapeMismatch
+//   NDHWC 通道轴为 dim4=6，paramLen=3 不匹配；不依赖 CheckBroadcastShape 的
+//   size-1 广播宽松语义（paramLen=1 而 C>1 也必须拒绝）。
+// ============================================================================
+TEST_F(Bn3DTrainingReduceGradTilingTest, error_param_len_mismatch)
+{
+    auto in = MakePublicInputs(ge::DT_FLOAT, ge::FORMAT_NDHWC, {2, 3, 4, 5, 6}, 3, 0.0001f);
+    optiling::PublicTilingOutput out{};
+    EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kShapeMismatch);
+}
+
+TEST_F(Bn3DTrainingReduceGradTilingTest, error_param_len_one_mismatch)
+{
+    // paramLen=1 而 C>1：广播语义会放行，5.5 校验必须拒绝（静默算错点）
+    auto in = MakePublicInputs(ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 3, 4, 5, 6}, 1, 0.0001f);
     optiling::PublicTilingOutput out{};
     EXPECT_EQ(optiling::ComputePublicTiling(in, out), optiling::PublicTilingError::kShapeMismatch);
 }

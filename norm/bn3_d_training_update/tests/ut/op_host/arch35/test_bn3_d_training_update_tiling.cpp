@@ -275,3 +275,24 @@ TEST_F(BN3DTrainingUpdateTilingTest, negative_channel_mismatch_rejected)
                         {&y, &stat, &stat, &stat, &stat}, DT_FLOAT, ge::FORMAT_NCHW, kAttrs),
               ge::GRAPH_FAILED);
 }
+
+TEST_F(BN3DTrainingUpdateTilingTest, negative_epsilon_lt0_rejected)
+{
+    // epsilon < 0 is a deterministic error (sqrt(sigma2+eps) with sigma2=0 → NaN).
+    gert::StorageShape x = {{2, 3, 4, 5}, {2, 3, 4, 5}};
+    gert::StorageShape stat = {{3}, {3}};
+    gert::StorageShape y = {{2, 3, 4, 5}, {2, 3, 4, 5}};
+    const std::vector<pair<string, Ops::NN::AnyValue>> kAttrsNegEps = {
+        {"factor", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+        {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(-1.0e-5f)}};
+    EXPECT_EQ(RunTiling(COMPILE_INFO_950, {&x, &stat, &stat, &stat, &stat, &stat, &stat},
+                        {&y, &stat, &stat, &stat, &stat}, DT_FLOAT, ge::FORMAT_NCHW, kAttrsNegEps),
+              ge::GRAPH_FAILED);
+    // factor=0 (freeze running stats) stays legal: only epsilon is gated.
+    const std::vector<pair<string, Ops::NN::AnyValue>> kAttrsFactor0 = {
+        {"factor", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+        {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1.0e-5f)}};
+    EXPECT_EQ(RunTiling(COMPILE_INFO_950, {&x, &stat, &stat, &stat, &stat, &stat, &stat},
+                        {&y, &stat, &stat, &stat, &stat}, DT_FLOAT, ge::FORMAT_NCHW, kAttrsFactor0),
+              ge::GRAPH_SUCCESS);
+}
