@@ -47,7 +47,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateDtype(gert::TilingContext* context)
+static ge::graphStatus ValidateDtype(const gert::TilingContext* context)
 {
     auto addrDesc = context->GetInputDesc(NpuCfs::ADDR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, addrDesc);

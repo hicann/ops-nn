@@ -13,6 +13,8 @@
 #ifndef NPU_CLEAR_FLOAT_STATUS_TILING_DATA_H_
 #define NPU_CLEAR_FLOAT_STATUS_TILING_DATA_H_
 
+#include <cstdint>
+
 struct NPUClearFloatStatusTilingData {
     int32_t needCoreNum = 0; // 需要启动的核数（= 物理核数）
 };

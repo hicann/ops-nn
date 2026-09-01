@@ -32,7 +32,7 @@ using namespace ge;
 namespace ops {
 
 // infershape 侧仅校验 input addr，output data 校验由 tiling 阶段负责
-static ge::graphStatus InferShapeValidateDtype(gert::InferShapeContext* context)
+static ge::graphStatus InferShapeValidateDtype(const gert::InferShapeContext* context)
 {
     auto addrDesc = context->GetInputDesc(NpuCfs::ADDR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, addrDesc);
