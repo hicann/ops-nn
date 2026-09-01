@@ -513,6 +513,96 @@ int RunSingleTest(int32_t deviceId, aclrtStream stream, const TestConfig& cfg)
     return passed ? 0 : 1;
 }
 
+// ==================== Negative Param Probes ====================
+// 文档错误码表承诺：第一段接口对非法入参（axis/dstType/beta/roundMode/空Tensor等）
+// 返回ACLNN_ERR_PARAM_INVALID(161002)，此段逐一验证校验拦截是否生效。
+
+struct ProbeConfig {
+    const char* desc;
+    double beta;
+    int64_t axis;
+    int64_t dstType;
+    const char* roundMode;
+    bool useEmptyTensor; // 用shape含0的空Tensor探测空tensor拦截
+    bool mismatchYDtype; // y的dtype故意与dstType不一致
+};
+
+static int RunNegativeProbe(const ProbeConfig& cfg)
+{
+    LOG_PRINT("--- Probe: %s ---\n", cfg.desc);
+
+    std::vector<int64_t> xShape = cfg.useEmptyTensor ? std::vector<int64_t>{0} : std::vector<int64_t>{2, 128};
+    std::vector<int64_t> yShape = cfg.useEmptyTensor ? std::vector<int64_t>{0} : std::vector<int64_t>{2, 64};
+    std::vector<int64_t> yScaleShape = cfg.useEmptyTensor ? std::vector<int64_t>{0} : std::vector<int64_t>{2, 1, 2};
+
+    const aclDataType xDtype = aclDataType::ACL_BF16;
+    const aclDataType yDtype = cfg.mismatchYDtype ? aclDataType::ACL_FLOAT8_E5M2 : aclDataType::ACL_FLOAT8_E4M3FN;
+    const aclDataType yScaleDtype = aclDataType::ACL_FLOAT8_E8M0;
+
+    // 非法参数在第一段即被拦截，不会下发device，无需真实device数据；
+    // 空Tensor场景size为0无法aclrtMalloc，统一用nullptr数据指针构造。
+    void* xDeviceAddr = nullptr;
+    void* yDeviceAddr = nullptr;
+    void* yScaleDeviceAddr = nullptr;
+
+    auto makeStrides = [](const std::vector<int64_t>& shape) {
+        std::vector<int64_t> strides(shape.size(), 1);
+        for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; i--) {
+            strides[i] = shape[i + 1] * strides[i + 1];
+        }
+        return strides;
+    };
+    auto xStrides = makeStrides(xShape);
+    auto yStrides = makeStrides(yShape);
+    auto yScaleStrides = makeStrides(yScaleShape);
+
+    aclTensor* x = aclCreateTensor(xShape.data(), xShape.size(), xDtype, xStrides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                   xShape.data(), xShape.size(), xDeviceAddr);
+    aclTensor* y = aclCreateTensor(yShape.data(), yShape.size(), yDtype, yStrides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                   yShape.data(), yShape.size(), yDeviceAddr);
+    aclTensor* yScale = aclCreateTensor(yScaleShape.data(), yScaleShape.size(), yScaleDtype, yScaleStrides.data(), 0,
+                                        aclFormat::ACL_FORMAT_ND, yScaleShape.data(), yScaleShape.size(),
+                                        yScaleDeviceAddr);
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    auto ret = aclnnSituMxQuantGetWorkspaceSize(x, cfg.beta, 0.0, false, cfg.axis, cfg.dstType,
+                                                const_cast<char*>(cfg.roundMode), y, yScale, &workspaceSize, &executor);
+
+    bool passed = (ret == ACLNN_ERR_PARAM_INVALID);
+    LOG_PRINT("  -> %s (ret=%d, expect ACLNN_ERR_PARAM_INVALID=%d)\n", passed ? "PASS" : "FAIL", static_cast<int>(ret),
+              static_cast<int>(ACLNN_ERR_PARAM_INVALID));
+
+    aclDestroyTensor(x);
+    aclDestroyTensor(y);
+    aclDestroyTensor(yScale);
+    return passed ? 0 : 1;
+}
+
+static int RunNegativeProbes()
+{
+    LOG_PRINT("\n=== Negative Param Probes (expect ACLNN_ERR_PARAM_INVALID) ===\n");
+    std::vector<ProbeConfig> probes = {
+        {"axis=0 should be rejected", 1.0, 0, 36, "rint", false, false},
+        {"axis=1 should be rejected", 1.0, 1, 36, "rint", false, false},
+        {"dstType=37 should be rejected", 1.0, -1, 37, "rint", false, false},
+        {"dstType=40 (FP4, unpublished) should be rejected", 1.0, -1, 40, "rint", false, false},
+        {"beta=0 should be rejected", 0.0, -1, 36, "rint", false, false},
+        {"beta<0 should be rejected", -1.0, -1, 36, "rint", false, false},
+        {"roundMode=round should be rejected", 1.0, -1, 36, "round", false, false},
+        {"empty tensor should be rejected", 1.0, -1, 36, "rint", true, false},
+        {"y dtype mismatch with dstType should be rejected", 1.0, -1, 36, "rint", false, true},
+    };
+
+    int failed = 0;
+    for (const auto& cfg : probes) {
+        failed += RunNegativeProbe(cfg);
+    }
+    LOG_PRINT("=== Probes Summary: %ld/%d PASSED ===\n", static_cast<int64_t>(probes.size()) - failed,
+              static_cast<int>(probes.size()));
+    return failed;
+}
+
 int main()
 {
     LOG_PRINT("=== SituMxQuant Example Test ===\n");
@@ -521,6 +611,9 @@ int main()
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init failed. ERROR: %d\n", ret); return ret);
+
+    // 负向探针：验证第一段接口对非法入参的校验拦截
+    int probeFailures = RunNegativeProbes();
 
     std::vector<TestConfig> tests = {
         {2, 128, 1.0f, 0.0f, false, 36, "Test 1: BF16 -> E4M3FN, beta=1.0, no linear_beta"},
@@ -535,14 +628,15 @@ int main()
         totalPassed += (testResult == 0) ? 1 : 0;
     }
 
-    LOG_PRINT("\n=== Summary: %d/%d tests PASSED ===\n", totalPassed, static_cast<int>(tests.size()));
+    LOG_PRINT("\n=== Summary: %d/%d tests PASSED, %d probe(s) FAILED ===\n", totalPassed,
+              static_cast<int>(tests.size()), probeFailures);
 
     Finalize(deviceId, stream);
 
-    if (totalPassed == static_cast<int>(tests.size())) {
+    if (totalPassed == static_cast<int>(tests.size()) && probeFailures == 0) {
         LOG_PRINT("\nAll tests PASSED!\n");
     } else {
         LOG_PRINT("\nSome tests FAILED!\n");
     }
-    return (totalPassed == static_cast<int>(tests.size())) ? 0 : 1;
+    return (totalPassed == static_cast<int>(tests.size()) && probeFailures == 0) ? 0 : 1;
 }

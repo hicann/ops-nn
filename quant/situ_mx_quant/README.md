@@ -77,7 +77,7 @@
     <tr>
       <td>beta</td>
       <td>属性</td>
-      <td>Situ激活的beta参数，公式中的β。不能为0。默认1.0。</td>
+      <td>Situ激活的beta参数，公式中的β。必须大于0。默认1.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -137,9 +137,10 @@
 - x的最后一维需要是2的倍数。
 - x的维数必须大于等于1维。
 - axis当前仅支持-1（尾轴量化）。
-- beta参数不能为0。
 - dst_type支持36（FLOAT8_E4M3FN）或35（FLOAT8_E5M2）。
 - round_mode必须为"rint"。
+- y的数据类型必须与dst_type匹配，y_scale的数据类型必须为FLOAT8_E8M0。
+- y、y_scale的shape需要与推导结果一致（见参数说明）。
 - 关于y_scale的shape约束说明如下：
   - H = x.shape[-1] / 2
   - scaleNum = ceil(H / 64)

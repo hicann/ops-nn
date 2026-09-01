@@ -39,7 +39,7 @@ constexpr size_t INDEX_ATTR_ROUND_MODE = 5;
 constexpr int64_t SPLIT_NUM = 2;
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t ALIGN_NUM = 2;
-constexpr size_t MAX_DIM_NUM = 7;
+constexpr size_t MAX_DIM_NUM = 8;
 
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
                                                                         ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
@@ -57,7 +57,7 @@ graphStatus InferShapeForSituMxQuant(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, yScaleShape);
 
     OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
-                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
+                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 8].", xShape->GetDimNum()),
                 return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {

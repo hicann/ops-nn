@@ -36,9 +36,9 @@ void CheckNpuTensor(const at::Tensor& tensor, const char* name)
 std::tuple<at::Tensor, at::Tensor> situ_mx_quant(const at::Tensor& x, double beta, double linear_beta,
                                                  bool activate_left, int64_t dst_type, const std::string& round_mode)
 {
-    // 入参校验：设备/维度/数据类型/取值范围
-    // 注意：空Tensor由aclnn侧正常处理（输出为空，见network测试M=0用例），非连续Tensor
-    // aclnn亦支持，此处不做额外限制，与基线行为保持一致。
+    // 入参校验：设备/维度/数据类型/取值范围。
+    // 空Tensor由aclnn侧拦截报错（aclnnSituMxQuant文档约束"不支持空Tensor"）；
+    // 非连续Tensor aclnn支持，此处不做额外限制，与基线行为保持一致。
     CheckNpuTensor(x, "x");
     TORCH_CHECK(x.dim() >= 1, "x must be at least 1-dimensional, but got ", x.dim());
     const int64_t lastDim = x.size(x.dim() - 1);

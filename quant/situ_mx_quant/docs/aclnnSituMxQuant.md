@@ -65,9 +65,9 @@ $$
 
 ```Cpp
 aclnnStatus aclnnSituMxQuantGetWorkspaceSize(
-    const aclTensor* x,
-    float             beta,
-    float             linearBeta,
+    const aclTensor*  x,
+    double            beta,
+    double            linearBeta,
     bool              activateLeft,
     int64_t           axis,
     int64_t           dstType,
@@ -123,17 +123,17 @@ aclnnStatus aclnnSituMxQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta（float）</td>
+      <td>beta（double）</td>
       <td>输入</td>
       <td>Situ激活的beta参数。</td>
-      <td>不能为0。默认1.0。</td>
+      <td>必须大于0。默认1.0。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>linearBeta（float）</td>
+      <td>linearBeta（double）</td>
       <td>输入</td>
       <td>Situ激活的linear_beta参数。</td>
       <td>当值≤0时不启用。默认0.0。</td>
@@ -250,8 +250,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>传入的x、yOut、yScaleOut是空指针。</td>
   </tr>
   <tr>
-    <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-    <td rowspan="7">161002</td>
+    <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+    <td rowspan="10">161002</td>
     <td>x、yOut、yScaleOut为空tensor。</td>
   </tr>
   <tr>
@@ -270,7 +270,16 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>x的最后一维不是2的倍数。</td>
   </tr>
   <tr>
-    <td>beta为0。</td>
+    <td>beta不大于0。</td>
+  </tr>
+  <tr>
+    <td>yOut的数据类型与dstType不匹配，或yScaleOut的数据类型不为FLOAT8_E8M0。</td>
+  </tr>
+  <tr>
+    <td>yOut或yScaleOut的shape与推导结果不一致。</td>
+  </tr>
+  <tr>
+    <td>x、yOut、yScaleOut的数据格式不为ND。</td>
   </tr>
   <tr>
     <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -329,9 +338,10 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - x的最后一维需要是2的倍数。
 - x的维数必须大于等于1维。
 - axis当前仅支持-1（尾轴量化）。
-- beta参数不能为0。
 - dstType支持36（FLOAT8_E4M3FN）或35（FLOAT8_E5M2）。
 - roundModeOptional必须为"rint"。
+- yOut的数据类型必须与dstType匹配，yScaleOut的数据类型必须为FLOAT8_E8M0。
+- yOut、yScaleOut的shape需要与推导结果一致（见参数说明）。
 - 关于yScaleOut的shape约束说明如下：
   - H = x.shape[-1] / 2
   - scaleNum = ceil(H / 64)
@@ -445,8 +455,8 @@ int main()
     ret = CreateAclTensor(yScaleHostData, yScaleShape, &yScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &yScale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    float beta = 1.0;
-    float linearBeta = 0.0;
+    double beta = 1.0;
+    double linearBeta = 0.0;
     bool activateLeft = false;
     int64_t axis = -1;
     int64_t dstType = 36;
