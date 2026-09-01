@@ -21,7 +21,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
-#include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
+#include "../../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 
 using namespace std;
 using namespace ge;

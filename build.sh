@@ -1465,7 +1465,7 @@ build_ut() {
 	    ut_args=(${trigger_option//:/ })
       if [[ "${UT_TARGES[@]}" =~ "${ut_args[0]}" ]]; then
         enable_cov=TRUE
-        echo "Trigger Ut: ${ut_args[0]} for ops: ${ut_args[1]}"
+        echo "Trigger Ut: ${ut_args[0]} for ops: ${ut_args[1]}, for version: ${ut_args[3]}"
 	        if [[ ${ut_args[3]} == "default" ]]; then
 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} ..
 	        else

@@ -49,7 +49,7 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 
 TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2}, {2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2}, {2, 2, 2}};
 
@@ -140,12 +140,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -235,12 +235,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -330,12 +330,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -425,5 +425,5 @@ TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }

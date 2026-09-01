@@ -36,7 +36,7 @@ protected:
 
 TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1280}, {1280}};
 
     std::map<std::string, std::string> soc_infos;
@@ -127,12 +127,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_001)
     ASSERT_EQ(tiling_key, 21);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 3);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_002)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1280}, {1280}};
 
     std::map<std::string, std::string> soc_infos;
@@ -223,12 +223,12 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_002)
     ASSERT_EQ(tiling_key, 20);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 3);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_003)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{10}, {10}};
 
     std::map<std::string, std::string> soc_infos;
@@ -319,5 +319,5 @@ TEST_F(UniqueConsecutiveTiling, unique_consecutive_testcase_003)
     ASSERT_EQ(tiling_key, 11);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 1);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }

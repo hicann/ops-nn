@@ -40,7 +40,7 @@ protected:
 
 TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Tiling_Test1)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape table_handle_shape = {{1}, {1}};
     gert::StorageShape keys_shape = {{2}, {2}};
     gert::StorageShape m_shape = {{2, 32}, {2, 32}};
@@ -158,7 +158,7 @@ TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Til
 
 TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Tiling_Test2)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape table_handle_shape = {{1}, {1}};
     gert::StorageShape keys_shape = {{2, 2}, {2, 2}};
     gert::StorageShape m_shape = {{2, 2, 32}, {2, 2, 32}};

@@ -33,12 +33,7 @@
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "../../../op_host/op_tiling/quant_batch_matmul_v3_basic_tiling.h"
-#include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
-#include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
-#include "../../../op_host/op_tiling/arch35/base_block_calculator.h"
-#include "../../../op_host/op_tiling/arch35/qbmm_streamk_tiling.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
+#include "test_quant_batch_matmul_v3_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "ut_string_utils.h"
 
@@ -46,51 +41,6 @@ using namespace ut_str;
 using namespace std;
 using namespace ge;
 using namespace ut_util;
-using namespace optiling;
-
-class QuantBatchMatmulV3TilingTestParam {
-public:
-    void Prepare(QuantBatchMatmulV3CompileInfo& compileInfo) const;
-    void InvokeTilingFunc(QuantBatchMatmulV3CompileInfo& compileInfo) const;
-    void Test() const;
-    std::string socVersion;
-    std::string caseName;
-    std::string kernelUtDir;
-    std::string prefix;
-    int64_t aicNum;
-    int64_t aivNum;
-    int64_t x1Dim;
-    int64_t x2Dim;
-    int64_t yDim;
-    int64_t batchA;
-    int64_t batchB;
-    int64_t batchC;
-    int64_t m;
-    int64_t k;
-    int64_t n;
-    bool offsetFlag;
-    bool pertokenFlag;
-    bool biasFlag;
-    bool transA;
-    bool transB;
-    size_t quantMode;
-    ge::DataType x1Dtype;
-    ge::DataType x2Dtype;
-    ge::DataType scaleDtype;
-    ge::DataType perTokenScaleDtype;
-    ge::DataType biasDtype;
-    ge::DataType yDtype;
-    bool fmapNz;
-    bool weightNz;
-    int32_t deterministicLevel = 0;
-
-    // output
-    bool result; // false means tiling fail
-    uint32_t numBlocks;
-    uint64_t tilingKey;
-    std::string tilingData;
-    bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
-};
 
 struct QuantBatchMatmulV3TilingCsvLoadResult {
     std::vector<QuantBatchMatmulV3TilingTestParam> params;
@@ -132,13 +82,6 @@ static gert::Shape TransNd2Nz(const gert::Shape& inShape)
     outShape.AppendDim(32);
     return outShape;
 }
-
-class TestQuantBatchMatmulV3Tiling : public testing::TestWithParam<QuantBatchMatmulV3TilingTestParam> {
-protected:
-    static void SetUpTestCase() {}
-
-    static void TearDownTestCase() {}
-};
 
 static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext* tilingContext, string& compileInfoStr,
                              int64_t aicNum = -1, int64_t aivNum = -1)
@@ -358,7 +301,7 @@ static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const st
     return kCasesParamsMC62CM12AA;
 }
 
-static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string& socVersion)
+std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string& socVersion)
 {
     return GetParamsLoadResult(socVersion).params;
 }
@@ -1076,16 +1019,8 @@ TEST(QuantBatchMatmulV3StreamKCapability, RejectsBatchBeforeBenefitEvaluation)
 
 TEST_P(TestQuantBatchMatmulV3Tiling, generalTest) { GetParam().Test(); }
 
-static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B2 = GetParams("Ascend910B2");
-static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B4 = GetParams("Ascend910B4");
-static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams310P3 = GetParams("Ascend310P3");
-static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams950 = GetParams("Ascend950");
 static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParamsMC62CM12AA = GetParams("MC62CM12AA");
 
-INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams910B2));
-INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams910B4));
-INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams310P3));
-INSTANTIATE_TEST_CASE_P(QUANTMM950, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams950));
 INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParamsMC62CM12AA));
 
 static mutex tilingTestMutex;
@@ -1133,7 +1068,7 @@ static void ThreadFuncInvokeTilingFunc(const QuantBatchMatmulV3TilingTestParam* 
     params[threadIdx].InvokeTilingFunc(compileInfo);
 }
 
-static void TestMultiThread(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum, size_t threadNum)
+void TestMultiThread(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum, size_t threadNum)
 {
     std::thread threads[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
@@ -1167,14 +1102,4 @@ static void TestMultiThreadSeparate(const QuantBatchMatmulV3TilingTestParam* par
     for (size_t idx = 0; idx < threadNum; ++idx) {
         threadsInvoke[idx].join();
     }
-}
-
-TEST_F(TestQuantBatchMatmulV3Tiling, multiThread310P3)
-{
-    TestMultiThread(kCasesParams310P3.data(), kCasesParams310P3.size(), 3);
-}
-
-TEST_F(TestQuantBatchMatmulV3Tiling, multiThread950)
-{
-    TestMultiThread(kCasesParams950.data(), kCasesParams950.size(), 3);
 }

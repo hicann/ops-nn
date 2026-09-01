@@ -26,7 +26,7 @@
 #include "platform/platform_infos_def.h"
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
-#include "../../../../common/op_host/op_tiling/conv_platform_util.h"
+#include "../../../../../common/op_host/op_tiling/conv_platform_util.h"
 #include "test_cube_util.h"
 
 #define SUCCESS 0
@@ -530,9 +530,9 @@ static void TestMultiThread(const Conv3DTransposeV2TilingTestParam* params, size
     }
 }
 
-TEST_P(Conv3DTransposeV2TilingRunTime2, DISABLED_general_cases) { TestOneParamCase(GetParam()); }
+TEST_P(Conv3DTransposeV2TilingRunTime2, general_cases) { TestOneParamCase(GetParam()); }
 
-TEST_F(Conv3DTransposeV2TilingRunTime2, DISABLED_general_cases_params_multi_thread)
+TEST_F(Conv3DTransposeV2TilingRunTime2, general_cases_params_multi_thread)
 {
     TestMultiThread(general_cases_params, sizeof(general_cases_params) / sizeof(Conv3DTransposeV2TilingTestParam), 3);
     TestMultiThread(general_20_core_num_cases_params,

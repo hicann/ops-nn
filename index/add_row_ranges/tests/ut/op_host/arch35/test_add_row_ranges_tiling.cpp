@@ -65,8 +65,6 @@ static const string kCompileInfoString = R"({
 
 TEST_F(AddRowRangesTilingTest, add_row_ranges_tiling_float32)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape xShape = {{7, 7}, {7, 7}};
     gert::StorageShape srcShape = {{11, 7}, {11, 7}};
     gert::StorageShape indicesShape = {{7, 2}, {7, 2}};
@@ -136,13 +134,10 @@ TEST_F(AddRowRangesTilingTest, add_row_ranges_tiling_float32)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()), "49 47244640263 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(AddRowRangesTilingTest, add_row_ranges_tiling_float16)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape xShape = {{16, 2049}, {16, 2049}};
     gert::StorageShape srcShape = {{16, 2049}, {16, 2049}};
     gert::StorageShape indicesShape = {{16, 2}, {16, 2}};
@@ -212,5 +207,4 @@ TEST_F(AddRowRangesTilingTest, add_row_ranges_tiling_float16)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()), "32784 68719478785 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }

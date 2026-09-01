@@ -73,7 +73,7 @@ void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_
 
 TEST_F(EmbeddingHashTableImportTiling, embedding_hash_table_import_tiling_001)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape table_handles_shape = {{1},
                                               {
                                                   1,

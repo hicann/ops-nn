@@ -32,7 +32,7 @@ protected:
 
 TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     // 非对齐形状测试
     gert::StorageShape x_shape = {{8, 63}, {8, 63}}; // 非对齐
@@ -126,12 +126,12 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
     auto tiling_key = tiling_context->GetTilingKey();
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     // 非对齐形状测试
     gert::StorageShape x_shape = {{8, 63}, {8, 63}}; // 非对齐
@@ -225,5 +225,5 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
     auto tiling_key = tiling_context->GetTilingKey();
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }

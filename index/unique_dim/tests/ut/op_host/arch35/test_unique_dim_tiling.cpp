@@ -36,7 +36,7 @@ protected:
 // Basic tiling test: 2D float32 input, dim=0
 TEST_F(UniqueDimTilingTest, unique_dim_tiling_basic_float32)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{8, 4}, {8, 4}};
     gert::StorageShape y_shape = {{8, 4}, {8, 4}};
     gert::StorageShape idx_shape = {{8}, {8}};
@@ -124,13 +124,13 @@ TEST_F(UniqueDimTilingTest, unique_dim_tiling_basic_float32)
     auto tiling_key = tiling_context->GetTilingKey();
     EXPECT_EQ(tiling_key, 1);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 // Tiling test: float16 input
 TEST_F(UniqueDimTilingTest, unique_dim_tiling_float16)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{16, 8}, {16, 8}};
     gert::StorageShape y_shape = {{16, 8}, {16, 8}};
     gert::StorageShape idx_shape = {{16}, {16}};
@@ -211,13 +211,13 @@ TEST_F(UniqueDimTilingTest, unique_dim_tiling_float16)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     EXPECT_EQ(tiling_context->GetTilingKey(), 1);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 // Empty input tiling test
 TEST_F(UniqueDimTilingTest, unique_dim_tiling_empty_input)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{0, 5}, {0, 5}};
     gert::StorageShape y_shape = {{0, 5}, {0, 5}};
     gert::StorageShape idx_shape = {{0}, {0}};
@@ -300,13 +300,13 @@ TEST_F(UniqueDimTilingTest, unique_dim_tiling_empty_input)
     // empty input -> tiling key = 0 (TILING_KEY_EMPTY)
     EXPECT_EQ(tiling_context->GetTilingKey(), 0);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 // Large input tiling test
 TEST_F(UniqueDimTilingTest, unique_dim_tiling_large_input)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{1024, 64}, {1024, 64}};
     gert::StorageShape y_shape = {{1024, 64}, {1024, 64}};
     gert::StorageShape idx_shape = {{1024}, {1024}};
@@ -387,13 +387,13 @@ TEST_F(UniqueDimTilingTest, unique_dim_tiling_large_input)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     EXPECT_EQ(tiling_context->GetTilingKey(), 1);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
 
 // 1D input tiling test
 TEST_F(UniqueDimTilingTest, unique_dim_tiling_1d)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{100}, {100}};
     gert::StorageShape y_shape = {{100}, {100}};
     gert::StorageShape idx_shape = {{100}, {100}};
@@ -474,5 +474,5 @@ TEST_F(UniqueDimTilingTest, unique_dim_tiling_1d)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     EXPECT_EQ(tiling_context->GetTilingKey(), 1);
 
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel((0, 3, 0));
 }
