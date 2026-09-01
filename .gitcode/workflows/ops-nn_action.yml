@@ -26,6 +26,7 @@ env:
   SOURCE_BRANCH: ${{atomgit.head_ref}}
   obs_smoke_path: "${{ env.obs_path }}/presmoke/2"
   online: ${{ vars.APPLY_LABEL }}
+  run_package_name: "cann-ops-nn-custom_linux-x86_64_950.run"
 
 stages:
   stage1:
@@ -329,6 +330,9 @@ stages:
         runs-on: ['self-hosted','npu=1','smoke=204']
         container:
           image: swr.cn-south-1.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A900 }}
+      JOB_st_test_950:
+        name: ST_test_950
+        uses: .gitcode/workflows/st_test_action.yml
     pre:
     - type: auto
     fail-fast: true

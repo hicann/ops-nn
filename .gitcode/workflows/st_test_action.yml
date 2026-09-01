@@ -56,7 +56,18 @@ jobs:
             ${{ env.obs_path }}/${{ env.run_package_name }}
           path: ${{ steps.process_checkout.outputs.path }}
       -
+        name: check_950_package_content
+        identifier: check_950_pkg
+        run: |
+          pkg="${{ steps.process_checkout.outputs.path }}/${{ env.run_package_name }}"
+          if [[ -f "${pkg}" && $(stat -c%s "${pkg}") -gt 0 ]]; then
+            echo "need_st=yes" >> "$ATOMGIT_OUTPUT"
+          else
+            echo "need_st=no" >> "$ATOMGIT_OUTPUT"
+          fi
+      -
         name: install_run_package
+        if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
         run: |
           cd ${{ steps.process_checkout.outputs.path }}
           if [[ -f "${{ env.run_package_name }}" ]]; then
@@ -71,6 +82,7 @@ jobs:
       -
         name: run_st_test
         identifier: st_test
+        if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
         run: |
           export WORKSPACE=${{ steps.process_checkout.outputs.path }}
           cd ${{ steps.process_checkout.outputs.path }}
@@ -79,6 +91,7 @@ jobs:
           bash scripts/ci/ops_st_test.sh --pr_filelist=./pr_filelist.txt --soc_version=ascend950
       -
         name: upload_results
+        if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
         uses: obs-upload
         with:
           endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
