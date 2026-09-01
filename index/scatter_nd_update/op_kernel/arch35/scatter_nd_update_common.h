@@ -495,7 +495,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     maskGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace);
     varIdxGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + (tiling_.varStorageInAxis + 1));
 
-    InitMaskGm(tiling_.varInAxis, workspace);
+    InitMaskGm(tiling_.varStorageInAxis, workspace);
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
     }
