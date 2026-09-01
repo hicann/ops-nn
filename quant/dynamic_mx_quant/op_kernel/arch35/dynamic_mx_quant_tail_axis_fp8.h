@@ -50,15 +50,15 @@ private:
     __aicore__ inline void ComputeScaleOcp(__ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
                                            __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum1VF,
                                            uint32_t totalScaleInUB);
-    __aicore__ inline void ComputeMaxExpCublasHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
-                                                   uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpCublasBf16(__ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
-                                                   uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpCublasFp32(__ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr,
-                                                   uint16_t loopNum2VF);
-    __aicore__ inline void ComputeScaleCublas(__ubuf__ intCalcType* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
-                                              __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNumHalfVF,
-                                              uint32_t totalScaleInUB);
+    __aicore__ inline void ComputeMaxExpCeilAlgHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                    uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpCeilAlgBf16(__ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                    uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpCeilAlgFp32(__ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr,
+                                                    uint16_t loopNum2VF);
+    __aicore__ inline void ComputeScaleCeilAlg(__ubuf__ intCalcType* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
+                                               __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNumHalfVF,
+                                               uint32_t totalScaleInUB);
     __aicore__ inline void ComputeData(__ubuf__ T* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
                                        __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF);
 
@@ -395,7 +395,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExp
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCublasBf16(
+__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCeilAlgBf16(
     __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
@@ -481,7 +481,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExp
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCublasHalf(
+__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCeilAlgHalf(
     __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
@@ -566,7 +566,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExp
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCublasFp32(
+__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeMaxExpCeilAlgFp32(
     __ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr, uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
@@ -683,7 +683,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleO
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleCublas(
+__aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleCeilAlg(
     __ubuf__ intCalcType* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
     uint16_t loopNumHalfVF, uint32_t totalScaleInUB)
 {
@@ -709,7 +709,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleC
         Reg::RegTensor<uint32_t> zeroU32;
         Reg::Duplicate(zeroU32, 0);
         Reg::RegTensor<uint32_t> scaleBias;
-        Reg::Duplicate(scaleBias, FP32_MX_EXP_BIAS_CUBLAS);
+        Reg::Duplicate(scaleBias, FP32_MX_EXP_BIAS_CEIL_ALG);
         Reg::RegTensor<uint32_t> nanU32;
         Reg::Duplicate(nanU32, FP32_NAN_PACK);
         Reg::RegTensor<uint32_t> fp8NanU32;
@@ -929,13 +929,13 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::Compute(int64
         ComputeData(xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
     } else if constexpr (SCALE_ALG == 1) {
         if constexpr (IsSame<T, float>::value) {
-            ComputeMaxExpCublasFp32(xLocalAddr, maxExpLocalAddr, loopNum2VF);
+            ComputeMaxExpCeilAlgFp32(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         } else if constexpr (IsSame<T, bfloat16_t>::value) {
-            ComputeMaxExpCublasBf16(xLocalAddr, maxExpLocalAddr, loopNum2VF);
+            ComputeMaxExpCeilAlgBf16(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         } else {
-            ComputeMaxExpCublasHalf(xLocalAddr, maxExpLocalAddr, loopNum2VF);
+            ComputeMaxExpCeilAlgHalf(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         }
-        ComputeScaleCublas(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNumHalfVF, totalBlockNum);
+        ComputeScaleCeilAlg(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNumHalfVF, totalBlockNum);
         ComputeData(xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
     }
 

@@ -42,12 +42,12 @@ private:
     __aicore__ inline void CopyOut(int64_t yOffset, int64_t scaleOutOffset, int64_t blockCount, int64_t dataLen);
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount, int64_t dataLen);
     __aicore__ inline void ComputeAll(int64_t blockCount, int64_t dataLen);
-    __aicore__ inline void ComputeScaleCuBlas(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
-                                              __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint16_t* tmpAddr);
+    __aicore__ inline void ComputeScaleCeilAlg(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                               __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint16_t* tmpAddr);
     __aicore__ inline void ComputeScaleOcp(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
                                            __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint16_t* tmpAddr);
-    __aicore__ inline void ComputeScaleCuBlasOptimize(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
-                                                      __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint16_t* tmpAddr);
+    __aicore__ inline void ComputeScaleCeilAlgOptimize(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                                       __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint16_t* tmpAddr);
     __aicore__ inline void ComputeYVf(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
                                       __ubuf__ uint16_t* tmpAddr, __ubuf__ uint8_t* yAddr);
     __aicore__ inline void ComputeYFromHalf(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
@@ -255,16 +255,16 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype
         xOffset = blockSize_ * dataLen16Align_;
     }
     int64_t yOffset = blockSize_ * dataLen64Align_ / DIGIT_TWO;
-    if constexpr ((IsSame<yDtype, float8_e4m3_t>::value) || (IsSame<yDtype, float8_e5m2_t>::value)) {
+    if constexpr ((IsSame<yDtype, fp8_e4m3fn_t>::value) || (IsSame<yDtype, fp8_e5m2_t>::value)) {
         yOffset = blockSize_ * dataLen32Align_;
     }
     int64_t scaleUbOffset = dataLen32Align_;
     int64_t tmpOffset = dataLen16Align_;
     for (int64_t i = 0; i < calcBlockLoop; i++) {
         if constexpr (calcMode == MODE_THREE || calcMode == MODE_ONE) {
-            ComputeScaleCuBlas(dataLen, static_cast<uint16_t>(blockSize_), xAddr, mxTmpScaleAddr, tmpAddr);
+            ComputeScaleCeilAlg(dataLen, static_cast<uint16_t>(blockSize_), xAddr, mxTmpScaleAddr, tmpAddr);
         } else if constexpr (calcMode == MODE_TWO) {
-            ComputeScaleCuBlasOptimize(dataLen, static_cast<uint16_t>(blockSize_), xAddr, mxTmpScaleAddr, tmpAddr);
+            ComputeScaleCeilAlgOptimize(dataLen, static_cast<uint16_t>(blockSize_), xAddr, mxTmpScaleAddr, tmpAddr);
         } else {
             ComputeScaleOcp(dataLen, static_cast<uint16_t>(blockSize_), xAddr, mxTmpScaleAddr, tmpAddr);
         }
@@ -275,9 +275,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype
         tmpAddr = tmpAddr + tmpOffset;
     }
     if constexpr (calcMode == MODE_THREE || calcMode == MODE_ONE) {
-        ComputeScaleCuBlas(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr, mxTmpScaleAddr, tmpAddr);
+        ComputeScaleCeilAlg(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr, mxTmpScaleAddr, tmpAddr);
     } else if constexpr (calcMode == MODE_TWO) {
-        ComputeScaleCuBlasOptimize(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr, mxTmpScaleAddr, tmpAddr);
+        ComputeScaleCeilAlgOptimize(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr, mxTmpScaleAddr, tmpAddr);
     } else {
         ComputeScaleOcp(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr, mxTmpScaleAddr, tmpAddr);
     }
@@ -342,7 +342,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
 __aicore__ inline void
-DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleCuBlas(
+DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleCeilAlg(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
     __ubuf__ uint16_t* tmpAddr)
 {
@@ -528,7 +528,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
 __aicore__ inline void
-DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleCuBlasOptimize(
+DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleCeilAlgOptimize(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleAddr,
     __ubuf__ uint16_t* tmpAddr)
 {

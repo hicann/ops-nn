@@ -60,10 +60,10 @@ constexpr uint32_t FP8_E4M3_MAX = 0x3b124925; // 1/448的float32表示 448是E4M
 constexpr uint16_t EXP_MASK_BF16 = 0x7f80;    // 0111 1111 1000 0000
 constexpr uint16_t EXP_MASK_FP16 = 0x7c00;    // 0111 1100 0000 0000
 
-// CuBALS Scale算法相关常量 (scaleAlg=1, FP8专用)
-constexpr uint16_t ABS_MASK_FOR_16BIT = 0x7fff;       // 取绝对值掩码，清除符号位
-constexpr uint32_t MAN_MASK_FLOAT = 0x007fffff;       // FP32尾数掩码 (23位尾数)
-constexpr uint32_t FP32_EXP_BIAS_CUBLAS = 0x00007f00; // FP32指数偏移(CuBALS)，左移7位后为BF16的指数偏移
+// 向上取整算法相关常量 (scaleAlg=1, FP8专用)
+constexpr uint16_t ABS_MASK_FOR_16BIT = 0x7fff;         // 取绝对值掩码，清除符号位
+constexpr uint32_t MAN_MASK_FLOAT = 0x007fffff;         // FP32尾数掩码 (23位尾数)
+constexpr uint32_t FP32_EXP_BIAS_CEIL_ALG = 0x00007f00; // FP32指数偏移(向上取整)，左移7位后为BF16的指数偏移
 constexpr uint32_t MAX_EXP_FOR_FP8_IN_FP32 = 0x000000ff; // FP8 NAN在E8M0中的表示 (0xFF)
 constexpr uint32_t NAN_CUSTOMIZATION_PACK = 0x00007f81;  // NAN的BF16打包表示 (uint32存储)
 constexpr uint32_t NUMBER_ZERO_U32 = 0x00000000;         // uint32零常量
@@ -101,10 +101,11 @@ private:
     __aicore__ inline void ComputeScaleOcp(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
                                            __ubuf__ uint8_t* mxScale1Addr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
                                            __ubuf__ uint8_t* mxScale2Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr);
-    __aicore__ inline void ComputeScaleCublas(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
-                                              __ubuf__ uint8_t* mxScale1Addr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
-                                              __ubuf__ uint8_t* mxScale2Addr,
-                                              __ubuf__ uint16_t* mxScale2ReciprocalAddr);
+    __aicore__ inline void ComputeScaleCeilAlg(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                               __ubuf__ uint8_t* mxScale1Addr,
+                                               __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+                                               __ubuf__ uint8_t* mxScale2Addr,
+                                               __ubuf__ uint16_t* mxScale2ReciprocalAddr);
     // DynamicDtypeRange Default: dstTypeMax=0.0/6.0/7.0, 指数域addValueBit进位法 (scaleAlg=2)
     __aicore__ inline void ComputeScaleDynamicDefault(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
                                                       __ubuf__ uint8_t* mxScale1Addr,
@@ -338,10 +339,10 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
                             mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
                             mxScale2ReciprocalAddr + scale2ReciprocalOffset);
         } else if constexpr (scaleAlg == 1) {
-            // CuBALS Scale算法 (FP8专用)
-            ComputeScaleCublas(dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
-                               mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
-                               mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+            // 向上取整算法 (FP8专用)
+            ComputeScaleCeilAlg(dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+                                mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+                                mxScale2ReciprocalAddr + scale2ReciprocalOffset);
         } else if constexpr (scaleAlg == 2) {
             // DynamicDtypeRange Scale算法 (FP4_E2M1专用)
             // 运行时根据dstTypeMax_选择Default (指数域进位法) 或 Custom (FP32精度乘法法)
@@ -377,9 +378,9 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
                             mxScale1Addr + scale1UbOffset, mxScale1ReciprocalAddr + scale1ReciprocalOffset,
                             tmpScale2Addr + scale2UbOffset, mxScale2ReciprocalAddr + scale2ReciprocalOffset);
         } else if constexpr (scaleAlg == 1) {
-            ComputeScaleCublas(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset,
-                               mxScale1Addr + scale1UbOffset, mxScale1ReciprocalAddr + scale1ReciprocalOffset,
-                               tmpScale2Addr + scale2UbOffset, mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+            ComputeScaleCeilAlg(dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset,
+                                mxScale1Addr + scale1UbOffset, mxScale1ReciprocalAddr + scale1ReciprocalOffset,
+                                tmpScale2Addr + scale2UbOffset, mxScale2ReciprocalAddr + scale2ReciprocalOffset);
         } else if constexpr (scaleAlg == 2) {
             // DynamicDtypeRange Scale算法 (FP4_E2M1专用) - 尾块处理
             if (dstTypeMax_ == DIGIT_ZERO_FLOAT || dstTypeMax_ == DIGIT_SIX_FLOAT || dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
@@ -585,12 +586,12 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
 #endif
 }
 
-// CuBALS Scale算法实现 (scaleAlg=1, FP8专用)
+// 向上取整算法实现 (scaleAlg=1, FP8专用)
 // 整体框架与ComputeScaleOcp一致：循环blockCount次处理-1轴scale，循环后处理-2轴scale
-// 算法差异：OCP使用指数提取法，CuBALS使用 Amax/Amax(DType) + FP32指数尾数条件舍入法
+// 算法差异：OCP使用指数提取法，CeilAlg使用 Amax/Amax(DType) + FP32指数尾数条件舍入法
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 __aicore__ inline void
-DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeScaleCublas(
+DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeScaleCeilAlg(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
     __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
     __ubuf__ uint16_t* mxScale2ReciprocalAddr)
@@ -638,7 +639,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
         Reg::RegTensor<uint32_t> manMaskFP32;
         Reg::Duplicate(manMaskFP32, MAN_MASK_FLOAT); // FP32尾数掩码
         Reg::RegTensor<uint32_t> scaleBiasFP32;
-        Reg::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CUBLAS); // BF16偏移在uint32
+        Reg::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CEIL_ALG); // BF16偏移在uint32
         Reg::RegTensor<uint32_t> nanPackFP32;
         Reg::Duplicate(nanPackFP32, NAN_CUSTOMIZATION_PACK);
 
@@ -694,10 +695,10 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
             Reg::Max(absMax2Dim2, absMax2Dim2, absMax1, maskAll);
 
             // ============================================================
-            // 5. 计算-1轴CuBALS Scale (FP32精度)
+            // 5. 计算-1轴CeilAlg Scale (FP32精度)
             //    ReduceMaxWithDataBlock后，8个max紧凑存储在寄存器前8个位置
             //    与0交织后，Cast Zero一次处理全部8个值转为FP32
-            //    (与原始DynamicMxQuant的ComputeCuBLAS一致)
+            //    (与原始DynamicMxQuant的ComputeCeilAlg一致)
             // ============================================================
 
             // 与0交织: [v0,0,v1,0,...,v7,0,...] → Cast Zero可一次取出全部8个有效值
@@ -744,7 +745,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
         }
 
         // ========================================================================
-        // 循环结束后，计算-2轴CuBALS Scale
+        // 循环结束后，计算-2轴CeilAlg Scale
         // absMax1Dim2: 128个偶数列的累积绝对值max
         // absMax2Dim2: 128个奇数列的累积绝对值max
         // 每个需要拆分为Zero/One两半分别做FP32计算，再合并
@@ -1095,7 +1096,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
 }
 
 // DynamicDtypeRange Custom Scale算法实现 (scaleAlg=2, 自定义dstTypeMax, FP4_E2M1专用)
-// 与CuBALS (scaleAlg=1) 类似，使用FP32精度乘以invDstTypeMax_，但：
+// 与CeilAlg (scaleAlg=1) 类似，使用FP32精度乘以invDstTypeMax_，但：
 // 1. 乘法因子为invDstTypeMax_ (1/dstTypeMax) 而非invDtypeMax_ (1/AMax(DType))
 // 2. 条件舍入仅处理normal场景 (exp>0 && exp<254 && man>0)，不处理subnormal场景
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
@@ -1147,7 +1148,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
         Reg::RegTensor<uint32_t> manMaskFP32;
         Reg::Duplicate(manMaskFP32, MAN_MASK_FLOAT); // FP32尾数掩码
         Reg::RegTensor<uint32_t> scaleBiasFP32;
-        Reg::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CUBLAS); // BF16偏移在uint32
+        Reg::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CEIL_ALG); // BF16偏移在uint32
 
         Reg::RegTensor<uint16_t> nanE8M0;
         Reg::Duplicate(nanE8M0, NAN_FOR_FP8_E8M0);
@@ -1179,7 +1180,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
 
         // ========================================================================
         // 循环blockCount次，每次处理一行，计算-1轴scale并累积-2轴max
-        // 与CuBALS一致: 取绝对值 → Max → ReduceMax → FP32域scale计算
+        // 与CeilAlg一致: 取绝对值 → Max → ReduceMax → FP32域scale计算
         // ========================================================================
         for (uint16_t i = 0; i < blockCount; i++) {
             // 1. 交织搬运输入数据: 将256个xDtype按偶奇拆分为x0(偶), x1(奇)
@@ -1218,7 +1219,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
             // 提取FP32尾数: 与尾数掩码
             Reg::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
             // 条件舍入: 仅normal场景 (exp>0 && exp<254 && man>0) → exp+1
-            // 注意: 与CuBALS不同，DynamicDtypeRange Custom不处理subnormal场景
+            // 注意: 与CeilAlg不同，DynamicDtypeRange Custom不处理subnormal场景
             Reg::Compares<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
             Reg::Compares<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
             Reg::Compares<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);

@@ -58,7 +58,7 @@
     | FLOAT8_E4M3FN |  8   |
     |  FLOAT8_E5M2  |  15  |
 
-  - 场景2，当scale_alg为1时，只涉及FP8类型（CuBALS Scale计算算法）：
+  - 场景2，当scale_alg为1时，只涉及FP8类型（向上取整算法）：
     - 将输入x在-1轴（或-2轴）上按照32个数进行分组，对每组单独计算块缩放因子$S_{fp32}^b$，再把组内所有元素映射到目标低精度类型FP8。
     - 找到该组中数值的最大绝对值：$Amax(D_{fp32}^b) = max(\{|d_i|\}_{i=1}^{32})$
     - 将FP32映射到目标数据类型FP8可表示的范围内：$S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}$
@@ -112,7 +112,7 @@
     <tr>
       <td>scale_alg</td>
       <td>可选属性</td>
-      <td>mxscale1和mxscale2的计算方法。<br>支持取值0、1和2，取值为0代表OCP实现（场景1），为1代表CuBALS实现（场景2），为2代表DynamicDtypeRange实现（场景3）。<br>当dst_type为FLOAT4_E1M2时仅支持取值为0。<br>当dst_type为FLOAT4_E2M1时仅支持取值为0和2。<br>当dst_type为FLOAT8时仅支持取值为0和1。</td>
+      <td>mxscale1和mxscale2的计算方法。<br>支持取值0、1和2，取值为0代表OCP实现（场景1），为1代表向上取整实现（场景2），为2代表DynamicDtypeRange实现（场景3）。<br>当dst_type为FLOAT4_E1M2时仅支持取值为0。<br>当dst_type为FLOAT4_E2M1时仅支持取值为0和2。<br>当dst_type为FLOAT8时仅支持取值为0和1。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>

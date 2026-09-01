@@ -38,7 +38,7 @@ constexpr int64_t ROW_BLOCK_SIZE = 64;
 constexpr int64_t COL_BLOCK_SIZE = 256;
 constexpr int64_t SCALE_AXIS_UNIT = 64;
 constexpr int64_t SCALE_PAIR = 2;
-constexpr int64_t SCALE_ALG_CUBLAS = 1;
+constexpr int64_t SCALE_ALG_CEIL_ALG = 1;
 constexpr int64_t DTYPE_FLOAT8_E5M2 = 35;
 constexpr int64_t DTYPE_FLOAT8_E4M3FN = 36;
 constexpr float MAX_DTYPE_VALUE_DEFAULT = 0.0f;
@@ -204,7 +204,7 @@ static ge::graphStatus CheckAttrs(gert::TilingContext* context,
                 return ge::GRAPH_FAILED);
     const int64_t* scaleAlg = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleAlg);
-    OP_CHECK_IF(*scaleAlg != SCALE_ALG_CUBLAS, OP_LOGE(context, "scale_alg should be 1, but got %ld.", *scaleAlg),
+    OP_CHECK_IF(*scaleAlg != SCALE_ALG_CEIL_ALG, OP_LOGE(context, "scale_alg should be 1, but got %ld.", *scaleAlg),
                 return ge::GRAPH_FAILED);
     const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context, dstDtype);

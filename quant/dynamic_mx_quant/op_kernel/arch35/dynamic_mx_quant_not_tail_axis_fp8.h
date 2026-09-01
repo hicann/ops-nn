@@ -37,8 +37,8 @@ private:
     __aicore__ inline void ComputeOCP(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
                                       __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputecuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
-                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCeilAlg(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     __aicore__ inline bool IsTailLoopInUbDim(int64_t loopIdx);
     __aicore__ inline bool IsNeedPadAndTailInAxis(int64_t curLoopIdxInAllCore);
 
@@ -181,7 +181,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPostAxis
     if (this->scaleAlg_ == 0) {
         ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
     } else {
-        ComputecuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
+        ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
     }
     this->mxScaleQueue_.template EnQue(mxScale);
     this->outQueue_.template EnQue(y);
@@ -207,8 +207,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::SplitPreAxisC
             ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr, mxScaleAddr,
                                                                     yAddr);
         } else {
-            ComputecuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
-                                                                       mxScaleAddr, yAddr);
+            ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                        mxScaleAddr, yAddr);
         }
     }
     this->mxScaleQueue_.template EnQue(mxScale);
@@ -467,10 +467,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
 
 template <typename T, typename U, const bool isTail>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS(int64_t dataLen, int64_t blockCount,
-                                                                                 __ubuf__ T* xAddr,
-                                                                                 __ubuf__ uint8_t* mxScaleAddr,
-                                                                                 __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeCeilAlg(int64_t dataLen, int64_t blockCount,
+                                                                                  __ubuf__ T* xAddr,
+                                                                                  __ubuf__ uint8_t* mxScaleAddr,
+                                                                                  __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfNum16 = Ops::Base::GetVRegSize() / sizeof(T); // 寄存器单次能处理的长度
     constexpr uint32_t vfNum32 = Ops::Base::GetVRegSize() / sizeof(float); // cast到FP32后单个寄存器中的元素个数
@@ -541,7 +541,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
         Reg::Duplicate(zeroRegTensor32, 0);
         Reg::Duplicate(manMaskFP32, FP32_MX_MAN_MASK);
         Reg::Duplicate(fp8Nan, FP8_MAX_EXP_IN_FP32);
-        Reg::Duplicate(bias, FP32_MX_EXP_BIAS_CUBLAS);
+        Reg::Duplicate(bias, FP32_MX_EXP_BIAS_CEIL_ALG);
         Reg::Duplicate(nan, BF16_NAN_CUSTOM);
         Reg::Duplicate(fullZero, 0);
 

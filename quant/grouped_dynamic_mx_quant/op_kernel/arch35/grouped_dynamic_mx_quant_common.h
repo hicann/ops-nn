@@ -27,7 +27,7 @@ constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t BLOCK_SIZE = 32;
 
 constexpr uint32_t MAX_EXP_FOR_FP8_IN_FP32 = 0x000000ff;
-constexpr uint32_t FP32_EXP_BIAS_CUBLAS = 0x00007f00;
+constexpr uint32_t FP32_EXP_BIAS_CEIL_ALG = 0x00007f00;
 constexpr uint32_t NAN_CUSTOMIZATION_PACK = 0x00007f81;
 constexpr uint32_t MAX_EXP_FOR_FP32 = 0x7f800000;
 

@@ -107,7 +107,7 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_100)
     free(path_);
 }
 
-// scaleAlg=1 (CuBALS) + FP8_E5M2 + FP16输入
+// scaleAlg=1 (Ceil rounding algorithm) + FP8_E5M2 + FP16输入
 TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e5m2)
 {
     size_t inputXSize = 128 * 256 * sizeof(half);
@@ -180,7 +180,7 @@ TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e5m2)
     free(path_);
 }
 
-// scaleAlg=1 (CuBALS) + FP8_E4M3FN + FP16输入
+// scaleAlg=1 (Ceil rounding algorithm) + FP8_E4M3FN + FP16输入
 TEST_F(dynamic_mx_quant_with_dual_axis_test, test_case_scaleAlg1_fp8_e4m3fn)
 {
     size_t inputXSize = 128 * 256 * sizeof(half);

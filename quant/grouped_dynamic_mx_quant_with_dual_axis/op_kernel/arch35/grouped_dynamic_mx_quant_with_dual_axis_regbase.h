@@ -42,7 +42,7 @@ constexpr int64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
 constexpr uint16_t ABS_FOR_UINT16 = 0x7fff;
 constexpr uint32_t MAN_FOR_FP32 = 0x007fffff;
 constexpr uint32_t MAX_EXP_FOR_FP8_IN_FP32 = 0x000000ff;
-constexpr uint32_t FP32_EXP_BIAS_CUBLAS = 0x00007f00;
+constexpr uint32_t FP32_EXP_BIAS_CEIL_ALG = 0x00007f00;
 constexpr uint32_t NAN_CUSTOMIZATION_PACK = 0x00007f81;
 constexpr int16_t SHR_NUM_FOR_BF16 = 7;
 constexpr int16_t SHR_NUM_FOR_FP32 = 23;
@@ -481,7 +481,7 @@ __aicore__ inline void GroupedDynamicMxQuantWithDualAxisBase<XType, YType, round
         AscendC::Reg::Duplicate(fp32MantissaMaskRegTensor, MAN_FOR_FP32);
         AscendC::Reg::Duplicate(fp8NanRegTensor32, MAX_EXP_FOR_FP8_IN_FP32);
         AscendC::Reg::Duplicate(nanRegTensor32, NAN_CUSTOMIZATION_PACK);
-        AscendC::Reg::Duplicate(biasRegTensor32, FP32_EXP_BIAS_CUBLAS);
+        AscendC::Reg::Duplicate(biasRegTensor32, FP32_EXP_BIAS_CEIL_ALG);
 
         for (uint16_t i = 0; i < scaleLoopNum; ++i) {
             AscendC::Reg::DataCopy<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
@@ -678,7 +678,7 @@ __aicore__ inline void GroupedDynamicMxQuantWithDualAxisBase<XType, YType, round
         AscendC::Reg::Duplicate(fp32MantissaMaskRegTensor, MAN_FOR_FP32);
         AscendC::Reg::Duplicate(fp8NanRegTensor32, MAX_EXP_FOR_FP8_IN_FP32);
         AscendC::Reg::Duplicate(nanRegTensor32, NAN_CUSTOMIZATION_PACK);
-        AscendC::Reg::Duplicate(biasRegTensor32, FP32_EXP_BIAS_CUBLAS);
+        AscendC::Reg::Duplicate(biasRegTensor32, FP32_EXP_BIAS_CEIL_ALG);
 
         for (uint16_t colBlockIdx = 0; colBlockIdx < colLoopCount; ++colBlockIdx) {
             uint16_t colOffset = static_cast<uint16_t>(colBlockIdx * REG_VF_LEN_FP32);

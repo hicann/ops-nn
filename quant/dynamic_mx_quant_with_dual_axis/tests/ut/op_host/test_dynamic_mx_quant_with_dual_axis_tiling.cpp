@@ -487,7 +487,7 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed
                           roundMode, dstDtype, scaleAlg);
 }
 
-// ===================== scaleAlg=1 (CuBALS) 成功用例 =====================
+// ===================== scaleAlg=1 (Ceil rounding algorithm) 成功用例 =====================
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp8_e5m2)
 {

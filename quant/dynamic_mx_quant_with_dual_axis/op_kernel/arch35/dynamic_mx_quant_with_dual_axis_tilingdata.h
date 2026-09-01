@@ -23,7 +23,7 @@ struct DynamicMxQuantWithDualAxisTilingData {
     int64_t usedCoreNum{0};            // 实际使用的核数
     int64_t roundMode{0};              // 数据类型转换的模式
     int64_t dstType{0};                // 输出y的数据类型
-    int64_t scaleAlg{0};               // CuBlas实现或OCP实现，默认OCP实现
+    int64_t scaleAlg{0};               // CeilAlg实现或OCP实现，默认OCP实现
     int64_t blockSize{0};              //
     int64_t dim0{0};                   //
     int64_t dimNeg2{0};                //

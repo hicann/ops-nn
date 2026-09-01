@@ -118,7 +118,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetAttr()
                                                       "The value of scale_alg must be 0, 1, or 2"),
                 return ge::GRAPH_FAILED);
 
-    // scaleAlg=1 仅支持 FP8 类型 (CuBALS Scale算法)
+    // scaleAlg=1 仅支持 FP8 类型 (Ceil rounding algorithm)
     OP_CHECK_IF(tilingParams.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     context_->GetNodeName(), "scale_alg", std::to_string(tilingParams.scaleAlg),

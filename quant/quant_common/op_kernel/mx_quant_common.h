@@ -145,11 +145,11 @@ __aicore__ inline void ComputeMxScaleOCP(const int64_t dataLen, const uint16_t l
 }
 
 template <typename T, typename U, const uint64_t scaleAlg>
-__aicore__ inline void ComputeMxScaleCuBLAS(const int64_t dataLen, const uint16_t loop, __ubuf__ T* xAddr,
-                                            Reg::RegTensor<uint8_t>& scaleReg,
-                                            Reg::RegTensor<uint16_t>& reversedScaleReg, const float invDstTypeMax_)
+__aicore__ inline void ComputeMxScaleCeilAlg(const int64_t dataLen, const uint16_t loop, __ubuf__ T* xAddr,
+                                             Reg::RegTensor<uint8_t>& scaleReg,
+                                             Reg::RegTensor<uint16_t>& reversedScaleReg, const float invDstTypeMax_)
 {
-    // ===== cuBLAS 算法 =====
+    // ===== Ceil rounding algorithm =====
     Reg::RegTensor<T> xReg;
     Reg::RegTensor<T> xAbsReg;
     Reg::RegTensor<T> xMaxReg;
@@ -241,8 +241,8 @@ __aicore__ inline void ComputeMxScaleDynamicDtypeRange(const int64_t dataLen, co
                                                        Reg::RegTensor<uint8_t>& scaleReg,
                                                        Reg::RegTensor<uint16_t>& reversedScaleReg)
 {
-    static constexpr Reg::CastTrait castTraitHalf2Bf16CuBLAS = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
-                                                                Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr Reg::CastTrait castTraitHalf2Bf16CeilAlg = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                                 Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     // ===== DynamicDtypeRange 算法 =====
     Reg::RegTensor<T> xReg;
     Reg::RegTensor<uint16_t> expRegFP16;
@@ -293,7 +293,7 @@ __aicore__ inline void ComputeMxScaleDynamicDtypeRange(const int64_t dataLen, co
     for (int i = 0; i < loop; i++) {
         Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(xReg, xAddr, dataLen);
         if constexpr (IsSameType<T, half>::value) {
-            Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16CuBLAS>(xRegBF16, xReg, mask);
+            Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16CeilAlg>(xRegBF16, xReg, mask);
             Reg::And(xAbsReg, (Reg::RegTensor<uint16_t>&)xRegBF16, absMask16Bit, mask);
         } else {
             Reg::And(xAbsReg, (Reg::RegTensor<uint16_t>&)xReg, absMask16Bit, mask);
@@ -446,11 +446,11 @@ __aicore__ inline void ComputeMxScale(const int64_t dataLen, const uint16_t loop
     if constexpr (scaleAlg == TPL_SCALE_ALG_0) {
         ComputeMxScaleOCP<T, U>(dataLen, loop, xAddr, scaleReg, reversedScaleReg);
     } else if constexpr (scaleAlg == TPL_SCALE_ALG_1) {
-        ComputeMxScaleCuBLAS<T, U, TPL_SCALE_ALG_1>(dataLen, loop, xAddr, scaleReg, reversedScaleReg, invDstTypeMax_);
+        ComputeMxScaleCeilAlg<T, U, TPL_SCALE_ALG_1>(dataLen, loop, xAddr, scaleReg, reversedScaleReg, invDstTypeMax_);
     } else if constexpr (scaleAlg == TPL_SCALE_ALG_2) {
         if constexpr (dstTypeMax == TPL_DST_TYPE_MAX_0) {
-            ComputeMxScaleCuBLAS<T, U, TPL_SCALE_ALG_2>(dataLen, loop, xAddr, scaleReg, reversedScaleReg,
-                                                        invDstTypeMax_);
+            ComputeMxScaleCeilAlg<T, U, TPL_SCALE_ALG_2>(dataLen, loop, xAddr, scaleReg, reversedScaleReg,
+                                                         invDstTypeMax_);
         } else {
             ComputeMxScaleDynamicDtypeRange<T, U, dstTypeMax>(dataLen, loop, xAddr, scaleReg, reversedScaleReg);
         }

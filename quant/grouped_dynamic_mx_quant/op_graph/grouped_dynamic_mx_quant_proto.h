@@ -40,7 +40,7 @@ namespace ge {
 * @li blocksize: An optional int, specifying the block size of quantization.
 * Defaults and only supports 32.
 * @li scale_alg: An Optional Int. The algorithm for the scale in quantization.
-* Support MxFP4/MxFP8(OCP Microscaling Formats(Mx) Specification, count 0) or MxFP8(nvidia-cuBLAS, count 1) or
+* Support MxFP4/MxFP8(OCP Microscaling Formats(Mx) Specification, count 0) or MxFP8(Ceil rounding algorithm, count 1) or
 MxFP4(Dynamic Dtype Range, count 2).
 * Defaults to 0.
 * @li dst_type_max: An Optional Float. Max_dtype takes the maximum value of the quant_data_type, or the provided value.

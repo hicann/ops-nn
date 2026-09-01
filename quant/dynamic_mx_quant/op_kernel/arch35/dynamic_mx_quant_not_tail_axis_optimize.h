@@ -36,8 +36,8 @@ private:
     __aicore__ inline void ComputeOcp(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
                                       __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
-                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCeilAlg(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
 
 private:
     TBuf<QuePosition::VECCALC> maxExpBuf_;
@@ -159,14 +159,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPre
             }
         } else {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
-                                                                           mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
-                                                                            mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
+                                                                             mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
-                                                                            mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
+                                                                             mxScaleAddr, yAddr);
             }
         }
     }
@@ -177,7 +177,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPre
 
 template <typename T, typename U, const bool ISTAIL>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeCuBLAS(
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeCeilAlg(
     int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
 {
     static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,

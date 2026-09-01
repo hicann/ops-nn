@@ -37,8 +37,8 @@ private:
     __aicore__ inline void ComputeOcp(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
                                       __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
-                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCeilAlg(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     __aicore__ inline bool IsTailLoopInUbDim(int64_t loopIdx);
     __aicore__ inline bool IsNeedPadAndTailInAxis(int64_t curLoopIdxInAllCore);
 
@@ -210,11 +210,13 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPostAxisCom
         }
     } else {
         if (this->roundMode_ == MODE_RINT) {
-            ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
         } else if (this->roundMode_ == MODE_FLOOR) {
-            ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeCeilAlg<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(dataLen, blockCount, xAddr, mxScaleAddr,
+                                                                         yAddr);
         } else if (this->roundMode_ == MODE_ROUND) {
-            ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(dataLen, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(dataLen, blockCount, xAddr, mxScaleAddr,
+                                                                         yAddr);
         }
     }
     this->mxScaleQueue_.template EnQue(mxScale);
@@ -261,14 +263,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisComp
             }
         } else {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
-                                                                           mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
-                                                                            mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
+                                                                             mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
-                                                                            mxScaleAddr, yAddr);
+                ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
+                                                                             mxScaleAddr, yAddr);
             }
         }
     }
@@ -534,10 +536,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
 
 template <typename T, typename U, const bool ISTAIL>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(int64_t dataLen, int64_t blockCount,
-                                                                              __ubuf__ T* xAddr,
-                                                                              __ubuf__ uint8_t* mxScaleAddr,
-                                                                              __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCeilAlg(int64_t dataLen, int64_t blockCount,
+                                                                               __ubuf__ T* xAddr,
+                                                                               __ubuf__ uint8_t* mxScaleAddr,
+                                                                               __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
     uint16_t regLoop = static_cast<uint16_t>(dataLen) / static_cast<uint16_t>(vfLen); // 当前loop需要处理的长度

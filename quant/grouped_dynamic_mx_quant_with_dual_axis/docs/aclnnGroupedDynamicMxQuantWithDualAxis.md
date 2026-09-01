@@ -513,7 +513,7 @@ int aclnnGroupedDynamicMxQuantWithDualAxisTest(int32_t deviceId)
 
     // attributes
     char* roundModeOptional = const_cast<char*>("rint");
-    int64_t scaleAlg = 1;  // cuBLAS
+    int64_t scaleAlg = 1;  // Ceil rounding algorithm
     int64_t dstDtype = 36; // FLOAT8_E4M3FN
     double maxDtypeValue = 0.0;
 

@@ -36,8 +36,8 @@ private:
     __aicore__ inline void ComputeOCP(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
                                       __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
-                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCeilAlg(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
 
 private:
     TBuf<QuePosition::VECCALC> maxExpBuf_;
@@ -126,8 +126,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Split
         int64_t blockCount = this->BlockCountInCurCompute(blockSizeIdx + i + 1);
         offset += blockCount * this->postAxisSize_;
         if (this->scaleAlg_) {
-            ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
-                                                                       mxScaleAddr, yAddr);
+            ComputeCeilAlg<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                        mxScaleAddr, yAddr);
         } else {
             ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr, mxScaleAddr,
                                                                     yAddr);
@@ -376,7 +376,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
 
 template <typename T, typename U, const bool isTail>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::ComputeCuBLAS(
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::ComputeCeilAlg(
     int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(T); // 寄存器单次处理能处理的长度
