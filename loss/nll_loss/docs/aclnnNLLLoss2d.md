@@ -384,7 +384,7 @@ int main() {
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建other aclTensor
+  // 创建target aclTensor
   ret = CreateAclTensor(targetHostData, targetShape, &targetDeviceAddr, aclDataType::ACL_INT32, &target);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建weight aclTensor
