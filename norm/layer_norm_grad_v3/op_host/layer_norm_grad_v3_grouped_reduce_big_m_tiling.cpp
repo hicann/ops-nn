@@ -35,6 +35,20 @@ bool LayerNormGradV3GroupedReduceBigMTiling::IsCapable()
     if (commonParams.rowSize > ROW_THRESHOLD_MAX && commonParams.colSize < COL_THRESHOLD_MIN) {
         return true;
     }
+    // 在coreNum较多场景下，计算dgamma/dbeta时，bigM模板可以分更多的核，有更好的性能
+    constexpr static int64_t MIN_BLOCK_NUM = 56;
+    constexpr static int64_t ROW_THRESHOLD_MAX_ONE = 1792; // 28 * 64 tile块按64切分，至少使用28个核时才考虑
+    constexpr static int64_t COL_THRESHOLD_MIN_ONE = 512;  // N轴太大会拖累性能收益
+    constexpr static int64_t ROW_THRESHOLD_MAX_TWO = 8192; // 64 * 128 开满64核
+    constexpr static int64_t COL_THRESHOLD_MIN_TWO = 1024; // N轴太大会拖累性能收益
+    if ((commonParams.pdgammaIsRequire || commonParams.pdbetaIsRequire) && commonParams.coreNum >= MIN_BLOCK_NUM) {
+        if (commonParams.rowSize > ROW_THRESHOLD_MAX_ONE && commonParams.colSize < COL_THRESHOLD_MIN_ONE) {
+            return true;
+        }
+        if (commonParams.rowSize > ROW_THRESHOLD_MAX_TWO && commonParams.colSize < COL_THRESHOLD_MIN_TWO) {
+            return true;
+        }
+    }
     return false;
 }
 

@@ -30,8 +30,8 @@ constexpr static int64_t MAX_CORE_NUM = 64;
 
 bool LayerNormGradGroupedReduceBigMTiling::IsCapable()
 {
-    constexpr static int64_t ROW_THRESHOLD_MAX = 4096;
-    constexpr static int64_t COL_THRESHOLD_MIN = 528;
+    constexpr static int64_t ROW_THRESHOLD_MAX = 2048; // 32 * 64 分32核
+    constexpr static int64_t COL_THRESHOLD_MIN = 1024;
     if (commonParams.rowSize > ROW_THRESHOLD_MAX && commonParams.colSize < COL_THRESHOLD_MIN) {
         return true;
     }
