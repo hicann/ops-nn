@@ -10,7 +10,7 @@
 #ifndef INCLUDE_MEM_H
 #define INCLUDE_MEM_H
 
-#include "hardware.h"
+#include "matmul_v2_compress_dequant_hardware.h"
 #include "kernel_event.h"
 #include "kernel_tensor.h"
 

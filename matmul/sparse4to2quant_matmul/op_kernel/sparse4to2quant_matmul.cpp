@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "sparse4to2quant_matmul.h"
+#include "sparse4to2quant_matmul_kernel.h"
 #include "sparse4to2quant_matmul_tiling_data.h"
 #include "kernel_operator.h"
 

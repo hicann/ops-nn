@@ -11,12 +11,12 @@
 #ifndef PP_MATMUL_I8_NZ_COMPRESS_H
 #define PP_MATMUL_I8_NZ_COMPRESS_H
 
-#include "kernels/utils/kernel/common.h"
-#include "kernels/utils/kernel/mem.h"
-#include "kernels/utils/kernel/iterator.h"
-#include "kernels/utils/kernel/mma.h"
-#include "kernels/utils/kernel/utils.h"
-#include "kernels/utils/kernel/simd.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_common.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_mem.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_iterator.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_mma.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_utils.h"
+#include "kernels/utils/kernel/matmul_v2_compress_dequant_simd.h"
 
 constexpr uint32_t BLOCK_SIZE_32 = 32;
 constexpr uint32_t CUBE_BLOCK_SIZE_INT8 = 512;

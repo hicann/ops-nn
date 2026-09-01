@@ -10,11 +10,11 @@
 #ifndef INCLUDE_ITERTOR_H
 #define INCLUDE_ITERTOR_H
 
-#include "common_func.h"
-#include "hardware.h"
+#include "matmul_v2_compress_dequant_common_func.h"
+#include "matmul_v2_compress_dequant_hardware.h"
 #include "kernel_operator.h"
-#include "layout.h"
-#include "mem.h"
+#include "matmul_v2_compress_dequant_layout.h"
+#include "matmul_v2_compress_dequant_mem.h"
 
 /////////////////////////////////////////////////////
 // gm_to_l1

@@ -10,7 +10,7 @@
 #ifndef INCLUDE_SIMD_H
 #define INCLUDE_SIMD_H
 
-#include "hardware.h"
+#include "matmul_v2_compress_dequant_hardware.h"
 #include "kernel_operator.h"
 
 /////////////////////////////////////////////////////

@@ -12,8 +12,8 @@
  * \file sparse4to2quant_matmul.h
  * \brief
  */
-#ifndef SPARSE4TO2_QUANT_MATMUL_H
-#define SPARSE4TO2_QUANT_MATMUL_H
+#ifndef SPARSE4TO2_QUANT_MATMUL_KERNEL_H
+#define SPARSE4TO2_QUANT_MATMUL_KERNEL_H
 
 #include "sparse4to2quant_matmul_block.h"
 #include "sparse4to2quant_matmul_update.h"
@@ -390,4 +390,4 @@ private:
 };
 } // namespace AscendC
 
-#endif // SPARSE4TO2_QUANT_MATMUL_H
+#endif // SPARSE4TO2_QUANT_MATMUL_KERNEL_H

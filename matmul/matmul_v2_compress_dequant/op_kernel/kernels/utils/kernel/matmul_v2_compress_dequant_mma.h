@@ -10,7 +10,7 @@
 #ifndef INCLUDE_MMA_H
 #define INCLUDE_MMA_H
 
-#include "hardware.h"
+#include "matmul_v2_compress_dequant_hardware.h"
 #include "kernel_tensor.h"
 
 template <ArchType ArchTag, typename ElementA, typename ElementB, typename AccDTypeC, bool IsTransposeA>
