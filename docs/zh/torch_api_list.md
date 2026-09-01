@@ -36,7 +36,7 @@
 |[grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)|根据`group_index`描述的行分组，对二维输入`x`同时沿最后一维和倒数第二维进行动态MX量化，输出两个方向的FP8量化结果及对应的FLOAT8_E8M0缩放因子。|-|默认确定性实现|
 |[quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)| 融合量化的矩阵乘、激活以及动态量化计算，weight仅支持NZ格式。 |-|默认支持确定性计算|
 |[flat_quant](../../matmul/flat_quant/docs/torchapi_flat_quant.md)| 为矩阵x依次进行两次克罗内克积小矩阵乘法，然后针对矩阵乘的结果进行量化处理。 |默认支持确定性计算|默认支持确定性计算|
-|[matmul_emu_split_weight](../../matmul/matmul_emu_split_weight/docs/torchapi_matmul_emu_split_weight.md)| 使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。离线将FP32权重拆分为高位BF16与低位残差BF16，推理阶段执行两次BF16 GEMM并做线性组合，激活值全程保持BF16，两路矩阵乘均运行在Cube上。 |-|默认支持确定性计算|
+|[matmul_emu_split_weight](../../matmul/matmul_emu_split_weight/docs/torchapi_matmul_emu_split_weight.md)| 使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。离线将FP32权重拆分为高位BF16与低位残差BF16，推理阶段执行两次BF16 GEMM并做线性组合，激活值全程保持BF16，两路矩阵乘均运行在Cube上。 |默认支持确定性计算|默认支持确定性计算|
 |[cross_entropy_sum_exp_and_index_logit](../../loss/cross_entropy_sum_exp_and_index_logit/docs/torchapi_cross_entropy_sum_exp_and_index_logit.md)| 面向vocab并行（Tensor Parallel）场景的CrossEntropy本地计算融合算子。|-| 默认确定性实现 |
 |[mx_to_block_mx_quant](../../quant/mx_to_block_mx_quant/docs/torchapi_mx_to_block_mx_quant.md)| 将调用 npu_dynamic_mx_quant 量化得到的 FLOAT4 的 Tensor 结合 FLOAT8_E8M0 缩放系数，转换为 FLOAT8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。|-| 默认确定性实现 |
 |[dequant_situ_quant](../../quant/dequant_situ_quant/docs/torchapi_dequant_situ_quant.md)|在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。|默认支持确定性计算|-|

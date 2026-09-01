@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "arch22/matmul_emu_split_weight_tiling.h"
 #include "arch35/matmul_emu_split_weight_tiling.h"
 #include "arch35/matmul_emu_split_weight_compile_info.h"
 
@@ -15,6 +16,7 @@
 #include "error_util.h"
 #include "op_host/tiling_templates_registry.h"
 
+using optiling::matmul_emu_split_weight::MatmulEmuSplitWeightBaseTiling;
 using optiling::matmul_emu_split_weight::MatmulEmuSplitWeightTiling;
 
 namespace {
@@ -34,12 +36,11 @@ static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* conte
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
-    OP_TILING_CHECK(socVersion != platform_ascendc::SocVersion::ASCEND950,
-                    CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight",
-                                          "MatmulEmuSplitWeight only supports Ascend950, current socVersion is %d",
-                                          static_cast<int32_t>(socVersion)),
-                    return ge::GRAPH_FAILED);
-    return MatmulEmuSplitWeightTiling(context).DoTiling();
+    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
+        return MatmulEmuSplitWeightTiling(context).DoTiling();
+    }
+
+    return MatmulEmuSplitWeightBaseTiling(context).DoTiling();
 }
 
 static ge::graphStatus TilingPrepareForMatmulEmuSplitWeight(gert::TilingParseContext* context)

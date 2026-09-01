@@ -143,9 +143,13 @@ TEST_P(TilingMatmulEmuSplitWeight, matmul_emu_split_weight_tiling)
         EXPECT_EQ(tilingDataPtr->m, static_cast<uint32_t>(param.x_shape.GetOriginShape().GetDim(0)));
         EXPECT_EQ(tilingDataPtr->n, static_cast<uint32_t>(param.wHigh_shape.GetOriginShape().GetDim(1)));
         EXPECT_EQ(tilingDataPtr->k, static_cast<uint32_t>(param.x_shape.GetOriginShape().GetDim(1)));
-        EXPECT_GT(tilingDataPtr->baseM, 0U);
-        EXPECT_GT(tilingDataPtr->baseN, 0U);
-        EXPECT_GT(tilingDataPtr->baseK, 0U);
+        const bool isA2A3 = (param.compile_info.find("Ascend910B") != string::npos) ||
+                            (param.compile_info.find("ASCEND910_93") != string::npos);
+        if (!isA2A3) {
+            EXPECT_GT(tilingDataPtr->baseM, 0U);
+            EXPECT_GT(tilingDataPtr->baseN, 0U);
+            EXPECT_GT(tilingDataPtr->baseK, 0U);
+        }
         EXPECT_GT(tilingDataPtr->usedCoreNum, 0U);
         EXPECT_EQ(tiling_context->GetBlockDim(), tilingDataPtr->usedCoreNum);
     }
@@ -172,6 +176,24 @@ static const string COMPILE_INFO_950_BAD_RATIO = R"({
     "CORE_NUM": 32, "socVersion": "Ascend950",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 48}
+})";
+
+static const string COMPILE_INFO_910B = R"({
+    "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+    "CORE_NUM": 24, "socVersion": "Ascend910B"}
+})";
+
+static const string COMPILE_INFO_910_93 = R"({
+    "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+    "CORE_NUM": 24, "socVersion": "ASCEND910_93"}
 })";
 
 static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
@@ -315,6 +337,48 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      false,
      0,
      ge::GRAPH_PARAM_INVALID},
+    // 10: Atlas A2 / 910B success
+    {"a2_bf16_fp32_128_256_128",
+     COMPILE_INFO_910B,
+     {{128, 256}, {128, 256}},
+     {{256, 128}, {256, 128}},
+     {{256, 128}, {256, 128}},
+     {{128, 128}, {128, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS},
+    // 11: Atlas A3 / 910_93 success
+    {"a3_bf16_fp32_128_256_128",
+     COMPILE_INFO_910_93,
+     {{128, 256}, {128, 256}},
+     {{256, 128}, {256, 128}},
+     {{256, 128}, {256, 128}},
+     {{128, 128}, {128, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS},
+    // 12: Atlas A2 invalid scale
+    {"a2_invalid_scale_fail",
+     COMPILE_INFO_910B,
+     {{128, 256}, {128, 256}},
+     {{256, 128}, {256, 128}},
+     {{256, 128}, {256, 128}},
+     {{128, 128}, {128, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.01f,
+     false,
+     false,
+     0,
+     ge::GRAPH_FAILED},
 };
 
 INSTANTIATE_TEST_SUITE_P(MatmulEmuSplitWeightTilingCases, TilingMatmulEmuSplitWeight, testing::ValuesIn(tiling_cases));

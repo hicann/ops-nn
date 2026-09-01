@@ -13,6 +13,8 @@ add_all_modules_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch22/matmul_emu_split_weight.cpp
+    COMPUTE_UNITS ascend910b ascend910_93
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )
@@ -20,5 +22,6 @@ add_kernel_sources(
 add_kernel_sources(
     KERNEL_SRC arch35/matmul_emu_split_weight.cpp
     COMPUTE_UNITS ascend950
+    SIMPLIFIED_KEY None
     AUTO_SYNC false
 )
