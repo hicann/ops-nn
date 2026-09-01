@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file scatter_elements.h
+ * \file scatter_elements_v2.h
  * \brief scatter_elements
  */
 #ifndef ASCENDC_SCATTER_ELEMENTS_V2_H_

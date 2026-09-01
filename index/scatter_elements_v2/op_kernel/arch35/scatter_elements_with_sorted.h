@@ -29,7 +29,7 @@
 
 namespace ScatterElements {
 
-// REDU_NONE/REDU_ADD/REDU_MUL 已在 scatter_elements.h 定义
+// REDU_NONE/REDU_ADD/REDU_MUL 已在 scatter_elements_v2.h 定义
 constexpr uint32_t REDU_LAST = 3;
 
 constexpr uint32_t WITH_SORTED_THREAD_NUM = 1024;

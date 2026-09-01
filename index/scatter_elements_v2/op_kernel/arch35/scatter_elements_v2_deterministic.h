@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file scatter_elements_deterministic.h
+ * \file scatter_elements_v2_deterministic.h
  * \brief scatter_elements
  */
 #ifndef ASCENDC_SCATTER_ELEMENTS_V2_DETERMINISTIC_H_
@@ -19,7 +19,7 @@
 
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
-#include "scatter_elements.h"
+#include "scatter_elements_v2.h"
 
 namespace ScatterElements {
 using namespace AscendC;
