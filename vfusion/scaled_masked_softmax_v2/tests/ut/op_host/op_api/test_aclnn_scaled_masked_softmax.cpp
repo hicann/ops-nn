@@ -82,3 +82,62 @@ TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_broadc
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_null_x)
+{
+    auto maskTensor = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
+    auto outTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    double scale = 1.0;
+    bool fixTriu = false;
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT((aclTensor*)nullptr, maskTensor, scale, fixTriu),
+                        OUTPUT(outTensor));
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_null_mask)
+{
+    auto xTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto outTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    double scale = 1.0;
+    bool fixTriu = false;
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, (aclTensor*)nullptr, scale, fixTriu),
+                        OUTPUT(outTensor));
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_null_y)
+{
+    auto xTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto maskTensor = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
+    double scale = 1.0;
+    bool fixTriu = false;
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, maskTensor, scale, fixTriu),
+                        OUTPUT((aclTensor*)nullptr));
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_null_workspaceSize)
+{
+    auto xTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto maskTensor = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
+    auto outTensor = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    double scale = 1.0;
+    bool fixTriu = false;
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, maskTensor, scale, fixTriu), OUTPUT(outTensor));
+
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(nullptr, executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}

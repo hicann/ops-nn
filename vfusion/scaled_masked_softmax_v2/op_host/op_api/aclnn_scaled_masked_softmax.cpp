@@ -113,7 +113,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* mask)
 
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* mask, aclTensor* y)
 {
-    CHECK_RET(CheckNotNull(x, mask, y), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CheckNotNull(x, mask, y), ACLNN_ERR_PARAM_NULLPTR);
 
     CHECK_RET(CheckDtypeValid(x, mask, y), ACLNN_ERR_PARAM_INVALID);
 
@@ -130,6 +130,8 @@ aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(const aclTensor* x, const a
 {
     auto ret_param = CheckParams(x, mask, y);
     CHECK_RET(ret_param == ACLNN_SUCCESS, ret_param);
+    CHECK_RET(workspaceSize != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(executor != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     if (fixedTriuMask) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the param fixedTriuMask only suppport false.");
         return ACLNN_ERR_PARAM_INVALID;
