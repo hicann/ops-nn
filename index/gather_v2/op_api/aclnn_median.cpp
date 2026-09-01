@@ -23,7 +23,8 @@
 #include "level0/equal.h"
 #include "level0/not_equal.h"
 #include "level0/fill.h"
-#include "level0/kth_value.h"
+#include "level0/median.h"
+#include "level0/nan_median.h"
 #include "op_api/gather_v2.h"
 #include "level0/reduce_sum_op.h"
 #include "aclnn_kernels/reshape.h"
@@ -54,8 +55,8 @@ static const int64_t MIN_INT64 = -9223372036854775807LL - 1;
 static const int32_t MAX_CONVERT_NUM = 16777216;
 static constexpr size_t DIM_ZERO = 0;
 static const int64_t SMALLSORTLIMIT = 16;
-static constexpr int64_t KTH_VALUE_DIRECT_AXIS_THRESHOLD = 2048;
-static constexpr int64_t KTH_VALUE_MIN_AXIS_LEN = 2;
+static constexpr int64_t MEDIAN_DIRECT_AXIS_THRESHOLD = 2048;
+static constexpr int64_t MEDIAN_MIN_AXIS_LEN = 2;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,  op::DataType::DT_UINT8,
@@ -435,7 +436,7 @@ static std::tuple<const aclTensor*, const aclTensor*> GetMedianSortResult(const 
     return std::tie(lastValueResult, lastIndicesResult);
 }
 
-static bool CanMedianDimUseKthValueDirectly(const aclTensor* self, int64_t realDim)
+static bool CanMedianNonLastAxisDirectly(const aclTensor* self, int64_t realDim)
 {
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
@@ -447,7 +448,7 @@ static bool CanMedianDimUseKthValueDirectly(const aclTensor* self, int64_t realD
 
     auto selfShape = self->GetViewShape();
     int64_t axisLen = selfShape[realDim];
-    if (axisLen < KTH_VALUE_MIN_AXIS_LEN || axisLen > KTH_VALUE_DIRECT_AXIS_THRESHOLD) {
+    if (axisLen < MEDIAN_MIN_AXIS_LEN || axisLen > MEDIAN_DIRECT_AXIS_THRESHOLD) {
         return false;
     }
 
@@ -476,43 +477,40 @@ static bool CanMedianDimUseKthValueDirectly(const aclTensor* self, int64_t realD
         innerSize *= dimSize;
     }
 
-    int64_t kSmallRowLargeOuterThreshold = 1024;
     int64_t dtypeSize = static_cast<int64_t>(op::TypeSize(self->GetDataType()));
     int64_t blockBytes = GetCurrentPlatformInfo().GetBlockSize();
     int64_t blockElems = Ops::Base::CeilDiv(blockBytes, dtypeSize);
-    // If each GM row copy is smaller than one block, no-transpose pays heavy per-row padding/gather overhead.
-    // With many outer slices, that fixed cost can dominate the transpose traffic saved by the new path.
-    if (innerSize < blockElems && outerSize >= kSmallRowLargeOuterThreshold) {
+    int64_t smallRowLargeOuterThreshold = 1024;
+    // Small inner rows incur padding/gather overhead on the non-transpose path. With many outer slices,
+    // that fixed cost outweighs the transpose traffic saved by calling Median/NanMedian directly.
+    if (innerSize < blockElems && outerSize >= smallRowLargeOuterThreshold) {
         return false;
     }
     return true;
 }
 
-static std::tuple<const aclTensor*, const aclTensor*> GetMedianKthValueResult(const aclTensor* self, int64_t realDim,
-                                                                              aclOpExecutor* executor)
+static std::tuple<const aclTensor*, const aclTensor*> GetMedianResult(const aclTensor* self, int64_t realDim,
+                                                                      bool ignoreNan, aclOpExecutor* executor)
 {
     int64_t dimSize = GetTensorDim(self);
-    int64_t medianK = (self->GetViewShape().GetDim(static_cast<size_t>(realDim)) - 1) / 2 + 1;
-    // Use L0 KthValue directly for last-axis cases and for supported small non-last axes.
-    if (realDim == dimSize - 1 || CanMedianDimUseKthValueDirectly(self, realDim)) {
-        auto kthValueResult = l0op::KthValue(self, medianK, realDim, executor);
-        return std::make_tuple(std::get<0>(kthValueResult), std::get<1>(kthValueResult));
+    if (realDim == dimSize - 1 || CanMedianNonLastAxisDirectly(self, realDim)) {
+        auto result = ignoreNan ? l0op::NanMedian(self, realDim, executor) : l0op::Median(self, realDim, executor);
+        return std::make_tuple(std::get<0>(result), std::get<1>(result));
     }
 
-    // Otherwise keep the old layout strategy: move the target axis to the end, compute, then restore.
     auto valuePerm = GetPermResult(realDim, dimSize, executor);
     CHECK_RET(valuePerm != nullptr, std::tuple(nullptr, nullptr));
     auto transposeSelf = l0op::Transpose(self, valuePerm, executor);
     CHECK_RET(transposeSelf != nullptr, std::tuple(nullptr, nullptr));
 
-    auto kthValueResult = l0op::KthValue(transposeSelf, medianK, -1, executor);
-    auto valueNoTrans = std::get<0>(kthValueResult);
-    auto indicesNoTrans = std::get<1>(kthValueResult);
-    CHECK_RET(valueNoTrans != nullptr && indicesNoTrans != nullptr, std::tuple(nullptr, nullptr));
+    auto result = ignoreNan ? l0op::NanMedian(transposeSelf, -1, executor) : l0op::Median(transposeSelf, -1, executor);
+    auto valuesNoTrans = std::get<0>(result);
+    auto indicesNoTrans = std::get<1>(result);
+    CHECK_RET(valuesNoTrans != nullptr && indicesNoTrans != nullptr, std::tuple(nullptr, nullptr));
 
-    auto valueResult = l0op::Transpose(valueNoTrans, valuePerm, executor);
-    auto indicesResult = l0op::Transpose(indicesNoTrans, valuePerm, executor);
-    return std::make_tuple(valueResult, indicesResult);
+    auto values = l0op::Transpose(valuesNoTrans, valuePerm, executor);
+    auto indices = l0op::Transpose(indicesNoTrans, valuePerm, executor);
+    return std::make_tuple(values, indices);
 }
 
 static aclnnStatus DealMedianEmptyTensor(const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
@@ -595,32 +593,39 @@ aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor* self, aclTensor* values
         CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    auto sortValues = selfReshape;
-    // 调用l0算子Sort进行计算
-    if (selfReshape->GetViewShape().GetDim(DIM_ZERO) > 1) {
-        bool descending = false;
-        bool stable = true;
-        auto sortResult = l0op::Sort(selfReshape, -1, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
-        CHECK_RET(CheckTupleNotNullptr(sortResult), ACLNN_ERR_INNER_NULLPTR);
-        sortValues = std::get<0>(sortResult);
-    }
-    CHECK_RET(sortValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* result = nullptr;
+    if (Ops::NN::AclnnUtil::IsRegbase() && reinterpret_cast<void*>(l0op::Median) != nullptr) {
+        auto medianResult = l0op::Median(selfReshape, -1, uniqueExecutor.get());
+        result = std::get<0>(medianResult);
+    } else {
+        auto sortValues = selfReshape;
+        // 调用l0算子Sort进行计算
+        if (selfReshape->GetViewShape().GetDim(DIM_ZERO) > 1) {
+            bool descending = false;
+            bool stable = true;
+            auto sortResult = l0op::Sort(selfReshape, -1, descending, stable, op::DataType::DT_INT32,
+                                         uniqueExecutor.get());
+            CHECK_RET(CheckTupleNotNullptr(sortResult), ACLNN_ERR_INNER_NULLPTR);
+            sortValues = std::get<0>(sortResult);
+        }
+        CHECK_RET(sortValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto medianIndex = (sortValues->GetViewShape().GetDim(DIM_ZERO) - 1) / 2;
-    const aclTensor* medianIndexTensor = uniqueExecutor->ConvertToTensor(&medianIndex, 1, op::DataType::DT_INT64);
-    CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto selectResult = l0op::GatherV2(sortValues, 0, medianIndexTensor, uniqueExecutor.get());
-    CHECK_RET(selectResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto medianIndex = (sortValues->GetViewShape().GetDim(DIM_ZERO) - 1) / 2;
+        const aclTensor* medianIndexTensor = uniqueExecutor->ConvertToTensor(&medianIndex, 1, op::DataType::DT_INT64);
+        CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto selectResult = l0op::GatherV2(sortValues, 0, medianIndexTensor, uniqueExecutor.get());
+        CHECK_RET(selectResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto result = selectResult;
-    auto FLOAT_DTYPE_LIST = GetFloatList();
-    if (CheckType(self->GetDataType(), FLOAT_DTYPE_LIST)) {
-        auto nanMask = GetNanMask(sortValues, 0, uniqueExecutor.get());
-        CHECK_RET(nanMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // 生成nan的Tensor
-        auto nanTensor = CreateNanTensor(selectResult, uniqueExecutor.get());
-        CHECK_RET(nanTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        result = l0op::SelectV2(nanMask, nanTensor, selectResult, uniqueExecutor.get());
+        result = selectResult;
+        auto FLOAT_DTYPE_LIST = GetFloatList();
+        if (CheckType(self->GetDataType(), FLOAT_DTYPE_LIST)) {
+            auto nanMask = GetNanMask(sortValues, 0, uniqueExecutor.get());
+            CHECK_RET(nanMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            // 生成nan的Tensor
+            auto nanTensor = CreateNanTensor(selectResult, uniqueExecutor.get());
+            CHECK_RET(nanTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            result = l0op::SelectV2(nanMask, nanTensor, selectResult, uniqueExecutor.get());
+        }
     }
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // output shape check
@@ -680,8 +685,8 @@ aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor* self, int64_t dim, b
     int64_t sortDimSize = self->GetViewShape().GetDim(static_cast<size_t>(realDim));
     const aclTensor* lastValueResult = nullptr;
     const aclTensor* lastIndicesResult = nullptr;
-    if (Ops::NN::AclnnUtil::IsRegbase() && reinterpret_cast<void*>(l0op::KthValue) != nullptr) {
-        auto result = GetMedianKthValueResult(selfReshape, realDim, uniqueExecutor.get());
+    if (Ops::NN::AclnnUtil::IsRegbase() && reinterpret_cast<void*>(l0op::Median) != nullptr) {
+        auto result = GetMedianResult(selfReshape, realDim, false, uniqueExecutor.get());
         lastValueResult = std::get<0>(result);
         CHECK_RET(lastValueResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         lastIndicesResult = std::get<1>(result);
@@ -892,19 +897,25 @@ aclnnStatus aclnnNanMedianGetWorkspaceSize(const aclTensor* self, aclTensor* out
         CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    // 调用l0算子Sort进行计算
-    bool descending = false;
-    bool stable = true;
-    auto sortResult = l0op::Sort(selfReshape, -1, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
-    CHECK_RET(CheckTupleNotNullptr(sortResult), ACLNN_ERR_INNER_NULLPTR);
-    auto sortValues = std::get<0>(sortResult);
+    const aclTensor* selectResult = nullptr;
+    if (Ops::NN::AclnnUtil::IsRegbase() && reinterpret_cast<void*>(l0op::NanMedian) != nullptr) {
+        auto result = l0op::NanMedian(selfReshape, -1, uniqueExecutor.get());
+        selectResult = std::get<0>(result);
+    } else {
+        // 调用l0算子Sort进行计算
+        bool descending = false;
+        bool stable = true;
+        auto sortResult = l0op::Sort(selfReshape, -1, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
+        CHECK_RET(CheckTupleNotNullptr(sortResult), ACLNN_ERR_INNER_NULLPTR);
+        auto sortValues = std::get<0>(sortResult);
 
-    // 获取中位数的索引
-    auto medianIndexTensor = GetNanMedianDimIndexTensor(selfReshape, 0, uniqueExecutor.get());
-    CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 获取中位数的索引
+        auto medianIndexTensor = GetNanMedianDimIndexTensor(selfReshape, 0, uniqueExecutor.get());
+        CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 按照索引取出中位数
-    auto selectResult = l0op::GatherV2(sortValues, 0, medianIndexTensor, uniqueExecutor.get(), 0, true);
+        // 按照索引取出中位数
+        selectResult = l0op::GatherV2(sortValues, 0, medianIndexTensor, uniqueExecutor.get(), 0, true);
+    }
     CHECK_RET(selectResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // output shape check
     CHECK_RET(CheckReduceOutShape(selectResult, out), ACLNN_ERR_PARAM_INVALID);
@@ -987,20 +998,28 @@ aclnnStatus aclnnNanMedianDimGetWorkspaceSize(const aclTensor* self, int64_t dim
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 获取中位数的索引
-    auto medianIndexTensor = GetNanMedianDimIndexTensor(selfContiguous, dim, uniqueExecutor.get());
-    CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* valueResult = nullptr;
+    const aclTensor* indicesResult = nullptr;
+    if (Ops::NN::AclnnUtil::IsRegbase() && reinterpret_cast<void*>(l0op::NanMedian) != nullptr) {
+        auto result = GetMedianResult(selfContiguous, dim, true, uniqueExecutor.get());
+        valueResult = std::get<0>(result);
+        indicesResult = std::get<1>(result);
+    } else {
+        // 获取中位数的索引
+        auto medianIndexTensor = GetNanMedianDimIndexTensor(selfContiguous, dim, uniqueExecutor.get());
+        CHECK_RET(medianIndexTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 调用Sort算子
-    auto sortResult = SortProcess(selfContiguous, dim, uniqueExecutor.get());
-    auto sortValues = std::get<0>(sortResult);
-    CHECK_RET(sortValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto sortIndices = std::get<1>(sortResult);
-    CHECK_RET(sortIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 调用Sort算子
+        auto sortResult = SortProcess(selfContiguous, dim, uniqueExecutor.get());
+        auto sortValues = std::get<0>(sortResult);
+        CHECK_RET(sortValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto sortIndices = std::get<1>(sortResult);
+        CHECK_RET(sortIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto valueResult = l0op::GatherElements(sortValues, dim, medianIndexTensor, uniqueExecutor.get());
+        valueResult = l0op::GatherElements(sortValues, dim, medianIndexTensor, uniqueExecutor.get());
+        indicesResult = l0op::GatherElements(sortIndices, dim, medianIndexTensor, uniqueExecutor.get());
+    }
     CHECK_RET(valueResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto indicesResult = l0op::GatherElements(sortIndices, dim, medianIndexTensor, uniqueExecutor.get());
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // Reshape
