@@ -342,11 +342,11 @@ protected:
     {
         ForeachNonFiniteCheckAndUnscaleTiling tilingObject(context_);
         if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context_->GetNodeName(), "Init tiling object return failed.");
+            OP_LOGE(context_->GetNodeName(), "Init tiling object returned failed.");
             return ge::GRAPH_FAILED;
         }
         if (tilingObject.RunBigKernelTiling() != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context_->GetNodeName(), "Run big kernel tiling return failed.");
+            OP_LOGE(context_->GetNodeName(), "Run big kernel tiling returned failed.");
             return ge::GRAPH_FAILED;
         }
 
