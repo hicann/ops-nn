@@ -4739,6 +4739,16 @@
     <td>对输入特征图执行位置敏感RoI平均池化，适用于R-FCN等目标检测网络。</td>
   </tr>
   <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/roi_pooling/README.md">roi_pooling</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入特征图按ROI区域进行最大池化，输出固定尺寸的池化结果，用于目标检测等任务。</td>
+  </tr>
+  <tr>
     <td>quant</td>
     <td><a href="../../quant/act_ulq_clamp_max_grad/README.md">act_ulq_clamp_max_grad</a></td>
     <td>✓</td>

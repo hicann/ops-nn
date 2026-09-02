@@ -1,0 +1,151 @@
+{
+  "op_type": "ROIPooling",
+  "op_list": [
+    {
+      "bin_filename": "ROIPooling_26b375e9e74290c680050922753a7c15",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "rois",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "roi_actual_num",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "pooled_h",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pooled_w",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "spatial_scale_h",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "spatial_scale_w",
+          "dtype": "float",
+          "value": 0.0
+        }
+      ]
+    },
+    {
+      "bin_filename": "ROIPooling_8c6aacae521127f659a1fcf5920e9de4",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "rois",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "roi_actual_num",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "pooled_h",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pooled_w",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "spatial_scale_h",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "spatial_scale_w",
+          "dtype": "float",
+          "value": 0.0
+        }
+      ]
+    }
+  ]
+}
