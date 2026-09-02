@@ -1941,39 +1941,6 @@ Reserved.
     .OP_END_FACTORY_REG(L2Normalize)
 
     /**
-    *@brief Performs the backpropagation of L2Normalize for training scenarios .
-
-    *@par Inputs:
-    * Three inputs, including:
-    *@li x: A ND Tensor(1D-8D) of type float16 or float32, specifying
-    * the eigenvalue of forward inputs.
-    *@li y: A ND Tensor(1D-8D) of type float16 or float32, specifying
-    * the normalization result of the forward output. the same shape with x.
-    *@li dy: A ND Tensor(1D-8D) of type float16 or float32, specifying
-    * the reverse input gradient. the same shape with x . \n
-
-    *@par Attributes:
-    *@li dim: A required attribute of type int, specifying the axis to be
-    * normalized.  Defaults to {}.
-    *@li eps: An optional attribute of type float, specifying the lower limit of
-    * normalization. Defaults to "1e-4" . \n
-
-    *@par Outputs:
-    *dx: A ND Tensor(1D-8D), Reverse gradient of eigenvalue "x". Has the same shape as "x" . \n
-
-    *@par Third-party framework compatibility
-    * Compatible with the L2 scenario of PyTorch operator NormalizeGrad.
-    */
-    REG_OP(L2NormalizeGrad)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(dx, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .ATTR(dim, ListInt, {})
-    .ATTR(eps, Float, 0.0001f)
-    .OP_END_FACTORY_REG(L2NormalizeGrad)
-
-    /**
     *@brief Performs the backpropagation of BatchNorm .
 
     *@par Inputs:
@@ -2278,28 +2245,6 @@ Reserved.
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT8, DT_INT16, DT_INT32, DT_INT64, DT_UINT8, DT_UINT16,
                            DT_UINT32, DT_UINT64, DT_BOOL}))
     .OP_END_FACTORY_REG(NextIteration)
-
-    /**
-    * @brief Applies set operation along last dimension of 2 Tensor inputs. \n
-
-    * @par Inputs:
-    * @li xyz1: A Tensor. Must be one of the following types: float16, bfloat16, float32. Point set with shape (B, 2, N)
-    * @li xyz2: A Tensor. Must have the same type and shape as x1. \n
-
-    * @par Outputs:
-    * @li dist1: A Tensor. Must be one of the following types: float16, bfloat16, float32. with shape (B, N)
-    * @li dist2: A Tensor. Must have the same type and shape as dist1.
-    * @li idx1: A Tensor of type int32. with shape (B, N)
-    * @li idx2: A Tensor. Must have the same type and shape as idx1.
-    */
-    REG_OP(ChamferDistance)
-    .INPUT(xyz1, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
-    .INPUT(xyz2, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
-    .OUTPUT(dist1, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
-    .OUTPUT(dist2, TensorType({DT_FLOAT, DT_BF16, DT_FLOAT16}))
-    .OUTPUT(idx1, TensorType({DT_INT32}))
-    .OUTPUT(idx2, TensorType({DT_INT32}))
-    .OP_END_FACTORY_REG(ChamferDistance)
 
     /**
     * @brief Computes LpNormReduce.
@@ -2756,45 +2701,6 @@ Reserved.
     .OP_END_FACTORY_REG(ApplyPowerSign)
 
     /**
-     *@brief Updates "var" according to the adagrad scheme.
-     *   accum += grad * grad
-     *   var -= lr * grad * (1 / sqrt(accum))
-     *
-     *@attention Constraints:
-     *@li The input and output tensors must have the same shape.
-     *
-     *@par Inputs:
-     *@li var: A mutable tensor. Should be from a Variable(). Support float16, bfloat16 and float32.
-     *@li accum: A mutable tensor. Has the same type as "var".
-     *     Should be from a Variable().
-     *@li lr: A scalar. Has the same type as "var".
-     *@li grad: A tensor for the gradient. Has the same type as "var".
-     *
-     *@par Attributes:
-     *@li update_slots: An optional bool. Defaults to "True". If "True", the accum tensor will be updated.
-     *@li use_locking: An optional bool. Defaults to "False".
-     *     If "True", updating of the "var", "ms", and "mom" tensors is protected
-     *     by a lock; otherwise the behavior is undefined, but may exhibit less
-     *     contention.
-     *
-     *@par Outputs:
-     * var: A mutable tensor. Has the same type as input "var".
-     *
-     *@par Third-party framework compatibility
-     *Compatible with the TensorFlow operator ApplyAdagrad.
-     *
-     */
-    REG_OP(ApplyAdagrad)
-    .INPUT(var, TensorType::NumberType())
-    .INPUT(accum, TensorType::NumberType())
-    .INPUT(lr, TensorType::NumberType())
-    .INPUT(grad, TensorType::NumberType())
-    .OUTPUT(var, TensorType::NumberType())
-    .ATTR(update_slots, Bool, true)
-    .ATTR(use_locking, Bool, false)
-    .OP_END_FACTORY_REG(ApplyAdagrad)
-
-    /**
      * @brief Updates "var" according to the adagradv2 scheme.
      *   accum += grad * grad
      *   var -= lr * grad * (1 / sqrt(accum) + epsilon)
@@ -2883,61 +2789,6 @@ Reserved.
     .OUTPUT(var, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdagradDA)
-
-    /**
-    * @brief Implements stochastic gradient descent (optionally with momentum).
-    * Nesterov momentum is based on the formula from
-    * On the importance of initialization and momentum in deep learning.
-
-    * @par Inputs:
-    * @li parameters: A mutable tensor of type float16, float32 or bfloat16.
-    * Support format: [NC1HWC0,NDC1HWC0,ND,FRACTAL_Z,FRACTAL_Z_3D].
-    * Specifies the iterable of parameters to optimize or dicts defining parameter
-    * groups.
-    * @li gradient: A tensor of type float16, float32 or bfloat16.
-    * Support format: [NC1HWC0,NDC1HWC0,ND,FRACTAL_Z,FRACTAL_Z_3D].
-    * Specifies the gradient of training step.
-    * @li learning_rate: A tensor of type float16, float32 or bfloat16.
-    * Support format: [ND].
-    * Specifies the learing_rate of training step.
-    * @li accum: A tensor of type float16, float32 or bfloat16.
-    * Support format: [NC1HWC0,NDC1HWC0,ND,FRACTAL_Z,FRACTAL_Z_3D].
-    * Specifies the velocity of training step.
-    * @li momentum: A tensor of type float16, float32 or bfloat16.
-    * Support format: [ND].
-    * Specifies the momentum factor.
-    * @li stat: A tensor of type float16, float32 or bfloat16.
-    * Support format: [NC1HWC0,NDC1HWC0,ND,FRACTAL_Z,FRACTAL_Z_3D].
-    * Specifies the status representing the first step or not . \n
-
-    * @par Attributes:
-    * @li dampening: An optional float, specifying the dampening for momentum.
-    * Defaults to "0.0".
-    * @li weight_decay: An optional float, specifying the L2 penalty. Defaults to
-    * "0.0".
-    * @li nesterov: An optional bool, specifying whether to enable Nesterov
-    * momentum. Defaults to "False" . \n
-
-    * @par Outputs:
-    * parameters: Tensor of the same type and format as input "parameters" . \n
-
-    * @see ApplyMomentum()
-
-    * @par Third-party framework compatibility
-    * @li Compatible with the PyTorch operator SGD.
-    */
-    REG_OP(SGD)
-    .INPUT(parameters, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .INPUT(gradient, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .INPUT(learning_rate, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .INPUT(accum, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .INPUT(momentum, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .INPUT(stat, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .OUTPUT(parameters, TensorType(DT_FLOAT, DT_FLOAT16, DT_BF16))
-    .ATTR(dampening, Float, 0.0)
-    .ATTR(weight_decay, Float, 0.0)
-    .ATTR(nesterov, Bool, false)
-    .OP_END_FACTORY_REG(SGD)
 
     /**
      *@brief Updates '*var' according to the momentum scheme.
@@ -3108,38 +2959,6 @@ Reserved.
     .OP_END_FACTORY_REG(GatherShapes)
 
     /**
-    *@brief Returns a tensor containing the indices of all non-zero elements of
-    *input.
-
-    *@par Inputs:
-    *x: A Tensor. Must be one of the following types: float16, float32, int32,
-    *int64, double, int8, uint8, int16, uint16, uint32, uint64, bool.
-    *Supported format "ND". \n
-
-    *@par Attributes:
-    *@li transpose: The output tensor will be transposed if true. Defaults to False.
-    *@li dtype: Must be one of the following types: int32. Defaults to `int32`. \n
-
-    *@par Outputs:
-    *@li value: A Tensor. Has the same type as "x" .
-    *@li index: A Tensor. The type is INT32, means index for input.
-    *@li count: A Scalar. The type is INT32, means count for non_zero ele in input. \n
-
-    *@par Third-party framework compatibility
-    *Compatible with the PyTorch operator NonZeroWithValue.
-    */
-    REG_OP(NonZeroWithValue)
-    .INPUT(x, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32,
-                          DT_INT64, DT_UINT64, DT_BOOL}))
-    .OUTPUT(value, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32,
-                               DT_UINT32, DT_INT64, DT_UINT64, DT_BOOL}))
-    .OUTPUT(index, TensorType({DT_INT32}))
-    .OUTPUT(count, TensorType({DT_INT32}))
-    .ATTR(transpose, Bool, false)
-    .ATTR(dtype, Type, DT_INT32)
-    .OP_END_FACTORY_REG(NonZeroWithValue)
-
-    /**
     *@brief Computes the inverse of one or more square invertible matrices or
     their adjoints (conjugate transposes) . \n
 
@@ -3167,34 +2986,6 @@ Reserved.
     .OUTPUT(y, TensorType({DT_FLOAT, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128}))
     .ATTR(adjoint, Bool, false)
     .OP_END_FACTORY_REG(MatrixInverse)
-
-    /**
-    * @brief Performs reduced batch normalization .
-
-    * @par Inputs:
-    * x: A 5D tensor of type float16 or float32 or bfloat16, with format NDHWC or NCDHW.
-    * Represents the input tensor in batch normalization training.
-    * When the C axis is 0, other dimensions support empty tensors; when the C axis is not 0, other dimensions do not
-    support empty tensors.
-
-    * @par Outputs:
-    * @li sum: A 1D tensor of type float32 for SUM reduced "x". It represents the sum of the input tensor "x" on the C
-    axis.
-    * The shape of sum is consistent with the C axis of "x". Has the same format as "x".
-    * @li square_sum: A 1D tensor of type float32 for SUMSQ reduced "x". It represents the sum of squares of the input
-    tensor "x" on the C axis.
-    * The shape of sum is consistent with the C axis of "x". Has the same format as "x". \n
-
-    * @attention Constraints:
-    * This operator is a BatchNorm fusion operator for updating the moving
-    * averages for training.
-    * This operator is used in conjunction with BN3DTrainingReduce.
-    */
-    REG_OP(BN3DTrainingReduce)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(sum, TensorType({DT_FLOAT}))
-    .OUTPUT(square_sum, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(BN3DTrainingReduce)
 
     /**
     * @brief Performs reduced batch normalization .
@@ -3296,62 +3087,6 @@ Reserved.
     .OP_END_FACTORY_REG(BN3DTrainingUpdateGrad)
 
     /**
-    *@brief Performs instance normalization for inference .
-
-    *@par Inputs:
-    * Five inputs, including:
-    *@li x: A Tensor of type float16 or float32.
-    *@li gamma: A optional Tensor of type float32, for the scaling gamma, with shape [N, C1, 1, 1, C0].
-    *@li beta: A optional Tensor of type float32, for the scaling beta, with the same shape of gamma.
-    *@li mean: A optional ensor of type float32, for the mean, with the same shape of gamma.
-    *@li variance: A optional Tensor of type float32, for the variance, with the same shape of gamma. \n
-
-    *@par Attributes:
-    *epsilon: An optional float32, specifying the small value added to variance to avoid dividing by zero.
-    Defaults to "0.00001" . \n
-
-    *@par Outputs:
-    *@li y: A Tensor of type float16 or float32 for the normalized "x".
-    *@li batch_mean: A Tensor of type float32 for the result mean.
-    *@li batch_variance: A Tensor of type float32 for the result variance . \n
-
-    *@attention Constraints:
-    *For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 0.001 due to the square root
-    instruction.
-    */
-    REG_OP(INInferV2)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OPTIONAL_INPUT(gamma, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(mean, TensorType({DT_FLOAT}))
-    .OPTIONAL_INPUT(variance, TensorType({DT_FLOAT}))
-    .ATTR(epsilon, Float, 0.00001)
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(batch_mean, TensorType({DT_FLOAT}))
-    .OUTPUT(batch_variance, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(INInferV2)
-
-    /**
-    *@brief Performs reduce instance normalization.
-
-    *@par Inputs:
-    *x: A 4D tensor of type float16 or float32, format [NCHW, NHWC]\n
-
-    *@par Outputs:
-    *@li sum: A 4D tensor of type float32 for SUM reduced "x", format [NCHW, NHWC], and HW=1.
-    *@li square_sum: A 4D tensor of type float32 for SUMSQ reduced "x", format [NCHW, NHWC], and HW=1. \n
-
-    *@attention Constraints:
-    * This operator is a InstanceNorm fusion operator for updating the moving averages for training.
-    * This operator is used in conjunction with INTrainingUpdateV2.
-    */
-    REG_OP(INTrainingReduceV2)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(sum, TensorType({DT_FLOAT}))
-    .OUTPUT(square_sum, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(INTrainingReduceV2)
-
-    /**
     *@brief Performs update instance normalization. \n
 
     *@par Inputs:
@@ -3394,30 +3129,6 @@ Reserved.
     .OUTPUT(batch_mean, TensorType({DT_FLOAT}))
     .OUTPUT(batch_variance, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(INTrainingUpdateV2)
-
-    /**
-    *@brief Performs the backpropagation of InstanceNorm. \n
-
-    *@par Inputs:
-    * Four inputs, including:
-    *@li dy: A 4D tensor of type float16 or float32, for the gradient, format [NCHW, NHWC].
-    *@li x: A 4Dtensor of type float16 or float32, format [NCHW, NHWC].
-    *@li variance: A 4D tensor of type float32, for the variance of "x", format [NCHW, NHWC] and HW=1.
-    *@li mean: A 4D tensor of type float32, for the mean of "x", format [NCHW, NHWC] and HW=1. \n
-
-    *@par Outputs:
-    *@li res_gamma: A 4D tensor of type float32, format [NCHW, NHWC] and HW=1.
-    *@li res_beta: A 4D tensor of type float32, format [NCHW, NHWC] and HW=1. \n
-
-    */
-    REG_OP(INTrainingUpdateGrad)
-    .INPUT(dy, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(variance, TensorType({DT_FLOAT}))
-    .INPUT(mean, TensorType({DT_FLOAT}))
-    .OUTPUT(res_gamma, TensorType({DT_FLOAT}))
-    .OUTPUT(res_beta, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(INTrainingUpdateGrad)
 
     /**
     *@brief Performs the backpropagation of InstanceNorm. \n
@@ -3656,50 +3367,6 @@ Reserved.
     .OP_END_FACTORY_REG(LRNGrad)
 
     /**
-    * @brief InstanceNormGrad operator interface implementation.
-
-    * @par Inputs:
-    * Five inputs, including:
-    * @li dy: Represents the input gradient tensor. Support dtype: float16, float32. Suppor shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW]. Has the same dtype, format and shape as "x".
-    * @li x: Represents the input tensor. Support dtype: float16, float32. Suppor shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW].
-    * @li variance: Represents the variance tensor. Support dtype: float16, float32. Suppor shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1). Has the same dtype and format as "x".
-    * The shapes of "variance" and "mean" are consistent, and the N and C axes are consistent with those of "x", and the
-    other dimensions are 1.
-    * @li mean: Represents the mean tensor. Support dtype: float16, float32. Suppor shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1). Has the same dtype and format as "x".
-    * The shapes of "variance" and "mean" are consistent, and the N and C axes are consistent with those of "x", and the
-    other dimensions are 1.
-    * @li gamma: Represents the optional weight parameter. Support dtype: float16, float32. Suppor shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW].  Has the same dtype as "x".
-    * The C axis of "gamma" is consistent with that of "x", and the other dimensions are 1. \n
-
-    * @par Outputs:
-    * Three outputs, including:
-    * @li pd_x: Represents the gradient tensor of the input tensor. Support dtype: float16, float32. Suppor shape 4D or
-    5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW].  Has the same dtype, format and shape as "x".
-    * @li pd_gamma: Represents the gradient tensor of the weight parameter. Support dtype: float16, float32. Suppor
-    shape 4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW]. Has the same dtype and format as "x". Has the same shape as "gamma".
-    * @li pd_beta: Represents the gradient tensor of the bias parameter. Support dtype: float16, float32. Suppor shape
-    4D or 5D.
-    * Support format: [NCHW, NHWC, NDHWC, NCDHW]. Has the same dtype and format as "x". Has the same shape as "gamma".
-    */
-    REG_OP(InstanceNormGrad)
-    .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(variance, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(mean, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(pd_x, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(pd_gamma, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OP_END_FACTORY_REG(InstanceNormGrad)
-
-    /**
     * @brief Computes Centralization. result = x - mean(x, axes)
 
     * @par Inputs:
@@ -3746,68 +3413,6 @@ Reserved.
     .ATTR(reduction, String, "mean")
     .OUTPUT(output_z, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(SoftMarginLoss)
-
-    /**
-     * @brief Calculate the PoissonNllLoss function.  \n
-     *        target follow distribution of Poisson(input)loss(input,target) = input - target * log(input) +
-     log(target!)
-
-     * @par Inputs:
-     * Two inputs, including:
-     * @li input_x: A tensor. Must be one of the following types: float16, float32.
-     * @li target: A tensor. Must be one of the following types: float16, float32. \n
-
-     * @par Attributes:
-     * four Attributes, including:
-     * @li log_input: An optional bool. Defaults to "True"
-     * @li full: An optional bool. Defaults to "False"
-     * @li eps: An optional float. Defaults to "1e-8"
-     * @li reduction: An optional string from "none", "mean",and "sum". Defaults to "mean" \n
-
-     * @par Outputs:
-     * loss: A Tensor has same element type as two inputs. \n
-
-     * @par Third-party framework compatibility
-     * Compatible with the Pytorch operator PoissonNllLoss. \n
-     */
-    REG_OP(PoissonNllLoss)
-    .INPUT(input_x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(target, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(loss, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .ATTR(log_input, Bool, true)
-    .ATTR(full, Bool, false)
-    .ATTR(eps, Float, 1e-8f)
-    .ATTR(reduction, String, "mean")
-    .OP_END_FACTORY_REG(PoissonNllLoss)
-
-    /**
-    * @brief Creates a criterion that optimizes a multi-class multi-classification hinge loss (margin-based loss)
-    *        between input x (a 2D mini-batch Tensor) and output y (which is a 2D Tensor of target class indices) \n
-
-    * @par Inputs:
-    * Two inputs, including:
-    * @li x: A tensor. Must be one of the following types:
-    *     float16, float32, bfloat16.
-    * @li target: A tensor. Must be the following types:
-    *     int32. \n
-
-    * @par Attributes:
-    * reduction: An optional string. Defaults to "mean" \n
-
-    * @par Outputs:
-    * @li y: A Tensor has same element type as input x. \n
-    * @li is_target: A Tensor has same element type as input target. \n
-
-    * @par Third-party framework compatibility
-    * Compatible with the Pytorch operator MultiLabelMarginLoss. \n
-    */
-    REG_OP(MultilabelMarginLoss)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(target, TensorType({DT_INT32}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(is_target, TensorType({DT_INT32}))
-    .ATTR(reduction, String, "mean")
-    .OP_END_FACTORY_REG(MultilabelMarginLoss)
 
     /**
      * @brief Performs batch normalization . \n
@@ -3865,44 +3470,6 @@ Reserved.
     .OUTPUT(loss, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BFLOAT16}))
     .OUTPUT(log_prop, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SoftmaxCrossEntropyLoss)
-
-    /**
-    * @brief MMCV Function: softmax_focal_loss_grad.
-
-    * @par Inputs:
-    * Three inputs, including:
-    * @li pred: the predicted tensor. The type support float16 and float32.
-    * @li target: the target label Tensor. The type support Int32.
-    * @li dout: the grad of previous op grad, which has the sampe shape wth pred. The type support float16 and float32.
-    * @li weight: A optional input Tensor, default is None, which helps to calculate the loss by supplying sample
-    weights. The type support float16 and float32.
-    *     shape of pred should be (B, D), B means batch size, D means the number of labels.
-    *     shape of target should be (B, D).
-    *     shape of weight should be (D, ) \n
-
-    * @par Attributes:
-    * @li alpha: A attribute is used to reweight the sample. The type is float . Default is 0.25\n
-    * @li gamma: A attribute is used to calculate the power of the probability.
-    *     The type is float . Default is 2.0\n
-    * @li reduction: a type of the reduce method. default is 'mean', which means computing the average loss.
-                    'sum' means computing the sum of the loss, 'none' means no reducing. Default is 'mean' \n
-
-    * @par Outputs:
-    * grad: A mutable Tensor. Has the same type and shape as "pred". \n
-
-    * @par Third-party framework compatibility
-    * Compatible with the MMCV operator SoftmaxFocalLossGrad.
-    */
-    REG_OP(SoftmaxFocalLossGrad)
-    .INPUT(pred, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(target, TensorType({DT_INT32}))
-    .INPUT(dout, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(grad, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .ATTR(alpha, Float, 0.25)
-    .ATTR(gamma, Float, 2.0)
-    .ATTR(reduction, String, "mean")
-    .OP_END_FACTORY_REG(SoftmaxFocalLossGrad)
 
     /**
     * @brief Performs Matrix-to-matrix Multiply,
