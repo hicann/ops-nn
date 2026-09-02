@@ -429,7 +429,7 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     // 310p not support Non-64B
     uint32_t blockSizeOf64B = BLOCK_SIZE_OF_64B / inputDTypeLen;
     if (((npuArch == NpuArch::DAV_2002)) && (tilingData->get_colLen() % blockSizeOf64B != 0)) {
-        OP_LOGE(opName_, "input shape is not support Non-64B aligned");
+        OP_LOGE(opName_, "input shape does not support Non-64B alignment");
         return false;
     }
     // 先计算开启double buffer的tiling参数

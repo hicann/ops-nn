@@ -79,7 +79,7 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
 {
     auto xDtype = context->GetInputDesc(INPUT_X_INDEX)->GetDataType();
     if (xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16 && xDtype != ge::DT_FLOAT) {
-        OP_LOGE(context->GetNodeName(), "input x dtype is only support fp16/bf16/fp32.");
+        OP_LOGE(context->GetNodeName(), "input x dtype only supports fp16/bf16/fp32.");
         return ge::GRAPH_FAILED;
     }
 
@@ -87,7 +87,7 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
     if (smoothScalesDesc != nullptr) {
         auto smoothScalesDtype = smoothScalesDesc->GetDataType();
         if (smoothScalesDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context->GetNodeName(), "input smoothScales dtype is only support fp32.");
+            OP_LOGE(context->GetNodeName(), "input smoothScales dtype only supports fp32.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -96,7 +96,7 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
     if (offsetsDesc != nullptr) {
         auto offsetsDtype = offsetsDesc->GetDataType();
         if (offsetsDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context->GetNodeName(), "input offsets dtype is only support fp32.");
+            OP_LOGE(context->GetNodeName(), "input offsets dtype only supports fp32.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -105,7 +105,7 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
     if (groupDesc != nullptr) {
         auto groupDtype = groupDesc->GetDataType();
         if (groupDtype != ge::DataType::DT_INT32) {
-            OP_LOGE(context->GetNodeName(), "group dtype is only support int32.");
+            OP_LOGE(context->GetNodeName(), "group dtype only supports int32.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -116,13 +116,13 @@ inline ge::graphStatus CheckOutputDtype(const gert::TilingContext* context)
 {
     auto yDtype = context->GetOutputDesc(OUTPUT_Y_INDEX)->GetDataType();
     if (yDtype != ge::DataType::DT_INT8 && yDtype != ge::DataType::DT_INT4) {
-        OP_LOGE(context->GetNodeName(), "y dtype is support int8 or int4.");
+        OP_LOGE(context->GetNodeName(), "y dtype only supports int8 or int4.");
         return ge::GRAPH_FAILED;
     }
 
     auto scaleDtype = context->GetOutputDesc(OUTPUT_SCALE_INDEX)->GetDataType();
     if (scaleDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context->GetNodeName(), "output scale dtype is only support fp32.");
+        OP_LOGE(context->GetNodeName(), "output scale dtype only supports fp32.");
         return ge::GRAPH_FAILED;
     }
 
@@ -156,7 +156,8 @@ inline ge::graphStatus CheckAttrs(const gert::TilingContext* context, SwiGluQuan
                     return ge::GRAPH_FAILED);
         int64_t dstType = static_cast<int64_t>(*dstTypePtr);
         OP_CHECK_IF((dstType != ge::DT_INT8 && dstType != ge::DT_INT4),
-                    OP_LOGE(context->GetNodeName(), "dstType can only be 2 or 29."), return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "dstType can only be 2(DT_INT8) or 29(DT_INT4)."),
+                    return ge::GRAPH_FAILED);
         compileInfo.dstType = dstType;
     }
     return ge::GRAPH_SUCCESS;
@@ -246,7 +247,7 @@ inline ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context, co
     size_t yDimNum = yShape->GetStorageShape().GetDimNum();
     if (CheckOpDim(xShape, yShape, xDimNum - 1, yDimNum - 1) != ge::GRAPH_SUCCESS) {
         // 除最后一个维度外，其他维度的shape需要一致
-        OP_LOGE(context->GetNodeName(), "x and y shape is inconsistency.");
+        OP_LOGE(context->GetNodeName(), "x and y shapes are inconsistent.");
         return ge::GRAPH_FAILED;
     }
     // DT_INT8量化最后一个维度的shape需要满足2倍关系

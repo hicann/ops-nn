@@ -108,7 +108,7 @@ ge::graphStatus GluBaseTiling4RegBase::GetPlatformInfo()
 
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize_);
     if (ubSize_ <= (uint64_t)UB_RESERVED_BUFF) {
-        OP_LOGI(opName_, "Compile Info is invalid, coreNum: %u, ubSize: %lu", blockDim_, ubSize_);
+        OP_LOGE(opName_, "Compile Info is invalid, coreNum: %u, ubSize: %lu", blockDim_, ubSize_);
         return ge::GRAPH_PARAM_INVALID;
     }
 
@@ -250,7 +250,7 @@ void GluBaseTiling4RegBase::AutoTiling()
         // 正常切分块和尾块的差值计算
         int64_t delta = rowNormalBlock * colNormalBlock;
         if (colNormalBlock == 0 || rowNormalBlock == 0) {
-            OP_LOGE(opName_, "GluBaseTiling4RegBase::AutoTiling devide by 0\
+            OP_LOGE(opName_, "GluBaseTiling4RegBase::AutoTiling divide by 0\
                 colNormalBlock:%ld rowNormalBlock:%ld",
                     colNormalBlock, rowNormalBlock);
         }
