@@ -111,6 +111,7 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
         Conv3DDXV2InnerProductTiling::LegalProtection(l1Params, l0Params); // L1合法性兜底, 兜底也不行就报错
         if (Conv3DDXV2InnerProductTiling::IsL1ParamsValid(l1Params, l0Params)) {
             SetSingleCoreInfo(coreParams, l0Params); // 重新设置核间切分数据
+            CalStepK(l1Params, l0Params);            // 可能需要更新stepK
         } else {
             CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
@@ -176,19 +177,19 @@ void Conv3DDXV2FullLoadTiling::CalStepK(L1TilingParams& l1Params, const L0Tiling
     Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params);
 }
 
-void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthCnt,
+void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt,
                                                     uint64_t& nCnt)
 {
     coreParams.singleCoreDin = ONE_U32;
 
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, coreParams.singleCoreM);
-    uint64_t bestTotalCnt = Ops::Base::CeilAlign(batchDepthCnt * maxMCnt * nCnt, static_cast<uint64_t>(coreNum_));
+    uint64_t bestTotalCnt = Ops::Base::CeilAlign(batchDepthGroupCnt * maxMCnt * nCnt, static_cast<uint64_t>(coreNum_));
     // 从最大切块往小找，直到找到符合负载均衡的分核
     for (uint64_t i = 1; i <= maxMCnt; ++i) {
         uint64_t tmpSingleCoreHWI = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_h), i) * runInfo_.dedx_w;
         uint64_t tmpMCnt = Ops::Base::CeilDiv(hwI, tmpSingleCoreHWI);
-        uint64_t tmpTotalCnt = batchDepthCnt * tmpMCnt * nCnt;
+        uint64_t tmpTotalCnt = batchDepthGroupCnt * tmpMCnt * nCnt;
         uint64_t realTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
         // 核间任务伦次拖尾影响不超过1.25倍，防止出现极端不均衡的分核，比如17*2=34轮任务分给32核
         if (tmpTotalCnt * static_cast<uint32_t>(5) < realTotalCnt * static_cast<uint32_t>(4)) {
@@ -218,22 +219,22 @@ void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L
     l0Params.baseN = Ops::Base::CeilAlign(tilingRunInfo_.nValue / nCnt, static_cast<uint64_t>(tilingRunInfo_.n0));
     coreParams.singleCoreCin = l0Params.baseN;
 
-    uint64_t batchDepthCnt = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+    uint64_t batchDepthGroupCnt = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d * runInfo_.real_g;
     coreParams.singleCoreM = l0Params.baseM;
 
-    if (batchDepthCnt * nCnt * runInfo_.dedx_h % coreNum_ == 0U) {
-        uint32_t remainFactor = coreNum_ / MathUtil::GetGcd(nCnt * runInfo_.batch_n, coreNum_);
+    if (batchDepthGroupCnt * nCnt * runInfo_.dedx_h % coreNum_ == 0U) {
+        uint32_t remainFactor = coreNum_ / MathUtil::GetGcd(nCnt * runInfo_.batch_n * runInfo_.real_g, coreNum_);
         uint32_t depthFactor = MathUtil::GetGcd(runInfo_.dedx_d, remainFactor);
         coreParams.singleCoreDin = runInfo_.dedx_d / depthFactor;
         coreParams.singleCoreM = static_cast<uint64_t>(runInfo_.dedx_h) * depthFactor / remainFactor * runInfo_.dedx_w;
-        batchDepthCnt = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d / coreParams.singleCoreDin;
     } else {
         // 无法均匀分核时仍然采取batch为1的策略
-        AdjustSingleCoreInfo(coreParams, batchDepthCnt, nCnt);
+        AdjustSingleCoreInfo(coreParams, batchDepthGroupCnt, nCnt);
     }
     if (coreParams.singleCoreM < l0Params.baseM) {
         l0Params.baseM = Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
     }
+    Conv3DDXV2InnerProductTiling::AdjustBaseMNK(l0Params, tilingRunInfo_);
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DDXV2FullLoadTiling, 100);
