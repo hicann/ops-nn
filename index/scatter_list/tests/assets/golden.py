@@ -114,3 +114,182 @@ def __golden_scatter_list(var_list, indice, updates, mask=None, **kwargs):
 
 
 __golden__ = {"kernel": {"scatter_list": "__golden_scatter_list"}}
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）。
+# third_party 用 torch 原生的 narrow().copy_() 表达"按索引窗口整段覆盖"，与上面 golden
+# 手写的平坦偏移算术（算 base/flat_idx 再展平赋值）是两条独立实现，比对有意义。
+# 覆盖范围限于契约内的合法索引：README「indice值域：不支持索引越界」，越界属契约外，
+# torch 的切片/index_copy_ 也表达不了算子那种"越界落到相邻前导维"的平坦写行为。
+# 判据保持 binary_equal：纯拷贝语义就该逐位相同，cross_check 反而是降级。
+# customize_inputs 即原 input.py 的合法索引重采样（原文件保留，不影响旧机制）。
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "binary_equal"},
+    "float16": {"standard": "binary_equal"},
+    "bfloat16": {"standard": "binary_equal"},
+    "int32": {"standard": "binary_equal"},
+    "int64": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+}
+
+
+def scatter_list_input(var_list, indice, updates, *rest, axis=-2, **kwargs):
+    """
+    Input function for scatter_list.
+    All the parameters (names and order) follow scatter_list_def.cpp without outputs.
+    var is a TensorList (list of ndarrays); indice/updates/mask are ndarrays.
+
+    Resample `indice` so every scatter window [start, start + S2) stays inside the
+    var scatter axis. 1-D indice carries only the start offset; 2-D indice carries
+    [start, len] -> keep len, clamp start so start + len <= var_axis_size.
+
+    Returns:
+        Input tensors (var_list, indice, updates[, mask]) —— 槽位数与入参一致
+    """
+    var0 = np.asarray(var_list[0])
+    updates = np.asarray(updates)
+    nax = axis if axis >= 0 else updates.ndim + axis
+    var_nax = nax - 1  # updates has extra leading list dim
+    var_axis = var0.shape[var_nax]
+    S2 = updates.shape[nax]
+    B = len(var_list)
+
+    indice = np.asarray(indice)
+    dt = indice.dtype
+    if indice.ndim == 2:
+        lens = np.minimum(indice[:, 1], S2)
+        lens = np.clip(lens, 1, max(1, var_axis))
+        highs = np.maximum(var_axis - lens, 0) + 1
+        starts = np.array([np.random.randint(0, h) for h in highs], dtype=dt)
+        new = np.stack([starts, lens.astype(dt)], axis=1)
+    else:
+        high = max(var_axis - S2, 0) + 1
+        new = np.random.randint(0, high, size=(B,)).astype(dt)
+        new = np.reshape(new, indice.shape)
+    # 原样回传收到的尾部槽位(mask)。TTK 按 flat_input_shapes 计数校验返回个数,
+    # 用例声明了 mask 槽但值为 None 时若把它丢掉, 会 INPUT_GEN_FAILURE:
+    # "Input plugin returned 3 arrays, expected 4"(实测 4 例)。
+    return [var_list, new, updates, *rest]
+
+
+class _ScatterListCompose:
+    """参数名按 scatter_list_def.cpp 的注册名: var / indice / updates / mask。
+    mask 是可选输入、axis 是可选属性, 一律从 kwargs 取（bind_by_name 不认默认值）。"""
+
+    def __call__(self, var, indice, updates, **kwargs):
+        mask = kwargs.get("mask")
+        axis = int(kwargs.get("axis", -2))
+
+        def _to_t(a):
+            t = (
+                a
+                if isinstance(a, torch.Tensor)
+                else torch.as_tensor(np.ascontiguousarray(a))  # 仅本地自测兜底
+            )
+            return t.to(torch.float32) if t.dtype == torch.bfloat16 else t
+
+        var_list = var if isinstance(var, (list, tuple)) else [var]
+        outs = [_to_t(v).clone() for v in var_list]
+        upd = _to_t(updates)
+        idx = (
+            indice
+            if isinstance(indice, torch.Tensor)
+            else torch.as_tensor(np.asarray(indice))
+        )
+        msk = None
+        if mask is not None:
+            mt = (
+                mask
+                if isinstance(mask, torch.Tensor)
+                else torch.as_tensor(np.asarray(mask))
+            )
+            msk = mt.reshape(-1)
+
+        nax = axis if axis >= 0 else upd.dim() + axis
+        var_nax = nax - 1  # updates 比 var 多一个前导 batch 维
+        s2 = int(upd.shape[nax])
+
+        for i in range(len(outs)):
+            if msk is not None and msk[i] == 0:
+                continue
+            if idx.dim() == 2:
+                start, n_rows = int(idx[i][0]), min(int(idx[i][1]), s2)
+            else:
+                start, n_rows = int(idx.reshape(-1)[i]), s2
+            vt = outs[i]
+            if n_rows <= 0 or start < 0 or start + n_rows > vt.shape[var_nax]:
+                continue  # 契约外(越界)不比对, 见类注释
+            vt.narrow(var_nax, start, n_rows).copy_(upd[i].narrow(var_nax, 0, n_rows))
+        return outs
+
+
+_GOLDEN_FN = __golden_scatter_list
+
+
+class ScatterListKernelSpec:
+    golden = _GOLDEN_FN
+    third_party = {"torch": _ScatterListCompose}
+    customize_inputs = scatter_list_input
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {
+    "scatter_list": "ScatterListKernelSpec",
+    "aclnnScatterList": "ScatterListAclnnSpec",
+}
+
+
+def _keep_dtype(res, ref):
+    """golden 输出 dtype 必须与算子输出一致: 比对按 dtype 判定, fp16/bf16 提到 fp32
+    算完必须还原, 否则 binary_equal 直接判 "dtype 不可比"(实测 GOLD 0%)。
+    golden_mode=Promote 时入参本身已是 fp32, 此处是恒等操作。"""
+    refs = ref if isinstance(ref, (list, tuple)) else [ref] * len(res)
+    return [
+        t.to(r.dtype)
+        if isinstance(t, torch.Tensor) and isinstance(r, torch.Tensor)
+        else t
+        for t, r in zip(res, refs)
+    ]
+
+
+class ScatterListAclnnSpec:
+    """aclnn 通路 spec。golden 由 TTK 按 aclnn 头文件形参**位置**下发
+    (AclnnParamPlan.build_args), 故签名逐项对齐 aclnnScatterListGetWorkspaceSize 的
+    形参 varRef/indice/updates/maskOptional/reduceOptional/axis;
+    third_party 走按名绑定(pool 的 key 取自头文件形参名), 用适配类把头文件的
+    varRef/maskOptional 接到 kernel 通路竞品类的 def 注册名 var/mask 上。
+    reduceOptional 只有 "update"(按索引窗口覆盖写)一种语义, 不分支。"""
+
+    @staticmethod
+    def golden(
+        varRef,
+        indice,
+        updates,
+        maskOptional=None,
+        reduceOptional=None,
+        axis=-2,
+        **kwargs,
+    ):
+        return _keep_dtype(
+            _ScatterListCompose()(
+                varRef, indice, updates, mask=maskOptional, axis=axis
+            ),
+            varRef,
+        )
+
+    class _Compose:
+        def __call__(self, varRef, indice, updates, **kwargs):
+            kw = dict(kwargs)
+            kw.setdefault("mask", kw.get("maskOptional"))
+            return _ScatterListCompose()(varRef, indice, updates, **kw)
+
+    third_party = {"torch": _Compose}
+    tolerance = _TOL_KERNEL
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
+# 未在 __spec__ 中注册:
+# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——无 framework/ 插件、无 graph pass,
+# 也未发现 torch_npu 绑定到 aclnnScatterList。

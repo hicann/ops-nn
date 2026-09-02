@@ -77,3 +77,81 @@ def lamb_apply_optimizer_assign_golden(
         next_v.numpy().astype(dt),
         next_m.numpy().astype(dt),
     ]
+
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
+# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
+    return t.to(torch.float32)
+
+
+def _tp_s(x):
+    return _tp_t(x).reshape(-1)[0]
+
+
+class _LambApplyOptimizerAssignCompose:
+    def __call__(
+        self,
+        grad,
+        inputv,
+        inputm,
+        input3,
+        mul0_x,
+        mul1_x,
+        mul2_x,
+        mul3_x,
+        add2_y,
+        steps,
+        do_use_weight,
+        weight_decay_rate,
+        **kwargs,
+    ):
+        g, v, m, w = (_tp_t(t) for t in (grad, inputv, inputm, input3))
+        b1, omb1, b2, omb2, eps, t, du, wd = (
+            _tp_s(x)
+            for x in (
+                mul0_x,
+                mul1_x,
+                mul2_x,
+                mul3_x,
+                add2_y,
+                steps,
+                do_use_weight,
+                weight_decay_rate,
+            )
+        )
+        next_v = torch.addcmul(v * b2, g, g, value=omb2)
+        next_m = m * b1 + g * omb1
+        b1_corr = 1.0 - torch.pow(b1, t)
+        b2_corr = 1.0 - torch.pow(b2, t)
+        update = (next_m / b1_corr) / (torch.sqrt(next_v / b2_corr) + eps) + w * wd * du
+        return [update, next_v, next_m]
+
+
+class LambApplyOptimizerAssignKernelSpec:
+    golden = lamb_apply_optimizer_assign_golden
+    third_party = {"torch": _LambApplyOptimizerAssignCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"lamb_apply_optimizer_assign": "LambApplyOptimizerAssignKernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md。
+# TensorFlow: 有 framework 的 tf_plugin, 但 TF 不是 TestSpec 的注册通路,
+# 如需对标应以 third_party 的 tf vendor 形式补充, 本次未做。
+# e2e / ONNX / 融合 pass: 均未交付。

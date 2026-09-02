@@ -49,3 +49,53 @@ def lamb_next_right_golden(
     next_v = v * b2 + (g * g) * omb2
     y2 = torch.sqrt(next_v * recip) + eps
     return [next_v.numpy().astype(dt), y2.numpy().astype(dt)]
+
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
+# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
+    return t.to(torch.float32)
+
+
+def _tp_s(x):
+    return _tp_t(x).reshape(-1)[0]
+
+
+class _LambNextRightCompose:
+    def __call__(
+        self, input_square, input_mul2, mul2_x, mul3_x, truediv1_recip, add2_y, **kwargs
+    ):
+        g, v = _tp_t(input_square), _tp_t(input_mul2)
+        b2, omb2, recip, eps = (
+            _tp_s(v_) for v_ in (mul2_x, mul3_x, truediv1_recip, add2_y)
+        )
+        next_v = torch.addcmul(v * b2, g, g, value=omb2)
+        y2 = torch.sqrt(next_v * recip) + eps
+        return [next_v, y2]
+
+
+class LambNextRightKernelSpec:
+    golden = lamb_next_right_golden
+    third_party = {"torch": _LambNextRightCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"lamb_next_right": "LambNextRightKernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md。
+# e2e / ONNX / 融合 pass: 均未交付。

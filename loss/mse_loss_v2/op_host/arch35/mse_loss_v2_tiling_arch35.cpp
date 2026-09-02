@@ -44,7 +44,6 @@ using Ops::Base::GetUbBlockSize;
 namespace {
 constexpr int64_t COMPUTE_TYPE_SIZE = 4; // fp32 compute/reduction
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
-constexpr size_t SYS_WORKSPACE_SIZE = 16UL * 1024UL * 1024UL; // system reserved workspace
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 // UB split counts (fp32-element units). Counted from the kernel's resident buffers with margin
 // for partialBuf + alignment (worst case fp32 DB=8 / fp16 DB=7; SB max 6). See 02 design
@@ -143,7 +142,8 @@ ge::graphStatus GetReduction(gert::TilingContext* context, uint32_t& reduction)
     } else if (strcmp(reductionStr, "mean") == 0) {
         reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE(context, "reduction must be none/sum/mean, got %s", reductionStr);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduction", reductionStr,
+                                              "The value of reduction must be none, sum or mean");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -176,12 +176,14 @@ static ge::graphStatus FillTilingData4MSELossV2Arch35(gert::TilingContext* conte
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    const size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     if (reduction != REDUCTION_NONE) {
         // one fp32 partial per core, each in its own 32B(=8 fp32) block to avoid sub-block
-        // multi-core GM write races; + system reserved workspace.
-        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
+        // multi-core GM write races; + system reserved workspace queried from the platform.
+        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + sysWorkspaceSize;
     } else {
-        currentWorkspace[0] = 0U;
+        currentWorkspace[0] = sysWorkspaceSize;
     }
 
     context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));

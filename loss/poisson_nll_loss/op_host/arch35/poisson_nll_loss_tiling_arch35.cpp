@@ -20,6 +20,7 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "poisson_nll_loss_tiling_arch35.h"
 #include "poisson_nll_loss/op_kernel/arch35/poisson_nll_loss_tiling_def.h"
 #include "poisson_nll_loss/op_kernel/arch35/poisson_nll_loss_tiling_key.h"
@@ -35,8 +36,7 @@ using Ops::Base::GetUbBlockSize;
 namespace {
 constexpr int64_t COMPUTE_TYPE_SIZE = 4; // fp32 compute
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
-constexpr int64_t MERGE_VL_FP32 = 64;                         // 跨核合并的矢量车道数(fp32)
-constexpr size_t SYS_WORKSPACE_SIZE = 16UL * 1024UL * 1024UL; // system reserved workspace
+constexpr int64_t MERGE_VL_FP32 = 64; // 跨核合并的矢量车道数(fp32)
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 constexpr int64_t BUFFER_NUM_DB = 12; // double-buffer UB split count (x/t/y * 2 + work bufs)
 constexpr int64_t BUFFER_NUM_SB = 9;  // single-buffer UB split count
@@ -86,7 +86,10 @@ ge::graphStatus ParseAttrs(gert::TilingContext* context, uint32_t& reduction, fl
     // eps must not be zero: it guards log(input+eps) on the log_input=false path.
     // Aligns with ascend910b TBE entry `if eps == 0: raise "Invalid eps which should not be zero."`
     // (canndev/ops/built-in/tbe/impl/poisson_nll_loss.py L148-149).
-    OP_CHECK_IF(*epsPtr == 0.0f, OP_LOGE(context, "eps must not be zero"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*epsPtr == 0.0f,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "eps", std::to_string(*epsPtr).c_str(),
+                                                      "The value of eps must not be zero"),
+                return ge::GRAPH_FAILED);
     const char* pnllReductionStr = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, pnllReductionStr);
 
@@ -97,7 +100,8 @@ ge::graphStatus ParseAttrs(gert::TilingContext* context, uint32_t& reduction, fl
     } else if (strcmp(pnllReductionStr, "mean") == 0) {
         reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE(context, "reduction must be none/sum/mean, got %s", pnllReductionStr);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduction", pnllReductionStr,
+                                              "The value of reduction must be none, sum or mean");
         return ge::GRAPH_FAILED;
     }
     eps = *epsPtr;
@@ -115,7 +119,9 @@ ge::graphStatus FillSplitAndWorkspace(gert::TilingContext* context, uint64_t pnl
     constexpr int64_t WS_CORE_STRIDE = 8;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
-    currentWorkspace[0] = 0U;
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    const size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    currentWorkspace[0] = sysWorkspaceSize;
 
     if (totalIdx == 0) {
         // Empty tensor (totalNum=0), block_dim stays 1. mean of empty = sum/N = 0/0 = nan;
@@ -124,7 +130,7 @@ ge::graphStatus FillSplitAndWorkspace(gert::TilingContext* context, uint64_t pnl
         // one core's 32B slot + sys workspace (mirrors the totalIdx>0 branch with usedCoreNum=1).
         tiling->meanCof = std::numeric_limits<float>::infinity();
         if (reduction != REDUCTION_NONE) {
-            currentWorkspace[0] = WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
+            currentWorkspace[0] = WS_CORE_STRIDE * sizeof(float) + sysWorkspaceSize;
             tiling->partialUbElems = static_cast<uint32_t>(MERGE_VL_FP32);
         }
         return ge::GRAPH_SUCCESS;
@@ -140,7 +146,7 @@ ge::graphStatus FillSplitAndWorkspace(gert::TilingContext* context, uint64_t pnl
     tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(pnllUbSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
     tiling->meanCof = 1.0f / static_cast<float>(totalIdx);
     if (reduction != REDUCTION_NONE) {
-        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
+        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + sysWorkspaceSize;
         // 跨核合并整轮读 MERGE_VL_FP32 车道, UB 用量按整轮向上取整, 由 host 下发。
         tiling->partialUbElems = static_cast<uint32_t>(CeilAlign(usedCoreNum * WS_CORE_STRIDE, MERGE_VL_FP32));
     }

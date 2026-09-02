@@ -68,3 +68,52 @@ def lamb_apply_weight_assign_golden(
     # 字面顺序写成 (lr*ratio)*upd 在浮点下不等价：update 与 lr 同时较大时实现会先溢出成 inf，
     # 而 (lr*ratio) 往往是正常量级、再乘 update 不溢出，两者可以差出 inf 与有限值。
     return [(param - ratio * (upd * lr)).numpy().astype(dt)]
+
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
+# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
+    return t.to(torch.float32)
+
+
+def _tp_s(x):
+    return _tp_t(x).reshape(-1)[0]
+
+
+class _LambApplyWeightAssignCompose:
+    def __call__(self, input0, input1, input2, input3, input_param, **kwargs):
+        wn, gn, lr = (_tp_s(v_) for v_ in (input0, input1, input2))
+        upd, param = _tp_t(input3), _tp_t(input_param)
+        one = torch.ones((), dtype=torch.float32, device=upd.device)
+        inner = torch.div(wn, gn) if bool(gn > 0) else one
+        ratio = inner if bool(wn > 0) else one
+        return [param - ratio * (upd * lr)]
+
+
+class LambApplyWeightAssignKernelSpec:
+    golden = lamb_apply_weight_assign_golden
+    third_party = {"torch": _LambApplyWeightAssignCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"lamb_apply_weight_assign": "LambApplyWeightAssignKernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md。
+# TensorFlow: 有 framework 的 tf_plugin, 但 TF 不是 TestSpec 的注册通路,
+# 如需对标应以 third_party 的 tf vendor 形式补充, 本次未做。
+# e2e / ONNX / 融合 pass: 均未交付。

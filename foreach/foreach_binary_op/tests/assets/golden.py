@@ -144,3 +144,92 @@ def __golden_foreach_binary_op(x1_list, x2_list, **kwargs):
 
 
 __golden__ = {"kernel": {"foreach_binary_op": "__golden_foreach_binary_op"}}
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# third_party 直接对标 torch 的 _foreach_* 竞品 API，在设备侧跑，供 cross_check 比对。
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_list(xs):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    out = []
+    for a in xs:
+        t = a if isinstance(a, torch.Tensor) else torch.as_tensor(_to_fp32(a))
+        out.append(t.to(torch.float32))
+    return out
+
+
+def _tp_scalar(x):
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x, "float32"))
+    return float(t.reshape(-1)[0])
+
+
+_GOLDEN_FN = __golden_foreach_binary_op
+
+
+def _tp_int64(a):
+    """整型入参提到 int64 做中间运算; 入参已是设备张量时不经 numpy。"""
+    t = a if isinstance(a, torch.Tensor) else torch.as_tensor(np.asarray(a))
+    return t.to(torch.int64)
+
+
+class _ForeachBinaryOpCompose:
+    """三方标杆必须跟随 op_code 分派: 该算子按属性 op_code 分解为 add/sub/mul/div,
+    写死单一 API 只对 add 成立。整型走与 golden 同款的宽中间量+窄化(2's-complement
+    wrap), 不能升 fp32——大 int32 经 float32 会静默丢精度。"""
+
+    def __call__(self, x1, x2, **kwargs):
+        op_code = _resolve_op_code(kwargs)
+        fn = {
+            OP_ADD: torch._foreach_add,
+            OP_SUB: torch._foreach_sub,
+            OP_MUL: torch._foreach_mul,
+            OP_DIV: torch._foreach_div,
+        }[op_code]
+        first = x1[0] if len(x1) else None
+        ft = None
+        if first is not None:
+            ft = (
+                first
+                if isinstance(first, torch.Tensor)
+                else torch.as_tensor(np.asarray(first))
+            )
+        # 用 torch dtype 判整型: 入参是 CUDA 张量时 np.asarray 会崩
+        is_int = ft is not None and not ft.is_floating_point()
+        if is_int:
+            narrow = ft.dtype
+            aw = [_tp_int64(a) for a in x1]
+            bw = [_tp_int64(b) for b in x2]
+            if op_code == OP_DIV:
+                # 整型除法: b == 0 取 0, 否则向零截断(纯整数, 不经浮点)
+                outs = []
+                for a_, b_ in zip(aw, bw):
+                    zero = b_ == 0
+                    safe = torch.where(zero, torch.ones_like(b_), b_)
+                    q = torch.div(a_, safe, rounding_mode="trunc")
+                    outs.append(torch.where(zero, torch.zeros_like(q), q).to(narrow))
+                return outs
+            return [t.to(narrow) for t in fn(aw, bw)]
+        return fn(_tp_list(x1), _tp_list(x2))
+
+
+class ForeachBinaryOpKernelSpec:
+    golden = _GOLDEN_FN
+    third_party = {"torch": _ForeachBinaryOpCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"foreach_binary_op": "ForeachBinaryOpKernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md, 该算子只对内分解使用。
+# e2e / TensorFlow / ONNX / 融合 pass: 均未交付。

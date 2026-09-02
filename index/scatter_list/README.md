@@ -90,7 +90,13 @@
 
 ## 约束说明
 
-- indice值域：不支持索引越界。
+- indice语义：indice给出的是**写入起始位置**，不是散射目标下标。1维时`indice[i]`为第i个张量在axis轴上的写入起点，写入长度为updates在axis轴上的大小；2维时`indice[i][0]`为起点、`indice[i][1]`为写入长度。
+
+- indice值域（调用方保证，算子不做校验）：indice的值位于Device侧，host侧无法校验，越界不会返回错误码，而是产生越界写。记var中单个张量在axis对应轴上的大小为`D`，updates在axis轴上的大小为`S`，则对每个列表下标`i`需满足：
+  - 1维：`0 <= indice[i]` 且 `indice[i] + S <= D`。
+  - 2维：`0 <= indice[i][0]`、`0 <= indice[i][1] <= S` 且 `indice[i][0] + indice[i][1] <= D`。
+
+  仅保证`indice[i] < D`并不充分——写入是从起点开始的一段连续区间，需保证整段不越过`D`。
 
 ## 调用说明
 

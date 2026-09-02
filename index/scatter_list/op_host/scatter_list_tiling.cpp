@@ -241,7 +241,7 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     OP_CHECK_IF(
         varTensorDims < DIM_1,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "var", std::to_string(varTensorDims).c_str(),
-                                                 "The dimension of var must > 1"),
+                                                 "The dimension of each var tensor must be greater than or equal to 1"),
         return ge::GRAPH_FAILED);
     auto updatesShapePtr = context->GetInputShape(updatesIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, updatesShapePtr);
@@ -251,8 +251,14 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     OP_CHECK_IF(
         updatesDims < 2,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "updates", std::to_string(updatesDims).c_str(),
-                                                 "The dimension of updates must >= 2"),
+                                                 "The dimension of updates must be greater than or equal to 2"),
         return ge::GRAPH_FAILED);
+    OP_CHECK_IF(updatesDims != varTensorDims + DIM_1,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "updates and var",
+                    (std::to_string(updatesDims) + " and " + std::to_string(varTensorDims)).c_str(),
+                    "The dimension of updates must be equal to the dimension of each var tensor plus 1"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(varTensorNum != dim0Count,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context->GetNodeName(), "var, updates",

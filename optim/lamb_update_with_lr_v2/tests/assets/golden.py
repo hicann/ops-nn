@@ -55,3 +55,49 @@ def lamb_update_with_lr_v2_golden(x1, x2, x3, x4, x5, greater_y, select_e, **kwa
     inner = _fp32_div(a, b) if b > gy else se
     ratio = inner if a > gy else se
     return [(param - lr * ratio * upd).numpy().astype(dt)]
+
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
+# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
+    return t.to(torch.float32)
+
+
+def _tp_s(x):
+    return _tp_t(x).reshape(-1)[0]
+
+
+class _LambUpdateWithLrV2Compose:
+    def __call__(self, x1, x2, x3, x4, x5, greater_y, select_e, **kwargs):
+        a, b, lr, gy, se = (_tp_s(v_) for v_ in (x1, x2, x3, greater_y, select_e))
+        upd, param = _tp_t(x4), _tp_t(x5)
+        inner = torch.div(a, b) if bool(b > gy) else se
+        ratio = inner if bool(a > gy) else se
+        return [param - lr * ratio * upd]
+
+
+class LambUpdateWithLrV2KernelSpec:
+    golden = lamb_update_with_lr_v2_golden
+    third_party = {"torch": _LambUpdateWithLrV2Compose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"lamb_update_with_lr_v2": "LambUpdateWithLrV2KernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md。
+# e2e / ONNX / 融合 pass: 均未交付。

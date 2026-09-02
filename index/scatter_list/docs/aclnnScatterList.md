@@ -23,15 +23,22 @@
 
 ## 功能说明
 
-- 接口功能：将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。
+- 接口功能：将updates中的值按indice给出的起始位置，沿axis指定的维度整段覆盖写入var张量列表中对应的张量。
 
 - 计算公式：
 
+  记varRef列表中的张量个数为B，`i`为列表下标（`0 <= i < B`），`start`为第`i`个张量的写入起始位置，`len`为写入长度，则：
+
   $$
-  var[i][j] = updates[k][j] \quad \text{when} \quad indices[k] = i
+  var[i][\dots, start + k, \dots] = updates[i][\dots, k, \dots] \quad , \quad 0 \le k < len
   $$
 
-  其中indices为索引张量，updates为待更新的值张量，var为待被更新的张量列表，scatter的维度由axis参数指定。
+  其中省略号表示axis轴之外的其余维度，写入沿axis指定的维度进行。`start`与`len`由indice给出：
+
+  - indice为1维时，`start = indice[i]`，`len`为updates在axis轴上的大小（各张量写入长度相同）。
+  - indice为2维时，`start = indice[i][0]`，`len = indice[i][1]`（各张量写入长度可不同）。
+
+  可选输入maskOptional按列表元素逐个门控是否执行写入。reduce当前仅支持"update"，即直接覆盖。
 
 ## 函数原型
 
@@ -96,7 +103,7 @@ aclnnStatus aclnnScatterList(
     <tr>
       <td>indice（aclTensor*）</td>
       <td>输入</td>
-      <td>索引张量。</td>
+      <td>写入位置张量，逐varRef列表元素给出写入的起始位置（1维时）或起始位置与长度（2维时）。<br>1维：indice[i]为第i个张量在axis轴上的写入起始位置，写入长度为updates在axis轴上的大小。<br>2维：indice[i][0]为起始位置，indice[i][1]为写入长度。</td>
       <td>-</td>
       <td>INT32、INT64</td>
       <td>ND</td>
@@ -259,6 +266,12 @@ aclnnStatus aclnnScatterList(
   - indice：shape支持1~2维；第一维大小等于B；为2维时，第二维大小必须为2。
   - maskOptional：shape支持1维，第一维大小等于B。
   - axis：归一化（负数按updates的维度数折算）后的取值必须落在开区间(0, updates的维度数)内，即不能指向第0维，也不能越界。默认值-2要求updates的维度数大于等于3。
+
+- indice取值范围（调用方保证，算子不做校验）：indice的值位于Device侧，第一段接口无法校验，越界不会返回错误码，而是产生越界写。记varRef中单个张量在axis对应轴上的大小为`D`，updates在axis轴上的大小为`S`，则对每个列表下标`i`需满足：
+  - indice为1维时：`0 <= indice[i]` 且 `indice[i] + S <= D`。
+  - indice为2维时：`0 <= indice[i][0]`、`0 <= indice[i][1] <= S` 且 `indice[i][0] + indice[i][1] <= D`。
+
+  注意：仅保证`indice[i] < D`并不充分——写入是从起始位置开始的一段连续区间，需保证整段区间不越过`D`。
 
 ## 调用示例
 

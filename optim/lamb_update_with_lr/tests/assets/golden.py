@@ -83,3 +83,74 @@ def lamb_update_with_lr_golden(
     # greater_y / minimum_y 为 NaN 时内核整片输出 NaN，用内置版本会给出有限值而全盘对不上。
     clip = torch.maximum(torch.minimum(_s(select1), _s(miny)), _s(gy)).item()
     return [(param - clip * lr * upd).numpy().astype(dt)]
+
+
+# ----------------------------------------------------------------------------
+# TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
+# golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
+# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# ----------------------------------------------------------------------------
+_TOL_KERNEL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
+    return t.to(torch.float32)
+
+
+def _tp_s(x):
+    return _tp_t(x).reshape(-1)[0]
+
+
+class _LambUpdateWithLrCompose:
+    def __call__(
+        self,
+        input_greater1,
+        input_greater_realdiv,
+        input_realdiv,
+        input_mul0,
+        input_mul1,
+        input_sub,
+        greater_y,
+        select_e,
+        minimum_y,
+        **kwargs,
+    ):
+        g1, grd, rd, lr, gy, se, miny = (
+            _tp_s(x)
+            for x in (
+                input_greater1,
+                input_greater_realdiv,
+                input_realdiv,
+                input_mul0,
+                greater_y,
+                select_e,
+                minimum_y,
+            )
+        )
+        upd, param = _tp_t(input_mul1), _tp_t(input_sub)
+        realdiv0 = torch.div(grd, rd)
+        select0 = realdiv0 if bool(g1 > gy) else se
+        select1 = select0 if bool(grd > gy) else se
+        clip = torch.maximum(torch.minimum(select1, miny), gy)
+        return [param - (clip * lr) * upd]
+
+
+class LambUpdateWithLrKernelSpec:
+    golden = lamb_update_with_lr_golden
+    third_party = {"torch": _LambUpdateWithLrCompose}
+    tolerance = _TOL_KERNEL
+
+
+__spec__ = {"lamb_update_with_lr": "LambUpdateWithLrKernelSpec"}
+
+
+# 通路交付情况
+# 已注册: kernel + GEIR(复用 kernel spec)
+# 未在 __spec__ 中注册:
+# aclnn: 未交付——算子目录下无 docs/aclnn*.md。
+# e2e / ONNX / 融合 pass: 均未交付。
