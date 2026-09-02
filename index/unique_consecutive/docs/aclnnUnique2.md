@@ -23,11 +23,11 @@
 
 ## 功能说明
 
-对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。
+对输入张量 self 进行去重，返回 self 中的唯一元素。unique 功能的增强，新增返回值 countsOut，表示 valueOut 中各元素在输入 self 中出现的次数，用 returnCounts 参数控制。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnUnique2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUnique2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用 `aclnnUnique2GetWorkspaceSize` 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 `aclnnUnique2` 接口执行计算。
 
 ```cpp
 aclnnStatus aclnnUnique2GetWorkspaceSize(
@@ -89,7 +89,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>sorted</td>
       <td>输入</td>
-      <td>表示是否对valueOut按升序进行排序。</td>
+      <td>表示是否对 valueOut 按升序进行排序。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>returnInverse</td>
       <td>输入</td>
-      <td>表示是否返回输入数据中各个元素在valueOut中的下标。</td>
+      <td>表示是否返回输入数据中各个元素在 valueOut 中的下标。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>returnCounts</td>
       <td>输入</td>
-      <td>表示是否返回valueOut中每个独特元素在原输入Tensor中的数目。</td>
+      <td>表示是否返回 valueOut 中每个独特元素在原输入 Tensor 中的数目。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>valueOut</td>
       <td>输出</td>
-      <td>第一个输出张量，保存输入张量中的唯一元素，shape仅支持1维度，元素个数与self相同。</td>
+      <td>第一个输出张量，保存输入张量中的唯一元素，shape 仅支持 1 维度，元素个数小于等于 self。</td>
       <td>-</td>
       <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
       <td>-</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>inverseOut</td>
       <td>输出</td>
-      <td>第二个输出张量，当returnInverse为True或returnCounts为True时有意义，返回self中各元素在valueOut中出现的位置下标，shape与self保持一致。</td>
+      <td>第二个输出张量，当 returnInverse 为 True 时有意义，返回 self 中各元素在 valueOut 中出现的位置下标，shape 与 self 保持一致。</td>
       <td>-</td>
       <td>INT64</td>
       <td>ND</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>countsOut</td>
       <td>输出</td>
-      <td>第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中出现的次数，shape与valueOut保持一致</td>
+      <td>第三个输出张量，当 returnCounts 为 True 时有意义，返回 valueOut 中各元素在 self 中出现的次数，shape 与 valueOut 保持一致。</td>
       <td>-</td>
       <td>INT64</td>
       <td>ND</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>返回需要在 Device 侧申请的 workspace 大小。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>executor</td>
       <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>返回 op 执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -188,21 +188,21 @@ aclnnStatus aclnnUnique2(
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
         <td>161001</td>
-        <td>传入的self或valueOut或inverseOut或countsOut是空指针时。</td>
+        <td>传入的 self 或 valueOut 或 inverseOut 或 countsOut 是空指针时。</td>
       </tr>
       <tr>
         <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="4">161002</td>
-        <td>self或valueOut的数据类型不在支持的范围之内。</td>
+        <td>self 或 valueOut 的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td>self为非连续张量。</td>
+        <td>self 为非连续张量。</td>
       </tr>
       <tr>
-        <td>returnInverse为True，且inverseOut与self shape不一致。</td>
+        <td>returnInverse 为 True，且 inverseOut 与 self shape 不一致。</td>
       </tr>
       <tr>
-        <td>returnCounts为True，且countsOut与valueOut shape不一致。</td>
+        <td>returnCounts 为 True，且 countsOut 与 valueOut shape 不一致。</td>
       </tr>
     </tbody>
     </table>
@@ -226,22 +226,22 @@ aclnnStatus aclnnUnique2(
     <tr>
       <td>workspace</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
+      <td>在 Device 侧申请的 workspace 内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnUnique2GetWorkspaceSize获取。</td>
+      <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnUnique2GetWorkspaceSize 获取。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
+      <td>op 执行器，包含了算子计算流程。</td>
     </tr>
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的Stream。</td>
+      <td>指定执行任务的 Stream。</td>
     </tr>
   </tbody>
   </table>
@@ -253,29 +253,29 @@ aclnnStatus aclnnUnique2(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnUnique2默认确定性实现。
+  - aclnnUnique2 默认确定性实现。
   <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-      * 由于去重算法实现差异，当满足下列所有条件时，算子将无视sorted入参的值，固定对输出结果进行升序排序：
-          * self输入为1D
-          * self的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
-      * 由于去重算法实现差异，当满足下列所有条件时，算子的inverseOut输出无意义：
-          - returnInverse输入为false
-          - self输入为1D
-          - self的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
+      * 由于去重算法实现差异，当满足下列所有条件时，算子将无视 sorted 入参的值，固定对输出结果进行升序排序：
+          * self 输入为 1D
+          * self 的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
+      * 由于去重算法实现差异，当满足下列所有条件时，算子的 inverseOut 输出无意义：
+          - returnInverse 输入为 false
+          - self 输入为 1D
+          - self 的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在输入self包含0的情况下，算子的输出中可能会包含正0和负0，而非只输出一个0。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在输入 self 包含 0 的情况下，算子的输出中可能会包含正 0 和负 0，而非只输出一个 0。
   <!-- end id8 -->
   <!-- npu="A3,910b" id9 -->
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当self的数据量超过2亿时，执行时间长，可能会运行超时。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当 self 的数据量超过 2 亿时，执行时间长，可能会运行超时。
   <!-- end id9 -->
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -389,7 +389,7 @@ int main() {
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnUnique2第二段接口
   ret = aclnnUnique2(workspaceAddr, workspaceSize, executor, stream);

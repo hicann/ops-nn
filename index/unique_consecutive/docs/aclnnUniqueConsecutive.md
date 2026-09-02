@@ -23,11 +23,11 @@
 
 ## 功能说明
 
-算子功能：去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。
+算子功能：去除每一个元素后的重复元素。当 dim 不为空时，去除对应维度上的每一个张量后的重复张量。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnUniqueConsecutiveGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUniqueConsecutive”接口执行**计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用 `aclnnUniqueConsecutiveGetWorkspaceSize` 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 `aclnnUniqueConsecutive` 接口执行计算。
 
 ```cpp
 aclnnStatus aclnnUniqueConsecutiveGetWorkspaceSize(
@@ -80,7 +80,7 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>输入张量。</td>
-      <td>支持空Tensor场景</td>
+      <td>支持空 Tensor 场景</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16</td>
       <td>ND</td>
       <td>≤8</td>
@@ -89,7 +89,7 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>returnInverse（bool）</td>
       <td>输入</td>
-      <td>表示是否返回self中各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。</td>
+      <td>表示是否返回 self 中各元素在 valueOut 中对应元素的位置下标，True 时返回，False 时不返回。</td>
       <td>-</td>
       <td>bool</td>
       <td>-</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>returnCounts（bool）</td>
       <td>输入</td>
-      <td>表示是否返回valueOut中各元素在self中连续重复出现的次数，True时返回，False时不返回。</td>
+      <td>表示是否返回 valueOut 中各元素在 self 中连续重复出现的次数，True 时返回，False 时不返回。</td>
       <td>-</td>
       <td>bool</td>
       <td>-</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>dim（int64_t）</td>
       <td>输入</td>
-      <td>表示进行去重的维度。取值范围为[-self.dim(), self.dim())，传入1000表示不指定维度（展平模式，将输入展平后去重）</td>
+      <td>表示进行去重的维度。取值范围为[-self.dim(), self.dim())，传入 1000 表示不指定维度（展平模式，将输入展平后去重）</td>
       <td>-</td>
       <td>int64</td>
       <td>-</td>
@@ -120,36 +120,36 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>valueOut（aclTensor*）</td>
       <td>输出</td>
       <td>第一个输出张量，返回消除连续重复元素后的结果。</td>
-      <td>数据类型与self一致</td>
+      <td>数据类型与 self 一致</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。</td>
       <td>ND</td>
-      <td>与self保持一致</td>
+      <td>与 self 保持一致</td>
       <td>-</td>
     </tr>
     <tr>
       <td>inverseOut（aclTensor*）</td>
       <td>输出</td>
-      <td>第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中对应元素的位置下标。</td>
-      <td>inverseOut和countsOut的数据类型须一致。</td>
+      <td>第二个输出张量，当 returnInverse 为 True 时有意义，返回 self 中各元素在 valueOut 中对应元素的位置下标。</td>
+      <td>inverseOut 和 countsOut 的数据类型须一致。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>与valueOut保持一致</td>
+      <td>与 valueOut 保持一致</td>
       <td>-</td>
     </tr>
     <tr>
       <td>countsOut（aclTensor*）</td>
       <td>输出</td>
-      <td>第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中连续重复出现的次数。</td>
-      <td>inverseOut和countsOut的数据类型须一致。</td>
+      <td>第三个输出张量，当 returnCounts 为 True 时有意义，返回 valueOut 中各元素在 self 中连续重复出现的次数。</td>
+      <td>inverseOut 和 countsOut 的数据类型须一致。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>与valueOut保持一致</td>
+      <td>与 valueOut 保持一致</td>
       <td>-</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>返回需要在 Device 侧申请的 workspace 大小。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>返回 op 执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -171,11 +171,11 @@ aclnnStatus aclnnUniqueConsecutive(
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
-  输入`self`不支持DOUBLE、COMPLEX64、COMPLEX128、BOOL类型
+  输入 `self` 不支持 DOUBLE、COMPLEX64、COMPLEX128、BOOL 类型
 
-  输入`returnInverse`仅支持false
+  输入 `returnInverse` 仅支持 false
 
-  输入`dim`仅支持1000。
+  输入 `dim` 仅支持 1000。
 
 <!-- end id7 -->
 
@@ -200,21 +200,21 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self或valueOut或inverseOut或countsOut是空指针时。</td>
+      <td>传入的 self 或 valueOut 或 inverseOut 或 countsOut 是空指针时。</td>
     </tr>
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self或valueOut的数据类型不在支持的范围之内。</td>
+      <td>self 或 valueOut 的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>self的数据类型不在支持的范围之内。</td>
+      <td>self 的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>inverseOut或countsOut的数据类型不在支持的范围之内。</td>
+      <td>inverseOut 或 countsOut 的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>inverseOut和countsOut的数据类型不一致。</td>
+      <td>inverseOut 和 countsOut 的数据类型不一致。</td>
     </tr>
   </tbody>
   </table>
@@ -238,42 +238,42 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>workspace</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
+      <td>在 Device 侧申请的 workspace 内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnUniqueConsecutiveGetWorkspaceSize获取。</td>
+      <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnUniqueConsecutiveGetWorkspaceSize 获取。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
+      <td>op 执行器，包含了算子计算流程。</td>
     </tr>
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的Stream。</td>
+      <td>指定执行任务的 Stream。</td>
     </tr>
   </tbody>
   </table>
 
-- **返回值**
+* **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
 - 确定性计算：
-  - aclnnUniqueConsecutive默认确定性实现。
+  - aclnnUniqueConsecutive 默认确定性实现。
 - 性能：
-  - A2、A3及训练系列产品上，当self在dim上的维度值超过2亿时，性能很差甚至是运行超时。
+  - A2、A3 及训练系列产品上，当 self 在 dim 上的维度值超过 2 亿时，性能很差甚至是运行超时。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

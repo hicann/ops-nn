@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 算子功能：在某一dim轴上，对输入张量`self`做去重操作。
+- 算子功能：在某一 dim 轴上，对输入张量 `self` 做去重操作。
 - 示例：假设`self`为
 
   $$
@@ -71,7 +71,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnUniqueDimGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnUniqueDim”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用 `aclnnUniqueDimGetWorkspaceSize` 接口获取入参并根据计算流程计算所需 workspace 大小，再调用 `aclnnUniqueDim` 接口执行计算。
 
 ```cpp
 aclnnStatus aclnnUniqueDimGetWorkspaceSize(
@@ -123,7 +123,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>示例中的self。</td>
+      <td>示例中的 self。</td>
       <td>-</td>
       <td>FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。</td>
       <td>ND</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>sorted</td>
       <td>输入</td>
-      <td>表示返回的输出结果valueOut是否排序。</td>
+      <td>表示返回的输出结果 valueOut 是否排序。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>returnInverse</td>
       <td>输入</td>
-      <td>表示是否返回self在dim轴上各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。</td>
+      <td>表示是否返回 self 在 dim 轴上各元素在 valueOut 中对应元素的位置下标，True 时返回，False 时不返回。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -153,9 +153,9 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>dim</td>
       <td>输入</td>
-      <td>示例中的dim。</td>
-      <td>指定做去重操作的维度，数据类型支持INT64，取值范围为[-self.dim(), self.dim())。</td>
-      <td>FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16</td>
+      <td>示例中的 dim。</td>
+      <td>指定做去重操作的维度，数据类型支持 INT64，取值范围为[-self.dim(), self.dim())。</td>
+      <td>INT64</td>
       <td>ND</td>
       <td></td>
       <td>√</td>
@@ -163,8 +163,8 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>valueOut</td>
       <td>输出</td>
-      <td>示例中的valueOut，表示去重结果。</td>
-      <td>数据类型与self一致。</td>
+      <td>示例中的 valueOut，表示去重结果。</td>
+      <td>数据类型与 self 一致。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>inverseOut</td>
       <td>输出</td>
-      <td>示例中的inverseOut，表示self在dim轴上各元素在valueOut中对应元素的位置下标。</td>
+      <td>示例中的 inverseOut，表示 self 在 dim 轴上各元素在 valueOut 中对应元素的位置下标。</td>
       <td>-</td>
       <td>INT64</td>
       <td>-</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>countsOut</td>
       <td>输出</td>
-      <td>示例中的countsOut，表示valueOut中的各元素在self中出现的次数。</td>
+      <td>示例中的 countsOut，表示 valueOut 中的各元素在 self 中出现的次数。</td>
       <td>-</td>
       <td>INT64</td>
       <td>-</td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>返回需要在 Device 侧申请的 workspace 大小。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -203,7 +203,7 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>executor</td>
       <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>返回 op 执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -233,24 +233,24 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self、valueOut、inverseOut或countsOut是空指针。</td>
+      <td>传入的 self、valueOut、inverseOut 或 countsOut 是空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
-      <td>self的数据类型不在支持的范围之内。</td>
+      <td>self 的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>inverseOut和countsOut的数据类型不为INT64。</td>
+      <td>inverseOut 和 countsOut 的数据类型不为 INT64。</td>
     </tr>
     <tr>
-      <td>self和valueOut的数据类型不一致。</td>
+      <td>self 和 valueOut 的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>self的shape维度大于8。</td>
+      <td>self 的 shape 维度大于 8。</td>
     </tr>
     <tr>
-      <td>dim值不在[-self.dim(), self.dim())范围内。</td>
+      <td>dim 值不在[-self.dim(), self.dim())范围内。</td>
     </tr>
   </tbody>
   </table>
@@ -274,22 +274,22 @@ aclnnStatus aclnnUniqueDim(
     <tr>
       <td>workspace</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
+      <td>在 Device 侧申请的 workspace 内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnUniqueDimGetWorkspaceSize获取。</td>
+      <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnUniqueDimGetWorkspaceSize 获取。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
+      <td>op 执行器，包含了算子计算流程。</td>
     </tr>
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的Stream。</td>
+      <td>指定执行任务的 Stream。</td>
     </tr>
   </tbody>
   </table>
@@ -301,15 +301,15 @@ aclnnStatus aclnnUniqueDim(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnUniqueDim默认确定性实现。
+  - aclnnUniqueDim 默认确定性实现。
 - 性能：
-  - A2、A3及训练系列产品上，当self在dim上的维度值超过2亿时，性能很差甚至是运行超时。
+  - A2、A3 及训练系列产品上，当 self 在 dim 上的维度值超过 2 亿时，性能很差甚至是运行超时。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "math.h"
