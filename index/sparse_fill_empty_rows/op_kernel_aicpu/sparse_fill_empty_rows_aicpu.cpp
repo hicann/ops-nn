@@ -94,6 +94,10 @@ KernelStatus SparseFillEmptyRowsCpuKernel::ComputeSparseFillEmptyRows(const CpuK
     const int64_t n = indices->GetTensorShape()->GetDimSize(0);
     const int64_t denseRows = reinterpret_cast<int64_t*>(denseShape->GetData())[0];
     const int64_t rank = indices->GetTensorShape()->GetDimSize(1);
+    if (denseRows < 0) {
+        KERNEL_LOG_ERROR("dense_shape[0] must be non-negative, but got %ld.", denseRows);
+        return KERNEL_STATUS_PARAM_INVALID;
+    }
     if (denseRows == 0) {
         if (n != 0) {
             KERNEL_LOG_ERROR("dense_shape[0] = 0 but indices.shape[0] = %ld", n);

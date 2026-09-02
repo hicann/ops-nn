@@ -160,6 +160,24 @@ ADD_ALL_ROWS_FULL_CASE(DT_UINT32, uint32_t)
 ADD_ALL_ROWS_FULL_CASE(DT_UINT64, uint64_t)
 ADD_ALL_ROWS_FULL_CASE(DT_UINT8, uint8_t)
 
+TEST_F(TEST_SPARSE_FILL_EMPTY_ROWS_UT, dense_rows_negative_fail)
+{
+    vector<DataType> dataTypes = {DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_BOOL, DT_INT64};
+    vector<vector<int64_t>> shapes = {{0, 2}, {0}, {2}, {}, {0, 2}, {0}, {0}, {0}};
+    int64_t inputIndices[1] = {0};
+    int64_t inputValues[1] = {0};
+    int64_t denseShape[2] = {-1, 6};
+    int64_t defaultValue[1] = {-1};
+    int64_t yIndices[1] = {0};
+    int64_t yValues[1] = {0};
+    bool emptyRowIndicator[1] = {false};
+    int64_t reverseIndexMap[1] = {0};
+    vector<void*> datas = {inputIndices, inputValues, denseShape,        defaultValue,
+                           yIndices,     yValues,     emptyRowIndicator, reverseIndexMap};
+    CREATE_NODEDEF(shapes, dataTypes, datas);
+    RUN_KERNEL(nodeDef, HOST, KERNEL_STATUS_PARAM_INVALID);
+}
+
 TEST_F(TEST_SPARSE_FILL_EMPTY_ROWS_UT, dense_rows_zero_with_nonempty_indices_fail)
 {
     vector<DataType> dataTypes = {DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_INT64, DT_BOOL, DT_INT64};
