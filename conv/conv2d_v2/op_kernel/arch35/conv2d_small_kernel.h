@@ -1391,12 +1391,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             SetupLoad3DBase();
 
             uint32_t curMmadN = AlignB(curActualCo, GN0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
                 LoadFmapL1MModeForGroup(al1, x, groupIter);
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
 
                 ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
@@ -1404,7 +1402,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                     SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                 }
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
         } else {
             LoadWeightL1ForGroup(filter, groupIter);
@@ -1428,7 +1425,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 LoadFmapL1MModeForGroup(al1Buf0, x, groupIter);
             }
             SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             // M-loop -> K-loop -> Fixpipe.
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
                 uint32_t curBuf = innerBatchIter_ % 2;
@@ -1442,7 +1438,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                     LoadFmapL1MModeForGroup(al1Next, x, groupIter);
                     SetFlag<HardEvent::MTE2_MTE1>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
                 WaitFlag<HardEvent::MTE2_MTE1>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
 
@@ -1451,14 +1446,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 if (innerBatchIter_ + 2 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
-
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
         }
 
-        if (singleCoreBatch_ > 1) {
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-        }
         SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
@@ -1507,12 +1497,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             }
             SetupLoad3DBase();
 
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
                 LoadFmapL1(x, 0);
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
 
                 ProcessHwMode(al1, bl1, AlignB(actualCo_, GN0), kL0MaxIter, hwOut, y, extendParams);
@@ -1520,9 +1508,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                     SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                 }
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         } else {
             LoadWeightL1(filter);
             LoadBiasScaleL1(bias, extendParams);
@@ -1539,7 +1525,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             curBatchIdx_ = batchStart_;
             LoadFmapL1(x, 0);
             SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
 
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
                 uint32_t curBuf = innerBatchIter_ % 2;
@@ -1552,7 +1537,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                     LoadFmapL1(x, nextBuf);
                     SetFlag<HardEvent::MTE2_MTE1>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
                 WaitFlag<HardEvent::MTE2_MTE1>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
 
@@ -1561,9 +1545,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 if (innerBatchIter_ + 2 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         }
     } else {
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.

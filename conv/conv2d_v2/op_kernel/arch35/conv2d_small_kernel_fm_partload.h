@@ -206,17 +206,6 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     if (this->singleCoreBatch_ <= 1) {
         ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, 0, false,
                         EVT_BATCH_PREFETCH0);
-    } else if (!this->enableBatchDoubleBuffer_) {
-        SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-        for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
-            this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
-            this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-            ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, 0, false,
-                            EVT_BATCH_PREFETCH0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-        }
-        WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
     } else {
         uint32_t firstCurHi;
         uint32_t firstHiLoadOff;
@@ -240,7 +229,6 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
 
         this->PrefetchFirstCinBlock(kernelHxW, firstCurHi, firstHiLoadOff, firstCurWi, firstWiLoadOff, 0,
                                     EVT_BATCH_PREFETCH0);
-        SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
             event_t curBatchEv = (this->innerBatchIter_ % 2 == 0) ? EVT_BATCH_PREFETCH0 : EVT_BATCH_PREFETCH1;
             event_t nextBatchEv = (this->innerBatchIter_ % 2 == 0) ? EVT_BATCH_PREFETCH1 : EVT_BATCH_PREFETCH0;
@@ -248,7 +236,6 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
             this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
             this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
 
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, 0, true, curBatchEv);
             if (this->innerBatchIter_ + 1 < this->singleCoreBatch_) {
                 uint32_t savedBatchIdx = this->curBatchIdx_;
@@ -259,10 +246,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
                 this->curBatchIdx_ = savedBatchIdx;
                 this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
             }
-
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         }
-        WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
     }
 }
 
@@ -417,58 +401,8 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
                                                         int32_t padRight, bool loadWeight, uint32_t batchBufBase,
                                                         bool firstCinPrefetched, event_t batchEv)
 {
-    if (this->enableBatchDoubleBuffer_) {
-        BaseT::ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff, curWi,
-                                wiLoadOff, curM, setupMOff, setupWoOff, padLeft, padRight, loadWeight, batchBufBase,
-                                firstCinPrefetched, batchEv);
-        return;
-    }
-
-    // Preserve the original single-batch and serial FM path.
-    if (!firstCinPrefetched) {
-        SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
-    }
-    SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
-    for (uint32_t kl1 = 0; kl1 < this->cinL1Blocks_; kl1++) {
-        uint32_t cinOff;
-        uint32_t curCin;
-        uint32_t curCinOri;
-        uint32_t kOff;
-        uint32_t curKL1;
-        uint32_t kl1Buf;
-        event_t kl1Ev;
-        this->PrepareCinBlock(kl1, kernelHxW, batchBufBase, cinOff, curCin, curCinOri, kOff, curKL1, kl1Buf, kl1Ev);
-
-        if (kl1 == 0 && firstCinPrefetched) {
-            WaitFlag<HardEvent::MTE2_MTE1>(batchEv);
-            if (loadWeight) {
-                this->LoadWeightL1Block(kOff, curKL1);
-            }
-            SetFlag<HardEvent::MTE2_MTE1>(kl1Ev);
-            WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
-        } else {
-            WaitFlag<HardEvent::MTE1_MTE2>(kl1Ev);
-            this->LoadFmapL1Chunk(kl1Buf, curHi, hiLoadOff, padTop, padBottom, curWi, wiLoadOff, cinOff, curCinOri);
-            if (loadWeight) {
-                this->LoadWeightL1Block(kOff, curKL1);
-            }
-            SetFlag<HardEvent::MTE2_MTE1>(kl1Ev);
-            WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
-        }
-        uint32_t curCinOriFmap = AlignB(curCinOri, this->GK0Fmap);
-        this->SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi,
-                                  curCinOriFmap);
-
-        uint32_t al1ElemCount = curHi * curWi * curCinOriFmap;
-        uint32_t al1BufOff = kl1Buf * this->al1BufBytes_;
-        LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
-        uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
-        this->RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters);
-
-        SetFlag<HardEvent::MTE1_MTE2>(kl1Ev);
-    }
-
-    WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
-    WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+    BaseT::ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff, curWi,
+                            wiLoadOff, curM, setupMOff, setupWoOff, padLeft, padRight, loadWeight, batchBufBase,
+                            firstCinPrefetched, batchEv);
 }
 #endif // CONV2D_SMALL_KERNEL_FM_PARTLOAD_H

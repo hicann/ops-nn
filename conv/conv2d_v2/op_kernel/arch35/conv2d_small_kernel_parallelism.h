@@ -187,13 +187,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                                                     isNHWCout, IsHwMode>::SetupL1SplitLayout()
 {
     this->bl1ElemCount_ = this->k1Total_ * this->n1PerCore_ * GN0 * this->GK0;
-    this->enableBatchDoubleBuffer_ = this->singleCoreBatch_ > 1;
-    if (this->enableBatchDoubleBuffer_ && ApplyL1SplitLayout(2) > TOTAL_L1_SIZE) {
-        this->enableBatchDoubleBuffer_ = false;
-    }
-    if (!this->enableBatchDoubleBuffer_) {
-        ApplyL1SplitLayout(2);
-    }
+    ApplyL1SplitLayout(2);
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -716,10 +710,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
         uint32_t al1BufOff = kl1Buf * al1BufBytes_;
         LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
         uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
-        RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters, this->enableBatchDoubleBuffer_, kl1Ev);
-        if (!this->enableBatchDoubleBuffer_) {
-            SetFlag<HardEvent::MTE1_MTE2>(kl1Ev);
-        }
+        RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters, true, kl1Ev);
     }
 
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
@@ -903,38 +894,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                 CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
                               static_cast<uint32_t>(hwOut));
             }
-        } else if (!this->enableBatchDoubleBuffer_) {
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-            for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
-                this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
-                SetFmapGmBatch(x, this->curBatchIdx_, groupChanOff);
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-
-                for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
-                    uint32_t curM = this->hoL0_;
-                    if (mOff + curM > this->actualM_) {
-                        curM = this->actualM_ - mOff;
-                    }
-
-                    uint32_t curHi, padTop, padBottom, hiLoadOff;
-                    CalcChunkFmap(mOff, curM, curHi, padTop, padBottom, hiLoadOff);
-
-                    uint32_t curMAlign = AlignB(curM, GM0);
-                    LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
-
-                    MmadParams mp;
-                    this->InitMmadParams(mp, curMAlign, curMmadN);
-
-                    bool loadWeight = this->innerBatchIter_ == 0 && mOff == 0;
-                    ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
-                                     this->orgWin_, 0, curM, mOff, 0, 0, 0, loadWeight, 0, false, EVT_BATCH_PREFETCH0);
-
-                    CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
-                                  static_cast<uint32_t>(hwOut));
-                }
-
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-            }
         } else {
             uint32_t firstCurM = this->hoL0_;
             if (firstCurM > this->actualM_) {
@@ -947,7 +906,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             this->curBatchIdx_ = this->batchStart_;
             SetFmapGmBatch(x, this->curBatchIdx_, groupChanOff);
             PrefetchFirstCinBlock(kernelHxW, firstCurHi, firstHiLoadOff, this->orgWin_, 0, 0, EVT_BATCH_PREFETCH0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
                 event_t curBatchEv = (this->innerBatchIter_ % 2 == 0) ? EVT_BATCH_PREFETCH0 : EVT_BATCH_PREFETCH1;
                 event_t nextBatchEv = (this->innerBatchIter_ % 2 == 0) ? EVT_BATCH_PREFETCH1 : EVT_BATCH_PREFETCH0;
@@ -956,7 +914,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                 SetFmapGmBatch(x, this->curBatchIdx_, groupChanOff);
 
                 bool loadWeightThisBatch = this->innerBatchIter_ == 0;
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
 
                 for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
                     uint32_t curM = this->hoL0_;
@@ -990,14 +947,9 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                     CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
                                   static_cast<uint32_t>(hwOut));
                 }
-
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
         }
 
-        if (this->singleCoreBatch_ > 1) {
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-        }
         SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
@@ -1043,17 +995,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         if (this->singleCoreBatch_ <= 1) {
             ProcessHwMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, true, 0, false,
                           EVT_BATCH_PREFETCH0);
-        } else if (!this->enableBatchDoubleBuffer_) {
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-            for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
-                this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
-                SetFmapGmBatch(x, this->curBatchIdx_, 0);
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-                ProcessHwMode(kL0, kL0Iters, kernelHxW, AlignB(this->actualCo_, GN0), hwOut, y, extendParams, bl1Full,
-                              this->innerBatchIter_ == 0, 0, false, EVT_BATCH_PREFETCH0);
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
-            }
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         } else {
             uint32_t firstHo = this->hoL0_;
             if (firstHo > this->actualHo_) {
@@ -1074,7 +1015,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 
             PrefetchFirstCinBlock(kernelHxW, firstCurHi, firstHiLoadOff, firstCurWi, firstWiLoadOff, 0,
                                   EVT_BATCH_PREFETCH0);
-            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
 
             for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
                 event_t curBatchEv = (this->innerBatchIter_ % 2 == 0) ? EVT_BATCH_PREFETCH0 : EVT_BATCH_PREFETCH1;
@@ -1083,7 +1023,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                 this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
                 SetFmapGmBatch(x, this->curBatchIdx_, 0);
 
-                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
                 ProcessHwMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full,
                               this->innerBatchIter_ == 0, 0, true, curBatchEv);
                 if (this->innerBatchIter_ + 1 < this->singleCoreBatch_) {
@@ -1095,9 +1034,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                     this->curBatchIdx_ = savedBatchIdx;
                     SetFmapGmBatch(x, this->curBatchIdx_, 0);
                 }
-                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
             }
-            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         }
     } else {
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
