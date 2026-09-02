@@ -240,11 +240,13 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckFullLoad() const
         return false;
     }
     if (isBroadcastA && batchInfo_->batchA == 1UL) {
+        // each core needs to loop at least 4 batch for MatB, and MatB cannot be full-loaded after splited to all cores
         return args_.mValue <= BASIC_BLOCK_SIZE_256 && alignMatASize * DB_SIZE <= compileInfo_.l1Size &&
                (alignMatBSize >= compileInfo_.l1Size * compileInfo_.aicNum ||
                 batchInfo_->batchB * ops::CeilDiv(args_.nValue, BASIC_BLOCK_SIZE_256) >= 4UL * compileInfo_.aicNum);
     }
     if (!isBroadcastA && batchInfo_->batchB == 1UL) {
+        // each core needs to loop at least 4 batch for MatA, and MatA cannot be full-loaded after splited to all cores
         return args_.nValue <= BASIC_BLOCK_SIZE_256 && alignMatBSize * DB_SIZE <= compileInfo_.l1Size &&
                (alignMatASize >= compileInfo_.l1Size * compileInfo_.aicNum ||
                 batchInfo_->batchA * ops::CeilDiv(args_.mValue, BASIC_BLOCK_SIZE_256) >= 4UL * compileInfo_.aicNum);
