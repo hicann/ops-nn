@@ -788,7 +788,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::GetWorkspaceSize()
 
 ge::graphStatus AddRmsNormQuantRegbaseTiling::PostTiling()
 {
-    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
+    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %llu.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -811,7 +811,7 @@ uint64_t AddRmsNormQuantRegbaseTiling::GetTilingKey() const
     if (tilingParams.hasBeta) {
         tilingKey += TILING_OFFSET_HAS_BETA;
     }
-    OP_LOGD(nodeName.c_str(), "GetTilingKey: hasResOut=%u hasBeta=%u tilingType=%u tilingKey=%lu",
+    OP_LOGD(nodeName.c_str(), "GetTilingKey: hasResOut=%u hasBeta=%u tilingType=%u tilingKey=%llu",
             tilingParams.hasResOut, tilingParams.hasBeta, tilingParams.tilingType, tilingKey);
     return tilingKey;
 }

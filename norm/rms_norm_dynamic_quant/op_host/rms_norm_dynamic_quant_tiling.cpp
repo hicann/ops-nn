@@ -30,6 +30,7 @@ constexpr int NUM_WITH_BETA = 3;
 constexpr int NUM_WITHOUT_BETA = 2;
 
 constexpr int EPS_IDX = 0;
+constexpr int DST_TYPE_IDX = 1;
 
 constexpr uint64_t USR_WORKSPACE_SIZE_910B = 1;
 
@@ -187,6 +188,16 @@ bool RmsNormDynamicQuantTilingHelper::GetBaseInfo()
     if (epsPtr != nullptr) {
         this->eps_ = *epsPtr;
     }
+
+    auto dstType = static_cast<int64_t>(ge::DT_INT8);
+    auto dstTypePtr = attrs->GetInt(DST_TYPE_IDX);
+    if (dstTypePtr != nullptr) {
+        dstType = static_cast<int64_t>(*dstTypePtr);
+    }
+
+    OP_CHECK_IF(dstType != INT_TWO,
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "dst_type", std::to_string(dstType).c_str(), "2"),
+                return false);
 
     this->outQuant1Flag = -1; // auto mode: quant enabled when smooth_scales present
     if (!ValidateBaseParameters()) {

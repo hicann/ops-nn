@@ -131,8 +131,15 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     const gert::Shape gammaShape = context->GetInputShape(INPUT_IDX_GAMMA)->GetStorageShape();
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    float epsilon = *attrs->GetFloat(1);
-    bool divMode = *attrs->GetBool(2);
+    float epsilon = 1e-6f;
+    bool divMode = true;
+    const float* epsilonPtr = attrs->GetFloat(1);
+    const bool* divModePtr = attrs->GetBool(2);
+    OP_CHECK_IF((epsilonPtr == nullptr), OP_LOGE(context, "Error: epsilonPtr is nullptr."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((divModePtr == nullptr), OP_LOGE(context, "Error: divModePtr is nullptr."), return ge::GRAPH_FAILED);
+    epsilon = *epsilonPtr;
+    divMode = *divModePtr;
+
     numCol = gammaShape.GetShapeSize();
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
