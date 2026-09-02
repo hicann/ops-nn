@@ -18,8 +18,8 @@
 #include "matmul_compress_tiling_data.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "../transpose_batch_mat_mul/utils/common.h"
-#include "../transpose_batch_mat_mul/utils/common_func.h"
+#include "../transpose_batch_mat_mul/utils/tbmm_common.h"
+#include "../transpose_batch_mat_mul/utils/tbmm_common_func.h"
 #include "../transpose_batch_mat_mul/utils/hardware.h"
 #include "../transpose_batch_mat_mul/utils/iterator.h"
 #include "../transpose_batch_mat_mul/utils/mma.h"
@@ -248,7 +248,7 @@ public:
                     }
 
                     if (n_idx == (n_loop_ - 1) && (compress_overlap_n_ > 0)) {
-                        //对于L1的解压缩数据为N方向连续，因此偏移的基块为compress_overlap_n_ * 512
+                        // 对于L1的解压缩数据为N方向连续，因此偏移的基块为compress_overlap_n_ * 512
                         for (uint32_t i = 0; i < k0_round / align_k; i++) {
                             dst_offset = n_round * i * align_k;
                             src_offset = k_part_idx * k_part_len * n0_ + i * n0_ * align_k +

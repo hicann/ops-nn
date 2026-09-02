@@ -31,7 +31,7 @@
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 #include "../../../op_host/op_tiling/dual_level_quant_batch_matmul_adaptive_sliding_window_tiling.h"
 #include "../../../op_kernel/dual_level_quant_batch_matmul_tiling_data.h"

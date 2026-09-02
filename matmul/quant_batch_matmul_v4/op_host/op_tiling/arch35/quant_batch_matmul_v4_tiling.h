@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "op_host/tiling_templates_registry.h"
-#include "../../../../common/op_host/op_tiling/tiling_type.h"
+#include "../../../../common/op_host/op_tiling/tiling_type_mm.h"
 #include "op_cache_tiling.h"
 
 #include "../../../../weight_quant_batch_matmul_v2/op_host/op_tiling/weight_quant_batch_matmul_v2_tiling_tool.h"

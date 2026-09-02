@@ -16,7 +16,7 @@
 #include "dual_level_quant_batch_matmul_adaptive_sliding_window_tiling.h"
 #include "../../op_kernel/dual_level_quant_batch_matmul_tiling_key.h"
 #include "../../op_kernel/dual_level_quant_batch_matmul_tiling_data.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "error_util.h"
 
 using namespace platform_ascendc;

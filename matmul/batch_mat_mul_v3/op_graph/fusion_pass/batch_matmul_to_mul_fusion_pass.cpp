@@ -37,7 +37,7 @@
 #include "platform/platform_info.h"
 #include "common/inc/error_util.h"
 #include "common/op_graph/fusion_pass/matmul_fusion_utils_pass.h"
-#include "common/op_host/math_util.h"
+#include "common/op_host/math_util_nn.h"
 
 using namespace ge;
 using namespace ge::es;

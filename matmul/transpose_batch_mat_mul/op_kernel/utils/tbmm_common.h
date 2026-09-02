@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file common.h
+ * \file tbmm_common.h
  * \brief
  */
 
-#ifndef INCLUDE_KERNEL_UTILS_COMMON_H
-#define INCLUDE_KERNEL_UTILS_COMMON_H
+#ifndef INCLUDE_TBMM_COMMON_H
+#define INCLUDE_TBMM_COMMON_H
 
 #define CONST_2 2
 
@@ -26,4 +26,4 @@
 #define FORCE_INLINE inline __attribute__((always_inline))
 #endif
 
-#endif // INCLUDE_KERNEL_UTILS_COMMON_H
+#endif // INCLUDE_TBMM_COMMON_H

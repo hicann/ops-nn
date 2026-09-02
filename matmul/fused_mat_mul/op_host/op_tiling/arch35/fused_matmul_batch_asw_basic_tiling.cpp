@@ -21,7 +21,7 @@
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 namespace optiling {
 namespace fused_matmul {

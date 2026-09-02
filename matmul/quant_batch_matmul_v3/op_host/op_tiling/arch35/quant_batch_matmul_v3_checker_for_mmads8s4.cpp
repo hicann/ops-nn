@@ -15,7 +15,7 @@
 
 #include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
 
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"

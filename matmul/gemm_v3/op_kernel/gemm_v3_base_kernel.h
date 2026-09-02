@@ -23,7 +23,7 @@
 #define __aicore__ [aicore]
 #endif
 
-#include "../transpose_batch_mat_mul/utils/common.h"
+#include "../transpose_batch_mat_mul/utils/tbmm_common.h"
 #include "../transpose_batch_mat_mul/utils/iterator.h"
 #include "../transpose_batch_mat_mul/utils/mem.h"
 #include "../transpose_batch_mat_mul/utils/utils.h"

@@ -19,7 +19,7 @@
 #include "register/op_def_registry.h"
 #include "common/op_host/op_tiling/debug_tiling.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/log_format_util.h"
 
 namespace {

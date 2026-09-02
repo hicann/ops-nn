@@ -20,7 +20,7 @@
 #include "register/op_def_registry.h"
 #include "op_host/tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 namespace {
 constexpr uint32_t X_INDEX = 0;

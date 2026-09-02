@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
-#include "../../../../common/op_host/math_util.h"
+#include "../../../../common/op_host/math_util_nn.h"
 #include "ut_string_utils.h"
 
 using namespace ut_str;

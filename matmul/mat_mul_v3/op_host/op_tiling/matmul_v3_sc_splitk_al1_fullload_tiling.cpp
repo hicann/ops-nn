@@ -15,7 +15,7 @@
 
 #include "matmul_v3_sc_splitk_al1_fullload_tiling.h"
 #include "log/log.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 namespace optiling {
 namespace matmul_v3 {

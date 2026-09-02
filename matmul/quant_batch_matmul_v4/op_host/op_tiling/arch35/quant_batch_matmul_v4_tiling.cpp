@@ -29,7 +29,7 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "error_util.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "platform/platform_infos_def.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"

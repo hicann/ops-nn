@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "base_block_calculator.h"
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "l1_tiling_data_calculator.h"
 #include "log/log.h"

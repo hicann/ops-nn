@@ -12,8 +12,8 @@
 #define __QUANT_BATCH_MATMUL_V3_PERTOKEN_ARCH20_H__
 
 #include "../quant_batch_matmul_v3_kernel_tiling_data.h"
-#include "../../transpose_batch_mat_mul/utils/common.h"
-#include "../../transpose_batch_mat_mul/utils/common_func.h"
+#include "../../transpose_batch_mat_mul/utils/tbmm_common.h"
+#include "../../transpose_batch_mat_mul/utils/tbmm_common_func.h"
 #include "../../transpose_batch_mat_mul/utils/mem.h"
 #include "../../transpose_batch_mat_mul/utils/iterator.h"
 #include "../../transpose_batch_mat_mul/utils/utils.h"

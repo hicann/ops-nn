@@ -14,7 +14,7 @@
  */
 
 #include "quant_batch_matmul_v4_basic_block_tiling.h"
-#include "../../../../common/op_host/math_util.h"
+#include "../../../../common/op_host/math_util_nn.h"
 
 namespace optiling {
 using namespace matmul_v4;

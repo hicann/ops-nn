@@ -17,7 +17,7 @@
 
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_key.h"
 #include "error_util.h"
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "op_cache_tiling.h"

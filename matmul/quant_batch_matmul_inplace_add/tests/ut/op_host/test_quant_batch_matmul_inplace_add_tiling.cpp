@@ -32,7 +32,7 @@
 #include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_key.h"
-#include "../../../../common/op_host/math_util.h"
+#include "../../../../common/op_host/math_util_nn.h"
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"

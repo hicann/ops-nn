@@ -15,7 +15,7 @@
 
 #include "weight_quant_batch_matmul_v2_iterbatch_tiling.h"
 
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 #include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "../weight_quant_batch_matmul_v2_tiling_key.h"

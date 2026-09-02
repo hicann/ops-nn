@@ -16,7 +16,7 @@
 
 #include <map>
 
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "log/log.h"
 

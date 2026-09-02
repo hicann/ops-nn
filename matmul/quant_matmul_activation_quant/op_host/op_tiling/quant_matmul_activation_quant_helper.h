@@ -16,7 +16,7 @@
 #define QUANT_MATMUL_ACTIVATION_QUANT_HELPER_H
 
 #include <cstdint>
-#include "matmul/common/op_host/op_tiling/tiling_type.h"
+#include "matmul/common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"

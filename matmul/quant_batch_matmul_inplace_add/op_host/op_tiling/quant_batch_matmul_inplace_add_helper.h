@@ -16,7 +16,7 @@
 #define QUANT_BATCH_MATMUL_INPLACE_ADD_HELPER_H
 
 #include <cstdint>
-#include "matmul/common/op_host/op_tiling/tiling_type.h"
+#include "matmul/common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
@@ -408,7 +408,7 @@ void QuantBatchMatmulInplaceAddHelper<BaseT>::ResetInplaceTilingData(TilingData&
         OP_TILING_CHECK(
             memset_s(this->context_->GetRawTilingData()->GetData(), this->context_->GetRawTilingData()->GetCapacity(),
                      0, this->context_->GetRawTilingData()->GetCapacity()) != EOK,
-            CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to clear tiling data"), return );
+            CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to clear tiling data"), return);
     }
 }
 
@@ -420,7 +420,7 @@ void QuantBatchMatmulInplaceAddHelper<BaseT>::CopyV3BasicApiTilingData(
         sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData) == sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData),
         "QuantBatchMatmulInplaceAdd basic-api tiling data must stay layout-compatible with QuantBatchMatmulV3.");
     OP_TILING_CHECK(memcpy_s(&dst, sizeof(dst), &src, sizeof(src)) != EOK,
-                    CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to copy basic-api tiling data"), return );
+                    CUBE_INNER_ERR_REPORT(this->inputParams_.opName, "Fail to copy basic-api tiling data"), return);
 }
 
 } // namespace optiling

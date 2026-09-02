@@ -16,7 +16,7 @@
 #include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "batch_matmul_v3_tiling_key.h"
 
 using Ops::NN::MathUtil;

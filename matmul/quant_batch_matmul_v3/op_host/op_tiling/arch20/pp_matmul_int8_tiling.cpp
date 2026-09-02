@@ -12,7 +12,7 @@
  * \file pp_matmul_int8_tiling.cc
  * \brief
  */
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "op_cache_tiling.h"
 #include "log/log.h"
 #include "error_util.h"
@@ -42,7 +42,7 @@ void PpMatmulInt8Tiling::Reset()
         tilingData_ = PpMatmulTilingData();
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return );
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return);
     }
 }
 

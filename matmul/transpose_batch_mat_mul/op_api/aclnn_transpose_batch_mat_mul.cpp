@@ -24,7 +24,7 @@
 #include "level0/dot.h"
 #include "level0/fill.h"
 #include "matmul/common/op_host/op_api/matmul.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/unsqueeze.h"

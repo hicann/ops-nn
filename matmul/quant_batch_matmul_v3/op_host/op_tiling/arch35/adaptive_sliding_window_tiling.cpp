@@ -12,7 +12,7 @@
  * \file adaptive_sliding_window_tiling.cpp
  * \brief
  */
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "error_util.h"
 #include "adaptive_sliding_window_tiling.h"

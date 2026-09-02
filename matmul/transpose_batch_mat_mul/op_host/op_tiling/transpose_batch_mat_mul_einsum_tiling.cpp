@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 #include "op_cache_tiling.h"
 #include "runtime_kb_api.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_tuning.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/transpose_batch_mat_mul_tiling_key.h"

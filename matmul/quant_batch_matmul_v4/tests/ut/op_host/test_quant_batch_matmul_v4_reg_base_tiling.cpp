@@ -29,7 +29,7 @@
 #include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v4_tiling.h"
 #include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v4_reg_base_tiling.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
-#include "../../../../common/op_host/math_util.h"
+#include "../../../../common/op_host/math_util_nn.h"
 #include "ut_string_utils.h"
 
 using namespace ut_str;

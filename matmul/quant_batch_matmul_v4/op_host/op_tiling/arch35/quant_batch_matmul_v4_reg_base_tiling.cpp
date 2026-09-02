@@ -19,7 +19,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "quant_batch_matmul_v4_reg_base_tiling.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "error_util.h"
 
 using AscendC::BLOCK_CUBE;   // uint32_t

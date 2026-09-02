@@ -34,7 +34,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/op_api/fusedmatmul.h"
 
 using Ops::Base::CeilAlign;

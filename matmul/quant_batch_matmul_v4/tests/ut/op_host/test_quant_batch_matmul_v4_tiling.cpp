@@ -19,7 +19,7 @@
 #include "log/log.h"
 
 #include "op_host/tiling_templates_registry.h"
-#include "../../../../common/op_host/op_tiling/tiling_type.h"
+#include "../../../../common/op_host/op_tiling/tiling_type_mm.h"
 #include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
@@ -28,8 +28,8 @@
 #include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v4_tiling.h"
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
-#include "../../../../common/op_host/math_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
+#include "../../../../common/op_host/math_util_nn.h"
 #include "ut_string_utils.h"
 
 using namespace ut_str;

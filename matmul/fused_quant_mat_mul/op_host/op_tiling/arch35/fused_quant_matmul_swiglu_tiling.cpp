@@ -15,7 +15,7 @@
 #include "fused_quant_matmul_swiglu_tiling.h"
 
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "op_api/op_util.h"
 
@@ -120,7 +120,8 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeDtype()
 
     // swiglu场景不支持bias输入
     auto biasShape = context_->GetOptionalInputShape(GetBiasIdx());
-    OP_TILING_CHECK(biasShape, CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support bias."),
+    OP_TILING_CHECK(biasShape,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The current FusedQuantMatMul not support bias."),
                     return false);
 
     inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
@@ -147,7 +148,7 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeDtype()
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "X3 dtype should be FLOAT, actual is %s",
                                           ge::TypeUtils::DataTypeToSerialString(quantDtype).c_str()),
                     return false);
-    
+
     OP_TILING_CHECK(!(outDtype == ge::DT_INT8 || outDtype == ge::DT_FLOAT16),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Output dtype should be INT8/FLOAT16, actual is %s",
                                           ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
@@ -174,10 +175,9 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
         return false;
     }
 
-    OP_TILING_CHECK(
-        x2ShapeLen != 3 || x2Shape.GetDim(0) != 2,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) "),
-        return false);
+    OP_TILING_CHECK(x2ShapeLen != 3 || x2Shape.GetDim(0) != 2,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) "),
+                    return false);
 
     auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
@@ -210,18 +210,17 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "shape m:%lu k:%lu n:%lu is not in white list",
                                           inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
                     return false);
-    
+
     auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
     OP_TILING_CHECK(!scaleShape,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2 scale of FusedQuantMatMul can not be null."),
                     return false);
 
     // scaleShape必须是2D
-    OP_TILING_CHECK(
-        scaleShape->GetStorageShape().GetDimNum() != SWIGLU_X2_SCALE_DIM_NUM,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2Scale dimension value must be 2, but it is %zu.",
-                            scaleShape->GetStorageShape().GetDimNum()),
-        return false);
+    OP_TILING_CHECK(scaleShape->GetStorageShape().GetDimNum() != SWIGLU_X2_SCALE_DIM_NUM,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2Scale dimension value must be 2, but it is %zu.",
+                                          scaleShape->GetStorageShape().GetDimNum()),
+                    return false);
 
     // scaleShape必须是(2,n)
     OP_TILING_CHECK(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  */
 
 #include "weight_quant_batch_matmul_v2_checker_for_mmads8s4.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 
 namespace {
@@ -228,29 +228,30 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::Stora
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     size_t weightDimNum = weightShape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK(
-        xOriDimNum < MIN_SHAPE_LEN_ND || xOriDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,"OriginalShape of x can not be greater than %zu and "
-                                        "less than %zu, but is [%zu]",
-                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xOriDimNum),
-        return false);
+    OP_TILING_CHECK(xOriDimNum < MIN_SHAPE_LEN_ND || xOriDimNum > MAX_SHAPE_LEN_ND,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                                    "OriginalShape of x can not be greater than %zu and "
+                                                    "less than %zu, but is [%zu]",
+                                                    MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xOriDimNum),
+                    return false);
 
-    OP_TILING_CHECK(
-        weightOriDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of weight can not be greater than %zu and "
-                                        "less than %zu, but is [%zu]",
-                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightOriDimNum),
-        return false);
+    OP_TILING_CHECK(weightOriDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                                    "OriginalShape of weight can not be greater than %zu and "
+                                                    "less than %zu, but is [%zu]",
+                                                    MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightOriDimNum),
+                    return false);
 
-    OP_TILING_CHECK(
-        xDimNum < MIN_SHAPE_LEN_ND || xDimNum > MAX_SHAPE_LEN_ND,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of x can not be greater than %zu and "
-                                        "less than %zu, but is [%zu]",
-                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xDimNum),
-        return false);
+    OP_TILING_CHECK(xDimNum < MIN_SHAPE_LEN_ND || xDimNum > MAX_SHAPE_LEN_ND,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                                    "StorageShape of x can not be greater than %zu and "
+                                                    "less than %zu, but is [%zu]",
+                                                    MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xDimNum),
+                    return false);
 
     OP_TILING_CHECK(weightDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of weight can not be greater "
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                                                    "StorageShape of weight can not be greater "
                                                     "than %zu and less than %zu, but is [%zu]",
                                                     MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightDimNum),
                     return false);

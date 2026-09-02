@@ -17,7 +17,7 @@
 #include <vector>
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
 

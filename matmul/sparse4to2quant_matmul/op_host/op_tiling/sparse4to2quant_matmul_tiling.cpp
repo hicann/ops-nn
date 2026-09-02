@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@
 #include <tuple>
 
 #include "op_host/tiling_templates_registry.h"
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "common/op_host/op_tiling/hash.h"
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
 namespace optiling {
@@ -426,7 +426,7 @@ void Sparse4to2QuantMatmulTiling::CompareBase(std::vector<uint64_t>& basicMetric
     uint64_t totalCnt = mCnt * nCnt;
     uint64_t usedCoreNum = std::min(totalCnt, aicoreParams_.aicNum);
     OP_TILING_CHECK(usedCoreNum == 0 || mCnt == 0 || nCnt == 0, OPS_LOG_W(inputParams_.opName, "Reset tiling failed."),
-                    return );
+                    return);
     uint64_t round = ops::CeilDiv(totalCnt, usedCoreNum);
     // 如果L1加载量过多或者轮数拖尾，都不更新
     // 3: idx of dataSize of L1 in basicMetrics

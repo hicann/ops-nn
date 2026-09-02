@@ -18,7 +18,7 @@
 #include <numeric>
 
 #include "error_util.h"
-#include "common/op_host/op_tiling/tiling_type.h"
+#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "op_host/tiling_templates_registry.h"
 #include "quant_batch_matmul_v3_checker.h"

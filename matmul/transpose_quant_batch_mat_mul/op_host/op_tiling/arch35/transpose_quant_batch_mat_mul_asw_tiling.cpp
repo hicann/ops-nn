@@ -18,7 +18,7 @@
 #include "transpose_quant_batch_mat_mul_tiling_strategy.h"
 #include "op_host/tiling_key.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 using Ops::NN::MathUtil;
 namespace optiling {

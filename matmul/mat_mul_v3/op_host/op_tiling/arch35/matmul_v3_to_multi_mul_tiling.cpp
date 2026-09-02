@@ -16,7 +16,7 @@
 #include "matmul_v3_to_multi_mul_tiling.h"
 #include "matmul_tiling_registry.h"
 #include "matmul_v3_tiling_strategy.h"
-#include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/math_util_nn.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
