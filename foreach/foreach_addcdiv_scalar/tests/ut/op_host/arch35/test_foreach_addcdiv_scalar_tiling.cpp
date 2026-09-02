@@ -31,7 +31,7 @@ protected:
 };
 
 namespace {
-std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 }
 
 TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp32)

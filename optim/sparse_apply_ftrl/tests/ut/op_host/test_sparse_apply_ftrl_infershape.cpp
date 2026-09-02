@@ -51,3 +51,115 @@ TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_test1)
     };
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
+
+TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 3: grad
+            {{{-1}, {-1}}, ge::DT_INT32, ge::FORMAT_ND},         // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 8: lr_power
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, -1},
+        {-1, -1},
+        {-1, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_partial_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, -1}, {100, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, -1}, {100, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {100, -1},
+        {100, -1},
+        {100, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_mixed_partial_unknown_and_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, -1}, {100, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, -1}, {100, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, -1}, {100, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+        {-2},
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyFtrlInfershape, sparse_apply_ftrl_infershape_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 3: grad
+            {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND}, // input 4: indices
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 5: lr
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 6: l1
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 7: l2
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 8: lr_power
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+        {-2},
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}

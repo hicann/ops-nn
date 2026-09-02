@@ -16,19 +16,35 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
 namespace ops {
 
+static constexpr int64_t UNKNOWN_DIM = -1;
+
 static ge::graphStatus InferShapeInplaceUpdate(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeInplaceUpdate");
+
     const gert::Shape* xShape = context->GetInputShape(0);
     const gert::Shape* indicesShape = context->GetInputShape(1);
     const gert::Shape* vShape = context->GetInputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, vShape);
+
+    gert::Shape* yShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+
+    // Unknown rank (-2) 场景：任一输入 rank 未知时跳过维度校验，输出透传 x shape（x 为 {-2} 时输出亦为 {-2}）
+    if (Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownRank(*indicesShape) ||
+        Ops::Base::IsUnknownRank(*vShape)) {
+        OP_LOGD(context->GetNodeName(), "Input has unknown rank (-2), pass through x shape");
+        *yShape = *xShape;
+        return GRAPH_SUCCESS;
+    }
 
     // 校验1: indices 必须是 1 维
     OP_CHECK_IF(indicesShape->GetDimNum() != 1, OP_LOGE(context, "indices must be 1-dimensional"), return GRAPH_FAILED);
@@ -37,19 +53,19 @@ static ge::graphStatus InferShapeInplaceUpdate(gert::InferShapeContext* context)
     OP_CHECK_IF(xShape->GetDimNum() != vShape->GetDimNum(), OP_LOGE(context, "x.ndim must equal v.ndim"),
                 return GRAPH_FAILED);
 
-    // 校验3: v.shape[0] == indices.shape[0]（即 K）
-    OP_CHECK_IF(vShape->GetDim(0) != indicesShape->GetDim(0), OP_LOGE(context, "v.shape[0] must equal indices length"),
-                return GRAPH_FAILED);
+    // 校验3: v.shape[0] == indices.shape[0]（即 K）；任一侧维值未知(-1)时跳过该维校验
+    OP_CHECK_IF(vShape->GetDim(0) != UNKNOWN_DIM && indicesShape->GetDim(0) != UNKNOWN_DIM &&
+                    vShape->GetDim(0) != indicesShape->GetDim(0),
+                OP_LOGE(context, "v.shape[0] must equal indices length"), return GRAPH_FAILED);
 
-    // 校验4: x.shape[1:] == v.shape[1:]
+    // 校验4: x.shape[1:] == v.shape[1:]；任一侧维值未知(-1)时跳过该维校验
     for (size_t d = 1; d < xShape->GetDimNum(); d++) {
-        OP_CHECK_IF(xShape->GetDim(d) != vShape->GetDim(d),
+        OP_CHECK_IF(xShape->GetDim(d) != UNKNOWN_DIM && vShape->GetDim(d) != UNKNOWN_DIM &&
+                        xShape->GetDim(d) != vShape->GetDim(d),
                     OP_LOGE(context, "x.shape[d] must equal v.shape[d] for d >= 1"), return GRAPH_FAILED);
     }
 
     // 输出 y shape = x shape
-    gert::Shape* yShape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     yShape->SetDimNum(xShape->GetDimNum());
     for (size_t i = 0; i < xShape->GetDimNum(); i++) {
         yShape->SetDim(i, xShape->GetDim(i));

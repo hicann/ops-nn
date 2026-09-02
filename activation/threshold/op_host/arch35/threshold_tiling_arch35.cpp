@@ -50,6 +50,7 @@ static ge::graphStatus SetUbAndTilingKey(gert::TilingContext* context, uint64_t 
 
 static ge::graphStatus ThresholdTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingThreshold");
     // 1. Get platform info
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     int64_t physicalCoreNum = ascendcPlatform.GetCoreNumAiv();

@@ -28,7 +28,7 @@ protected:
 };
 
 namespace {
-std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 }
 
 /**

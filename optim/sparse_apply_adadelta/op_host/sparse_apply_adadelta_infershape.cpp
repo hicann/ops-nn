@@ -18,6 +18,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -27,6 +28,7 @@ static constexpr int64_t IDX_ACCUM = 1;
 static constexpr int64_t IDX_ACCUM_UPDATE = 2;
 static constexpr int64_t IDX_GRAD = 6;
 static constexpr int64_t IDX_INDICES = 7;
+static constexpr int64_t UNKNOWN_DIM = -1;
 
 static void CopyShape(const gert::Shape* src, gert::Shape* dst)
 {
@@ -38,7 +40,7 @@ static void CopyShape(const gert::Shape* src, gert::Shape* dst)
 
 static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin InferShapeSparseApplyAdadelta");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyAdadelta");
 
     // var_out.shape = var.shape
     const gert::Shape* varShape = context->GetInputShape(IDX_VAR);
@@ -61,6 +63,19 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, accumUpdateOutShape);
     CopyShape(accumUpdateShape, accumUpdateOutShape);
 
+    const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+
+    // Unknown rank (-2) 场景：任一参与校验的输入 rank 未知时跳过维度校验，输出已透传对应输入 shape
+    if (Ops::Base::IsUnknownRank(*varShape) || Ops::Base::IsUnknownRank(*accumShape) ||
+        Ops::Base::IsUnknownRank(*accumUpdateShape) || Ops::Base::IsUnknownRank(*gradShape) ||
+        Ops::Base::IsUnknownRank(*indicesShape)) {
+        OP_LOGD(context->GetNodeName(), "Some input is unknown rank (-2), pass through input shapes");
+        return GRAPH_SUCCESS;
+    }
+
     // 校验：var/accum/accum_update rank 一致
     if (varShape->GetDimNum() != accumShape->GetDimNum()) {
         OP_LOGE(context->GetNodeName(), "var and accum must have same rank");
@@ -71,23 +86,23 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
         return ge::GRAPH_FAILED;
     }
 
-    // 校验：grad.shape[0] == indices.shape[0]
-    const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
-    const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
-    if (gradShape->GetDim(0) != indicesShape->GetDim(0)) {
+    // 校验：grad.shape[0] == indices.shape[0]；任一侧维值未知(-1)时跳过该维校验
+    int64_t gradDim0 = gradShape->GetDim(0);
+    int64_t indicesDim0 = indicesShape->GetDim(0);
+    if (gradDim0 != UNKNOWN_DIM && indicesDim0 != UNKNOWN_DIM && gradDim0 != indicesDim0) {
         OP_LOGE(context->GetNodeName(), "grad first dim must equal indices length");
         return ge::GRAPH_FAILED;
     }
 
-    // 校验：grad.shape[1:] == var.shape[1:]（SE §5.4 约束）
+    // 校验：grad.shape[1:] == var.shape[1:]（SE §5.4 约束）；任一侧维值未知(-1)时跳过该维校验
     if (gradShape->GetDimNum() != varShape->GetDimNum()) {
         OP_LOGE(context->GetNodeName(), "grad and var must have same rank");
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 1; i < varShape->GetDimNum(); i++) {
-        if (gradShape->GetDim(i) != varShape->GetDim(i)) {
+        int64_t gradDimI = gradShape->GetDim(i);
+        int64_t varDimI = varShape->GetDim(i);
+        if (gradDimI != UNKNOWN_DIM && varDimI != UNKNOWN_DIM && gradDimI != varDimI) {
             OP_LOGE(context->GetNodeName(), "grad trailing dims must match var trailing dims");
             return ge::GRAPH_FAILED;
         }

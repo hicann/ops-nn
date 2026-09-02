@@ -224,6 +224,7 @@ static ge::graphStatus SetupSparseApplyFtrlTilingData(gert::TilingContext* conte
 
 static ge::graphStatus SparseApplyFtrlTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingSparseApplyFtrl");
     if (CheckSparseApplyFtrlShapeAndType(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

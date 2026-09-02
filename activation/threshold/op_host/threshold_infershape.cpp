@@ -24,7 +24,7 @@ static constexpr int64_t IDX_0 = 0;
 
 static ge::graphStatus InferShapeThreshold(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferShapeThreshold");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeThreshold");
 
     // Get input shape
     const gert::Shape* xShape = context->GetInputShape(IDX_0);

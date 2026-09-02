@@ -45,6 +45,8 @@ ge::graphStatus InferShapeForMaxPoolGradGradWithArgmax(gert::InferShapeContext* 
         return ge::GRAPH_FAILED;
     }
 
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeMaxPoolGradGradWithArgmax");
+
     const char* opName = "MaxPoolGradGradWithArgmax";
 
     auto xDesc = context->GetInputDesc(INDEX_X);

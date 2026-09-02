@@ -39,10 +39,7 @@ constexpr int64_t POINT_AXIS = 1;
 constexpr int64_t COORD_AXIS = 2;
 constexpr int64_t COORD_DIM = 2;
 
-inline bool IsDimCompatible(const int64_t lhs, const int64_t rhs)
-{
-    return lhs < 0 || rhs < 0 || lhs == rhs;
-}
+inline bool IsDimCompatible(const int64_t lhs, const int64_t rhs) { return lhs < 0 || rhs < 0 || lhs == rhs; }
 
 inline bool IsPointwiseShapeCompatible(const gert::Shape& xyzShape, const gert::Shape& pointwiseShape)
 {
@@ -74,7 +71,7 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
         return ge::GRAPH_FAILED;
     }
 
-    OP_LOGD(context->GetNodeName(), "Runtime2.0 ChamferDistanceGrad InferShape start.");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeChamferDistanceGrad");
 
     const gert::Shape* xyz1Shape = context->GetInputShape(INDEX_XYZ1);
     const gert::Shape* xyz2Shape = context->GetInputShape(INDEX_XYZ2);
@@ -130,16 +127,14 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
     const int64_t gradDist2Rank = static_cast<int64_t>(gradDist2Shape->GetDimNum());
 
     if (xyz1Rank != XYZ_RANK || xyz2Rank != XYZ_RANK) {
-        OP_LOGE(context->GetNodeName(),
-                "xyz1 and xyz2 must be rank-3 tensors, but got rank %ld and %ld.",
-                xyz1Rank, xyz2Rank);
+        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must be rank-3 tensors, but got rank %ld and %ld.", xyz1Rank,
+                xyz2Rank);
         return ge::GRAPH_FAILED;
     }
 
-    if (idx1Rank != POINTWISE_RANK || idx2Rank != POINTWISE_RANK ||
-        gradDist1Rank != POINTWISE_RANK || gradDist2Rank != POINTWISE_RANK) {
-        OP_LOGE(context->GetNodeName(),
-                "idx1, idx2, grad_dist1 and grad_dist2 must all be rank-2 tensors.");
+    if (idx1Rank != POINTWISE_RANK || idx2Rank != POINTWISE_RANK || gradDist1Rank != POINTWISE_RANK ||
+        gradDist2Rank != POINTWISE_RANK) {
+        OP_LOGE(context->GetNodeName(), "idx1, idx2, grad_dist1 and grad_dist2 must all be rank-2 tensors.");
         return ge::GRAPH_FAILED;
     }
 
@@ -151,8 +146,7 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
      */
     if (!IsDimCompatible(xyz1Shape->GetDim(COORD_AXIS), COORD_DIM) ||
         !IsDimCompatible(xyz2Shape->GetDim(COORD_AXIS), COORD_DIM)) {
-        OP_LOGE(context->GetNodeName(),
-                "The last dimensions of xyz1 and xyz2 must both be 2, but got %ld and %ld.",
+        OP_LOGE(context->GetNodeName(), "The last dimensions of xyz1 and xyz2 must both be 2, but got %ld and %ld.",
                 xyz1Shape->GetDim(COORD_AXIS), xyz2Shape->GetDim(COORD_AXIS));
         return ge::GRAPH_FAILED;
     }
@@ -162,40 +156,34 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
      * xyz2 must have the same batch dimension and point dimension.
      */
     if (!IsDimCompatible(xyz1Shape->GetDim(BATCH_AXIS), xyz2Shape->GetDim(BATCH_AXIS))) {
-        OP_LOGE(context->GetNodeName(),
-                "xyz1 and xyz2 must have the same batch dimension, but got %ld and %ld.",
+        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must have the same batch dimension, but got %ld and %ld.",
                 xyz1Shape->GetDim(BATCH_AXIS), xyz2Shape->GetDim(BATCH_AXIS));
         return ge::GRAPH_FAILED;
     }
 
     if (!IsDimCompatible(xyz1Shape->GetDim(POINT_AXIS), xyz2Shape->GetDim(POINT_AXIS))) {
-        OP_LOGE(context->GetNodeName(),
-                "xyz1 and xyz2 must have the same point dimension, but got %ld and %ld.",
+        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must have the same point dimension, but got %ld and %ld.",
                 xyz1Shape->GetDim(POINT_AXIS), xyz2Shape->GetDim(POINT_AXIS));
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz1Shape, *idx1Shape)) {
-        OP_LOGE(context->GetNodeName(),
-                "idx1 shape must match the first two dimensions of xyz1.");
+        OP_LOGE(context->GetNodeName(), "idx1 shape must match the first two dimensions of xyz1.");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz2Shape, *idx2Shape)) {
-        OP_LOGE(context->GetNodeName(),
-                "idx2 shape must match the first two dimensions of xyz2.");
+        OP_LOGE(context->GetNodeName(), "idx2 shape must match the first two dimensions of xyz2.");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz1Shape, *gradDist1Shape)) {
-        OP_LOGE(context->GetNodeName(),
-                "grad_dist1 shape must match the first two dimensions of xyz1.");
+        OP_LOGE(context->GetNodeName(), "grad_dist1 shape must match the first two dimensions of xyz1.");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz2Shape, *gradDist2Shape)) {
-        OP_LOGE(context->GetNodeName(),
-                "grad_dist2 shape must match the first two dimensions of xyz2.");
+        OP_LOGE(context->GetNodeName(), "grad_dist2 shape must match the first two dimensions of xyz2.");
         return ge::GRAPH_FAILED;
     }
 
@@ -214,8 +202,7 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
     OP_LOGD(context->GetNodeName(),
             "Runtime2.0 ChamferDistanceGrad InferShape success. "
             "grad_xyz1 shape is %s, grad_xyz2 shape is %s.",
-            Ops::Base::ToString(*gradXyz1Shape).c_str(),
-            Ops::Base::ToString(*gradXyz2Shape).c_str());
+            Ops::Base::ToString(*gradXyz1Shape).c_str(), Ops::Base::ToString(*gradXyz2Shape).c_str());
 
     return ge::GRAPH_SUCCESS;
 }

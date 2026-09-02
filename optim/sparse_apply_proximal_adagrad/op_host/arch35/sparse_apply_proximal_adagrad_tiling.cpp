@@ -281,6 +281,7 @@ static ge::graphStatus PrepareTiling(gert::TilingContext* context, uint64_t& ubS
 
 static ge::graphStatus SparseApplyProximalAdagradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingSparseApplyProximalAdagrad");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     int64_t totalIndices = 0;

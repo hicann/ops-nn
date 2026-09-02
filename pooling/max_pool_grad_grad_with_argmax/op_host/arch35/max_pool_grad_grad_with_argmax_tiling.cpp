@@ -61,6 +61,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 static ge::graphStatus MaxPoolGradGradWithArgmaxTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingMaxPoolGradGradWithArgmax");
     // 1. 获取平台信息
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

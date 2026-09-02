@@ -40,7 +40,7 @@ static bool IsUnknownRank(const gert::Shape* shape)
 
 static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferShapeSparseApplyAdagradV2");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyAdagradV2");
 
     // 输出 var shape = 输入 var shape（原地更新）
     const gert::Shape* varShape = context->GetInputShape(IDX_VAR);

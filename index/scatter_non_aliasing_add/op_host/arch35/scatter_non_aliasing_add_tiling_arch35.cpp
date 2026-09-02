@@ -121,6 +121,7 @@ static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, 
 
 static ge::graphStatus ScatterNonAliasingAddTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingScatterNonAliasingAdd");
     auto platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);

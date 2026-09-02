@@ -27,6 +27,8 @@ namespace ops {
 
 static ge::graphStatus InferShapeSparseApplyRMSProp(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyRMSProp");
+
     constexpr size_t kNumOutputs = 3; // 3 outputs: var, ms, mom
     for (size_t i = 0; i < kNumOutputs; i++) {
         auto in_shape = context->GetInputShape(i);

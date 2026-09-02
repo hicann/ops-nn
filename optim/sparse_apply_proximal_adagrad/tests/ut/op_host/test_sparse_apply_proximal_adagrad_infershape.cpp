@@ -140,3 +140,67 @@ TEST_F(SparseApplyProximalAdagrad, sparse_apply_proximal_adagrad_infershape_case
     ASSERT_EQ(outShapes.size(), 2u);
     EXPECT_EQ(outShapes[0], (std::vector<int64_t>{4, 8}));
 }
+
+// case_4: unknown shape (-1); outputs pass through input shapes.
+TEST_F(SparseApplyProximalAdagrad, sparse_apply_proximal_adagrad_infershape_unknown_shape)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyProximalAdagrad"), nullptr);
+    gert::StorageShape varShape = {{-1, -1}, {-1, -1}};
+    gert::StorageShape gradShape = {{-1, -1}, {-1, -1}};
+    gert::StorageShape indicesShape = {{-1}, {-1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    std::vector<std::vector<int64_t>> outShapes;
+
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outShapes.size(), 2u);
+    EXPECT_EQ(outShapes[0], (std::vector<int64_t>{-1, -1}));
+    EXPECT_EQ(outShapes[1], (std::vector<int64_t>{-1, -1}));
+}
+
+// case_5: unknown rank (-2); outputs are unknown rank as well.
+TEST_F(SparseApplyProximalAdagrad, sparse_apply_proximal_adagrad_infershape_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyProximalAdagrad"), nullptr);
+    gert::StorageShape varShape = {{-2}, {}};
+    gert::StorageShape gradShape = {{-2}, {}};
+    gert::StorageShape indicesShape = {{-2}, {}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    std::vector<std::vector<int64_t>> outShapes;
+
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outShapes.size(), 2u);
+    EXPECT_EQ(outShapes[0], (std::vector<int64_t>{-2}));
+    EXPECT_EQ(outShapes[1], (std::vector<int64_t>{-2}));
+}
+
+// case_6: partial unknown shape (mixed -1 and known dims); outputs preserve known dims.
+TEST_F(SparseApplyProximalAdagrad, sparse_apply_proximal_adagrad_infershape_partial_unknown_shape)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyProximalAdagrad"), nullptr);
+    gert::StorageShape varShape = {{-1, 8}, {-1, 8}};
+    gert::StorageShape gradShape = {{2, 8}, {2, 8}};
+    gert::StorageShape indicesShape = {{2}, {2}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    std::vector<std::vector<int64_t>> outShapes;
+
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outShapes.size(), 2u);
+    EXPECT_EQ(outShapes[0], (std::vector<int64_t>{-1, 8}));
+    EXPECT_EQ(outShapes[1], (std::vector<int64_t>{-1, 8}));
+}
+
+// case_7: partial unknown var + unknown rank indices; outputs pass through var shape.
+TEST_F(SparseApplyProximalAdagrad, sparse_apply_proximal_adagrad_infershape_mixed_partial_unknown_and_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseApplyProximalAdagrad"), nullptr);
+    gert::StorageShape varShape = {{-1, 8}, {-1, 8}};
+    gert::StorageShape gradShape = {{2, 8}, {2, 8}};
+    gert::StorageShape indicesShape = {{-2}, {}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    std::vector<std::vector<int64_t>> outShapes;
+
+    ASSERT_EQ(RunAndGetOutputShapes(varShape, gradShape, indicesShape, scalarShape, outShapes), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outShapes.size(), 2u);
+    EXPECT_EQ(outShapes[0], (std::vector<int64_t>{-1, 8}));
+    EXPECT_EQ(outShapes[1], (std::vector<int64_t>{-1, 8}));
+}

@@ -48,3 +48,111 @@ TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_test1)
     };
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
+
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},           // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},           // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},           // epsilon
+            {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{-1}, {-1}}, ge::DT_INT32, ge::FORMAT_ND},         // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, -1},
+        {-1, -1},
+        {-1, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_partial_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{-1, 8}, {-1, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{-1, 8}, {-1, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{-1, 8}, {-1, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // epsilon
+            {{{2, -1}, {2, -1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{2}, {2}}, ge::DT_INT32, ge::FORMAT_ND},         // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, 8},
+        {-1, 8},
+        {-1, 8},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_mixed_partial_unknown_and_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},   // var
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},   // accum
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},   // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},         // epsilon
+            {{{-1, 8}, {-1, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND},         // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {4, 8},
+        {4, 8},
+        {4, 8},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // lr
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // rho
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // epsilon
+            {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND}, // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+        {-2},
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}

@@ -311,6 +311,7 @@ ge::graphStatus ChamferDistanceGradTiling950::PostTiling()
 
 ge::graphStatus DoChamferDistanceGradTiling950(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingChamferDistanceGrad");
     ChamferDistanceGradTiling950 tiling(context);
     return tiling.DoTiling();
 }

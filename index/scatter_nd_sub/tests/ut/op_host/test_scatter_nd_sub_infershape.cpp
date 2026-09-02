@@ -54,3 +54,71 @@ TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_test2)
     };
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
+
+TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{-1, -1}, {-1, -1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                          {{{-1, -1}, {-1, -1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, -1},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_partial_unknown_shape)
+{
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{-1, 8}, {-1, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{2, 1}, {2, 1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                          {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-1, 8},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_mixed_partial_unknown_and_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                          {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {4, 8},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_unknown_rank)
+{
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{-2}, {}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                          {{{-2}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {-2},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}

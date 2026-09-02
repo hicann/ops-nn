@@ -200,4 +200,18 @@ TEST_F(SparseApplyAdagradV2Infershape, S010_AnyInputUnknownRank_VarAccumInconsis
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
+// S011 混合场景：var/accum/grad 部分 -1 已知，indices 为 unknown rank {-2}：
+//    任一输入为 -2 即输出 unknown rank，不做维度校验
+TEST_F(SparseApplyAdagradV2Infershape, S011_Mixed_PartialUnknownAndUnknownRank)
+{
+    gert::StorageShape var({4, -1}, {4, -1});
+    gert::StorageShape accum({4, -1}, {4, -1});
+    gert::StorageShape scalar({1}, {1});
+    gert::StorageShape grad({2, -1}, {2, -1});
+    gert::StorageShape indices({-2}, {});
+    auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
+    std::vector<std::vector<int64_t>> expect = {{-2}, {-2}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
 } // namespace SparseApplyAdagradV2UT

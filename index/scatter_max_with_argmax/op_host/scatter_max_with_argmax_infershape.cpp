@@ -30,7 +30,7 @@ static constexpr size_t IDX_1 = 1;
 
 static ge::graphStatus InferShapeScatterMaxWithArgmax(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferShapeScatterMaxWithArgmax");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeScatterMaxWithArgmax");
 
     const gert::Shape* xShape = context->GetInputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);

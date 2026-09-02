@@ -19,6 +19,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -29,7 +30,7 @@ static constexpr int64_t IDX_OUTPUT = 0;
 
 static ge::graphStatus InferShapeScatterNdSub(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin InferShapeScatterNdSub");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeScatterNdSub");
 
     // Get input var shape
     const gert::Shape* varShape = context->GetInputShape(IDX_VAR);
@@ -45,16 +46,24 @@ static ge::graphStatus InferShapeScatterNdSub(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
-    // Validate: var rank >= indices last dim
+    // Output shape = var shape
+    gert::Shape* outputShape = context->GetOutputShape(IDX_OUTPUT);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+
+    // Unknown rank (-2) 场景：跳过校验，输出直接透传 var shape
+    if (Ops::Base::IsUnknownRank(*varShape) || Ops::Base::IsUnknownRank(*indicesShape)) {
+        OP_LOGD(context->GetNodeName(), "Input has unknown rank (-2), pass through var shape");
+        *outputShape = *varShape;
+        return GRAPH_SUCCESS;
+    }
+
+    // Validate: var rank >= indices last dim（indices 最后一维未知(-1)时跳过该校验）
     int64_t indicesLastDim = indicesShape->GetDim(indicesShape->GetDimNum() - 1);
-    if (varShape->GetDimNum() < static_cast<size_t>(indicesLastDim)) {
+    if (indicesLastDim >= 0 && varShape->GetDimNum() < static_cast<size_t>(indicesLastDim)) {
         OP_LOGE(context->GetNodeName(), "var rank must >= indices last dim");
         return GRAPH_FAILED;
     }
 
-    // Output shape = var shape
-    gert::Shape* outputShape = context->GetOutputShape(IDX_OUTPUT);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     auto varDimNum = varShape->GetDimNum();
     outputShape->SetDimNum(varDimNum);
     for (size_t i = 0; i < varDimNum; i++) {

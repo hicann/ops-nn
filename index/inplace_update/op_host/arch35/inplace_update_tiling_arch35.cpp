@@ -38,6 +38,7 @@ struct InplaceUpdateCompileInfo {};
 
 static ge::graphStatus InplaceUpdateTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingInplaceUpdate");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     int64_t coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);

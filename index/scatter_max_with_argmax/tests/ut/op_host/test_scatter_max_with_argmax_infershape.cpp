@@ -84,3 +84,90 @@ TEST_F(ScatterMaxWithArgmaxInfershape, scatter_max_with_argmax_infershape_test2)
     ASSERT_EQ(Ops::Base::ToString(*yOut), Ops::Base::ToString(expectedShape));
     ASSERT_EQ(Ops::Base::ToString(*argmaxOut), Ops::Base::ToString(expectedShape));
 }
+
+TEST_F(ScatterMaxWithArgmaxInfershape, scatter_max_with_argmax_infershape_unknown_shape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMaxWithArgmax")->infer_shape;
+    gert::Shape xShape = {-1, -1};
+    gert::Shape indicesShape = {-1};
+    gert::Shape updatesShape = {-1, -1};
+    gert::Shape yShape = {};
+    gert::Shape argmaxShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &updatesShape})
+                      .OutputShapes({&yShape, &argmaxShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-1, -1};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}
+
+TEST_F(ScatterMaxWithArgmaxInfershape, scatter_max_with_argmax_infershape_partial_unknown_shape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMaxWithArgmax")->infer_shape;
+    gert::Shape xShape = {-1, 4, 2};
+    gert::Shape indicesShape = {-1};
+    gert::Shape updatesShape = {-1, 4, 2};
+    gert::Shape yShape = {};
+    gert::Shape argmaxShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &updatesShape})
+                      .OutputShapes({&yShape, &argmaxShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-1, 4, 2};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}
+
+TEST_F(ScatterMaxWithArgmaxInfershape, scatter_max_with_argmax_infershape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMaxWithArgmax")->infer_shape;
+    gert::Shape xShape = {-2};
+    gert::Shape indicesShape = {-2};
+    gert::Shape updatesShape = {-2};
+    gert::Shape yShape = {};
+    gert::Shape argmaxShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &updatesShape})
+                      .OutputShapes({&yShape, &argmaxShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}

@@ -61,6 +61,7 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, uint64_t M, 
 
 static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingInplaceScatterAdd");
     auto varInput = context->GetInputShape(INDEX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
     auto varShape = varInput->GetStorageShape();

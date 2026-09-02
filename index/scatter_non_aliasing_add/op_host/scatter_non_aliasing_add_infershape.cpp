@@ -26,6 +26,8 @@ constexpr size_t Y_OUTPUT_INDEX = 0;
 
 static ge::graphStatus InferShapeScatterNonAliasingAdd(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeScatterNonAliasingAdd");
+
     const gert::Shape* xShape = context->GetInputShape(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 

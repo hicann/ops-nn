@@ -27,6 +27,8 @@ namespace ops {
 
 static ge::graphStatus InferShapeSparseApplyFtrlV2(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyFtrlV2");
+
     // Output 0 (var) shape = Input 0 (var) shape
     // Output 1 (accum) shape = Input 1 (accum) shape
     // Output 2 (linear) shape = Input 2 (linear) shape

@@ -108,6 +108,7 @@ static ge::graphStatus GetAndValidateDtypes(gert::TilingContext* context)
 
 static ge::graphStatus AddRowRangesTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingAddRowRanges");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

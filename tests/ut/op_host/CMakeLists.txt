@@ -73,6 +73,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
     )
 
     target_compile_definitions(${OP_HOST_UT_EXE} PRIVATE LOG_CPP)
+    target_include_directories(${OP_HOST_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc)
     target_compile_options(${OP_HOST_UT_EXE} PUBLIC -fPIE -fno-access-control)
     target_link_libraries(${OP_HOST_UT_EXE} PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>

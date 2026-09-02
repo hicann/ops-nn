@@ -288,6 +288,7 @@ static ge::graphStatus PrepareTiling(gert::TilingContext* context, uint64_t& ubS
 // Tiling dispatch entry
 static ge::graphStatus SparseApplyRMSPropTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingSparseApplyRMSProp");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     int64_t totalIndices = 0;

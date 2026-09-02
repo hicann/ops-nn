@@ -28,6 +28,7 @@
 
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -38,7 +39,7 @@ static constexpr int64_t IDX_2 = 2;
 
 static ge::graphStatus InferShapeAddRowRanges(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferShapeAddRowRanges");
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeAddRowRanges");
 
     // 获取输入 shapes
     const gert::Shape* xShape = context->GetInputShape(IDX_0);
@@ -47,6 +48,18 @@ static ge::graphStatus InferShapeAddRowRanges(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, srcShape);
     const gert::Shape* indicesShape = context->GetInputShape(IDX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+
+    // 输出 shape = 输入 x shape
+    gert::Shape* yShape = context->GetOutputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+
+    // Unknown rank (-2) 场景：跳过维度与约束校验，输出直接透传 x 的 shape（x 为 {-2} 时输出亦为 {-2}）
+    if (Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownRank(*srcShape) ||
+        Ops::Base::IsUnknownRank(*indicesShape)) {
+        OP_LOGD(context->GetNodeName(), "Input has unknown rank (-2), pass through x shape");
+        *yShape = *xShape;
+        return GRAPH_SUCCESS;
+    }
 
     // shape 校验：所有输入必须是 2D
     if (xShape->GetDimNum() != 2) {
@@ -62,17 +75,21 @@ static ge::graphStatus InferShapeAddRowRanges(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
+    // Unknown shape (-1) 场景：维度值未知的维跳过一致性约束校验
+    const int64_t UNKNOWN_DIM = -1;
     // 约束校验：src.shape[1] == x.shape[1]
-    if (srcShape->GetDim(1) != xShape->GetDim(1)) {
+    if (srcShape->GetDim(1) != UNKNOWN_DIM && xShape->GetDim(1) != UNKNOWN_DIM &&
+        srcShape->GetDim(1) != xShape->GetDim(1)) {
         OP_LOGE(context, "src.shape[1]=%ld must equal x.shape[1]=%ld", srcShape->GetDim(1), xShape->GetDim(1));
         return GRAPH_FAILED;
     }
     // 约束校验：indices.shape == (M, 2)
-    if (indicesShape->GetDim(0) != xShape->GetDim(0)) {
+    if (indicesShape->GetDim(0) != UNKNOWN_DIM && xShape->GetDim(0) != UNKNOWN_DIM &&
+        indicesShape->GetDim(0) != xShape->GetDim(0)) {
         OP_LOGE(context, "indices.shape[0]=%ld must equal x.shape[0]=%ld", indicesShape->GetDim(0), xShape->GetDim(0));
         return GRAPH_FAILED;
     }
-    if (indicesShape->GetDim(1) != 2) {
+    if (indicesShape->GetDim(1) != UNKNOWN_DIM && indicesShape->GetDim(1) != 2) {
         OP_LOGE(context, "indices.shape[1] must be 2, got %ld", indicesShape->GetDim(1));
         return GRAPH_FAILED;
     }
@@ -102,9 +119,6 @@ static ge::graphStatus InferShapeAddRowRanges(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
-    // 输出 shape = 输入 x shape
-    gert::Shape* yShape = context->GetOutputShape(IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     *yShape = *xShape;
 
     // 输出 dtype = 输入 x dtype（由框架从 def.cpp DataType 配置自动推导）

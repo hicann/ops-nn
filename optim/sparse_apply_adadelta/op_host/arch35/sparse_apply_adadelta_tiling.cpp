@@ -92,6 +92,7 @@ static ge::graphStatus SetLocalMemory(gert::TilingContext* context, uint64_t ubS
 
 static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingSparseApplyAdadelta");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

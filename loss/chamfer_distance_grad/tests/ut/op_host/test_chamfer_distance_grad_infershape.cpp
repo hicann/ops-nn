@@ -20,6 +20,8 @@
 #include <gtest/gtest.h>
 #include "infershape_test_util.h" // NOLINT
 #include "ut_op_common.h"
+#include "log/log.h"
+#include "util/shape_util.h"
 #include "../../../op_graph/chamfer_distance_grad_proto.h"
 
 class ChamferDistanceGradTest : public testing::Test {
@@ -48,6 +50,142 @@ TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_fp32)
     auto output1_desc = op.GetOutputDesc(1);
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
     EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_output_shape);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_unknown_shape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad")->infer_shape;
+    gert::Shape xyz1Shape = {-1, -1, -1};
+    gert::Shape xyz2Shape = {-1, -1, -1};
+    gert::Shape idx1Shape = {-1, -1};
+    gert::Shape idx2Shape = {-1, -1};
+    gert::Shape gradDist1Shape = {-1, -1};
+    gert::Shape gradDist2Shape = {-1, -1};
+    gert::Shape gradXyz1Shape = {0, 0, 0};
+    gert::Shape gradXyz2Shape = {0, 0, 0};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .InputShapes({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape})
+                      .OutputShapes({&gradXyz1Shape, &gradXyz2Shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-1, -1, -1};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_partial_unknown_shape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad")->infer_shape;
+    gert::Shape xyz1Shape = {4, -1, 2};
+    gert::Shape xyz2Shape = {4, -1, 2};
+    gert::Shape idx1Shape = {4, -1};
+    gert::Shape idx2Shape = {4, -1};
+    gert::Shape gradDist1Shape = {4, -1};
+    gert::Shape gradDist2Shape = {4, -1};
+    gert::Shape gradXyz1Shape = {0, 0, 0};
+    gert::Shape gradXyz2Shape = {0, 0, 0};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .InputShapes({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape})
+                      .OutputShapes({&gradXyz1Shape, &gradXyz2Shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {4, -1, 2};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_mixed_partial_unknown_and_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad")->infer_shape;
+    gert::Shape xyz1Shape = {4, -1, 2};
+    gert::Shape xyz2Shape = {4, -1, 2};
+    gert::Shape idx1Shape = {4, -1};
+    gert::Shape idx2Shape = {4, -1};
+    gert::Shape gradDist1Shape = {-2};
+    gert::Shape gradDist2Shape = {4, -1};
+    gert::Shape gradXyz1Shape = {0};
+    gert::Shape gradXyz2Shape = {0};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .InputShapes({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape})
+                      .OutputShapes({&gradXyz1Shape, &gradXyz2Shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad")->infer_shape;
+    gert::Shape xyz1Shape = {-2};
+    gert::Shape xyz2Shape = {-2};
+    gert::Shape idx1Shape = {-2};
+    gert::Shape idx2Shape = {-2};
+    gert::Shape gradDist1Shape = {-2};
+    gert::Shape gradDist2Shape = {-2};
+    gert::Shape gradXyz1Shape = {0};
+    gert::Shape gradXyz2Shape = {0};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .InputShapes({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape})
+                      .OutputShapes({&gradXyz1Shape, &gradXyz2Shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto out0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto out1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*out0), Ops::Base::ToString(expectedOutputShape));
+    ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
 }
 
 TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_dtype_fp32)

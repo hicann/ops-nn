@@ -27,6 +27,8 @@ namespace ops {
 
 static ge::graphStatus InferShapeSparseApplyProximalAdagrad(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyProximalAdagrad");
+
     // Output 0 (var) shape = Input 0 (var) shape
     // Output 1 (accum) shape = Input 1 (accum) shape (should be identical to var)
     constexpr size_t kNumOutputs = 2;

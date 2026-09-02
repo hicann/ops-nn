@@ -104,7 +104,7 @@ static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t N, i
 
 static ge::graphStatus ScatterMaxWithArgmaxTilingFunc(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do ScatterMaxWithArgmaxTiling");
+    OP_LOGD(context->GetNodeName(), "Enter TilingScatterMaxWithArgmax");
 
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

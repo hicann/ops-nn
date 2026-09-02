@@ -293,6 +293,7 @@ static ge::graphStatus PrepareTiling(gert::TilingContext* context, uint64_t& ubS
 
 static ge::graphStatus SparseApplyFtrlV2TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context, "Enter TilingSparseApplyFtrlV2");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     int64_t M = 0;
