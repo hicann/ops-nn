@@ -180,11 +180,6 @@ static bool CheckDim(const aclTensor* y, const aclTensor* scale, const aclTensor
 
 static bool CheckXAndScaleDim(const aclTensor* x, const aclTensor* scale)
 {
-    if (scale->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale cannot be an empty tensor.");
-        return false;
-    }
-
     if (x->GetDataType() != op::DataType::DT_INT32) {
         return true;
     }

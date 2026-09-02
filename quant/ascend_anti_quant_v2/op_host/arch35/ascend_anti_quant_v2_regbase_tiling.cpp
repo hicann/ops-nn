@@ -283,8 +283,9 @@ ge::graphStatus AscendAntiQuantV2Regbase::GetOpParam()
 
     // 不支持空tensor
     size_t xSizeNum = xInput->GetStorageShape().GetShapeSize();
-    if (xSizeNum == 0ULL) {
-        OP_LOGE(context_->GetNodeName(), "ascend_anti_quant_v2 does not support empty tensor.");
+    size_t scaleSizeNum = scaleInput->GetStorageShape().GetShapeSize();
+    if (xSizeNum == 0ULL || scaleSizeNum == 0ULL) {
+        OP_LOGE(context_->GetNodeName(), "ascend_anti_quant_v2 tiling does not support empty tensor.");
         return ge::GRAPH_FAILED;
     }
 
