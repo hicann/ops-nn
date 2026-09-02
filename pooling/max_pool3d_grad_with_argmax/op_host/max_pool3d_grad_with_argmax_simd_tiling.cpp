@@ -26,6 +26,7 @@ static constexpr int64_t UB_RESVERVED_SIZE = 2048;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t KSIZE_STRIDE_RATIO_THRESHOLD = 16;
+static constexpr int64_t MAX_INPUT_ELEMENTS = std::numeric_limits<uint16_t>::max();
 
 void MaxPool3DGradWithArgmaxNCDHWTiling::InitializationVars()
 {
@@ -169,12 +170,20 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetTargetCoreNum() const
 bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetUBSizeNC()
 {
     DoBufferCalculateNC();
+    if (baseData.inputBytes == FLOAT16_SIZE) {
+        return splitData.totalBufferSize <= baseData.availableUb &&
+               splitData.gradBufferSize <= MAX_INPUT_ELEMENTS * baseData.inputBytes;
+    }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
 
 bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
+    if (baseData.inputBytes == FLOAT16_SIZE) {
+        return splitData.totalBufferSize <= baseData.availableUb &&
+               splitData.gradBufferSize <= MAX_INPUT_ELEMENTS * baseData.inputBytes;
+    }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
 
