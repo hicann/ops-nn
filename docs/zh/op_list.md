@@ -2530,6 +2530,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/sigmoid_focal_loss_grad/README.md">sigmoid_focal_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算Sigmoid Focal Loss对前向logits的反向梯度。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/cross_v2/README.md">cross_v2</a></td>
     <td>✓</td>
     <td>✓</td>
