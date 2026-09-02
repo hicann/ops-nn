@@ -910,47 +910,6 @@ int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、strin
     .OUTPUT(y, TensorType::BasicType())
     .OP_END_FACTORY_REG(DynSeqOuter)
 
-    /**
-    * @brief Finds values and indices of the "k" largest elements for the last
-    * dimension . \n
-
-    * @par Inputs:
-    * Two inputs, including:
-    * @li x: A 1D or higher tensor of type RealNumberType, with the last dimension
-    * at least "k".
-    * @li k: A 0D Tensor of type int32.
-    * Number of top elements to look for along the last dimension (along each row
-    * for matrices) . \n
-
-    * @par Attributes:
-    * @li sorted: An optional bool. Defaults to "True".
-    * If "True", the returned "k" elements are themselves sorted.
-    * If "False", the returned "k" elements are not sorted.
-    * @li largest: An optional bool, controls whether to return largest or smallest elements. Defaults to true.
-    * If "True", the "k" largest elements are returned in descending order.
-    * If "False", the "k" smallest elements are returned in ascending order.
-    * @li dim: An optional int. Default is -1. 0-D. Number of top elements to look for along the last dimension (along
-    each row for matrices). \n
-
-    * @par Outputs:
-    * @li values: A Tensor, specifying the sorted data. Has the same type as
-    * "x".
-    * @li indices: A Tensor of type int32, specifying the indices of sorted data . \n
-
-    * @see TopK()
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator TopKV2.
-    */
-    REG_OP(TopK)
-    .INPUT(x, TensorType::RealNumberType())
-    .INPUT(k, TensorType({DT_INT32}))
-    .OUTPUT(values, TensorType::RealNumberType())
-    .OUTPUT(indices, TensorType({DT_INT32}))
-    .ATTR(sorted, Bool, true)
-    .ATTR(largest, Bool, true)
-    .ATTR(dim, Int, -1)
-    .OP_END_FACTORY_REG(TopK)
-
 /**
 * @brief Computes a 2D convolution given 4D "x", "filter" and "bias" tensors.
 * Like this, output = CONV(x, filter) + bias.
