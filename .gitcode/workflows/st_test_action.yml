@@ -6,7 +6,7 @@ on:
     keyword: '^(?:\/)?st_950\b'
   pull_request_comment:
     types: [created]
-    branches: ['*']
+    branches: ['master']
     comments: ['^(?:\/)?st_950\b']
   workflow_call:
     inputs:
@@ -59,6 +59,11 @@ jobs:
         name: check_950_package_content
         identifier: check_950_pkg
         run: |
+          if [[ "${{ env.TARGET_BRANCH }}" != "master" ]]; then
+            echo "need_st=no" >> "$ATOMGIT_OUTPUT"
+            echo "Skip st_950: target branch '${{ env.TARGET_BRANCH }}' is not master"
+            exit 0
+          fi
           pkg="${{ steps.process_checkout.outputs.path }}/${{ env.run_package_name }}"
           if [[ -f "${pkg}" && $(stat -c%s "${pkg}") -gt 0 ]]; then
             echo "need_st=yes" >> "$ATOMGIT_OUTPUT"
@@ -95,8 +100,15 @@ jobs:
           export CI_ONLINE_ST=1
           bash scripts/ci/ops_st_test.sh --pr_filelist=./pr_filelist.txt --soc_version=ascend950
       -
+        name: package_st_results
+        if: ${{ always() && steps.check_950_pkg.outputs.need_st == 'yes' }}
+        run: |
+          cd ${{ steps.process_checkout.outputs.path }}
+          rm -f st_950_log.tar.gz
+          tar -zcf st_950_log.tar.gz st
+      -
         name: upload_results
-        if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
+        if: ${{ always() && steps.check_950_pkg.outputs.need_st == 'yes' }}
         uses: obs-upload
         with:
           endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
@@ -104,7 +116,7 @@ jobs:
           access-key: ${{secrets.AK}}
           secret-key: ${{secrets.SK}}
           artifact-path: |
-            ${{ steps.process_checkout.outputs.path }}/st/log/**/*
+            ${{ steps.process_checkout.outputs.path }}/st_950_log.tar.gz
           object-prefix: ${{ env.obs_path }}/st_results/
     if: "${{ default() }}"
     runs-on: ['self-hosted', 'os=ubuntu', 'evb=a5', 'repo=nn']
