@@ -241,7 +241,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     if ((x1->GetViewShape().GetDimNum() != EXPECTED_DIM) || (x2->GetViewShape().GetDimNum() != EXPECTED_DIM)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
                 op::ToString(x1->GetViewShape()).GetString(), op::ToString(x2->GetViewShape()).GetString());
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     // perm必须为3维
     if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {

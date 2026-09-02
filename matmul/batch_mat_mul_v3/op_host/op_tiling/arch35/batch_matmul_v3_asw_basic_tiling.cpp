@@ -66,7 +66,7 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::DoOpTiling()
     // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
     uint64_t abL1TensorSize = runInfo_.baseK * runInfo_.stepKa * (runInfo_.baseM + runInfo_.baseN) * args_.aDtypeSize;
     if (args_.hasBias) {
-        abL1TensorSize += runInfo_.baseN * sizeof(args_.biasType);
+        abL1TensorSize += runInfo_.baseN * GetSizeByDataType(args_.biasType);
     }
     if (abL1TensorSize * NUM_FOUR <= compileInfo_.l1Size) {
         runInfo_.l1BufferNum = NUM_FOUR;

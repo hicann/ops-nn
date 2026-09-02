@@ -201,6 +201,10 @@ void BatchMatMulV3Tiling::MergeBatchAndMAxis(MatMulV3BatchInfo& batchInfo)
     if (batchInfo.batchB != 1UL || args_.isATrans) {
         return;
     }
+    if (batchInfo.batchA > static_cast<uint64_t>(INT32_MAX) / args_.mValue) {
+        OP_LOGI(args_.opName, "m value will exceed int32 max value after merge axis, stop merging !");
+        return;
+    }
     OP_LOGD(args_.opName, "Merge Batch and M axis");
     args_.mValue = batchInfo.batchA * args_.mValue;
     batchInfo.batchA3 = 1UL;
