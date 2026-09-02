@@ -13,6 +13,7 @@
  * \brief CosineEmbeddingLoss arch35 tiling UT.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -137,6 +138,9 @@ void RunTilingCase(const std::vector<int64_t>& x1Dims, const std::vector<int64_t
     EXPECT_EQ(td->n, expectN);
     EXPECT_EQ(td->d, expectD);
     EXPECT_EQ(td->dAlign, ((expectD + 15) / 16) * 16);
+    EXPECT_GT(td->x1Num, 0);
+    EXPECT_GT(td->x2Num, 0);
+    EXPECT_GT(td->targetNum, 0);
     EXPECT_GT(td->ubTileRows, 0);
     EXPECT_EQ(td->reduction, expectReduction);
     ASSERT_EQ(td->outputRank, tilingOutputDims.size());
@@ -167,6 +171,7 @@ void RunTilingCase(const std::vector<int64_t>& x1Dims, const std::vector<int64_t
         EXPECT_EQ(td->featureTile, 0);
         EXPECT_EQ(td->reduceTmpBytes, 0);
     }
+    EXPECT_EQ(td->ubTileRows, std::min(rowsPerCore, COSINE_EMBEDDING_LOSS_MAX_UB_TILE_ROWS));
     if (expectReduction == REDUCTION_MEAN) {
         EXPECT_NEAR(td->meanCoef, 1.0f / static_cast<float>(expectN), 1e-9f);
     }
@@ -257,4 +262,11 @@ TEST_F(CosineEmbeddingLossArch35Tiling, invalid_feature_alignment_overflow)
 {
     RunTilingCase({1, std::numeric_limits<int64_t>::max()}, {1, std::numeric_limits<int64_t>::max()}, {1}, {}, {},
                   ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, "none", false, REDUCTION_NONE);
+}
+
+TEST_F(CosineEmbeddingLossArch35Tiling, large_n_uses_row_tile_split)
+{
+    RunTilingCase({8, 9206, 9, 1923}, {6, 4, 6, 5, 1, 9206, 9, 1}, {1, 9, 1923}, {1}, {6, 6, 5, 8, 9206, 9, 1923},
+                  ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, -0.7960737922501269f, "sum", true, REDUCTION_SUM,
+                  229432668480LL, 4, COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH);
 }

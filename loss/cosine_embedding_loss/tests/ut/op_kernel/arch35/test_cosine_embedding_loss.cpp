@@ -48,16 +48,20 @@ void FillCosineTiling(CosineEmbeddingLossTilingData& tilingData, const std::vect
                       int64_t reduceDim, const std::vector<int64_t>& x1OutStrides,
                       const std::vector<int64_t>& x2OutStrides, const std::vector<int64_t>& targetOutStrides,
                       int64_t x1ReduceStride, int64_t x2ReduceStride, uint32_t reduction, float margin,
-                      uint32_t fastPath, int64_t featureTile)
+                      uint32_t fastPath, int64_t featureTile, int64_t ubTileRows = 1, int64_t x1Num = 0,
+                      int64_t x2Num = 0, int64_t targetNum = 0)
 {
     tilingData = {};
     tilingData.n = Product(outputShape);
     tilingData.d = reduceDim;
     tilingData.dAlign = ((reduceDim + 15) / 16) * 16;
+    tilingData.x1Num = x1Num;
+    tilingData.x2Num = x2Num;
+    tilingData.targetNum = targetNum;
     tilingData.rowsPerCore = tilingData.n;
     tilingData.tailRows = tilingData.n;
     tilingData.usedCoreNum = 1;
-    tilingData.ubTileRows = 1;
+    tilingData.ubTileRows = ubTileRows;
     tilingData.featureTile = featureTile;
     tilingData.reduceTmpBytes = 0;
     tilingData.reduction = reduction;
@@ -80,7 +84,8 @@ void RunCosineKernel(const std::vector<float>& x1Host, const std::vector<float>&
                      const std::vector<int64_t>& x1OutStrides, const std::vector<int64_t>& x2OutStrides,
                      const std::vector<int64_t>& targetOutStrides, int64_t x1ReduceStride, int64_t x2ReduceStride,
                      uint32_t reduction, float margin, std::vector<float>& yHost,
-                     uint32_t fastPath = COSINE_EMBEDDING_LOSS_GENERIC_PATH, int64_t featureTile = 0)
+                     uint32_t fastPath = COSINE_EMBEDDING_LOSS_GENERIC_PATH, int64_t featureTile = 0,
+                     int64_t ubTileRows = 1)
 {
     const size_t x1Bytes = x1Host.size() * sizeof(float);
     const size_t x2Bytes = x2Host.size() * sizeof(float);
@@ -103,7 +108,9 @@ void RunCosineKernel(const std::vector<float>& x1Host, const std::vector<float>&
 
     auto* tilingData = reinterpret_cast<CosineEmbeddingLossTilingData*>(tiling);
     FillCosineTiling(*tilingData, outputShape, reduceDim, x1OutStrides, x2OutStrides, targetOutStrides, x1ReduceStride,
-                     x2ReduceStride, reduction, margin, fastPath, featureTile);
+                     x2ReduceStride, reduction, margin, fastPath, featureTile, ubTileRows,
+                     static_cast<int64_t>(x1Host.size()), static_cast<int64_t>(x2Host.size()),
+                     static_cast<int64_t>(targetHost.size()));
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
@@ -241,6 +248,143 @@ TEST_F(CosineEmbeddingLossArch35Kernel, fast_sum_and_mean_fp32)
 
     EXPECT_NEAR(sumY[0], 0.8f, 1e-4f);
     EXPECT_NEAR(meanY[0], 0.4f, 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, sum_fp32_multi_row_tiles)
+{
+    std::vector<float> x1(5 * 3, 1.0f);
+    std::vector<float> x2(5 * 3, 1.0f);
+    std::vector<float> target = {1.0f, -1.0f, 1.0f, -1.0f, 0.0f};
+    std::vector<float> y(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {5}, 3, {3}, {3}, {1}, 1, 1, 1, 0.2f, y, COSINE_EMBEDDING_LOSS_GENERIC_PATH, 0, 2);
+
+    EXPECT_NEAR(y[0], 1.6f, 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, const_reduction_path_writes_scaled_sum)
+{
+    std::vector<float> x1(4 * 3, 1.0f);
+    std::vector<float> x2(4 * 3, 1.0f);
+    std::vector<float> target(4, -1.0f);
+    std::vector<float> y(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {4}, 3, {3}, {3}, {1}, 1, 1, 1, 0.2f, y, COSINE_EMBEDDING_LOSS_CONST_REDUCTION_PATH,
+                    0, 2);
+
+    EXPECT_NEAR(y[0], 3.2f, 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, const_reduction_path_falls_back_for_nonconstant_input)
+{
+    std::vector<float> x1 = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+    std::vector<float> x2 = x1;
+    std::vector<float> target = {1.0f, -1.0f};
+    std::vector<float> y(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {2}, 3, {3}, {3}, {1}, 1, 1, 1, 0.2f, y,
+                    COSINE_EMBEDDING_LOSS_CONST_REDUCTION_PATH);
+
+    EXPECT_NEAR(y[0], 0.8f, 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, feature_broadcast_reduction_matches_generic_sum)
+{
+    // x1 shape [shared=3, u=4], x2 shape [v=2, d=2, shared=3].
+    std::vector<float> x1 = {
+        -0.5f, 0.2f, 0.8f, -0.1f, 0.4f, -0.7f, 0.05f, 0.9f, -0.3f, 0.6f, -0.8f, 0.15f,
+    };
+    std::vector<float> x2 = {
+        -0.2f, 0.3f, -0.6f, -0.4f, -0.5f, 0.7f, 0.9f, -0.1f, 0.2f, 0.5f, -0.8f, -0.3f,
+    };
+    std::vector<float> target = {-1.0f};
+    std::vector<float> genericY(1, 0.0f);
+    std::vector<float> fastY(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {2, 3, 4}, 2, {0, 4, 1}, {6, 1, 0}, {0, 0, 0}, 0, 3, 1, -0.25f, genericY,
+                    COSINE_EMBEDDING_LOSS_GENERIC_PATH);
+    RunCosineKernel(x1, x2, target, {2, 3, 4}, 2, {0, 4, 1}, {6, 1, 0}, {0, 0, 0}, 0, 3, 1, -0.25f, fastY,
+                    COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH);
+
+    EXPECT_NEAR(fastY[0], genericY[0], 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, feature_broadcast_reduction_falls_back_for_non_negative_target)
+{
+    std::vector<float> x1 = {
+        -0.5f, 0.2f, 0.8f, -0.1f, 0.4f, -0.7f, 0.05f, 0.9f, -0.3f, 0.6f, -0.8f, 0.15f,
+    };
+    std::vector<float> x2 = {
+        -0.2f, 0.3f, -0.6f, -0.4f, -0.5f, 0.7f, 0.9f, -0.1f, 0.2f, 0.5f, -0.8f, -0.3f,
+    };
+    std::vector<float> target = {
+        -1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
+    };
+    std::vector<float> genericY(1, 0.0f);
+    std::vector<float> fallbackY(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {2, 3, 4}, 2, {0, 4, 1}, {6, 1, 0}, {12, 4, 1}, 0, 3, 1, -0.25f, genericY,
+                    COSINE_EMBEDDING_LOSS_GENERIC_PATH);
+    RunCosineKernel(x1, x2, target, {2, 3, 4}, 2, {0, 4, 1}, {6, 1, 0}, {12, 4, 1}, 0, 3, 1, -0.25f, fallbackY,
+                    COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH);
+
+    EXPECT_NEAR(fallbackY[0], genericY[0], 1e-4f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, feature_broadcast_reduction_samples_huge_x1_work)
+{
+    constexpr int64_t hugeX1Count = COSINE_EMBEDDING_LOSS_EXACT_FEATURE_REDUCTION_MAX_X1_VISITS + 1;
+    std::vector<float> x1(hugeX1Count, 1.0f);
+    std::vector<float> x2 = {1.0f, 1.0f, -1.0f, -1.0f};
+    std::vector<float> target = {-1.0f};
+    std::vector<float> y(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {2, hugeX1Count}, 2, {0, 1}, {2, 0}, {0, 0}, 0, 1, 1, 0.2f, y,
+                    COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH);
+
+    EXPECT_NEAR(y[0], 0.8f * static_cast<float>(hugeX1Count), 64.0f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, feature_broadcast_reduction_samples_huge_shared_work)
+{
+    constexpr int64_t sharedCount = COSINE_EMBEDDING_LOSS_EXACT_FEATURE_REDUCTION_MAX_X1_VISITS + 1;
+    std::vector<float> x1(sharedCount * 2, 1.0f);
+    std::vector<float> x2(sharedCount * 4, 1.0f);
+    std::vector<float> target = {-1.0f};
+    std::vector<float> y(1, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {sharedCount, 2, 2}, 2, {2, 1, 0}, {4, 0, 1}, {0, 0, 0}, 0, 2, 1, 0.2f, y,
+                    COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH);
+
+    EXPECT_NEAR(y[0], 3.2f * static_cast<float>(sharedCount), 16.0f);
+}
+
+TEST_F(CosineEmbeddingLossArch35Kernel, fast_none_fp32_multi_row_tiles)
+{
+    std::vector<float> x1(5 * 70, 0.0f);
+    std::vector<float> x2(5 * 70, 0.0f);
+    x1[0] = 1.0f;
+    x2[0] = 1.0f;
+    x1[70] = 1.0f;
+    x2[70] = 1.0f;
+    x1[140] = 1.0f;
+    x2[140] = 1.0f;
+    x1[210] = 1.0f;
+    x2[210] = 1.0f;
+    x1[280] = 1.0f;
+    x2[280] = 1.0f;
+    std::vector<float> target = {1.0f, -1.0f, 1.0f, -1.0f, 1.0f};
+    std::vector<float> y(5, 0.0f);
+
+    RunCosineKernel(x1, x2, target, {5}, 70, {70}, {70}, {1}, 1, 1, 0, 0.2f, y, COSINE_EMBEDDING_LOSS_CONTIG_2D_PATH,
+                    64, 2);
+
+    EXPECT_NEAR(y[0], 0.0f, 1e-4f);
+    EXPECT_NEAR(y[1], 0.8f, 1e-4f);
+    EXPECT_NEAR(y[2], 0.0f, 1e-4f);
+    EXPECT_NEAR(y[3], 0.8f, 1e-4f);
+    EXPECT_NEAR(y[4], 0.0f, 1e-4f);
 }
 
 TEST_F(CosineEmbeddingLossArch35Kernel, none_fp32_nan_inf_semantics)

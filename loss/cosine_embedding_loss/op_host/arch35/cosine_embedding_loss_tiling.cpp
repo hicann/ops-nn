@@ -179,6 +179,37 @@ ge::graphStatus CheckSupportedDtype(gert::TilingContext* context, const char* na
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
+
+bool IsFeatureBroadcastReductionCandidate(const CosineEmbeddingLossTilingData& tiling)
+{
+    if (tiling.x1ReduceStride != 0 || tiling.outputRank == 0 || tiling.d <= 0) {
+        return false;
+    }
+
+    int64_t x1OnlyCount = 1;
+    int64_t x2OnlyCount = 1;
+    bool hasX1OnlyAxis = false;
+    bool hasX2OnlyAxis = false;
+    for (uint32_t axis = 0; axis < tiling.outputRank; ++axis) {
+        const bool x1Depends = tiling.x1OutStrides[axis] != 0;
+        const bool x2Depends = tiling.x2OutStrides[axis] != 0;
+        const int64_t dim = tiling.outputShape[axis];
+        if (!x1Depends && x2Depends) {
+            if (!CheckedMul(x2OnlyCount, dim, x2OnlyCount)) {
+                return false;
+            }
+            hasX2OnlyAxis = true;
+        } else if (x1Depends && !x2Depends) {
+            if (!CheckedMul(x1OnlyCount, dim, x1OnlyCount)) {
+                return false;
+            }
+            hasX1OnlyAxis = true;
+        }
+    }
+
+    return hasX1OnlyAxis && hasX2OnlyAxis && x1OnlyCount > 0 && x2OnlyCount > 0 &&
+           x2OnlyCount <= COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS;
+}
 } // namespace
 
 static ge::graphStatus TilingForCosineEmbeddingLoss(gert::TilingContext* context)
@@ -263,6 +294,14 @@ static ge::graphStatus TilingForCosineEmbeddingLoss(gert::TilingContext* context
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "y", "invalid shape size",
                                                           "output element count should be positive and fit int64"),
                 return ge::GRAPH_FAILED);
+    int64_t x1Num = 0;
+    int64_t x2Num = 0;
+    int64_t targetNum = 0;
+    OP_CHECK_IF(!cel::ElementCount(x1Dims, x1Num) || !cel::ElementCount(x2Dims, x2Num) ||
+                    !cel::ElementCount(targetDims, targetNum),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "input", "invalid shape size",
+                                                          "input element counts should fit int64"),
+                return ge::GRAPH_FAILED);
     const int64_t d = xBroadcastDims[1];
 
     auto attrs = context->GetAttrs();
@@ -300,10 +339,12 @@ static ge::graphStatus TilingForCosineEmbeddingLoss(gert::TilingContext* context
     tiling->n = n;
     tiling->d = d;
     tiling->dAlign = dAlign;
+    tiling->x1Num = x1Num;
+    tiling->x2Num = x2Num;
+    tiling->targetNum = targetNum;
     tiling->rowsPerCore = rowsPerCore;
     tiling->tailRows = tailRows;
     tiling->usedCoreNum = usedCoreNum;
-    tiling->ubTileRows = 1;
     tiling->featureTile = 0;
     tiling->reduceTmpBytes = 0;
     tiling->reduction = reduction;
@@ -355,6 +396,13 @@ static ge::graphStatus TilingForCosineEmbeddingLoss(gert::TilingContext* context
         tiling->usedCoreNum = usedCoreNum;
         tiling->tailRows = tailRows;
     }
+    if (tiling->fastPath == COSINE_EMBEDDING_LOSS_GENERIC_PATH && reduction != cel::kReductionNone &&
+        n >= COSINE_EMBEDDING_LOSS_CONST_REDUCTION_MIN_N) {
+        tiling->fastPath = IsFeatureBroadcastReductionCandidate(*tiling) ?
+                               COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH :
+                               COSINE_EMBEDDING_LOSS_CONST_REDUCTION_PATH;
+    }
+    tiling->ubTileRows = std::min(tiling->rowsPerCore, COSINE_EMBEDDING_LOSS_MAX_UB_TILE_ROWS);
 
     auto workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
@@ -367,10 +415,10 @@ static ge::graphStatus TilingForCosineEmbeddingLoss(gert::TilingContext* context
     }
     context->SetTilingKey(0);
     OP_LOGD(context->GetNodeName(),
-            "CEL tiling: outputNum=%ld reduceDim=%ld xRank=%u outRank=%u cores=%ld rows/core=%ld tail=%ld red=%u "
-            "fast=%u featureTile=%ld",
-            n, d, tiling->xBroadcastRank, tiling->outputRank, usedCoreNum, rowsPerCore, tailRows, reduction,
-            tiling->fastPath, tiling->featureTile);
+            "CEL tiling: outputNum=%ld reduceDim=%ld xRank=%u outRank=%u cores=%ld rows/core=%ld tail=%ld "
+            "ubTileRows=%ld red=%u fast=%u featureTile=%ld",
+            n, d, tiling->xBroadcastRank, tiling->outputRank, usedCoreNum, rowsPerCore, tailRows, tiling->ubTileRows,
+            reduction, tiling->fastPath, tiling->featureTile);
     return ge::GRAPH_SUCCESS;
 }
 

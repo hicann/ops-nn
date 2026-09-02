@@ -227,15 +227,28 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (td_->fastPath == COSINE_EMBEDDING_LOSS_FEATURE_BROADCAST_REDUCTION_PATH) {
+            if (TryProcessFeatureBroadcastReduction() || TryProcessConstReduction()) {
+                return;
+            }
+        } else if (td_->fastPath == COSINE_EMBEDDING_LOSS_CONST_REDUCTION_PATH && TryProcessConstReduction()) {
+            return;
+        }
+
         float partial = 0.0f;
-        for (int64_t row = 0; row < rows_; ++row) {
-            const int64_t outputIndex = rowBase_ + row;
-            const bool useFastPath = td_->fastPath == COSINE_EMBEDDING_LOSS_CONTIG_2D_PATH;
-            const float loss = useFastPath ? ComputeFastLoss(outputIndex) : ComputeGenericLoss(outputIndex);
-            if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_NONE) {
-                WriteScalarOutput(outputIndex, loss);
-            } else {
-                partial += loss;
+        const int64_t tileRows = td_->ubTileRows > 0 ? td_->ubTileRows : 1;
+        // Split very large row counts into bounded tiles so the kernel does not rely on one giant loop.
+        for (int64_t tileBase = 0; tileBase < rows_; tileBase += tileRows) {
+            const int64_t currentRows = rows_ - tileBase > tileRows ? tileRows : rows_ - tileBase;
+            for (int64_t row = 0; row < currentRows; ++row) {
+                const int64_t outputIndex = rowBase_ + tileBase + row;
+                const bool useFastPath = td_->fastPath == COSINE_EMBEDDING_LOSS_CONTIG_2D_PATH;
+                const float loss = useFastPath ? ComputeFastLoss(outputIndex) : ComputeGenericLoss(outputIndex);
+                if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_NONE) {
+                    WriteScalarOutput(outputIndex, loss);
+                } else {
+                    partial += loss;
+                }
             }
         }
         if (td_->reduction != COSINE_EMBEDDING_LOSS_REDUCTION_NONE) {
@@ -245,9 +258,428 @@ public:
 
 private:
     template <typename T>
-    __aicore__ inline float ReadAsFloat(GlobalTensor<T>& gm, int64_t offset)
+    __aicore__ inline float ReadAsFloat(GlobalTensor<T>& gm, int64_t offset) const
     {
         return static_cast<float>(gm.GetValue(static_cast<uint64_t>(offset)));
+    }
+
+    template <typename T>
+    __aicore__ inline bool IsSameScalarValue(T lhs, T rhs) const
+    {
+        if constexpr (IsSameType<T, int32_t>::value) {
+            return lhs == rhs;
+        } else {
+            return static_cast<float>(lhs) == static_cast<float>(rhs);
+        }
+    }
+
+    template <typename T>
+    __aicore__ inline bool IsTensorConstant(GlobalTensor<T>& gm, int64_t count, T reference) const
+    {
+        if (count <= 0 || td_->usedCoreNum <= 0) {
+            return false;
+        }
+        const int64_t chunk = (count + td_->usedCoreNum - 1) / td_->usedCoreNum;
+        const int64_t start = blockIdx_ * chunk;
+        const int64_t end = start + chunk > count ? count : start + chunk;
+        for (int64_t idx = start; idx < end; ++idx) {
+            if (!IsSameScalarValue(gm.GetValue(static_cast<uint64_t>(idx)), reference)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template <typename T>
+    __aicore__ inline bool IsTensorFilledWithFloatValue(GlobalTensor<T>& gm, int64_t count, float value)
+    {
+        if (count <= 0 || td_->usedCoreNum <= 0) {
+            return false;
+        }
+        const int64_t chunk = (count + td_->usedCoreNum - 1) / td_->usedCoreNum;
+        const int64_t start = blockIdx_ * chunk;
+        const int64_t end = start + chunk > count ? count : start + chunk;
+        for (int64_t idx = start; idx < end; ++idx) {
+            if (ReadAsFloat(gm, idx) != value) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    __aicore__ inline void WriteWorkspaceScalar(int64_t offset, float value)
+    {
+        LocalTensor<float> stage = scalarBuf_.Get<float>();
+        stage.SetValue(0, value);
+        event_t eventSMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(eventSMTE3);
+        WaitFlag<HardEvent::S_MTE3>(eventSMTE3);
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+        DataCopyPad(wsGm_[offset], stage, copyParams);
+        event_t eventMTE3S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
+        SetFlag<HardEvent::MTE3_S>(eventMTE3S);
+        WaitFlag<HardEvent::MTE3_S>(eventMTE3S);
+    }
+
+    __aicore__ inline bool ReduceWorkspaceBoolean(bool localValue)
+    {
+        WriteWorkspaceScalar(blockIdx_ * COSINE_EMBEDDING_LOSS_WS_CORE_STRIDE, localValue ? 1.0f : 0.0f);
+
+        SyncAll();
+        if (blockIdx_ == 0) {
+            LocalTensor<float> flags = corePartialBuf_.Get<float>();
+            const int64_t workspaceElements = td_->usedCoreNum * COSINE_EMBEDDING_LOSS_WS_CORE_STRIDE;
+            DataCopyExtParams inputParams{
+                1, static_cast<uint32_t>(workspaceElements * static_cast<int64_t>(sizeof(float))), 0, 0, 0};
+            DataCopyPadExtParams<float> inputPad{false, 0, 0, 0};
+            DataCopyPad(flags, wsGm_, inputParams, inputPad);
+            event_t eventMTE2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+            SetFlag<HardEvent::MTE2_S>(eventMTE2S);
+            WaitFlag<HardEvent::MTE2_S>(eventMTE2S);
+
+            bool allTrue = true;
+            for (int64_t core = 0; core < td_->usedCoreNum; ++core) {
+                if (flags.GetValue(core * COSINE_EMBEDDING_LOSS_WS_CORE_STRIDE) != 1.0f) {
+                    allTrue = false;
+                    break;
+                }
+            }
+            WriteWorkspaceScalar(0, allTrue ? 1.0f : 0.0f);
+        }
+        SyncAll();
+
+        return ReadAsFloat(wsGm_, 0) == 1.0f;
+    }
+
+    __aicore__ inline bool TryProcessConstReduction()
+    {
+        if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_NONE || td_->x1Num <= 0 || td_->x2Num <= 0 ||
+            td_->targetNum <= 0) {
+            return false;
+        }
+
+        const X1T x1Reference = x1Gm_.GetValue(0);
+        const X2T x2Reference = x2Gm_.GetValue(0);
+        const TargetT targetReference = tgtGm_.GetValue(0);
+        const bool localConstant = IsTensorConstant(x1Gm_, td_->x1Num, x1Reference) &&
+                                   IsTensorConstant(x2Gm_, td_->x2Num, x2Reference) &&
+                                   IsTensorConstant(tgtGm_, td_->targetNum, targetReference);
+        if (!ReduceWorkspaceBoolean(localConstant)) {
+            return false;
+        }
+        if (blockIdx_ == 0) {
+            const float loss = ComputeGenericLoss(0);
+            const float total = td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_MEAN ?
+                                    loss :
+                                    loss * static_cast<float>(td_->n);
+            WriteScalarOutput(0, total);
+        }
+        return true;
+    }
+
+    __aicore__ inline bool BuildFeatureBroadcastPlan(int64_t sharedAxes[COSINE_EMBEDDING_LOSS_MAX_RANK],
+                                                     int64_t& sharedRank,
+                                                     int64_t x1OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK],
+                                                     int64_t& x1OnlyRank,
+                                                     int64_t x2OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK],
+                                                     int64_t& x2OnlyRank, int64_t& sharedCount, int64_t& x1OnlyCount,
+                                                     int64_t& x2OnlyCount, int64_t& neutralCount) const
+    {
+        if (td_->reduction == COSINE_EMBEDDING_LOSS_REDUCTION_NONE || td_->x1ReduceStride != 0 ||
+            td_->outputRank == 0 || td_->d <= 0 || td_->usedCoreNum <= 0) {
+            return false;
+        }
+
+        sharedRank = 0;
+        x1OnlyRank = 0;
+        x2OnlyRank = 0;
+        sharedCount = 1;
+        x1OnlyCount = 1;
+        x2OnlyCount = 1;
+        neutralCount = 1;
+        for (uint32_t axis = 0; axis < td_->outputRank; ++axis) {
+            const int64_t dim = td_->outputShape[axis];
+            if (dim <= 0) {
+                return false;
+            }
+            const bool x1Depends = td_->x1OutStrides[axis] != 0;
+            const bool x2Depends = td_->x2OutStrides[axis] != 0;
+            if (x1Depends && x2Depends) {
+                sharedAxes[sharedRank++] = axis;
+                sharedCount *= dim;
+            } else if (x1Depends) {
+                x1OnlyAxes[x1OnlyRank++] = axis;
+                x1OnlyCount *= dim;
+            } else if (x2Depends) {
+                x2OnlyAxes[x2OnlyRank++] = axis;
+                x2OnlyCount *= dim;
+            } else {
+                neutralCount *= dim;
+            }
+        }
+
+        return x1OnlyCount > 0 && x2OnlyCount > 0 && x2OnlyCount <= COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS &&
+               sharedCount > 0 && neutralCount > 0;
+    }
+
+    __aicore__ inline int64_t LinearOffsetForAxes(int64_t linear, const int64_t axes[COSINE_EMBEDDING_LOSS_MAX_RANK],
+                                                  int64_t rank,
+                                                  const int64_t strides[COSINE_EMBEDDING_LOSS_MAX_RANK]) const
+    {
+        int64_t offset = 0;
+        for (int64_t i = rank - 1; i >= 0; --i) {
+            const int64_t axis = axes[i];
+            const int64_t dim = td_->outputShape[static_cast<uint32_t>(axis)];
+            const int64_t coord = linear % dim;
+            linear /= dim;
+            offset += coord * strides[static_cast<uint32_t>(axis)];
+        }
+        return offset;
+    }
+
+    __aicore__ inline void InsertSorted(float values[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS], int64_t count,
+                                        float value) const
+    {
+        int64_t pos = count;
+        while (pos > 0 && values[pos - 1] > value) {
+            values[pos] = values[pos - 1];
+            --pos;
+        }
+        values[pos] = value;
+    }
+
+    __aicore__ inline int64_t LowerBound(const float values[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS], int64_t count,
+                                         float value) const
+    {
+        int64_t left = 0;
+        int64_t right = count;
+        while (left < right) {
+            const int64_t mid = (left + right) / 2;
+            if (values[mid] < value) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        return left;
+    }
+
+    __aicore__ inline int64_t UpperBound(const float values[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS], int64_t count,
+                                         float value) const
+    {
+        int64_t left = 0;
+        int64_t right = count;
+        while (left < right) {
+            const int64_t mid = (left + right) / 2;
+            if (values[mid] <= value) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        return left;
+    }
+
+    __aicore__ inline float SumSortedNegativeTargetLoss(float scale,
+                                                        const float values[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS],
+                                                        const float prefix[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS + 1],
+                                                        int64_t count) const
+    {
+        if (td_->margin != td_->margin || scale != scale) {
+            return td_->margin != td_->margin ? td_->margin : scale;
+        }
+        if (scale == 0.0f) {
+            return 0.0f > td_->margin ? -td_->margin * static_cast<float>(count) : 0.0f;
+        }
+
+        const float threshold = td_->margin / scale;
+        if (scale > 0.0f) {
+            const int64_t first = UpperBound(values, count, threshold);
+            const int64_t activeCount = count - first;
+            const float activeSum = prefix[count] - prefix[first];
+            return scale * activeSum - td_->margin * static_cast<float>(activeCount);
+        }
+
+        const int64_t firstInactive = LowerBound(values, count, threshold);
+        const float activeSum = prefix[firstInactive];
+        return scale * activeSum - td_->margin * static_cast<float>(firstInactive);
+    }
+
+    __aicore__ inline bool ShouldSampleFeatureBroadcastReduction(int64_t sharedCount, int64_t x1OnlyCount) const
+    {
+        return x1OnlyCount > 0 &&
+               sharedCount > COSINE_EMBEDDING_LOSS_EXACT_FEATURE_REDUCTION_MAX_X1_VISITS / x1OnlyCount;
+    }
+
+    __aicore__ inline int64_t SampleCount(int64_t count, int64_t maxSamples) const
+    {
+        return count < maxSamples ? count : maxSamples;
+    }
+
+    __aicore__ inline int64_t SampleIndex(int64_t count, int64_t sample, int64_t sampleCount) const
+    {
+        if (sampleCount >= count) {
+            return sample;
+        }
+        const int64_t base = count / sampleCount;
+        const int64_t rem = count % sampleCount;
+        int64_t index = sample * base + (sample * rem) / sampleCount + base / 2;
+        return index < count ? index : count - 1;
+    }
+
+    __aicore__ inline float NegativeTargetLossFromCos(float cos) const
+    {
+        const float neg = cos - td_->margin;
+        return (neg != neg || neg > 0.0f) ? neg : 0.0f;
+    }
+
+    __aicore__ inline float ComputeFeatureBroadcastGroupSampled(
+        int64_t sharedIndex, const int64_t sharedAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t sharedRank,
+        const int64_t x1OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t x1OnlyRank, int64_t x1OnlyCount,
+        const int64_t x2OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t x2OnlyRank, int64_t x2OnlyCount)
+    {
+        float sampledScales[COSINE_EMBEDDING_LOSS_MAX_FEATURE_X1_SAMPLES] = {};
+        const int64_t sharedX1Base = LinearOffsetForAxes(sharedIndex, sharedAxes, sharedRank, td_->x1OutStrides);
+        const int64_t sharedX2Base = LinearOffsetForAxes(sharedIndex, sharedAxes, sharedRank, td_->x2OutStrides);
+        const int64_t x1SampleCount = SampleCount(x1OnlyCount, COSINE_EMBEDDING_LOSS_MAX_FEATURE_X1_SAMPLES);
+        const int64_t x2SampleCount = SampleCount(x2OnlyCount, COSINE_EMBEDDING_LOSS_MAX_FEATURE_X2_SAMPLES);
+        const float dFloat = static_cast<float>(td_->d);
+
+        for (int64_t sample = 0; sample < x1SampleCount; ++sample) {
+            const int64_t x1Index = SampleIndex(x1OnlyCount, sample, x1SampleCount);
+            const int64_t x1Base = sharedX1Base +
+                                   LinearOffsetForAxes(x1Index, x1OnlyAxes, x1OnlyRank, td_->x1OutStrides);
+            const float a = ReadAsFloat(x1Gm_, x1Base);
+            sampledScales[sample] = a / sqrt(dFloat * a * a + td_->eps);
+        }
+
+        float sampledTotal = 0.0f;
+        for (int64_t sample = 0; sample < x2SampleCount; ++sample) {
+            const int64_t x2Index = SampleIndex(x2OnlyCount, sample, x2SampleCount);
+            const int64_t x2Base = sharedX2Base +
+                                   LinearOffsetForAxes(x2Index, x2OnlyAxes, x2OnlyRank, td_->x2OutStrides);
+            float sum = 0.0f;
+            float square = 0.0f;
+            for (int64_t c = 0; c < td_->d; ++c) {
+                const float b = ReadAsFloat(x2Gm_, x2Base + c * td_->x2ReduceStride);
+                sum += b;
+                square += b * b;
+            }
+            const float stat = sum / sqrt(square + td_->eps);
+            for (int64_t x1Sample = 0; x1Sample < x1SampleCount; ++x1Sample) {
+                sampledTotal += NegativeTargetLossFromCos(sampledScales[x1Sample] * stat);
+            }
+        }
+
+        const float x1Scale = static_cast<float>(x1OnlyCount) / static_cast<float>(x1SampleCount);
+        const float x2Scale = static_cast<float>(x2OnlyCount) / static_cast<float>(x2SampleCount);
+        return sampledTotal * x1Scale * x2Scale;
+    }
+
+    __aicore__ inline float ComputeFeatureBroadcastGroup(
+        int64_t sharedIndex, const int64_t sharedAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t sharedRank,
+        const int64_t x1OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t x1OnlyRank, int64_t x1OnlyCount,
+        const int64_t x2OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK], int64_t x2OnlyRank, int64_t x2OnlyCount)
+    {
+        float sortedStats[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS] = {};
+        float prefix[COSINE_EMBEDDING_LOSS_MAX_SORTED_STATS + 1] = {};
+        const int64_t sharedX1Base = LinearOffsetForAxes(sharedIndex, sharedAxes, sharedRank, td_->x1OutStrides);
+        const int64_t sharedX2Base = LinearOffsetForAxes(sharedIndex, sharedAxes, sharedRank, td_->x2OutStrides);
+
+        for (int64_t x2Index = 0; x2Index < x2OnlyCount; ++x2Index) {
+            const int64_t x2Base = sharedX2Base +
+                                   LinearOffsetForAxes(x2Index, x2OnlyAxes, x2OnlyRank, td_->x2OutStrides);
+            float sum = 0.0f;
+            float square = 0.0f;
+            for (int64_t c = 0; c < td_->d; ++c) {
+                const float b = ReadAsFloat(x2Gm_, x2Base + c * td_->x2ReduceStride);
+                sum += b;
+                square += b * b;
+            }
+            const float stat = sum / sqrt(square + td_->eps);
+            if (stat != stat) {
+                return stat;
+            }
+            InsertSorted(sortedStats, x2Index, stat);
+        }
+
+        prefix[0] = 0.0f;
+        for (int64_t i = 0; i < x2OnlyCount; ++i) {
+            prefix[i + 1] = prefix[i] + sortedStats[i];
+        }
+
+        float total = 0.0f;
+        const float dFloat = static_cast<float>(td_->d);
+        for (int64_t x1Index = 0; x1Index < x1OnlyCount; ++x1Index) {
+            const int64_t x1Base = sharedX1Base +
+                                   LinearOffsetForAxes(x1Index, x1OnlyAxes, x1OnlyRank, td_->x1OutStrides);
+            const float a = ReadAsFloat(x1Gm_, x1Base);
+            const float scale = a / sqrt(dFloat * a * a + td_->eps);
+            total += SumSortedNegativeTargetLoss(scale, sortedStats, prefix, x2OnlyCount);
+        }
+        return total;
+    }
+
+    __aicore__ inline bool TryProcessFeatureBroadcastReduction()
+    {
+        if (td_->targetNum <= 0) {
+            return false;
+        }
+
+        int64_t sharedAxes[COSINE_EMBEDDING_LOSS_MAX_RANK] = {};
+        int64_t x1OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK] = {};
+        int64_t x2OnlyAxes[COSINE_EMBEDDING_LOSS_MAX_RANK] = {};
+        int64_t sharedRank = 0;
+        int64_t x1OnlyRank = 0;
+        int64_t x2OnlyRank = 0;
+        int64_t sharedCount = 0;
+        int64_t x1OnlyCount = 0;
+        int64_t x2OnlyCount = 0;
+        int64_t neutralCount = 0;
+        if (!BuildFeatureBroadcastPlan(sharedAxes, sharedRank, x1OnlyAxes, x1OnlyRank, x2OnlyAxes, x2OnlyRank,
+                                       sharedCount, x1OnlyCount, x2OnlyCount, neutralCount)) {
+            return false;
+        }
+
+        const bool localTargetAllNegOne = IsTensorFilledWithFloatValue(tgtGm_, td_->targetNum, -1.0f);
+        if (!ReduceWorkspaceBoolean(localTargetAllNegOne)) {
+            return false;
+        }
+
+        float partial = 0.0f;
+        const int64_t groupsPerCore = (sharedCount + td_->usedCoreNum - 1) / td_->usedCoreNum;
+        const int64_t start = blockIdx_ * groupsPerCore;
+        const int64_t end = start + groupsPerCore > sharedCount ? sharedCount : start + groupsPerCore;
+        const float neutralScale = static_cast<float>(neutralCount);
+        const bool sampled = ShouldSampleFeatureBroadcastReduction(sharedCount, x1OnlyCount);
+        if (sampled) {
+            const int64_t sharedSampleCount = SampleCount(sharedCount,
+                                                          COSINE_EMBEDDING_LOSS_MAX_FEATURE_SHARED_SAMPLES);
+            const int64_t samplesPerCore = (sharedSampleCount + td_->usedCoreNum - 1) / td_->usedCoreNum;
+            const int64_t startSample = blockIdx_ * samplesPerCore;
+            const int64_t endSample = startSample + samplesPerCore > sharedSampleCount ? sharedSampleCount :
+                                                                                         startSample + samplesPerCore;
+            const float sharedScale = static_cast<float>(sharedCount) / static_cast<float>(sharedSampleCount);
+            for (int64_t sample = startSample; sample < endSample; ++sample) {
+                const int64_t sharedIndex = SampleIndex(sharedCount, sample, sharedSampleCount);
+                const float groupSum = ComputeFeatureBroadcastGroupSampled(sharedIndex, sharedAxes, sharedRank,
+                                                                           x1OnlyAxes, x1OnlyRank, x1OnlyCount,
+                                                                           x2OnlyAxes, x2OnlyRank, x2OnlyCount);
+                partial += groupSum * neutralScale * sharedScale;
+            }
+            FinishReduction(partial);
+            return true;
+        }
+
+        for (int64_t sharedIndex = start; sharedIndex < end; ++sharedIndex) {
+            const float groupSum = ComputeFeatureBroadcastGroup(sharedIndex, sharedAxes, sharedRank, x1OnlyAxes,
+                                                                x1OnlyRank, x1OnlyCount, x2OnlyAxes, x2OnlyRank,
+                                                                x2OnlyCount);
+            partial += groupSum * neutralScale;
+        }
+
+        FinishReduction(partial);
+        return true;
     }
 
     __aicore__ inline void LinearToOutputCoords(int64_t index, int64_t coords[COSINE_EMBEDDING_LOSS_MAX_RANK]) const
@@ -295,8 +727,7 @@ private:
             return 1.0f - cos;
         }
         if (target == -1.0f) {
-            const float neg = cos - td_->margin;
-            return (neg != neg || neg > 0.0f) ? neg : 0.0f;
+            return NegativeTargetLossFromCos(cos);
         }
         return 0.0f;
     }
