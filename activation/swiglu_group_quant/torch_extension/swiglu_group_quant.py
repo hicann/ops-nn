@@ -32,9 +32,18 @@ def _ceil_div(value, factor):
     return (value + factor - 1) // factor
 
 
+def _check_not_empty_tensor(tensor, name):
+    if tensor is None:
+        return
+    for dim in tensor.shape:
+        if isinstance(dim, int) and dim == 0:
+            raise RuntimeError(f"input {name} is empty tensor, which is not supported")
+
+
 def _swiglu_shape(x):
     if x.dim() < 1:
         raise RuntimeError("x rank should be greater than 0")
+    _check_not_empty_tensor(x, "x")
     last_dim = x.size(x.dim() - 1)
     if last_dim % 2 != 0:
         raise RuntimeError("x last dim size should be even")
@@ -117,6 +126,9 @@ class SwigluGroupQuantOpBuilder(OpBuilder):
             dst_type_max=15.0,
             output_origin=False,
         ):
+            _check_not_empty_tensor(weight, "weight")
+            _check_not_empty_tensor(group_index, "group_index")
+            _check_not_empty_tensor(scale, "scale")
             y = x.new_empty(
                 _quant_output_shape(x, dst_type, quant_mode),
                 dtype=_quant_output_dtype(dst_type, quant_mode),

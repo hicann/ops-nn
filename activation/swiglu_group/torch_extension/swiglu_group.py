@@ -14,9 +14,18 @@ from torch.library import impl
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
 
+def _check_not_empty_tensor(tensor, name):
+    if tensor is None:
+        return
+    for dim in tensor.shape:
+        if isinstance(dim, int) and dim == 0:
+            raise RuntimeError(f"input {name} is empty tensor, which is not supported")
+
+
 def _swiglu_shape(x):
     if x.dim() < 1:
         raise RuntimeError("x rank should be greater than 0")
+    _check_not_empty_tensor(x, "x")
     last_dim = x.size(x.dim() - 1)
     if last_dim % 2 != 0:
         raise RuntimeError("x last dim size should be even")
@@ -41,6 +50,8 @@ class SwigluGroupOpBuilder(OpBuilder):
     def register_meta(self):
         @impl(get_as_library(), self.name, "Meta")
         def swiglu_group_meta(x, weight=None, group_index=None, *, clamp_limit=-1.0):
+            _check_not_empty_tensor(weight, "weight")
+            _check_not_empty_tensor(group_index, "group_index")
             return x.new_empty(_swiglu_shape(x))
 
 

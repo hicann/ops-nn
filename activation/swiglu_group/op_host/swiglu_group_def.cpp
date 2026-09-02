@@ -45,6 +45,8 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("clamp_limit").AttrType(OPTIONAL).Float(DEFAULT_CLAMP_LIMIT);
 
+        this->AICore().LaunchWithZeroEleOutputTensors(true);
+
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
