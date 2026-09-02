@@ -107,8 +107,6 @@ static int64_t GetTensorSize(const aclTensor* input)
     return size;
 }
 
-static int64_t CeilDiv(const int64_t a, const int64_t b) { return (a + b - 1) / b; }
-
 static bool IsSameDimValueExceptAxis(const op::Shape x_shape, const op::Shape index_shape, const int64_t axis,
                                      const size_t dims)
 {
@@ -170,25 +168,9 @@ static bool IsLastAxisSupport(const aclTensor* self, const aclTensor* index, con
     } else if (!is_last_axis) {
         return false;
     }
-    if (isSupportSoc) {
-        const int64_t blockSizeX = BLOCK_SIZE / x_dsize;
-        const int64_t blockSizeIdx = BLOCK_SIZE / index_dsize;
-        const int64_t blockSizeIdx32 = BLOCK_SIZE / FOUR_BYTE;
-        const int64_t xAligned = CeilDiv(x_axis, blockSizeX) * blockSizeX;
-        const int64_t idxAligned = CeilDiv(index_axis, blockSizeIdx) * blockSizeIdx;
-        const int64_t resAligned = CeilDiv(index_axis, blockSizeX) * blockSizeX;
-        const int64_t idx32Aligned = CeilDiv(index_axis, blockSizeIdx32) * blockSizeIdx32;
-        const int64_t lastAxisUbSize = repeat_per_core *
-                                       (xAligned * x_dsize + idxAligned * index_dsize + resAligned * x_dsize +
-                                        idx32Aligned * 2 * FOUR_BYTE + index_axis * FOUR_BYTE);
-        if (lastAxisUbSize >= available_ub_size) {
-            return false;
-        }
-    } else {
-        all_data_size = repeat_per_core * x_axis * x_dsize + repeat_per_core * index_axis * (x_dsize + index_dsize);
-        if (all_data_size >= available_ub_size) {
-            return false;
-        }
+    all_data_size = repeat_per_core * x_axis * x_dsize + repeat_per_core * index_axis * (x_dsize + index_dsize);
+    if (all_data_size >= available_ub_size) {
+        return false;
     }
     return true;
 }
