@@ -8,22 +8,34 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "onnx_common.h"
+#include "plugin_util.h"
+#include "register/register.h"
+#include "graph/operator.h"
+#include "nlohmann/json.hpp"
 
 namespace domi {
-using NodeProto = ge::onnx::NodeProto;
+using json = nlohmann::json;
 
-static Status ParseParamsAdaCast(const Message* op_src, ge::Operator& op_dst)
+static Status ParseParamsAdaCast(const ge::Operator& op_src, ge::Operator& op_dst)
 {
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
-    if (node == nullptr) {
-        OP_LOGE(GetOpName(op_dst).c_str(), "Dynamic cast op_src to NodeProto failed.");
-        return FAILED;
-    }
     int pixel_value = 65535;
-    for (const auto& attr : node->attribute()) {
-        if (attr.name() == "pixel" && attr.type() == ge::onnx::AttributeProto::INT) {
-            pixel_value = attr.i();
+    ge::AscendString attrs_string;
+    if (op_src.GetAttr("attribute", attrs_string) == ge::GRAPH_SUCCESS) {
+        try {
+            json attrs = json::parse(attrs_string.GetString());
+            if (attrs.contains("attribute") && attrs["attribute"].is_array()) {
+                for (json& attr : attrs["attribute"]) {
+                    if (attr.value("name", "") == "pixel" && attr.contains("i")) {
+                        pixel_value = attr["i"].get<int>();
+                    }
+                }
+            }
+        } catch (const nlohmann::json::exception& e) {
+            OP_LOGE(GetOpName(op_dst).c_str(), "JSON parse error: %s", e.what());
+            return FAILED;
+        } catch (...) {
+            OP_LOGE(GetOpName(op_dst).c_str(), "get unknown exception, please check compile info json.");
+            return FAILED;
         }
     }
     op_dst.SetAttr("pixel", pixel_value);
@@ -39,6 +51,6 @@ REGISTER_CUSTOM_OP("AdaCast")
                    ge::AscendString("ai.onnx::14::AdaCast"), ge::AscendString("ai.onnx::15::AdaCast"),
                    ge::AscendString("ai.onnx::16::AdaCast"), ge::AscendString("ai.onnx::17::AdaCast"),
                    ge::AscendString("ai.onnx::18::AdaCast")})
-    .ParseParamsFn(ParseParamsAdaCast)
+    .ParseParamsByOperatorFn(ParseParamsAdaCast)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

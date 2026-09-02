@@ -13,6 +13,7 @@ function(add_opbase_ut_common)
         return()
     endif()
     add_library(opbase_ut_common STATIC
+        ${PROJECT_SOURCE_DIR}/tests/ut/empty.cpp
         $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
         $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
         $<$<TARGET_EXISTS:opbase_tiling_objs>:$<TARGET_OBJECTS:opbase_tiling_objs>>
@@ -135,6 +136,7 @@ function(add_framework_ut_modules OP_FRAMEWORK_MODULE_NAME)
     set(UT_COMMON_INC ${PROJECT_SOURCE_DIR}/tests/ut/common)
     add_opbase_ut_common()
     # add framework (onnx plugin) ut test cases obj
+    # 零源兜底由 add_modules_ut_sources 的 framework 分支 if(OPFRAMEWORK_FILTERED_SRC) 守卫保证（对齐 tiling/infershape）
     add_library(${OP_FRAMEWORK_MODULE_NAME}_cases_obj OBJECT)
     add_dependencies(${OP_FRAMEWORK_MODULE_NAME}_cases_obj json)
     target_include_directories(${OP_FRAMEWORK_MODULE_NAME}_cases_obj PRIVATE
@@ -441,11 +443,24 @@ function(add_modules_ut_sources)
     string(FIND "${MODULE_HOSTNAME}_cases_obj" "framework" FRAMEWORK_FOUND_INDEX)
     if(${FRAMEWORK_FOUND_INDEX} GREATER_EQUAL 0)
         file(GLOB OPHOST_FRAMEWORK_SRCS ${MODULE_DIR}/test_*_onnx_plugin.cpp)
-        if (NOT TARGET ${MODULE_HOSTNAME}_cases_obj)
-            add_framework_ut_modules(${OP_FRAMEWORK_MODULE_NAME})
+        # common 集中目录多算子共目录：--ops 模式按文件名逐文件过滤，仅留命中算子的用例；全量模式全收
+        set(OPFRAMEWORK_FILTERED_SRC "")
+        foreach(_src ${OPHOST_FRAMEWORK_SRCS})
+            get_filename_component(_src_name ${_src} NAME_WE)
+            string(REGEX REPLACE "^test_(.*)_onnx_plugin$" "\\1" _op_name "${_src_name}")
+            if(NOT "${ASCEND_OP_NAME}" STREQUAL "" AND (NOT _op_name IN_LIST ASCEND_OP_NAME))
+                continue()
+            endif()
+            list(APPEND OPFRAMEWORK_FILTERED_SRC ${_src})
+        endforeach()
+        # 对齐 tiling/infershape 的 `AND <SRCS>` 守卫：过滤后为空则不创建 module，避免 cases_obj 零源报错
+        if(OPFRAMEWORK_FILTERED_SRC)
+            if (NOT TARGET ${MODULE_HOSTNAME}_cases_obj)
+                add_framework_ut_modules(${OP_FRAMEWORK_MODULE_NAME})
+            endif()
+            target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPFRAMEWORK_FILTERED_SRC})
+            message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPFRAMEWORK_FILTERED_SRC}")
         endif()
-        target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_FRAMEWORK_SRCS})
-        message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_FRAMEWORK_SRCS}")
     endif()
 endfunction()
 

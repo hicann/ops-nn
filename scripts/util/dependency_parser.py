@@ -79,10 +79,21 @@ class OpDependenciesParser:
         self.all_category_ops = {}
         self.parse_dependency(build_path)
         self.parse_pytorch_extension_ops(build_path)
+        self.framework_only_ops = self.parse_common_framework_ops(build_path)
         pass
 
     def find_all_dependency(self, op, result_dependencies, all_dependencies, src_op):
         if op not in self.all_ops:
+            if op in self.framework_only_ops:
+                # common/src/framework 下无独立算子目录的 ONNX 插件不在 ops_config.txt 依赖图里。
+                logging.warning(
+                    "%s is not in the dependency graph (framework-only plugin without an op directory); "
+                    "treat as no sub-dependencies.",
+                    op,
+                )
+                if op not in result_dependencies:
+                    result_dependencies.append(op)
+                return
             logging.error("%s is not exists, please check.", op)
             raise RuntimeError(f"{op} is not exists, please check.")
         if op in result_dependencies:
@@ -151,6 +162,17 @@ class OpDependenciesParser:
                         self.all_category_ops, op_class_dir.name, op_dir.name
                     )
                     self.all_ops.append(op_dir.name)
+
+    def parse_common_framework_ops(self, build_path):
+        plugin_dir = Path(build_path).resolve().parent / "common" / "src" / "framework"
+        framework_only_ops = set()
+        if not plugin_dir.exists():
+            return framework_only_ops
+        for plugin_file in plugin_dir.glob("*_onnx_plugin.cpp"):
+            op_name = plugin_file.name[: -len("_onnx_plugin.cpp")]
+            if op_name not in self.all_ops:
+                framework_only_ops.add(op_name)
+        return framework_only_ops
 
     def get_dependencies_by_ops(self, ops):
         result_ops = []
