@@ -740,7 +740,7 @@ static bool IsContiguousStride(StrideIndexPairs& strideIndexPairs)
 }
 
 static bool ValidateSliceParams(const op::Shape& simpleShape, const op::Strides& simpleStrides, int64_t viewOffset,
-                                int64_t storageSize)
+                                int64_t storageSize, ge::DataType dtype = ge::DT_FLOAT16)
 {
     auto dimNum = static_cast<int64_t>(simpleStrides.size());
     op::FVector<int64_t> srcShape(dimNum, 1);
@@ -784,6 +784,12 @@ static bool ValidateSliceParams(const op::Shape& simpleShape, const op::Strides&
     }
     // 3.当3D M轴切片时倒数第二维维度大小为16的倍数或者因数, 2D K轴和3D K轴切片不限制
     if (dimNum == DIMS_TWO || simpleShape[dimNum - 1] != srcShape[dimNum - 1]) {
+        int64_t sliceK = simpleShape[dimNum - 1];
+        int64_t kBytes = sliceK * ge::GetSizeByDataType(dtype);
+        if (kBytes < 64) { // K轴slice后，K * dtype < 64 bytes 时不融合，避免非连续访存劣化
+            OP_LOGD("Slice K * dtype = %ld bytes < 64, skip non-contiguous slice fusion.", kBytes);
+            return false;
+        }
         return true;
     }
     int64_t sliceM = simpleShape[dimNum - 2];
@@ -978,7 +984,7 @@ bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2, int8_t c
         return false;
     }
     // Validate slice params
-    return ValidateSliceParams(viewShape, viewStrides, viewOffset, storageSize);
+    return ValidateSliceParams(viewShape, viewStrides, viewOffset, storageSize, self->GetDataType());
 }
 
 static inline string PrintIndex(const vector<int> idx)
