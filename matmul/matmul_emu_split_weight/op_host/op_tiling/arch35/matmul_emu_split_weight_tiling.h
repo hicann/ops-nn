@@ -32,6 +32,9 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
+    // Input null-check
+    ge::graphStatus ValidateInputsNotNull();
+
     // Extract phases
     void ExtractDtype();
     void ExtractFormat();

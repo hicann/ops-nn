@@ -44,8 +44,12 @@ ge::graphStatus InferShapeForMatmulEmuSplitWeight(gert::InferShapeContext* conte
                     wLowShape->GetDimNum() != kMinDimNum,
                 CUBE_INNER_ERR_REPORT(op_name, "all inputs must be 2D"), return ge::GRAPH_FAILED);
 
-    bool transX = *(attrs->GetAttrPointer<bool>(kAttrTransXIdx));
-    bool transW = *(attrs->GetAttrPointer<bool>(kAttrTransWIdx));
+    auto transXPtr = attrs->GetAttrPointer<bool>(kAttrTransXIdx);
+    auto transWPtr = attrs->GetAttrPointer<bool>(kAttrTransWIdx);
+    OP_CHECK_IF(transXPtr == nullptr || transWPtr == nullptr,
+                CUBE_INNER_ERR_REPORT(op_name, "transX or transW attr is null"), return ge::GRAPH_FAILED);
+    bool transX = *transXPtr;
+    bool transW = *transWPtr;
 
     int64_t M = transX ? xShape->GetDim(1) : xShape->GetDim(0);
     int64_t K = transX ? xShape->GetDim(0) : xShape->GetDim(1);

@@ -82,7 +82,10 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ExtractAttrs()
     const int32_t* yDtypePtr = attrs->GetAttrPointer<int32_t>(INDEX_ATTR_Y_DTYPE);
     yDtype_ = (yDtypePtr != nullptr) ? *yDtypePtr : Y_DTYPE_FP32;
 
-    scale_ = *(attrs->GetAttrPointer<float>(INDEX_ATTR_W_LOW_SCALE));
+    const float* scalePtr = attrs->GetAttrPointer<float>(INDEX_ATTR_W_LOW_SCALE);
+    OP_TILING_CHECK(scalePtr == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "wLowScale attr is null"),
+                    return ge::GRAPH_FAILED);
+    scale_ = *scalePtr;
 
     const bool* transXPtr = attrs->GetAttrPointer<bool>(INDEX_ATTR_TRANS_X);
     transX_ = (transXPtr != nullptr) ? *transXPtr : false;
@@ -187,10 +190,30 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ValidateAttrs() const
     return ge::GRAPH_SUCCESS;
 }
 
+// ====== Input null-check ======
+
+ge::graphStatus MatmulEmuSplitWeightTiling::ValidateInputsNotNull()
+{
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INDEX_X));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INDEX_X));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INDEX_W_HIGH));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INDEX_W_HIGH));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INDEX_W_LOW));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INDEX_W_LOW));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(INDEX_Y));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputShape(INDEX_Y));
+    return ge::GRAPH_SUCCESS;
+}
+
 // ====== GetShapeAttrsInfo: orchestrates extract + validate phases ======
 
 ge::graphStatus MatmulEmuSplitWeightTiling::GetShapeAttrsInfo()
 {
+    if (ValidateInputsNotNull() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (ExtractAttrs() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
