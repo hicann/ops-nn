@@ -77,7 +77,7 @@ static bool CheckDim(const aclTensor* self, int64_t dim)
     return true;
 }
 
-static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output, aclTensor* out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* out)
 {
     if (gradOutput->GetViewShape().GetDimNum() > AXIS_LIMIT || output->GetViewShape().GetDimNum() > AXIS_LIMIT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of input tensor can't be greater than 8.");

@@ -234,6 +234,6 @@ inline ge::DataType DtypeScalarToTensor2(ge::DataType dtype)
 
 #define FOREACH_OPDEF(CORE_VERSION, FOREACH_TYPE, NAME, ...) \
     FOREACH_OPDEF_BEGIN(NAME)                                \
-    FOREACH_##FOREACH_TYPE##_PARAM(__VA_ARGS__) FOREACH_OPDEF_END_##CORE_VERSION(NAME) OP_ADD(Foreach##NAME);
+    FOREACH_##FOREACH_TYPE##_PARAM(__VA_ARGS__) FOREACH_OPDEF_END_##CORE_VERSION(NAME) OP_ADD(Foreach##NAME)
 
 #endif

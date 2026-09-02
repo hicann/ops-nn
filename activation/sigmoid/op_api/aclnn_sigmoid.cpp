@@ -48,7 +48,7 @@ static const std::initializer_list<DataType>& GetSelfRefDtypeList()
     }
 }
 
-static bool CheckInplaceDtypeValid(aclTensor* selfRef)
+static bool CheckInplaceDtypeValid(const aclTensor* selfRef)
 {
     auto inplaceSupportList = GetSelfRefDtypeList();
     // 检查selfRef的数据类型是否在inplace sigmoid算子的支持列表内

@@ -81,7 +81,7 @@ static bool CheckDim(const aclTensor* self, int64_t dim)
     return true;
 }
 
-static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output, aclTensor* out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, AXIS_LIMIT, return false);
 

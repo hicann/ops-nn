@@ -53,7 +53,7 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, acl
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* betaOptional,
-                            aclTensor* gradInput)
+                            const aclTensor* gradInput)
 {
     // 检查gradOutput的数据类型是否在SiluGrad/SwishGrad算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, DTYPE_SUPPORT_LIST, return false);
@@ -83,7 +83,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
+static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);

@@ -57,7 +57,7 @@ static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* re
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* result, const aclTensor* gradInput)
 {
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, result, return false);
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, gradInput, return false);
@@ -69,7 +69,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* result
     return true;
 }
 
-static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* result, const aclTensor* gradInput)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, result, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, gradInput, return false);

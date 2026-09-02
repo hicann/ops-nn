@@ -215,7 +215,7 @@ aclnnStatus aclnnForeachMulScalarV2GetWorkspaceSize(const aclTensorList* x, cons
 }
 
 aclnnStatus aclnnForeachMulScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                    const aclrtStream stream)
+                                    aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnForeachMulScalarV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
