@@ -463,7 +463,7 @@ aclnnStatus aclnnAdaLayerNormBackwardGetWorkspaceSize(
     aclTensor* gradWeightOut, aclTensor* gradBiasOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaLayerNormBackward,
-                   DFX_IN(gradOut, input, normalizedShape, rstd, mean, scale, weightOptional, biasOptional),
+                   DFX_IN(gradOut, input, normalizedShape, rstd, mean, scale, shift, weightOptional, biasOptional),
                    DFX_OUT(gradInputOut, gradScaleOut, gradShiftOut, gradWeightOut, gradBiasOut));
 
     // 固定写法，创建OpExecutor

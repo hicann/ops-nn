@@ -377,7 +377,7 @@ aclnnStatus aclnnAscendQuantV3GetWorkspaceSize(const aclTensor* x, const aclTens
                                                bool sqrtMode, const char* roundMode, int32_t dstType, int32_t axis,
                                                const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnAscendQuantV3, DFX_IN(x, scale, offset, roundMode, sqrtMode, dstType), DFX_OUT(y));
+    L2_DFX_PHASE_1(aclnnAscendQuantV3, DFX_IN(x, scale, offset, roundMode, sqrtMode, dstType, axis), DFX_OUT(y));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

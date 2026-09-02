@@ -341,7 +341,7 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* 
                                            const aclTensor* kroneckerP2, double clipRatio, aclTensor* out,
                                            aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnFlatQuant, DFX_IN(x, kroneckerP1, kroneckerP2), DFX_OUT(out, quantScale));
+    L2_DFX_PHASE_1(aclnnFlatQuant, DFX_IN(x, kroneckerP1, kroneckerP2, clipRatio), DFX_OUT(out, quantScale));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -392,7 +392,8 @@ aclnnStatus aclnnFlatQuantV2GetWorkspaceSize(const aclTensor* x, const aclTensor
                                              aclTensor* out, aclTensor* quantScale, uint64_t* workspaceSize,
                                              aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnFlatQuantV2, DFX_IN(x, kroneckerP1, kroneckerP2), DFX_OUT(out, quantScale));
+    L2_DFX_PHASE_1(aclnnFlatQuantV2, DFX_IN(x, kroneckerP1, kroneckerP2, clipRatio, dstTypeMax),
+                   DFX_OUT(out, quantScale));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -444,7 +445,9 @@ aclnnStatus aclnnFlatQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor
                                              double clipRatio, double dstTypeMax, int64_t groupListType, aclTensor* out,
                                              aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnFlatQuantV3, DFX_IN(x, kroneckerP1, kroneckerP2, groupListOptional), DFX_OUT(out, quantScale));
+    L2_DFX_PHASE_1(aclnnFlatQuantV3,
+                   DFX_IN(x, kroneckerP1, kroneckerP2, groupListOptional, clipRatio, dstTypeMax, groupListType),
+                   DFX_OUT(out, quantScale));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

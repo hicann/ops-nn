@@ -533,7 +533,7 @@ aclnnStatus aclnnDynamicQuantV4GetWorkspaceSize(const aclTensor* x, const aclTen
                                                 aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnDynamicQuantV4,
-                   DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
+                   DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode, dstTypeMax),
                    DFX_OUT(yOut, scaleOut, offsetOut));
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV4 only support socVersion Ascend950");
