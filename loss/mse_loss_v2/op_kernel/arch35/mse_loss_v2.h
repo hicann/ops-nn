@@ -52,13 +52,11 @@ constexpr uint32_t MSE_REDUCTION_MEAN = 2;
 // atomic at 32B granularity, so adjacent cores writing dense 4B slots into one block would race.
 // Give each core its own block. (aligns with loss/poisson_nll_loss, norm/batch_norm_grad_v3)
 constexpr int32_t MSE_WS_CORE_STRIDE = 8;
-// Max vector cores on Ascend950 (vector_core_cnt <= 64). Phase-2 reads usedCoreNum*8 fp32 partials
-// back into a fixed buffer of this capacity, decoupled from ubFactor so it never overflows.
-constexpr int32_t MSE_MAX_CORE_NUM = 64;
-constexpr int32_t MSE_PARTIAL_BUF_ELEMS = MSE_MAX_CORE_NUM * MSE_WS_CORE_STRIDE; // 512 fp32 = 2KB
 // A single vector op needs at least 256B of lane coverage; size compute buffers to that minimum
 // even when ubFactor is tiny, so ReduceSum/Sub/Mul never underflow a vector register.
 constexpr int64_t MSE_MIN_COMPUTE_ELEMS = 256 / static_cast<int64_t>(sizeof(float));
+// 一个 fp32 向量寄存器的车道数(256B / 4B)
+constexpr int32_t MSE_VL_FP32 = 64;
 
 template <typename T_IN, int BUFFER_MODE>
 class MseLossV2 {
@@ -89,7 +87,7 @@ private:
 
     TBuf<QuePosition::VECCALC> lossBuf_;    // fp32 (input-target)^2
     TBuf<QuePosition::VECCALC> reduceBuf_;  // fp32 ReduceSum scratch + this-core partial staging
-    TBuf<QuePosition::VECCALC> partialBuf_; // fp32 phase-2 read-back of all cores' partials (fixed 2KB)
+    TBuf<QuePosition::VECCALC> partialBuf_; // fp32 phase-2 read-back of all cores' partials
     TBuf<QuePosition::VECCALC> castXBuf_;   // fp32 cast of input  (NEED_CAST only)
     TBuf<QuePosition::VECCALC> castTBuf_;   // fp32 cast of target (NEED_CAST only)
 
@@ -103,6 +101,7 @@ private:
     int64_t totalNum_ = 0;
     int64_t blockFactor_ = 0;
     int64_t usedCoreNum_ = 0;
+    int32_t partialUbElems_ = 0;
     uint32_t reduction_ = MSE_REDUCTION_NONE;
     int32_t blockIdx_ = 0;
 };
@@ -118,6 +117,7 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::Init(GM_ADDR input, GM_ADDR
     reduction_ = tilingData->reduction;
     blockIdx_ = static_cast<int32_t>(AscendC::GetBlockIdx());
     usedCoreNum_ = (blockFactor_ > 0) ? ((totalNum_ + blockFactor_ - 1) / blockFactor_) : 0;
+    partialUbElems_ = static_cast<int32_t>(tilingData->partialUbElems);
 
     int64_t startOffset = blockFactor_ * static_cast<int64_t>(blockIdx_);
     int64_t remaining = totalNum_ - startOffset;
@@ -141,7 +141,7 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::Init(GM_ADDR input, GM_ADDR
     pipe_.InitBuffer(lossBuf_, allocElems * static_cast<int64_t>(sizeof(float)));
     pipe_.InitBuffer(reduceBuf_, allocElems * static_cast<int64_t>(sizeof(float)));
     if (reduction_ != MSE_REDUCTION_NONE) {
-        pipe_.InitBuffer(partialBuf_, MSE_PARTIAL_BUF_ELEMS * static_cast<int64_t>(sizeof(float)));
+        pipe_.InitBuffer(partialBuf_, static_cast<int64_t>(partialUbElems_) * static_cast<int64_t>(sizeof(float)));
     }
     if constexpr (NEED_CAST) {
         pipe_.InitBuffer(castXBuf_, allocElems * static_cast<int64_t>(sizeof(float)));
@@ -265,12 +265,18 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::ProcessReduce()
     }
 
     // Stage this core's partial into its own 32B-aligned workspace slot (blockIdx_*8).
+    // 写**整 32B 块**(partial + 7 个 0)而不是单个 4B: GM 上跨核写以 32B 为粒度, 4B 密排会让相邻
+    // 核踩同一块; 而补零成整块后, phase 2 可以一次连续读进来直接矢量规约(0 不影响和), 不必再
+    // 逐核 GetValue。
     LocalTensor<float> stage = reduceBuf_.Get<float>();
+    for (int32_t k = 0; k < MSE_WS_CORE_STRIDE; k++) {
+        stage.SetValue(k, 0.0f);
+    }
     stage.SetValue(0, partial);
     event_t evtSMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(evtSMTE3);
     WaitFlag<HardEvent::S_MTE3>(evtSMTE3);
-    DataCopyExtParams wsParams{1, static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+    DataCopyExtParams wsParams{1, static_cast<uint32_t>(MSE_WS_CORE_STRIDE * sizeof(float)), 0, 0, 0};
     DataCopyPad(wsGm_[blockIdx_ * MSE_WS_CORE_STRIDE], stage, wsParams);
 
     SyncAll();
@@ -280,25 +286,83 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::ProcessReduce()
         return;
     }
     LocalTensor<float> partials = partialBuf_.Get<float>();
+    const uint16_t mergeRounds = static_cast<uint16_t>(partialUbElems_ / MSE_VL_FP32);
     DataCopyExtParams inParams{1, static_cast<uint32_t>(usedCoreNum_ * MSE_WS_CORE_STRIDE * sizeof(float)), 0, 0, 0};
     DataCopyPadExtParams<float> inPad{false, 0, 0, 0};
     DataCopyPad(partials, wsGm_, inParams, inPad);
-    event_t evtMTE2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(evtMTE2S);
-    WaitFlag<HardEvent::MTE2_S>(evtMTE2S);
+    event_t evtMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(evtMTE2V);
+    WaitFlag<HardEvent::MTE2_V>(evtMTE2V);
 
-    // Kahan 补偿累加:裸的 total += p 每加一次都会把加数末位舍掉,total 越大丢得越多,
-    // 且不会互相抵消。补偿法把每次丢掉的零头算出来,下一轮加回去:
-    //     y = p - comp             先补上轮丢的
-    //     t = total + y            这一步会丢零头
-    //     comp = (t - total) - y   实际加进去的 减 本来要加的 = 这次丢的零头
-    //     total = t
+    // 只清**补零区**: 矢量合并整轮读满 MSE_VL_FP32 车道、收尾标量循环也按 stride 读满
+    // MSE_VL_FP32/MSE_WS_CORE_STRIDE 条车道, 而 DataCopyPad 只搬入 usedCoreNum_ 个槽; 余下车道若不清零读到的是
+    // UB 残留(可能含 ±inf/NaN), 会被当作 partial 累加 —— 核数越少无效车道越多。
+    // 放在搬入之后只清尾巴, 比"搬入前清整段"省一次 V->MTE2 同步和大部分清零量(实测小 shape 的
+    // sum 快回 4~5%); Duplicate 与下面的矢量循环同为 V 流水, 按序发射无需额外同步。
+    const int32_t copiedElems = static_cast<int32_t>(usedCoreNum_ * MSE_WS_CORE_STRIDE);
+    if (partialUbElems_ > copiedElems) {
+        Duplicate(partials[copiedElems], 0.0f, partialUbElems_ - copiedElems);
+    }
+
+    // ── 跨核合并: **矢量(regbase)形态的 Kahan 补偿累加** ───────────────────────────────
+    // 布局: 每核占一个 32B 块(首元素是它的 partial, 其余 7 个为 0), 于是一次寄存器载入(64 车道)
+    // 正好覆盖 8 个核, 补零车道加 0 不改变结果也不产生补偿量。64 核 = 8 轮, 即 8 车道并行、
+    // 每车道顺序累加 8 个 partial —— Kahan 的补偿项覆盖的就是这 8 步。
+    //
+    // 为什么不是标量循环: 原写法在 block 0 上串行 usedCoreNum_(最多 64)次, 实测跨核规约段占
+    // 小 shape 整核时延四成; 矢量化后这段压成 8 轮指令。
+    // 为什么不是纯树形规约: 树形没有补偿项, 合并 64 个 partial 的误差 ~log2(64)*eps, 比 Kahan
+    // 的 ~2*eps 差(实测 4M 用例 1.2 ulp vs 0.8 ulp), 精度不能白丢。
+    // inf/nan: 补偿量 c = (t - sum) - y 在 t 为 ±inf 时算出 NaN, 会污染后续每一轮, 把本该是 inf
+    // 的和变成 nan(实测单核不复现、多核必现)。用自比 Compare<EQ>(c, c) 找出非 NaN 车道, Select
+    // 把 NaN 车道的补偿量清零 —— 只清补偿量、不动 sum, 故真 nan 仍会如实传播。
+    // (同款写法见 norm/instance_norm_grad 的跨 N 合并。)
+    __local_mem__ float* partialUb = (__local_mem__ float*)partials.GetPhyAddr();
+    {
+        AscendC::Reg::RegTensor<float> sumReg;
+        AscendC::Reg::RegTensor<float> compReg;
+        AscendC::Reg::RegTensor<float> zeroReg;
+        AscendC::Reg::RegTensor<float> pReg;
+        AscendC::Reg::RegTensor<float> kY;
+        AscendC::Reg::RegTensor<float> kT;
+        AscendC::Reg::RegTensor<float> kD;
+        AscendC::Reg::MaskReg preg;
+        AscendC::Reg::MaskReg finiteMask;
+        uint32_t sreg = static_cast<uint32_t>(mergeRounds) * MSE_VL_FP32;
+        __VEC_SCOPE__
+        {
+            preg = AscendC::Reg::UpdateMask<float>(sreg);
+            AscendC::Reg::Duplicate(sumReg, 0.0f, preg);
+            AscendC::Reg::Duplicate(compReg, 0.0f, preg);
+            AscendC::Reg::Duplicate(zeroReg, 0.0f, preg);
+            for (uint16_t r = 0; r < mergeRounds; ++r) {
+                AscendC::Reg::DataCopy(pReg, partialUb + r * MSE_VL_FP32);
+                AscendC::Reg::Sub(kY, pReg, compReg, preg); // y = p - comp
+                AscendC::Reg::Add(kT, sumReg, kY, preg);    // t = sum + y
+                AscendC::Reg::Sub(kD, kT, sumReg, preg);    // d = t - sum
+                AscendC::Reg::Sub(compReg, kD, kY, preg);   // comp = d - y
+                AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(finiteMask, compReg, compReg, preg);
+                AscendC::Reg::Select(compReg, compReg, zeroReg, finiteMask); // NaN 车道 -> 0
+                AscendC::Reg::Move(sumReg, kT, preg);
+            }
+            AscendC::Reg::DataCopy(partialUb, sumReg, preg);
+        }
+    }
+    // 合并 64 条车道(其中 8 条有效, 其余恒 0)
+    // 收尾: 只对 MSE_VL_FP32/MSE_WS_CORE_STRIDE 条有效车道做标量 Kahan(核数 64 时是 8 步, 不是原来的 64 步)。
+    // 车道内已补偿过各自的顺序累加, 这里再补偿车道之间 —— 实测(同一批 partial 配对比较)
+    // 与原标量 Kahan 6 例中 5 例逐位相同; 若这里改用无补偿的树形规约, 会有 3/6 变差。
+    SetFlag<HardEvent::V_S>(EVENT_ID0);
+    WaitFlag<HardEvent::V_S>(EVENT_ID0);
     float total = 0.0f;
-    float comp = 0.0f;
-    for (int64_t i = 0; i < usedCoreNum_; i++) {
-        float y = partials.GetValue(i * MSE_WS_CORE_STRIDE) - comp;
+    float mergeComp = 0.0f;
+    for (int32_t lane = 0; lane < MSE_VL_FP32; lane += static_cast<int32_t>(MSE_WS_CORE_STRIDE)) {
+        float y = partials.GetValue(lane) - mergeComp;
         float t = total + y;
-        comp = (t - total) - y;
+        mergeComp = (t - total) - y;
+        if (__isinf(t) || __isnan(t)) {
+            mergeComp = 0.0f;
+        }
         total = t;
     }
     if (reduction_ == MSE_REDUCTION_MEAN) {

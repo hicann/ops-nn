@@ -27,6 +27,9 @@ struct MSELossV2Arch35TilingData {
     int64_t ubFactor = 0;    // number of elements per UB iteration
     float meanCof = 1.0f;    // 1 / totalNum, applied for reduction=mean (unused for none/sum)
     uint32_t reduction = 0;  // runtime reduction: 0=none, 1=sum, 2=mean
+    // 跨核合并读回 partial 的 UB 元素数。矢量合并按整轮(64 车道)读, 故这里是
+    // ceil(usedCoreNum*8 / 64)*64, 由 host 按真实核数算好下发; reduction=none 时为 0。
+    uint32_t partialUbElems = 0;
 };
 
 #endif // MSE_LOSS_V2_ARCH35_TILING_DATA_H

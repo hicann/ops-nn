@@ -87,6 +87,16 @@ def _compute(x, target, **kwargs):
     reduction = _reduction_str(_attr(kwargs, "reduction", "mean"))
     low_prec = x.dtype in (torch.float16, torch.bfloat16)
     xf = x.to(torch.float32) if low_prec else x
+    if x.numel() == 0 and reduction != "none":
+        # [0,C] 的 sum/mean：**不能用 aten 当真值** —— 它在空输入上读的是未初始化内存
+        # （同一输入连续调用会得到 3.6e19 / 1.6e-12 等互不相同的值）。取归约的通用约定：
+        # sum(空)=0、mean(空)=0/0=nan（与 torch.empty(0).mean() 一致），与算子实现所取标准同源。
+        y = torch.tensor(
+            0.0 if reduction == "sum" else float("nan"),
+            dtype=xf.dtype,
+            device=xf.device,
+        )
+        return [y, torch.zeros_like(target, dtype=torch.int64)]
     out, is_target = torch.ops.aten.multilabel_margin_loss_forward(
         xf, target.to(torch.int64), _REDUCTION_STR2INT[reduction]
     )

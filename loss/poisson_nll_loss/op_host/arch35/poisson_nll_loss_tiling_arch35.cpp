@@ -35,6 +35,7 @@ using Ops::Base::GetUbBlockSize;
 namespace {
 constexpr int64_t COMPUTE_TYPE_SIZE = 4; // fp32 compute
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+constexpr int64_t MERGE_VL_FP32 = 64;                         // 跨核合并的矢量车道数(fp32)
 constexpr size_t SYS_WORKSPACE_SIZE = 16UL * 1024UL * 1024UL; // system reserved workspace
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 constexpr int64_t BUFFER_NUM_DB = 12; // double-buffer UB split count (x/t/y * 2 + work bufs)
@@ -48,51 +49,32 @@ constexpr uint32_t REDUCTION_NONE = 0;
 constexpr uint32_t REDUCTION_SUM = 1;
 constexpr uint32_t REDUCTION_MEAN = 2;
 
-const gert::Shape g_vec_1_shape = {1};
+const gert::Shape g_pnll_vec1_shape = {1};
 
-inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
+inline const gert::Shape PnllEnsureNotScalar(const gert::Shape& inShape)
 {
     if (inShape.GetDimNum() == 0) {
-        return g_vec_1_shape;
+        return g_pnll_vec1_shape;
     }
     return inShape;
 }
 
-ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+ge::graphStatus GetPnllPlatformInfo(gert::TilingContext* context, uint64_t& pnllUbSize, int64_t& pnllCoreNum)
 {
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    fe::PlatFormInfos* pnllPlatformPtr = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, pnllPlatformPtr);
+    auto pnllPlatform = platform_ascendc::PlatformAscendC(pnllPlatformPtr);
+    pnllCoreNum = pnllPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(pnllCoreNum == 0, OP_LOGE(context, "pnllCoreNum is 0"), return ge::GRAPH_FAILED);
+    pnllPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, pnllUbSize);
+    OP_CHECK_IF(pnllUbSize == 0, OP_LOGE(context, "pnllUbSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-} // namespace
 
-ge::graphStatus PoissonNllLossTiling::RunTiling(const PoissonNllLossCompileInfo* compileInfo)
+// 读取并校验属性: log_input / full / eps / reduction。
+ge::graphStatus ParseAttrs(gert::TilingContext* context, uint32_t& reduction, float& eps, uint32_t& logInput,
+                           uint32_t& full)
 {
-    (void)compileInfo;
-    gert::TilingContext* context = tilingContext;
-
-    uint64_t ubSize = 0;
-    int64_t coreNum = 0;
-    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-
-    auto inputX = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
-    int64_t totalIdx = EnsureNotScalar(inputX->GetStorageShape()).GetShapeSize();
-    // Empty tensor is supported, aligning with ascend910b (para_check.check_shape min_size=0 admits empty)
-    // and torch: reduction=none -> empty output; sum -> 0; mean -> nan (0/0). See the empty branch
-    // below (meanCof=inf makes the kernel's 0*meanCof produce nan for mean).
-
-    auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    ge::DataType dataType = inputDesc->GetDataType();
-
-    // Read attributes.
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const bool* logInputPtr = attrs->GetAttrPointer<bool>(ATTR_LOG_INPUT_IDX);
@@ -105,69 +87,109 @@ ge::graphStatus PoissonNllLossTiling::RunTiling(const PoissonNllLossCompileInfo*
     // Aligns with ascend910b TBE entry `if eps == 0: raise "Invalid eps which should not be zero."`
     // (canndev/ops/built-in/tbe/impl/poisson_nll_loss.py L148-149).
     OP_CHECK_IF(*epsPtr == 0.0f, OP_LOGE(context, "eps must not be zero"), return ge::GRAPH_FAILED);
-    const char* reductionStr = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, reductionStr);
+    const char* pnllReductionStr = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, pnllReductionStr);
 
-    uint32_t reduction = REDUCTION_MEAN;
-    if (strcmp(reductionStr, "none") == 0) {
+    if (strcmp(pnllReductionStr, "none") == 0) {
         reduction = REDUCTION_NONE;
-    } else if (strcmp(reductionStr, "sum") == 0) {
+    } else if (strcmp(pnllReductionStr, "sum") == 0) {
         reduction = REDUCTION_SUM;
-    } else if (strcmp(reductionStr, "mean") == 0) {
+    } else if (strcmp(pnllReductionStr, "mean") == 0) {
         reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE(context, "reduction must be none/sum/mean, got %s", reductionStr);
+        OP_LOGE(context, "reduction must be none/sum/mean, got %s", pnllReductionStr);
         return ge::GRAPH_FAILED;
     }
+    eps = *epsPtr;
+    logInput = (*logInputPtr) ? 1U : 0U;
+    full = (*fullPtr) ? 1U : 0U;
+    return ge::GRAPH_SUCCESS;
+}
 
-    PoissonNllLossTilingData* tiling = context->GetTilingData<PoissonNllLossTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(PoissonNllLossTilingData), 0, sizeof(PoissonNllLossTilingData)) != EOK,
-                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-
-    tiling->eps = *epsPtr;
-    tiling->logInput = (*logInputPtr) ? 1U : 0U;
-    tiling->full = (*fullPtr) ? 1U : 0U;
-    tiling->reduction = reduction;
-
+// 切分与 workspace: 按真实核数算 blockFactor/ubFactor/partialUbElems 与 workspace 大小。
+// reduction=sum/mean 每核一个 32B(=8 fp32)独占槽, 避免子块粒度的多核写竞争。
+ge::graphStatus FillSplitAndWorkspace(gert::TilingContext* context, uint64_t pnllUbSize, int64_t pnllCoreNum,
+                                      int64_t totalIdx, uint32_t reduction, PoissonNllLossTilingData* tiling,
+                                      int64_t& usedCoreNum, bool& useDoubleBuffer)
+{
+    constexpr int64_t WS_CORE_STRIDE = 8;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    currentWorkspace[0] = 0U;
 
-    int64_t usedCoreNum = 1;
-    bool useDoubleBuffer = false;
-
-    if (totalIdx > 0) {
-        int64_t ubBlockSize = GetUbBlockSize(context);
-        tiling->totalNum = totalIdx;
-        tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
-        usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
-        useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
-        int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
-        int64_t alignUnit = (ubBlockSize > COMPARE_ALIGN_ELEMENTS) ? ubBlockSize : COMPARE_ALIGN_ELEMENTS;
-        tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
-        tiling->meanCof = 1.0f / static_cast<float>(totalIdx);
-        // reduction=sum/mean stages one fp32 partial sum per core into workspace, each in its
-        // own 32B(=8 fp32) block to avoid sub-block multi-core write races (WS_CORE_STRIDE=8).
-        if (reduction != REDUCTION_NONE) {
-            constexpr int64_t WS_CORE_STRIDE = 8;
-            currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) +
-                                  SYS_WORKSPACE_SIZE;
-        } else {
-            currentWorkspace[0] = 0U;
-        }
-    } else {
+    if (totalIdx == 0) {
         // Empty tensor (totalNum=0), block_dim stays 1. mean of empty = sum/N = 0/0 = nan;
         // meanCof=inf makes the kernel's total(0)*meanCof produce nan. sum of empty = 0 (meanCof
         // unused). reduction=sum/mean still stages one (zero) partial via workspace, so allocate
         // one core's 32B slot + sys workspace (mirrors the totalIdx>0 branch with usedCoreNum=1).
         tiling->meanCof = std::numeric_limits<float>::infinity();
         if (reduction != REDUCTION_NONE) {
-            constexpr int64_t WS_CORE_STRIDE = 8;
             currentWorkspace[0] = WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
-        } else {
-            currentWorkspace[0] = 0U;
+            tiling->partialUbElems = static_cast<uint32_t>(MERGE_VL_FP32);
         }
+        return ge::GRAPH_SUCCESS;
     }
+
+    int64_t ubBlockSize = GetUbBlockSize(context);
+    tiling->totalNum = totalIdx;
+    tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, pnllCoreNum), ubBlockSize);
+    usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
+    useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
+    int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
+    int64_t alignUnit = (ubBlockSize > COMPARE_ALIGN_ELEMENTS) ? ubBlockSize : COMPARE_ALIGN_ELEMENTS;
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(pnllUbSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
+    tiling->meanCof = 1.0f / static_cast<float>(totalIdx);
+    if (reduction != REDUCTION_NONE) {
+        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
+        // 跨核合并整轮读 MERGE_VL_FP32 车道, UB 用量按整轮向上取整, 由 host 下发。
+        tiling->partialUbElems = static_cast<uint32_t>(CeilAlign(usedCoreNum * WS_CORE_STRIDE, MERGE_VL_FP32));
+    }
+    return ge::GRAPH_SUCCESS;
+}
+} // namespace
+
+ge::graphStatus PoissonNllLossTiling::RunTiling(const PoissonNllLossCompileInfo* compileInfo)
+{
+    (void)compileInfo;
+    gert::TilingContext* context = tilingContext;
+
+    uint64_t pnllUbSize = 0;
+    int64_t pnllCoreNum = 0;
+    OP_CHECK_IF(GetPnllPlatformInfo(context, pnllUbSize, pnllCoreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPnllPlatformInfo error"), return ge::GRAPH_FAILED);
+
+    auto inputX = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
+    int64_t totalIdx = PnllEnsureNotScalar(inputX->GetStorageShape()).GetShapeSize();
+    // Empty tensor is supported, aligning with ascend910b (para_check.check_shape min_size=0 admits empty)
+    // and torch: reduction=none -> empty output; sum -> 0; mean -> nan (0/0). See FillSplitAndWorkspace
+    // (meanCof=inf makes the kernel's 0*meanCof produce nan for mean).
+
+    auto inputDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    ge::DataType dataType = inputDesc->GetDataType();
+
+    uint32_t reduction = REDUCTION_MEAN;
+    float eps = 0.0f;
+    uint32_t logInput = 0U;
+    uint32_t full = 0U;
+    OP_CHECK_IF(ParseAttrs(context, reduction, eps, logInput, full) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ParseAttrs error"), return ge::GRAPH_FAILED);
+
+    PoissonNllLossTilingData* tiling = context->GetTilingData<PoissonNllLossTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    OP_CHECK_IF(memset_s(tiling, sizeof(PoissonNllLossTilingData), 0, sizeof(PoissonNllLossTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    tiling->eps = eps;
+    tiling->logInput = logInput;
+    tiling->full = full;
+    tiling->reduction = reduction;
+
+    int64_t usedCoreNum = 1;
+    bool useDoubleBuffer = false;
+    OP_CHECK_IF(FillSplitAndWorkspace(context, pnllUbSize, pnllCoreNum, totalIdx, reduction, tiling, usedCoreNum,
+                                      useDoubleBuffer) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "FillSplitAndWorkspace error"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(usedCoreNum);
     // reduction=sum/mean does a two-phase cross-core reduction: each core writes its fp32 partial

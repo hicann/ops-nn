@@ -13,6 +13,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "multilabel_margin_loss.h"
 #include "level0/unsqueeze.h"
+#include "level0/fill.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
@@ -142,6 +143,10 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
     return ACLNN_SUCCESS;
 }
 
+// reduction 取值约定与 GetReductionStr 一致: 0=none, 1=mean, 2=sum
+static constexpr int64_t REDUCTION_NONE_VAL = 0;
+static constexpr int64_t REDUCTION_MEAN_VAL = 1;
+
 static const std::string& GetReductionStr(int64_t reduction)
 {
     if (reduction == 0) {
@@ -163,6 +168,49 @@ static bool CheckTupleNullptr(std::tuple<aclTensor*, aclTensor*> tensorTuple)
     return (std::get<0>(tensorTuple) != nullptr) && (std::get<1>(tensorTuple) != nullptr);
 }
 
+// 空 tensor([0,C]) 且 reduction=sum/mean 时给单元素 out 填标准值: sum(空)=0, mean(空)=nan。
+// 写法对齐仓内先例 loss/binary_cross_entropy: AllocScalar -> l0op::Fill -> ViewCopy。
+static aclnnStatus FillEmptyReducedOut(const aclTensor* self, int64_t reduction, aclTensor* out,
+                                       aclOpExecutor* executor)
+{
+    const aclScalar* valueScalar = (reduction == REDUCTION_MEAN_VAL) ? executor->AllocScalar(NAN) :
+                                                                       executor->AllocScalar(0);
+    CHECK_COND(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR, "alloc empty-tensor scalar failed!");
+    auto valueTensor = executor->ConvertToTensor(valueScalar, self->GetDataType());
+    CHECK_COND(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR, "convert empty-tensor scalar failed!");
+    auto fillShape = op::ToShapeVector(out->GetOriginalShape());
+    aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+    CHECK_COND(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR, "alloc fill shape failed!");
+    const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+    CHECK_COND(dims != nullptr, ACLNN_ERR_INNER_NULLPTR, "convert fill dims failed!");
+    auto filled = l0op::Fill(dims, valueTensor, shapeArray, executor);
+    CHECK_COND(filled != nullptr, ACLNN_ERR_INNER_NULLPTR, "fill empty out failed!");
+    auto viewCopyEmpty = l0op::ViewCopy(filled, out, executor);
+    CHECK_COND(viewCopyEmpty != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewcopy empty out failed!");
+    return ACLNN_SUCCESS;
+}
+
+// 结果搬回用户 out / isTarget。is_target 输出跟随 self dtype(对齐 torch is_target==self)。按 soc 门控:
+//   A5(950/DAV_3510): kernel 直产 self,直接 ViewCopy(绕开开发机缺失的 int32->float Cast);
+//   非 A5(910b/910_93): kernel 产 int32,走原始 Cast int32->self(A2 基线,910b 有内置 Cast)。
+static aclnnStatus WriteBackOutputs(const aclTensor* outLoss, const aclTensor* outIsTarget, aclTensor* out,
+                                    aclTensor* isTarget, aclOpExecutor* executor)
+{
+    auto castOut = l0op::Cast(outLoss, out->GetDataType(), executor);
+    CHECK_COND(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast out failed!");
+    auto viewCopyResult = l0op::ViewCopy(castOut, out, executor);
+    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewcopy out failed!");
+
+    const aclTensor* isTargetOut = outIsTarget;
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        isTargetOut = l0op::Cast(outIsTarget, isTarget->GetDataType(), executor);
+        CHECK_COND(isTargetOut != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast isTarget failed!");
+    }
+    auto viewCopyIsTarget = l0op::ViewCopy(isTargetOut, isTarget, executor);
+    CHECK_COND(viewCopyIsTarget != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewcopy isTarget failed!");
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, const aclTensor* target, int64_t reduction,
                                                       aclTensor* out, aclTensor* isTarget, uint64_t* workspaceSize,
                                                       aclOpExecutor** executor)
@@ -178,8 +226,15 @@ aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, con
     auto ret = CheckParams(self, target, reduction, out, isTarget);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (self->IsEmpty()) {
-        // 根据实际支持情况补充
+        // 空 tensor(仅 N 轴为空, 即 [0,C]): reduction=none 时 out 本身也是空, 无需写;
+        // sum/mean 的 out 是单元素, **必须按标准填值**, 否则调用方读到未初始化内存。
+        // 标准取 torch 的归约约定: sum(空)=0, mean(空)=0/0=nan(与 torch .mean() 一致)。
         *workspaceSize = 0;
+        if (reduction != REDUCTION_NONE_VAL && !out->IsEmpty()) {
+            auto emptyRet = FillEmptyReducedOut(self, reduction, out, uniqueExecutor.get());
+            CHECK_RET(emptyRet == ACLNN_SUCCESS, emptyRet);
+            *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        }
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
@@ -218,21 +273,8 @@ aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, con
     auto outLoss = std::get<0>(lossOut);
     auto outIsTarget = std::get<1>(lossOut);
 
-    auto castOut = l0op::Cast(outLoss, out->GetDataType(), uniqueExecutor.get());
-    CHECK_COND(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast out failed!");
-
-    auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
-    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewcopy out failed!");
-    // is_target 输出跟随 self dtype(对齐 torch is_target==self)。按 soc 门控:
-    //   A5(950/DAV_3510): kernel 直产 self,直接 ViewCopy(绕开开发机缺失的 int32->float Cast);
-    //   非 A5(910b/910_93): kernel 产 int32,走原始 Cast int32->self(A2 基线,910b 有内置 Cast)。
-    const aclTensor* isTargetOut = outIsTarget;
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        isTargetOut = l0op::Cast(outIsTarget, isTarget->GetDataType(), uniqueExecutor.get());
-        CHECK_COND(isTargetOut != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast isTarget failed!");
-    }
-    auto viewCopyIsTarget = l0op::ViewCopy(isTargetOut, isTarget, uniqueExecutor.get());
-    CHECK_COND(viewCopyIsTarget != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewcopy isTarget failed!");
+    auto writeRet = WriteBackOutputs(outLoss, outIsTarget, out, isTarget, uniqueExecutor.get());
+    CHECK_RET(writeRet == ACLNN_SUCCESS, writeRet);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

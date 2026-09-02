@@ -39,7 +39,7 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
   $$
 
   $$
-    l_n=\sum^C_{j,istarget[j]=1}\sum^C_{i,istarget[i]=0} \frac{max(0,1-x[j]-x[i])}{C}
+    l_n=\sum^C_{j,istarget[j]=1}\sum^C_{i,istarget[i]=0} \frac{max(0,1-x[j]+x[i])}{C}
   $$
 
   当`reduction`为`none`时
@@ -271,7 +271,8 @@ aclnnStatus aclnnMultilabelMarginLoss(
 - 确定性计算：
     - aclnnMultilabelMarginLoss默认非确定性实现。
 - isTarget数据类型跟随self（0/1掩码，torch契约is_target==self）；self、out、isTarget三者须一致（FLOAT/FLOAT16/BFLOAT16）。
-- 空tensor：仅支持N(batch)轴为空，即 `[0,C]`（N=0、C≥1），空进空出；类别维C=0（`[N,0]`/`[0,0]`/1D `[0]`）为非法输入，返回ACLNN_ERR_PARAM_INVALID(161002)。
+- 空tensor：仅支持N(batch)轴为空，即 `[0,C]`（N=0、C≥1）；类别维C=0（`[N,0]`/`[0,0]`/1D `[0]`）为非法输入，返回ACLNN_ERR_PARAM_INVALID(161002)。
+  `[0,C]` 时isTarget为空张量；out取值遵循归约的通用约定：`reduction=none`时out为空张量，`reduction=sum`时out为0，`reduction=mean`时out为nan（0/0）。
 
 ## 调用示例
 

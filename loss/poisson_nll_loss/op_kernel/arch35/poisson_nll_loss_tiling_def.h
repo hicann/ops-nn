@@ -27,6 +27,9 @@ struct PoissonNllLossTilingData {
     uint32_t logInput = 1;   // runtime: 1=log_input true, 0=false
     uint32_t full = 0;       // runtime: 1=full true, 0=false
     uint32_t reduction = 0;  // runtime: 0=none, 1=sum, 2=mean
+    // 跨核合并读回 partial 的 UB 元素数(host 按真实核数算, 已按矢量整轮 64 向上取整);
+    // reduction=none 时为 0。kernel 不再假设平台最大核数。
+    uint32_t partialUbElems = 0;
 };
 
 #endif // __POISSON_NLL_LOSS_TILING_DATA_H__

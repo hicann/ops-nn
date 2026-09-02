@@ -47,11 +47,12 @@ constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 constexpr size_t SYS_WORKSPACE_SIZE = 16UL * 1024UL * 1024UL; // system reserved workspace
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 // UB split counts (fp32-element units). Counted from the kernel's resident buffers with margin
-// for the fixed partialBuf + alignment (worst case fp32 DB=8 / fp16 DB=7; SB max 6). See 02 design
+// for partialBuf + alignment (worst case fp32 DB=8 / fp16 DB=7; SB max 6). See 02 design
 // §4. Over-estimating shrinks ubFactor (safe); under-estimating overflows UB (VEC_ERROR).
 constexpr int64_t BUFFER_NUM_DB = 10;
 constexpr int64_t BUFFER_NUM_SB = 7;
 constexpr int64_t WS_CORE_STRIDE = 8; // 32B(=8 fp32) per-core partial slot
+constexpr int64_t MERGE_VL_FP32 = 64; // 跨核合并的矢量车道数(fp32)
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t ATTR_REDUCTION_IDX = 0;
 constexpr uint32_t REDUCTION_NONE = 0;
@@ -147,6 +148,50 @@ ge::graphStatus GetReduction(gert::TilingContext* context, uint32_t& reduction)
     }
     return ge::GRAPH_SUCCESS;
 }
+// 填 tiling 数据 + workspace/blockDim/调度模式。入参(ubSize/coreNum/totalIdx/reduction)均已在入口校验。
+static ge::graphStatus FillTilingData4MSELossV2Arch35(gert::TilingContext* context, uint64_t ubSize, int64_t coreNum,
+                                                      int64_t totalIdx, uint32_t reduction, bool& useDoubleBuffer)
+{
+    MSELossV2Arch35TilingData* tiling = context->GetTilingData<MSELossV2Arch35TilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    OP_CHECK_IF(memset_s(tiling, sizeof(MSELossV2Arch35TilingData), 0, sizeof(MSELossV2Arch35TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+
+    int64_t ubBlockSize = GetUbBlockSize(context);
+    tiling->totalNum = totalIdx;
+    tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
+    int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
+
+    useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
+    int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
+    int64_t alignUnit = std::max(ubBlockSize, COMPARE_ALIGN_ELEMENTS);
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
+    tiling->meanCof = 1.0f / static_cast<float>(totalIdx);
+    tiling->reduction = reduction;
+    // 跨核合并的 UB 用量由 host 按真实核数算(kernel 不再假设平台最大核数):
+    // 矢量合并整轮读 MERGE_VL_FP32 车道, 故按整轮向上取整。
+    tiling->partialUbElems = (reduction == REDUCTION_NONE) ?
+                                 0U :
+                                 static_cast<uint32_t>(CeilAlign(usedCoreNum * WS_CORE_STRIDE, MERGE_VL_FP32));
+
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    if (reduction != REDUCTION_NONE) {
+        // one fp32 partial per core, each in its own 32B(=8 fp32) block to avoid sub-block
+        // multi-core GM write races; + system reserved workspace.
+        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
+    } else {
+        currentWorkspace[0] = 0U;
+    }
+
+    context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
+    // sum/mean cross-core reduction uses SyncAll -> all launched cores must be co-resident -> batch mode.
+    if (reduction != REDUCTION_NONE) {
+        context->SetScheduleMode(1);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 } // namespace
 
 static ge::graphStatus Tiling4MSELossV2Arch35(gert::TilingContext* context)
@@ -175,38 +220,10 @@ static ge::graphStatus Tiling4MSELossV2Arch35(gert::TilingContext* context)
     OP_CHECK_IF(GetReduction(context, reduction) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetReduction error"),
                 return ge::GRAPH_FAILED);
 
-    MSELossV2Arch35TilingData* tiling = context->GetTilingData<MSELossV2Arch35TilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(MSELossV2Arch35TilingData), 0, sizeof(MSELossV2Arch35TilingData)) != EOK,
-                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-
-    int64_t ubBlockSize = GetUbBlockSize(context);
-    tiling->totalNum = totalIdx;
-    tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
-    int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
-
-    bool useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
-    int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
-    int64_t alignUnit = std::max(ubBlockSize, COMPARE_ALIGN_ELEMENTS);
-    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
-    tiling->meanCof = 1.0f / static_cast<float>(totalIdx);
-    tiling->reduction = reduction;
-
-    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
-    if (reduction != REDUCTION_NONE) {
-        // one fp32 partial per core, each in its own 32B(=8 fp32) block to avoid sub-block
-        // multi-core GM write races; + system reserved workspace.
-        currentWorkspace[0] = static_cast<size_t>(usedCoreNum) * WS_CORE_STRIDE * sizeof(float) + SYS_WORKSPACE_SIZE;
-    } else {
-        currentWorkspace[0] = 0U;
-    }
-
-    context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
-    // sum/mean cross-core reduction uses SyncAll -> all launched cores must be co-resident -> batch mode.
-    if (reduction != REDUCTION_NONE) {
-        context->SetScheduleMode(1);
-    }
+    bool useDoubleBuffer = false;
+    OP_CHECK_IF(FillTilingData4MSELossV2Arch35(context, ubSize, coreNum, totalIdx, reduction, useDoubleBuffer) !=
+                    ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "FillTilingData4MSELossV2Arch35 error"), return ge::GRAPH_FAILED);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer ? 1ULL : 0ULL);
