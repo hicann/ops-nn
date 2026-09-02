@@ -208,6 +208,19 @@ const string COMPILE_INFO_STR_950_36_CORE = R"({"_pattern": "Conv3d_backprop_fil
                           "cube_core_cnt": 36, "vector_core_cnt": 72, "core_type_list": "CubeCore,VectorCore"}
                           })";
 
+// CV核配比不满足1:2的compile info，CheckVectorCoreNum应拦截tiling
+const string COMPILE_INFO_STR_950_CV_BAD = R"({"_pattern": "Conv3d_backprop_filter_v2", "tiling_type": "binary",
+                          "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
+                          "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                          "intrinsic_fix_pipe_l0c2out_f322bf16": true,
+                          "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": true,
+                          "Intrinsic_fix_pipe_pre_conv_cast": true,
+                          "Intrinsic_data_move_l12bt": true,
+                          "UB_SIZE": 245760, "L2_SIZE": 134217728, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
+                          "cube_core_cnt": 32, "vector_core_cnt": 32, "core_type_list": "CubeCore,VectorCore"}
+                          })";
+
 Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
     {"conv_stdit_01_fp16",
      "3510",
@@ -239,6 +252,36 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      0,
      "33 4 1152 4 1152 1 16 16 1 32 32 1 2 2 1 1 1 2 2 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 144 112 64 16 16 16 3 3 1 21504 "
      "48384 0 1 1 144 16 16 1 32 144 64 256 1 0 16 0 9 0 "},
+
+    {"conv_stdit_01_fp16_cv_ratio_bad",
+     "3510",
+     "3510",
+     COMPILE_INFO_STR_950_CV_BAD,
+     {33, 4, 1, 32, 32},
+     {33, 4, 1, 32, 32},
+     {1152, 4, 1, 2, 2},
+     {1152, 4, 1, 2, 2},
+     {33, 1152, 1, 16, 16},
+     {33, 1152, 1, 16, 16},
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::DT_FLOAT16,
+     {1, 1, 1, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     "VALID",
+     0,
+     true,
+     false,
+     32,
+     0,
+     ""},
 
     {"conv_stdit_01_hifp8",
      "3510",

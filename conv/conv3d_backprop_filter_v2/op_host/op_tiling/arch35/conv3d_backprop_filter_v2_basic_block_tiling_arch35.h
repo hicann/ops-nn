@@ -135,6 +135,8 @@ protected:
 
     bool IsSocVersion91095();
 
+    bool CheckVectorCoreNum();
+
     ge::graphStatus SetPlatformCompileInfo();
 
     bool CheckAttrs();

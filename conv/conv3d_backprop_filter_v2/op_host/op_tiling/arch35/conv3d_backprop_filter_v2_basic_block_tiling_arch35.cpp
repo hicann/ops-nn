@@ -52,6 +52,29 @@ namespace NN {
 namespace Conv {
 bool Conv3DDWV2BasicBlockTilingArch35::IsSocVersion91095() { return platformInfo_.npuArch == NpuArch::DAV_3510; }
 
+bool Conv3DDWV2BasicBlockTilingArch35::CheckVectorCoreNum()
+{
+    if (!IsSocVersion91095()) {
+        return true;
+    }
+
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(opName_, "platformInfoPtr is null"), return false);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    uint64_t aivCoreCount = ascendcPlatform.GetCoreNumAiv();
+    uint64_t aicCoreCount = ascendcPlatform.GetCoreNumAic();
+    if (aicCoreCount == 0) {
+        OP_LOGE(opName_, "CheckVectorCoreNum failed, aicCoreCount is 0");
+        return false;
+    }
+    if (aivCoreCount < aicCoreCount * AIC_AIV_RATIO_1_2) {
+        OP_LOGE(opName_, "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than 2:1",
+                aivCoreCount, aicCoreCount);
+        return false;
+    }
+    return true;
+}
+
 void Conv3DDWV2BasicBlockTilingArch35::Reset()
 {
     OP_TILING_CHECK(
@@ -1015,6 +1038,10 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
                                static_cast<uint64_t>(1));
     dwt.singleCoreCin = l1Cin1 * BLOCK_CUBE;
 
+    if (!CheckVectorCoreNum()) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
+        return ge::GRAPH_FAILED;
+    }
     PrintBasickBlockTilingData();
     return ge::GRAPH_SUCCESS;
 }

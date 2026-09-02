@@ -563,6 +563,10 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
         ShrinkBaseKForKernelSplit(l1Params, l0Params, cout1A1, cout1B1);
     }
     UpdateWorkSpaceSize(l0Params);
+    if (!Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
+        return ge::GRAPH_FAILED;
+    }
     SetTilingData(coreParams, l1Params, l0Params);
     PrintTilingSummary();
     return ge::GRAPH_SUCCESS;

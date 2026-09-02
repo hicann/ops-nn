@@ -153,6 +153,7 @@ protected:
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
     uint64_t GetCVRation();
+    bool CheckVectorCoreNum();
 
     bool GetTilingFromRepo();
     std::shared_ptr<tuningtiling::TuningTilingDef> GetKnowledgeTiling();
@@ -229,6 +230,7 @@ private:
                           const ge::DataType filterDtype, const ge::DataType yDtype) const;
     DtypeFlags ComputeDtypeFlags(const ge::DataType outputBackpropDtype, const ge::DataType filterDtype,
                                  const ge::DataType yDtype) const;
+    bool NeedVectorCore();
 };
 
 } // namespace Conv

@@ -23,6 +23,9 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 
+// AIC与AIV核数标准配比 C:V=1:2
+constexpr uint64_t AIC_AIV_RATIO_1_2 = 2;
+
 struct Conv3DBackpropV2CompileInfo {
     std::string soc_version = "";
     platform_ascendc::SocVersion shortSocVersion = platform_ascendc::SocVersion::ASCEND910B;

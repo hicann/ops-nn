@@ -591,6 +591,44 @@ uint64_t Conv3DDXV2InnerProductTiling::GetCVRation()
     return 2; // v100, v120 C:V=1:2
 }
 
+bool Conv3DDXV2InnerProductTiling::NeedVectorCore()
+{
+    if (groupConvMode_ == TILING_GROUP_MODE_ENLARGE || kernelSplitMode_ != 0 || loadB1Condition_ == ENABLE_C04 ||
+        tilingRunInfo_.enableVecTransFlag || runInfo_.initOutputFlag == 1 || tilingRunInfo_.useUbAccumForSplitK == 1) {
+        return true;
+    }
+
+    return false;
+}
+
+bool Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()
+{
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510) {
+        return true;
+    }
+
+    // 如果tiling策略不需要用到V核，直接返回true
+    if (!NeedVectorCore()) {
+        return true;
+    }
+
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(opName_, "platformInfoPtr is null"), return false);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    uint64_t aivCoreCount = ascendcPlatform.GetCoreNumAiv();
+    uint64_t aicCoreCount = ascendcPlatform.GetCoreNumAic();
+    if (aicCoreCount == 0) {
+        OP_LOGE(opName_, "CheckVectorCoreNum failed, aicCoreCount is 0");
+        return false;
+    }
+    if (aivCoreCount < aicCoreCount * AIC_AIV_RATIO_1_2) {
+        OP_LOGE(opName_, "CheckVectorCoreNum failed, aivCoreCount[%lu] and aicCoreCount[%lu] ratio is less than 2:1",
+                aivCoreCount, aicCoreCount);
+        return false;
+    }
+    return true;
+}
+
 bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
 {
     if (runInfo_.outBackpropFormat != ge::FORMAT_NCDHW || runInfo_.filterFormat != ge::FORMAT_NCDHW ||
@@ -1121,6 +1159,10 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
     }
 
     SetTilingCondition(coreParams, l1Params, l0Params);
+    if (!CheckVectorCoreNum()) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
+        return ge::GRAPH_FAILED;
+    }
     SetTilingData(coreParams, l1Params, l0Params);
     PrintTilingSummary();
     return ge::GRAPH_SUCCESS;

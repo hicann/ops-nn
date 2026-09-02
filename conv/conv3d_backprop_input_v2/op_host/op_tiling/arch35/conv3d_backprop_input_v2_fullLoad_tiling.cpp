@@ -117,6 +117,10 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
         }
     }
     Conv3DDXV2InnerProductTiling::SetTilingCondition(coreParams, l1Params, l0Params);
+    if (!Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()) {
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
+        return ge::GRAPH_FAILED;
+    }
     Conv3DDXV2InnerProductTiling::SetTilingData(coreParams, l1Params, l0Params);
     PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
