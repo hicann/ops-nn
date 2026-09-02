@@ -1394,26 +1394,6 @@ Reserved.
 #endif
 
     /**
-    *@brief Computes reciprocal of square root of "x" element-wise: y = 1/sqrt{x}.
-
-    *
-    *@par Inputs:
-    * x: An ND or 5HD tensor. Must be one of the following types: bfloat16, float, double, float16,
-        * complex64, complex128.
-    *
-    *@par Outputs:
-    * y: An ND or 5HD tensor. Has the same dtype as "x".
-    *
-    *@par Third-party framework compatibility
-    *Compatible with the TensorFlow operator Rsqrt.
-    *
-    */
-    REG_OP(Rsqrt)
-    .INPUT(x, TensorType::UnaryDataType())
-    .OUTPUT(y, TensorType::UnaryDataType())
-    .OP_END_FACTORY_REG(Rsqrt)
-
-    /**
     * @brief Performs max pooling on the input .
 
     * @par Inputs:
