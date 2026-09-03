@@ -11,6 +11,7 @@
 #include "sparse_to_dense_aicpu.h"
 
 #include <algorithm>
+#include <atomic>
 #include <memory>
 #include <numeric>
 #include <vector>
@@ -84,9 +85,12 @@ public:
     uint32_t EigenTensorIndicesValidParaCheck(const CpuKernelContext& ctx, int64_t dimsSize) const
     {
         uint32_t minCoreNum = 1;
-        int64_t maxCoreNum = std::max(minCoreNum, aicpu::CpuKernelUtils::GetCPUNum(ctx) - kResvCpuNum);
-        uint32_t result = static_cast<uint32_t>(KERNEL_STATUS_OK);
-        (void)aicpu::CpuKernelUtils::ParallelFor(
+        const uint32_t curCoreNum = aicpu::CpuKernelUtils::GetCPUNum(ctx);
+        const uint32_t availCoreNum = (curCoreNum > kResvCpuNum) ? (curCoreNum - kResvCpuNum) : 0U;
+        int64_t maxCoreNum = std::max(minCoreNum, availCoreNum);
+        // result is shared by every ParallelFor worker, so it must be atomic.
+        std::atomic<uint32_t> result(static_cast<uint32_t>(KERNEL_STATUS_OK));
+        const uint32_t shardRet = aicpu::CpuKernelUtils::ParallelFor(
             ctx, dimsSize, dimsSize / maxCoreNum, [&](std::int64_t begin, std::int64_t end) {
                 int64_t start = begin;
                 if (begin == 0) {
@@ -111,22 +115,28 @@ public:
                     }
                     if (!valid) {
                         KERNEL_LOG_ERROR("Indices is out of bounds, index=%ld.", n);
-                        result = static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID);
+                        result.store(static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID), std::memory_order_relaxed);
                         return;
                     }
                     if (!increasing) {
                         KERNEL_LOG_ERROR("indices is out of order, index=%ld.", n);
-                        result = static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID);
+                        result.store(static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID), std::memory_order_relaxed);
                         return;
                     }
                     if (!different) {
                         KERNEL_LOG_ERROR("indices is repeated, index=%ld.", n);
-                        result = static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID);
+                        result.store(static_cast<uint32_t>(KERNEL_STATUS_PARAM_INVALID), std::memory_order_relaxed);
                         return;
                     }
                 }
             });
-        return result;
+        // ParallelFor returns KERNEL_STATUS_OK whenever dispatch succeeds, so a dispatch failure means no
+        // worker ran and result is still KERNEL_STATUS_OK.
+        if (shardRet != static_cast<uint32_t>(KERNEL_STATUS_OK)) {
+            KERNEL_LOG_ERROR("EigenTensorIndicesValidParaCheck parallel for failed.");
+            return shardRet;
+        }
+        return result.load(std::memory_order_relaxed);
     }
 
     template <typename T>
@@ -170,8 +180,11 @@ public:
                                  1 :
                                  ix_->GetTensor()->GetTensorShape()->GetDimSize(0);
         uint32_t minCoreNum = 1;
-        int64_t maxCoreNum = std::max(minCoreNum, aicpu::CpuKernelUtils::GetCPUNum(ctx) - kResvCpuNum);
-        uint32_t result = static_cast<uint32_t>(KERNEL_STATUS_OK);
+        const uint32_t curCoreNum = aicpu::CpuKernelUtils::GetCPUNum(ctx);
+        const uint32_t availCoreNum = (curCoreNum > kResvCpuNum) ? (curCoreNum - kResvCpuNum) : 0U;
+        int64_t maxCoreNum = std::max(minCoreNum, availCoreNum);
+        // result is shared by every ParallelFor worker, so it must be atomic.
+        std::atomic<uint32_t> result(static_cast<uint32_t>(KERNEL_STATUS_OK));
         auto parallelProc = [&](std::int64_t begin, std::int64_t end) {
             for (int64_t n = begin; n < end; ++n) {
                 bool invalidDims = false;
@@ -184,7 +197,7 @@ public:
                     ix += strides[d] * ixND;
                 }
                 if (invalidDims) {
-                    result = static_cast<uint32_t>(KERNEL_STATUS_INNER_ERROR);
+                    result.store(static_cast<uint32_t>(KERNEL_STATUS_INNER_ERROR), std::memory_order_relaxed);
                     KERNEL_LOG_ERROR("Sparse to dense got invalid dims.");
                     return;
                 }
@@ -194,7 +207,7 @@ public:
         };
         KERNEL_HANDLE_ERROR(aicpu::CpuKernelUtils::ParallelFor(ctx, sparseSize, sparseSize / maxCoreNum, parallelProc),
                             "SparseToDense Compute failed.")
-        return result;
+        return result.load(std::memory_order_relaxed);
     }
 
     template <typename IndiceT, typename ValueT>
@@ -489,7 +502,9 @@ uint32_t SparseToDenseCpuKernel::ParallelSetDefaultValue(const CpuKernelContext&
     char* defaultValueAddr = reinterpret_cast<char*>(defaultValueTensor->GetData());
     char* outputAddr = reinterpret_cast<char*>(outputTensor->GetData());
     uint32_t minCoreNum = 1;
-    int64_t maxCoreNum = std::max(minCoreNum, aicpu::CpuKernelUtils::GetCPUNum(ctx) - kResvCpuNum);
+    const uint32_t curCoreNum = aicpu::CpuKernelUtils::GetCPUNum(ctx);
+    const uint32_t availCoreNum = (curCoreNum > kResvCpuNum) ? (curCoreNum - kResvCpuNum) : 0U;
+    int64_t maxCoreNum = std::max(minCoreNum, availCoreNum);
     auto defaultValue = [&](std::int64_t begin, std::int64_t end) {
         int64_t total = end - begin;
         int64_t remainder = total % kCopyDataSize;
