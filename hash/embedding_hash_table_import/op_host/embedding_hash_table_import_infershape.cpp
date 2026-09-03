@@ -96,7 +96,8 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
     int64_t totalInNum = computeNodeInfo->GetIrInputsNum();
     if (!(totalInNum == INPUT_NODE_NUM)) {
-        OP_LOGE(context->GetNodeName(), "Check input nums failed, actual InputNum is %ld", totalInNum);
+        OP_LOGE(context->GetNodeName(), "Check input nums failed, expected InputNum is %ld, but got %ld",
+                static_cast<int64_t>(INPUT_NODE_NUM), totalInNum);
         return GRAPH_FAILED;
     }
     auto tableHandleDtype = context->GetInputDataType(TABLE_HANDLES_IDX); // table_handle

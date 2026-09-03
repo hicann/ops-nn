@@ -34,7 +34,10 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetPlatformInfo()
     OP_CHECK_IF((compileInfoPtr->aivNum <= 0), OP_LOGE(opName, "embeddingHashTableImportTiling fail to get coreNum."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((compileInfoPtr->ubSize <= REGBASE_CCEC_CACHE_SIZE),
-                OP_LOGE(opName, "ub size is less than REGBASE_CCEC_CACHE_SIZE, please check."),
+                OP_LOGE(opName,
+                        "ub size is less than REGBASE_CCEC_CACHE_SIZE, got ubSize = %lu bytes, "
+                        "REGBASE_CCEC_CACHE_SIZE = %lu bytes.",
+                        compileInfoPtr->ubSize, static_cast<uint64_t>(REGBASE_CCEC_CACHE_SIZE)),
                 return ge::GRAPH_FAILED);
     coreNum_ = static_cast<int64_t>(compileInfoPtr->aivNum);
     ubSize_ = static_cast<int64_t>(compileInfoPtr->ubSize - REGBASE_CCEC_CACHE_SIZE);
