@@ -2248,6 +2248,62 @@ Reserved.
     .OP_END_FACTORY_REG(TensorScatterAdd)
 #endif
 
+/**
+* @brief Adds "v" into specified rows of "x".
+* Computes y = x; y[i, :] += v.
+* @par Inputs:
+* Three inputs, including:
+* @li x: A Tensor.
+*     TensorType::BasicType(), Format is ND.
+* @li indices: A vector of type int32.
+*     Indices into the left-most dimension of "x".
+* @li v: A Tensor of the same type as "x".
+*     Same dimension sizes as x except the first dimension,
+*     which must be the same as the size of "indices" . \n
+
+* @par Outputs:
+* y: A Tensor of the same type as "x".
+*  An alias of "x". The content of "y" is undefined if there are duplicates in indices.
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator InplaceAdd.
+*/
+#ifndef OPS_PROTO_DEF_INPLACEADD
+#define OPS_PROTO_DEF_INPLACEADD
+        REG_OP(InplaceAdd)
+    .INPUT(x, TensorType::BasicType())
+    .INPUT(indices, TensorType({DT_INT32}))
+    .INPUT(v, TensorType::BasicType())
+    .OUTPUT(y, TensorType::BasicType())
+    .OP_END_FACTORY_REG(InplaceAdd)
+#endif // OPS_PROTO_DEF_INPLACEADD
+
+/**
+* @brief Subtracts "v" into specified rows of "x".
+* Computes y = x; y[i, :] -= v; return y.
+* @par Inputs:
+** Three inputs, including:
+* @li x: A Tensor. TensorType::BasicType(), Format is ND.
+* @li indices: A vector of type int32, Format is ND. Indices into the left-most dimension of x.
+* @li v: A Tensor of the same type as "x", Format is ND.
+* Same dimension sizes as "x" except the first dimension, which must be the same as the size of "indices" . \n
+
+* @par Outputs:
+* y: A Tensor. Has the same type as "x", Format is ND.
+*  An alias of "x". The content of "y" is undefined if there are duplicates in indices . \n
+
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator InplaceSub.
+*/
+#ifndef OPS_PROTO_DEF_INPLACESUB
+#define OPS_PROTO_DEF_INPLACESUB
+        REG_OP(InplaceSub)
+    .INPUT(x, TensorType::BasicType())
+    .INPUT(indices, TensorType({DT_INT32}))
+    .INPUT(v, TensorType::BasicType())
+    .OUTPUT(y, TensorType::BasicType())
+    .OP_END_FACTORY_REG(InplaceSub)
+#endif // OPS_PROTO_DEF_INPLACESUB
+
     /**
     * @brief Updates specified rows with values in v.
     * Computes x[i, :] = v; return x.
@@ -2445,6 +2501,30 @@ Reserved.
     .OUTPUT(y, TensorType({DT_INT8, DT_INT4}))
     .ATTR(dst_type, Int, DT_INT8)
     .OP_END_FACTORY_REG(AscendWeightQuant)
+
+/**
+ *@brief Computes Normalize bbox function.
+ *
+ *@par Inputs:
+ *Inputs include:
+ * @li boxes: A Tensor. Must be float16 or float32.
+ * @li shape_hw: A Tensor. Must be int32.
+ *
+ *@par Attributes:
+ * reversed_box: optional, bool. Defaults to "False"
+ *
+ *@par Outputs:
+ * y: A Tensor. Must have the same type and shape as boxes.
+ */
+#ifndef OPS_PROTO_DEF_NORMALIZEBBOX
+#define OPS_PROTO_DEF_NORMALIZEBBOX
+        REG_OP(NormalizeBBox)
+    .INPUT(boxes, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(shape_hw, TensorType({DT_INT32}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .ATTR(reversed_box, Bool, false)
+    .OP_END_FACTORY_REG(NormalizeBBox)
+#endif // OPS_PROTO_DEF_NORMALIZEBBOX
 
     /**
     *@brief Normalizes elements of a specific dimension of eigenvalues (L2) .
