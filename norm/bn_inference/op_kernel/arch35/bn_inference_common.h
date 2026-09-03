@@ -12,7 +12,7 @@
 #define BN_INFERENCE_COMMON_H
 
 #include "kernel_operator.h"
-#include "op_common/op_kernel/platform_util.h"
+#include "op_kernel/platform_util.h"
 
 namespace BNInferenceOps {
 using namespace AscendC;
