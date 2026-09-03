@@ -1,5 +1,7 @@
 # InplaceIndexAddWithSorted
 
+## 产品支持情况
+
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                          |    √   |
@@ -8,8 +10,8 @@
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×   |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+| <term>Kirin X90 处理器系列产品</term>                        |    √   |
+| <term>Kirin 9030 处理器系列产品</term>                       |    √   |
 
 ## 功能说明
 
@@ -69,16 +71,16 @@
     </tr>
     <tr>
       <td>alpha</td>
-      <td>输入</td>
-      <td>公式中的`alpha`，表示对value的缩放，与value相乘后再累加至var。</td>
+      <td>可选输入</td>
+      <td><ul><li>公式中的`alpha`，表示对value的缩放，与value相乘后再累加至var。</li><li>默认值为1.0。</li></ul></td>
       <td>FLOAT、INT32、INT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>axis</td>
       <td>属性</td>
-      <td>表示指定var在哪一轴相加。</td>
-      <td>Int</td>
+      <td><ul><li>表示指定var在哪一轴相加。</li><li>当前仅支持0。</li></ul></td>
+      <td>int64_t</td>
       <td>-</td>
     </tr>
   </tbody></table>
@@ -94,4 +96,5 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+| 图模式调用 | [test_geir_inplace_index_add_with_sorted](./examples/test_geir_inplace_index_add_with_sorted.cpp) | 通过[算子IR](./op_graph/inplace_index_add_with_sorted_proto.h)构图方式调用InplaceIndexAddWithSorted算子。 |
 | aclnn调用 | [test_aclnn_index_add](../inplace_scatter_add/examples/test_aclnn_index_add.cpp) | 通过[aclnnIndexAdd](../inplace_scatter_add/docs/aclnnIndexAdd.md)接口方式调用InplaceIndexAddWithSorted算子。 |
