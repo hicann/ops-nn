@@ -545,6 +545,60 @@ TEST_F(l2_baddbmm_test, case_beta_is_zero)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+// alpha == 0 && beta != 0, out = beta * self, 跳过matmul
+TEST_F(l2_baddbmm_test, case_alpha_is_zero)
+{
+    auto self = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(0.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// alpha == 0 && beta == 0, out = 0, 跳过matmul
+TEST_F(l2_baddbmm_test, case_alpha_0_beta_0)
+{
+    auto self = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(0.0f);
+    auto alpha = ScalarDesc(0.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// alpha == 0 && beta != 0, self需要broadcast
+TEST_F(l2_baddbmm_test, case_alpha_0_self_broadcast)
+{
+    auto self = TensorDesc({1, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(2.0f);
+    auto alpha = ScalarDesc(0.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 // beta == 0 && USE_FP32_ADD 场景，910B上路由至GemmV3融合kernel
 TEST_F(l2_baddbmm_test, baddbmm_910b_beta_0_fp16_use_fp32_add)
 {

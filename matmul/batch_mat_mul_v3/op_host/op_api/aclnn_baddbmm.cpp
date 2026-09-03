@@ -23,8 +23,10 @@
 #include "level0/add.h"
 #include "level0/axpy.h"
 #include "matmul/common/op_host/op_api/batch_matmul.h"
+#include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "level0/fill.h"
 #include "level0/muls.h"
 
 #include "matmul/common/op_host/op_api/cube_util.h"
@@ -211,6 +213,98 @@ static const aclTensor* bmmProcessEmptyTensor(const aclTensor* self, const aclTe
     return out;
 }
 
+// alpha == 0时self(bias) * beta的计算，跳过matmul避免NaN
+static const aclTensor* BaddbmmSelfMulsBeta(const aclTensor* self, const aclScalar* beta, aclOpExecutor* executor)
+{
+    const aclTensor* selfContiguous = l0op::Contiguous(self, executor);
+    if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
+        OP_CHECK_NULL(selfContiguous, return nullptr);
+        selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+    }
+    OP_CHECK_NULL(selfContiguous, return nullptr);
+    const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+    OP_CHECK_NULL(mulOut, return nullptr);
+    return mulOut;
+}
+
+// 将self广播到output的shape [B, M, N]
+static const aclTensor* BaddbmmBroadcastSelf(const aclTensor* self, const aclTensor* output, aclOpExecutor* executor)
+{
+    const op::Shape& outShape = output->GetViewShape();
+    std::vector<int64_t> tensorShape{outShape[FIRST_DIM], outShape[SHAPE_LIMIT - PENULTIMATE_DIM],
+                                     outShape[SHAPE_LIMIT - LAST_DIM]};
+    auto outShapeArray = executor->AllocIntArray(tensorShape.data(), tensorShape.size());
+    OP_CHECK_NULL(outShapeArray, return nullptr);
+    auto out = l0op::BroadcastTo(self, outShapeArray, executor);
+    OP_CHECK_NULL(out, return nullptr);
+    return out;
+}
+
+// alpha == 0 && beta == 0: 输出全0，跳过matmul计算
+class BaddbmmAlpha0Beta0Graph : public Ops::NN::MatmulGraphImpl {
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
+
+    aclnnStatus Impl() override
+    {
+        const op::Shape& outShape = output->GetViewShape();
+        std::vector<int64_t> fillShape = {outShape[FIRST_DIM], outShape[SHAPE_LIMIT - PENULTIMATE_DIM],
+                                          outShape[SHAPE_LIMIT - LAST_DIM]};
+        const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclScalar* valueScalar = executor->AllocScalar(0);
+        CHECK_RET(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = fillTensor;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override
+    {
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~BaddbmmAlpha0Beta0Graph() override = default;
+};
+
+// alpha == 0 && beta != 0: 仅计算 beta * self，跳过matmul计算
+class BaddbmmAlpha0Graph : public Ops::NN::MatmulGraphImpl {
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
+
+    aclnnStatus Impl() override
+    {
+        const aclTensor* mulOut = BaddbmmSelfMulsBeta(bias, beta, executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        mulOut = BaddbmmBroadcastSelf(mulOut, output, executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = mulOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override
+    {
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~BaddbmmAlpha0Graph() override = default;
+};
+
 class BaddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
@@ -367,14 +461,28 @@ std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(const aclTensor* self, c
 {
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
-    // beta == 0
+    // alpha == 0: batch1和batch2不参与计算，避免matmul结果中的Inf/NaN导致0*Inf=NaN
+    if (std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+        // beta == 0: self也不参与计算，输出全0
+        if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+            matmulGraph = std::make_shared<BaddbmmAlpha0Beta0Graph>(batch1, batch2, self, out, alpha, beta,
+                                                                    cubeMathType, executor);
+            return matmulGraph;
+        }
+        // beta != 0: 仅计算 beta * self
+        matmulGraph = std::make_shared<BaddbmmAlpha0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                           executor);
+        return matmulGraph;
+    }
+
+    // alpha != 0 && beta == 0
     if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
         matmulGraph = std::make_shared<BaddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
                                                           executor);
         return matmulGraph;
     }
 
-    // beta != 0
+    // alpha != 0 && beta != 0
     matmulGraph = std::make_shared<BaddbmmMatmulGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
     return matmulGraph;
 }
