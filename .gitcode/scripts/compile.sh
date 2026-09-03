@@ -9,6 +9,36 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
+BRed="\033[1;31m"
+Color_Off="\033[0m"
+
+# Log error
+function LOG_ERROR() {
+    local assert_msg=${1}
+    date_time=$(date +%Y%m%d-%H%M%S)
+    echo -e "${BRed}[ERROR] ${date_time} ${assert_msg}${Color_Off}"
+}
+
+function DP_ASSERT_EQUAL() {
+    local actual_value=${1}
+    local expect_value=${2}
+    local assert_msg=${3}
+    local log_flag=${4:-"true"}
+    local log_path=${5}
+    if [ "${actual_value}" != "${expect_value}" ]; then
+        if [ -n "${log_path}" ] && [ -f "${log_path}" ]; then
+            cat "${log_path}"
+        fi
+        LOG_ERROR "${assert_msg} is failed."
+        exit 1
+    else
+        if [ "${log_flag}" = "true" ]; then
+            echo "${assert_msg} is success."
+        fi
+    fi
+}
+
+
 echo "WORKSPACE: ${WORKSPACE}"
 echo "TARGET_BRANCH: ${TARGET_BRANCH}"
 echo "OS_TYPE: ${OS_TYPE}"
@@ -71,16 +101,19 @@ fi
 case "${task_name}" in
     x86_compile)
         bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     x86_compile_ubuntu24)
         sed -i "1i set(CMAKE_EXPORT_COMPILE_COMMANDS ON)" "CMakeLists.txt"
         bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     X86_monitor_910b)
         if [ "${TARGET_BRANCH}" = "master" ];then
             bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend910b
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910b]"
         else
             echo "not need build monitor"
@@ -91,6 +124,7 @@ case "${task_name}" in
     X86_monitor_910c)
         if [ "${TARGET_BRANCH}" = "master" ];then
             bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend910_93
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910_93]"
         else
             echo "not need build monitor"
@@ -101,6 +135,7 @@ case "${task_name}" in
     X86_monitor_950)
         if [ "${TARGET_BRANCH}" = "master" ];then
             bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16 --soc=ascend950
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend950]"
         else
             echo "not need build monitor"
@@ -111,6 +146,7 @@ case "${task_name}" in
     Compile_Ascend_X86_950*)
         export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
         bash scripts/ci/compile_ascend950_pkg.sh "pr_filelist.txt" "-j32" "--no_force"
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         compile_package_name=$(ls "${WORKSPACE}/build_out/" |grep -E "*.run$"|head -n1)
         if [[ -z "${compile_package_name}" ]]; then
             echo "not need build 950"
@@ -120,6 +156,7 @@ case "${task_name}" in
         ;;
     Pre_compile)
         bash build.sh --pkg --ops="fatrelu_mul" --cann_3rd_lib_path=/home/jenkins/opensource
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "build fatrelu_mul"
         ls build_out
         mv build_out/*.run ${WORKSPACE}/build_out/cann-ops-nn-fatrelu_mul_linux-aarch64.run
@@ -129,6 +166,7 @@ case "${task_name}" in
         if [ "${TARGET_BRANCH}" = "master" ];then
             export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
             bash scripts/ci/check_pkg.sh "pr_filelist.txt" "-j16"
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash scripts/ci/check_pkg.sh pr_filelist.txt]"
         fi
         if [ ! -f ${WORKSPACE}/single.tar.gz ];then
@@ -138,10 +176,12 @@ case "${task_name}" in
         ;;
     arm_compile*)
         bash build.sh --pkg --jit -f "pr_filelist.txt" --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     Compile_Ascend_experimental)
         sh scripts/ci/check_experimental_pkg.sh "pr_filelist.txt"
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         echo "exec cmd: [sh scripts/ci/check_experimental_pkg.sh pr_filelist.txt]"
         if [ ! -f "build_out/"*.run ]; then
             mkdir -p build_out
@@ -151,6 +191,7 @@ case "${task_name}" in
     Compile_Ascend_ARM_950)
         export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
         bash scripts/ci/compile_ascend950_pkg.sh "pr_filelist.txt" "-j16" "-force_jit" "--no_force"
+        DP_ASSERT_EQUAL $? 0 "build ${task_name}"
         compile_package_name=$(ls "${WORKSPACE}/build_out/" |grep -E "*.run$"|head -n1)
         if [[ -z "${compile_package_name}" ]]; then
             echo "not need build 950"
@@ -164,6 +205,7 @@ case "${task_name}" in
             chmod +x *.run
             sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
@@ -178,6 +220,7 @@ case "${task_name}" in
             chmod +x *.run
             sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
@@ -192,6 +235,7 @@ case "${task_name}" in
             chmod +x *.run
             sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
