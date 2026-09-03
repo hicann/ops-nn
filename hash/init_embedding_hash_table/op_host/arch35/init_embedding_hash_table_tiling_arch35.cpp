@@ -90,7 +90,7 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
     auto* constantValue = attrs->GetAttrPointer<float>(ATTR_CONSTANT_VALUE_IDX);
     if (strcmp(initializerMode, "random") == 0) {
         mode = RANDOM_MODE;
-        auto sampledValuesShapePtr = context->GetInputShape(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
+        auto sampledValuesShapePtr = context->GetOptionalInputShape(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context, sampledValuesShapePtr);
         auto sampledValuesShape = sampledValuesShapePtr->GetStorageShape();
         int64_t sampledValuesShapeSize = sampledValuesShape.GetShapeSize();
