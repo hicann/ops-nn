@@ -585,14 +585,15 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 Reg::Mul(regOut, regOut, regA, mask);
                 Reg::Adds(regOut, regOut, scalarOne, mask);
                 Reg::Mul(regOut, regOut, regB, mask);
-                Reg::Mul(regSig, regSig, regGrad, mask);
                 Reg::Mul(regOut, regOut, regSig, mask);
+                Reg::Mul(regOut, regOut, regGrad, mask);
 
                 Reg::AddrReg outOffsetA = Reg::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum, dim1vfLoopIdx,
                                                                      VF_LEN_FP32);
                 Reg::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(regHalf, regOut, mask);
                 DataCopy<xDtype, Reg::StoreDist::DIST_PACK_B32>(gradXAddr, regHalf, outOffsetA, mask);
 
+                Reg::Mul(regSig, regSig, regGrad, mask);
                 Reg::Mul(regSig, regSig, regA, mask);
 
                 Reg::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(regHalf, regSig, mask);

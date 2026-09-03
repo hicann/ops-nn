@@ -623,6 +623,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         Reg::RegTensor<float> negReg;
         Reg::RegTensor<float> expReg;
         Reg::RegTensor<float> addsReg;
+        Reg::RegTensor<float> sigmoidReg;
         Reg::RegTensor<float> outFReg;
         Reg::RegTensor<xDtype> outTReg;
 
@@ -641,12 +642,12 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregActF, vregAct, mask);
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregGateF, vregGate, mask);
-                Reg::Mul(outFReg, vregActF, vregGateF, mask);
 
                 Reg::Muls(negReg, vregActF, negScalarOne, mask);
                 Reg::Exp(expReg, negReg, mask);
                 Reg::Adds(addsReg, expReg, scalarOne, mask);
-                Reg::Div(outFReg, outFReg, addsReg, mask);
+                Reg::Div(sigmoidReg, vregActF, addsReg, mask);
+                Reg::Mul(outFReg, sigmoidReg, vregGateF, mask);
 
                 Reg::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 Reg::AddrReg outOffset = Reg::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum, dim1vfLoopIdx,
@@ -664,12 +665,12 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregActF, vregAct, mask1);
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregGateF, vregGate, mask1);
-                Reg::Mul(outFReg, vregActF, vregGateF, mask1);
 
                 Reg::Muls(negReg, vregActF, negScalarOne, mask1);
                 Reg::Exp(expReg, negReg, mask1);
                 Reg::Adds(addsReg, expReg, scalarOne, mask1);
-                Reg::Div(outFReg, outFReg, addsReg, mask1);
+                Reg::Div(sigmoidReg, vregActF, addsReg, mask1);
+                Reg::Mul(outFReg, sigmoidReg, vregGateF, mask1);
 
                 // mask2 writes zeros for positions beyond valid data (zero-mode mask)
                 Reg::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
@@ -710,6 +711,7 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
         Reg::RegTensor<float> negReg;
         Reg::RegTensor<float> expReg;
         Reg::RegTensor<float> addsReg;
+        Reg::RegTensor<float> sigmoidReg;
         Reg::RegTensor<float> outFReg;
         Reg::RegTensor<xDtype> outTReg;
         Reg::MaskReg mask = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
@@ -721,11 +723,11 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
                 Reg::LoadAlign<xDtype, Reg::LoadDist::DIST_UNPACK_B16>(vregGate, gateAddr, srcOffset);
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregActF, vregAct, mask);
                 Reg::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregGateF, vregGate, mask);
-                Reg::Mul(outFReg, vregActF, vregGateF, mask);
                 Reg::Muls(negReg, vregActF, negScalarOne, mask);
                 Reg::Exp(expReg, negReg, mask);
                 Reg::Adds(addsReg, expReg, scalarOne, mask);
-                Reg::Div(outFReg, outFReg, addsReg, mask);
+                Reg::Div(sigmoidReg, vregActF, addsReg, mask);
+                Reg::Mul(outFReg, sigmoidReg, vregGateF, mask);
                 Reg::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 Reg::AddrReg outOffset = Reg::CreateAddrReg<xDtype>(row, fullTileCols, vf, VF_LEN_FP32);
                 Reg::StoreAlign<xDtype, Reg::StoreDist::DIST_PACK_B32>(swigluOutAddr, outTReg, outOffset, mask);
