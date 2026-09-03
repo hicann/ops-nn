@@ -708,30 +708,33 @@ REG_OP(ApplyAdamWithAmsgradV2)
     .OP_END_FACTORY_REG(BatchMatMulV2)
 #endif
 
-    /**
-    * @brief Sum the alpha according to the offset and ksize,
-        and quadrature it with the sigmoid value of energy.
-    * @par Inputs:
-    * Three inputs, including:
-    * @li alpha: A Tensor. Must be one of the following types: float32, float16.
-    * @li energy: A Tensor. Must be one of the following types: float32, float16.
-    * @li offset: A Tensor of type int32. \n
-    * @par Outputs:
-    * y: A Tensor with same type as "alpha". \n
-    *
-    * @par Attributes:
-    * ksize: A int.
-    *
-    * @par Restrictions:
-    * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-    */
-    REG_OP(MovingSumWithSigmoid)
+/**
+* @brief Sum the alpha according to the offset and ksize,
+    and quadrature it with the sigmoid value of energy.
+* @par Inputs:
+* Three inputs, including:
+* @li alpha: A Tensor. Must be one of the following types: float32, float16.
+* @li energy: A Tensor. Must be one of the following types: float32, float16.
+* @li offset: A Tensor of type int32. \n
+* @par Outputs:
+* y: A Tensor with same type as "alpha". \n
+*
+* @par Attributes:
+* ksize: A int.
+*
+* @par Restrictions:
+* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+*/
+#ifndef OPS_PROTO_DEF_MOVINGSUMWITHSIGMOID
+#define OPS_PROTO_DEF_MOVINGSUMWITHSIGMOID
+        REG_OP(MovingSumWithSigmoid)
     .INPUT(alpha, TensorType::BasicType())
     .INPUT(energy, TensorType::BasicType())
     .INPUT(offset, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType::BasicType())
     .REQUIRED_ATTR(ksize, Int)
     .OP_END_FACTORY_REG(MovingSumWithSigmoid)
+#endif
 
 /**
 *@brief Returns the size of a tensor, that is, an integer of the number of elements of the tensor. \n
@@ -754,46 +757,47 @@ int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、strin
     .OP_END_FACTORY_REG(Size)
 #endif
 
-    /**
-    * @brief BasicLSTMInplaceFillWindowCache calculation.
-    * @par Inputs:
-    * eight inputs: \n
-    * @li x:Each time step is a 3D Tensor. Must be one of the following types: float16.
-    * @li w:Each direction is a 3D Tensor. Must be one of the following types: int8.
-    * @li r:Each direction is a 3D Tensor. Must be one of the following types: int8.
-    * @li h:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    * @li c:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    * @li b:An optional input. Each direction is a 2D Tensor. Must be one of the following types: int32.
-    * @li sequence_lens:An optional input. A 1D Tensor. Must be one of the following types: int32.
-    * @li clean_cache:An optional input. A 1D Tensor. Must be one of the following types: int32. clean_cache=None
-    behaves the same as clean_cache=2.
-    * @li deq_scale:A 1D Tensor. Must be one of the following types: uint64.
+/**
+* @brief BasicLSTMInplaceFillWindowCache calculation.
+* @par Inputs:
+* eight inputs: \n
+* @li x:Each time step is a 3D Tensor. Must be one of the following types: float16.
+* @li w:Each direction is a 3D Tensor. Must be one of the following types: int8.
+* @li r:Each direction is a 3D Tensor. Must be one of the following types: int8.
+* @li h:Each direction is a 3D Tensor. Must be one of the following types: float16.
+* @li c:Each direction is a 3D Tensor. Must be one of the following types: float16.
+* @li b:An optional input. Each direction is a 2D Tensor. Must be one of the following types: int32.
+* @li sequence_lens:An optional input. A 1D Tensor. Must be one of the following types: int32.
+* @li clean_cache:An optional input. A 1D Tensor. Must be one of the following types: int32. clean_cache=None
+behaves the same as clean_cache=2.
+* @li deq_scale:A 1D Tensor. Must be one of the following types: uint64.
 
-    * @par Attributes:
-    * @li hidden_size:Number of neurons in the hidden layer. Requied. Reserved.
-    * @li activation_alpha: Optional scaling values used by some activation functions. Empty is currently supported.
-    * @li activation_beta: Optional scaling values used by some activation functions. Empty is currently supported.
-    * @li activations: A list of strings of activation functions. Empty is currently supported.
-    * @li clip:An float identifying the cell clip in the op. Default to -1.
-    * @li direction: Specify if the RNN is forward, reverse, or bidirectional. Must be forward(default).
-    * @li input_forget:Couple the input and forget gates if 1. Reserved.
-    * @li quant_scale_x: A float identifying the quant_scale of x_tensor. Default to -0.0.
-    * @li quant_offset_x:A float identifying the quant_offset of x_tensor. Default to -0.0.
-    * @li quant_sqrt_mode_x:A sqrt_mode of x_tensor. Default to False.
-    * @li quant_scale_h:A float identifying the quant_scale of h_tensor. Default to -0.0.
-    * @li quant_offset_h:A float identifying the quant_offset of h_tensor. Default to -0.0.
-    * @li quant_sqrt_mode_h:A sqrt_mode of h_tensor. Default to False.
-    * @li quant_dtype:An Int number identifying the dtype of quant. Default to 2(DT_INT8).
+* @par Attributes:
+* @li hidden_size:Number of neurons in the hidden layer. Requied. Reserved.
+* @li activation_alpha: Optional scaling values used by some activation functions. Empty is currently supported.
+* @li activation_beta: Optional scaling values used by some activation functions. Empty is currently supported.
+* @li activations: A list of strings of activation functions. Empty is currently supported.
+* @li clip:An float identifying the cell clip in the op. Default to -1.
+* @li direction: Specify if the RNN is forward, reverse, or bidirectional. Must be forward(default).
+* @li input_forget:Couple the input and forget gates if 1. Reserved.
+* @li quant_scale_x: A float identifying the quant_scale of x_tensor. Default to -0.0.
+* @li quant_offset_x:A float identifying the quant_offset of x_tensor. Default to -0.0.
+* @li quant_sqrt_mode_x:A sqrt_mode of x_tensor. Default to False.
+* @li quant_scale_h:A float identifying the quant_scale of h_tensor. Default to -0.0.
+* @li quant_offset_h:A float identifying the quant_offset of h_tensor. Default to -0.0.
+* @li quant_sqrt_mode_h:A sqrt_mode of h_tensor. Default to False.
+* @li quant_dtype:An Int number identifying the dtype of quant. Default to 2(DT_INT8).
 
-    * @par Outputs:
-    * three outputs: \n
-    * @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
-    following types: float16.
-    * @li y_h:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    * @li y_c:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    */
-
-    REG_OP(BasicLSTMInplaceFillWindowCache)
+* @par Outputs:
+* three outputs: \n
+* @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
+following types: float16.
+* @li y_h:Each direction is a 3D Tensor. Must be one of the following types: float16.
+* @li y_c:Each direction is a 3D Tensor. Must be one of the following types: float16.
+*/
+#ifndef OPS_PROTO_DEF_BASICLSTMINPLACEFILLWINDOWCACHE
+#define OPS_PROTO_DEF_BASICLSTMINPLACEFILLWINDOWCACHE
+        REG_OP(BasicLSTMInplaceFillWindowCache)
     .INPUT(x, TensorType({DT_FLOAT16}))
     .INPUT(w, TensorType({DT_INT8}))
     .INPUT(r, TensorType({DT_INT8}))
@@ -821,45 +825,47 @@ int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、strin
     .ATTR(quant_sqrt_mode_h, Bool, false)
     .ATTR(quant_dtype, Int, DT_INT8)
     .OP_END_FACTORY_REG(BasicLSTMInplaceFillWindowCache)
+#endif
 
-    /*
-    * @brief BasicGRUInplaceFillWindowCache calculation.
-    * @par Inputs:
-    * eight inputs: \n
-    * @li x:Each time step is a 3D Tensor. Must be one of the following types: float16.
-    * @li w:Each direction is a 3D Tensor. Must be one of the following types: int8.
-    * @li r:Each direction is a 3D Tensor. Must be one of the following types: int8.
-    * @li h:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    * @li b:An optional input. Each direction is a 2D Tensor. Must be one of the following types: int32.
-    * @li sequence_lens:An optional input. A 1D Tensor. Must be one of the following types: int32.
-    * @li clean_cache:An optional input. A 1D Tensor. Must be one of the following types: int32.
-    * @li deq_scale:A 1D Tensor. Must be one of the following types: uint64.
+/*
+* @brief BasicGRUInplaceFillWindowCache calculation.
+* @par Inputs:
+* eight inputs: \n
+* @li x:Each time step is a 3D Tensor. Must be one of the following types: float16.
+* @li w:Each direction is a 3D Tensor. Must be one of the following types: int8.
+* @li r:Each direction is a 3D Tensor. Must be one of the following types: int8.
+* @li h:Each direction is a 3D Tensor. Must be one of the following types: float16.
+* @li b:An optional input. Each direction is a 2D Tensor. Must be one of the following types: int32.
+* @li sequence_lens:An optional input. A 1D Tensor. Must be one of the following types: int32.
+* @li clean_cache:An optional input. A 1D Tensor. Must be one of the following types: int32.
+* @li deq_scale:A 1D Tensor. Must be one of the following types: uint64.
 
-    * @par Attributes:
-    * @li hidden_size:Number of neurons in the hidden layer. Requied. Reserved.
-    * @li activation_alpha: Optional scaling values used by some activation functions. Empty is currently supported.
-    * @li activation_beta: Optional scaling values used by some activation functions. Empty is currently supported.
-    * @li activations: A list of strings of activation functions. Empty is currently supported.
-    * @li clip:An float identifying the cell clip in the op. Default to -1.
-    * @li direction: Specify if the RNN is forward, reverse, or bidirectional. Must be forward(default).
-    * @li linear_before_reset: Apply the linear transformation before multiplying by the output of the reset gate.
-    Default to 1(Int).
-    * @li quant_scale_x: A float identifying the quant_scale of x_tensor. Default to -0.0.
-    * @li quant_offset_x:A float identifying the quant_offset of x_tensor. Default to -0.0.
-    * @li quant_sqrt_mode_x:A sqrt_mode of x_tensor. Default to False.
-    * @li quant_scale_h:A float identifying the quant_scale of h_tensor. Default to -0.0.
-    * @li quant_offset_h:A float identifying the quant_offset of h_tensor. Default to -0.0.
-    * @li quant_sqrt_mode_h:A sqrt_mode of h_tensor. Default to False.
-    * @li quant_dtype:An Int number identifying the dtype of quant. Default to 2(DT_INT8).
+* @par Attributes:
+* @li hidden_size:Number of neurons in the hidden layer. Requied. Reserved.
+* @li activation_alpha: Optional scaling values used by some activation functions. Empty is currently supported.
+* @li activation_beta: Optional scaling values used by some activation functions. Empty is currently supported.
+* @li activations: A list of strings of activation functions. Empty is currently supported.
+* @li clip:An float identifying the cell clip in the op. Default to -1.
+* @li direction: Specify if the RNN is forward, reverse, or bidirectional. Must be forward(default).
+* @li linear_before_reset: Apply the linear transformation before multiplying by the output of the reset gate.
+Default to 1(Int).
+* @li quant_scale_x: A float identifying the quant_scale of x_tensor. Default to -0.0.
+* @li quant_offset_x:A float identifying the quant_offset of x_tensor. Default to -0.0.
+* @li quant_sqrt_mode_x:A sqrt_mode of x_tensor. Default to False.
+* @li quant_scale_h:A float identifying the quant_scale of h_tensor. Default to -0.0.
+* @li quant_offset_h:A float identifying the quant_offset of h_tensor. Default to -0.0.
+* @li quant_sqrt_mode_h:A sqrt_mode of h_tensor. Default to False.
+* @li quant_dtype:An Int number identifying the dtype of quant. Default to 2(DT_INT8).
 
-    * @par Outputs:
-    * two outputs: \n
-    * @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
-    following types: float16.
-    * @li y_h:Each direction is a 3D Tensor. Must be one of the following types: float16.
-    */
-
-    REG_OP(BasicGRUInplaceFillWindowCache)
+* @par Outputs:
+* two outputs: \n
+* @li y:First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the
+following types: float16.
+* @li y_h:Each direction is a 3D Tensor. Must be one of the following types: float16.
+*/
+#ifndef OPS_PROTO_DEF_BASICGRUINPLACEFILLWINDOWCACHE
+#define OPS_PROTO_DEF_BASICGRUINPLACEFILLWINDOWCACHE
+        REG_OP(BasicGRUInplaceFillWindowCache)
     .INPUT(x, TensorType({DT_FLOAT16}))
     .INPUT(w, TensorType({DT_INT8}))
     .INPUT(r, TensorType({DT_INT8}))
@@ -885,30 +891,34 @@ int16、uint16、uint8、int32、int64、uint32、uint64、bool、double、strin
     .ATTR(quant_sqrt_mode_h, Bool, false)
     .ATTR(quant_dtype, Int, DT_INT8)
     .OP_END_FACTORY_REG(BasicGRUInplaceFillWindowCache)
+#endif
 
-    /**
-    * @brief Sum X1 and X2 according to the offset recorded in seq_len1 and seq_len2. \n
+/**
+* @brief Sum X1 and X2 according to the offset recorded in seq_len1 and seq_len2. \n
 
-    * @par Inputs:
-    * Four inputs, including:
-    * @li x1: A Tensor. Support BasicType.
-    * @li x2: A Tensor. Support BasicType.
-    * @li seq_len1: A Tensor. Support int32.
-    * @li seq_len2: A Tensor. Support int32. \n
+* @par Inputs:
+* Four inputs, including:
+* @li x1: A Tensor. Support BasicType.
+* @li x2: A Tensor. Support BasicType.
+* @li seq_len1: A Tensor. Support int32.
+* @li seq_len2: A Tensor. Support int32. \n
 
-    * @par Outputs:
-    * y: A Tensor with same type as "x1". \n
+* @par Outputs:
+* y: A Tensor with same type as "x1". \n
 
-    * @par Restrictions:
-    * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-    */
-    REG_OP(DynSeqOuter)
+* @par Restrictions:
+* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+*/
+#ifndef OPS_PROTO_DEF_DYNSEQOUTER
+#define OPS_PROTO_DEF_DYNSEQOUTER
+        REG_OP(DynSeqOuter)
     .INPUT(x1, TensorType::BasicType())
     .INPUT(x2, TensorType::BasicType())
     .INPUT(seq_len1, TensorType({DT_INT32}))
     .INPUT(seq_len2, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType::BasicType())
     .OP_END_FACTORY_REG(DynSeqOuter)
+#endif
 
 /**
 * @brief Computes a 2D convolution given 4D "x", "filter" and "bias" tensors.
@@ -1453,42 +1463,44 @@ Reserved.
     .ATTR(data_format, String, "NHWC")
     .OP_END_FACTORY_REG(MaxPool)
 
-    /**
-    * @brief DynamicGRUV2 calculation.
-    * @par Inputs:
-    * seven inputs:
-    * @li x:Must be one of the following types: float16.
-    * @li weight_input:Must be one of the following types: float16.
-    * @li weight_hidden:Must be one of the following types: float16.
-    * @li bias_input:Must be one of the following types: float16, float32. The format must be ND.
-    * @li bias_hidden:Must be one of the following types: float16, float32. The format must be ND.
-    * @li seq_length:Must be one of the following types: int32, float16 in ND.
-    * @li init_h:Must be one of the following types: float16, float32.
+/**
+* @brief DynamicGRUV2 calculation.
+* @par Inputs:
+* seven inputs:
+* @li x:Must be one of the following types: float16.
+* @li weight_input:Must be one of the following types: float16.
+* @li weight_hidden:Must be one of the following types: float16.
+* @li bias_input:Must be one of the following types: float16, float32. The format must be ND.
+* @li bias_hidden:Must be one of the following types: float16, float32. The format must be ND.
+* @li seq_length:Must be one of the following types: int32, float16 in ND.
+* @li init_h:Must be one of the following types: float16, float32.
 
-    * @par Attributes:
-    * @li direction:An string identifying the direction in the op. Default to "UNIDIRECTIONAL". Support "UNIDIRECTIONAL"
-    and "REDIRECTIONAL".
-    * @li cell_depth:An integer identifying the cell depth in the op. Default to 1.
-    * @li keep_prob:An float identifying the keep prob in the op. Default to 1.
-    * @li cell_clip:An float identifying the cell clip in the op. Default to -1.
-    * @li num_proj:An integer identifying the num projection in the op. Default to 0.
-    * @li time_major:An bool identifying the time major in the op. Default to true.
-    * @li activation:An string identifying the type of activation function in the op. Default to "tanh". Only tanh is
-    currently supported.
-    * @li gate_order:An string identifying the gate order in weight and bias. Default to "zrh". "rzh" is another option.
-    * @li reset_after:An bool identifying whether to apply reset gate after matrix multiplication. Default to true.
-    * @li is_training:An bool identifying is training in the op. Default to true.
+* @par Attributes:
+* @li direction:An string identifying the direction in the op. Default to "UNIDIRECTIONAL". Support "UNIDIRECTIONAL"
+and "REDIRECTIONAL".
+* @li cell_depth:An integer identifying the cell depth in the op. Default to 1.
+* @li keep_prob:An float identifying the keep prob in the op. Default to 1.
+* @li cell_clip:An float identifying the cell clip in the op. Default to -1.
+* @li num_proj:An integer identifying the num projection in the op. Default to 0.
+* @li time_major:An bool identifying the time major in the op. Default to true.
+* @li activation:An string identifying the type of activation function in the op. Default to "tanh". Only tanh is
+currently supported.
+* @li gate_order:An string identifying the gate order in weight and bias. Default to "zrh". "rzh" is another option.
+* @li reset_after:An bool identifying whether to apply reset gate after matrix multiplication. Default to true.
+* @li is_training:An bool identifying is training in the op. Default to true.
 
-    * @par Outputs:
-    * six outputs:
-    * @li y:Must be one of the following types: float16, float32.
-    * @li output_h:Must be one of the following types: float16, float32.
-    * @li update:Must be one of the following types: float16, float32.
-    * @li reset:Must be one of the following types: float16, float32.
-    * @li new:Must be one of the following types: float16, float32.
-    * @li hidden_new:Must be one of the following types: float16, float32.
-    */
-    REG_OP(DynamicGRUV2)
+* @par Outputs:
+* six outputs:
+* @li y:Must be one of the following types: float16, float32.
+* @li output_h:Must be one of the following types: float16, float32.
+* @li update:Must be one of the following types: float16, float32.
+* @li reset:Must be one of the following types: float16, float32.
+* @li new:Must be one of the following types: float16, float32.
+* @li hidden_new:Must be one of the following types: float16, float32.
+*/
+#ifndef OPS_PROTO_DEF_DYNAMICGRUV2
+#define OPS_PROTO_DEF_DYNAMICGRUV2
+        REG_OP(DynamicGRUV2)
     .INPUT(x, TensorType({DT_FLOAT16}))
     .INPUT(weight_input, TensorType({DT_FLOAT16}))
     .INPUT(weight_hidden, TensorType({DT_FLOAT16}))
@@ -1513,6 +1525,7 @@ Reserved.
     .ATTR(reset_after, Bool, true)
     .ATTR(is_training, Bool, true)
     .OP_END_FACTORY_REG(DynamicGRUV2)
+#endif
 
 /**
 * @brief Function axpy with softmax and dropoutdomask . \n
