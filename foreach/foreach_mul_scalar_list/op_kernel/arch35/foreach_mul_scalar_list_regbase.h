@@ -46,7 +46,7 @@ public:
         __ubuf__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
         __ubuf__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
-        using scalarCalcType = typename Conditional<AscendC::IsSameType<ScalarT, int32_t>::value, int32_t, float>::type;
+        using scalarCalcType = typename Conditional<AscendC::IsSameType<T, int32_t>::value, int32_t, float>::type;
         scalarCalcType scaleVal = scalarCalcType(inScalarGM_.GetValue(tensorIndex));
 
         uint32_t dataCountPerLoop = VL_SIZE / sizeof(float);
