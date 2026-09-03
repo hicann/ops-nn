@@ -4439,6 +4439,16 @@
     <td>实现输入为tensorlist的adamw融合优化器功能。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/fused_adam/README.md">fused_adam</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现输入为tensorlist的adam融合优化器功能。</td>
+  </tr>
+  <tr>
     <td>pooling</td>
     <td><a href="../../pooling/adaptive_avg_pool3d/README.md">adaptive_avg_pool3d</a></td>
     <td>✓</td>
