@@ -4130,6 +4130,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/inplace_apply_add_sign/README.md">inplace_apply_add_sign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现AddSign优化器的inplace参数更新，根据动量累积m、梯度grad及标量参数lr/alpha/sign_decay/beta，原地更新权重参数var和动量累积m，对标TensorFlow的ResourceApplyAddSign接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/lamb_apply_optimizer_assign/README.md">lamb_apply_optimizer_assign</a></td>
     <td>✓</td>
     <td>✓</td>
