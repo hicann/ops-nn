@@ -871,8 +871,13 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             DataCopy(bl1, filterGm[gmOff], p);
         }
     } else {
-        // FRACTAL_Z weight: direct copy per group iteration
-        if (tiling_->nDim == 1) {
+        // FRACTAL_Z weight: direct copy per group iteration.
+        // When n1PerCore_ == n1PerGroup (full N partition), contiguous copy is fine.
+        // When n1PerCore_ < n1PerGroup (group tail with enlargeTail), the FRACTAL_Z
+        // layout [k1, n1, GN0, GK0] means contiguous copy would interleave n1 blocks
+        // across different k1 values — must use strided copy to extract only the
+        // first n1PerCore_ n1-blocks per k1.
+        if (tiling_->nDim == 1 && n1PerCore_ == n1PerGroup) {
             DataCopy(bl1, filterGm[0], bl1ElemCount_);
         } else {
             uint32_t n1Start = nIdx_ * tiling_->singleCoreCo / GN0;

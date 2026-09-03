@@ -121,7 +121,16 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
 
     ExtendParams extendParams(scale0, relu_weight0, clip_value0, scale1, relu_weight1, clip_value1, y1);
 
-    if constexpr (SmallKernel == CONV_SMALL_KERNEL && weightFormat == ConvFormat::FRACTAL_Z) {
+    if constexpr (SmallKernel == CONV_SMALL_KERNEL_FM_PARTLOAD) {
+        constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
+        constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
+        constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
+        Conv2dSmallKernelFmPartload<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                                    isHw>
+            op;
+        op.Init(tilingData);
+        op.Process(x, filter, bias, y0, &extendParams);
+    } else if constexpr (SmallKernel == CONV_SMALL_KERNEL && weightFormat == ConvFormat::FRACTAL_Z) {
         constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
         constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
