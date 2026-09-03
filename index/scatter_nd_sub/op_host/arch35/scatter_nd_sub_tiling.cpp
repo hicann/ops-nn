@@ -41,6 +41,7 @@ constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int32_t IDX_VAR = 0;
 constexpr int32_t IDX_INDICES = 1;
 constexpr int32_t IDX_UPDATES = 2;
+constexpr int64_t INDICES_MIN_RANK = 2;
 
 struct ScatterNdSubCompileInfo {};
 
@@ -89,6 +90,54 @@ static void ComputeScatterShapes(const gert::Shape& varShape, const gert::Shape&
     }
 }
 
+static bool DimMatch(int64_t actual, int64_t expected)
+{
+    // negative dim means unknown dim in dynamic shape scenario
+    return actual < 0 || expected < 0 || actual == expected;
+}
+
+static ge::graphStatus CheckScatterNdSubShapes(gert::TilingContext* context, const gert::Shape& varShape,
+                                               const gert::Shape& indicesShape, const gert::Shape& updatesShape)
+{
+    int64_t varRank = static_cast<int64_t>(varShape.GetDimNum());
+    int64_t indicesRank = static_cast<int64_t>(indicesShape.GetDimNum());
+    OP_CHECK_IF(indicesRank < INDICES_MIN_RANK,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
+                                             (std::to_string(indicesRank) + "D").c_str(), "at least 2D"),
+                return ge::GRAPH_FAILED);
+
+    // constraint: var rank >= indices.shape[-1]
+    int64_t indicesLastDim = indicesShape.GetDim(indicesRank - 1);
+    OP_CHECK_IF(
+        indicesLastDim > varRank,
+        OP_LOGE(context, "var rank %ld must be greater than or equal to indices last dim %ld", varRank, indicesLastDim),
+        return ge::GRAPH_FAILED);
+
+    // dynamic shape: indices last dim unknown, skip updates shape consistency check
+    if (indicesLastDim < 0) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    // constraint: updates.shape == indices.shape[:-1] + var.shape[indices.shape[-1]:]
+    int64_t expectedRank = (indicesRank - 1) + (varRank - indicesLastDim);
+    bool shapeMatch = (static_cast<int64_t>(updatesShape.GetDimNum()) == expectedRank);
+    for (int64_t i = 0; shapeMatch && i < indicesRank - 1; i++) {
+        shapeMatch = DimMatch(updatesShape.GetDim(i), indicesShape.GetDim(i));
+    }
+    for (int64_t i = 0; shapeMatch && i < varRank - indicesLastDim; i++) {
+        shapeMatch = DimMatch(updatesShape.GetDim(indicesRank - 1 + i), varShape.GetDim(indicesLastDim + i));
+    }
+    OP_CHECK_IF(!shapeMatch,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "updates", Ops::Base::ToString(updatesShape).c_str(),
+                    ("The shape of updates must be indices.shape[:-1] + var.shape[indices.shape[-1]:], "
+                     "indices.shape = " +
+                     Ops::Base::ToString(indicesShape) + ", var.shape = " + Ops::Base::ToString(varShape))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 static void ComputeScatterCoreNum(int64_t totalVarElements, int64_t numSlices, int64_t coreNum,
                                   gert::TilingContext* context)
 {
@@ -129,10 +178,16 @@ static ge::graphStatus ScatterNdSubTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
     auto indicesInput = context->GetInputShape(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
+    auto updatesInput = context->GetInputShape(IDX_UPDATES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
 
     auto varShape = EnsureNotScalar(varInput->GetStorageShape());
     auto indicesShape = EnsureNotScalar(indicesInput->GetStorageShape());
+    auto updatesShape = EnsureNotScalar(updatesInput->GetStorageShape());
     int64_t totalVarElements = varShape.GetShapeSize();
+
+    OP_CHECK_IF(CheckScatterNdSubShapes(context, varShape, indicesShape, updatesShape) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckScatterNdSubShapes error"), return ge::GRAPH_FAILED);
 
     int64_t numSlices = 0, sliceSize = 0, indicesLastDim = 0, varRank = 0;
     int64_t varStrides[MAX_VAR_RANK] = {0};

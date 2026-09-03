@@ -78,6 +78,7 @@ $$
 
 ## 约束说明
 
+- indices的rank必须大于等于2，即indices为形如(N, ..., K)的二维及以上张量（N为索引组数，最后一维K为索引深度），不支持一维indices。
 - var的rank必须大于等于indices的最后一维。
 - updates的shape必须与indices.shape[:-1] + var.shape[indices.shape[-1]:]一致。
 - indices值不支持越界。

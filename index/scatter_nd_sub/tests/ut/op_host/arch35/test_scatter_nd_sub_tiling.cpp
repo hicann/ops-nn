@@ -65,6 +65,7 @@ struct ScatterNdSubTilingResult {
 
 static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_list<int64_t>& varShape,
                                                          const std::initializer_list<int64_t>& indicesShape,
+                                                         const std::initializer_list<int64_t>& updatesShape,
                                                          ge::DataType varDtype, ge::DataType indicesDtype)
 {
     ScatterNdSubTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
@@ -94,7 +95,7 @@ static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_
 
     gert::StorageShape varStorage = {varShape, varShape};
     gert::StorageShape indicesStorage = {indicesShape, indicesShape};
-    gert::StorageShape updatesStorage = {varShape, varShape};
+    gert::StorageShape updatesStorage = {updatesShape, updatesShape};
 
     ScatterNdSubUtCompileInfo compileInfo;
 
@@ -139,7 +140,7 @@ static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_
 
 TEST_F(TestScatterNdSubTiling, scatter_nd_sub_fp32_int32)
 {
-    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 1}, ge::DT_FLOAT, ge::DT_INT32);
+    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 1}, {2, 8}, ge::DT_FLOAT, ge::DT_INT32);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
     EXPECT_EQ(result.totalVarElements, 32);
@@ -149,7 +150,7 @@ TEST_F(TestScatterNdSubTiling, scatter_nd_sub_fp32_int32)
 
 TEST_F(TestScatterNdSubTiling, scatter_nd_sub_fp32_int64)
 {
-    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 1}, ge::DT_FLOAT, ge::DT_INT64);
+    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 1}, {2, 8}, ge::DT_FLOAT, ge::DT_INT64);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
     EXPECT_EQ(result.totalVarElements, 32);
@@ -159,9 +160,36 @@ TEST_F(TestScatterNdSubTiling, scatter_nd_sub_fp32_int64)
 
 TEST_F(TestScatterNdSubTiling, scatter_nd_sub_fp16_int32)
 {
-    auto result = DoScatterNdSubTilingCase({8, 16}, {4, 1}, ge::DT_FLOAT16, ge::DT_INT32);
+    auto result = DoScatterNdSubTilingCase({8, 16}, {4, 1}, {4, 16}, ge::DT_FLOAT16, ge::DT_INT32);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.totalVarElements, 128);
     EXPECT_EQ(result.numSlices, 4);
     EXPECT_EQ(result.sliceSize, 16);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_int32_3d_indices)
+{
+    auto result = DoScatterNdSubTilingCase({8, 427}, {2, 3, 1}, {2, 3, 427}, ge::DT_INT32, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.totalVarElements, 3416);
+    EXPECT_EQ(result.numSlices, 6);
+    EXPECT_EQ(result.sliceSize, 427);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_1d_indices_failed)
+{
+    auto result = DoScatterNdSubTilingCase({4, 8}, {1}, {8}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_updates_shape_mismatch_failed)
+{
+    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 1}, {4, 8}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_indices_last_dim_gt_var_rank_failed)
+{
+    auto result = DoScatterNdSubTilingCase({4, 8}, {2, 3}, {2}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }

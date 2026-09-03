@@ -14,8 +14,8 @@
  * \file scatter_nd_sub_infershape.cpp
  * \brief Infershape implementation for scatter_nd_sub operator
  *
- * Output shape = var shape (SE 5.4)
- * Output dtype = var dtype (SE 5.5)
+ * Output shape = var shape
+ * Output dtype = var dtype
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
