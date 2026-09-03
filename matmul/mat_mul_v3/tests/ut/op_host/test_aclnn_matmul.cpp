@@ -789,6 +789,70 @@ TEST_F(l2_matmul_test, ascend950_test_mm_slice_valid)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_matmul_test, ascend950_test_mm_slice_k_large)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::SetCubeCoreNum(32U);
+    // 2D K-slice: view [128, 64], storage [128, 128], K=64, fp16 -> K*dtype=128 bytes >= 32
+    auto tensor_1_desc = TensorDesc({128, 64}, ACL_FLOAT16, ACL_FORMAT_ND, {128, 1}, 0, {16384}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({64, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({128, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend950_test_mm_2d_slice_k_small)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::SetCubeCoreNum(32U);
+    // 2D K-slice: view [128, 2], storage [128, 18], K=2, fp16 -> K*dtype=4 bytes < 32, should be blocked
+    auto tensor_1_desc = TensorDesc({128, 2}, ACL_FLOAT16, ACL_FORMAT_ND, {18, 1}, 0, {2304}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({2, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({128, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend950_test_mm_3d_slice_k_large)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::SetCubeCoreNum(32U);
+    // 3D K-slice: view [5, 3, 32], storage [5, 3, 64], K=32, fp16 -> K*dtype=64 bytes >= 32
+    auto tensor_1_desc = TensorDesc({5, 3, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {192, 64, 1}, 0, {960}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({32, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend950_test_mm_3d_slice_k_small)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::SetCubeCoreNum(32U);
+    // 3D K-slice: view [5, 3, 2], storage [5, 3, 18], K=2, fp16 -> K*dtype=4 bytes < 32, should be blocked
+    auto tensor_1_desc = TensorDesc({5, 3, 2}, ACL_FLOAT16, ACL_FORMAT_ND, {54, 18, 1}, 0, {270}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_matmul_test, ascend950_test_bmm_transpose_scene1)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
