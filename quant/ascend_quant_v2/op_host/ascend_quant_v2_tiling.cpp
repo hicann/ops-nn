@@ -27,7 +27,7 @@ constexpr size_t g_AttrSqrtMode = 0;
 constexpr size_t g_AttrRoundMode = 1;
 constexpr size_t g_AttrDstType = 2;
 constexpr size_t g_AttrAxis = 3;
-constexpr int64_t g_SyncWorkSpaceSize = static_cast<int64_t>(16 * 1024 * 1024);
+constexpr int64_t g_SyncWorkSpaceSize = static_cast<int64_t>(0);
 constexpr int64_t g_CacheLineV220 = 512;
 constexpr int64_t g_BaseLen = 128;
 constexpr int64_t g_BlockSize = 32;
@@ -499,7 +499,7 @@ void AscendQuantV2::CalcTiling()
     int64_t shape1 = xInputShape_.GetDim(1);
     shape0 = GetNewShape0(shape0, shape1);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
     if (cacheLine_ == 0 || dtypeSize == 0) {
         return;
     }
@@ -534,7 +534,7 @@ void AscendQuantV2::CalcTilingNz()
     K_ = xInputShape_.GetDim(1);
     N_ = xInputShape_.GetDim(dim_2);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
     needCoreNum_ = K_ / length;
     if (needCoreNum_ >= static_cast<int64_t>(coreNum_)) {
         needCoreNum_ = static_cast<int64_t>(coreNum_);
@@ -547,7 +547,7 @@ void AscendQuantV2::CalcPerHeadTiling()
     int64_t shape1 = xInputShape_.GetDim(g_SecondShapeDim);
     int64_t shape2 = xInputShape_.GetDim(g_ThirdShapeDim);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
     if (cacheLine_ == 0 || dtypeSize == 0) {
         return;
     }

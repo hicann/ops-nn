@@ -27,7 +27,7 @@ constexpr size_t ATTR_SQRT_MODE_INDEX = 0;
 constexpr size_t ATTR_ROUND_MODE_INDEX = 1;
 constexpr size_t ATTR_DST_TYPE_INDEX = 2;
 constexpr size_t ATTR_AXIS_INDEX = 3;
-constexpr size_t SYNC_WORKSPACE_SIZE = 16777216;
+constexpr size_t SYNC_WORKSPACE_SIZE = 0;
 constexpr int64_t CACHE_SIZE_950 = 128;
 constexpr int64_t g_BaseLen = 128;
 constexpr int64_t g_BlockSize = 32;
@@ -542,7 +542,7 @@ void AscendQuantV2Regbase::CalcPerHeadTiling()
     int64_t shape1 = xInputShape_.GetDim(g_SecondShapeDim);
     int64_t shape2 = xInputShape_.GetDim(g_ThirdShapeDim);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
 
     if (cacheLine_ == 0 || dtypeSize == 0) {
         return;

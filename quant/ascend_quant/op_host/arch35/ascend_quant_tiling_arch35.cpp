@@ -39,7 +39,7 @@ constexpr size_t ATTR_ROUND_MODE_INDEX = 3;
 constexpr size_t ATTR_DST_TYPE_INDEX = 4;
 constexpr size_t OUTPUT_Y_INDEX = 0;
 
-constexpr size_t SYNC_WORKSPACE_SIZE = 16777216;
+constexpr size_t SYNC_WORKSPACE_SIZE = 0;
 constexpr int64_t CACHE_SIZE_910D = 128;
 
 constexpr size_t FIRST_DIM = 0;

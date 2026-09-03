@@ -30,7 +30,7 @@ using namespace EluNs;
 
 namespace optiling {
 constexpr uint64_t ELU_TILING_KEY_ELEMENTWISE = 101;
-constexpr uint64_t ELU_WORKSPACE_RESERVE_BYTE = 16777216; // 16 * 1024 * 1024
+constexpr uint64_t ELU_WORKSPACE_RESERVE_BYTE = 0;
 const int ATTR_ELU_ALPHA_POS = 0;
 const int ATTR_ELU_SCALE_POS = 1;
 const int ATTR_ELU_INPUT_SCALE_POS = 2;

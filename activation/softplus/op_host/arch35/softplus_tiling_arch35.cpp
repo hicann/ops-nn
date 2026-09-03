@@ -23,7 +23,7 @@
 #include <iostream>
 
 namespace optiling {
-const size_t ASCEND_WORKSPACE = 16777216; // 16M
+const size_t ASCEND_WORKSPACE = 0; // 0M
 const gert::Shape g_vec_1_shape = {1};
 
 ge::graphStatus SoftplusTiling::CalcInputDtype()

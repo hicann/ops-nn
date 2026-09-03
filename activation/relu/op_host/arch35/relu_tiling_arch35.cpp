@@ -26,7 +26,7 @@ namespace optiling {
 using namespace ge;
 using namespace Ops::Base;
 
-constexpr uint64_t SYS_WORKSPACE = 16777216; // 16M
+constexpr uint64_t SYS_WORKSPACE = 0; // 0M
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP16 = 101;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_BF16 = 102;
 constexpr uint64_t RELU_TILING_KEY_ELEMENTWISE_FP32 = 103;

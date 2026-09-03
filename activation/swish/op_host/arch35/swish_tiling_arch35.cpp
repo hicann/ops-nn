@@ -35,7 +35,7 @@ static constexpr uint64_t OP_KEY_2 = 2;
 static constexpr uint64_t OP_KEY_3 = 3;
 static constexpr uint64_t INDEX_0 = 0;
 static constexpr uint64_t WORKSPACE_SIZE = 32;
-const int64_t ASCEND_WORKSPACE = 16777216; // 16 * 1024 * 1024
+const int64_t ASCEND_WORKSPACE = 0; // 0 * 1024 * 1024
 static constexpr float NEG_ONE = -1.0f;
 static constexpr float ZERO = 0.0;
 
