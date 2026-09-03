@@ -56,7 +56,7 @@ private:
     uint64_t tilingKey_ = 0;
     ge::graphStatus GetDtype();
     ge::graphStatus GetScale();
-    void DumpTilingInfo();
+    void DumpTilingInfo() override;
     platform_ascendc::SocVersion socVersion_ = platform_ascendc::SocVersion::ASCEND910B;
     bool hasWeight_ = false;
     bool hasPosWeight_ = false;

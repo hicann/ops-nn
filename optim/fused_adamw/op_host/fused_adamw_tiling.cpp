@@ -170,12 +170,13 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context, uint32_t am
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);
     auto paramsDtype = dtypeInput->GetDataType();
 
-    auto checkDtype = [&](uint32_t idx, const char* name) -> ge::graphStatus {
+    auto checkDtype = [&](uint32_t idx, const char* nameOfOps) -> ge::graphStatus {
         auto dtypeInputInner = context->GetDynamicInputDesc(idx, 0);
         OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInputInner);
         auto dtype = dtypeInputInner->GetDataType();
         if (dtype != paramsDtype) {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), name, Ops::Base::ToString(dtype).c_str(),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), nameOfOps,
+                                                   Ops::Base::ToString(dtype).c_str(),
                                                    "should have the same dtype as params");
             return ge::GRAPH_FAILED;
         }
@@ -228,11 +229,11 @@ ge::graphStatus FusedAdamWTiling::GetInputTensorInfo()
         OP_CHECK_NULL_WITH_CONTEXT(context_, paramsShapePtr);
         gert::Shape paramsShape = paramsShapePtr->GetStorageShape();
 
-        auto checkShape = [&](uint32_t idx, const char* name) -> ge::graphStatus {
+        auto checkShape = [&](uint32_t idx, const char* shapeNameOfOps) -> ge::graphStatus {
             auto shapePtr = context_->GetDynamicInputShape(idx, i);
             OP_CHECK_NULL_WITH_CONTEXT(context_, shapePtr);
             if (shapePtr->GetStorageShape() != paramsShape) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), name,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), shapeNameOfOps,
                                                        Ops::Base::ToString(shapePtr->GetStorageShape()).c_str(),
                                                        "should have the same shape as params");
                 return ge::GRAPH_FAILED;

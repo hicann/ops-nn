@@ -25,13 +25,13 @@ struct FusedSgdCompileInfo {};
 
 class FusedSgdTiling {
 public:
-    explicit FusedSgdTiling(gert::TilingContext* context) : context_(context){};
+    explicit FusedSgdTiling(gert::TilingContext* context) : context_(context) {};
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus GetAttrInfo();
     ge::graphStatus GetInputTensorInfo();
     ge::graphStatus CalculateOutputInfo();
     void CheckOptionalInputs();
-    void SetTilingData(FusedSgdTilingData* tilingData);
+    void SetTilingData(FusedSgdTilingData* tilingData) const;
     std::string TilingDataToString() const;
 
 private:

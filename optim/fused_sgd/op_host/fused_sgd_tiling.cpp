@@ -274,7 +274,7 @@ ge::graphStatus FusedSgdTiling::CalculateOutputInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-void FusedSgdTiling::SetTilingData(FusedSgdTilingData* tilingData)
+void FusedSgdTiling::SetTilingData(FusedSgdTilingData* tilingData) const
 {
     tilingData->weightDecay = weightDecay_;
     tilingData->momentum = momentum_;
