@@ -54,7 +54,7 @@ graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inpu
     } else if (inputXShape->GetDimNum() == INPUT_DIM_NUM_THREE) {
         int64_t dim0 = inputXShape->GetDim(DIGIT_ZERO);
         int64_t dim1 = inputXShape->GetDim(DIGIT_ONE);
-        int64_t dim2 = inputXShape->GetDim(DIGIT_ZERO);
+        int64_t dim2 = inputXShape->GetDim(DIGIT_TWO);
         OP_LOGD(context, "DynamicBlockQuant input shape is (%ld, %ld, %ld), rowBlockSize is %d, colBlockSize is %d",
                 dim0, dim1, dim2, *rowBlockSize, *colBlockSize);
 
