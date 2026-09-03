@@ -93,7 +93,7 @@ const aclTensor* GeluGradV2(const aclTensor* gradOutput, const aclTensor* self, 
     auto gradInput = isMixDataType ? executor->AllocTensor(broadcastShape, DataType::DT_FLOAT) :
                                      executor->AllocTensor(broadcastShape, self->GetDataType());
     if (gradInput == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc gradIntput tensor failed.");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc gradInput tensor failed.");
         return nullptr;
     }
 

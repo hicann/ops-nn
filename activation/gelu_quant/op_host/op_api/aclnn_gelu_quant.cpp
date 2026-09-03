@@ -154,10 +154,11 @@ static bool CheckShape(const aclTensor* self, const aclTensor* inputScaleOptiona
         }
         if (inputScaleOptional != nullptr) {
             auto scaleShape = inputScaleOptional->GetViewShape();
-            OP_CHECK((scaleShape.GetDim(0) == offsetShape.GetDim(0)),
-                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                             "The shape of inputOffsetOptional matches the shape of inputScaleOptional."),
-                     return false);
+            if (scaleShape.GetDim(0) != offsetShape.GetDim(0)) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "The shape of inputOffsetOptional does not matches the shape of inputScaleOptional.");
+                return false;
+            }
         }
     }
     OP_CHECK_SHAPE_NOT_EQUAL(self, y, return false);
@@ -209,7 +210,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inputScaleOp
              return false);
 
     OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].", dstType,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) must be the same as y dtype[%s].", dstType,
                      op::ToString(static_cast<op::DataType>(dstType)).GetString(),
                      op::ToString(y->GetDataType()).GetString()),
              return false);

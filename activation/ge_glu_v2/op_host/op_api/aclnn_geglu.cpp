@@ -146,11 +146,11 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
     int64_t outDimNum = out->GetViewShape().GetDimNum();
     int64_t outGeluDimNum = outGelu->GetViewShape().GetDimNum();
 
-    OP_CHECK(outDimNum == outGeluDimNum && outDimNum == dimNum,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "outDimNum[%ld] and outGeluDimNum[%ld] must be the same with inputDimNum[%ld].", outDimNum,
-                     outGeluDimNum, dimNum),
-             return false);
+    OP_CHECK(
+        outDimNum == outGeluDimNum && outDimNum == dimNum,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outDimNum[%ld] and outGeluDimNum[%ld] must be the same as inputDimNum[%ld].",
+                outDimNum, outGeluDimNum, dimNum),
+        return false);
 
     return CheckOtherDimsMatch(self, out, outGelu, dimNum, sliceDim, dim);
 }

@@ -35,13 +35,13 @@ ge::graphStatus GeluQuantTiling::GetPlatformInfo()
     OP_CHECK_IF(
         (baseInfoOp.vectorCoreNum <= 0),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "vectorCoreNum", std::to_string(baseInfoOp.vectorCoreNum),
-                                              "The value of vectorCoreNum must be greate than 0"),
+                                              "The value of vectorCoreNum must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize = compileInfo->ubSize;
     OP_CHECK_IF((baseInfoOp.ubSize <= 0),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "ubSize", std::to_string(baseInfoOp.ubSize),
-                                                      "The value of ubSize must be greate than 0"),
+                                                      "The value of ubSize must be greater than 0"),
                 return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize -= RESERVED_UB_SIZE; // 可用UB空间
@@ -202,7 +202,7 @@ ge::graphStatus GeluQuantTiling::ProcessOptionalScaleInfo()
     OP_CHECK_IF((baseInfoOp.xInputDtype == ge::DT_FLOAT && baseInfoOp.scaleInputDtype != ge::DT_FLOAT),
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                     nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype),
-                    "The dtype of input_scale must be ge::DT_FLOAT when the dype of input_x is DT_FLOAT"),
+                    "The dtype of input_scale must be ge::DT_FLOAT when the dtype of input_x is DT_FLOAT"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((baseInfoOp.xInputDtype == ge::DT_FLOAT16 && baseInfoOp.scaleInputDtype == ge::DT_BF16),
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(

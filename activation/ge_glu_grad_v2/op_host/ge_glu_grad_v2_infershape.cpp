@@ -41,7 +41,7 @@ ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, i
 static ge::graphStatus CheckSplitDimValues(int64_t dim_value_x, int64_t dim_value_dy, int64_t dim_value_gelu)
 {
     OP_CHECK_IF((dim_value_x % GE_GLU_NUM_TWO != 0),
-                OP_LOGE("GEGLUGRADV2", "The input x shape can not split by the attr dim, check failed."),
+                OP_LOGE("GEGLUGRADV2", "The input x shape cannot be split by the attr dim, check failed."),
                 return GRAPH_FAILED);
     OP_CHECK_IF((dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_x != GE_GLU_NUM_TWO * dim_value_dy),
                 OP_LOGE("GEGLUGRADV2", "The input dy and x shape does not satisfy the operator constraint."),
@@ -74,7 +74,7 @@ static ge::graphStatus CheckDimValuesConsistency(const gert::Shape* x_shape, con
         if (dim_value_x == UNKNOWN_DIM_VALUE_) {
             OP_CHECK_IF((dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_gelu != UNKNOWN_DIM_VALUE_ &&
                          dim_value_dy != dim_value_gelu),
-                        OP_LOGE("GEGLUGRADV2", "The input shape dy and gelu is different, check failed."),
+                        OP_LOGE("GEGLUGRADV2", "The input shape dy and gelu are different, check failed."),
                         return GRAPH_FAILED);
             continue;
         }
@@ -110,7 +110,7 @@ static ge::graphStatus InferShapeForGeGluGradV2(gert::InferShapeContext* context
     size_t x_dim_num = x_shape->GetDimNum();
     size_t gelu_dim_num = gelu_shape->GetDimNum();
     OP_CHECK_IF(x_dim_num == 0 || dy_dim_num == 0 || gelu_dim_num == 0,
-                OP_LOGE("GEGLUGRADV2", "not support inputs have scalar, check failed"), return GRAPH_FAILED);
+                OP_LOGE("GEGLUGRADV2", "scalar inputs are not supported, check failed"), return GRAPH_FAILED);
 
     OP_CHECK_IF(Ops::Base::IsUnknownRank(*x_shape) || Ops::Base::IsUnknownRank(*dy_shape) ||
                     Ops::Base::IsUnknownRank(*gelu_shape),

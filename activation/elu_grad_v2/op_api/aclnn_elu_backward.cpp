@@ -122,17 +122,17 @@ static void CheckFormat(const aclTensor* gradOutput, const aclTensor* selfOrResu
 {
     op::Format format = gradOutput->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW("Format of gradOutput input gets [%s], this format mat lead to precision failure",
+        OP_LOGW("Format of gradOutput input gets [%s], this format may lead to precision failure",
                 op::ToString(format).GetString());
     }
     format = selfOrResult->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW("Format of selfOrResult input gets [%s], this format mat lead to precision failure",
+        OP_LOGW("Format of selfOrResult input gets [%s], this format may lead to precision failure",
                 op::ToString(format).GetString());
     }
     format = gradInput->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW("Format of gradInput input gets [%s], this format mat lead to precision failure",
+        OP_LOGW("Format of gradInput input gets [%s], this format may lead to precision failure",
                 op::ToString(format).GetString());
     }
 }

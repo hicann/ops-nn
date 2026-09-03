@@ -32,7 +32,7 @@ const aclTensor* GeGluGradV2(const aclTensor* gradOutput, const aclTensor* self,
     // 根据输入shape申请输出tensor
     auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), Format::FORMAT_ND);
     if (gradInput == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc gradIntput tensor failed.");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc gradInput tensor failed.");
         return nullptr;
     }
 

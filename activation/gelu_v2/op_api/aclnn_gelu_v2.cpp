@@ -53,7 +53,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* y)
     OP_CHECK_DTYPE_NOT_MATCH(y, x->GetDataType(), return false);
 
     if (!CheckSocVersionIsSupportBf16() && (x->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dtype of gelu_v2 is not support bfloat16 in current socversion.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dtype of gelu_v2 does not support bfloat16 in current socversion.");
         return false;
     }
 
