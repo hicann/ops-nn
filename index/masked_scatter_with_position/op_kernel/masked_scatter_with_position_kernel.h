@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file masked_scatter_with_position.h
+ * \file masked_scatter_with_position_kernel.h
  * \brief
  */
-#ifndef __MASKED_SCATTER_WITH_POSITION_H__
-#define __MASKED_SCATTER_WITH_POSITION_H__
+#ifndef __MASKED_SCATTER_WITH_POSITION_KERNEL_H__
+#define __MASKED_SCATTER_WITH_POSITION_KERNEL_H__
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
@@ -126,4 +126,4 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWith
     }
 }
 } // namespace MaskedScatterWithPosition
-#endif // MASKED_SCATTER_WITH_POSITION_H
+#endif // MASKED_SCATTER_WITH_POSITION_KERNEL_H

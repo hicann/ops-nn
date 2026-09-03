@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "masked_scatter_with_position.h"
+#include "masked_scatter_with_position_kernel.h"
 
 #define BA_INT32_TILING_KEY 100
 #define BA_INT64_TILING_KEY 101
