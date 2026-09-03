@@ -38,51 +38,6 @@ using namespace ops;
 using namespace AdaptiveAvgPool2dOp;
 using namespace AdaptiveAvgPool2dPoolingBaseNs;
 
-template <typename ID_T>
-__simd_vf__ inline void SplitHCalWiToWoInfoVf(__ubuf__ int32_t* wiWoStartAddr, __ubuf__ int32_t* wiWoCountAddr,
-                                              uint16_t loopSize, uint32_t dataLen, uint16_t vfLen, int64_t wInDim,
-                                              int64_t wOutDim)
-{
-    AapIndexRegType<ID_T> startIdxReg;
-    AapIndexRegType<ID_T> endIdxReg;
-    AapIndexRegType<ID_T> countReg;
-    AapIndexRegType<ID_T> dupReg;
-    // See CalWKernelInfo: Pack narrows b64->b32 and requires an unsigned destination.
-    Reg::RegTensor<uint32_t> startDstReg;
-    Reg::RegTensor<uint32_t> countDstReg;
-    Reg::MaskReg calMask;
-
-    Reg::Duplicate(dupReg, static_cast<ID_T>(wInDim));
-    for (uint16_t i = 0; i < loopSize; i++) {
-        if constexpr (IsSameType<ID_T, int64_t>::value) {
-            calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
-        } else {
-            calMask = Reg::UpdateMask<ID_T>(dataLen);
-        }
-        ID_T startIdx = i * vfLen;
-        Reg::Arange(startIdxReg, startIdx);
-        Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wInDim - 1), calMask);
-        Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
-        Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
-        Reg::Sub(countReg, endIdxReg, startIdxReg, calMask);
-
-        if constexpr (IsSameType<ID_T, int64_t>::value) {
-            // Narrow b64 indices to b32; see CalWKernelInfo. Under RegTraitNumTwo
-            // reg[0] already holds the low words of all 64 elements.
-            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(startDstReg, startIdxReg);
-            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(countDstReg, countReg);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
-        } else {
-            Reg::StoreAlign(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
-            Reg::StoreAlign(wiWoCountAddr + i * vfLen, countReg, calMask);
-        }
-    }
-}
-
 template <typename T, const uint32_t NC_FACTOR>
 __simd_vf__ inline void SplitHAccumulateRowsToHoWUpsampleVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
                                                             __ubuf__ int32_t* wiWoStartAddr,
@@ -128,18 +83,6 @@ __simd_vf__ inline void SplitHAccumulateRowsToHoWUpsampleVf(__ubuf__ T* inputAdd
                 Reg::StoreAlign(outAddr + sumOffset, outReg, preg);
             }
         }
-    }
-}
-
-__simd_vf__ inline void SplitHClearTempBufVf(__ubuf__ float* tempAddr, uint16_t loopSize, uint32_t remaining,
-                                             uint32_t vfLenFp32)
-{
-    Reg::RegTensor<float> zeroReg;
-    Reg::Duplicate(zeroReg, 0.0f);
-    for (uint16_t i = 0; i < loopSize; i++) {
-        Reg::MaskReg mask = Reg::UpdateMask<float>(remaining);
-        Reg::AddrReg offset = Reg::CreateAddrReg<float>(i, vfLenFp32);
-        Reg::StoreAlign(tempAddr, zeroReg, offset, mask);
     }
 }
 
@@ -736,7 +679,7 @@ private:
     template <bool IS_FIRST>
     __aicore__ inline void AccumulateRowsToHoWUpsampleKW1(int64_t hoLocal, int64_t rowLoStart, int64_t rowLoEnd);
     __aicore__ inline void CalAvgOneHoKW1(int64_t kernelH, int64_t hoLocal);
-    __aicore__ inline void CalWiToWoInfo();
+    // CalWiToWoInfo lives in AdaptiveAvgPool2dPoolingBase (shared with UpsampleH).
     __aicore__ inline void TransOut(int64_t hoNum);
     __aicore__ inline void CopyOut(int64_t ncIdx, int64_t ncNum, int64_t hoGlobal, int64_t hoNum);
     __aicore__ inline void ProcessOneBlock(const BlockParam& blockPara);
@@ -829,24 +772,6 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::Init(GM_ADDR
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::CalWiToWoInfo()
-{
-    LocalTensor<int32_t> wiWoStartLocal = wiWoStartBuf_.template Get<int32_t>();
-    LocalTensor<int32_t> wiWoCountLocal = wiWoCountBuf_.template Get<int32_t>();
-    __ubuf__ int32_t* wiWoStartAddr = (__ubuf__ int32_t*)wiWoStartLocal.GetPhyAddr();
-    __ubuf__ int32_t* wiWoCountAddr = (__ubuf__ int32_t*)wiWoCountLocal.GetPhyAddr();
-
-    int32_t wIn = this->tilingData_->wIn;
-    int64_t wOutDim = this->tilingData_->wOut;
-    int64_t wInDim = this->tilingData_->wIn;
-    uint16_t vfLen = AAP_V_REG_SIZE / sizeof(int32_t);
-    uint16_t loopSize = ops::CeilDiv(static_cast<uint16_t>(wIn), vfLen);
-    uint32_t dataLen = wIn;
-
-    SplitHCalWiToWoInfoVf<ID_T>(wiWoStartAddr, wiWoCountAddr, loopSize, dataLen, vfLen, wInDim, wOutDim);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoWUpsample(int64_t hoLocal,
                                                                                                 int64_t rowLoStart,
                                                                                                 int64_t rowLoEnd)
@@ -878,11 +803,8 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::ClearTempBuf
     __ubuf__ float* tempAddr = (__ubuf__ float*)tempLocal.GetPhyAddr();
 
     uint32_t totalCount = static_cast<uint32_t>(this->wInAlign_) * this->vlNum_;
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint16_t loopSize = ops::CeilDiv(totalCount, vfLenFp32);
-    uint32_t remaining = totalCount;
-
-    SplitHClearTempBufVf(tempAddr, loopSize, remaining, vfLenFp32);
+    // Same zero-fill loop as the base ClearOutBuf, applied to tempSumBuf_ instead of outBuf_.
+    this->ClearFloatRange(tempAddr, totalCount);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
@@ -1466,7 +1388,7 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::Process()
         this->CalWKernelInfo();
     }
     if (wOut > wIn) {
-        CalWiToWoInfo();
+        this->CalWiToWoInfo(wiWoStartBuf_, wiWoCountBuf_);
     }
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);

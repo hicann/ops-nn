@@ -44,41 +44,6 @@ using namespace AdaptiveAvgPool2dOp;
 using namespace AdaptiveAvgPool2dPoolingBaseNs;
 
 template <typename T, const uint32_t NC_FACTOR>
-__simd_vf__ inline void UpsampleHAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
-                                               __ubuf__ int32_t* wStartAddr, __ubuf__ int32_t* wKerSizeAddr,
-                                               uint32_t rowBase, uint32_t outBase, uint16_t woNum, uint32_t vlNum,
-                                               uint32_t vfLenFp32)
-{
-    Reg::RegTensor<float> inputReg;
-    Reg::RegTensor<float> sumReg;
-    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-    for (uint16_t wo = 0; wo < woNum; wo++) {
-        uint32_t baseOffset = (rowBase + static_cast<uint32_t>(wStartAddr[wo])) * vlNum;
-        uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
-        uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-
-        Reg::LoadAlign(sumReg, outAddr + sumOffset);
-        for (uint16_t k = 0; k < kernelW; k++) {
-            uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-        }
-        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-        if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
-            for (uint16_t k = 0; k < kernelW; k++) {
-                uint32_t inputOffset1 = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset1);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-            }
-            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-        }
-    }
-}
-
-template <typename T, const uint32_t NC_FACTOR>
 __simd_vf__ inline void UpsampleHAccumulateWBulkVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr, uint32_t rowBase,
                                                    uint32_t outBase, uint16_t woNum, uint32_t vlNum, uint32_t vfLenFp32)
 {
@@ -147,51 +112,6 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
                 Reg::Add(outReg, outReg, inputReg, preg);
                 Reg::StoreAlign(outAddr + outOffset1, outReg, preg);
             }
-        }
-    }
-}
-
-template <typename ID_T>
-__simd_vf__ inline void UpsampleHCalWiToWoInfoVf(__ubuf__ int32_t* wiWoStartAddr, __ubuf__ int32_t* wiWoCountAddr,
-                                                 uint16_t loopSize, uint32_t dataLen, uint16_t vfLen, int64_t wInDim,
-                                                 int64_t wOutDim)
-{
-    AapIndexRegType<ID_T> startIdxReg;
-    AapIndexRegType<ID_T> endIdxReg;
-    AapIndexRegType<ID_T> countReg;
-    AapIndexRegType<ID_T> dupReg;
-    // See CalWKernelInfo: Pack narrows b64->b32 and requires an unsigned destination.
-    Reg::RegTensor<uint32_t> startDstReg;
-    Reg::RegTensor<uint32_t> countDstReg;
-    Reg::MaskReg calMask;
-
-    Reg::Duplicate(dupReg, static_cast<ID_T>(wInDim));
-    for (uint16_t i = 0; i < loopSize; i++) {
-        if constexpr (IsSameType<ID_T, int64_t>::value) {
-            calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
-        } else {
-            calMask = Reg::UpdateMask<ID_T>(dataLen);
-        }
-        ID_T startIdx = i * vfLen;
-        Reg::Arange(startIdxReg, startIdx);
-        Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim), calMask);
-        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wInDim - 1), calMask);
-        Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
-        Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
-        Reg::Sub(countReg, endIdxReg, startIdxReg, calMask);
-
-        if constexpr (IsSameType<ID_T, int64_t>::value) {
-            // Narrow b64 indices to b32; see CalWKernelInfo. Under RegTraitNumTwo
-            // reg[0] already holds the low words of all 64 elements.
-            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(startDstReg, startIdxReg);
-            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(countDstReg, countReg);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
-        } else {
-            Reg::StoreAlign(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
-            Reg::StoreAlign(wiWoCountAddr + i * vfLen, countReg, calMask);
         }
     }
 }
@@ -312,12 +232,12 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void AccumulateW(int64_t rowOffset, int64_t hoLocal);
+    // AccumulateW and CalWiToWoInfo live in AdaptiveAvgPool2dPoolingBase (shared with
+    // SplitW / SplitH respectively); only the UpsampleH-specific variants remain here.
     __aicore__ inline void AccumulateWBulk(int64_t rowOffset, int64_t hoLocal);
     __aicore__ inline void AccumulateWUpsample(int64_t rowOffset, int64_t hoLocal);
     __aicore__ inline void WReduceAndScatter(int64_t rowOffset, int64_t hoStart, int64_t hoCount);
     __aicore__ inline void WReduceAndScatterBulk(int64_t rowOffset, int64_t hoStart, int64_t hoCount);
-    __aicore__ inline void CalWiToWoInfo();
     __aicore__ inline void BroadcastOutBufRow(int64_t srcHoLocal, int64_t dstHoStart, int64_t dstHoCount);
     __aicore__ inline void ClearOutBufRows(int64_t hoStart, int64_t hoCount);
     __aicore__ inline void EarlyCastTransOut(int64_t hoNum);
@@ -341,6 +261,13 @@ private:
     __aicore__ inline void ProcessBlockPlain(const BlockParam& blockPara, int64_t hiMin, int64_t hiMax);
     __aicore__ inline void ProcessBlockCompact(const BlockParam& blockPara, int64_t hiMin, int64_t hiMax,
                                                const int64_t* hoToCompact, int64_t compactHoNum);
+
+    // The compact CopyOut row loop, previously written out three times (CompactCopyOut's fp32
+    // and cast branches, plus CompactEarlyCastCopyOut) with only the source tensor type differing.
+    template <typename U>
+    __aicore__ inline void CompactCopyOutRows(const LocalTensor<U>& src, const DataCopyExtParams& valueParams,
+                                              const LoopModeParams& loopModeParams, int64_t ncBase,
+                                              int64_t hoGlobalStart, int64_t hoNum);
 
     TBuf<QuePosition::VECCALC> wiWoStartBuf_;
     TBuf<QuePosition::VECCALC> wiWoCountBuf_;
@@ -386,27 +313,6 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::Init(GM_A
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::AccumulateW(int64_t rowOffset, int64_t hoLocal)
-{
-    LocalTensor<T> transLocal = this->transBuf_.template Get<T>();
-    __ubuf__ T* inputAddr = (__ubuf__ T*)transLocal.GetPhyAddr();
-    LocalTensor<float> outLocal = this->outBuf_.template Get<float>();
-    __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
-    LocalTensor<int32_t> wStartLocal = this->wStartBuf_.template Get<int32_t>();
-    __ubuf__ int32_t* wStartAddr = (__ubuf__ int32_t*)wStartLocal.GetPhyAddr();
-    LocalTensor<int32_t> wKerSizeLocal = this->wKerSizeBuf_.template Get<int32_t>();
-    __ubuf__ int32_t* wKerSizeAddr = (__ubuf__ int32_t*)wKerSizeLocal.GetPhyAddr();
-
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint32_t rowBase = static_cast<uint32_t>(rowOffset);
-    uint32_t outBase = static_cast<uint32_t>(hoLocal) * this->wOutAlign_ * this->vlNum_;
-    uint16_t woNum = static_cast<uint16_t>(this->tilingData_->wOut);
-
-    UpsampleHAccumulateWVf<T, NC_FACTOR>(inputAddr, outAddr, wStartAddr, wKerSizeAddr, rowBase, outBase, woNum,
-                                         this->vlNum_, vfLenFp32);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::AccumulateWBulk(int64_t rowOffset,
                                                                                        int64_t hoLocal)
 {
@@ -423,7 +329,7 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::Accumulat
 
         UpsampleHAccumulateWBulkVf<T, NC_FACTOR>(inputAddr, outAddr, rowBase, outBase, woNum, this->vlNum_, vfLenFp32);
     } else {
-        AccumulateW(rowOffset, hoLocal);
+        this->AccumulateW(rowOffset, hoLocal);
     }
 }
 
@@ -448,24 +354,6 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::Accumulat
 
     UpsampleHAccumulateWUpsampleVf<T, NC_FACTOR>(inputAddr, outAddr, wiWoStartAddr, wiWoCountAddr, rowBase, outBase,
                                                  wiNum, this->vlNum_, vfLenFp32);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CalWiToWoInfo()
-{
-    LocalTensor<int32_t> wiWoStartLocal = wiWoStartBuf_.template Get<int32_t>();
-    LocalTensor<int32_t> wiWoCountLocal = wiWoCountBuf_.template Get<int32_t>();
-    __ubuf__ int32_t* wiWoStartAddr = (__ubuf__ int32_t*)wiWoStartLocal.GetPhyAddr();
-    __ubuf__ int32_t* wiWoCountAddr = (__ubuf__ int32_t*)wiWoCountLocal.GetPhyAddr();
-
-    int32_t wIn = this->tilingData_->wIn;
-    int64_t wOutDim = this->tilingData_->wOut;
-    int64_t wInDim = this->tilingData_->wIn;
-    uint16_t vfLen = AAP_V_REG_SIZE / sizeof(int32_t);
-    uint16_t loopSize = ops::CeilDiv(static_cast<uint16_t>(wIn), vfLen);
-    uint32_t dataLen = wIn;
-
-    UpsampleHCalWiToWoInfoVf<ID_T>(wiWoStartAddr, wiWoCountAddr, loopSize, dataLen, vfLen, wInDim, wOutDim);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
@@ -499,13 +387,8 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::ClearOutB
     uint32_t startOffset = static_cast<uint32_t>(hoStart) * rowElems;
     uint32_t totalElems = static_cast<uint32_t>(hoCount) * rowElems;
 
-    // Identical to the base ClearOutBuf loop, just restricted to [hoStart, hoStart+hoCount),
-    // so reuse its VF instead of emitting a second copy.
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint16_t loopSize = ops::CeilDiv(totalElems, vfLenFp32);
-    uint32_t remaining = totalElems;
-
-    ClearOutBufVf(outAddr + startOffset, loopSize, remaining, vfLenFp32);
+    // Identical to the base ClearOutBuf loop, just restricted to [hoStart, hoStart+hoCount).
+    this->ClearFloatRange(outAddr + startOffset, totalElems);
 }
 
 // Fused W-reduction + scatter: keeps sumReg in register across Ho iterations.
@@ -587,133 +470,23 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::EarlyCast
     LocalTensor<T> resOutLocal = this->resQue1_.template DeQue<T>();
 
     DataCopyExtParams valueParams;
-    valueParams.blockCount = 1;
-    valueParams.blockLen = static_cast<uint32_t>(this->tilingData_->wOut * sizeof(T));
-    valueParams.srcStride = 0;
-    valueParams.dstStride = 0;
-
     LoopModeParams loopModeParams;
-    loopModeParams.loop1Size = ncNum;
-    loopModeParams.loop2Size = 1;
-    loopModeParams.loop1SrcStride = hwOutStride * sizeof(T);
-    loopModeParams.loop2SrcStride = 0;
-    loopModeParams.loop1DstStride = this->outHW_ * sizeof(T);
-    loopModeParams.loop2DstStride = 0;
+    this->BuildOutCopyParams(hwOutStride, ncNum, valueParams, loopModeParams);
 
-    SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
-    for (int64_t ho = 0; ho < hoNum; ho++) {
-        int64_t yOff = ncBase * this->outHW_ + (hoGlobal + ho) * this->tilingData_->wOut;
-        uint64_t srcOff = static_cast<uint64_t>(ho) * this->wOutAlign_;
-        DataCopyPad(this->yGm_[yOff], resOutLocal[srcOff], valueParams);
-    }
-    ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+    this->template CopyOutPaddedRows<T>(resOutLocal, valueParams, loopModeParams, ncBase, hoGlobal, hoNum);
     this->resQue1_.FreeTensor(resOutLocal);
 }
 
+// Consecutive Ho with kernelH==1 that read the same input row share one outBuf row, so ci only
+// advances at run boundaries while ho scans every output row.
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactCopyOut(int64_t ncIdx, int64_t ncNum,
-                                                                                      int64_t compactHoNum,
-                                                                                      int64_t hoGlobalStart,
-                                                                                      int64_t hoNum)
+template <typename U>
+__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactCopyOutRows(
+    const LocalTensor<U>& src, const DataCopyExtParams& valueParams, const LoopModeParams& loopModeParams,
+    int64_t ncBase, int64_t hoGlobalStart, int64_t hoNum)
 {
     int64_t hIn = this->tilingData_->hIn;
     int64_t hOut = this->tilingData_->hOut;
-    uint64_t hwOutStride = ops::CeilAlign(static_cast<uint64_t>(compactHoNum * this->wOutAlign_),
-                                          static_cast<uint64_t>(AAP_TRANS_ADDR_LEN));
-    int64_t ncBase = ncIdx * this->tilingData_->ncFactor;
-
-    LocalTensor<float> resOutLocal = this->resQue1_.template DeQue<float>();
-
-    DataCopyExtParams valueParams;
-    valueParams.blockCount = 1;
-    valueParams.blockLen = static_cast<uint32_t>(this->tilingData_->wOut * sizeof(T));
-    valueParams.srcStride = 0;
-    valueParams.dstStride = 0;
-
-    LoopModeParams loopModeParams;
-    loopModeParams.loop1Size = ncNum;
-    loopModeParams.loop2Size = 1;
-    loopModeParams.loop1SrcStride = hwOutStride * sizeof(T);
-    loopModeParams.loop2SrcStride = 0;
-    loopModeParams.loop1DstStride = this->outHW_ * sizeof(T);
-    loopModeParams.loop2DstStride = 0;
-
-    if constexpr (IsSameType<T, float>::value) {
-        SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
-        int64_t ci = 0;
-        int64_t prevHStart = -1;
-        int64_t prevKH = -1;
-        for (int64_t ho = 0; ho < hoNum; ho++) {
-            int64_t hoGlobal = hoGlobalStart + ho;
-            int64_t hStart = (hoGlobal * hIn) / hOut;
-            int64_t kH = ((hoGlobal + 1) * hIn + hOut - 1) / hOut - hStart;
-            if (ho > 0 && (kH != 1 || prevKH != 1 || hStart != prevHStart)) {
-                ci++;
-            }
-            uint64_t srcOff = static_cast<uint64_t>(ci) * this->wOutAlign_;
-            int64_t yOff = ncBase * this->outHW_ + hoGlobal * this->tilingData_->wOut;
-            DataCopyPad(this->yGm_[yOff], resOutLocal[srcOff], valueParams);
-            prevHStart = hStart;
-            prevKH = kH;
-        }
-        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
-    } else {
-        LocalTensor<T> castOutLocal = this->resQue2_.template AllocTensor<T>();
-        if constexpr (IsSameType<T, half>::value) {
-            Cast(castOutLocal, resOutLocal, RoundMode::CAST_NONE, ncNum * hwOutStride);
-        } else {
-            Cast(castOutLocal, resOutLocal, RoundMode::CAST_RINT, ncNum * hwOutStride);
-        }
-        this->resQue2_.EnQue(castOutLocal);
-        castOutLocal = this->resQue2_.template DeQue<T>();
-        SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
-        int64_t ci = 0;
-        int64_t prevHStart = -1;
-        int64_t prevKH = -1;
-        for (int64_t ho = 0; ho < hoNum; ho++) {
-            int64_t hoGlobal = hoGlobalStart + ho;
-            int64_t hStart = (hoGlobal * hIn) / hOut;
-            int64_t kH = ((hoGlobal + 1) * hIn + hOut - 1) / hOut - hStart;
-            if (ho > 0 && (kH != 1 || prevKH != 1 || hStart != prevHStart)) {
-                ci++;
-            }
-            uint64_t srcOff = static_cast<uint64_t>(ci) * this->wOutAlign_;
-            int64_t yOff = ncBase * this->outHW_ + hoGlobal * this->tilingData_->wOut;
-            DataCopyPad(this->yGm_[yOff], castOutLocal[srcOff], valueParams);
-            prevHStart = hStart;
-            prevKH = kH;
-        }
-        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
-        this->resQue2_.FreeTensor(castOutLocal);
-    }
-    this->resQue1_.FreeTensor(resOutLocal);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactEarlyCastCopyOut(
-    int64_t ncIdx, int64_t ncNum, int64_t compactHoNum, int64_t hoGlobalStart, int64_t hoNum)
-{
-    int64_t hIn = this->tilingData_->hIn;
-    int64_t hOut = this->tilingData_->hOut;
-    uint64_t hwOutStride = ops::CeilAlign(static_cast<uint64_t>(compactHoNum * this->wOutAlign_),
-                                          static_cast<uint64_t>(AAP_TRANS_ADDR_LEN));
-    int64_t ncBase = ncIdx * this->tilingData_->ncFactor;
-
-    LocalTensor<T> resOutLocal = this->resQue1_.template DeQue<T>();
-
-    DataCopyExtParams valueParams;
-    valueParams.blockCount = 1;
-    valueParams.blockLen = static_cast<uint32_t>(this->tilingData_->wOut * sizeof(T));
-    valueParams.srcStride = 0;
-    valueParams.dstStride = 0;
-
-    LoopModeParams loopModeParams;
-    loopModeParams.loop1Size = ncNum;
-    loopModeParams.loop2Size = 1;
-    loopModeParams.loop1SrcStride = hwOutStride * sizeof(T);
-    loopModeParams.loop2SrcStride = 0;
-    loopModeParams.loop1DstStride = this->outHW_ * sizeof(T);
-    loopModeParams.loop2DstStride = 0;
 
     SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
     int64_t ci = 0;
@@ -728,11 +501,61 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactEa
         }
         uint64_t srcOff = static_cast<uint64_t>(ci) * this->wOutAlign_;
         int64_t yOff = ncBase * this->outHW_ + hoGlobal * this->tilingData_->wOut;
-        DataCopyPad(this->yGm_[yOff], resOutLocal[srcOff], valueParams);
+        DataCopyPad(this->yGm_[yOff], src[srcOff], valueParams);
         prevHStart = hStart;
         prevKH = kH;
     }
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+}
+
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactCopyOut(int64_t ncIdx, int64_t ncNum,
+                                                                                      int64_t compactHoNum,
+                                                                                      int64_t hoGlobalStart,
+                                                                                      int64_t hoNum)
+{
+    uint64_t hwOutStride = ops::CeilAlign(static_cast<uint64_t>(compactHoNum * this->wOutAlign_),
+                                          static_cast<uint64_t>(AAP_TRANS_ADDR_LEN));
+    int64_t ncBase = ncIdx * this->tilingData_->ncFactor;
+
+    LocalTensor<float> resOutLocal = this->resQue1_.template DeQue<float>();
+
+    DataCopyExtParams valueParams;
+    LoopModeParams loopModeParams;
+    this->BuildOutCopyParams(hwOutStride, ncNum, valueParams, loopModeParams);
+
+    if constexpr (IsSameType<T, float>::value) {
+        CompactCopyOutRows<float>(resOutLocal, valueParams, loopModeParams, ncBase, hoGlobalStart, hoNum);
+    } else {
+        LocalTensor<T> castOutLocal = this->resQue2_.template AllocTensor<T>();
+        if constexpr (IsSameType<T, half>::value) {
+            Cast(castOutLocal, resOutLocal, RoundMode::CAST_NONE, ncNum * hwOutStride);
+        } else {
+            Cast(castOutLocal, resOutLocal, RoundMode::CAST_RINT, ncNum * hwOutStride);
+        }
+        this->resQue2_.EnQue(castOutLocal);
+        castOutLocal = this->resQue2_.template DeQue<T>();
+        CompactCopyOutRows<T>(castOutLocal, valueParams, loopModeParams, ncBase, hoGlobalStart, hoNum);
+        this->resQue2_.FreeTensor(castOutLocal);
+    }
+    this->resQue1_.FreeTensor(resOutLocal);
+}
+
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::CompactEarlyCastCopyOut(
+    int64_t ncIdx, int64_t ncNum, int64_t compactHoNum, int64_t hoGlobalStart, int64_t hoNum)
+{
+    uint64_t hwOutStride = ops::CeilAlign(static_cast<uint64_t>(compactHoNum * this->wOutAlign_),
+                                          static_cast<uint64_t>(AAP_TRANS_ADDR_LEN));
+    int64_t ncBase = ncIdx * this->tilingData_->ncFactor;
+
+    LocalTensor<T> resOutLocal = this->resQue1_.template DeQue<T>();
+
+    DataCopyExtParams valueParams;
+    LoopModeParams loopModeParams;
+    this->BuildOutCopyParams(hwOutStride, ncNum, valueParams, loopModeParams);
+
+    CompactCopyOutRows<T>(resOutLocal, valueParams, loopModeParams, ncBase, hoGlobalStart, hoNum);
     this->resQue1_.FreeTensor(resOutLocal);
 }
 
@@ -799,7 +622,7 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::ReduceRow
     } else if (isBulkWReduce_) {
         AccumulateWBulk(rowOffset, hoLocal);
     } else {
-        AccumulateW(rowOffset, hoLocal);
+        this->AccumulateW(rowOffset, hoLocal);
     }
 }
 
@@ -1016,7 +839,7 @@ __aicore__ inline void AdaptiveAvgPool2dUpsampleH<T, ID_T, NC_FACTOR>::Process()
     // Compute W kernel info (vector ops) then sync V->S before scalar reads.
     this->CalWKernelInfo();
     if (isWUpsample_) {
-        CalWiToWoInfo();
+        this->CalWiToWoInfo(wiWoStartBuf_, wiWoCountBuf_);
     }
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);

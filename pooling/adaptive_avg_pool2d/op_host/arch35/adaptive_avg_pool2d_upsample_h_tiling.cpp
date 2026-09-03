@@ -106,32 +106,13 @@ ge::graphStatus AdaptiveAvgPool2dUpsampleHTiling::DoOpTiling()
     bool hoFactorStuckAt1 = (computeInfo_.hoFactor <= 1);
     bool largeKernel = (computeInfo_.kernelHMax * computeInfo_.kernelWMax > TILING_LARGE_KERNEL_AREA);
     if (computeInfo_.xDtypeSize < sizeof(float) && (hoFactorStuckAt1 || largeKernel)) {
-        uint64_t origNcFactor = computeInfo_.ncFactor;
-        uint64_t origHiFactor = computeInfo_.hiFactor;
-        uint64_t origHoFactor = computeInfo_.hoFactor;
+        // IsMeetUbSize() only rewrites the que sizes, never nc/hi/hoFactor, so sampling it here
+        // (before TryHalfNcFactor snapshots those three) keeps the original ordering.
         bool origFits = IsMeetUbSize();
-        computeInfo_.ncFactor = computeInfo_.vfLen / TILING_DOUBLE;
-        ShrinkHiFactor(computeInfo_, meetUb);
-        BinarySearchMaxHoFactor(computeInfo_, input_.hOut, meetUb);
-        if (computeInfo_.hoFactor <= origHoFactor && origFits) {
-            computeInfo_.ncFactor = origNcFactor;
-            computeInfo_.hiFactor = origHiFactor;
-            computeInfo_.hoFactor = origHoFactor;
-        }
+        TryHalfNcFactor(computeInfo_, input_.hOut, meetUb, origFits);
     }
 
-    CalUbBlockFactor(computeInfo_);
-    while (computeInfo_.useCoreNum < input_.coreNum && computeInfo_.hoFactor > 1 &&
-           computeInfo_.totalOuter <= input_.coreNum * UPSAMPLE_H_CORE_OCCUPY_SLACK) {
-        uint64_t lastBlockFactor = computeInfo_.blockFactor;
-        computeInfo_.hoFactor--;
-        CalUbBlockFactor(computeInfo_);
-        if (computeInfo_.blockFactor > lastBlockFactor) {
-            computeInfo_.hoFactor++;
-            CalUbBlockFactor(computeInfo_);
-            break;
-        }
-    }
+    OptimizeHoFactorForCores(computeInfo_, input_.coreNum * UPSAMPLE_H_CORE_OCCUPY_SLACK);
 
     // No final UB re-check here. IsCapable() already validated UB at the minimum
     // hiFactor/hoFactor=1 configuration, and every search primitive above only grows those

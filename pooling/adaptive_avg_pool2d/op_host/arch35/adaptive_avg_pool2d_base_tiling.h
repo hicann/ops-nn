@@ -161,11 +161,15 @@ protected:
         return true;
     }
 
+    // Shrink hoFactor while it buys core occupancy without growing blockFactor.
+    // maxTotalOuter caps the search for callers that must not let it run away on large hOut
+    // (UpsampleH passes coreNum * slack); the default is unbounded, i.e. the plain loop.
     template <typename ComputeT>
-    void OptimizeHoFactorForCores(ComputeT& computeInfo)
+    void OptimizeHoFactorForCores(ComputeT& computeInfo, uint64_t maxTotalOuter = UINT64_MAX)
     {
         CalUbBlockFactor(computeInfo);
-        while (computeInfo.useCoreNum < input_.coreNum && computeInfo.hoFactor > 1) {
+        while (computeInfo.useCoreNum < input_.coreNum && computeInfo.hoFactor > 1 &&
+               computeInfo.totalOuter <= maxTotalOuter) {
             uint64_t lastBlockFactor = computeInfo.blockFactor;
             computeInfo.hoFactor--;
             CalUbBlockFactor(computeInfo);
@@ -403,8 +407,12 @@ void BinarySearchMaxHoFactor(CommonComputeInfo& ci, uint64_t maxHo, MeetUbFunc m
     }
 }
 
+// Retry at half ncFactor and keep it only if it bought a larger hoFactor.
+// origFits tells whether the incoming (full ncFactor) configuration still fits UB: when it does
+// not, the half-nc result must be kept even if hoFactor did not grow, because there is nothing
+// valid to fall back to. Callers whose incoming config is known to fit leave it at the default.
 template <typename MeetUbFunc>
-void TryHalfNcFactor(CommonComputeInfo& ci, uint64_t maxHo, MeetUbFunc meetUb)
+void TryHalfNcFactor(CommonComputeInfo& ci, uint64_t maxHo, MeetUbFunc meetUb, bool origFits = true)
 {
     uint64_t origNcFactor = ci.ncFactor;
     uint64_t origHiFactor = ci.hiFactor;
@@ -412,7 +420,7 @@ void TryHalfNcFactor(CommonComputeInfo& ci, uint64_t maxHo, MeetUbFunc meetUb)
     ci.ncFactor = ci.vfLen / TILING_DOUBLE;
     ShrinkHiFactor(ci, meetUb);
     BinarySearchMaxHoFactor(ci, maxHo, meetUb);
-    if (ci.hoFactor <= origHoFactor) {
+    if (ci.hoFactor <= origHoFactor && origFits) {
         ci.ncFactor = origNcFactor;
         ci.hiFactor = origHiFactor;
         ci.hoFactor = origHoFactor;

@@ -82,22 +82,29 @@ __simd_vf__ inline void ClearOutBufVf(__ubuf__ float* outAddr, uint16_t loopSize
     }
 }
 
+// Adaptive-window start/count table for one dimension:
+//   start[i] = floor(i * numDim / denDim)
+//   count[i] = ceil((i + 1) * numDim / denDim) - start[i]
+// Both directions of the mapping are the very same instruction sequence with numDim/denDim
+// swapped, so one VF replaces the three byte-identical copies that used to exist:
+//   * wo -> wi window (CalWKernelInfo): numDim = wIn,  denDim = wOut -> wStart / wKerSize
+//   * wi -> wo window (CalWiToWoInfo):  numDim = wOut, denDim = wIn  -> wiWoStart / wiWoCount
+//     (previously SplitHCalWiToWoInfoVf and UpsampleHCalWiToWoInfoVf)
 template <typename ID_T>
-__simd_vf__ inline void CalWKernelInfoVf(__ubuf__ int32_t* wStartAddr, __ubuf__ int32_t* wKerSizeAddr,
-                                         uint16_t loopSize, uint32_t dataLen, uint16_t vfLen, int64_t wIn,
-                                         int64_t wOutDim)
+__simd_vf__ inline void CalStartCountVf(__ubuf__ int32_t* startAddr, __ubuf__ int32_t* countAddr, uint16_t loopSize,
+                                        uint32_t dataLen, uint16_t vfLen, int64_t numDim, int64_t denDim)
 {
     AapIndexRegType<ID_T> startIdxReg;
     AapIndexRegType<ID_T> endIdxReg;
-    AapIndexRegType<ID_T> kerSizeReg;
+    AapIndexRegType<ID_T> countReg;
     AapIndexRegType<ID_T> dupReg;
-    // Pack narrows b64->b32 and only supports unsigned destinations; wStart/wKerSize
+    // Pack narrows b64->b32 and only supports unsigned destinations; start/count
     // are non-negative and far below 2^31, so the uint32->int32 store is value-preserving.
     Reg::RegTensor<uint32_t> startDstReg;
-    Reg::RegTensor<uint32_t> kSizeDstReg;
+    Reg::RegTensor<uint32_t> countDstReg;
     Reg::MaskReg calMask;
 
-    Reg::Duplicate(dupReg, static_cast<ID_T>(wOutDim));
+    Reg::Duplicate(dupReg, static_cast<ID_T>(denDim));
     for (uint16_t i = 0; i < loopSize; i++) {
         if constexpr (IsSameType<ID_T, int64_t>::value) {
             calMask = Reg::UpdateMask<ID_T, Reg::RegTraitNumTwo>(dataLen);
@@ -107,13 +114,13 @@ __simd_vf__ inline void CalWKernelInfoVf(__ubuf__ int32_t* wStartAddr, __ubuf__ 
         ID_T startIdx = i * vfLen;
         Reg::Arange(startIdxReg, startIdx);
         Reg::Adds(endIdxReg, startIdxReg, static_cast<ID_T>(1), calMask);
-        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(wIn), calMask);
-        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(wIn), calMask);
-        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(wOutDim - 1), calMask);
+        Reg::Muls(startIdxReg, startIdxReg, static_cast<ID_T>(numDim), calMask);
+        Reg::Muls(endIdxReg, endIdxReg, static_cast<ID_T>(numDim), calMask);
+        Reg::Adds(endIdxReg, endIdxReg, static_cast<ID_T>(denDim - 1), calMask);
 
         Reg::Div(startIdxReg, startIdxReg, dupReg, calMask);
         Reg::Div(endIdxReg, endIdxReg, dupReg, calMask);
-        Reg::Sub(kerSizeReg, endIdxReg, startIdxReg, calMask);
+        Reg::Sub(countReg, endIdxReg, startIdxReg, calMask);
 
         if constexpr (IsSameType<ID_T, int64_t>::value) {
             // Narrow b64 indices to b32 for the int32 UB buffers. Under RegTraitNumTwo the
@@ -121,12 +128,49 @@ __simd_vf__ inline void CalWKernelInfoVf(__ubuf__ int32_t* wStartAddr, __ubuf__ 
             // Pack reduces to a copy of reg[0] -- matching the vfLen=64 store stride and the
             // b32 mask that UpdateMask<int64_t, RegTraitNumTwo> produces.
             Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(startDstReg, startIdxReg);
-            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(kSizeDstReg, kerSizeReg);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wStartAddr + i * vfLen, startDstReg, calMask);
-            Reg::StoreAlign((__ubuf__ uint32_t*)wKerSizeAddr + i * vfLen, kSizeDstReg, calMask);
+            Reg::Pack<uint32_t, ID_T, Reg::HighLowPart::LOWEST>(countDstReg, countReg);
+            Reg::StoreAlign((__ubuf__ uint32_t*)startAddr + i * vfLen, startDstReg, calMask);
+            Reg::StoreAlign((__ubuf__ uint32_t*)countAddr + i * vfLen, countDstReg, calMask);
         } else {
-            Reg::StoreAlign(wStartAddr + i * vfLen, startIdxReg, calMask);
-            Reg::StoreAlign(wKerSizeAddr + i * vfLen, kerSizeReg, calMask);
+            Reg::StoreAlign(startAddr + i * vfLen, startIdxReg, calMask);
+            Reg::StoreAlign(countAddr + i * vfLen, countReg, calMask);
+        }
+    }
+}
+
+// Shared by SplitW and UpsampleH: sum the [wStart, wStart+kernelW) columns of one already
+// transposed input row into the outBuf accumulator of one Ho. Previously duplicated as
+// SplitWAccumulateWVf / UpsampleHAccumulateWVf.
+template <typename T, const uint32_t NC_FACTOR>
+__simd_vf__ inline void AccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr, __ubuf__ int32_t* wStartAddr,
+                                      __ubuf__ int32_t* wKerSizeAddr, uint32_t rowBase, uint32_t outBase,
+                                      uint16_t woNum, uint32_t vlNum, uint32_t vfLenFp32)
+{
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+
+    for (uint16_t wo = 0; wo < woNum; wo++) {
+        uint32_t baseOffset = (rowBase + static_cast<uint32_t>(wStartAddr[wo])) * vlNum;
+        uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
+        uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
+
+        Reg::LoadAlign(sumReg, outAddr + sumOffset);
+        for (uint16_t k = 0; k < kernelW; k++) {
+            uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+        }
+        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
+
+        if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
+            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
+            for (uint16_t k = 0; k < kernelW; k++) {
+                uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
+            }
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -215,14 +259,63 @@ protected:
     template <typename U>
     __aicore__ inline void TransposeB32(LocalTensor<U> dst, LocalTensor<U> src, uint32_t rowNum, uint32_t colNum);
     __aicore__ inline void TransposeB16(LocalTensor<T> dst, LocalTensor<T> src, uint32_t rowNum, uint32_t colNum);
+    // Zero-fill totalCount contiguous fp32 elements at addr. Backs ClearOutBuf,
+    // UpsampleH::ClearOutBufRows and SplitH::ClearTempBuf, which only differ in the range.
+    __aicore__ inline void ClearFloatRange(__ubuf__ float* addr, uint32_t totalCount)
+    {
+        uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
+        uint16_t loopSize = ops::CeilDiv(totalCount, vfLenFp32);
+        uint32_t remaining = totalCount;
+        ClearOutBufVf(addr, loopSize, remaining, vfLenFp32);
+    }
+
     __aicore__ inline void ClearOutBuf();
     __aicore__ inline void CalWKernelInfo();
+    // wi -> wo reverse mapping for the W-upsampling paths of SplitH and UpsampleH. The buffers
+    // stay owned by the derived classes (their declaration order fixes the UB/object layout of
+    // each template), so they are passed in rather than pulled into this base.
+    __aicore__ inline void CalWiToWoInfo(TBuf<QuePosition::VECCALC>& wiWoStartBuf,
+                                         TBuf<QuePosition::VECCALC>& wiWoCountBuf);
+    __aicore__ inline void AccumulateW(int64_t rowOffset, int64_t hoLocal);
     __aicore__ inline void CalAvgOneHo(int64_t kernelH, int64_t hoLocal, uint32_t wStride);
     __aicore__ inline void CalAvgOneHo(int64_t kernelH, int64_t hoLocal) { CalAvgOneHo(kernelH, hoLocal, wOutAlign_); }
 
     // Default TransOut/CopyOut use padded wOutAlign_ row stride. SplitH shadows with compact version.
     __aicore__ inline void TransOut(int64_t hoNum);
     __aicore__ inline void CopyOut(int64_t ncIdx, int64_t ncNum, int64_t hoGlobal, int64_t hoNum);
+
+    // Descriptors for the padded (wOutAlign_ row stride) UB->GM copy. Identical in base CopyOut and
+    // in UpsampleH's EarlyCast / Compact variants apart from hwOutStride, so they build them here.
+    __aicore__ inline void BuildOutCopyParams(uint64_t hwOutStride, int64_t ncNum, DataCopyExtParams& valueParams,
+                                              LoopModeParams& loopModeParams) const
+    {
+        valueParams.blockCount = 1;
+        valueParams.blockLen = static_cast<uint32_t>(tilingData_->wOut * sizeof(T));
+        valueParams.srcStride = 0;
+        valueParams.dstStride = 0;
+
+        loopModeParams.loop1Size = ncNum;
+        loopModeParams.loop2Size = 1;
+        loopModeParams.loop1SrcStride = hwOutStride * sizeof(T);
+        loopModeParams.loop2SrcStride = 0;
+        loopModeParams.loop1DstStride = outHW_ * sizeof(T);
+        loopModeParams.loop2DstStride = 0;
+    }
+
+    // One DataCopyPad per Ho row, source rows padded to wOutAlign_.
+    template <typename U>
+    __aicore__ inline void CopyOutPaddedRows(const LocalTensor<U>& src, const DataCopyExtParams& valueParams,
+                                             const LoopModeParams& loopModeParams, int64_t ncBase, int64_t hoGlobal,
+                                             int64_t hoNum)
+    {
+        SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
+        for (int64_t ho = 0; ho < hoNum; ho++) {
+            int64_t yOff = ncBase * outHW_ + (hoGlobal + ho) * tilingData_->wOut;
+            uint64_t srcOff = static_cast<uint64_t>(ho) * wOutAlign_;
+            DataCopyPad(yGm_[yOff], src[srcOff], valueParams);
+        }
+        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+    }
 
     // Default CopyInputBatch/TransInputBatch load full-width wIn. SplitC shadows with wi-chunk version.
     __aicore__ inline void CopyInputBatch(int64_t ncIdx, int64_t ncNum, int64_t hiStart, int64_t hiBatch);
@@ -390,11 +483,7 @@ __aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>
     __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
 
     uint32_t totalCount = static_cast<uint32_t>(tilingData_->hoFactor) * wOutAlign_ * vlNum_;
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint16_t loopSize = ops::CeilDiv(totalCount, vfLenFp32);
-    uint32_t remaining = totalCount;
-
-    ClearOutBufVf(outAddr, loopSize, remaining, vfLenFp32);
+    ClearFloatRange(outAddr, totalCount);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR, typename TilingT>
@@ -412,7 +501,52 @@ __aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>
     uint16_t loopSize = ops::CeilDiv(static_cast<uint16_t>(wOut), vfLen);
     uint32_t dataLen = wOut;
 
-    CalWKernelInfoVf<ID_T>(wStartAddr, wKerSizeAddr, loopSize, dataLen, vfLen, wIn, wOutDim);
+    CalStartCountVf<ID_T>(wStartAddr, wKerSizeAddr, loopSize, dataLen, vfLen, wIn, wOutDim);
+}
+
+template <typename T, typename ID_T, const uint32_t NC_FACTOR, typename TilingT>
+__aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>::CalWiToWoInfo(
+    TBuf<QuePosition::VECCALC>& wiWoStartBuf, TBuf<QuePosition::VECCALC>& wiWoCountBuf)
+{
+    LocalTensor<int32_t> wiWoStartLocal = wiWoStartBuf.template Get<int32_t>();
+    LocalTensor<int32_t> wiWoCountLocal = wiWoCountBuf.template Get<int32_t>();
+    __ubuf__ int32_t* wiWoStartAddr = (__ubuf__ int32_t*)wiWoStartLocal.GetPhyAddr();
+    __ubuf__ int32_t* wiWoCountAddr = (__ubuf__ int32_t*)wiWoCountLocal.GetPhyAddr();
+
+    int32_t wIn = tilingData_->wIn;
+    int64_t wOutDim = tilingData_->wOut;
+    int64_t wInDim = tilingData_->wIn;
+    uint16_t vfLen = AAP_V_REG_SIZE / sizeof(int32_t);
+    uint16_t loopSize = ops::CeilDiv(static_cast<uint16_t>(wIn), vfLen);
+    uint32_t dataLen = wIn;
+
+    CalStartCountVf<ID_T>(wiWoStartAddr, wiWoCountAddr, loopSize, dataLen, vfLen, wOutDim, wInDim);
+}
+
+// Scalar W-kernel indices are read from UB pointers inside the vector scope
+// (stack-array dynamic indexing would trigger "Unsupported Inst must be hoisted").
+// [RegBase-native] Compiler limitation seen with CANN 9.0.0 (V100R001C10SPC001B250).
+template <typename T, typename ID_T, const uint32_t NC_FACTOR, typename TilingT>
+__aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>::AccumulateW(int64_t rowOffset,
+                                                                                              int64_t hoLocal)
+{
+    LocalTensor<T> transLocal = transBuf_.template Get<T>();
+    LocalTensor<float> outLocal = outBuf_.template Get<float>();
+    LocalTensor<int32_t> wStartLocal = wStartBuf_.template Get<int32_t>();
+    LocalTensor<int32_t> wKerSizeLocal = wKerSizeBuf_.template Get<int32_t>();
+
+    __ubuf__ T* inputAddr = (__ubuf__ T*)transLocal.GetPhyAddr();
+    __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
+    __ubuf__ int32_t* wStartAddr = (__ubuf__ int32_t*)wStartLocal.GetPhyAddr();
+    __ubuf__ int32_t* wKerSizeAddr = (__ubuf__ int32_t*)wKerSizeLocal.GetPhyAddr();
+
+    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
+    uint32_t rowBase = static_cast<uint32_t>(rowOffset);
+    uint32_t outBase = static_cast<uint32_t>(hoLocal) * wOutAlign_ * vlNum_;
+    uint16_t woNum = static_cast<uint16_t>(tilingData_->wOut);
+
+    AccumulateWVf<T, NC_FACTOR>(inputAddr, outAddr, wStartAddr, wKerSizeAddr, rowBase, outBase, woNum, vlNum_,
+                                vfLenFp32);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR, typename TilingT>
@@ -460,27 +594,11 @@ __aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>
     LocalTensor<float> resOutLocal = resQue1_.DeQue<float>();
 
     DataCopyExtParams valueParams;
-    valueParams.blockCount = 1;
-    valueParams.blockLen = static_cast<uint32_t>(tilingData_->wOut * sizeof(T));
-    valueParams.srcStride = 0;
-    valueParams.dstStride = 0;
-
     LoopModeParams loopModeParams;
-    loopModeParams.loop1Size = ncNum;
-    loopModeParams.loop2Size = 1;
-    loopModeParams.loop1SrcStride = hwOutStride * sizeof(T);
-    loopModeParams.loop2SrcStride = 0;
-    loopModeParams.loop1DstStride = outHW_ * sizeof(T);
-    loopModeParams.loop2DstStride = 0;
+    BuildOutCopyParams(hwOutStride, ncNum, valueParams, loopModeParams);
 
     if constexpr (IsSameType<T, float>::value) {
-        SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
-        for (int64_t ho = 0; ho < hoNum; ho++) {
-            int64_t yOff = ncBase * outHW_ + (hoGlobal + ho) * tilingData_->wOut;
-            uint64_t srcOff = static_cast<uint64_t>(ho) * wOutAlign_;
-            DataCopyPad(yGm_[yOff], resOutLocal[srcOff], valueParams);
-        }
-        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+        CopyOutPaddedRows<float>(resOutLocal, valueParams, loopModeParams, ncBase, hoGlobal, hoNum);
     } else {
         LocalTensor<T> castOutLocal = resQue2_.AllocTensor<T>();
         if constexpr (IsSameType<T, half>::value) {
@@ -490,13 +608,7 @@ __aicore__ inline void AdaptiveAvgPool2dPoolingBase<T, ID_T, NC_FACTOR, TilingT>
         }
         resQue2_.EnQue(castOutLocal);
         castOutLocal = resQue2_.DeQue<T>();
-        SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
-        for (int64_t ho = 0; ho < hoNum; ho++) {
-            int64_t yOff = ncBase * outHW_ + (hoGlobal + ho) * tilingData_->wOut;
-            uint64_t srcOff = static_cast<uint64_t>(ho) * wOutAlign_;
-            DataCopyPad(yGm_[yOff], castOutLocal[srcOff], valueParams);
-        }
-        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+        CopyOutPaddedRows<T>(castOutLocal, valueParams, loopModeParams, ncBase, hoGlobal, hoNum);
         resQue2_.FreeTensor(castOutLocal);
     }
     resQue1_.FreeTensor(resOutLocal);
