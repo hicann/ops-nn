@@ -33,6 +33,9 @@ static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t TREE = 3;
 static constexpr int64_t TWO = 2;
 static constexpr int64_t ONE = 1;
+static constexpr int64_t BIG_KERNEL_OVERLAP_FACTOR = 5;
+
+static inline bool IsStrongOverlap(int64_t ksize, int64_t stride) { return BIG_KERNEL_OVERLAP_FACTOR * stride < ksize; }
 bool Pool3DNcdhwBigKernelTiling::IsCapable()
 {
     if (inputData_.inputFormat != ge::Format::FORMAT_NCDHW) {
@@ -45,6 +48,12 @@ bool Pool3DNcdhwBigKernelTiling::IsCapable()
     if (inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] *
             inputData_.dtypeSize <
         NUM256) {
+        return false;
+    }
+    bool hasStrongOverlap = IsStrongOverlap(inputData_.kernelSize[D_DIM], inputData_.stride[D_DIM]) ||
+                            IsStrongOverlap(inputData_.kernelSize[H_DIM], inputData_.stride[H_DIM]) ||
+                            IsStrongOverlap(inputData_.kernelSize[W_DIM], inputData_.stride[W_DIM]);
+    if (!hasStrongOverlap) {
         return false;
     }
     return true;

@@ -36,6 +36,8 @@ extern "C" {
 namespace {
 static const int64_t DIM_NUM_5D = 5;
 static const int64_t DIM_NUM_4D = 4;
+static const int64_t DIM_NUM_3D = 3;
+static const int64_t DIM_NUM_2D = 2;
 
 static const int64_t DIM0 = 0;
 static const int64_t DIM1 = 1;
@@ -50,6 +52,12 @@ static const int64_t BIG_KERNEL_SUM_LIMIT = 10240;
 static const int64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
 static const int64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
 static const int64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
+
+// overlap for A5
+static const int64_t BIG_BATCH_MERGE_OVERLAP_MIN = 100;
+static const int64_t BIG_BATCH_MERGE_OUTDIM_MIN = 10;
+static const int64_t BIG_BATCH_MERGE_SMALL_KSZIE_MAX = 2;
+static const int64_t MULTI_OVERLAP_CHANNEL_MIN = 16;
 
 static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride,
                             const aclIntArray* padding, const aclTensor* out)
@@ -294,9 +302,61 @@ static bool CheckBigKernel(const aclIntArray* kernelSize, const aclIntArray* pad
     return false;
 }
 
-static bool IsEnableNCDHW(const aclIntArray* kernelSize, const int64_t divisorOverride, const aclIntArray* pad,
-                          const bool countIncludePad, const bool ceilMode, const aclTensor* avgpoolIn,
-                          const aclTensor* out)
+static bool IsBatchMergeBigKernel(const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* pad,
+                                  const bool ceilMode, const aclTensor* avgpoolIn)
+{
+    const int64_t kD = (*kernelSize)[0];
+    const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
+    const int64_t kW = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM2];
+
+    const int64_t sD = stride->Size() == 0 ? kD : (*stride)[0];
+    const int64_t sH = stride->Size() == 0 ? kH : stride->Size() == 1 ? sD : (*stride)[DIM1];
+    const int64_t sW = stride->Size() == 0 ? kW : stride->Size() == 1 ? sD : (*stride)[DIM2];
+
+    const int64_t padD = (*pad)[0];
+    const int64_t padH = pad->Size() == 1 ? padD : (*pad)[DIM1];
+    const int64_t padW = pad->Size() == 1 ? padD : (*pad)[DIM2];
+
+    auto inputShape = avgpoolIn->GetViewShape();
+
+    const int64_t channel = inputShape.GetDim(DIM1);
+    const int64_t inputD = inputShape.GetDim(DIM2);
+    const int64_t inputH = inputShape.GetDim(DIM3);
+    const int64_t inputW = inputShape.GetDim(DIM4);
+
+    const int64_t kArr[DIM_NUM_3D] = {kD, kH, kW};
+    const int64_t sArr[DIM_NUM_3D] = {sD, sH, sW};
+    const int64_t pArr[DIM_NUM_3D] = {padD, padH, padW};
+    const int64_t inputArr[DIM_NUM_3D] = {inputD, inputH, inputW};
+
+    int64_t bigDimCount = 0;
+    // overlap是否满足阈值
+    for (int32_t i = 0; i < DIM_NUM_3D; i++) {
+        int64_t overlap = kArr[i] - sArr[i];
+        int64_t outDim = PoolingOutShape(inputArr[i], kArr[i], pArr[i], sArr[i], ceilMode);
+        if (overlap > BIG_BATCH_MERGE_OVERLAP_MIN && outDim > BIG_BATCH_MERGE_OUTDIM_MIN) {
+            bigDimCount++;
+        }
+    }
+    int64_t smallKCount = 0;
+    for (int32_t i = 0; i < DIM_NUM_3D; i++) {
+        if (kArr[i] <= BIG_BATCH_MERGE_SMALL_KSZIE_MAX) {
+            smallKCount++;
+        }
+    }
+
+    if (bigDimCount == 1 && smallKCount == 2) {
+        return true;
+    } else if (bigDimCount >= DIM_NUM_2D && channel >= MULTI_OVERLAP_CHANNEL_MIN) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool IsEnableNCDHW(const aclIntArray* kernelSize, const aclIntArray* stride, const int64_t divisorOverride,
+                          const aclIntArray* pad, const bool countIncludePad, const bool ceilMode,
+                          const aclTensor* avgpoolIn, const aclTensor* out)
 {
     const int64_t kD = (*kernelSize)[0];
     const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
@@ -311,9 +371,10 @@ static bool IsEnableNCDHW(const aclIntArray* kernelSize, const int64_t divisorOv
     auto avgpoolInShape = avgpoolIn->GetViewShape();
     auto avgpoolInShapeNC = avgpoolInShape.GetDim(0) * avgpoolInShape.GetDim(1);
     auto enableNC = (avgpoolInShapeNC > 256) && (avgpoolInShapeNC < 960);
-    bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    bool isBatchMergeBigKernel = IsBatchMergeBigKernel(kernelSize, stride, pad, ceilMode, avgpoolIn);
+    bool isRegbaseBatchMerge = Ops::NN::AclnnUtil::IsRegbase() && !isBatchMergeBigKernel;
     bool isBigKernelFlag = CheckBigKernel(kernelSize, pad, avgpoolIn, out);
-    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || isRegbase;
+    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || isRegbaseBatchMerge;
 }
 
 // 构建averagepool3d计算图, 通过Vector实现
@@ -345,7 +406,8 @@ static aclnnStatus BuildAvgPool3dGraph(UniqueExecutor& uniqueExecutor, const acl
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool is310pFlag = curArch == NpuArch::DAV_2002;
 
-    auto isEnableNCDHW = IsEnableNCDHW(kernelSize, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn, out);
+    auto isEnableNCDHW = IsEnableNCDHW(kernelSize, stride, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn,
+                                       out);
     if ((!isDimDDownsamping && !isEnableNCDHW) or is310pFlag) {
         dataFormat = "NDHWC";
         // Transpose N,C,D,H,W -> N,D,H,W,C

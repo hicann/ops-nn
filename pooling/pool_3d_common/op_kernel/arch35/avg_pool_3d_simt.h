@@ -162,59 +162,94 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNcSimtCompu
     TYPE_T magicW = AvgPool3DSimtParam[4];
     TYPE_T shiftW = AvgPool3DSimtParam[5];
 
+    // 循环不变量外提
+    const TYPE_T dInDim = static_cast<TYPE_T>(SimtTilingData->dInDim);
+    const TYPE_T hInDim = static_cast<TYPE_T>(SimtTilingData->hInDim);
+    const TYPE_T wInDim = static_cast<TYPE_T>(SimtTilingData->wInDim);
+    const TYPE_T dOutDim = static_cast<TYPE_T>(SimtTilingData->dOutDim);
+    const TYPE_T hOutDim = static_cast<TYPE_T>(SimtTilingData->hOutDim);
+    const TYPE_T wOutDim = static_cast<TYPE_T>(SimtTilingData->wOutDim);
+    const TYPE_T kD = static_cast<TYPE_T>(SimtTilingData->kD);
+    const TYPE_T kH = static_cast<TYPE_T>(SimtTilingData->kH);
+    const TYPE_T kW = static_cast<TYPE_T>(SimtTilingData->kW);
+    const TYPE_T sD = static_cast<TYPE_T>(SimtTilingData->sD);
+    const TYPE_T sH = static_cast<TYPE_T>(SimtTilingData->sH);
+    const TYPE_T sW = static_cast<TYPE_T>(SimtTilingData->sW);
+    const TYPE_T fPad = static_cast<TYPE_T>(SimtTilingData->fPad);
+    const TYPE_T bkPad = static_cast<TYPE_T>(SimtTilingData->bkPad);
+    const TYPE_T tPad = static_cast<TYPE_T>(SimtTilingData->tPad);
+    const TYPE_T bPad = static_cast<TYPE_T>(SimtTilingData->bPad);
+    const TYPE_T lPad = static_cast<TYPE_T>(SimtTilingData->lPad);
+    const TYPE_T rPad = static_cast<TYPE_T>(SimtTilingData->rPad);
+    const TYPE_T divisorOverride = static_cast<TYPE_T>(SimtTilingData->divisorOverride);
+    const TYPE_T countIncludePad = static_cast<TYPE_T>(SimtTilingData->countIncludePad);
+    const TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * dOutDim * hOutDim * wOutDim;
+    const TYPE_T planeSize = hInDim * wInDim;
+    const TYPE_T rowSize = wInDim;
+    const bool hasOverride = divisorOverride != 0;
+
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
-    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim *
-                     SimtTilingData->wOutDim;
     for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize; i += gridDim.x * blockDim.x) {
         DIV_T quotientW = Simt::UintDiv<DIV_T>(i, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         DIV_T quotientD = Simt::UintDiv<DIV_T>(quotientH, magicD, shiftD);
-        TYPE_T pw = i - quotientW * SimtTilingData->wOutDim;
-        TYPE_T ph = quotientW - quotientH * SimtTilingData->hOutDim;
-        TYPE_T pd = quotientH - quotientD * SimtTilingData->dOutDim;
+        TYPE_T pw = i - quotientW * wOutDim;
+        TYPE_T ph = quotientW - quotientH * hOutDim;
+        TYPE_T pd = quotientH - quotientD * dOutDim;
         TYPE_T pnc = quotientD;
-        TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
-        TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
-        TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD,
-                          (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
-        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH,
-                          (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
-        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW,
-                          (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
+        TYPE_T dStart = pd * sD - fPad;
+        TYPE_T hStart = ph * sH - tPad;
+        TYPE_T wStart = pw * sW - lPad;
+        TYPE_T dEnd = min(dStart + kD, dInDim + bkPad);
+        TYPE_T hEnd = min(hStart + kH, hInDim + bPad);
+        TYPE_T wEnd = min(wStart + kW, wInDim + rPad);
         TYPE_T poolSize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
         dStart = max(dStart, (TYPE_T)0);
         hStart = max(hStart, (TYPE_T)0);
         wStart = max(wStart, (TYPE_T)0);
-        dEnd = min(dEnd, (TYPE_T)SimtTilingData->dInDim);
-        hEnd = min(hEnd, (TYPE_T)SimtTilingData->hInDim);
-        wEnd = min(wEnd, (TYPE_T)SimtTilingData->wInDim);
+        dEnd = min(dEnd, dInDim);
+        hEnd = min(hEnd, hInDim);
+        wEnd = min(wEnd, wInDim);
         if (dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;
         }
 
         TYPE_T divisorFactor;
-        if (SimtTilingData->divisorOverride) {
-            divisorFactor = SimtTilingData->divisorOverride;
+        if (hasOverride) {
+            divisorFactor = divisorOverride;
         } else {
-            if (SimtTilingData->countIncludePad) {
+            if (countIncludePad != 0) {
                 divisorFactor = poolSize;
             } else {
                 divisorFactor = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
             }
         }
-        float sum = 0;
-        auto xData = x + pnc * SimtTilingData->dInDim * SimtTilingData->hInDim * SimtTilingData->wInDim;
+        // 行指针递增代替每元素全量寻址
+        __gm__ X_T* dPtr = x + pnc * (dInDim * planeSize) + dStart * planeSize + hStart * rowSize;
+        float s0 = 0;
+        float s1 = 0;
+        float s2 = 0;
+        float s3 = 0;
         for (TYPE_T d = dStart; d < dEnd; d++) {
+            __gm__ X_T* rowPtr = dPtr;
             for (TYPE_T h = hStart; h < hEnd; h++) {
-                for (TYPE_T w = wStart; w < wEnd; w++) {
-                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim +
-                                       h * SimtTilingData->wInDim + w;
-                    sum += static_cast<float>(xData[idxOffset]);
+                TYPE_T len = wEnd - wStart;
+                TYPE_T len4 = len / 4 * 4;
+                for (TYPE_T j = 0; j < len4; j += 4) {
+                    s0 += static_cast<float>(rowPtr[wStart + j]);
+                    s1 += static_cast<float>(rowPtr[wStart + j + 1]);
+                    s2 += static_cast<float>(rowPtr[wStart + j + 2]);
+                    s3 += static_cast<float>(rowPtr[wStart + j + 3]);
                 }
+                for (TYPE_T j = len4; j < len; j++) {
+                    s0 += static_cast<float>(rowPtr[wStart + j]);
+                }
+                rowPtr += rowSize;
             }
+            dPtr += planeSize;
         }
+        float sum = (s0 + s1) + (s2 + s3);
         y[i] = static_cast<X_T>(sum / static_cast<float>(divisorFactor));
     }
 }
@@ -232,62 +267,101 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
     TYPE_T magicC = AvgPool3DSimtParam[6];
     TYPE_T shiftC = AvgPool3DSimtParam[7];
 
+    // 循环不变量外提
+    const TYPE_T cDim = static_cast<TYPE_T>(SimtTilingData->cDim);
+    const TYPE_T dInDim = static_cast<TYPE_T>(SimtTilingData->dInDim);
+    const TYPE_T hInDim = static_cast<TYPE_T>(SimtTilingData->hInDim);
+    const TYPE_T wInDim = static_cast<TYPE_T>(SimtTilingData->wInDim);
+    const TYPE_T dOutDim = static_cast<TYPE_T>(SimtTilingData->dOutDim);
+    const TYPE_T hOutDim = static_cast<TYPE_T>(SimtTilingData->hOutDim);
+    const TYPE_T wOutDim = static_cast<TYPE_T>(SimtTilingData->wOutDim);
+    const TYPE_T kD = static_cast<TYPE_T>(SimtTilingData->kD);
+    const TYPE_T kH = static_cast<TYPE_T>(SimtTilingData->kH);
+    const TYPE_T kW = static_cast<TYPE_T>(SimtTilingData->kW);
+    const TYPE_T sD = static_cast<TYPE_T>(SimtTilingData->sD);
+    const TYPE_T sH = static_cast<TYPE_T>(SimtTilingData->sH);
+    const TYPE_T sW = static_cast<TYPE_T>(SimtTilingData->sW);
+    const TYPE_T fPad = static_cast<TYPE_T>(SimtTilingData->fPad);
+    const TYPE_T bkPad = static_cast<TYPE_T>(SimtTilingData->bkPad);
+    const TYPE_T tPad = static_cast<TYPE_T>(SimtTilingData->tPad);
+    const TYPE_T bPad = static_cast<TYPE_T>(SimtTilingData->bPad);
+    const TYPE_T lPad = static_cast<TYPE_T>(SimtTilingData->lPad);
+    const TYPE_T rPad = static_cast<TYPE_T>(SimtTilingData->rPad);
+    const TYPE_T divisorOverride = static_cast<TYPE_T>(SimtTilingData->divisorOverride);
+    const TYPE_T countIncludePad = static_cast<TYPE_T>(SimtTilingData->countIncludePad);
+    const TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * dOutDim * hOutDim * wOutDim;
+    const TYPE_T planeSize = hInDim * wInDim * cDim;
+    const TYPE_T rowSize = wInDim * cDim;
+    const TYPE_T cStep = cDim;
+    const bool hasOverride = divisorOverride != 0;
+
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
-    TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim *
-                     SimtTilingData->wOutDim;
     for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize; i += gridDim.x * blockDim.x) {
         DIV_T quotientC = Simt::UintDiv<DIV_T>(i, magicC, shiftC);
         DIV_T quotientW = Simt::UintDiv<DIV_T>(quotientC, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         DIV_T quotientD = Simt::UintDiv<DIV_T>(quotientH, magicD, shiftD);
-        TYPE_T pc = i - quotientC * SimtTilingData->cDim;
-        TYPE_T pw = quotientC - quotientW * SimtTilingData->wOutDim;
-        TYPE_T ph = quotientW - quotientH * SimtTilingData->hOutDim;
-        TYPE_T pd = quotientH - quotientD * SimtTilingData->dOutDim;
+        TYPE_T pc = i - quotientC * cDim;
+        TYPE_T pw = quotientC - quotientW * wOutDim;
+        TYPE_T ph = quotientW - quotientH * hOutDim;
+        TYPE_T pd = quotientH - quotientD * dOutDim;
         TYPE_T pn = quotientD;
-        TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
-        TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
-        TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = min(dStart + (TYPE_T)SimtTilingData->kD,
-                          (TYPE_T)SimtTilingData->dInDim + (TYPE_T)SimtTilingData->bkPad);
-        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH,
-                          (TYPE_T)SimtTilingData->hInDim + (TYPE_T)SimtTilingData->bPad);
-        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW,
-                          (TYPE_T)SimtTilingData->wInDim + (TYPE_T)SimtTilingData->rPad);
+        TYPE_T dStart = pd * sD - fPad;
+        TYPE_T hStart = ph * sH - tPad;
+        TYPE_T wStart = pw * sW - lPad;
+        TYPE_T dEnd = min(dStart + kD, dInDim + bkPad);
+        TYPE_T hEnd = min(hStart + kH, hInDim + bPad);
+        TYPE_T wEnd = min(wStart + kW, wInDim + rPad);
         TYPE_T poolSize = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
         dStart = max(dStart, (TYPE_T)0);
         hStart = max(hStart, (TYPE_T)0);
         wStart = max(wStart, (TYPE_T)0);
-        dEnd = min(dEnd, (TYPE_T)SimtTilingData->dInDim);
-        hEnd = min(hEnd, (TYPE_T)SimtTilingData->hInDim);
-        wEnd = min(wEnd, (TYPE_T)SimtTilingData->wInDim);
+        dEnd = min(dEnd, dInDim);
+        hEnd = min(hEnd, hInDim);
+        wEnd = min(wEnd, wInDim);
         if (dStart >= dEnd || hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;
         }
 
         TYPE_T divisorFactor;
-        if (SimtTilingData->divisorOverride) {
-            divisorFactor = SimtTilingData->divisorOverride;
+        if (hasOverride) {
+            divisorFactor = divisorOverride;
         } else {
-            if (SimtTilingData->countIncludePad) {
+            if (countIncludePad != 0) {
                 divisorFactor = poolSize;
             } else {
                 divisorFactor = (dEnd - dStart) * (hEnd - hStart) * (wEnd - wStart);
             }
         }
-        float sum = 0;
-        auto xData = x + pn * SimtTilingData->dInDim * SimtTilingData->hInDim * SimtTilingData->wInDim *
-                             SimtTilingData->cDim;
+        // 指针递增代替每元素全量寻址
+        __gm__ X_T* dPtr = x + pn * (dInDim * planeSize) + dStart * planeSize + hStart * rowSize + wStart * cStep + pc;
+        float s0 = 0;
+        float s1 = 0;
+        float s2 = 0;
+        float s3 = 0;
         for (TYPE_T d = dStart; d < dEnd; d++) {
+            __gm__ X_T* rowPtr = dPtr;
             for (TYPE_T h = hStart; h < hEnd; h++) {
-                for (TYPE_T w = wStart; w < wEnd; w++) {
-                    TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim +
-                                       h * SimtTilingData->wInDim + w;
-                    sum += static_cast<float>(xData[idxOffset * SimtTilingData->cDim + pc]);
+                __gm__ X_T* wPtr = rowPtr;
+                TYPE_T len = wEnd - wStart;
+                TYPE_T len4 = len / 4 * 4;
+                for (TYPE_T j = 0; j < len4; j += 4) {
+                    s0 += static_cast<float>(wPtr[0]);
+                    s1 += static_cast<float>(wPtr[cStep]);
+                    s2 += static_cast<float>(wPtr[2 * cStep]);
+                    s3 += static_cast<float>(wPtr[3 * cStep]);
+                    wPtr += 4 * cStep;
                 }
+                for (TYPE_T j = len4; j < len; j++) {
+                    s0 += static_cast<float>(*wPtr);
+                    wPtr += cStep;
+                }
+                rowPtr += rowSize;
             }
+            dPtr += planeSize;
         }
+        float sum = (s0 + s1) + (s2 + s3);
         y[i] = static_cast<X_T>(sum / static_cast<float>(divisorFactor));
     }
 }
