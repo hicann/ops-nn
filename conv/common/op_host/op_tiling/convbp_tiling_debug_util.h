@@ -47,8 +47,10 @@ std::string DebugString(const std::vector<T>& v)
 
 inline void DebugShape(gert::TilingContext* context, const int64_t index, std::vector<int64_t>& shape, bool isInput)
 {
-    auto geShape = isInput ? context->GetInputShape(index)->GetStorageShape() :
-                             context->GetOutputShape(index)->GetStorageShape();
+    const gert::StorageShape* geShapePtr = isInput ? context->GetInputShape(index) : context->GetOutputShape(index);
+    OP_CHECK_IF(geShapePtr == nullptr,
+                OP_LOGE(context->GetNodeName(), "get shape from context fail, index=%ld.", index), return);
+    auto geShape = geShapePtr->GetStorageShape();
     int32_t dimNum = geShape.GetDimNum();
     shape.reserve(dimNum);
     for (int i = 0; i < dimNum; ++i) {
@@ -63,7 +65,10 @@ inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, boo
     OP_CHECK_IF(tensor == nullptr, OP_LOGE(context->GetNodeName(), "get tensor desc from context fail."), return info);
 
     if (dimCount == 1) {
-        info.shape = {context->GetInputShape(index)->GetStorageShape().GetDim(0)};
+        const gert::StorageShape* geShapePtr = context->GetInputShape(index);
+        OP_CHECK_IF(geShapePtr == nullptr,
+                    OP_LOGE(context->GetNodeName(), "get shape from context fail, index=%ld.", index), return info);
+        info.shape = {geShapePtr->GetStorageShape().GetDim(0)};
     } else {
         DebugShape(context, index, info.shape, isInput);
     }
@@ -76,6 +81,7 @@ inline std::vector<int64_t> GetAttrVector(gert::TilingContext* context, int attr
                                           const char* attrName)
 {
     auto attrs = context->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE(context->GetNodeName(), "get attrs from context fail."), return {});
     const auto attr = attrs->GetAttrPointer<gert::ContinuousVector>(attrIndex);
     OP_CHECK_IF(attr == nullptr, OP_LOGE(context->GetNodeName(), "get %s from context fail.", attrName), return {});
     OP_CHECK_IF(attr->GetSize() != static_cast<size_t>(expectedSize),
