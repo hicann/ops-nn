@@ -69,6 +69,22 @@ bool PadDepthwiseConv2dFusionPass::IsAscend950() const
     return ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, curArch) && curArch == NpuArch::DAV_3510;
 }
 
+bool PadDepthwiseConv2dFusionPass::CheckPadDynamicShape() const
+{
+    TensorDesc inputDesc;
+    FUSION_PASS_CHECK(padNode->GetInputDesc(PAD_X_INPUT_INDEX, inputDesc) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get Pad input desc failed."), return false);
+    FUSION_PASS_CHECK(ConvFusionUtilsPass::IsUnknownShape(inputDesc),
+                      OP_LOGD(convDescInfo.nodeNameStr, "Pad input is unknown shape, no fusion."), return false);
+
+    TensorDesc outputDesc;
+    FUSION_PASS_CHECK(padNode->GetOutputDesc(OUTPUT_INDEX, outputDesc) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get Pad output desc failed."), return false);
+    FUSION_PASS_CHECK(ConvFusionUtilsPass::IsUnknownShape(outputDesc),
+                      OP_LOGD(convDescInfo.nodeNameStr, "Pad output is unknown shape, no fusion."), return false);
+    return true;
+}
+
 bool PadDepthwiseConv2dFusionPass::GetPaddingsFromConst()
 {
     paddings.clear();
@@ -213,6 +229,8 @@ bool PadDepthwiseConv2dFusionPass::MeetRequirements(const GNode& convNode)
 
     isAscend950 = IsAscend950();
 
+    FUSION_PASS_CHECK_NOLOG(!CheckPadDynamicShape(), return false);
+
     AscendString paddingMode;
     FUSION_PASS_CHECK(convNode.GetAttr(PADDING, paddingMode) != GRAPH_SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Get DepthwiseConv2D padding attr failed."), return false);
@@ -316,4 +334,8 @@ bool PadDepthwiseConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode&
 
     return true;
 }
+
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+REG_FUSION_PASS(PadDepthwiseConv2dFusionPass).Stage(CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops

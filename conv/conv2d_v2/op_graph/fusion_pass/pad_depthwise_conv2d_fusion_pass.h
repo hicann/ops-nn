@@ -64,6 +64,7 @@ protected:
     bool ConvFusionReplaceImpl(ge::GraphPtr& graph, ge::GNode& convNode, ge::CustomPassContext& passContext) override;
 
 private:
+    bool CheckPadDynamicShape() const;
     bool GetPaddingsFromConst();
     bool ExtractPaddingByFormat();
     bool CheckPaddingRange() const;

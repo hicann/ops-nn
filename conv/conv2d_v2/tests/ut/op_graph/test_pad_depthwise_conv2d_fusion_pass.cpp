@@ -397,7 +397,7 @@ TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_fuse_on_ascend950)
     EXPECT_TRUE(VerifyPadsAttr(graph, {1, 0, 1, 1}));
 }
 
-// =================================./install/autoconfig.shcd=========================================================
+// ==========================================================================================
 // Reentrant: two independent chains
 // ==========================================================================================
 TEST_F(PadDepthwiseConv2dFusionPassTest, reentrant_two_chains)
