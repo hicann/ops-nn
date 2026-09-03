@@ -196,5 +196,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_group_norm_silu_quant.cpp](examples/test_aclnn_group_norm_silu_quant.cpp) | 通过[aclnnGroupNormSiluQuant.md](docs/aclnnGroupNormSiluQuant.md)接口方式调用GroupNormSiluQuant算子。 |
+| aclnn接口  | [test_aclnn_group_norm_silu_quant.cpp](examples/arch22/test_aclnn_group_norm_silu_quant.cpp) | 通过[aclnnGroupNormSiluQuant.md](docs/aclnnGroupNormSiluQuant.md)接口方式调用GroupNormSiluQuant算子。 |
 | 图模式调用 | [test_geir_group_norm_silu_quant.cpp](examples/arch35/test_geir_group_norm_silu_quant.cpp) | 通过[算子IR](op_graph/group_norm_silu_quant_proto.h)构图方式调用GroupNormSiluQuant算子。 |
