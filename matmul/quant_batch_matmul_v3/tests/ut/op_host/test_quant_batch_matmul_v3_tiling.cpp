@@ -873,6 +873,33 @@ TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, CubeStreamKAlignsEveryTransposeT
     }
 }
 
+TEST(QuantBatchMatmulV3StreamKFixpipeCost, UsesEightyPercentPeakBandwidthForAlignedNTiles)
+{
+    const auto result = streamk_cost_model::EstimateFixpipeCost(224UL, 224UL, 1UL, 458752UL);
+
+    ASSERT_TRUE(result.valid);
+    EXPECT_TRUE(result.allNTilesAligned);
+    EXPECT_EQ(result.timeNs, 111UL);
+}
+
+TEST(QuantBatchMatmulV3StreamKFixpipeCost, UsesQuarterPeakBandwidthWhenAnyNTileIsUnaligned)
+{
+    const auto result = streamk_cost_model::EstimateFixpipeCost(418UL, 224UL, 2UL, 5500880UL);
+
+    ASSERT_TRUE(result.valid);
+    EXPECT_FALSE(result.allNTilesAligned);
+    EXPECT_EQ(result.timeNs, 4232UL);
+}
+
+TEST(QuantBatchMatmulV3StreamKFixpipeCost, ChecksBaseNEvenWhenShapeNIsAligned)
+{
+    const auto result = streamk_cost_model::EstimateFixpipeCost(480UL, 240UL, 2UL, 5200UL);
+
+    ASSERT_TRUE(result.valid);
+    EXPECT_FALSE(result.allNTilesAligned);
+    EXPECT_EQ(result.timeNs, 4UL);
+}
+
 TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, MxStreamKAlignsEveryTransposeTo256Bytes)
 {
     for (bool transA : {false, true}) {

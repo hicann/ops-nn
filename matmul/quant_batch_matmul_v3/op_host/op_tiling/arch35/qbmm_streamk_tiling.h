@@ -21,6 +21,18 @@
 
 namespace optiling {
 
+namespace streamk_cost_model {
+
+struct FixpipeCostResult {
+    bool valid = false;
+    bool allNTilesAligned = true;
+    uint64_t timeNs = 0UL;
+};
+
+FixpipeCostResult EstimateFixpipeCost(uint64_t n, uint64_t baseN, uint64_t nCnt, uint64_t writeBytes);
+
+} // namespace streamk_cost_model
+
 class QBMMV3StreamKTiling : public QuantBatchMatmulV3TilingBase {
 public:
     explicit QBMMV3StreamKTiling(gert::TilingContext* context);

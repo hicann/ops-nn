@@ -50,8 +50,10 @@ using optiling::qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
 using optiling::qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
 using optiling::qmmv3_tiling_const::NUM_HALF;
 // Benefit thresholds are tuned for DAV_3510/Ascend950 QBMM MX StreamK. Sizes are bytes, time is ns, and permille
-// values use 1000 as the denominator. The transfer model uses 4 TB/s for MTE2/AIV paths; the fixed overhead and
-// safety margin come from ops-test-kit single-op profiling and cover StreamK scheduling/reduce overhead.
+// values use 1000 as the denominator. The transfer model uses 4 TB/s for MTE2/AIV paths. Fixpipe uses 80% of
+// 5.2 TB/s when every candidate N tile width is aligned and 25% otherwise. The unaligned value is based on the
+// 1.308 TB/s median measured by the N-tail profiling suite. The fixed overhead and safety margin come from
+// ops-test-kit single-op profiling and cover StreamK scheduling/reduce/Fixpipe uncertainty.
 // The StreamK RPC workspace is sized in MiB and is reserved for the multi-block reduce synchronization path.
 constexpr uint64_t STREAMK_RPC_WORKSPACE_SIZE = STREAMK_RPC_WORKSPACE_MB * 1024UL * 1024UL;
 constexpr uint64_t BENEFIT_MIN_K_THRESHOLD = 4096UL;
@@ -61,10 +63,14 @@ constexpr uint64_t BENEFIT_MTE2_MIN_SAVED_BYTES = 2UL * 1024UL * 1024UL;
 constexpr uint64_t BENEFIT_MTE2_MIN_SAVED_PERMILLE = 330UL;
 constexpr uint64_t BENEFIT_MTE2_BW_BYTES_PER_NS = 4000UL;
 constexpr uint64_t BENEFIT_AIV_BW_BYTES_PER_NS = 4000UL;
+constexpr uint64_t BENEFIT_FIXPIPE_BASE_BW_BYTES_PER_NS = 5200UL;
+constexpr uint64_t BENEFIT_FIXPIPE_ALIGNED_BW_BYTES_PER_NS = BENEFIT_FIXPIPE_BASE_BW_BYTES_PER_NS * 80UL / 100UL;
+constexpr uint64_t BENEFIT_FIXPIPE_UNALIGNED_BW_BYTES_PER_NS = BENEFIT_FIXPIPE_BASE_BW_BYTES_PER_NS * 25UL / 100UL;
 constexpr uint64_t BENEFIT_STREAMK_FIXED_OVERHEAD_NS = 500UL;
 constexpr uint64_t BENEFIT_STREAMK_MIN_MARGIN_NS = 300UL;
 constexpr uint64_t BENEFIT_TIME_SAFETY_NUM = 6UL;
 constexpr uint64_t BENEFIT_TIME_SAFETY_DEN = 5UL;
+constexpr uint64_t FIXPIPE_N_ALIGN_ELEMENTS = 32UL;
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_STREAMK;
@@ -467,8 +473,11 @@ bool BuildActualStreamKCandidate(const optiling::QuantBatchMatmulInfo& inputPara
 }
 
 struct BenefitExtraCost {
+    bool allFixpipeNTilesAligned = true;
     uint64_t workspaceReadBytes = 0UL;
     uint64_t outputWriteBytes = 0UL;
+    uint64_t fixpipeWriteBytes = 0UL;
+    uint64_t fixpipeTimeNs = 0UL;
     uint64_t fixedOverheadNs = BENEFIT_STREAMK_FIXED_OVERHEAD_NS;
     uint64_t totalBytes = 0UL;
     uint64_t totalTimeNs = 0UL;
@@ -484,6 +493,14 @@ BenefitExtraCost EstimateStreamKExtraBytes(const BenefitCandidate& candidate,
     uint64_t outputTileBytes = GetSizeWithDataTypeLocal(tileElements, inputParams.cDtype);
     cost.workspaceReadBytes = SaturatingMul(SaturatingMul(streamKTailMnCnt, candidate.splitK), workspaceTileBytes);
     cost.outputWriteBytes = SaturatingMul(streamKTailMnCnt, outputTileBytes);
+    const uint64_t logicalOutputWriteBytes = SaturatingMul(
+        SaturatingMul(SaturatingMul(inputParams.mSize, inputParams.nSize), candidate.splitK), DATA_SIZE_L0C);
+    // Both values bound the split-K Fixpipe writeback without reproducing the device-side tile scheduler.
+    cost.fixpipeWriteBytes = std::min(cost.workspaceReadBytes, logicalOutputWriteBytes);
+    const auto fixpipeCost = optiling::streamk_cost_model::EstimateFixpipeCost(inputParams.nSize, candidate.baseN,
+                                                                               candidate.nCnt, cost.fixpipeWriteBytes);
+    cost.allFixpipeNTilesAligned = fixpipeCost.allNTilesAligned;
+    cost.fixpipeTimeNs = fixpipeCost.valid ? fixpipeCost.timeNs : UINT64_SATURATED;
     cost.totalBytes = SaturatingAdd(cost.workspaceReadBytes, cost.outputWriteBytes);
     cost.totalTimeNs = SaturatingAdd(CalcTransferTimeNs(cost.totalBytes, BENEFIT_AIV_BW_BYTES_PER_NS),
                                      cost.fixedOverheadNs);
@@ -506,8 +523,11 @@ struct BenefitGateEval {
     uint64_t skMte2Bytes = 0UL;
     uint64_t savedMte2Bytes = 0UL;
     uint64_t extraBytes = 0UL;
+    bool allFixpipeNTilesAligned = true;
     uint64_t workspaceExtraBytes = 0UL;
     uint64_t reduceExtraBytes = 0UL;
+    uint64_t fixpipeWriteBytes = 0UL;
+    uint64_t fixpipeTimeNs = 0UL;
     uint64_t fixedOverheadNs = 0UL;
     uint64_t transposeExtraBytes = 0UL;
     uint64_t requiredSavedBytes = 0UL;
@@ -642,8 +662,11 @@ void FillEvalWithActualStreamK(const optiling::QuantBatchMatmulInfo& inputParams
     eval.skSplitK = actualSk.splitK;
     eval.skMte2Bytes = actualSk.mte2Bytes;
     eval.extraBytes = extraCost.totalBytes;
+    eval.allFixpipeNTilesAligned = extraCost.allFixpipeNTilesAligned;
     eval.workspaceExtraBytes = extraCost.workspaceReadBytes;
     eval.reduceExtraBytes = extraCost.outputWriteBytes;
+    eval.fixpipeWriteBytes = extraCost.fixpipeWriteBytes;
+    eval.fixpipeTimeNs = extraCost.fixpipeTimeNs;
     eval.fixedOverheadNs = extraCost.fixedOverheadNs;
     eval.transposeExtraBytes = 0UL;
     eval.extraCostTimeNs = extraCost.totalTimeNs;
@@ -685,8 +708,9 @@ void FillMte2SavingEval(const BenefitGateSearchResult& result, BenefitGateEval& 
     eval.savedMte2Permille = CalcPermille(eval.savedMte2Bytes, eval.aswtMte2Bytes);
     eval.extraCostPermille = CalcPermille(eval.extraBytes, eval.aswtMte2Bytes);
     eval.savedMte2TimeNs = CalcTransferTimeNs(eval.savedMte2Bytes, BENEFIT_MTE2_BW_BYTES_PER_NS);
+    const uint64_t estimatedExtraTimeNs = SaturatingAdd(eval.extraCostTimeNs, eval.fixpipeTimeNs);
     eval.requiredSavedTimeNs = SaturatingAdd(
-        SaturatingMulDiv(eval.extraCostTimeNs, BENEFIT_TIME_SAFETY_NUM, BENEFIT_TIME_SAFETY_DEN),
+        SaturatingMulDiv(estimatedExtraTimeNs, BENEFIT_TIME_SAFETY_NUM, BENEFIT_TIME_SAFETY_DEN),
         BENEFIT_STREAMK_MIN_MARGIN_NS);
     eval.requiredSavedBytes = std::max(BENEFIT_MTE2_MIN_SAVED_BYTES,
                                        SaturatingMul(eval.requiredSavedTimeNs, BENEFIT_MTE2_BW_BYTES_PER_NS));
@@ -756,7 +780,8 @@ void LogBenefitGateEval(const char* opName, const optiling::QuantBatchMatmulInfo
             "aswtMCnt=%lu aswtNCnt=%lu aswtAFullLoad=%d "
             "skBaseM=%lu skBaseN=%lu skBaseK=%lu skMnCnt=%lu skSingleCoreK=%lu skSplitK=%lu "
             "aswtMte2Bytes=%lu skMte2Bytes=%lu savedMte2Bytes=%lu extraBytes=%lu "
-            "workspaceExtraBytes=%lu reduceExtraBytes=%lu fixedOverheadNs=%lu transposeExtraBytes=%lu "
+            "workspaceExtraBytes=%lu reduceExtraBytes=%lu fixpipeWriteBytes=%lu "
+            "allFixpipeNTilesAligned=%d fixpipeTimeNs=%lu fixedOverheadNs=%lu transposeExtraBytes=%lu "
             "requiredSavedBytes=%lu savedMte2Permille=%lu extraCostPermille=%lu requiredSavedPermille=%lu "
             "savedMte2TimeNs=%lu extraCostTimeNs=%lu requiredSavedTimeNs=%lu.",
             benefitGate.admit ? "ADMIT" : "REJECT", benefitGate.reason, inputParams.mSize, inputParams.nSize,
@@ -766,14 +791,43 @@ void LogBenefitGateEval(const char* opName, const optiling::QuantBatchMatmulInfo
             benefitGate.skBaseM, benefitGate.skBaseN, benefitGate.skBaseK, benefitGate.skMnCnt,
             benefitGate.skSingleCoreK, benefitGate.skSplitK, benefitGate.aswtMte2Bytes, benefitGate.skMte2Bytes,
             benefitGate.savedMte2Bytes, benefitGate.extraBytes, benefitGate.workspaceExtraBytes,
-            benefitGate.reduceExtraBytes, benefitGate.fixedOverheadNs, benefitGate.transposeExtraBytes,
-            benefitGate.requiredSavedBytes, benefitGate.savedMte2Permille, benefitGate.extraCostPermille,
-            benefitGate.requiredSavedPermille, benefitGate.savedMte2TimeNs, benefitGate.extraCostTimeNs,
-            benefitGate.requiredSavedTimeNs);
+            benefitGate.reduceExtraBytes, benefitGate.fixpipeWriteBytes,
+            static_cast<int32_t>(benefitGate.allFixpipeNTilesAligned), benefitGate.fixpipeTimeNs,
+            benefitGate.fixedOverheadNs, benefitGate.transposeExtraBytes, benefitGate.requiredSavedBytes,
+            benefitGate.savedMte2Permille, benefitGate.extraCostPermille, benefitGate.requiredSavedPermille,
+            benefitGate.savedMte2TimeNs, benefitGate.extraCostTimeNs, benefitGate.requiredSavedTimeNs);
 }
 } // namespace
 
 namespace optiling {
+
+namespace streamk_cost_model {
+
+FixpipeCostResult EstimateFixpipeCost(uint64_t n, uint64_t baseN, uint64_t nCnt, uint64_t writeBytes)
+{
+    FixpipeCostResult result;
+    if (n == 0UL || baseN == 0UL || nCnt == 0UL || SafeCeilDiv(n, baseN) != nCnt) {
+        return result;
+    }
+
+    uint64_t tailOffset = 0UL;
+    if (!CheckedMul(nCnt - 1UL, baseN, tailOffset) || tailOffset >= n) {
+        return result;
+    }
+    const uint64_t tailN = n - tailOffset;
+    // Check every N width the candidate can produce. This deliberately avoids duplicating the device scheduler;
+    // an unaligned tail outside the split-K region may be overestimated, which is safe for an admission gate.
+    result.allNTilesAligned = tailN % FIXPIPE_N_ALIGN_ELEMENTS == 0UL &&
+                              (nCnt == 1UL || baseN % FIXPIPE_N_ALIGN_ELEMENTS == 0UL);
+
+    const uint64_t bandwidth = result.allNTilesAligned ? BENEFIT_FIXPIPE_ALIGNED_BW_BYTES_PER_NS :
+                                                         BENEFIT_FIXPIPE_UNALIGNED_BW_BYTES_PER_NS;
+    result.timeNs = CalcTransferTimeNs(writeBytes, bandwidth);
+    result.valid = true;
+    return result;
+}
+
+} // namespace streamk_cost_model
 
 QBMMV3StreamKTiling::QBMMV3StreamKTiling(gert::TilingContext* context)
     : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
