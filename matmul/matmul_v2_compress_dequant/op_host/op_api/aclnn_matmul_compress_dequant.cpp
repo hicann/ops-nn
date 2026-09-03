@@ -119,7 +119,7 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclI
     int64_t x2KDim = 0;
 
     if (dimTensor1 != 2 || dimTensor2 != 1) { // ND format dims > 2 for x1
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MatmulUnzip not support x1 shape %s, x2 shape %s",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MatmulCompressDequant not support x1 shape %s, x2 shape %s",
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     } else {
