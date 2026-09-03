@@ -292,8 +292,9 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnMaxPool2dWithMaskBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnMaxPool2dWithMaskBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id8 -->
 
 - 输入数据暂不支持NaN、-Inf。
 

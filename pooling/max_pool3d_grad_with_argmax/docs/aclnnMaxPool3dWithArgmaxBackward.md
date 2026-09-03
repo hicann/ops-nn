@@ -300,8 +300,9 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnMaxPool3dWithArgmaxBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnMaxPool3dWithArgmaxBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id8 -->
 
 - 未支持类型说明：
   - DOUBLE：指令不支持DOUBLE。

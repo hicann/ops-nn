@@ -216,8 +216,9 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnAdaptiveAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnAdaptiveAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id8 -->
 
 ## 调用示例
 

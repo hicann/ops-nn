@@ -325,8 +325,9 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnMaxPool2dWithIndicesBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id9 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnMaxPool2dWithIndicesBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id9 -->
 
 - 输入数据暂不支持NaN、-Inf。indices值不能超过公式中的$H\_in*W\_in$，且需要大于等于0。
 

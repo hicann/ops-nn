@@ -233,8 +233,9 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnAdaptiveMaxPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnAdaptiveMaxPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id7 -->
 
 - 非整除场景下（self的后两个维度的维度值对gradOutput后两个维度的维度值取余不为0），shape不超过2的24次方。整除场景下，没有这个限制。
 - 举例整除场景：self=[a,b,c,d]，gradOutput=[a,b,e,f]。 c%e为0并且d%f为0就是整除场景。

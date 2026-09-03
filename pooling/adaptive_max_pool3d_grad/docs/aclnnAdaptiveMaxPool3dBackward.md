@@ -263,8 +263,9 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnAdaptiveMaxPool3dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：aclnnAdaptiveMaxPool3dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+<!-- end id8 -->
 
 - A2、A3非整除场景下，shape不超过2的24次方。整除场景下，没有这个限制。
 
