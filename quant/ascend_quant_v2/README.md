@@ -130,6 +130,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_ascend_quant](examples/test_aclnn_ascend_quant.cpp) | 通过[aclnnAscendQuant](docs/aclnnAscendQuant.md)接口方式调用AscendQuantV2算子。 |
+| aclnn接口  | [test_aclnn_ascend_quant](examples/arch22/test_aclnn_ascend_quant.cpp) | 通过[aclnnAscendQuant](docs/aclnnAscendQuant.md)接口方式调用AscendQuantV2算子。 |
 | aclnn接口  | [test_aclnn_ascend_quant_v3](examples/test_aclnn_ascend_quant_v3.cpp) | 通过[aclnnAscendQuantV3](docs/aclnnAscendQuantV3.md)接口方式调用AscendQuantV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/ascend_quant_v2_proto.h)构图方式调用AscendQuantV2算子。         |
