@@ -15,11 +15,11 @@
 
 - 算子功能：功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss，中间根据通信拆分为[FusedLinearOnlineMaxSum](./)和[FusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum)。
 - 计算公式：
-  1. $input$与$wight^T$做矩阵乘得到：
+  1. $input$与$weight^T$做矩阵乘得到：
 
      $$
      vocab\_parallel\_logits\_out = input @ weight^T
-     $$ 
+     $$
   2. 计算$vocab\_parallel\_logits\_out$每行的最大值：
 
      $$
@@ -183,4 +183,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/test_aclnn_fused_linear_online_max_sum.cpp) | 通过[aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum.md)接口方式调用FusedLinearOnlineMaxSum算子。 |
+| aclnn接口  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/arch22/test_aclnn_fused_linear_online_max_sum.cpp) | 通过[aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum.md)接口方式调用FusedLinearOnlineMaxSum算子。 |
