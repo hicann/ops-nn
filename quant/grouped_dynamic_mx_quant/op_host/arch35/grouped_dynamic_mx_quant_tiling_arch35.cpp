@@ -155,12 +155,12 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, GroupedDynami
                                                       "must be within the range [6, 12] or equal to 0"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((tilingParam.dstTypeMax < 0 || (tilingParam.dstTypeMax > 0 && tilingParam.dstTypeMax < 1.75) ||
-                 tilingParam.dstTypeMax > 3.5) &&
+                 tilingParam.dstTypeMax >= 3.5) &&
                     tilingParam.outDtype == ge::DT_FLOAT4_E1M2,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dst_type_max",
                                                       std::to_string(tilingParam.dstTypeMax),
                                                       "If the dtype of output y is FLOAT4_E1M2, parameter dst_type_max "
-                                                      "must be within the range [1.75, 3.5] or equal to 0"),
+                                                      "must be within the range [1.75, 3.5) or equal to 0"),
                 return ge::GRAPH_FAILED);
 
     // 当dstTypeMax=0时，默认使用目标数据类型最大值，FP4E2M1最大值6、FP4E1M2最大值1.75、FP8_E4M3FN最大值448、FP8_E5M2最大值57344

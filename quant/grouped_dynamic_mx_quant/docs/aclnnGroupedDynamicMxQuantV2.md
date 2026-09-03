@@ -45,7 +45,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
     $$
 
-    - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，`mxscale_pre`按对应的`groupIndex`分组，分组内第一个维度pad为偶数，组成输出`mxscale`。
+    - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，`mxscale_pre`按对应的`groupIndex`分组，分组内第一个维度pad为偶数，组成输出`mxscale`。
 
     - `emax`：对应数据类型的最大正则数的指数位。
 
@@ -229,7 +229,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>dstTypeMax (double)</td>
       <td>输入</td>
       <td>表示maxType的取值，对应公式中的Amax(Dtype)。</td>
-      <td><ul><li>当前取值支持0.0和1.75-3.5(FLOAT4_E1M2)、0.0和6.0-12.0(FLOAT4_E2M1)。仅支持在FP4时设置该值。</li><li>取值为0.0代表Amax(Dtype)为量化结果数据类型的最大值；取值为1.75-3.5或6.0-12.0代表Amax(Dtype)为传入值。</li></ul></td>
+      <td><ul><li>当前取值支持0.0和[1.75, 3.5)(FLOAT4_E1M2)、0.0和[6.0, 12.0](FLOAT4_E2M1)。仅支持在FP4时设置该值。</li><li>取值为0.0代表Amax(Dtype)为量化结果数据类型的最大值；取值为[1.75, 3.5)或[6.0, 12.0]代表Amax(Dtype)为传入值。</li></ul></td>
       <td>DOUBLE</td>
       <td>-</td>
       <td>-</td>
@@ -249,7 +249,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>mxscale (aclTensor*)</td>
       <td>输出</td>
       <td>公式中的mxscale_pre组成的输出mxscale，每个分组对应的量化尺度。</td>
-      <td><ul><li>支持空Tensor。</li><li>假设x的shape为 [m,n]，groupedIndex的shape为 [g]，则mxscale的shape为 [(m/(blocksize∗2)+g),n,2]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>假设x的shape为 [m,n]，groupIndex的shape为 [g]，则mxscale的shape为 [(m/(blocksize∗2)+g),n,2]。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -304,8 +304,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
     <td>传入的roundMode是空指针。</td>
   </tr>
   <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x、groupIndex、y、mxscale的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
@@ -316,6 +316,9 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
   </tr>
   <tr>
     <td>roundMode、dstType、blocksize、scaleAlg、dstTypeMax不符合当前支持的值。</td>
+  </tr>
+  <tr>
+    <td>y为FLOAT4_E2M1或FLOAT4_E1M2时不支持非连续的Tensor。</td>
   </tr>
   <tr>
     <td>mxscale不支持非连续的Tensor。</td>
@@ -379,6 +382,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
   - mxscale.shape[0] = x.shape[0] / (blocksize * 2) + g，其中g为group的数量。
   - mxscale.shape[-1] = 2，其它维度与输入x一致。
   - 输出y的shape和x保持一致。
+  - 当输出y的数据类型为FLOAT4_E2M1或FLOAT4_E1M2时，x尾轴（第1维）的长度必须为偶数。
 
 ## 调用示例
 
@@ -470,20 +474,20 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {8, 1};
-    std::vector<int64_t> groupedIndexShape = {2};
+    std::vector<int64_t> groupIndexShape = {2};
     std::vector<int64_t> yOutShape = {8, 1};
     std::vector<int64_t> mxscaleOutShape = {2, 1, 2};
     void* xDeviceAddr = nullptr;
-    void* groupedIndexDeviceAddr = nullptr;
+    void* groupIndexDeviceAddr = nullptr;
     void* yOutDeviceAddr = nullptr;
     void* mxscaleOutDeviceAddr = nullptr;
     aclTensor* x = nullptr;
-    aclTensor* groupedIndex = nullptr;
+    aclTensor* groupIndex = nullptr;
     aclTensor* yOut = nullptr;
     aclTensor* mxscaleOut = nullptr;
     //对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
-    std::vector<uint32_t> groupedIndexHostData = {4, 8};
+    std::vector<uint32_t> groupIndexHostData = {4, 8};
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
     //对应float8_e8m0的值(2)
@@ -498,10 +502,10 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> xDeviceAddrPtr(xDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建groupedIndex aclTensor
-    ret = CreateAclTensor(groupedIndexHostData, groupedIndexShape, &groupedIndexDeviceAddr, aclDataType::ACL_INT32, &groupedIndex);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupedIndexTensorPtr(groupedIndex, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> groupedIndexDeviceAddrPtr(groupedIndexDeviceAddr, aclrtFree);
+    // 创建groupIndex aclTensor
+    ret = CreateAclTensor(groupIndexHostData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT32, &groupIndex);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupIndexTensorPtr(groupIndex, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> groupIndexDeviceAddrPtr(groupIndexDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建yOut aclTensor
     ret = CreateAclTensor(yOutHostData, yOutShape, &yOutDeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &yOut);
@@ -519,7 +523,7 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     aclOpExecutor* executor;
 
     // 调用aclnnGroupedDynamicMxQuantV2第一段接口
-    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg,
+    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupIndex, roundModeOptional, dstType, blocksize, scaleAlg,
                                                        dstTypeMax, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -541,7 +545,7 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
-    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                       size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);

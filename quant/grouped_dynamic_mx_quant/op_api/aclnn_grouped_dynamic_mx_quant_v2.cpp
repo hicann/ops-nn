@@ -84,6 +84,11 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output mxscale Dims is %ld, should be 3D.", mxscaleShape.GetDimNum()),
              return false);
     OP_CHECK_SHAPE_NOT_EQUAL(y, x, return false);
+    OP_CHECK((y->GetDataType() != op::DataType::DT_FLOAT4_E2M1 && y->GetDataType() != op::DataType::DT_FLOAT4_E1M2) ||
+                 xShape.GetDim(1) == -1 || xShape.GetDim(1) % NUM_TWO == 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "When the data type of y is FLOAT4_E2M1/FLOAT4_E1M2, the tail axis of x must be an even number."),
+             return false);
     int64_t xDim0 = xShape.GetDim(0);
     int64_t xDim1 = xShape.GetDim(1);
     int64_t groupIndexDim0 = groupShape.GetDim(0);
