@@ -299,13 +299,14 @@ stages:
     name: PreSmoke
     jobs:
       A2_smoke:
-        name: A2_pre_smoke
+        name: PreSmoke_A2
         steps:
           -
             name: Checkout
             identifier: process_checkout
             uses: checkout
             with:
+              ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
           -
             name: download
             uses: obs-download
