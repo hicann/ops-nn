@@ -7,30 +7,44 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
+/*!
+ * \file test_huber_loss_infershape.cpp
+ * \brief InferShape and InferDataType unit tests.
+ */
 #include <gtest/gtest.h>
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
+#include "../../../op_kernel/huber_loss_tiling_data.h"
 
 namespace {
-ge::graphStatus RunInferShape(const std::initializer_list<int64_t>& predictionDims,
-                              const std::initializer_list<int64_t>& targetDims, gert::Shape& outputShape)
+
+ge::graphStatus RunInferShape(const std::initializer_list<int64_t>& inputDims,
+                              const std::initializer_list<int64_t>& targetDims, int64_t reduction,
+                              gert::Shape& outputShape)
 {
     const auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("HuberLoss");
     if (opImpl == nullptr || opImpl->infer_shape == nullptr) {
         return ge::GRAPH_FAILED;
     }
 
-    gert::Shape predictionShape(predictionDims);
+    gert::Shape inputShape(inputDims);
     gert::Shape targetShape(targetDims);
+    // Both attributes are supplied even though infershape reads only
+    // reduction: the attribute list is addressed positionally, so omitting
+    // delta would leave reduction correct by accident rather than by contract.
     auto holder = gert::InferShapeContextFaker()
                       .SetOpType("HuberLoss")
                       .NodeIoNum(2, 1)
-                      .InputShapes({&predictionShape, &targetShape})
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&inputShape, &targetShape})
                       .OutputShapes({&outputShape})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<int64_t>(reduction)},
+                                  {"delta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
                       .Build();
     auto context = holder.GetContext<gert::InferShapeContext>();
     if (context == nullptr) {
@@ -38,49 +52,157 @@ ge::graphStatus RunInferShape(const std::initializer_list<int64_t>& predictionDi
     }
     const ge::graphStatus status = opImpl->infer_shape(context);
     if (status == ge::GRAPH_SUCCESS) {
-        const gert::Shape* inferredShape = context->GetOutputShape(0);
-        if (inferredShape == nullptr) {
+        const gert::Shape* inferred = context->GetOutputShape(0);
+        if (inferred == nullptr) {
             return ge::GRAPH_FAILED;
         }
-        outputShape = *inferredShape;
+        outputShape = *inferred;
     }
     return status;
 }
 
-TEST(HuberLossInferShapeTest, CopiesInputShape)
+ge::graphStatus RunInferDataType(ge::DataType inputDtype, ge::DataType targetDtype, ge::DataType& outputDtype)
 {
-    gert::Shape outputShape;
-    ASSERT_EQ(RunInferShape({2, 3, 4}, {2, 3, 4}, outputShape), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(outputShape.GetDimNum(), 3);
-    EXPECT_EQ(outputShape.GetDim(0), 2);
-    EXPECT_EQ(outputShape.GetDim(1), 3);
-    EXPECT_EQ(outputShape.GetDim(2), 4);
+    const auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("HuberLoss");
+    if (opImpl == nullptr || opImpl->infer_datatype == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    auto holder = gert::InferDataTypeContextFaker()
+                      .SetOpType("HuberLoss")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, targetDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<int64_t>(HUBER_LOSS_REDUCE_MEAN)},
+                                  {"delta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    const ge::graphStatus status = opImpl->infer_datatype(context);
+    if (status == ge::GRAPH_SUCCESS) {
+        outputDtype = context->GetOutputDataType(0);
+    }
+    return status;
 }
 
-TEST(HuberLossInferShapeTest, SupportsScalarAndEmptyShapes)
-{
-    gert::Shape scalarOutput;
-    EXPECT_EQ(RunInferShape({}, {}, scalarOutput), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(scalarOutput.GetDimNum(), 0);
+// --- reduction=none: the output takes the input shape -----------------------
 
-    gert::Shape emptyOutput;
-    ASSERT_EQ(RunInferShape({0, 3}, {0, 3}, emptyOutput), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(emptyOutput.GetDimNum(), 2);
-    EXPECT_EQ(emptyOutput.GetDim(0), 0);
-    EXPECT_EQ(emptyOutput.GetDim(1), 3);
+TEST(HuberLossInferShapeTest, NoneCopiesInputShape)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({2, 3, 4}, {2, 3, 4}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(out.GetDimNum(), 3U);
+    EXPECT_EQ(out.GetDim(0), 2);
+    EXPECT_EQ(out.GetDim(1), 3);
+    EXPECT_EQ(out.GetDim(2), 4);
 }
 
-TEST(HuberLossInferShapeTest, CopiesMatchingDynamicShape)
+TEST(HuberLossInferShapeTest, NoneKeepsRankZero)
 {
-    gert::Shape outputShape;
-    ASSERT_EQ(RunInferShape({-1, 3}, {-1, 3}, outputShape), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(outputShape.GetDim(0), -1);
-    EXPECT_EQ(outputShape.GetDim(1), 3);
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({}, {}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(out.GetDimNum(), 0U);
 }
 
-TEST(HuberLossInferShapeTest, RejectsMismatchedInputShapes)
+TEST(HuberLossInferShapeTest, NoneKeepsEmptyTensorShape)
 {
-    gert::Shape outputShape;
-    EXPECT_EQ(RunInferShape({2, 3}, {2, 4}, outputShape), ge::GRAPH_FAILED);
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({0, 3}, {0, 3}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(out.GetDimNum(), 2U);
+    EXPECT_EQ(out.GetDim(0), 0);
+    EXPECT_EQ(out.GetDim(1), 3);
 }
+
+// --- reduction=mean/sum: the output is a rank-0 scalar ----------------------
+//
+// Rank 0, not shape {1}. A rank-1 single-element tensor breaks the scalar
+// contract and is what the aclnn output view rank check compares against.
+
+TEST(HuberLossInferShapeTest, MeanProducesRankZeroScalar)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({2, 3, 4}, {2, 3, 4}, HUBER_LOSS_REDUCE_MEAN, out), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(out.GetDimNum(), 0U);
+}
+
+TEST(HuberLossInferShapeTest, SumProducesRankZeroScalar)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({1024}, {1024}, HUBER_LOSS_REDUCE_SUM, out), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(out.GetDimNum(), 0U);
+}
+
+TEST(HuberLossInferShapeTest, MeanOnEmptyTensorStillProducesScalar)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({0}, {0}, HUBER_LOSS_REDUCE_MEAN, out), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(out.GetDimNum(), 0U);
+}
+
+// --- dynamic shape ----------------------------------------------------------
+//
+// An unknown dimension carries no information yet, so infershape must let it
+// through rather than reject a legal dynamic-shape graph. Tiling re-checks the
+// concrete shapes, where they are known.
+
+TEST(HuberLossInferShapeTest, AcceptsUnknownDimAgainstStaticDim)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({-1, 3}, {8, 3}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(out.GetDimNum(), 2U);
+    EXPECT_EQ(out.GetDim(0), -1);
+    EXPECT_EQ(out.GetDim(1), 3);
+}
+
+TEST(HuberLossInferShapeTest, AcceptsUnknownDimOnBothSides)
+{
+    gert::Shape out;
+    ASSERT_EQ(RunInferShape({-1, -1}, {-1, -1}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(out.GetDim(0), -1);
+    EXPECT_EQ(out.GetDim(1), -1);
+}
+
+// --- rejections -------------------------------------------------------------
+
+TEST(HuberLossInferShapeTest, RejectsMismatchedDim)
+{
+    gert::Shape out;
+    EXPECT_EQ(RunInferShape({2, 3}, {2, 4}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_FAILED);
+}
+
+TEST(HuberLossInferShapeTest, RejectsMismatchedRank)
+{
+    gert::Shape out;
+    EXPECT_EQ(RunInferShape({2, 3}, {2, 3, 1}, HUBER_LOSS_REDUCE_NONE, out), ge::GRAPH_FAILED);
+}
+
+TEST(HuberLossInferShapeTest, RejectsOutOfRangeReduction)
+{
+    gert::Shape out;
+    EXPECT_EQ(RunInferShape({8}, {8}, 3, out), ge::GRAPH_FAILED);
+    EXPECT_EQ(RunInferShape({8}, {8}, -1, out), ge::GRAPH_FAILED);
+}
+
+// --- InferDataType ----------------------------------------------------------
+
+TEST(HuberLossInferDataTypeTest, OutputFollowsInputForEveryDtype)
+{
+    for (const ge::DataType dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}) {
+        ge::DataType out = ge::DT_UNDEFINED;
+        ASSERT_EQ(RunInferDataType(dtype, dtype, out), ge::GRAPH_SUCCESS) << "dtype=" << static_cast<int>(dtype);
+        // The float32 accumulation is internal; it narrows once before the
+        // store and must not leak into the output type.
+        EXPECT_EQ(out, dtype);
+    }
+}
+
+TEST(HuberLossInferDataTypeTest, RejectsMismatchedInputDtypes)
+{
+    ge::DataType out = ge::DT_UNDEFINED;
+    EXPECT_EQ(RunInferDataType(ge::DT_FLOAT, ge::DT_FLOAT16, out), ge::GRAPH_FAILED);
+}
+
 } // namespace

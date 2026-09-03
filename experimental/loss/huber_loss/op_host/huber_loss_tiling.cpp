@@ -7,104 +7,196 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include "register/op_def_registry.h"
-#include "op_common/log/log.h"
-#include "op_common/op_host/util/math_util.h"
-#include "op_common/op_host/util/platform_util.h"
+
+/*!
+ * \file huber_loss_tiling.cpp
+ * \brief HuberLoss tiling -- framework glue only.
+ *
+ * Everything that decides anything lives in huber_loss_tiling_calc.h, which
+ * has no framework dependency and is unit tested on a plain host compiler.
+ * This file fetches shapes, dtype, attributes and platform limits, calls it
+ * once, and forwards the result.
+ */
+#include <cmath>
+#include "log/log.h"
 #include "graph/utils/type_utils.h"
+#include "util/math_util.h"
+#include "util/platform_util.h"
+#include "op_host/tiling_util.h"
+#include "tiling/platform/platform_ascendc.h"
+#include "register/op_impl_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/huber_loss_tiling_data.h"
-#include <limits>
+#include "../op_kernel/huber_loss_tiling_key.h"
+#include "huber_loss_tiling_calc.h"
 
 namespace optiling {
-using Ops::Base::CeilDiv;
-constexpr uint32_t kVectorElements = 64;
-constexpr uint32_t kQueueCount = 6;         // two inputs and one output, all double buffered
-constexpr uint32_t kFloatBuffers = 4;       // diff, abs(diff), quadratic, linear
-constexpr uint32_t kUpcastFloatBuffers = 2; // converted predictions and targets
-constexpr uint32_t kMaskBytes = 1;
-static bool FitsU32(uint64_t value) { return value <= std::numeric_limits<uint32_t>::max(); }
-static ge::graphStatus HuberLossTiling(gert::TilingContext* context)
+
+struct HuberLossCompileInfo {};
+
+static constexpr size_t IDX_INPUT = 0;
+static constexpr size_t IDX_TARGET = 1;
+static constexpr size_t IDX_OUT = 0;
+// Attribute order is fixed in the OpDef: reduction 0, delta 1.
+static constexpr size_t ATTR_REDUCTION = 0;
+static constexpr size_t ATTR_DELTA = 1;
+
+// Batch scheduling. Not a framework constant -- every operator in this
+// repository that needs it declares its own. Required whenever the kernel
+// calls SyncAll: the barrier assumes every launched core is resident at once,
+// and without batch mode they start in waves and the barrier deadlocks
+// probabilistically. Precedent: loss/multilabel_margin_loss,
+// loss/mse_loss_v2, loss/cosine_embedding_loss.
+static constexpr uint32_t HUBER_LOSS_BATCH_MODE = 1;
+
+static ge::graphStatus FetchInputs(gert::TilingContext* context, int64_t& numel, uint32_t& typeLength)
 {
-    OP_CHECK_IF(context == nullptr, OP_LOGE("HuberLoss", "tiling context is null"), return ge::GRAPH_FAILED);
-    const auto* inputShape = context->GetInputShape(0);
-    const auto* targetShape = context->GetInputShape(1);
-    const auto* outputShape = context->GetOutputShape(0);
+    auto inputShape = context->GetInputShape(IDX_INPUT);
+    auto targetShape = context->GetInputShape(IDX_TARGET);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
-    const gert::Shape& predictions = inputShape->GetStorageShape();
-    const gert::Shape& targets = targetShape->GetStorageShape();
-    const gert::Shape& loss = outputShape->GetStorageShape();
-    OP_CHECK_IF(predictions != targets || predictions != loss, OP_LOGE(context, "HuberLoss requires equal shapes"),
-                return ge::GRAPH_FAILED);
-    const auto* inputDesc = context->GetInputDesc(0);
-    const auto* targetDesc = context->GetInputDesc(1);
-    const auto* outputDesc = context->GetOutputDesc(0);
+    // infershape lets unknown dims pass so dynamic-shape graphs are not
+    // rejected; here the concrete shapes exist, so this is where a would-be
+    // broadcast is stopped.
+    OP_CHECK_IF(inputShape->GetStorageShape() != targetShape->GetStorageShape(),
+                OP_LOGE(context, "input and target shapes must match"), return ge::GRAPH_FAILED);
+
+    numel = inputShape->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF(numel < 0, OP_LOGE(context, "negative shape size %ld", numel), return ge::GRAPH_FAILED);
+    // numel == 0 is legal and not an error here: the kernel handles an empty
+    // tensor through the divisor alone.
+
+    auto inputDesc = context->GetInputDesc(IDX_INPUT);
+    auto targetDesc = context->GetInputDesc(IDX_TARGET);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetDesc);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
-    const ge::DataType dtype = inputDesc->GetDataType();
-    OP_CHECK_IF(dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16,
-                OP_LOGE(context, "HuberLoss unsupported dtype"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(targetDesc->GetDataType() != dtype || outputDesc->GetDataType() != dtype,
-                OP_LOGE(context, "HuberLoss requires equal dtypes"), return ge::GRAPH_FAILED);
-    const auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const float* deltaAttr = attrs->GetAttrPointer<float>(0);
-    const float delta = deltaAttr == nullptr ? 1.0f : *deltaAttr;
-    OP_CHECK_IF(!(delta > 0.0f), OP_LOGE(context, "HuberLoss requires delta > 0"), return ge::GRAPH_FAILED);
-    uint32_t elemBytes = 0;
-    OP_CHECK_IF(!ge::TypeUtils::GetDataTypeLength(dtype, elemBytes) || elemBytes == 0,
-                OP_LOGE(context, "HuberLoss failed to get dtype length"), return ge::GRAPH_FAILED);
-    fe::PlatFormInfos* info = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, info);
-    platform_ascendc::PlatformAscendC platform(info);
-    uint64_t ubBytes = 0;
-    platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubBytes);
-    const uint64_t cores = platform.GetCoreNumAiv();
-    OP_CHECK_IF(ubBytes == 0 || cores == 0, OP_LOGE(context, "HuberLoss invalid platform information"),
-                return ge::GRAPH_FAILED);
-    const int64_t signedTotal = predictions.GetShapeSize();
-    OP_CHECK_IF(signedTotal < 0, OP_LOGE(context, "HuberLoss does not support unknown shape size"),
-                return ge::GRAPH_FAILED);
-    const uint64_t total = static_cast<uint64_t>(signedTotal);
-    const uint64_t floatBuffers = kFloatBuffers + (dtype == ge::DT_FLOAT ? 0 : kUpcastFloatBuffers);
-    const uint64_t bytesPerElement = kQueueCount * elemBytes + floatBuffers * sizeof(float) + kMaskBytes;
-    const uint64_t rawTile = ubBytes / bytesPerElement;
-    const uint64_t tile = (rawTile / kVectorElements) * kVectorElements;
-    OP_CHECK_IF(tile == 0 || !FitsU32(tile), OP_LOGE(context, "HuberLoss UB cannot hold one aligned tile"),
-                return ge::GRAPH_FAILED);
-    const uint64_t usedCores = total == 0 ? 1 : (total < cores ? total : cores);
-    const uint64_t small = total / usedCores;
-    const uint64_t tailCores = total % usedCores;
-    const uint64_t big = small + (tailCores == 0 ? 0 : 1);
-    const uint64_t smallTiles = small == 0 ? 0 : CeilDiv(small, tile);
-    const uint64_t bigTiles = big == 0 ? 0 : CeilDiv(big, tile);
-    const uint64_t smallTail = small == 0 ? 0 : small - (smallTiles - 1) * tile;
-    const uint64_t bigTail = big == 0 ? 0 : big - (bigTiles - 1) * tile;
-    OP_CHECK_IF(tailCores * big + (usedCores - tailCores) * small != total,
-                OP_LOGE(context, "HuberLoss core split does not conserve the logical element count"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!FitsU32(small) || !FitsU32(big) || !FitsU32(smallTiles) || !FitsU32(bigTiles) || !FitsU32(smallTail) ||
-                    !FitsU32(bigTail) || !FitsU32(tailCores),
-                OP_LOGE(context, "HuberLoss tiling field exceeds uint32 range"), return ge::GRAPH_FAILED);
-    auto* tiling = context->GetTilingData<HuberLossTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    tiling->smallCoreDataNum = static_cast<uint32_t>(small);
-    tiling->bigCoreDataNum = static_cast<uint32_t>(big);
-    tiling->finalBigTileNum = static_cast<uint32_t>(bigTiles);
-    tiling->finalSmallTileNum = static_cast<uint32_t>(smallTiles);
-    tiling->tileDataNum = static_cast<uint32_t>(tile);
-    tiling->smallTailDataNum = static_cast<uint32_t>(smallTail);
-    tiling->bigTailDataNum = static_cast<uint32_t>(bigTail);
-    tiling->tailBlockNum = static_cast<uint32_t>(tailCores);
-    tiling->delta = delta;
-    context->SetTilingKey(0);
-    context->SetBlockDim(static_cast<uint32_t>(usedCores));
-    size_t* workspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
-    workspace[0] = 0;
+    OP_CHECK_IF(inputDesc->GetDataType() != targetDesc->GetDataType(),
+                OP_LOGE(context, "input and target dtypes must match"), return ge::GRAPH_FAILED);
+    // The dtype whitelist is explicit rather than inferred from the byte
+    // width. Accepting anything two or four bytes wide would admit DT_INT32
+    // and DT_INT16, which the kernel has no instantiation for.
+    const ge::DataType inputDtype = inputDesc->GetDataType();
+    OP_CHECK_IF(inputDtype != ge::DT_FLOAT && inputDtype != ge::DT_FLOAT16 && inputDtype != ge::DT_BF16,
+                OP_LOGE(context, "unsupported dtype %d", static_cast<int>(inputDtype)), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::TypeUtils::GetDataTypeLength(inputDtype, typeLength) != true,
+                OP_LOGE(context, "cannot size dtype %d", static_cast<int>(inputDtype)), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-IMPL_OP_OPTILING(HuberLoss).Tiling(HuberLossTiling);
+
+static ge::graphStatus FetchAttrs(gert::TilingContext* context, int32_t& reduction, float& delta)
+{
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const int64_t* reductionPtr = attrs->GetInt(ATTR_REDUCTION);
+    const float* deltaPtr = attrs->GetFloat(ATTR_DELTA);
+    OP_CHECK_NULL_WITH_CONTEXT(context, reductionPtr);
+    OP_CHECK_NULL_WITH_CONTEXT(context, deltaPtr);
+    // reduction is validated in the WIDER type, before narrowing: integer
+    // narrowing wraps, so 2^32 would arrive as a legal 0. delta is checked
+    // after narrowing (double to float) for the opposite reason: a tiny
+    // positive double such as 1e-300 narrows to 0, and checking beforehand
+    // would let it through. The rule is not "always check after narrowing" --
+    // it is "check where the illegal values cannot be disguised".
+    OP_CHECK_IF(*reductionPtr != HUBER_LOSS_REDUCE_NONE && *reductionPtr != HUBER_LOSS_REDUCE_MEAN &&
+                    *reductionPtr != HUBER_LOSS_REDUCE_SUM,
+                OP_LOGE(context, "reduction must be 0, 1 or 2, got %ld", static_cast<long>(*reductionPtr)),
+                return ge::GRAPH_FAILED);
+    reduction = static_cast<int32_t>(*reductionPtr);
+    delta = *deltaPtr;
+    return ge::GRAPH_SUCCESS;
+}
+
+// The output is validated here and not in infershape, because infershape
+// computes the output shape rather than receiving one. On the aclnn path the
+// caller supplies the output tensor directly and infershape never sees it, so
+// without this check nothing constrains it.
+static ge::graphStatus CheckOutput(gert::TilingContext* context, int32_t reduction)
+{
+    auto outShape = context->GetOutputShape(IDX_OUT);
+    auto outDesc = context->GetOutputDesc(IDX_OUT);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outDesc);
+    OP_CHECK_IF(outDesc->GetDataType() != context->GetInputDesc(IDX_INPUT)->GetDataType(),
+                OP_LOGE(context, "out dtype must match input"), return ge::GRAPH_FAILED);
+    if (reduction == HUBER_LOSS_REDUCE_NONE) {
+        OP_CHECK_IF(outShape->GetStorageShape() != context->GetInputShape(IDX_INPUT)->GetStorageShape(),
+                    OP_LOGE(context, "reduction=none requires out to have the input shape"), return ge::GRAPH_FAILED);
+        return ge::GRAPH_SUCCESS;
+    }
+    // A reduced result is one element. Rank 0 is what infershape produces
+    // and what the scalar contract calls for; a rank-1 {1} is accepted too
+    // because it is equally safe and callers commonly spell a scalar that
+    // way. Anything else is refused rather than silently over- or
+    // under-written.
+    const int64_t outNumel = outShape->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF(outNumel != 1 || outShape->GetStorageShape().GetDimNum() > 1,
+                OP_LOGE(context, "reduction=%d requires a scalar out, got numel %ld rank %zu", reduction, outNumel,
+                        outShape->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus HuberLossTilingFunc(gert::TilingContext* context)
+{
+    OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
+
+    int64_t numel = 0;
+    uint32_t typeLength = 0;
+    int32_t reduction = 0;
+    float delta = 0.0f;
+    // Each helper logs the check it fails.
+    if (FetchInputs(context, numel, typeLength) != ge::GRAPH_SUCCESS ||
+        FetchAttrs(context, reduction, delta) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    uint64_t ubSize = 0;
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    const uint32_t aivNum = static_cast<uint32_t>(ascendcPlatform.GetCoreNumAiv());
+
+    const huber_loss::HuberTilingPlan plan = huber_loss::CalcTiling(static_cast<uint64_t>(numel), reduction, delta,
+                                                                    typeLength, ubSize, aivNum);
+    OP_CHECK_IF(!plan.valid,
+                OP_LOGE(context, "tiling rejected: numel=%ld reduction=%d delta=%f dtypeBytes=%u ub=%lu aiv=%u", numel,
+                        reduction, static_cast<double>(delta), typeLength, static_cast<unsigned long>(ubSize), aivNum),
+                return ge::GRAPH_FAILED);
+
+    if (CheckOutput(context, reduction) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    HuberLossTilingData* tiling = context->GetTilingData<HuberLossTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    *tiling = plan.data;
+
+    context->SetBlockDim(plan.blockDim);
+    // Route through GET_TPL_TILING_KEY, the convention every TPL operator in
+    // this repository follows, instead of publishing the raw mode value: this
+    // keeps working if the template-key encoding ever changes. With a single
+    // width-1 field the encoding is currently the value itself.
+    context->SetTilingKey(plan.tilingKey == HUBER_LOSS_SCH_MODE_REDUCE ?
+                              GET_TPL_TILING_KEY(HUBER_LOSS_SCH_MODE_REDUCE) :
+                              GET_TPL_TILING_KEY(HUBER_LOSS_SCH_MODE_NONE));
+
+    // A non-zero workspace means the kernel will cross-core reduce, which
+    // means it will call SyncAll.
+    if (plan.workspaceSize > 0) {
+        context->SetScheduleMode(HUBER_LOSS_BATCH_MODE);
+    }
+
+    size_t* workspaces = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
+    workspaces[0] = static_cast<size_t>(plan.workspaceSize) + ascendcPlatform.GetLibApiWorkSpaceSize();
+
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus TilingParseForHuberLoss([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(HuberLoss).Tiling(HuberLossTilingFunc).TilingParse<HuberLossCompileInfo>(TilingParseForHuberLoss);
+
 } // namespace optiling

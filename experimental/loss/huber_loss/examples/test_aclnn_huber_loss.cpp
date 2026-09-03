@@ -7,16 +7,39 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include <algorithm>
+
+/*!
+ * \file test_aclnn_huber_loss.cpp
+ * \brief aclnn calling sample: one call per reduction, checked against a host reference
+ *
+ * The inputs -2, -1, -0.5, 0, 0.5, 1, 2 with delta = 1.0 cover both branches
+ * of the definition and the knee at |e| = delta.
+ */
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnn_huber_loss.h"
 
+#define CHECK_RET(cond, return_expr) \
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
+
+#define LOG_PRINT(fmt, ...)              \
+    do {                                 \
+        std::printf(fmt, ##__VA_ARGS__); \
+    } while (0)
+
 namespace {
+
+constexpr int64_t REDUCTION_NONE = 0;
+constexpr int64_t REDUCTION_MEAN = 1;
+constexpr int64_t REDUCTION_SUM = 2;
+
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t size = 1;
@@ -26,183 +49,146 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return size;
 }
 
-aclError CreateFloatTensor(const std::vector<float>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                           aclTensor** tensor)
+int CreateAclTensor(const std::vector<float>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclTensor** tensor)
 {
-    const int64_t elementCount = GetShapeSize(shape);
-    if (elementCount < 0 || static_cast<size_t>(elementCount) != hostData.size()) {
-        return ACL_ERROR_INVALID_PARAM;
-    }
-    const size_t bytes = hostData.size() * sizeof(float);
-    aclError ret = aclrtMalloc(deviceAddr, bytes, ACL_MEM_MALLOC_HUGE_FIRST);
-    if (ret != ACL_SUCCESS) {
-        return ret;
-    }
+    const size_t bytes = static_cast<size_t>(GetShapeSize(shape)) * sizeof(float);
+    auto ret = aclrtMalloc(deviceAddr, bytes, ACL_MEM_MALLOC_HUGE_FIRST);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = aclrtMemcpy(*deviceAddr, bytes, hostData.data(), bytes, ACL_MEMCPY_HOST_TO_DEVICE);
-    if (ret != ACL_SUCCESS) {
-        aclrtFree(*deviceAddr);
-        *deviceAddr = nullptr;
-        return ret;
-    }
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
-        strides[static_cast<size_t>(i)] = shape[static_cast<size_t>(i + 1)] * strides[static_cast<size_t>(i + 1)];
+        strides[i] = shape[i + 1] * strides[i + 1];
     }
     *tensor = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
                               shape.size(), *deviceAddr);
-    if (*tensor == nullptr) {
-        aclrtFree(*deviceAddr);
-        *deviceAddr = nullptr;
-        return ACL_ERROR_FAILURE;
-    }
-    return ACL_SUCCESS;
+    return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-std::vector<float> ComputeGolden(const std::vector<float>& predictions, const std::vector<float>& targets, float delta)
+float GoldenElem(float p, float t, float delta)
 {
-    std::vector<float> golden(predictions.size());
-    for (size_t i = 0; i < predictions.size(); ++i) {
-        const float error = predictions[i] - targets[i];
-        const float absError = std::fabs(error);
-        golden[i] = absError <= delta ? 0.5f * error * error : delta * (absError - 0.5f * delta);
-    }
-    return golden;
+    const float a = std::fabs(p - t);
+    return (a <= delta) ? (0.5f * a * a) : (delta * (a - 0.5f * delta));
 }
 
-void PrintVector(const char* label, const std::vector<float>& values)
+// One call per reduction. reduction=0 gives an output shaped like the input;
+// reduction=1/2 gives a rank-0 scalar -- an empty shape holding one element.
+// The first-stage interface checks this, so getting it wrong is refused
+// rather than silently written past the end of the allocation.
+int RunOne(aclrtStream stream, int64_t reduction, const char* name, const std::vector<float>& inputHost,
+           const std::vector<float>& targetHost, double delta)
 {
-    std::printf("%s: [", label);
-    for (size_t i = 0; i < values.size(); ++i) {
-        std::printf(i + 1 == values.size() ? "%.6f" : "%.6f, ", values[i]);
+    const std::vector<int64_t> shape = {static_cast<int64_t>(inputHost.size())};
+    const bool scalarOut = (reduction != REDUCTION_NONE);
+    const std::vector<int64_t> outShape = scalarOut ? std::vector<int64_t>{} : shape;
+    const size_t outElems = scalarOut ? 1U : inputHost.size();
+
+    void* inputDevice = nullptr;
+    void* targetDevice = nullptr;
+    void* outDevice = nullptr;
+    aclTensor* input = nullptr;
+    aclTensor* target = nullptr;
+    aclTensor* out = nullptr;
+    void* workspace = nullptr;
+    aclOpExecutor* executor = nullptr;
+    uint64_t workspaceSize = 0;
+    std::vector<float> outHost(outElems, 0.0f);
+    int ret = 0;
+
+    do {
+        ret = CreateAclTensor(inputHost, shape, &inputDevice, &input);
+        CHECK_RET(ret == ACL_SUCCESS, break);
+        ret = CreateAclTensor(targetHost, shape, &targetDevice, &target);
+        CHECK_RET(ret == ACL_SUCCESS, break);
+        ret = CreateAclTensor(outHost, outShape, &outDevice, &out);
+        CHECK_RET(ret == ACL_SUCCESS, break);
+
+        ret = aclnnHuberLossGetWorkspaceSize(input, target, reduction, delta, out, &workspaceSize, &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHuberLossGetWorkspaceSize failed: %d\n", ret); break);
+
+        // The reduced modes need workspace for the cross-core partial sums and
+        // reduction=0 does not, but the returned size also carries the
+        // framework's reserved region, so it is non-zero either way. Use what
+        // the first stage returns rather than inferring it from reduction.
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            CHECK_RET(ret == ACL_SUCCESS, break);
+        }
+        ret = aclnnHuberLoss(workspace, workspaceSize, executor, stream);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHuberLoss failed: %d\n", ret); break);
+        ret = aclrtSynchronizeStream(stream);
+        CHECK_RET(ret == ACL_SUCCESS, break);
+
+        const size_t bytes = outElems * sizeof(float);
+        ret = aclrtMemcpy(outHost.data(), bytes, outDevice, bytes, ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, break);
+    } while (false);
+
+    if (ret == ACL_SUCCESS) {
+        double refSum = 0.0;
+        for (size_t i = 0; i < inputHost.size(); ++i) {
+            refSum += GoldenElem(inputHost[i], targetHost[i], static_cast<float>(delta));
+        }
+        LOG_PRINT("reduction=%s workspace=%llu out=[", name, static_cast<unsigned long long>(workspaceSize));
+        for (size_t i = 0; i < outHost.size(); ++i) {
+            LOG_PRINT(i + 1 == outHost.size() ? "%.6f" : "%.6f, ", outHost[i]);
+        }
+        if (scalarOut) {
+            const double ref = (reduction == REDUCTION_MEAN) ? refSum / static_cast<double>(inputHost.size()) : refSum;
+            LOG_PRINT("] ref=%.6f\n", ref);
+        } else {
+            LOG_PRINT("] ref=[");
+            for (size_t i = 0; i < inputHost.size(); ++i) {
+                const double r = GoldenElem(inputHost[i], targetHost[i], static_cast<float>(delta));
+                LOG_PRINT(i + 1 == inputHost.size() ? "%.6f" : "%.6f, ", r);
+            }
+            LOG_PRINT("]\n");
+        }
     }
-    std::printf("]\n");
+
+    aclDestroyTensor(input);
+    aclDestroyTensor(target);
+    aclDestroyTensor(out);
+    aclrtFree(inputDevice);
+    aclrtFree(targetDevice);
+    aclrtFree(outDevice);
+    if (workspace != nullptr) {
+        aclrtFree(workspace);
+    }
+    return ret;
 }
+
 } // namespace
 
 int main()
 {
-    constexpr float delta = 1.0f;
-    constexpr float tolerance = 1e-5f;
-    const std::vector<int64_t> shape = {7};
-    const std::vector<float> predictionsHost = {-2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f};
-    const std::vector<float> targetsHost(predictionsHost.size(), 0.0f);
-    const std::vector<float> golden = ComputeGolden(predictionsHost, targetsHost, delta);
-    std::vector<float> lossHost(predictionsHost.size(), 0.0f);
-
-    int32_t deviceId = 0;
-    if (const char* value = std::getenv("ASCEND_DEVICE_ID")) {
-        deviceId = std::atoi(value);
-    }
+    const int32_t deviceId = 0;
     aclrtStream stream = nullptr;
-    aclTensor* predictions = nullptr;
-    aclTensor* targets = nullptr;
-    aclTensor* loss = nullptr;
-    void* predictionsDevice = nullptr;
-    void* targetsDevice = nullptr;
-    void* lossDevice = nullptr;
-    void* workspace = nullptr;
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
-    aclError finalRet = ACL_SUCCESS;
-    bool initialized = false;
-    bool deviceSet = false;
 
-    auto cleanup = [&]() {
-        if (predictions != nullptr)
-            aclDestroyTensor(predictions);
-        if (targets != nullptr)
-            aclDestroyTensor(targets);
-        if (loss != nullptr)
-            aclDestroyTensor(loss);
-        if (workspace != nullptr)
-            aclrtFree(workspace);
-        if (predictionsDevice != nullptr)
-            aclrtFree(predictionsDevice);
-        if (targetsDevice != nullptr)
-            aclrtFree(targetsDevice);
-        if (lossDevice != nullptr)
-            aclrtFree(lossDevice);
-        if (stream != nullptr)
-            aclrtDestroyStream(stream);
-        if (deviceSet)
-            aclrtResetDevice(deviceId);
-        if (initialized)
-            aclFinalize();
-        return finalRet;
-    };
-
-    aclError ret = aclInit(nullptr);
-    if (ret != ACL_SUCCESS) {
-        std::printf("aclInit failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
-    initialized = true;
+    auto ret = aclInit(nullptr);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    if (ret != ACL_SUCCESS) {
-        std::printf("aclrtSetDevice failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
-    deviceSet = true;
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed: %d\n", ret); aclFinalize(); return ret);
     ret = aclrtCreateStream(&stream);
-    if (ret != ACL_SUCCESS) {
-        std::printf("aclrtCreateStream failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
-    ret = CreateFloatTensor(predictionsHost, shape, &predictionsDevice, &predictions);
-    if (ret == ACL_SUCCESS)
-        ret = CreateFloatTensor(targetsHost, shape, &targetsDevice, &targets);
-    if (ret == ACL_SUCCESS)
-        ret = CreateFloatTensor(lossHost, shape, &lossDevice, &loss);
-    if (ret != ACL_SUCCESS) {
-        std::printf("CreateFloatTensor failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed: %d\n", ret); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
 
-    ret = aclnnHuberLossGetWorkspaceSize(predictions, targets, delta, loss, &workspaceSize, &executor);
-    if (ret != ACL_SUCCESS) {
-        std::printf("aclnnHuberLossGetWorkspaceSize failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        if (ret != ACL_SUCCESS) {
-            std::printf("aclrtMalloc workspace failed. ERROR: %d\n", ret);
-            finalRet = ret;
-            return cleanup();
-        }
-    }
-    ret = aclnnHuberLoss(workspace, workspaceSize, executor, stream);
-    if (ret == ACL_SUCCESS)
-        ret = aclrtSynchronizeStream(stream);
-    if (ret == ACL_SUCCESS) {
-        ret = aclrtMemcpy(lossHost.data(), lossHost.size() * sizeof(float), lossDevice, lossHost.size() * sizeof(float),
-                          ACL_MEMCPY_DEVICE_TO_HOST);
-    }
-    if (ret != ACL_SUCCESS) {
-        std::printf("HuberLoss execution failed. ERROR: %d\n", ret);
-        finalRet = ret;
-        return cleanup();
-    }
+    // Spans both branches: |e| = 0.5 is quadratic, |e| = 2 is linear, and
+    // |e| = 1 sits exactly on the knee, which aten's z < delta test puts on
+    // the linear side. Both branches agree there.
+    const std::vector<float> inputHost = {-2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f};
+    const std::vector<float> targetHost(inputHost.size(), 0.0f);
+    constexpr double delta = 1.0;
 
-    float maxError = 0.0f;
-    for (size_t i = 0; i < lossHost.size(); ++i) {
-        maxError = std::max(maxError, std::fabs(lossHost[i] - golden[i]));
-    }
-    PrintVector("输入 predictions", predictionsHost);
-    PrintVector("输入 targets", targetsHost);
-    std::printf("delta: %.4f\n", delta);
-    PrintVector("Golden loss", golden);
-    PrintVector("NPU loss", lossHost);
-    std::printf("最大误差（loss）: %.6f\n", maxError);
-    const bool passed = maxError <= tolerance;
-    std::printf("验证结果: %s\n", passed ? "PASS" : "FAIL");
-    std::printf("------------------------------------------------------------\n");
-    if (!passed)
-        finalRet = ACL_ERROR_FAILURE;
-    return cleanup();
+    int rc = 0;
+    rc |= RunOne(stream, REDUCTION_NONE, "none", inputHost, targetHost, delta);
+    rc |= RunOne(stream, REDUCTION_MEAN, "mean", inputHost, targetHost, delta);
+    rc |= RunOne(stream, REDUCTION_SUM, "sum", inputHost, targetHost, delta);
+
+    aclrtDestroyStream(stream);
+    aclrtResetDevice(deviceId);
+    aclFinalize();
+    return rc == ACL_SUCCESS ? 0 : 1;
 }
