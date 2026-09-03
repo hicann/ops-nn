@@ -14,59 +14,72 @@
 ## 功能说明
 
 - 算子功能：
+
   通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。
 
 - 计算公式：
 
-    将采样点的归一化坐标 $(u,v)\in[0,1]$ 映射到第 $\ell$ 层特征图的像素坐标系：
+    设$b \in [0, bs)$、$q \in [0, num\_queries)$、$h \in [0, num\_heads)$、$\ell \in [0, num\_levels)$、$p \in [0, num\_points)$、$c \in [0, channels)$，分别为batch、查询、头、特征图、采样点、通道的索引。第$\ell$层特征图的高和宽为$H_\ell$、$W_\ell$，即$\mathrm{spatialShape}[\ell] = (H_\ell, W_\ell)$；$\mathrm{value}$的$num\_keys$维将所有层的特征图像素按层展平拼接（$num\_keys = \sum_{\ell=0}^{num\_levels-1} H_\ell W_\ell$），第$\ell$层的起始索引为$\mathrm{levelStartIndex}[\ell]$。
 
-    $$
-    x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
-    $$
+    1. 将采样点的归一化坐标$\mathrm{location}[b, q, h, \ell, p] = (u, v) \in [0,1]^2$（$u$、$v$分别为最后一维的第0、1个元素，对应$x$、$y$方向）映射到第$\ell$层特征图的像素坐标系：
 
-    确定采样点落在哪四个整数网格点之间：
+       $$
+       x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
+       $$
 
-    $$
-    x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
-    y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
-    $$
+    2. 确定采样点落在哪四个整数网格点之间：
 
-    计算采样点相对于左上角网格点的偏移，用于插值权重：
+       $$
+       x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
+       y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
+       $$
 
-    $$
-    \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
-    $$
+    3. 计算采样点相对于左上角网格点的偏移，用于插值权重：
 
-    计算双线性插值权重，四个邻点的和为1
+       $$
+       \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
+       $$
 
-    $$
-    \begin{aligned}
-    w_{00} &= (1-\alpha_y)(1-\alpha_x), \\
-    w_{10} &= (1-\alpha_y)\alpha_x, \\
-    w_{01} &= \alpha_y(1-\alpha_x), \\
-    w_{11} &= \alpha_y\alpha_x
-    \end{aligned}
-    $$
+    4. 计算双线性插值权重，四个邻点的和为1：
 
-    计算得到采样点对应的特征向量（长度为 $D$）:
+       $$
+       \begin{aligned}
+       w_{00} &= (1-\alpha_y)(1-\alpha_x), \\
+       w_{10} &= (1-\alpha_y)\alpha_x, \\
+       w_{01} &= \alpha_y(1-\alpha_x), \\
+       w_{11} &= \alpha_y\alpha_x
+       \end{aligned}
+       $$
 
-    $$
-    \operatorname{bilinear}(V;\,b,h,\ell,x,y) =
-    w_{00} \, V_{b,\ell,y_0,x_0,h,:}
-    + w_{10} \, V_{b,\ell,y_0,x_1,h,:}
-    + w_{01} \, V_{b,\ell,y_1,x_0,h,:}
-    + w_{11} \, V_{b,\ell,y_1,x_1,h,:}
-    $$
+    5. 第$\ell$层特征图上的像素$(y, x)$展平后在$\mathrm{value}$的$num\_keys$维上的索引为：
 
-    所有层、所有采样点的双线性采样结果，加权求和得到最终输出：
+       $$
+       k_\ell(y, x) = \mathrm{levelStartIndex}[\ell] + y \cdot W_\ell + x
+       $$
 
-    $$
-    O_{b,q,h,:} =
-    \sum_{\ell=0}^{L-1} \sum_{p=0}^{N_p-1}
-    A_{b,q,h,\ell,p} \cdot
-    \operatorname{bilinear}\!\left(V;\,b,h,\ell,
-    x_{b,q,h,\ell,p}, y_{b,q,h,\ell,p}\right)
-    $$
+    6. 对$\mathrm{value}$做双线性采样，得到采样点对应的特征向量（长度为$channels$）：
+
+       $$
+       \begin{aligned}
+       \operatorname{bilinear}(\mathrm{value};\,b,h,\ell,x,y) ={}&
+       w_{00} \cdot \mathrm{value}[b,\; k_\ell(y_0, x_0),\; h,\; :] \\
+       &+ w_{10} \cdot \mathrm{value}[b,\; k_\ell(y_0, x_1),\; h,\; :] \\
+       &+ w_{01} \cdot \mathrm{value}[b,\; k_\ell(y_1, x_0),\; h,\; :] \\
+       &+ w_{11} \cdot \mathrm{value}[b,\; k_\ell(y_1, x_1),\; h,\; :]
+       \end{aligned}
+       $$
+
+    7. 所有层、所有采样点的双线性采样结果，以$\mathrm{attnWeight}$加权求和得到最终输出$\mathrm{output}$（shape为$(bs, num\_queries, num\_heads \times channels)$，最后一维按$h \times channels + c$排布）：
+
+       $$
+       \mathrm{output}[b,\; q,\; h \times channels + c] =
+       \sum_{\ell=0}^{num\_levels-1} \sum_{p=0}^{num\_points-1}
+       \mathrm{attnWeight}[b, q, h, \ell, p] \cdot
+       \operatorname{bilinear}\!\left(\mathrm{value};\, b, h, \ell,\;
+       x_{b,q,h,\ell,p},\, y_{b,q,h,\ell,p}\right)[c]
+       $$
+
+       其中$x_{b,q,h,\ell,p}$、$y_{b,q,h,\ell,p}$为采样点$\mathrm{location}[b, q, h, \ell, p]$经上述坐标映射得到的像素坐标。
 
 ## 参数说明
 
@@ -75,6 +88,7 @@
   <col style="width: 144px">
   <col style="width: 273px">
   <col style="width: 256px">
+  <col style="width: 116px">
   </colgroup>
   <thead>
     <tr>
@@ -82,31 +96,52 @@
       <th>输入/输出/属性</th>
       <th>描述</th>
       <th>数据类型</th>
-    </tr>
-  </thead>
+      <th>数据格式</th>
+    </tr></thead>
   <tbody>
-    <tr><td><b>u, v</b></td><td>输入</td><td>采样点的归一化坐标，范围 [0,1]</td><td>FLOAT</td></tr>
-    <tr><td><b>W<sub>ℓ</sub>, H<sub>ℓ</sub></b></td><td>输入</td><td>第 ℓ 层特征图的宽、高</td><td>INT32</td></tr>
-    <tr><td><b>V(b,ℓ,y,x,h,:)</b></td><td>输入</td><td>Value特征向量：第b个batch、第 ℓ 层、坐标(y,x)、head h</td><td>FLOAT</td></tr>
-    <tr><td><b>A(b,q,h,ℓ,p)</b></td><td>输入</td><td>注意力权重：query q在第 ℓ 层第p个采样点上的权重</td><td>FLOAT</td></tr>
-    <tr><td><b>x, y</b></td><td>中间量</td><td>映射到像素坐标系下的采样点位置</td><td>FLOAT</td></tr>
-    <tr><td><b>x₀, x₁, y₀, y₁</b></td><td>中间量</td><td>四邻点整数坐标</td><td>INT32</td></tr>
-    <tr><td><b>αx, αy</b></td><td>中间量</td><td>采样点相对于左上角网格点的偏移量</td><td>FLOAT</td></tr>
-    <tr><td><b>w₀₀, w₁₀, w₀₁, w₁₁</b></td><td>中间量</td><td>双线性插值权重，和为1</td><td>FLOAT</td></tr>
-    <tr><td><b>bilinear(V;·)</b></td><td>中间量</td><td>插值得到的采样向量</td><td>FLOAT</td></tr>
-    <tr><td><b>O(b,q,h,:)</b></td><td>输出</td><td>最终输出向量：query q在head h的结果</td><td>FLOAT</td></tr>
-    <tr><td><b>b</b></td><td>属性</td><td>batch索引</td><td>INT32</td></tr>
-    <tr><td><b>q</b></td><td>属性</td><td>query索引</td><td>INT32</td></tr>
-    <tr><td><b>h</b></td><td>属性</td><td>head索引</td><td>INT32</td></tr>
-    <tr><td><b>ℓ</b></td><td>属性</td><td>特征层索引</td><td>INT32</td></tr>
-    <tr><td><b>p</b></td><td>属性</td><td>采样点索引</td><td>INT32</td></tr>
-    <tr><td><b>D</b></td><td>属性</td><td>每个head的嵌入维度</td><td>INT32</td></tr>
-    <tr><td><b>Nq(num_queries)</b></td><td>属性</td><td>每个batch的query数</td><td>INT32</td></tr>
-    <tr><td><b>Nh(num_heads)</b></td><td>属性</td><td>注意力head数</td><td>INT32</td></tr>
-    <tr><td><b>L(num_levels)</b></td><td>属性</td><td>特征层数</td><td>INT32</td></tr>
-    <tr><td><b>Np(num_points)</b></td><td>属性</td><td>每层每个query的采样点数</td><td>INT32</td></tr>
-  </tbody>
-</table>
+  <tr>
+      <td>value</td>
+      <td>输入</td>
+      <td>特征图的特征值，shape为(bs, num_keys, num_heads, channels)。对应公式中的`value`。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>value_spatial_shapes</td>
+      <td>输入</td>
+      <td>存储每个尺度特征图的高和宽，shape为(num_levels, 2)。对应公式中的`spatialShape`。</td>
+      <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>value_level_start_index</td>
+      <td>输入</td>
+      <td>每张特征图在value的num_keys维上的起始索引，shape为(num_levels)。对应公式中的`levelStartIndex`。</td>
+      <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>sampling_locations</td>
+      <td>输入</td>
+      <td>采样点位置tensor，shape为(bs, num_queries, num_heads, num_levels, num_points, 2)。对应公式中的`location`。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>attention_weights</td>
+      <td>输入</td>
+      <td>采样点权重tensor，shape为(bs, num_queries, num_heads, num_levels, num_points)。对应公式中的`attnWeight`。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>output</td>
+      <td>输出</td>
+      <td>算子计算输出，shape为(bs, num_queries, num_heads × channels)。对应公式中的`output`。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 - <term>Atlas 推理系列产品</term>：不支持BFLOAT16
 

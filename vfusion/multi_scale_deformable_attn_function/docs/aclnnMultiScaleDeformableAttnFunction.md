@@ -23,59 +23,73 @@
 
 ## 功能说明
 
-- 接口功能：通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。
+- 接口功能：
+
+  通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。
 
 - 计算公式：
 
-    将采样点的归一化坐标 $(u,v)\in[0,1]$ 映射到第 $\ell$ 层特征图的像素坐标系：
+    设$b \in [0, bs)$、$q \in [0, num\_queries)$、$h \in [0, num\_heads)$、$\ell \in [0, num\_levels)$、$p \in [0, num\_points)$、$c \in [0, channels)$，分别为batch、查询、头、特征图、采样点、通道的索引。第$\ell$层特征图的高和宽为$H_\ell$、$W_\ell$，即$\mathrm{spatialShape}[\ell] = (H_\ell, W_\ell)$；$\mathrm{value}$的$num\_keys$维将所有层的特征图像素按层展平拼接（$num\_keys = \sum_{\ell=0}^{num\_levels-1} H_\ell W_\ell$），第$\ell$层的起始索引为$\mathrm{levelStartIndex}[\ell]$。
 
-    $$
-    x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
-    $$
+    1. 将采样点的归一化坐标$\mathrm{location}[b, q, h, \ell, p] = (u, v) \in [0,1]^2$（$u$、$v$分别为最后一维的第0、1个元素，对应$x$、$y$方向）映射到第$\ell$层特征图的像素坐标系：
 
-    确定采样点落在哪四个整数网格点之间：
+       $$
+       x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
+       $$
 
-    $$
-    x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
-    y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
-    $$
+    2. 确定采样点落在哪四个整数网格点之间：
 
-    计算采样点相对于左上角网格点的偏移，用于插值权重：
+       $$
+       x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
+       y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
+       $$
 
-    $$
-    \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
-    $$
+    3. 计算采样点相对于左上角网格点的偏移，用于插值权重：
 
-    计算双线性插值权重，四个邻点的和为1
+       $$
+       \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
+       $$
 
-    $$
-    \begin{aligned}
-    w_{00} &= (1-\alpha_y)(1-\alpha_x), \\
-    w_{10} &= (1-\alpha_y)\alpha_x, \\
-    w_{01} &= \alpha_y(1-\alpha_x), \\
-    w_{11} &= \alpha_y\alpha_x
-    \end{aligned}
-    $$
+    4. 计算双线性插值权重，四个邻点的和为1：
 
-    计算得到采样点对应的特征向量（长度为 $D$）:
+       $$
+       \begin{aligned}
+       w_{00} &= (1-\alpha_y)(1-\alpha_x), \\
+       w_{10} &= (1-\alpha_y)\alpha_x, \\
+       w_{01} &= \alpha_y(1-\alpha_x), \\
+       w_{11} &= \alpha_y\alpha_x
+       \end{aligned}
+       $$
 
-    $$
-    \operatorname{bilinear}(V;\,b,h,\ell,x,y) =
-    w_{00} \, V_{b,\ell,y_0,x_0,h,:}
-    + w_{10} \, V_{b,\ell,y_0,x_1,h,:}
-    + w_{01} \, V_{b,\ell,y_1,x_0,h,:}
-    + w_{11} \, V_{b,\ell,y_1,x_1,h,:}
-    $$
+    5. 第$\ell$层特征图上的像素$(y, x)$展平后在$\mathrm{value}$的$num\_keys$维上的索引为：
 
-    所有层、所有采样点的双线性采样结果，加权求和得到最终输出：
+       $$
+       k_\ell(y, x) = \mathrm{levelStartIndex}[\ell] + y \cdot W_\ell + x
+       $$
 
-    $$
-    O_{b,q,h,:} =
-    \sum_{\ell=0}^{L-1} \sum_{p=0}^{N_p-1}
-    A_{b,q,h,\ell,p} \cdot
-    \operatorname{bilinear}\!\left(V;\,b,h,\ell,
-    x_{b,q,h,\ell,p}, y_{b,q,h,\ell,p}\right)
-    $$
+    6. 对$\mathrm{value}$做双线性采样，得到采样点对应的特征向量（长度为$channels$）：
+
+       $$
+       \begin{aligned}
+       \operatorname{bilinear}(\mathrm{value};\,b,h,\ell,x,y) ={}&
+       w_{00} \cdot \mathrm{value}[b,\; k_\ell(y_0, x_0),\; h,\; :] \\
+       &+ w_{10} \cdot \mathrm{value}[b,\; k_\ell(y_0, x_1),\; h,\; :] \\
+       &+ w_{01} \cdot \mathrm{value}[b,\; k_\ell(y_1, x_0),\; h,\; :] \\
+       &+ w_{11} \cdot \mathrm{value}[b,\; k_\ell(y_1, x_1),\; h,\; :]
+       \end{aligned}
+       $$
+
+    7. 所有层、所有采样点的双线性采样结果，以$\mathrm{attnWeight}$加权求和得到最终输出$\mathrm{output}$（shape为$(bs, num\_queries, num\_heads \times channels)$，最后一维按$h \times channels + c$排布）：
+
+       $$
+       \mathrm{output}[b,\; q,\; h \times channels + c] =
+       \sum_{\ell=0}^{num\_levels-1} \sum_{p=0}^{num\_points-1}
+       \mathrm{attnWeight}[b, q, h, \ell, p] \cdot
+       \operatorname{bilinear}\!\left(\mathrm{value};\, b, h, \ell,\;
+       x_{b,q,h,\ell,p},\, y_{b,q,h,\ell,p}\right)[c]
+       $$
+
+       其中$x_{b,q,h,\ell,p}$、$y_{b,q,h,\ell,p}$为采样点$\mathrm{location}[b, q, h, \ell, p]$经上述坐标映射得到的像素坐标。
 
 ## 函数原型
 
@@ -104,6 +118,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 ## aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize
 
 - **参数说明**：
+
   <table style="undefined;table-layout: fixed; width: 100%"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -129,7 +144,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>value（aclTensor*）</td>
       <td>输入</td>
-      <td>特征图的特征值。</td>
+      <td>特征图的特征值。对应公式中的`value`。</td>
       <td>shape为(bs, num_keys, num_heads, channels)。其中bs为batch size，num_keys为特征图的大小，num_heads为头的数量，channels为特征图的维度。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -139,7 +154,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>spatialShape（aclTensor*）</td>
       <td>输入</td>
-      <td>存储每个尺度特征图的高和宽。</td>
+      <td>存储每个尺度特征图的高和宽。对应公式中的`spatialShape`。</td>
       <td>shape为(num_levels, 2)。其中num_levels为特征图的数量，2分别代表H，W。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
@@ -149,7 +164,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>levelStartIndex（aclTensor*）</td>
       <td>输入</td>
-      <td>每张特征图的起始索引。</td>
+      <td>每张特征图的起始索引。对应公式中的`levelStartIndex`。</td>
       <td>shap为(num_levels)。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
@@ -159,7 +174,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>location（aclTensor*）</td>
       <td>输入</td>
-      <td>采样点位置tensor，存储每个采样点的坐标位置。</td>
+      <td>采样点位置tensor，存储每个采样点的坐标位置。对应公式中的`location`。</td>
       <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads, num_levels, num_points, 2)。其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -169,7 +184,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>attnWeight（aclTensor*）</td>
       <td>输入</td>
-      <td>采样点权重tensor。</td>
+      <td>采样点权重tensor。对应公式中的`attnWeight`。</td>
       <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads, num_levels, num_points)。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -179,7 +194,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     <tr>
       <td>output（aclTensor*）</td>
       <td>输出</td>
-      <td>算子计算输出</td>
+      <td>算子计算输出。对应公式中的`output`。</td>
       <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads * channels)。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -210,7 +225,6 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 
   <!-- npu="310p" id7 -->
   - <term>Atlas 推理系列产品</term>：不支持BFLOAT16数据类型。
-
   <!-- end id7 -->
 
 - **返回值**：
@@ -218,6 +232,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed"><colgroup>
   <col style="width: 250px">
   <col style="width: 130px">
@@ -273,6 +288,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 ## aclnnMultiScaleDeformableAttnFunction
 
 - **参数说明**：
+
   <table><thead>
     <tr>
       <th>参数名</th>

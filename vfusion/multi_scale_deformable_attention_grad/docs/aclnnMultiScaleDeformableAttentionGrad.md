@@ -24,8 +24,70 @@
 ## 功能说明
 
 - 算子功能：
+
   MultiScaleDeformableAttention正向算子功能主要通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。
 - 计算公式：
+
+    设$b \in [0, bs)$、$q \in [0, num\_queries)$、$h \in [0, num\_heads)$、$\ell \in [0, num\_levels)$、$p \in [0, num\_points)$、$c \in [0, channels)$，分别为batch、查询、头、特征图、采样点、通道的索引。第$\ell$层特征图的高和宽为$H_\ell$、$W_\ell$，即$\mathrm{spatialShape}[\ell] = (H_\ell, W_\ell)$；第$\ell$层特征图像素$(y, x)$在$\mathrm{value}$的$num\_keys$维上的展平索引为$k_\ell(y, x) = \mathrm{levelStartIndex}[\ell] + y \cdot W_\ell + x$。采样点$\mathrm{location}[b, q, h, \ell, p] = (u, v)$（最后一维第0、1个元素分别对应$x$、$y$方向）映射到像素坐标$x = u \cdot W_\ell - 0.5$、$y = v \cdot H_\ell - 0.5$；记$x_0 = \lfloor x \rfloor$、$x_1 = x_0 + 1$、$y_0 = \lfloor y \rfloor$、$y_1 = y_0 + 1$，$\alpha_x = x - x_0$、$\alpha_y = y - y_0$，双线性插值权重$w_{00} = (1-\alpha_y)(1-\alpha_x)$、$w_{10} = (1-\alpha_y)\alpha_x$、$w_{01} = \alpha_y(1-\alpha_x)$、$w_{11} = \alpha_y\alpha_x$，并记四邻点特征向量$V_{y_i, x_j} := \mathrm{value}[b,\; k_\ell(y_i, x_j),\; h,\; :]$（$i, j \in \{0, 1\}$，越界邻点按0处理）。
+
+    - 正向输出为：
+
+      $$
+      \mathrm{output}[b,\; q,\; h \times channels + c] =
+      \sum_{\ell=0}^{num\_levels-1} \sum_{p=0}^{num\_points-1}
+      \mathrm{attnWeight}[b, q, h, \ell, p] \cdot
+      \sum_{i,j \in \{0,1\}} w_{ij} \cdot V_{y_i, x_j}[c]
+      $$
+
+    - 反向算子根据梯度$\mathrm{gradOutput}$（shape为$(bs, num\_queries, num\_heads \times channels)$，最后一维按$h \times channels + c$排布）计算$\mathrm{value}$、$\mathrm{location}$、$\mathrm{attnWeight}$三个输入的梯度。记$\mathrm{gradOutput}$中head$h$的切片为$G_{b,q,h,c} := \mathrm{gradOutput}[b,\; q,\; h \times channels + c]$。
+      1. 按注意力权重展开：
+
+         $$
+         \tilde{G}_{b,q,h,\ell,p,c} = \mathrm{attnWeight}[b, q, h, \ell, p] \cdot G_{b,q,h,c}
+         $$
+
+      2. 计算$\mathrm{value}$的梯度$\mathrm{gradValue}$（shape与value一致）：对每个采样点$(b, q, h, \ell, p)$，将其展开梯度按双线性权重累加到四个邻点位置（对所有$q$、$p$累加，越界邻点不累加）：
+
+         $$
+         \begin{aligned}
+         \mathrm{gradValue}[b,\; k_\ell(y_0, x_0),\; h,\; c] &+= w_{00} \cdot \tilde{G}_{b,q,h,\ell,p,c}, \\
+         \mathrm{gradValue}[b,\; k_\ell(y_0, x_1),\; h,\; c] &+= w_{10} \cdot \tilde{G}_{b,q,h,\ell,p,c}, \\
+         \mathrm{gradValue}[b,\; k_\ell(y_1, x_0),\; h,\; c] &+= w_{01} \cdot \tilde{G}_{b,q,h,\ell,p,c}, \\
+         \mathrm{gradValue}[b,\; k_\ell(y_1, x_1),\; h,\; c] &+= w_{11} \cdot \tilde{G}_{b,q,h,\ell,p,c}
+         \end{aligned}
+         $$
+
+      3. 计算$\mathrm{attnWeight}$的梯度$\mathrm{gradAttnWeight}$（shape与attnWeight一致），为输出梯度与采样得到的特征向量的内积：
+
+         $$
+         \mathrm{gradAttnWeight}[b, q, h, \ell, p] =
+         \sum_{c} G_{b,q,h,c} \cdot
+         \left( \sum_{i,j \in \{0,1\}} w_{ij} \cdot V_{y_i, x_j}[c] \right)
+         $$
+
+      4. 计算$\mathrm{location}$的梯度$\mathrm{gradLocation}$（shape与location一致）。采样点像素坐标$(x, y)$的梯度由双线性插值的一阶偏导得到：
+
+         $$
+         \nabla x_{b,q,h,\ell,p} =
+         \sum_{c} \tilde{G}_{b,q,h,\ell,p,c} \,
+         \big[ (V_{y_0, x_1}[c] - V_{y_0, x_0}[c])(1-\alpha_y)
+             + (V_{y_1, x_1}[c] - V_{y_1, x_0}[c])\alpha_y \big]
+         $$
+
+         $$
+         \nabla y_{b,q,h,\ell,p} =
+         \sum_{c} \tilde{G}_{b,q,h,\ell,p,c} \,
+         \big[ (V_{y_1, x_0}[c] - V_{y_0, x_0}[c])(1-\alpha_x)
+             + (V_{y_1, x_1}[c] - V_{y_0, x_1}[c])\alpha_x \big]
+         $$
+
+      5. 由$x = u \cdot W_\ell - 0.5$、$y = v \cdot H_\ell - 0.5$，按链式法则缩放回归一化坐标的梯度，写入$\mathrm{gradLocation}$（最后一维第0、1个元素分别对应$x$、$y$方向，与location一致）：
+
+         $$
+         \mathrm{gradLocation}[b, q, h, \ell, p] = (\nabla u, \nabla v), \qquad
+         \nabla u = W_\ell \cdot \nabla x_{b,q,h,\ell,p}, \qquad
+         \nabla v = H_\ell \cdot \nabla y_{b,q,h,\ell,p}
+         $$
 
 ## 函数原型
 
@@ -57,6 +119,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
 ## aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize
 
 - **参数说明**：
+
   <table style="undefined;table-layout: fixed; width: 100%"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -82,91 +145,91 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
     <tr>
       <td>value</td>
       <td>输入</td>
-      <td>特征图的特征值。</td>
-      <td>-</td>
+      <td>特征图的特征值。对应公式中的`value`。</td>
+      <td>shape为(bs, num_keys, num_heads, channels)，其中：<ul><li>bs为batch size。</li><li>num_keys为特征图的大小。</li><li>num_heads为头的数量。</li><li>channels为特征图的维度。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_keys, num_heads, channels)<br>其中bs为batch size，num_keys为特征图的大小，num_heads为头的数量，channels为特征图的维度</td>
+      <td>4</td>
       <td>√</td>
     </tr>
     <tr>
       <td>spatialShape</td>
       <td>输入</td>
-      <td>存储每个尺度特征图的高和宽。</td>
-      <td>-</td>
+      <td>存储每个尺度特征图的高和宽。对应公式中的`spatialShape`。</td>
+      <td>shape为(num_levels, 2)，其中：<ul><li>num_levels为特征图的数量。</li><li>2分别代表H，W。</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>(num_levels, 2)<br>其中num_levels为特征图的数量，2分别代表H,W</td>
+      <td>2</td>
       <td>√</td>
     </tr>
     <tr>
       <td>levelStartIndex</td>
       <td>输入</td>
-      <td>每张特征图的起始索引。</td>
-      <td>-</td>
+      <td>每张特征图的起始索引。对应公式中的`levelStartIndex`。</td>
+      <td>shape为(num_levels)。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>(num_levels)</td>
+      <td>1</td>
       <td>√</td>
     </tr>
     <tr>
       <td>location</td>
       <td>输入</td>
-      <td>采样点位置tensor，存储每个采样点的坐标位置。</td>
-      <td>-</td>
+      <td>采样点位置tensor，存储每个采样点的坐标位置。对应公式中的`location`。</td>
+      <td>shape为(bs, num_queries, num_heads, num_levels, num_points, 2)，其中：<ul><li>num_queries为查询的数量。</li><li>num_points为采样点的数量。</li><li>2分别代表y，x。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads, num_levels, num_points, 2)<br>其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x</td>
+      <td>6</td>
       <td>√</td>
     </tr>
     <tr>
       <td>attnWeight</td>
       <td>输入</td>
-      <td>采样点权重tensor。</td>
-      <td>-</td>
+      <td>采样点权重tensor。对应公式中的`​attnWeight`。</td>
+      <td>shape为(bs, num_queries, num_heads, num_levels, num_points)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads, num_levels, num_points)</td>
+      <td>5</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>正向输出梯度，也是反向算子的初始梯度。</td>
-      <td>-</td>
+      <td>正向输出梯度，也是反向算子的初始梯度。对应公式中的`gradOutput`。</td>
+      <td>shape为(bs, num_queries, num_heads*channels)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads*channels)</td>
+      <td>3</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradValue</td>
       <td>输出</td>
-      <td>输入value对应的梯度。</td>
+      <td>输入value对应的梯度。对应公式中的`gradValue`。</td>
       <td>shape与value保持一致</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>4</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradLocation</td>
       <td>输出</td>
-      <td>输入location对应的梯度。</td>
+      <td>输入location对应的梯度。对应公式中的`gradLocation`。</td>
       <td>shape与location保持一致</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>6</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradAttnWeight</td>
       <td>输出</td>
-      <td>输入attnWeight对应的梯度。</td>
+      <td>输入attnWeight对应的梯度。对应公式中的`gradAttnWeight`。</td>
       <td>shape与attnWeight保持一致</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>5</td>
       <td>√</td>
     </tr>
     <tr>
@@ -190,11 +253,13 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
       <td>-</td>
     </tr>
   </tbody></table>
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed"><colgroup>
   <col style="width: 250px">
   <col style="width: 130px">
