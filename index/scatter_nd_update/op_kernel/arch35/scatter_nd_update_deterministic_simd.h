@@ -30,10 +30,12 @@ public:
         : ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
+    __aicore__ inline void ProcessSplitCol();
 
 private:
     __aicore__ inline void CopyInUpdate(LocalTensor<PARAMS_T>& updateLocal);
     __aicore__ inline void CopyOutUpdate(LocalTensor<PARAMS_T>& updateLocal, uint64_t varGmOffSet);
+    __aicore__ inline void InitSplitCol(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
 
 private:
     TYPE_T updateOffSet = 0;
@@ -42,13 +44,58 @@ private:
     TYPE_T updateLoopSize = 0;
     int32_t updateCount = 0;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 2> inQueue_;
+
+    int64_t colBlockLoop_ = 0;
+    int64_t colBlockTail_ = 0;
+    int64_t colOffset_ = 0;
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(
     GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
-    this->InitBase(x, indices, updates, y, workspace);
+    if (this->tiling_.isPcieThrough == 1) {
+        InitSplitCol(x, indices, updates, y, workspace);
+    } else {
+        this->InitBase(x, indices, updates, y, workspace);
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitSplitCol(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+{
+    this->blockIdx = GetBlockIdx();
+    this->indicesUbFactor = this->tiling_.indicesUbFactor;
+    this->rankSize_ = this->tiling_.rankSize;
+
+    this->idxGm.SetGlobalBuffer((__gm__ INDICES_T*)indices);
+    this->updateGm.SetGlobalBuffer((__gm__ PARAMS_T*)updates);
+    this->outputGm.SetGlobalBuffer((__gm__ PARAMS_T*)y);
+
+    if (this->blockIdx >= this->tiling_.usedCoreNumForCol) {
+        return;
+    }
+
+    int64_t colCount = (this->blockIdx == this->tiling_.usedCoreNumForCol - 1) ? this->tiling_.tailBlockColNum :
+                                                                                 this->tiling_.normBlockColNum;
+    int64_t colUbFactor = this->tiling_.updateColUbFactor;
+    colBlockLoop_ = Ops::Base::CeilDiv(colCount, colUbFactor);
+    colBlockTail_ = colCount - colUbFactor * (colBlockLoop_ - 1);
+    colOffset_ = this->blockIdx * this->tiling_.normBlockColNum;
+
+    this->pipe_.InitBuffer(
+        this->indicesQue_, 1,
+        Ops::Base::CeilAlign(this->indicesUbFactor * this->rankSize_ * sizeof(INDICES_T), UB_AGLIN_VALUE));
+    this->pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(INDICES_T));
+    this->pipe_.InitBuffer(this->outOfstBuf_,
+                           Ops::Base::CeilAlign(this->indicesUbFactor * sizeof(OFFSET_T), UB_AGLIN_VALUE));
+    this->pipe_.InitBuffer(inQueue_, 2, Ops::Base::CeilAlign(colUbFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
+
+    LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
+    for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {
+        strideLocal(i) = static_cast<INDICES_T>(this->tiling_.strideList[i]);
+    }
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
@@ -56,6 +103,10 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
 {
     // if input is empty, return directly
     if (this->tiling_.sliceSize == 0) {
+        return;
+    }
+    if (this->tiling_.isPcieThrough == 1) {
+        ProcessSplitCol();
         return;
     }
     SyncAll();
@@ -106,6 +157,64 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
             updateLocal = inQueue_.DeQue<PARAMS_T>();
             CopyOutUpdate(updateLocal, varGmOffSet);
             inQueue_.template FreeTensor(updateLocal);
+        }
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ProcessSplitCol()
+{
+    if (this->blockIdx >= this->tiling_.usedCoreNumForCol) {
+        return;
+    }
+
+    int64_t colUbFactor = this->tiling_.updateColUbFactor;
+    int64_t varFullDimSize = this->tiling_.outputStorageShapeSize;
+    uint32_t indicesCount = static_cast<uint32_t>(this->indicesUbFactor);
+
+    // 每个核均处理所有的索引，不同之处在于每个核处理的update列不同.
+    for (uint64_t idx = 0; idx < this->tiling_.colIndicesLoopSize; idx++) {
+        if (idx == this->tiling_.colIndicesLoopSize - 1) {
+            indicesCount = static_cast<uint32_t>(this->tiling_.colIndicesTailNum);
+        }
+        uint64_t indicesGmOffset = idx * this->indicesUbFactor;
+        this->CopyInIndices(indicesGmOffset * this->rankSize_, indicesCount * this->rankSize_);
+
+        LocalTensor<INDICES_T> indicesLocal = this->indicesQue_.template DeQue<INDICES_T>();
+        LocalTensor<OFFSET_T> flatOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
+        event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        this->ComputeOutOfset(indicesLocal, flatOfstLocal, static_cast<int32_t>(indicesCount),
+                              static_cast<int32_t>(this->rankSize_));
+        this->indicesQue_.FreeTensor(indicesLocal);
+
+        event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventIdVToS);
+        WaitFlag<HardEvent::V_S>(eventIdVToS);
+
+        for (uint32_t i = 0; i < indicesCount; i++) {
+            OFFSET_T indicesValue = flatOfstLocal.GetValue(i);
+            if (indicesValue < 0 || indicesValue >= varFullDimSize) {
+                continue;
+            }
+
+            uint64_t updatesGmOffset = (indicesGmOffset + i) * static_cast<uint64_t>(this->tiling_.sliceSize) +
+                                       colOffset_;
+            uint64_t varGmOffset = static_cast<uint64_t>(indicesValue) + colOffset_;
+            for (int64_t j = 0; j < colBlockLoop_; j++) {
+                this->updateCount = (j == colBlockLoop_ - 1) ? static_cast<int32_t>(colBlockTail_) :
+                                                               static_cast<int32_t>(colUbFactor);
+                this->updateOffSet = updatesGmOffset + j * colUbFactor;
+                uint64_t varOutOffset = varGmOffset + j * colUbFactor;
+
+                LocalTensor<PARAMS_T> updateLocal = inQueue_.template AllocTensor<PARAMS_T>();
+                CopyInUpdate(updateLocal);
+                inQueue_.EnQue(updateLocal);
+                updateLocal = inQueue_.DeQue<PARAMS_T>();
+                CopyOutUpdate(updateLocal, varOutOffset);
+                inQueue_.template FreeTensor(updateLocal);
+            }
         }
     }
 }

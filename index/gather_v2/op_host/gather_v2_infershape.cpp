@@ -15,6 +15,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/const_util.h"
+#include "version/metadef_version.h"
 #include <string>
 #include <sstream>
 
@@ -214,6 +215,12 @@ static ge::graphStatus InferShapeForGather(gert::InferShapeContext* context)
     return GatherCommonInfer(context, x_shape, indies_shape, out_shape, gatherinfo);
 }
 
-IMPL_OP_INFERSHAPE(GatherV2).InferShape(InferShapeForGatherV2).InputsDataDependency({INPUT_IDX_AXIS});
+IMPL_OP_INFERSHAPE(GatherV2)
+    .InferShape(InferShapeForGatherV2)
+    .InputsDataDependency({INPUT_IDX_AXIS})
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90200000
+    .SetSupportPcieThrough()
+#endif
+    ;
 IMPL_OP_INFERSHAPE(Gather).InferShape(InferShapeForGather);
 } // namespace ops

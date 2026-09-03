@@ -668,6 +668,11 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
         return ge::GRAPH_SUCCESS;
     }
 
+    bool isPcieThrough = ops::IsPcieThrough(context_);
+    if (isPcieThrough && isDeterministic_) {
+        isDeterministicSplitCol_ = 1;
+    }
+
     if (isDeterministic_) {
         DoDeterministicTiling();
         if (!isSimt_) {
@@ -678,7 +683,7 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
     }
 
     CalcMask();
-    if (isMask_ == 1UL) {
+    if (!isPcieThrough && isMask_ == 1UL) {
         DoMaskSimdTiling();
         SetTilingData();
         return ge::GRAPH_SUCCESS;
@@ -686,6 +691,11 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
 
     isSort_ = indicesSize_ > varShape_[0] ? 1 : 0;
     isSort_ = indicesSize_ >= MIN_SIZE_SORT_INDICES_64 ? isSort_ : 0;
+
+    if (isPcieThrough) {
+        isSimt_ = false;
+        isSort_ = 0;
+    }
 
     if (!isSimt_) {
         templateKey_ = UPDATES_IN_SIMD;

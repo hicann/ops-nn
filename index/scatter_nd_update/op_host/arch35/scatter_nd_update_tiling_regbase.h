@@ -17,6 +17,7 @@
 #define SCATTER_ND_UPDATE_TILING_H_
 
 #include "op_host/tiling_base.h"
+#include "op_host/pcie_through_util.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "index/scatter_nd_update/op_kernel/arch35/scatter_nd_update_struct.h"
@@ -62,6 +63,9 @@ protected:
     void CalcDeterministicUpdateSplit(int64_t ubBlock);
     void CalcDeterministicIndicesSplit(int64_t ubBlock);
     void CalculateMask();
+    void DoOpTilingForDeterministicSplitCol();
+    void CalcSplitColCoreSplit();
+    void CalcSplitColUbFactor();
     uint64_t GetTilingKey() const override;
     void ComputeCoreSplitAfterAxis();
     void InitFactors(int64_t halfUbSize, int64_t indicesSize, int64_t alignNum);
@@ -161,6 +165,15 @@ private:
     int64_t maskTailBlockLen_ = 0;
     int64_t isDeterminSimt_ = 0;
     int64_t needInt64_ = 0;
+
+    /* for pcie through splitCol (deterministic simd) */
+    int64_t isPcieThrough_ = 0;
+    int64_t usedCoreNumForCol_ = 0;
+    int64_t normBlockColNum_ = 0;
+    int64_t tailBlockColNum_ = 0;
+    int64_t updateColUbFactor_ = 0;
+    int64_t colIndicesLoopSize_ = 0;
+    int64_t colIndicesTailNum_ = 0;
 
     const char* opName = "ScatterNdUpdate";
 };

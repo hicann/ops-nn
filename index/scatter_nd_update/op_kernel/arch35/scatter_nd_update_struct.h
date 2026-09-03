@@ -79,5 +79,14 @@ public:
     int64_t tailBlockLoop = 0;
     int64_t normBlockTail = 0;
     int64_t tailBlockTail = 0;
+
+    /* for pcie through splitCol (deterministic simd) */
+    int64_t isPcieThrough = 0;
+    int64_t usedCoreNumForCol = 0;
+    int64_t normBlockColNum = 0;
+    int64_t tailBlockColNum = 0;
+    int64_t updateColUbFactor = 0;
+    int64_t colIndicesLoopSize = 0;
+    int64_t colIndicesTailNum = 0;
 };
 #endif

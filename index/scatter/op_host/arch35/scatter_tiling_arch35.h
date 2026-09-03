@@ -20,6 +20,7 @@
 #include "exe_graph/runtime/kernel_run_context.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"
+#include "op_host/pcie_through_util.h"
 #include "register/op_impl_registry.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "register/tilingdata_base.h"

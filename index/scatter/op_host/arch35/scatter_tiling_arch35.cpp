@@ -533,7 +533,9 @@ ge::graphStatus ScatterTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
 
+    bool isPcieThrough = ops::IsPcieThrough(context_);
     if (isDeterministic_) {
+        // 确定性场景走 ScatterDeterministic（纯 DataCopyPad，PCIe安全）
         if (DoDeterministicTiling() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
@@ -541,8 +543,9 @@ ge::graphStatus ScatterTiling::DoOpTiling()
         return ge::GRAPH_SUCCESS;
     }
 
+    // 非确定性场景：PCIe through 时强制走 ScatterSimd（纯 SIMD，PCIe安全）
     int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
-    if (srcStride * dtypeSize > MIN_FACTOR) {
+    if (isPcieThrough || srcStride * dtypeSize > MIN_FACTOR) {
         indicesUbSize = INDICES_SIZE;
         int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
         int64_t maxUpdatesUbSize = Ops::Base::FloorAlign((ubSize - SIMD_RESERVED_SIZE - INDICES_SIZE) / DB_BUFFER,
@@ -550,7 +553,8 @@ ge::graphStatus ScatterTiling::DoOpTiling()
         loopLength = maxUpdatesUbSize / dtypeSize;
         simdTemp = SIMD_TEMP;
         int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
-        if (boNum < aivCoreNum && srcStride > loopLength && updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
+        if (!isPcieThrough && boNum < aivCoreNum && srcStride > loopLength &&
+            updatesNewShape[DIM3] * dtypeSize > SIMD_PERF_SIZE) {
             simdTemp = SIMD_PERF_TEMP;
         }
     }

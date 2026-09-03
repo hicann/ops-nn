@@ -610,6 +610,11 @@ ge::graphStatus Gatherv2TilingBase::DoOpTiling()
         tilingMode_ = TILING_EMPTY;
         return CalcEmptyCoreElement();
     }
+    if (ops::IsPcieThrough(context_)) {
+        tilingMode_ = TILING_SIMD;
+        CalcSimdTiling();
+        return ge::GRAPH_SUCCESS;
+    }
     if (IsSimdTwoDim()) {
         tilingMode_ = TILING_SIMD_TWO_DIM;
         return SimdTwoDimTiling();

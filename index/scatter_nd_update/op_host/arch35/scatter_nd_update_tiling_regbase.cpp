@@ -60,6 +60,9 @@ static constexpr float PARTIAL_UB = 0.1;
 static constexpr int64_t MIN_THREAD_NUM = 128;
 static constexpr int64_t MIN_SIZE_SIMD_DETERMINSTIC = 128;
 static constexpr int64_t MIN_INDICES_PER_CORE_FOR_SIMD_SORT = 64;
+static constexpr int64_t UB_AGLIN_VALUE = 32;
+static constexpr int64_t DETERMINISTIC_MIN_COL = 128;
+static constexpr int64_t MIN_INDICES_SIZE_FOR_COL = 1024;
 
 static const std::set<ge::DataType> DETERMIN_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16};
 
@@ -852,8 +855,70 @@ void ScatterNdUpdateTiling::CalcDeterministicIndicesSplit(int64_t ubBlock)
     tailBlockTail_ = tailCoreHandleIdx_ - (tailBlockLoop_ - 1) * indicesUbFactor_;
 }
 
+void ScatterNdUpdateTiling::DoOpTilingForDeterministicSplitCol()
+{
+    isDeterminSimt_ = 0;
+    CalcSplitColCoreSplit();
+    CalcSplitColUbFactor();
+}
+
+void ScatterNdUpdateTiling::CalcSplitColCoreSplit()
+{
+    // afterAxis_ 按列分核
+    int64_t minColPerCore = static_cast<int64_t>(DETERMINISTIC_MIN_COL) / varTypeSize_;
+    usedCoreNumForCol_ = std::min(Ops::Base::CeilDiv(afterAxis_, minColPerCore), totalCoreNum_);
+    normBlockColNum_ = Ops::Base::CeilDiv(afterAxis_, usedCoreNumForCol_);
+    usedCoreNumForCol_ = Ops::Base::CeilDiv(afterAxis_, normBlockColNum_);
+    tailBlockColNum_ = afterAxis_ - normBlockColNum_ * (usedCoreNumForCol_ - 1);
+}
+
+void ScatterNdUpdateTiling::CalcSplitColUbFactor()
+{
+    int64_t ubSize = static_cast<int64_t>(ubSize_ - RESERVE_SIZE);
+    int64_t strideBytes = MAX_SHAPE_RANK * indicesTypeSize_;
+
+    // kernel inQueue_开启了double buffer，每个buffer独立CeilAlign向上对齐, tiling必须用 2 * CeilAlign(single, 32)
+    int64_t normColBytes = Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
+    int64_t updateUbBytes = 2 * Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
+
+    // 一个索引的ub空间占用：indicesQue + outOfst各自一个索引占用
+    int64_t oneIndicesQueBytes = Ops::Base::CeilAlign(rankSize_ * indicesTypeSize_, UB_AGLIN_VALUE);
+    int64_t oneOutOfstBytes = Ops::Base::CeilAlign(outOfSetTypeSize_, UB_AGLIN_VALUE);
+    int64_t oneIndicesBytes = oneIndicesQueBytes + oneOutOfstBytes;
+
+    if ((updateUbBytes + oneIndicesBytes + strideBytes) > ubSize) {
+        // 列数据放不下UB：indices限制在1k，update占剩余空间
+        int64_t indicesBytes = std::min(MIN_INDICES_SIZE_FOR_COL, indicesAxis_ * indicesTypeSize_);
+        indicesUbFactor_ = Ops::Base::CeilAlign(indicesBytes, UB_AGLIN_VALUE) / indicesTypeSize_;
+        int64_t indicesQueBytes = Ops::Base::CeilAlign(indicesUbFactor_ * rankSize_ * indicesTypeSize_, UB_AGLIN_VALUE);
+        int64_t outOfstBytes = Ops::Base::CeilAlign(indicesUbFactor_ * outOfSetTypeSize_, UB_AGLIN_VALUE);
+        int64_t remainingUb = ubSize - strideBytes - indicesQueBytes - outOfstBytes;
+        // kernel inQueue_每个buffer独立CeilAlign向上对齐，需按单buffer对齐后分配
+        int64_t perBufBytes = Ops::Base::FloorAlign(remainingUb / 2, UB_AGLIN_VALUE);
+        updateColUbFactor_ = perBufBytes / varTypeSize_;
+        updateColUbFactor_ = std::min(updateColUbFactor_, normColBytes / varTypeSize_);
+    } else {
+        // 列数据放得下UB：update一次搬完（double buffer），indices占剩余空间
+        updateColUbFactor_ = normBlockColNum_;
+        int64_t remainingUb = ubSize - strideBytes - updateUbBytes;
+        // kernel对indicesQue和outOfstBuf分别CeilAlign，最多多出 2*(32-1)=62B padding
+        int64_t perIndexBytes = rankSize_ * indicesTypeSize_ + outOfSetTypeSize_;
+        int64_t alignPadding = 2 * (UB_AGLIN_VALUE - 1);
+        int64_t availForIndices = remainingUb - alignPadding;
+        indicesUbFactor_ = std::max<int64_t>(1, Ops::Base::FloorAlign(availForIndices, UB_AGLIN_VALUE) / perIndexBytes);
+        indicesUbFactor_ = std::min(indicesUbFactor_, indicesAxis_);
+    }
+
+    colIndicesLoopSize_ = Ops::Base::CeilDiv(indicesAxis_, indicesUbFactor_);
+    colIndicesTailNum_ = indicesAxis_ - (colIndicesLoopSize_ - 1) * indicesUbFactor_;
+}
+
 void ScatterNdUpdateTiling::DoOpTilingForDeterministic()
 {
+    if (isPcieThrough_ == 1) {
+        DoOpTilingForDeterministicSplitCol();
+        return;
+    }
     CalcDeterministicCoreSplit();
 
     int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
@@ -881,6 +946,14 @@ ge::graphStatus ScatterNdUpdateTiling::DoOpTiling()
     } else {
         outOfSetTypeSize_ = sizeof(int64_t);
         outOfSetDtype_ = ge::DataType::DT_INT64;
+    }
+
+    if (ops::IsPcieThrough(context_)) {
+        isPcieThrough_ = 1;
+        if (isDeterminstic_ != 1) {
+            isSimdNonDeterminstic_ = 1;
+            isSimtWithSort_ = 0;
+        }
     }
 
     if (isSimdNonDeterminstic_ == 1) {
@@ -928,7 +1001,7 @@ uint64_t ScatterNdUpdateTiling::GetTilingKey() const
 ge::graphStatus ScatterNdUpdateTiling::GetWorkspaceSize()
 {
     workspaceSize = RESERVED_WORKSPACE_SIZE;
-    if (isDeterminstic_ == 1) {
+    if (isDeterminstic_ == 1 && isPcieThrough_ != 1) {
         if (indiceShapeSize < UINT32_MAX && updateShapeSize < UINT32_MAX && outputStorageShapeSize_ < INT32_MAX) {
             workspaceSize = workspaceSize + (varStorageInAxis_ + indicesAxis_ + 1) * sizeof(int32_t);
         } else {
@@ -1050,6 +1123,14 @@ void ScatterNdUpdateTiling::SetTilingData()
     tilingData->tailBlockLoop = tailBlockLoop_;
     tilingData->normBlockTail = normBlockTail_;
     tilingData->tailBlockTail = tailBlockTail_;
+
+    tilingData->isPcieThrough = isPcieThrough_;
+    tilingData->usedCoreNumForCol = usedCoreNumForCol_;
+    tilingData->normBlockColNum = normBlockColNum_;
+    tilingData->tailBlockColNum = tailBlockColNum_;
+    tilingData->updateColUbFactor = updateColUbFactor_;
+    tilingData->colIndicesLoopSize = colIndicesLoopSize_;
+    tilingData->colIndicesTailNum = colIndicesTailNum_;
 }
 
 void ScatterNdUpdateTiling::DumpTilingInfo()
@@ -1084,6 +1165,13 @@ void ScatterNdUpdateTiling::DumpTilingInfo()
     info << "ubRowFactor: " << ubRowFactor_ << std::endl;
     info << "ubQuantaIndxFactor: " << ubQuantaIndxFactor_ << std::endl;
     info << "eachCoreAfterAxisCount: " << eachCoreAfterAxisCount_ << std::endl;
+    info << "isPcieThrough: " << isPcieThrough_ << std::endl;
+    info << "usedCoreNumForCol: " << usedCoreNumForCol_ << std::endl;
+    info << "normBlockColNum: " << normBlockColNum_ << std::endl;
+    info << "tailBlockColNum: " << tailBlockColNum_ << std::endl;
+    info << "updateColUbFactor: " << updateColUbFactor_ << std::endl;
+    info << "colIndicesLoopSize: " << colIndicesLoopSize_ << std::endl;
+    info << "colIndicesTailNum: " << colIndicesTailNum_ << std::endl;
     OP_LOGI(opName, "Tiling info is: %s", info.str().c_str());
 }
 

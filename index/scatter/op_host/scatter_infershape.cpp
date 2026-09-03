@@ -16,6 +16,7 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/shape_util.h"
+#include "version/metadef_version.h"
 
 using namespace ge;
 using namespace Ops::Base;
@@ -48,5 +49,10 @@ static ge::graphStatus InferShape4Scatter(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 // register infershape for Scatter op
-IMPL_OP_INFERSHAPE(Scatter).InferShape(InferShape4Scatter);
+IMPL_OP_INFERSHAPE(Scatter)
+    .InferShape(InferShape4Scatter)
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90200000
+    .SetSupportPcieThrough()
+#endif
+    ;
 } // namespace ops
