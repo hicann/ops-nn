@@ -21,7 +21,6 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(co
                                                                               aclOpExecutor* executor)
 {
     L0_DFX(ModulateGrad, grad_output, input, scale, shift);
-
     auto grad_inputShape = grad_output->GetViewShape();
     const aclTensor* grad_scale = nullptr;
     const aclTensor* grad_shift = nullptr;
@@ -34,8 +33,12 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(co
         grad_shift = executor->AllocTensor(grad_shiftShape, shift->GetDataType());
     }
     const aclTensor* grad_input = executor->AllocTensor(grad_inputShape, grad_output->GetDataType());
-    ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad, OP_INPUT(grad_output, input, scale, shift),
-                                OP_OUTPUT(grad_input, grad_scale, grad_shift));
+    const aclTensor* launcher_scale = scale != nullptr ? scale : grad_input;
+    const aclTensor* launcher_shift = shift != nullptr ? shift : grad_input;
+    const aclTensor* launcher_grad_scale = grad_scale != nullptr ? grad_scale : grad_input;
+    const aclTensor* launcher_grad_shift = grad_shift != nullptr ? grad_shift : grad_input;
+    ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad, OP_INPUT(grad_output, input, launcher_scale, launcher_shift),
+                                OP_OUTPUT(grad_input, launcher_grad_scale, launcher_grad_shift));
     return std::make_tuple(grad_input, grad_scale, grad_shift);
 }
 } // namespace l0op

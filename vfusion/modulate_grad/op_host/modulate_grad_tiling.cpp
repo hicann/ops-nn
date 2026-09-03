@@ -107,16 +107,15 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     constexpr uint32_t SHIFT_INDEX = 3;
     uint32_t has_scale = 0;
     uint32_t has_shift = 0;
-    context->SetTilingKey(0);
     ModulateGradTiling tilingData;
     ModulateGradTilingData tiling;
     const gert::StorageShape* input_shape = context->GetInputShape(INPUT_INDEX);
     auto scale_input = context->GetOptionalInputShape(SCALE_INDEX);
     auto shift_input = context->GetOptionalInputShape(SHIFT_INDEX);
-    if (scale_input) {
+    if (scale_input != nullptr && scale_input->GetStorageShape().GetDimNum() > 0) {
         has_scale = 1;
     }
-    if (shift_input) {
+    if (shift_input != nullptr && shift_input->GetStorageShape().GetDimNum() > 0) {
         has_shift = 1;
     }
     const uint64_t B = input_shape->GetStorageShape().GetDim(0);

@@ -89,6 +89,44 @@ static bool CheckDtypeValid(const aclTensor* grad_output, const aclTensor* input
     return true;
 }
 
+static bool CheckDtypeConsistency(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
+                                  const aclTensor* shift, const aclTensor* grad_input, const aclTensor* grad_scale,
+                                  const aclTensor* grad_shift)
+{
+    auto refDtype = grad_output->GetDataType();
+    if (input->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(input->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    if (CheckNotNullForScaleAndShift(scale) && scale->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(scale->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    if (CheckNotNullForScaleAndShift(shift) && shift->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shift dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(shift->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    if (grad_input->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_input dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(grad_input->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    if (CheckNotNullForScaleAndShift(grad_scale) && grad_scale->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_scale dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(grad_scale->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    if (CheckNotNullForScaleAndShift(grad_shift) && grad_shift->GetDataType() != refDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad_shift dtype %d does not match grad_output dtype %d",
+                static_cast<int32_t>(grad_shift->GetDataType()), static_cast<int32_t>(refDtype));
+        return false;
+    }
+    return true;
+}
+
 static bool CheckMaxDimension(const aclTensor* grad_output, const aclTensor* input, const aclTensor* scale,
                               const aclTensor* shift)
 {
@@ -100,9 +138,8 @@ static bool CheckMaxDimension(const aclTensor* grad_output, const aclTensor* inp
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of self must be 3");
         return false;
     }
-    bool scaleNotEmpty = CheckNotNullForScaleAndShift(scale) && !scale->IsEmpty();
-    bool shiftNotEmpty = CheckNotNullForScaleAndShift(shift) && !shift->IsEmpty();
-    if ((grad_output->IsEmpty() || input->IsEmpty()) && (scaleNotEmpty || shiftNotEmpty)) {
+    if ((grad_output->IsEmpty() || input->IsEmpty()) && ((CheckNotNullForScaleAndShift(scale) && !scale->IsEmpty()) ||
+                                                         (CheckNotNullForScaleAndShift(shift) && !shift->IsEmpty()))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when grad_output or input is empty, scale and shift must be empty");
         return false;
     }
@@ -118,7 +155,9 @@ static bool CheckDimension(const aclTensor* grad_output, const aclTensor* input,
     if (input->GetStorageFormat() != Format::FORMAT_ND || grad_output->GetStorageFormat() != Format::FORMAT_ND ||
         (CheckNotNullForScaleAndShift(scale) && scale->GetStorageFormat() != Format::FORMAT_ND) ||
         (CheckNotNullForScaleAndShift(shift) && shift->GetStorageFormat() != Format::FORMAT_ND)) {
-        OP_LOGW("Format only support ND");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, got input format %d, grad_output format %d",
+                static_cast<int32_t>(input->GetStorageFormat()), static_cast<int32_t>(grad_output->GetStorageFormat()));
+        return false;
     }
     if (CheckNotNullForScaleAndShift(scale)) {
         auto scale_Shape = scale->GetViewShape();
@@ -156,9 +195,12 @@ static aclnnStatus CheckParams(const aclTensor* grad_output, const aclTensor* in
     // 2.检查数据类型是否在支持的范围内
     CHECK_RET(CheckDtypeValid(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift),
               ACLNN_ERR_PARAM_INVALID);
-    // 3.检查维度是否超过8维 在这里不会超过8维
+    // 3.检查数据类型一致性
+    CHECK_RET(CheckDtypeConsistency(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift),
+              ACLNN_ERR_PARAM_INVALID);
+    // 4.检查维度是否超过8维 在这里不会超过8维
     CHECK_RET(CheckMaxDimension(grad_output, input, scale, shift), ACLNN_ERR_PARAM_INVALID);
-    // 4.检查维度是否匹配
+    // 5.检查维度是否匹配
     CHECK_RET(CheckDimension(grad_output, input, scale, shift), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;

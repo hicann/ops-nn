@@ -51,7 +51,7 @@ private:
     uint32_t splitByD_, coresPerB_, formerNum_, formerLength_;
     uint32_t tailNum_, tailLength_, maxRowsPerTile_;
 
-    //当前核心处理的相关参数
+    // 当前核心处理的相关参数
     uint32_t coreId_, b_index_, d_start_, totalD_, totalcutD_;
     uint32_t currentL_, currentD_, len_, num, cores_;
     // B较大时分块参数
@@ -75,8 +75,8 @@ public:
     __aicore__ inline void Init(const ModulateGradTiling& tiling, GM_ADDR inputGm, GM_ADDR gradOutputGm,
                                 GM_ADDR gradInputGm, GM_ADDR scaleGm, GM_ADDR gradScaleGm, GM_ADDR gradShiftGm)
     {
-        InitGlobalTensors(inputGm, gradOutputGm, gradInputGm, scaleGm, gradScaleGm, gradShiftGm);
         InitTilingParams(tiling);
+        InitGlobalTensors(inputGm, gradOutputGm, gradInputGm, scaleGm, gradScaleGm, gradShiftGm);
         InitCoreSpecificParams(tiling);
         InitTileParams();
         InitPipeBuffers();
@@ -93,22 +93,29 @@ public:
         PipeBarrier<PIPE_ALL>();
         CopyInGradOutput(allOffset, LenD, lenD);
         PipeBarrier<PIPE_ALL>();
-        CopyInScale(scaleOffset, lenD);
+        if (has_scale_) {
+            CopyInScale(scaleOffset, lenD);
+        }
     }
 
     __aicore__ inline void Compute(uint32_t tileLIndex)
     {
         LocalTensor<T> computeinputLocal = inputQueue_.DeQue<T>();
         LocalTensor<T> computegradOutputLocal = gradOutputQueue_.DeQue<T>();
-        LocalTensor<T> computescaleLocal = scaleQueue_.DeQue<T>();
+        LocalTensor<T> computescaleLocal;
+        if (has_scale_) {
+            computescaleLocal = scaleQueue_.DeQue<T>();
+        }
         LocalTensor<T> computegradInputLocal = gradInputQueue_.AllocTensor<T>();
-        computegradInputLocal.SetSize(currentL_ * alignedRowBytes);
+        computegradInputLocal.SetSize(currentL_ * currentD_);
 
         ComputeGradients(computeinputLocal, computegradOutputLocal, computescaleLocal, computegradInputLocal);
         PipeBarrier<PIPE_ALL>();
         inputQueue_.FreeTensor(computeinputLocal);
         gradOutputQueue_.FreeTensor(computegradOutputLocal);
-        scaleQueue_.FreeTensor(computescaleLocal);
+        if (has_scale_) {
+            scaleQueue_.FreeTensor(computescaleLocal);
+        }
         PipeBarrier<PIPE_ALL>();
     }
     __aicore__ inline void CopyOut(uint32_t tileIndex)
@@ -149,11 +156,16 @@ private:
     {
         inputGm_.SetGlobalBuffer((__gm__ float*)inputGm);
         gradOutputGm_.SetGlobalBuffer((__gm__ float*)gradOutputGm);
-        scaleGm_.SetGlobalBuffer((__gm__ float*)scaleGm);
-
+        if (has_scale_) {
+            scaleGm_.SetGlobalBuffer((__gm__ float*)scaleGm);
+        }
         gradInputGm_.SetGlobalBuffer((__gm__ float*)gradInputGm);
-        gradShiftGm_.SetGlobalBuffer((__gm__ float*)gradShiftGm);
-        gradScaleGm_.SetGlobalBuffer((__gm__ float*)gradScaleGm);
+        if (has_scale_) {
+            gradScaleGm_.SetGlobalBuffer((__gm__ float*)gradScaleGm);
+        }
+        if (has_shift_) {
+            gradShiftGm_.SetGlobalBuffer((__gm__ float*)gradShiftGm);
+        }
     }
 
     __aicore__ inline void UpdatetileParamsDsize()
@@ -334,11 +346,11 @@ private:
     __aicore__ inline void CopyInScale(uint64_t scaleOffset, uint32_t lenD)
     {
         LocalTensor<T> scaleLocal = scaleQueue_.AllocTensor<T>();
-        DataCopyExtParams scaleParams{static_cast<uint16_t>(1), static_cast<uint32_t>(rowBytes), 0, 0, 0};
-
-        DataCopyPadExtParams<T> scalePadParams{true, 0, rowPadElements, static_cast<T>(0)};
-
-        DataCopyPad(scaleLocal, scaleGm_[scaleOffset], scaleParams, scalePadParams);
+        if (has_scale_) {
+            DataCopyExtParams scaleParams{static_cast<uint16_t>(1), static_cast<uint32_t>(rowBytes), 0, 0, 0};
+            DataCopyPadExtParams<T> scalePadParams{true, 0, rowPadElements, static_cast<T>(0)};
+            DataCopyPad(scaleLocal, scaleGm_[scaleOffset], scaleParams, scalePadParams);
+        }
         scaleQueue_.EnQue(scaleLocal);
         PipeBarrier<PIPE_ALL>();
     }
