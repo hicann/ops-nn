@@ -91,7 +91,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
     int64_t mxscaleDim1 = mxscaleShape.GetDim(1);
     int64_t mxscaleDim2 = mxscaleShape.GetDim(NUM_TWO);
     int64_t mxscaleDim0Count = (xDim0 / (blocksize * NUM_TWO) + groupIndexDim0);
-    OP_CHECK(mxscaleDim2 == NUM_TWO, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale dim2 is %ld, should be 2.", mxscaleDim1),
+    OP_CHECK(mxscaleDim2 == NUM_TWO, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale dim2 is %ld, should be 2.", mxscaleDim2),
              return false);
     OP_CHECK(
         xDim1 == mxscaleDim1,
@@ -126,7 +126,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg only support '0', '1' or '2' now, get: %ld", scaleAlg),
                  return false);
         OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].", dstType,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) must be the same as y dtype[%s].", dstType,
                          op::ToString(static_cast<op::DataType>(dstType)).GetString(),
                          op::ToString(y->GetDataType()).GetString()),
                  return false);

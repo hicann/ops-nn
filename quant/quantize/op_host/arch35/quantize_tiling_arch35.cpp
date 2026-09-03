@@ -377,7 +377,7 @@ ge::graphStatus Quantize::GetOpParam()
 
     const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(ATTR_AXIS_INDEX);
     if (nullptr == axisPtr) {
-        OP_LOGD(context_->GetNodeName(), "attr[axis] got unsuccessful, use default value %d", 1);
+        OP_LOGD(context_->GetNodeName(), "Failed to get attr[axis], use default value %d", 1);
     }
     // default 1
     axis_ = (nullptr == axisPtr) ? 1 : (*axisPtr);

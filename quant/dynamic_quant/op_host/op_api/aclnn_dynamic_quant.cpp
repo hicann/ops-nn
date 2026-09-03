@@ -224,12 +224,12 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
                     dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastToSecondDimInput,
                     ACLNN_ERR_PARAM_INVALID,
                     "If quantMode is perchannel, the second to last dim[%ld] of x and the last dim[%ld] of "
-                    "smooth_scales shoule be equal.",
+                    "smooth_scales should be equal.",
                     xLastToSecondDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
             } else {
                 CHECK_COND(dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
                            ACLNN_ERR_PARAM_INVALID,
-                           "The last dim[%ld] of x and the dim[%ld] of smooth_scales shoule be equal.", xLastDimInput,
+                           "The last dim[%ld] of x and the dim[%ld] of smooth_scales should be equal.", xLastDimInput,
                            dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
             }
         }

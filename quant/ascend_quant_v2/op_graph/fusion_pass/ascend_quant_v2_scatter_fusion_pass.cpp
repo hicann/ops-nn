@@ -243,7 +243,7 @@ static bool IsTargetPlatform()
     bool is_platform950 = (soc == "Ascend950");
     OPS_LOG_D(PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
     if (!is_platform950) {
-        OPS_LOG_D(PASS_NAME.c_str(), "Platform is not support, only work on Ascend950.");
+        OPS_LOG_D(PASS_NAME.c_str(), "Platform is not supported, this pass only works on Ascend950.");
         return false;
     }
     return true;

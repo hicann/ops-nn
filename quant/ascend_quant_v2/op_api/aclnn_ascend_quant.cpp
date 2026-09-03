@@ -181,7 +181,7 @@ static bool CheckInt32OutputShape(const aclTensor* self, const aclTensor* out)
 {
     int64_t dimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
     if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype int32 not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype int32 does not support scalar.");
         return false;
     }
     int64_t dimInput = self->GetViewShape().GetDim(dimNum - 1);
@@ -216,7 +216,7 @@ static bool CheckInt4LastDim(const aclTensor* self)
 {
     int64_t dimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
     if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype int4 not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype int4 does not support scalar.");
         return false;
     }
     int64_t lastDimInput = self->GetViewShape().GetDim(dimNum - 1);

@@ -216,7 +216,7 @@ ge::graphStatus AscendQuantRegbase::CheckShape(const gert::Shape& xShape, const 
     }
     if (dstType_ == ge::DT_INT4 && (xShape.GetDim(xDimNum - 1) % INT4_NUMS_IN_INT8_SPACE)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xShape),
-                                              "When dstDype is DT_INT4, the tail axis of x must be an even number");
+                                              "When dstType is DT_INT4, the tail axis of x must be an even number");
         return ge::GRAPH_FAILED;
     }
     if (xShape != yShape) {

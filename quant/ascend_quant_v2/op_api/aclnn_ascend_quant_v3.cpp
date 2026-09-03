@@ -162,7 +162,7 @@ static bool CheckDim(const aclTensor* x, const aclTensor* scale, const aclTensor
     int64_t scaleDimNum = static_cast<int64_t>(scaleShape.GetDimNum());
     // check scale scalar
     if (scaleDimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale and offset not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale and offset do not support scalar.");
         return false;
     }
 
@@ -199,7 +199,7 @@ static bool CheckInt32OutputShape(const aclTensor* x, const aclTensor* y)
 {
     int64_t dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
     if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x does not support scalar.");
         return false;
     }
     int64_t dimInput = x->GetViewShape().GetDim(dimNum - 1);
@@ -230,7 +230,7 @@ static bool CheckInt4LastDim(const aclTensor* x)
 {
     int64_t dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
     if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x does not support scalar.");
         return false;
     }
     int64_t lastDimInput = x->GetViewShape().GetDim(dimNum - 1);
@@ -350,7 +350,7 @@ static aclnnStatus CheckInputScalar(const aclTensor* x)
 {
     int64_t dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
     if (dimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x not support scalar.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x does not support scalar.");
         return false;
     }
     return true;

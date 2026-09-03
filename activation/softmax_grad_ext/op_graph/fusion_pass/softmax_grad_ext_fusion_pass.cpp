@@ -62,7 +62,7 @@ bool IsTargetPlatform()
     const std::string soc = platform_info.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s", soc.c_str());
     if (soc != kTargetSocVersion) {
-        OPS_LOG_D(kPassName.c_str(), "Platform is not support, only support %s.", kTargetSocVersion.c_str());
+        OPS_LOG_D(kPassName.c_str(), "Platform is not supported, only support %s.", kTargetSocVersion.c_str());
         return false;
     }
     return true;

@@ -158,7 +158,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(const gert::TilingC
                 (groupNum > 0 && isPerChannel_),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                     context->GetNodeName(), "groupNum", std::to_string(groupNum),
-                    "The vaule of groupNum must be less than or equal to 0 when the quantization mode is perchannel"),
+                    "The value of groupNum must be less than or equal to 0 when the quantization mode is perchannel"),
                 return ge::GRAPH_FAILED);
         }
 

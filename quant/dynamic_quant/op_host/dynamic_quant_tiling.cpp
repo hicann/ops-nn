@@ -760,7 +760,7 @@ static ge::graphStatus TilingForDynamicQuant(gert::TilingContext* context)
             ret = tiling310P.RunFusionKernelTiling(context);
             return ret;
         default:
-            OP_LOGE(context, "DynamicQuan only supports Atlas 800I A2/A3 or  Atlas 300I Duo.");
+            OP_LOGE(context, "DynamicQuant only supports Atlas 800I A2/A3 or  Atlas 300I Duo.");
             return ge::GRAPH_FAILED;
     }
 }
