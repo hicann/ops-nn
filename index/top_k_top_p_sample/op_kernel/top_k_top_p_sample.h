@@ -104,7 +104,7 @@ public:
                 bool ifGetIndex = false;
                 // 不做排序，全长度Softmax取maxIndex
                 SoftMaxAll(rowId, kCount, logitsGlobal, this->ifQSampleCompute, maxIndex,
-                           this->isNeedLogits); //不做Qsample时，拿到的是sortmax全排序后的一行
+                           this->isNeedLogits); // 不做Qsample时，拿到的是sortmax全排序后的一行
                 if (!this->ifQSampleCompute) {
                     ifGetIndex = true;
                 }
@@ -115,7 +115,7 @@ public:
                 this->k_pad = Align(kCount, EIGHT);
                 SoftMaxAll(
                     rowId, kCount, logitsGlobal, false, maxIndex,
-                    false); //做了Softmax但是没做sort的存在了logitsGlobalUser里，做了softmax继续做了sort的存在了buf3里
+                    false); // 做了Softmax但是没做sort的存在了logitsGlobalUser里，做了softmax继续做了sort的存在了buf3里
                 TopPCompute(rowId, kCount, fp32P); // 因为已经做完softmax了
                 if (this->ifFind == 1) {           // 猜到了
                     SoftMaxCompute(this->topPNum, localValueRs);
@@ -258,7 +258,7 @@ private:
         for (uint32_t row = 0; row < this->rtCoreRowNum; row++) {
             uint32_t temp = topKGlobal.GetValue(row); // 自GM取当前行logits的k值
             uint32_t topKMax = this->rowLen > TOPK_MAX ? TOPK_MAX : this->rowLen;
-            if (temp > topKMax) { // k值大于1024 or s[b], topK不使能
+            if (temp == 0 || temp > topKMax) { // k<=0或k值大于topKMax, topK不使能
                 this->rowIdToppList[row] = 1;
             } else {
                 this->rowIdTopkList[row] = 1;
@@ -848,6 +848,6 @@ private:
 
     const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
     const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
-};     // namespace TopKTopPSample
-};     // namespace TopKTopPSample
+}; // namespace TopKTopPSample
+}; // namespace TopKTopPSample
 #endif // TOP_K_TOP_P_SAMPLE_H
