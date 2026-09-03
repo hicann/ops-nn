@@ -60,7 +60,8 @@ def _kernel_compute(
     mm_out = np.matmul(a, b)
     mm_out = mm_out * alpha
 
-    if c is not None:
+    # If beta is 0, C is ignored and nan/inf in it must not propagate.
+    if c is not None and beta != 0:
         c = c.astype(comp_dtype)
         mm_out = mm_out + beta * c
 

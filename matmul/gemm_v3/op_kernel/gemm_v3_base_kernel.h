@@ -224,6 +224,7 @@ private:
     uint64_t cBatchStride_{0};
     uint64_t cMStride_{0};
     uint64_t cNStride_{0};
+    bool skipC_{false};
     bool enShuffleK_{false};
 };
 
@@ -253,6 +254,8 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
     nAlign_ = RoundUp<CONST_16>(n_);
     alpha_ = tilingData.alpha;
     beta_ = tilingData.beta;
+    // if beta is 0, C is ignored and nan/inf in it must not propagate.
+    skipC_ = (beta_ == 0.0f);
     biasBroadcastType_ = tilingData.biasBroadcastType;
     cBatchStride_ = tilingData.cBatchStride;
     cMStride_ = tilingData.cMStride;
@@ -712,14 +715,23 @@ __aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InD
                                                                                         uint64_t count)
 {
 #ifdef __DAV_C220_VEC__
-    if (biasBroadcastType_ == BIAS_BCAST_NONE) {
+    if (skipC_ || biasBroadcastType_ == BIAS_BCAST_NONE) {
         for (uint32_t i = 0; i < count; ++i) {
-            AscendC::Axpy<AccumDtype, AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL],  // dst
-                                                         ubProd_[i * VEC_ITER_NUMEL], // src0
-                                                         alpha_,                      // src1
-                                                         (uint64_t)0,                 // mask (disabled)
-                                                         VEC_ITER_REPEAT,             // repeat
-                                                         AscendC::UnaryRepeatParams(1, 1, 8, 8));
+            if (skipC_) {
+                AscendC::Muls<AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL],  // dst
+                                                 ubProd_[i * VEC_ITER_NUMEL], // src
+                                                 alpha_,                      // scalar
+                                                 (uint64_t)0,                 // mask (disabled)
+                                                 (uint8_t)VEC_ITER_REPEAT,    // repeat
+                                                 AscendC::UnaryRepeatParams(1, 1, 8, 8));
+            } else {
+                AscendC::Axpy<AccumDtype, AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL],  // dst
+                                                             ubProd_[i * VEC_ITER_NUMEL], // src0
+                                                             alpha_,                      // src1
+                                                             (uint64_t)0,                 // mask (disabled)
+                                                             VEC_ITER_REPEAT,             // repeat
+                                                             AscendC::UnaryRepeatParams(1, 1, 8, 8));
+            }
             AscendC::PipeBarrier<PIPE_V>();
         }
         return;
@@ -770,7 +782,9 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
         uint64_t count = CeilDiv<VEC_ITER_NUMEL>(numel);
         if (mTileHalfActual != 0) {
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            PrepareBias(offsetC, static_cast<uint32_t>(mTileHalfActual), static_cast<uint32_t>(nTileActual), count);
+            if (!skipC_) {
+                PrepareBias(offsetC, static_cast<uint32_t>(mTileHalfActual), static_cast<uint32_t>(nTileActual), count);
+            }
         }
         AscendC::CrossCoreWaitFlag(C_NOTIFY_V + cvPingPongFlag);
         if (mTileHalfActual != 0) {
