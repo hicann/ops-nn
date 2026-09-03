@@ -85,7 +85,7 @@ uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetBatchCoreCnt() const { 
 
 const void* AdaptiveSlidingWindowPerblockBasicAPITiling::GetTilingData() const { return &tilingData_; }
 
-uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch) const
+uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }

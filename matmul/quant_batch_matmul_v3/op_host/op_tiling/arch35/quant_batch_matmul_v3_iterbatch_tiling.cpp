@@ -309,7 +309,7 @@ uint64_t QuantBatchMatmulV3IterbatchTiling::GetKernelType() const
                               static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT);
 }
 
-uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch) const
+uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch npuArch) const
 {
     return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
 }

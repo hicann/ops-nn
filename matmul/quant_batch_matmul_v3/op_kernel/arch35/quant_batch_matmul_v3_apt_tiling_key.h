@@ -125,10 +125,10 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_NON_MX_CUBE_ND_TPL false
 #endif
 
-#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) &&                \
-    ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0 && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) &&          \
-    defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_FRACTAL_NZ) && defined(DT_FLOAT8_E4M3FN) && \
-    defined(DT_INT8) && defined(DT_HIFLOAT8) && defined(DT_FLOAT) && defined(DT_BF16)
+#if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && defined(ASC_DEVKIT_MAJOR) && \
+    defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0 && defined(ORIG_DTYPE_X1) &&           \
+    defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_FRACTAL_NZ) &&        \
+    defined(DT_FLOAT8_E4M3FN) && defined(DT_INT8) && defined(DT_HIFLOAT8) && defined(DT_FLOAT) && defined(DT_BF16)
 #define SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY                                                                   \
     (((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_HIFLOAT8) &&                                   \
       (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_HIFLOAT8) && (ORIG_DTYPE_SCALE == DT_FLOAT) && \

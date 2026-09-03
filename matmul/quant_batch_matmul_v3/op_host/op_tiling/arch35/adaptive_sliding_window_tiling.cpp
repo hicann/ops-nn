@@ -244,7 +244,7 @@ uint64_t AdaptiveSlidingWindowTiling::GetKernelType() const
                           static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_WITH_MMAPI);
 }
 
-uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch) const
+uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch npuArch) const
 {
     return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
 }

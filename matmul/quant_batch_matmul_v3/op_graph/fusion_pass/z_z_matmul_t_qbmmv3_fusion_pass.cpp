@@ -49,6 +49,7 @@ constexpr char kOpTypeBatchMatMulV3[] = "BatchMatMulV3";
 constexpr int64_t kV3ScaleIdx = 2;
 constexpr int64_t kV3BiasIdx = 4;
 constexpr uint64_t kScaleOneValue = 0x3F800000;
+constexpr int32_t kGeCompilerVersion900 = 90000000;
 
 bool IsBatchMatMulType(const GNode& node)
 {
@@ -199,7 +200,7 @@ std::vector<PatternUniqPtr> ZZMatMulTOQBMMV3FusionPass::Patterns()
 bool ZZMatMulTOQBMMV3FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
     OPS_LOG_D(kPassName, "Begin to do ZZMatMulTOQBMMV3FusionPass MeetRequirements.");
-    if (GetGeCompilerVersionNum() < 90000000) {
+    if (GetGeCompilerVersionNum() < kGeCompilerVersion900) {
         OPS_LOG_D(kPassName, "GE runtime < 9.0.0, skip fusion (compat empty run).");
         return false;
     }

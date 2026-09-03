@@ -14,7 +14,6 @@
 
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "runtime/runtime/base.h"
 #include "tiling/platform/platform_ascendc.h"
 
 namespace OpCheckHelper {

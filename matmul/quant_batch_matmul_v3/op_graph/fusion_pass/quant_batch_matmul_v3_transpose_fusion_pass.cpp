@@ -72,6 +72,8 @@ constexpr int MX_SCALE_LEN = 3;
 constexpr int INNER_SHAPE_LIMIT = 65535;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
+// Number of transpose-equivalent candidates tracked for x1, x2, x1_scale, and x2_scale.
+constexpr size_t TRANS_NODE_NUM = 4;
 
 bool IsTargetVersion()
 {
@@ -108,8 +110,8 @@ GNodePtr GetInputNode(const GNode& dstNode, int64_t dstInputPort, int64_t* srcOu
 {
     int32_t actualIndex = static_cast<int32_t>(dstInputPort);
     if (dstInputPort == X1_SCALE_INDEX) {
-        if (const_cast<GNode&>(dstNode).GetInputIndexByName(AscendString("pertoken_scale"), actualIndex) !=
-                GRAPH_SUCCESS ||
+        GNode dstNodeCopy = dstNode;
+        if (dstNodeCopy.GetInputIndexByName(AscendString("pertoken_scale"), actualIndex) != GRAPH_SUCCESS ||
             actualIndex < 0) {
             if (srcOutputPort != nullptr) {
                 *srcOutputPort = 0;
@@ -268,7 +270,8 @@ GNodePtr GetTransposeCandidateNode(const GNode& dstNode, int64_t dstInputPort, b
 
 bool IsBitcastPattern(const GNode& nodeQuantBmmv3, bool isDynamic)
 {
-    static const std::array<int64_t, 4> quantDstInputPorts = {X1_INDEX, X2_INDEX, X1_SCALE_INDEX, X2_SCALE_INDEX};
+    static const std::array<int64_t, TRANS_NODE_NUM> quantDstInputPorts = {X1_INDEX, X2_INDEX, X1_SCALE_INDEX,
+                                                                           X2_SCALE_INDEX};
     for (auto quantDstInputPort : quantDstInputPorts) {
         auto srcNode = GetInputNode(nodeQuantBmmv3, quantDstInputPort);
         if (!IsType(srcNode, OP_TYPE_BITCAST)) {
@@ -507,7 +510,7 @@ void AddNodeToRemove(std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>&
     nodesBeforeFuse.emplace_back(*node);
 }
 
-void CollectFusionNodes(const GNode& nodeQuantBmmv3, const std::array<GNodePtr, 4>& transNodes,
+void CollectFusionNodes(const GNode& nodeQuantBmmv3, const std::array<GNodePtr, TRANS_NODE_NUM>& transNodes,
                         std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>& nodesToRemove)
 {
     nodesBeforeFuse = {nodeQuantBmmv3};
@@ -541,7 +544,7 @@ Status CheckFusionPreconditions(const GNode& nodeQuantBmmv3, bool& isDynamic, bo
 }
 
 Status FindTransposeNodes(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bool limitPass, bool isBitcastPattern,
-                          bool isDynamic, std::array<GNodePtr, 4>& transNodes)
+                          bool isDynamic, std::array<GNodePtr, TRANS_NODE_NUM>& transNodes)
 {
     constexpr size_t nodeX1Index = 0;
     constexpr size_t nodeX2Index = 1;
@@ -569,7 +572,7 @@ Status FindTransposeNodes(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bo
 }
 
 Status PrepareFusion(const GNode& nodeQuantBmmv3, bool& isDynamic, bool limitPass, bool& isBitcastPattern,
-                     std::array<GNodePtr, 4>& transNodes)
+                     std::array<GNodePtr, TRANS_NODE_NUM>& transNodes)
 {
     bool supportL12btBf16 = false;
     auto status = CheckFusionPreconditions(nodeQuantBmmv3, isDynamic, isBitcastPattern, supportL12btBf16);
@@ -579,7 +582,7 @@ Status PrepareFusion(const GNode& nodeQuantBmmv3, bool& isDynamic, bool limitPas
     return FindTransposeNodes(nodeQuantBmmv3, supportL12btBf16, limitPass, isBitcastPattern, isDynamic, transNodes);
 }
 
-bool SetTransposeAttrs(GNode& nodeQuantBmmv3, const std::array<GNodePtr, 4>& transNodes)
+bool SetTransposeAttrs(GNode& nodeQuantBmmv3, const std::array<GNodePtr, TRANS_NODE_NUM>& transNodes)
 {
     constexpr size_t nodeX1Index = 0;
     constexpr size_t nodeX2Index = 1;
@@ -593,9 +596,9 @@ bool SetTransposeAttrs(GNode& nodeQuantBmmv3, const std::array<GNodePtr, 4>& tra
 }
 
 bool RelinkFusionNodes(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool isBitcastPattern,
-                       const std::array<GNodePtr, 4>& transNodes)
+                       const std::array<GNodePtr, TRANS_NODE_NUM>& transNodes)
 {
-    constexpr std::array<int64_t, 4> inputPorts = {X1_INDEX, X2_INDEX, X1_SCALE_INDEX, X2_SCALE_INDEX};
+    constexpr std::array<int64_t, TRANS_NODE_NUM> inputPorts = {X1_INDEX, X2_INDEX, X1_SCALE_INDEX, X2_SCALE_INDEX};
     for (size_t nodeIndex = 0; nodeIndex < transNodes.size(); ++nodeIndex) {
         if (!RelinkNode(graph, nodeQuantBmmv3, transNodes[nodeIndex], inputPorts[nodeIndex], isBitcastPattern)) {
             return false;
@@ -615,7 +618,7 @@ bool RemoveFusionNodes(const GraphPtr& graph, const std::vector<GNodePtr>& nodes
 }
 
 Status CommitFusion(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool isBitcastPattern,
-                    const std::array<GNodePtr, 4>& transNodes, CustomPassContext& passContext)
+                    const std::array<GNodePtr, TRANS_NODE_NUM>& transNodes, CustomPassContext& passContext)
 {
     std::vector<GNode> nodesBeforeFuse;
     std::vector<GNodePtr> nodesToRemove;
@@ -638,7 +641,7 @@ Status Fusion(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool& isDynamic, boo
               CustomPassContext& passContext)
 {
     bool isBitcastPattern = false;
-    std::array<GNodePtr, 4> transNodes = {};
+    std::array<GNodePtr, TRANS_NODE_NUM> transNodes = {};
     const auto status = PrepareFusion(nodeQuantBmmv3, isDynamic, limitPass, isBitcastPattern, transNodes);
     if (status != SUCCESS) {
         return status;
