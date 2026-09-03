@@ -697,6 +697,7 @@ aclnnStatus aclnnFusedMatmulGetWorkspaceSize(const aclTensor* x1, const aclTenso
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     // 固定写法，参数检查
     auto ret = CheckParams(x1, x2, bias, x3, nullptr, nullptr, fusedOpType, cubeMathType, y);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

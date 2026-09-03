@@ -84,9 +84,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* mat, const a
 
 static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
 {
-    bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
-    bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
-    auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
+    auto promoteType = PromoteType(self->GetDataType(), mat2->GetDataType());
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
@@ -335,6 +333,9 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(const aclTensor* self, const aclTensor* m
 {
     L2_DFX_PHASE_1(aclnnAddmv, DFX_IN(self, mat, vec, alpha, beta, cubeMathType), DFX_OUT(out));
 
+    CHECK_RET(workspaceSize != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(executor != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -372,6 +373,7 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(const aclTensor* self, const aclTensor* m
             mulRet = selfContiguous;
         } else {
             mulRet = MulScalar(beta, selfContiguous, uniqueExecutor.get());
+            CHECK_RET(mulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
 

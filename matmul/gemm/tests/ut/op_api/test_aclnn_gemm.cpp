@@ -408,7 +408,7 @@ TEST_F(l2_gemm_test, test_hf32_trans)
     auto A = TensorDesc({14, 13}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto B = TensorDesc({15, 14}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto C = TensorDesc({13, 15}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto out = TensorDesc({15, 15}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto out = TensorDesc({13, 15}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     float alpha = 1.0;
     float beta = 1.0;
     int64_t transA = 1;
@@ -420,7 +420,7 @@ TEST_F(l2_gemm_test, test_hf32_trans)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // 空tensor混合场景

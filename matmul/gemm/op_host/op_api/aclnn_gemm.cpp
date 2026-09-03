@@ -71,7 +71,7 @@ static inline bool CheckFormat(const aclTensor* A, const aclTensor* B, const acl
     return true;
 }
 
-static inline bool CheckDtypeValid(const aclTensor* C, const aclTensor* A, const aclTensor* B, const aclTensor* out)
+static inline bool CheckDtypeValid(const aclTensor* A, const aclTensor* B, const aclTensor* C, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(A, dtypeSupportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(B, dtypeSupportList, return false);
@@ -127,6 +127,7 @@ static inline bool CheckBroadcast(const aclTensor* A, const aclTensor* B, const 
 static inline bool CheckOutShape(const aclTensor* A, const aclTensor* B, int64_t transA, int64_t transB,
                                  const aclTensor* out)
 {
+    OP_CHECK_WRONG_DIMENSION(out, 2, return false); // 2 is the expected dimension of out
     auto mDim = static_cast<bool>(transA) ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
     auto nDim = static_cast<bool>(transB) ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
 

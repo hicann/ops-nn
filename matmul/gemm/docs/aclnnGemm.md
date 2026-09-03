@@ -116,10 +116,10 @@ aclnnStatus aclnnGemm(
       <td>输入</td>
       <td>公式中的输入C，Device侧的aclTensor。</td>
       <td><ul><li>数据类型需要与AB计算后的结果构成互相推导关系。</li>
-      <li>shape需要与A@B计算后的结果一致或满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li></ul></td>
+      <li>shape支持一维或二维，需要与A@B计算后的结果一致或满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>2</td>
+      <td>1、2</td>
       <td>√</td>
     </tr>
     <tr>
@@ -145,7 +145,7 @@ aclnnStatus aclnnGemm(
     <tr>
       <td>transA</td>
       <td>输入</td>
-      <td>公式中的输入transA，Host侧的整型，表示矩阵A是否需要转置，非零表示转置, A矩阵为[K,M]，零表示不需要转置, A矩阵为[M, K]。</td>
+      <td>公式中的输入transA，Host侧的整型，表示矩阵A是否需要转置，非零表示转置，A矩阵为[K,M]，零表示不需要转置，A矩阵为[M, K]。</td>
       <td>-</td>
       <td>int64_t</td>
       <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnGemm(
     <tr>
       <td>transB</td>
       <td>输入</td>
-      <td>公式中的输入transB，Host侧的整型，表示矩阵B是否需要转置，非零表示转置, B矩阵为[N, K]，零表示不需要转置, B矩阵为[K, N]。</td>
+      <td>公式中的输入transB，Host侧的整型，表示矩阵B是否需要转置，非零表示转置，B矩阵为[N, K]，零表示不需要转置，B矩阵为[K, N]。</td>
       <td>-</td>
       <td>int64_t</td>
       <td>-</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnGemm(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>公式中的out，Device侧的aclTensor，数据类型需要与C构成互相推导关系，shape需要A@B计算后的结果一致。</td>
+      <td>公式中的out，Device侧的aclTensor，数据类型需要与C构成互相推导关系，shape需要与A@B计算后的结果一致。</td>
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -261,21 +261,18 @@ aclnnStatus aclnnGemm(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的A, B，C或out是空指针。</td>
+      <td>传入的A、B、C或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>A或B不是2维，或者进行计算时，shape不满足[m, k]和[k, n]的k维度相等关系。</td>
     </tr>
     <tr>
-      <td>self不能与batch1@batch2做broadcast操作。</td>
-    </tr>
-    <tr>
-      <td>C和AB计算后的结果不满足broadcast关系。</td>
+      <td>C和A@B计算后的结果不满足broadcast关系。</td>
     </tr>
     <tr>
       <td>out和AB计算后的shape不一致。</td>
@@ -352,12 +349,12 @@ aclnnStatus aclnnGemm(
     - out的数据类型为FLOAT32时，MatMul使用FLOAT32累加，beta×C、alpha×(A@B)以及两部分相加的中间结果均使用FLOAT32，最终结果以FLOAT32写入out。
     - out的数据类型为FLOAT16或BFLOAT16且cubeMathType=4时，上述中间结果使用FLOAT32，最终结果转换为out指定的数据类型。
     - out的数据类型为FLOAT16或BFLOAT16且cubeMathType不为4时，中间结果不会转换为FLOAT32。
-    - C的shape为[1, n]且alpha=1、beta=1时，C直接作为MatMul的bias输入，加法在MatMul内部完成。
+    - C的shape为[n]或[1, n]且alpha=1、beta=1时，C直接作为MatMul的bias输入，加法在MatMul内部完成。
 
 <!-- end id13 -->
 
 <!-- npu="910,310p" id9 -->
-- <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算.
+- <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
 
 <!-- end id9 -->
 
@@ -369,7 +366,7 @@ aclnnStatus aclnnGemm(
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/level2/aclnn_gemm.h"
+#include "aclnnop/aclnn_gemm.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \
