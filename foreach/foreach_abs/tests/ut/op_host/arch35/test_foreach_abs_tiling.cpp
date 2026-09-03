@@ -38,7 +38,10 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":253952,"CORE_NUM":64}})", soc, ai, intr);
     pf.Init();
 
+    // 字段布局需与op_host/arch35/foreach_abs_tiling_arch35.h中ForeachAbsCompileInfo保持一致
     struct ForeachAbsCompileInfo {
+        int64_t coreNum = 64;
+        int64_t ubSize = 253952;
     } ci;
     auto opType = std::string("ForeachAbs");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;

@@ -76,9 +76,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0)
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-        int32_t totalCoreNum = 0;
+        uint64_t totalCoreNum = 0;
         uint64_t ubSizePlatForm = 0;
-        bool isRegbase = false;
+        bool isRegBase = false;
     } compile_info;
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -164,9 +164,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1)
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-        int32_t totalCoreNum = 0;
+        uint64_t totalCoreNum = 0;
         uint64_t ubSizePlatForm = 0;
-        bool isRegbase = false;
+        bool isRegBase = false;
     } compile_info;
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()
@@ -252,9 +252,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2)
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-        int32_t totalCoreNum = 0;
+        uint64_t totalCoreNum = 0;
         uint64_t ubSizePlatForm = 0;
-        bool isRegbase = false;
+        bool isRegBase = false;
     } compile_info;
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()

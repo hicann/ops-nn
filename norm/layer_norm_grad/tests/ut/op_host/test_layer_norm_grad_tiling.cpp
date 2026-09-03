@@ -28,6 +28,8 @@ using namespace ge;
 struct LayerNormGradCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSizePlatForm = 0;
+    int64_t blockSize = 0;
+    int64_t vlFp32 = 0;
     bool isRegBase = false;
 };
 

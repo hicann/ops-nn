@@ -123,7 +123,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
             add_custom_command(
                 TARGET ${OP_HOST_UT_EXE} POST_BUILD
                 COMMAND BUILD_PATH=${BUILD_PATH}
-                LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.4:/usr/lib/x86_64-linux-gnu/libstdc++.so.6 ASAN_OPTIONS=detect_leaks=0 && ./${OP_HOST_UT_EXE}
+                LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.4:/usr/lib/x86_64-linux-gnu/libstdc++.so.6 ASAN_OPTIONS=detect_leaks=0 ./${OP_HOST_UT_EXE}
                 COMMENT "Run ops op_host utest with asan"
             )
         else()

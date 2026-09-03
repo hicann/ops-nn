@@ -68,6 +68,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -171,6 +172,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -274,6 +276,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -377,6 +380,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -480,6 +484,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -583,6 +588,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -686,6 +692,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -789,6 +796,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -892,6 +900,7 @@ TEST_F(MultiScaleDeformableAttnFunctionTiling, MultiScaleDeformableAttnFunction_
         int32_t total_core_num = 0;
         uint64_t ub_size_platform = 0;
         bool is_inf_base = false;
+        bool isRegBase = false;
     } compile_info;
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);

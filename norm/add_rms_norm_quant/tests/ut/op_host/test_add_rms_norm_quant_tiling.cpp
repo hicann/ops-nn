@@ -32,9 +32,9 @@ protected:
 };
 
 struct AddRmsNormQuantCompileInfo {
-    uint32_t totalCoreNum = 40;
-    uint64_t totalUbSize = 196608;
-    platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
+    platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
+    uint64_t totalCoreNum = 0;
+    uint64_t maxUbSize = 0;
 };
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)

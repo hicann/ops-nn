@@ -138,16 +138,23 @@ struct MockContext {
     {
         size_t numInputs = inputs.size();
         size_t numOutputs = outputs.size();
+        // 真实OpExecutePrepareContext内存布局:
+        //   values = [inputs..., outputs..., extend_inputs(kExecuteOption/kFwkData/kStream),
+        //             extend_outputs(kParams/kWorkspaceSize)]
+        // 其中KernelContext::input_size = numInputs + numOutputs + kExtendInputs,
+        // KernelContext::output_size = kExtendOutputs,
+        // GetOutput(kParams)读取values[input_size + i]，若buffer不足会越界
         constexpr size_t kExtendInputs = 3;
-        size_t totalValues = numInputs + numOutputs + kExtendInputs;
+        constexpr size_t kExtendOutputs = 2;
+        size_t totalValues = numInputs + numOutputs + kExtendInputs + kExtendOutputs;
 
         size_t ctxSize = sizeof(KernelRunContext) + (totalValues > 1 ? (totalValues - 1) * sizeof(void*) : 0);
         buffer.resize(ctxSize);
         std::memset(buffer.data(), 0, ctxSize);
 
         auto krc = reinterpret_cast<KernelRunContext*>(buffer.data());
-        krc->input_size = totalValues;
-        krc->output_size = numOutputs;
+        krc->input_size = numInputs + numOutputs + kExtendInputs;
+        krc->output_size = kExtendOutputs;
         krc->compute_node_info = computeNodeInfo;
         krc->kernel_extend_info = nullptr;
         krc->output_start = nullptr;
@@ -173,6 +180,13 @@ struct MockContext {
                 krc->values[idx] = nullptr;
             }
         }
+        // Extend inputs (kExecuteOption, kFwkData, kStream) remain null
+        // Extend outputs (kParams, kWorkspaceSize) need valid chains for SetOpApiParams/SetWorkspaceSizes
+        for (size_t i = 0; i < kExtendOutputs; ++i) {
+            auto chain = new gert::Chain();
+            chains.push_back(chain);
+            krc->values[krc->input_size + i] = reinterpret_cast<AsyncAnyValue*>(chain);
+        }
 
         ctx = reinterpret_cast<gert::OpExecutePrepareContext*>(buffer.data());
     }
@@ -180,6 +194,8 @@ struct MockContext {
     ~MockContext()
     {
         for (auto* chain : chains) {
+            // 释放Chain中持有的带deleter的数据(如OpApiParams/workspace sizes)，避免泄漏
+            chain->Set(nullptr, nullptr);
             delete chain;
         }
     }

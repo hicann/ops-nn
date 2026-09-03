@@ -567,10 +567,8 @@ static void runCase(int32_t freq, gert::StorageShape input0, gert::StorageShape 
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct EmbeddingDenseGradCompileInfo {
-        int32_t core_num = 32;
-        int32_t scale_grad_by_freq = 0;
-    } compile_info;
+    optiling::EmbeddingDenseGradCompileInfo compile_info{};
+    compile_info.core_num = 32;
     compile_info.scale_grad_by_freq = freq;
     // tilingParseFunc simulate
     auto kernel_holder = gert::KernelRunContextFaker()

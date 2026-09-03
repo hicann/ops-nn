@@ -268,7 +268,10 @@ TEST_P(ExtendConvTransposeTilingRunTime, general_cases)
     }
     auto scale_dtype = ge::DT_UINT64;
     int64_t nodeNum = 5;
-    auto inputShape = {&input_size, &out_backprop_shape, &filter_shape, &bias_shape, &scale_shape};
+    // 此处不能使用auto(推导为std::initializer_list，重新赋值后底层临时数组在语句结束时销毁，
+    // 导致后续InputShapes读取悬垂内存触发ASAN stack-use-after-scope)
+    std::vector<gert::StorageShape*> inputShape = {&input_size, &out_backprop_shape, &filter_shape, &bias_shape,
+                                                   &scale_shape};
     if (param.scale_shape.size() == 0) {
         nodeNum--;
         inputShape = {&input_size, &out_backprop_shape, &filter_shape, &bias_shape};

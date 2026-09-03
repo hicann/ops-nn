@@ -63,8 +63,10 @@ TEST_F(CTCLossV2GradTiling, test_rt2_success)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    // 定义编译信息结构体
+    // 定义编译信息结构体，字段布局与op_host/arch35/ctc_loss_v2_grad_tiling_arch35.h中CTCLossV2GradForCompileInfo保持一致
     struct CTCLossV2GradCompileInfo {
+        int32_t totalCoreNum = 0;
+        uint64_t ubSize = 0;
     } compile_info;
 
     // 获取操作符实现

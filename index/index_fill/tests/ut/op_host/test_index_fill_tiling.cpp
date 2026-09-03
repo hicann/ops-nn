@@ -56,9 +56,11 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     // compile info
+    // 字段布局需与op_host/arch35/index_fill_tiling_arch35.h中IndexFillCompileInfoArch35保持一致
     struct IndexFillCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        uint32_t sysWorkspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
@@ -139,9 +141,11 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     // compile info
+    // 字段布局需与op_host/arch35/index_fill_tiling_arch35.h中IndexFillCompileInfoArch35保持一致
     struct IndexFillCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        uint32_t sysWorkspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
@@ -222,9 +226,11 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     // compile info
+    // 字段布局需与op_host/arch35/index_fill_tiling_arch35.h中IndexFillCompileInfoArch35保持一致
     struct IndexFillCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        uint32_t sysWorkspaceSize = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()

@@ -60,6 +60,7 @@ TEST_F(ModulateTiling, test_modulate_tiling_000)
     struct ModulateCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        bool isRegBase = false;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
@@ -142,6 +143,7 @@ TEST_F(ModulateTiling, test_modulate_tiling_001)
     struct ModulateCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        bool isRegBase = false;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
@@ -224,6 +226,7 @@ TEST_F(ModulateTiling, test_modulate_tiling_002)
     struct ModulateCompileInfo {
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
+        bool isRegBase = false;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
@@ -307,6 +310,7 @@ TEST_F(ModulateTiling, test_modulate_regbase_tiling_D)
     struct ModulateCompileInfo {
         int32_t totalCoreNum = 56;
         uint64_t ubSizePlatForm = 0;
+        bool isRegBase = false;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()

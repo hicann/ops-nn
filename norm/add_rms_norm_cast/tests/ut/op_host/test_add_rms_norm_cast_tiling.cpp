@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <iostream>
 #include <fstream>
@@ -64,8 +63,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_tiling_001)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -164,8 +163,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_tiling_002)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -265,8 +264,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_100)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -372,8 +371,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_101)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -474,8 +473,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_overflow_check)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -576,8 +575,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_102)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;
@@ -683,8 +682,8 @@ TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_tiling_103)
     platform_info.Init();
     // compile info
     struct AddRmsNormCastCompileInfo {
-        uint32_t totalCoreNum = 40;
-        uint64_t totalUbSize = 196608;
+        uint64_t totalCoreNum = 0;
+        uint64_t totalUbSize = 0;
         platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     };
     AddRmsNormCastCompileInfo compile_info;

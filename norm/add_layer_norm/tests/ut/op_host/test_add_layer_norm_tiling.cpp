@@ -1,12 +1,11 @@
-/*
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+/**
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <iostream>
 #include <fstream>
@@ -61,11 +60,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_001)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -163,11 +162,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_200)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -265,11 +264,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_303)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -367,11 +366,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_302)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -469,11 +468,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias_bc)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -572,11 +571,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -675,11 +674,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_slice)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -778,11 +777,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bign)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -881,11 +880,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_sliceext)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -992,11 +991,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_normal)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1097,11 +1096,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_normal310)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1200,11 +1199,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x1)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1302,11 +1301,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x2)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1404,11 +1403,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_gamma)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1597,11 +1596,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_1172)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1700,11 +1699,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_82)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1803,11 +1802,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_170)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -1905,11 +1904,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_80)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2007,11 +2006,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_001)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2106,11 +2105,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2211,11 +2210,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_003)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2312,11 +2311,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_001)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2420,11 +2419,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_002)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2523,11 +2522,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_003)
     platform_info.Init();
 
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2628,11 +2627,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_001)
     platform_info.Init();
     // compile info
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2733,11 +2732,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_002)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2834,11 +2833,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_003)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -2935,11 +2934,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -3031,11 +3030,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_002)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -3127,11 +3126,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_003)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;
@@ -3222,11 +3221,11 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_004)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     struct AddLayerNormCompileInfo {
-        uint32_t aivCoreNum_ = 0;
-        uint32_t sysWorkspaceSize_ = 0;
+        int64_t aivCoreNum_ = 0;
+        int64_t sysWorkspaceSize_ = 0;
         uint64_t ubSize_ = 0;
-        uint32_t vecRegSize_ = 0;
-        uint32_t blockSize_ = 0;
+        int64_t vecRegSize_ = 0;
+        int64_t blockSize_ = 0;
         bool isAscend950_ = false;
     };
     AddLayerNormCompileInfo compile_info;

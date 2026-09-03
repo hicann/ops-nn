@@ -109,7 +109,7 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_reduce_last)
     gert::StorageShape yShape = {{4}, {4}};
 
     auto axesHolder = MakeAxesConstTensor({1});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{1}, {1}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -126,7 +126,7 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_reduce_last)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -159,7 +159,7 @@ TEST_F(EuclideanNormTiling, tiling_fp16_2d_reduce_last)
     gert::StorageShape yShape = {{8}, {8}};
 
     auto axesHolder = MakeAxesConstTensor({1});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{1}, {1}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -175,7 +175,7 @@ TEST_F(EuclideanNormTiling, tiling_fp16_2d_reduce_last)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -208,7 +208,7 @@ TEST_F(EuclideanNormTiling, tiling_int32_2d_reduce_first)
     gert::StorageShape yShape = {{32}, {32}};
 
     auto axesHolder = MakeAxesConstTensor({0});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{1}, {1}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -222,7 +222,7 @@ TEST_F(EuclideanNormTiling, tiling_int32_2d_reduce_first)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -256,7 +256,7 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arar_fp32)
     gert::StorageShape yShape = {{4, 8}, {4, 8}};
 
     auto axesHolder = MakeAxesConstTensor({1, 3});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{2}, {2}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -270,7 +270,7 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arar_fp32)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -302,7 +302,7 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arara_fp16)
     gert::StorageShape yShape = {{2, 4, 6}, {2, 4, 6}};
 
     auto axesHolder = MakeAxesConstTensor({1, 3});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{2}, {2}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -316,7 +316,7 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arara_fp16)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -348,7 +348,7 @@ TEST_F(EuclideanNormTiling, tiling_bf16_3d_reduce_middle)
     gert::StorageShape yShape = {{2, 8}, {2, 8}};
 
     auto axesHolder = MakeAxesConstTensor({1});
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    gert::StorageShape axesShape = {{1}, {1}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -362,7 +362,7 @@ TEST_F(EuclideanNormTiling, tiling_bf16_3d_reduce_middle)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -394,7 +394,8 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_empty_axes_full_reduce)
     gert::StorageShape yShape = {{1, 1}, {1, 1}}; // full reduce + keep_dims=true → (1, 1)
 
     auto axesHolder = MakeAxesConstTensor({}); // 空 axes
-    auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
+    // axes=[]需用1-D且dim=0的shape表达，标量shape(0-D)的GetShapeSize为1
+    gert::StorageShape axesShape = {{0}, {0}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
@@ -410,7 +411,7 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_empty_axes_full_reduce)
                       .SetOpType("EuclideanNorm")
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .InputShapes({&xShape, &axesShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))

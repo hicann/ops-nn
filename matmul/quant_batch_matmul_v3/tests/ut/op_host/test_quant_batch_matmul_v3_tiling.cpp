@@ -716,7 +716,15 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         bool tensorApiCapable = IsTensorapiCapable() && isAscend950;
         //  非 Blaze 不支持 weightNz BasicAPI 路径；950 非 TensorAPI 场景跳过 MX 出参校验
         bool skipMxCheckWithoutTensorApi = isAscend950 && !tensorApiCapable && (isMxfp8 || isMxfp4);
-        if (tilingStub || (weightNz && !tensorApiCapable) || skipMxCheckWithoutTensorApi) {
+        // tilingKey布局: ATRANS[0:1] BTRANS[2:3] BATCHMODE[4:7] KERNELTYPE[8:15] APILEVEL[16:17]
+        // CSV用例基于TensorAPI(Blaze)运行环境生成，950非TensorAPI场景tiling走非Blaze路径，出参与预期不一致，跳过校验
+        constexpr uint64_t apiLevelShift = 16UL;
+        constexpr uint64_t apiLevelMask = 0x3UL << apiLevelShift;
+        bool expectBlazeApiLevel = (tilingKey & apiLevelMask) ==
+                                   (static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) << apiLevelShift);
+        bool skipBlazeCheckWithoutTensorApi = isAscend950 && !tensorApiCapable && expectBlazeApiLevel;
+        if (tilingStub || (weightNz && !tensorApiCapable) || skipMxCheckWithoutTensorApi ||
+            skipBlazeCheckWithoutTensorApi) {
             return;
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)

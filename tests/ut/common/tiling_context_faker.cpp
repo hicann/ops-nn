@@ -306,7 +306,10 @@ KernelRunContextHolder TilingContextFaker::Build()
     std::vector<Tensor*> inputTensorsPtr;
     bool inputPacked = std::find(inputInstanceNum_.begin(), inputInstanceNum_.end(), 0) != inputInstanceNum_.end();
     for (size_t idx = 0; idx < inputTensors_.size(); ++idx) {
-        if (inputPacked || inputInstanceNumPacked_[idx] > 0) {
+        // idx >= inputInstanceNumPacked_.size()的场景为动态输入展开后的额外实例，必须传入context，
+        // 否则ComputeNodeInfo中声明的inputs_num_与实际传入的tensor个数不一致，
+        // 导致GetPlatformInfo/GetCompileInfo按inputs_num_+outputs_num_计算slot索引时越界返回空指针
+        if (inputPacked || idx >= inputInstanceNumPacked_.size() || inputInstanceNumPacked_[idx] > 0) {
             inputTensorsPtr.push_back(&(inputTensors_[idx]));
         }
     }

@@ -11,10 +11,41 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 #include <limits.h>
+#include <dlfcn.h>
+#include <iostream>
 #include "platform/platform_info.h"
 #include "base/registry/op_impl_space_registry_v2.h"
+#include "register/register_custom_pass.h"
 
 using namespace std;
+
+namespace ge {
+/*
+ * UT框架自动兜底pass名:
+ * 生产环境由GE框架在执行pass前调用SetPassName; UT中测试直接构造CustomPassContext调用pass.Run,
+ * 容易遗漏SetPassName, 导致三参数重载SubgraphRewriter::Replace内部ReportFuse因pass名为空而失败。
+ * 本可执行文件符号在全局符号解析顺序中优先于libregister.so(libge_compiler经PLT调用GetPassName),
+ * 在此定义同名符号完成拦截: pass名非空时透传真实值, 为空时自动回填当前gtest用例名并打印告警。
+ */
+AscendString CustomPassContext::GetPassName() const
+{
+    using RealGetPassNameFunc = AscendString (*)(const CustomPassContext*);
+    static RealGetPassNameFunc realGetPassName = reinterpret_cast<RealGetPassNameFunc>(
+        dlsym(RTLD_NEXT, "_ZNK2ge17CustomPassContext11GetPassNameEv"));
+    if (realGetPassName != nullptr) {
+        AscendString passName = realGetPassName(this);
+        const char* name = passName.GetString();
+        if (name != nullptr && name[0] != '\0') {
+            return passName;
+        }
+    }
+    const ::testing::TestInfo* testInfo = ::testing::UnitTest::GetInstance()->current_test_info();
+    const char* fallbackName = (testInfo != nullptr) ? testInfo->name() : "UnknownFusionPass";
+    std::cout << "[ut-framework] CustomPassContext pass name is empty, auto filled with '" << fallbackName
+              << "', consider calling passContext.SetPassName in test" << std::endl;
+    return AscendString(fallbackName);
+}
+} // namespace ge
 
 #ifdef __aarch64__
 const string CPU_ARCH_STR = "aarch64";
