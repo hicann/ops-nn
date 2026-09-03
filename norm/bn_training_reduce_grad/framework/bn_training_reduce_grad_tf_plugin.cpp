@@ -19,6 +19,6 @@ namespace domi {
 REGISTER_CUSTOM_OP("BNTrainingReduceGrad")
     .FrameworkType(TENSORFLOW)
     .OriginOpType("BNTrainingReduceGrad")
-    .ParseParamsFn(AutoMappingFn)
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

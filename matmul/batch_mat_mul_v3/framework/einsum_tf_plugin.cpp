@@ -9,15 +9,21 @@
  */
 
 /*!
- * \file apply_adagrad_tf_plugin.cpp
- * \brief ApplyAdagrad TensorFlow plugin mapping.
+ * \file einsum_tf_plugin.cpp
+ * \brief
  */
 #include "register/register.h"
 
 namespace domi {
-REGISTER_CUSTOM_OP("ApplyAdagrad")
+static Status AutoMappingFnEinSum(const ge::Operator& op_src, ge::Operator& op)
+{
+    AutoMappingByOpFn(op_src, op);
+    return SUCCESS;
+}
+
+REGISTER_CUSTOM_OP("Einsum")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType(std::vector<ge::AscendString>{"ApplyAdagrad", "ResourceApplyAdagrad"})
-    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .OriginOpType("Einsum")
+    .ParseParamsByOperatorFn(AutoMappingFnEinSum)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -9,15 +9,36 @@
  */
 
 /*!
- * \file apply_adagrad_tf_plugin.cpp
- * \brief ApplyAdagrad TensorFlow plugin mapping.
+ * \file ascend_weightquant_tf_plugin.cpp
+ * \brief
  */
+#include <string>
+
+#include "graph/types.h"
+#include "log/log.h"
 #include "register/register.h"
 
 namespace domi {
-REGISTER_CUSTOM_OP("ApplyAdagrad")
+static Status ParseParamsAscendWeightQuant(const ge::Operator& op_src, ge::Operator& op)
+{
+    AutoMappingByOpFn(op_src, op);
+
+    std::string dst_type_str;
+    if (op.GetAttr("dst_type", dst_type_str) == ge::GRAPH_SUCCESS) {
+        int dst_type = ge::DT_INT8;
+        if (dst_type_str == "INT4") {
+            dst_type = ge::DT_INT4;
+        }
+        op.SetAttr("dst_type", dst_type);
+    }
+
+    OP_LOGI("AscendWeightQuant", "op[AscendWeightQuant] tensowflow plugin parser [AutoMapping] success.");
+    return SUCCESS;
+}
+
+REGISTER_CUSTOM_OP("AscendWeightQuant")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType(std::vector<ge::AscendString>{"ApplyAdagrad", "ResourceApplyAdagrad"})
-    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .OriginOpType("AscendWeightQuant")
+    .ParseParamsByOperatorFn(ParseParamsAscendWeightQuant)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -19,6 +19,6 @@ namespace domi {
 REGISTER_CUSTOM_OP("BNInfer")
     .FrameworkType(TENSORFLOW)
     .OriginOpType("BNInfer")
-    .ParseParamsFn(AutoMappingFn)
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -9,15 +9,15 @@
  */
 
 /*!
- * \file apply_adagrad_tf_plugin.cpp
- * \brief ApplyAdagrad TensorFlow plugin mapping.
+ * \file sparse_segment_mean_grad_tf_plugin.cpp
+ * \brief SparseSegmentMeanGrad TensorFlow plugin mapping.
  */
 #include "register/register.h"
 
 namespace domi {
-REGISTER_CUSTOM_OP("ApplyAdagrad")
+REGISTER_CUSTOM_OP("SparseSegmentMeanGrad")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType(std::vector<ge::AscendString>{"ApplyAdagrad", "ResourceApplyAdagrad"})
+    .OriginOpType("SparseSegmentMeanGrad")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -21,4 +21,10 @@ REGISTER_CUSTOM_OP("GatherV2")
     .OriginOpType("GatherV2")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("Gather")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType(std::vector<ge::AscendString>{"Gather", "ResourceGather"})
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -21,4 +21,10 @@ REGISTER_CUSTOM_OP("ScatterAdd")
     .OriginOpType("ScatterAdd")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("TensorScatterAdd")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("TensorScatterAdd")
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

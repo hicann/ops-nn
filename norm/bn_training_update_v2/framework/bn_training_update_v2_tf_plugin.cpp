@@ -20,6 +20,12 @@ namespace domi {
 REGISTER_CUSTOM_OP("BNTrainingUpdateV2")
     .FrameworkType(TENSORFLOW)
     .OriginOpType("BNTrainingUpdateV2")
-    .ParseParamsFn(AutoMappingFn)
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("BNTrainingUpdate")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("BNTrainingUpdate")
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

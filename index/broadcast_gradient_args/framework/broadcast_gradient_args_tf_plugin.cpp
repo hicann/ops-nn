@@ -9,15 +9,15 @@
  */
 
 /*!
- * \file apply_adagrad_tf_plugin.cpp
- * \brief ApplyAdagrad TensorFlow plugin mapping.
+ * \file broadcast_gradient_args_tf_plugin.cpp
+ * \brief BroadcastGradientArgs TensorFlow plugin mapping.
  */
 #include "register/register.h"
 
 namespace domi {
-REGISTER_CUSTOM_OP("ApplyAdagrad")
+REGISTER_CUSTOM_OP("BroadcastGradientArgs")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType(std::vector<ge::AscendString>{"ApplyAdagrad", "ResourceApplyAdagrad"})
+    .OriginOpType("BroadcastGradientArgs")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

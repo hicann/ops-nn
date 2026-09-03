@@ -21,4 +21,10 @@ REGISTER_CUSTOM_OP("ScatterSub")
     .OriginOpType("ScatterSub")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("TensorScatterSub")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("TensorScatterSub")
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

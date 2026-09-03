@@ -18,7 +18,7 @@ namespace domi {
 // TensorFlow LayerNormGrad maps directly from the TensorFlow op of the same name; auto operator mapping suffices.
 REGISTER_CUSTOM_OP("LayerNormGrad")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType("LayerNormGrad")
+    .OriginOpType(std::vector<ge::AscendString>{"LayerNormGrad", "FusedLayerNormGrad"})
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -9,15 +9,34 @@
  */
 
 /*!
- * \file apply_adagrad_tf_plugin.cpp
- * \brief ApplyAdagrad TensorFlow plugin mapping.
+ * \file dynamic_rnnv2_tf_plugin.cpp
+ * \brief DynamicRnnV2 / DynamicRNNV2 TensorFlow plugin mapping.
  */
 #include "register/register.h"
 
 namespace domi {
-REGISTER_CUSTOM_OP("ApplyAdagrad")
+static Status ParseParamsDynamicRNN(const ge::Operator& op_src, ge::Operator& op_dest)
+{
+    AutoMappingByOpFn(op_src, op_dest);
+    op_dest.SetAttr("is_misplaced", true);
+    return SUCCESS;
+}
+
+REGISTER_CUSTOM_OP("DynamicRNN")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType(std::vector<ge::AscendString>{"ApplyAdagrad", "ResourceApplyAdagrad"})
+    .OriginOpType("DynamicRnnV2")
+    .ParseParamsByOperatorFn(ParseParamsDynamicRNN)
+    .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("DynamicRNNV2")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("DynamicRnnv2WithoutSeqlength")
+    .ParseParamsByOperatorFn(ParseParamsDynamicRNN)
+    .ImplyType(ImplyType::TVM);
+
+REGISTER_CUSTOM_OP("DynamicRNNV2")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("DynamicRnnv2WithSeqlength")
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

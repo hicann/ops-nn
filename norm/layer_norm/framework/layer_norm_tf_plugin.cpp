@@ -19,7 +19,7 @@ namespace domi {
 // The attributes `begin_norm_axis`, `begin_params_axis`, `epsilon` share the same name in TF and GE.
 REGISTER_CUSTOM_OP("LayerNorm")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType("LayerNorm")
+    .OriginOpType(std::vector<ge::AscendString>{"LayerNorm", "FusedLayerNorm"})
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi
