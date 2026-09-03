@@ -139,11 +139,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         for (OFFSET_T ow = owStart; ow < owEnd; ++ow) {
             OFFSET_T iw0 = StartIndexOut2In<OFFSET_T, DIV_T>(ow, inW, magicOsizeW, shiftOsizeW);
             OFFSET_T iw1 = EndIndexOut2In<OFFSET_T, DIV_T>(ow, outW, inW, magicOsizeW, shiftOsizeW);
-            float invKW = 1.0f / static_cast<float>(iw1 - iw0);
+            float kernelW = static_cast<float>(iw1 - iw0);
             for (OFFSET_T oh = 0; oh < outH; ++oh) {
                 gradient += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(outW) +
-                                                     static_cast<DIV_T>(ow)]) *
-                            invKW;
+                                                     static_cast<DIV_T>(ow)]) /
+                            kernelW;
             }
         }
         gradX[index] = static_cast<VALUE_T>(gradient);
@@ -161,12 +161,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
     LoadSimtParams<OFFSET_T, DIV_T>(p, magicInH, shiftInH, magicInW, shiftInW, magicOsizeH, shiftOsizeH, magicOsizeW,
                                     shiftOsizeW);
     OFFSET_T iw0[OUT_W], iw1[OUT_W];
-    float invKW[OUT_W];
+    float kernelW[OUT_W];
     for (uint32_t ow = 0; ow < OUT_W; ++ow) {
         iw0[ow] = StartIndexOut2In<OFFSET_T, DIV_T>(static_cast<OFFSET_T>(ow), inW, magicOsizeW, shiftOsizeW);
         iw1[ow] = EndIndexOut2In<OFFSET_T, DIV_T>(static_cast<OFFSET_T>(ow), static_cast<OFFSET_T>(OUT_W), inW,
                                                   magicOsizeW, shiftOsizeW);
-        invKW[ow] = 1.0f / static_cast<float>(iw1[ow] - iw0[ow]);
+        kernelW[ow] = static_cast<float>(iw1[ow] - iw0[ow]);
     }
     DIV_T rowCount = static_cast<DIV_T>(nDims) * static_cast<DIV_T>(cDims) * static_cast<DIV_T>(inH);
     DIV_T outHW = static_cast<DIV_T>(outH) * static_cast<DIV_T>(OUT_W);
@@ -184,9 +184,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
             OFFSET_T ih0 = StartIndexOut2In<OFFSET_T, DIV_T>(oh, inH, magicOsizeH, shiftOsizeH);
             OFFSET_T ih1 = EndIndexOut2In<OFFSET_T, DIV_T>(oh, outH, inH, magicOsizeH, shiftOsizeH);
             DIV_T yBase = base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(OUT_W);
-            float invKH = 1.0f / static_cast<float>(ih1 - ih0);
+            float kernelH = static_cast<float>(ih1 - ih0);
             for (uint32_t ow = 0; ow < OUT_W; ++ow) {
-                owSum[ow] += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow)]) * invKH * invKW[ow];
+                owSum[ow] += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow)]) / kernelH / kernelW[ow];
             }
         }
         for (OFFSET_T w = 0; w < inW; ++w) {
@@ -241,26 +241,26 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         bool singleOut = ohEnd <= ohStart + static_cast<OFFSET_T>(1);
         float firstWeight = (leftCross || (singleOut && rightCross)) ? 0.5f : 1.0f;
         float lastWeight = rightCross ? 0.5f : 1.0f;
-        float invKW0 = 1.0f / static_cast<float>(kW0);
-        float invKW1 = boundary ? ((kW0 == kW1) ? invKW0 : 1.0f / static_cast<float>(kW1)) : 0.0f;
+        float kernelW0 = static_cast<float>(kW0);
+        float kernelW1 = static_cast<float>(kW1);
         DIV_T base = nc * outHW;
         DIV_T firstBase = base + static_cast<DIV_T>(ohStart) * static_cast<DIV_T>(OUT_W);
-        float gradient = static_cast<float>(gradY[firstBase + static_cast<DIV_T>(ow0)]) * firstWeight * invKW0;
+        float gradient = static_cast<float>(gradY[firstBase + static_cast<DIV_T>(ow0)]) * firstWeight / kernelW0;
         if (boundary) {
-            gradient += static_cast<float>(gradY[firstBase + static_cast<DIV_T>(ow0 + 1)]) * firstWeight * invKW1;
+            gradient += static_cast<float>(gradY[firstBase + static_cast<DIV_T>(ow0 + 1)]) * firstWeight / kernelW1;
         }
         for (OFFSET_T oh = ohStart + static_cast<OFFSET_T>(1); oh < ohEnd - static_cast<OFFSET_T>(1); ++oh) {
             DIV_T yBase = base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(OUT_W);
-            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow0)]) * invKW0;
+            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow0)]) / kernelW0;
             if (boundary) {
-                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow0 + 1)]) * invKW1;
+                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow0 + 1)]) / kernelW1;
             }
         }
         if (ohEnd > ohStart + static_cast<OFFSET_T>(1)) {
             DIV_T lastBase = base + static_cast<DIV_T>(ohEnd - static_cast<OFFSET_T>(1)) * static_cast<DIV_T>(OUT_W);
-            gradient += static_cast<float>(gradY[lastBase + static_cast<DIV_T>(ow0)]) * lastWeight * invKW0;
+            gradient += static_cast<float>(gradY[lastBase + static_cast<DIV_T>(ow0)]) * lastWeight / kernelW0;
             if (boundary) {
-                gradient += static_cast<float>(gradY[lastBase + static_cast<DIV_T>(ow0 + 1)]) * lastWeight * invKW1;
+                gradient += static_cast<float>(gradY[lastBase + static_cast<DIV_T>(ow0 + 1)]) * lastWeight / kernelW1;
             }
         }
         VALUE_T outVal = static_cast<VALUE_T>(gradient);
@@ -297,13 +297,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         for (OFFSET_T ow = owStart; ow < owEnd; ++ow) {
             OFFSET_T iw0 = StartIndexOut2In<OFFSET_T, DIV_T>(ow, inW, magicOsizeW, shiftOsizeW);
             OFFSET_T iw1 = EndIndexOut2In<OFFSET_T, DIV_T>(ow, outW, inW, magicOsizeW, shiftOsizeW);
-            float invKW = 1.0f / static_cast<float>(iw1 - iw0);
+            float kernelW = static_cast<float>(iw1 - iw0);
             for (OFFSET_T oh = ohStart; oh < ohEnd; ++oh) {
                 OFFSET_T ih0 = StartIndexOut2In<OFFSET_T, DIV_T>(oh, inH, magicOsizeH, shiftOsizeH);
                 OFFSET_T ih1 = EndIndexOut2In<OFFSET_T, DIV_T>(oh, outH, inH, magicOsizeH, shiftOsizeH);
+                float kernelH = static_cast<float>(ih1 - ih0);
                 gradient += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(outW) +
-                                                     static_cast<DIV_T>(ow)]) *
-                            invKW / static_cast<float>(ih1 - ih0);
+                                                     static_cast<DIV_T>(ow)]) /
+                            kernelH / kernelW;
             }
         }
         gradX[index] = static_cast<VALUE_T>(gradient);
@@ -337,10 +338,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
             OFFSET_T iw0 = StartIndexOut2In<OFFSET_T, DIV_T>(ow, inW, magicOsizeW, shiftOsizeW);
             OFFSET_T iw1 = EndIndexOut2In<OFFSET_T, DIV_T>(ow, outW, inW, magicOsizeW, shiftOsizeW);
             DIV_T yBase = base + static_cast<DIV_T>(ow);
-            float invKW = 1.0f / static_cast<float>(iw1 - iw0);
+            float kernelW = static_cast<float>(iw1 - iw0);
 #pragma unroll
             for (uint32_t i = 0; i < H_SCALE; ++i) {
-                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(i) * static_cast<DIV_T>(outW)]) * invKW;
+                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(i) * static_cast<DIV_T>(outW)]) /
+                            kernelW;
             }
         }
         gradX[index] = static_cast<VALUE_T>(gradient);
@@ -373,7 +375,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         for (OFFSET_T oh = ohStart; oh < ohEnd; ++oh) {
             OFFSET_T ih0 = StartIndexOut2In<OFFSET_T, DIV_T>(oh, inH, magicOsizeH, shiftOsizeH);
             OFFSET_T ih1 = EndIndexOut2In<OFFSET_T, DIV_T>(oh, outH, inH, magicOsizeH, shiftOsizeH);
-            float invKH = 1.0f / static_cast<float>(ih1 - ih0);
+            float kernelH = static_cast<float>(ih1 - ih0);
             DIV_T yBase = base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(outW);
             if (owEnd <= owStart) {
                 continue;
@@ -381,22 +383,22 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
             if (owEnd == owStart + static_cast<OFFSET_T>(1)) {
                 OFFSET_T iw0 = StartIndexOut2In<OFFSET_T, DIV_T>(owStart, inW, magicOsizeW, shiftOsizeW);
                 OFFSET_T iw1 = EndIndexOut2In<OFFSET_T, DIV_T>(owStart, outW, inW, magicOsizeW, shiftOsizeW);
-                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(owStart)]) * invKH /
+                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(owStart)]) / kernelH /
                             static_cast<float>(iw1 - iw0);
                 continue;
             }
             OFFSET_T firstIw0 = StartIndexOut2In<OFFSET_T, DIV_T>(owStart, inW, magicOsizeW, shiftOsizeW);
             OFFSET_T firstIw1 = EndIndexOut2In<OFFSET_T, DIV_T>(owStart, outW, inW, magicOsizeW, shiftOsizeW);
-            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(owStart)]) * invKH /
+            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(owStart)]) / kernelH /
                         static_cast<float>(firstIw1 - firstIw0);
             OFFSET_T middleEnd = owEnd - static_cast<OFFSET_T>(1);
             for (OFFSET_T ow = owStart + static_cast<OFFSET_T>(1); ow < middleEnd; ++ow) {
-                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow)]) * invKH;
+                gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(ow)]) / kernelH;
             }
             OFFSET_T lastOw = owEnd - static_cast<OFFSET_T>(1);
             OFFSET_T lastIw0 = StartIndexOut2In<OFFSET_T, DIV_T>(lastOw, inW, magicOsizeW, shiftOsizeW);
             OFFSET_T lastIw1 = EndIndexOut2In<OFFSET_T, DIV_T>(lastOw, outW, inW, magicOsizeW, shiftOsizeW);
-            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(lastOw)]) * invKH /
+            gradient += static_cast<float>(gradY[yBase + static_cast<DIV_T>(lastOw)]) / kernelH /
                         static_cast<float>(lastIw1 - lastIw0);
         }
         gradX[index] = static_cast<VALUE_T>(gradient);
@@ -421,7 +423,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
     DIV_T outHW = static_cast<DIV_T>(outH) * OUT_W;
     DIV_T kW = (static_cast<DIV_T>(inW) + static_cast<DIV_T>(1)) >> static_cast<DIV_T>(1);
     DIV_T rightStart = static_cast<DIV_T>(inW) >> static_cast<DIV_T>(1);
-    float invKW = 1.0f / static_cast<float>(kW);
+    float kernelW = static_cast<float>(kW);
 
     for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += gridDim.x * blockDim.x) {
         DIV_T tmp = Simt::UintDiv<DIV_T>(index, magicInW, shiftInW);
@@ -447,46 +449,46 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         if (useOw0 && !useOw1) {
             float sum0 = 0.0f;
             if (leftCross) {
-                sum0 += static_cast<float>(gradY[base + static_cast<DIV_T>(ohStart) * OUT_W]) * 0.5f * invKW;
+                sum0 += static_cast<float>(gradY[base + static_cast<DIV_T>(ohStart) * OUT_W]) * 0.5f / kernelW;
             }
             OFFSET_T oh = midBegin;
             for (; oh + static_cast<OFFSET_T>(3) < midEnd; oh += static_cast<OFFSET_T>(4)) {
                 DIV_T yBase = base + static_cast<DIV_T>(oh) * OUT_W;
-                sum0 += static_cast<float>(gradY[yBase]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) * invKW;
+                sum0 += static_cast<float>(gradY[yBase]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) / kernelW;
             }
             for (; oh < midEnd; ++oh) {
-                sum0 += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * OUT_W]) * invKW;
+                sum0 += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * OUT_W]) / kernelW;
             }
             if (rightCross) {
                 sum0 += static_cast<float>(gradY[base + static_cast<DIV_T>(ohEnd - static_cast<OFFSET_T>(1)) * OUT_W]) *
-                        0.5f * invKW;
+                        0.5f / kernelW;
             }
             gradX[index] = static_cast<VALUE_T>(sum0);
         } else if (!useOw0 && useOw1) {
             float sum1 = 0.0f;
             if (leftCross) {
                 sum1 += static_cast<float>(gradY[base + static_cast<DIV_T>(ohStart) * OUT_W + static_cast<DIV_T>(1)]) *
-                        0.5f * invKW;
+                        0.5f / kernelW;
             }
             OFFSET_T oh = midBegin;
             for (; oh + static_cast<OFFSET_T>(3) < midEnd; oh += static_cast<OFFSET_T>(4)) {
                 DIV_T yBase = base + static_cast<DIV_T>(oh) * OUT_W + static_cast<DIV_T>(1);
-                sum1 += static_cast<float>(gradY[yBase]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) * invKW;
+                sum1 += static_cast<float>(gradY[yBase]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) / kernelW;
             }
             for (; oh < midEnd; ++oh) {
-                sum1 += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * OUT_W + static_cast<DIV_T>(1)]) *
-                        invKW;
+                sum1 += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * OUT_W + static_cast<DIV_T>(1)]) /
+                        kernelW;
             }
             if (rightCross) {
                 sum1 += static_cast<float>(gradY[base + static_cast<DIV_T>(ohEnd - static_cast<OFFSET_T>(1)) * OUT_W +
                                                  static_cast<DIV_T>(1)]) *
-                        0.5f * invKW;
+                        0.5f / kernelW;
             }
             gradX[index] = static_cast<VALUE_T>(sum1);
         } else {
@@ -494,30 +496,30 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
             float sum1 = 0.0f;
             if (leftCross) {
                 DIV_T yBase = base + static_cast<DIV_T>(ohStart) * OUT_W;
-                sum0 += static_cast<float>(gradY[yBase]) * 0.5f * invKW;
-                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * 0.5f * invKW;
+                sum0 += static_cast<float>(gradY[yBase]) * 0.5f / kernelW;
+                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * 0.5f / kernelW;
             }
             OFFSET_T oh = midBegin;
             for (; oh + static_cast<OFFSET_T>(3) < midEnd; oh += static_cast<OFFSET_T>(4)) {
                 DIV_T yBase = base + static_cast<DIV_T>(oh) * OUT_W;
-                sum0 += static_cast<float>(gradY[yBase]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) * invKW;
-                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(3)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(5)]) * invKW +
-                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(7)]) * invKW;
+                sum0 += static_cast<float>(gradY[yBase]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(2)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(4)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(6)]) / kernelW;
+                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(3)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(5)]) / kernelW +
+                        static_cast<float>(gradY[yBase + static_cast<DIV_T>(7)]) / kernelW;
             }
             for (; oh < midEnd; ++oh) {
                 DIV_T yBase = base + static_cast<DIV_T>(oh) * OUT_W;
-                sum0 += static_cast<float>(gradY[yBase]) * invKW;
-                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * invKW;
+                sum0 += static_cast<float>(gradY[yBase]) / kernelW;
+                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) / kernelW;
             }
             if (rightCross) {
                 DIV_T yBase = base + static_cast<DIV_T>(ohEnd - static_cast<OFFSET_T>(1)) * OUT_W;
-                sum0 += static_cast<float>(gradY[yBase]) * 0.5f * invKW;
-                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * 0.5f * invKW;
+                sum0 += static_cast<float>(gradY[yBase]) * 0.5f / kernelW;
+                sum1 += static_cast<float>(gradY[yBase + static_cast<DIV_T>(1)]) * 0.5f / kernelW;
             }
             gradX[index] = static_cast<VALUE_T>(sum0 + sum1);
         }
@@ -550,13 +552,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dGra
         for (OFFSET_T oh = ohStart; oh < ohEnd; ++oh) {
             OFFSET_T ih0 = StartIndexOut2In<OFFSET_T, DIV_T>(oh, inH, magicOsizeH, shiftOsizeH);
             OFFSET_T ih1 = EndIndexOut2In<OFFSET_T, DIV_T>(oh, outH, inH, magicOsizeH, shiftOsizeH);
-            float invKH = 1.0f / static_cast<float>(ih1 - ih0);
+            float kernelH = static_cast<float>(ih1 - ih0);
             for (OFFSET_T ow = owStart; ow < owEnd; ++ow) {
                 OFFSET_T iw0 = StartIndexOut2In<OFFSET_T, DIV_T>(ow, inW, magicOsizeW, shiftOsizeW);
                 OFFSET_T iw1 = EndIndexOut2In<OFFSET_T, DIV_T>(ow, outW, inW, magicOsizeW, shiftOsizeW);
                 gradient += static_cast<float>(gradY[base + static_cast<DIV_T>(oh) * static_cast<DIV_T>(outW) +
-                                                     static_cast<DIV_T>(ow)]) *
-                            invKH / static_cast<float>(iw1 - iw0);
+                                                     static_cast<DIV_T>(ow)]) /
+                            kernelH / static_cast<float>(iw1 - iw0);
             }
         }
         gradX[index] = static_cast<VALUE_T>(gradient);
