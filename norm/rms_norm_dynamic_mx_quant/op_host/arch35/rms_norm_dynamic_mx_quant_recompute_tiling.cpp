@@ -237,7 +237,7 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::PostTiling()
 
     size_t tilingDataSize = sizeof(tilingData_);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
+                           &tilingData_, tilingDataSize);
     OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "memcpy_s failed."), return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 

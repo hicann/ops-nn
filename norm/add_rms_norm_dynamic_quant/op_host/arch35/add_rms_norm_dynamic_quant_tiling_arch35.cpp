@@ -109,7 +109,7 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetPlatformInfo()
         OP_LOGD(nodeName.c_str(), "GetPlatformInfo return nullptr, need re get later.");
         tilingParams.needGetCompileInfo = true;
     } else {
-        auto compileInfo = reinterpret_cast<const AddRmsNormDynamicQuantCompileInfo*>(context_->GetCompileInfo());
+        auto compileInfo = static_cast<const AddRmsNormDynamicQuantCompileInfo*>(context_->GetCompileInfo());
         tilingParams.totalCoreNum = compileInfo->totalCoreNum;
         tilingParams.maxUbSize = compileInfo->maxUbSize;
         tilingParams.needGetCompileInfo = false;

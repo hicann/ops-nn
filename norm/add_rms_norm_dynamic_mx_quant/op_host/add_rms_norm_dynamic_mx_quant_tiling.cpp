@@ -22,7 +22,7 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
     if (platformInfo != nullptr) {
         useRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     } else {
-        auto compileInfo = reinterpret_cast<const AddRmsNormDynamicMxQuantCompileInfo*>(context->GetCompileInfo());
+        auto compileInfo = static_cast<const AddRmsNormDynamicMxQuantCompileInfo*>(context->GetCompileInfo());
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
         useRegbase = compileInfo->isRegbase;
     }

@@ -240,7 +240,7 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
 {
     OP_LOGD("Tiling4AddRmsNormQuantNotRegbase", "Enter Tiling4AddRmsNormQuantNotRegbase");
 
-    auto ptrCompileInfo = reinterpret_cast<const AddRmsNormQuantCompileInfo*>(context->GetCompileInfo());
+    auto ptrCompileInfo = static_cast<const AddRmsNormQuantCompileInfo*>(context->GetCompileInfo());
     uint32_t numCore;
     InitPlatformParams(context, ptrCompileInfo, numCore);
 

@@ -529,7 +529,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::GetShapeAttrsInfo()
 ge::graphStatus AddRmsNormQuantRegbaseTiling::GetPlatformInfo()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormQuantRegbaseTiling GetPlatformInfo.");
-    auto compileInfo = reinterpret_cast<const AddRmsNormQuantCompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = static_cast<const AddRmsNormQuantCompileInfo*>(context_->GetCompileInfo());
     if (compileInfo == nullptr) {
         OP_LOGD(nodeName.c_str(), "GetPlatformInfo return nullptr, need re get later.");
         tilingParams.needGetCompileInfo = true;
