@@ -23,9 +23,13 @@ static constexpr int64_t OUT_Y_IDX = 0;
 static constexpr size_t TWO = 2;
 static constexpr int64_t SIMT_CACHE_SIZE = static_cast<int64_t>(128 * 1024);
 static constexpr uint64_t NO_CONTIGUOUS_BASE_KEY = 100;
+static constexpr uint64_t NO_CONTIGUOUS_SIMD_BASE_KEY_INT32 = 150;
+static constexpr uint64_t NO_CONTIGUOUS_SIMD_BASE_KEY_INT64 = 151;
 static constexpr uint64_t DIGIT_TEN = 10;
 static constexpr int64_t INT32_MAX_BOUND = 2147483647;
 static constexpr size_t SUPPORT_DIM = 2;
+static constexpr int64_t BUFFER_NUM = 2;
+static constexpr int64_t INDICES_SIZE = 8192;
 
 bool EmbeddingNoContiguousTiling::IsCapable()
 {
@@ -261,6 +265,85 @@ void EmbeddingNoContiguousTiling::CalcuCore()
     lastCoreElements_ = ySize_ - perCoreElements_ * (usedCoreNum_ - 1);
 }
 
+bool EmbeddingNoContiguousTiling::IsPcieThrough()
+{
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90200000
+    return context_->GetPcieThroughFlag();
+#else
+    return false;
+#endif
+}
+
+bool EmbeddingNoContiguousTiling::IsUseSimdForNoContiguous()
+{
+    if (IsPcieThrough()) {
+        return true;
+    }
+    return false;
+}
+
+void EmbeddingNoContiguousTiling::SimdCalcuCore()
+{
+    int64_t aivNum = totalCoreNum_;
+    int64_t gatherSize = static_cast<int64_t>(indicesShape_.GetShapeSize());
+    if (gatherSize == 0) {
+        usedCoreNum_ = 1;
+        perCoreElements_ = 0;
+        lastCoreElements_ = 0;
+        return;
+    }
+    int64_t blockFactor = gatherSize / aivNum;
+    int64_t tailBlockFactor = gatherSize - blockFactor * aivNum;
+    usedCoreNum_ = blockFactor > 0 ? aivNum : tailBlockFactor;
+    perCoreElements_ = blockFactor;
+    lastCoreElements_ = tailBlockFactor;
+}
+
+void EmbeddingNoContiguousTiling::SetSimdTilingData()
+{
+    int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
+    int64_t ubAviable = (ubSize_ - INDICES_SIZE) / ubBlockSize * ubBlockSize / xDtypeSize_ / BUFFER_NUM;
+    int32_t indiceFactor = INDICES_SIZE / indicesDtypeSize_;
+    int64_t blockFactor = perCoreElements_;
+    int64_t tailBlockFactor = lastCoreElements_;
+
+    simdTilingData_.set_needCoreNum(static_cast<int16_t>(usedCoreNum_));
+    simdTilingData_.set_indiceFactor(indiceFactor);
+    simdTilingData_.set_dtypeSize(static_cast<int32_t>(xDtypeSize_));
+    simdTilingData_.set_gatherDimSize(gatherSize_);
+    simdTilingData_.set_gatherSize(static_cast<int64_t>(indicesShape_.GetShapeSize()));
+    simdTilingData_.set_innerSize(innerSize_);
+    simdTilingData_.set_indicesDim1Size(indicesDim1Size_);
+    simdTilingData_.set_xDim0Stride(xDim0Stride_);
+    simdTilingData_.set_xDim1Stride(xDim1Stride_);
+    simdTilingData_.set_indicesDim0Stride(indicesDim0Stride_);
+    simdTilingData_.set_indicesDim1Stride(indicesDim1Stride_);
+    simdTilingData_.set_blockFactor(blockFactor);
+    simdTilingData_.set_tailBlockFactor(tailBlockFactor);
+    simdTilingData_.set_maxElement(ubAviable);
+}
+
+void EmbeddingNoContiguousTiling::ShowSimdTilingData()
+{
+    std::ostringstream info;
+    info << "tilingKey: " << GetTilingKey();
+    info << ", needCoreNum: " << simdTilingData_.get_needCoreNum();
+    info << ", indiceFactor: " << simdTilingData_.get_indiceFactor();
+    info << ", dtypeSize: " << simdTilingData_.get_dtypeSize();
+    info << ", gatherDimSize: " << simdTilingData_.get_gatherDimSize();
+    info << ", gatherSize: " << simdTilingData_.get_gatherSize();
+    info << ", innerSize: " << simdTilingData_.get_innerSize();
+    info << ", indicesDim1Size: " << simdTilingData_.get_indicesDim1Size();
+    info << ", xDim0Stride: " << simdTilingData_.get_xDim0Stride();
+    info << ", xDim1Stride: " << simdTilingData_.get_xDim1Stride();
+    info << ", indicesDim0Stride: " << simdTilingData_.get_indicesDim0Stride();
+    info << ", indicesDim1Stride: " << simdTilingData_.get_indicesDim1Stride();
+    info << ", blockFactor: " << simdTilingData_.get_blockFactor();
+    info << ", tailBlockFactor: " << simdTilingData_.get_tailBlockFactor();
+    info << ", maxElement: " << simdTilingData_.get_maxElement();
+    OP_LOGI(opName_, "%s", info.str().c_str());
+}
+
 void EmbeddingNoContiguousTiling::SetTilingData()
 {
     m_tilingData_.set_threadNum(threadNum_);
@@ -279,6 +362,10 @@ void EmbeddingNoContiguousTiling::SetTilingData()
 
 void EmbeddingNoContiguousTiling::DumpTilingInfo()
 {
+    if (isSimd_) {
+        ShowSimdTilingData();
+        return;
+    }
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", threadNum: " << m_tilingData_.get_threadNum();
@@ -314,8 +401,14 @@ ge::graphStatus EmbeddingNoContiguousTiling::DoOpTiling()
     bool yEnableInt64 = IsEnableInt64(yShape_, yStride_);
     enableInt64_ = (xEnableInt64 || indicesEnableInt64 || yEnableInt64) ? 1 : 0;
 
-    CalcuCore();
-    SetTilingData();
+    isSimd_ = IsUseSimdForNoContiguous();
+    if (isSimd_) {
+        SimdCalcuCore();
+        SetSimdTilingData();
+    } else {
+        CalcuCore();
+        SetTilingData();
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -323,8 +416,13 @@ ge::graphStatus EmbeddingNoContiguousTiling::DoLibApiTiling() { return ge::GRAPH
 
 uint64_t EmbeddingNoContiguousTiling::GetTilingKey() const
 {
-    uint64_t key = NO_CONTIGUOUS_BASE_KEY;
-    key += static_cast<uint64_t>(enableInt64_ * DIGIT_TEN + xDtypeSize_);
+    uint64_t key = 0;
+    if (isSimd_) {
+        key = (indicesDtype_ == ge::DT_INT64) ? NO_CONTIGUOUS_SIMD_BASE_KEY_INT64 : NO_CONTIGUOUS_SIMD_BASE_KEY_INT32;
+    } else {
+        key = NO_CONTIGUOUS_BASE_KEY;
+        key += static_cast<uint64_t>(enableInt64_ * DIGIT_TEN + xDtypeSize_);
+    }
     return key;
 }
 
@@ -339,15 +437,27 @@ ge::graphStatus EmbeddingNoContiguousTiling::GetWorkspaceSize()
 ge::graphStatus EmbeddingNoContiguousTiling::PostTiling()
 {
     context_->SetBlockDim(usedCoreNum_);
-    uint64_t localMemorySize = static_cast<uint64_t>(ubSize_) - static_cast<uint64_t>(SIMT_CACHE_SIZE);
-    context_->SetLocalMemorySize(localMemorySize);
+    if (!isSimd_) {
+        uint64_t localMemorySize = static_cast<uint64_t>(ubSize_) - static_cast<uint64_t>(SIMT_CACHE_SIZE);
+        context_->SetLocalMemorySize(localMemorySize);
+    }
 
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    if (m_tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
+    if (isSimd_) {
+        if (simdTilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
+            return ge::GRAPH_FAILED;
+        }
+        simdTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                     context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(simdTilingData_.GetDataSize());
+    } else {
+        if (m_tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
+            return ge::GRAPH_FAILED;
+        }
+        m_tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                   context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(m_tilingData_.GetDataSize());
     }
-    m_tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(m_tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 

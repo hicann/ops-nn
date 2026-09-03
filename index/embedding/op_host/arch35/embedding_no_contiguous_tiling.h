@@ -30,6 +30,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "error_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "version/metadef_version.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
@@ -57,6 +58,26 @@ REGISTER_TILING_DATA_CLASS(Embedding_111, EmbeddingNoContiguousTilingData)
 REGISTER_TILING_DATA_CLASS(Embedding_112, EmbeddingNoContiguousTilingData)
 REGISTER_TILING_DATA_CLASS(Embedding_114, EmbeddingNoContiguousTilingData)
 REGISTER_TILING_DATA_CLASS(Embedding_118, EmbeddingNoContiguousTilingData)
+
+BEGIN_TILING_DATA_DEF(EmbeddingNoContiguousSimdTilingData)
+TILING_DATA_FIELD_DEF(int16_t, needCoreNum);
+TILING_DATA_FIELD_DEF(int32_t, indiceFactor);
+TILING_DATA_FIELD_DEF(int32_t, dtypeSize);
+TILING_DATA_FIELD_DEF(int64_t, gatherDimSize);
+TILING_DATA_FIELD_DEF(int64_t, gatherSize);
+TILING_DATA_FIELD_DEF(int64_t, innerSize);
+TILING_DATA_FIELD_DEF(int64_t, indicesDim1Size);
+TILING_DATA_FIELD_DEF(int64_t, xDim0Stride);
+TILING_DATA_FIELD_DEF(int64_t, xDim1Stride);
+TILING_DATA_FIELD_DEF(int64_t, indicesDim0Stride);
+TILING_DATA_FIELD_DEF(int64_t, indicesDim1Stride);
+TILING_DATA_FIELD_DEF(int64_t, blockFactor);
+TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, maxElement);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(Embedding_150, EmbeddingNoContiguousSimdTilingData)
+REGISTER_TILING_DATA_CLASS(Embedding_151, EmbeddingNoContiguousSimdTilingData)
 
 class EmbeddingNoContiguousTiling : public TilingBaseClass {
 public:
@@ -92,6 +113,11 @@ private:
     ge::graphStatus CheckInAndOutDtype();
     ge::graphStatus CheckOutShape();
     void CalcuCore();
+    void SimdCalcuCore();
+    bool IsUseSimdForNoContiguous();
+    bool IsPcieThrough();
+    void SetSimdTilingData();
+    void ShowSimdTilingData();
     bool IsContiguous(const gert::Shape& xShape, const gert::Stride& xStride);
     ge::graphStatus GetContiguousTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut);
     ge::graphStatus GetTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut = false);
@@ -132,6 +158,8 @@ private:
 
     const char* opName_ = "Embedding";
     EmbeddingNoContiguousTilingData m_tilingData_;
+    EmbeddingNoContiguousSimdTilingData simdTilingData_;
+    bool isSimd_ = false;
 };
 } // namespace optiling
 #endif // EMBEDDING_NO_CONTIGUOUS_TILING_H

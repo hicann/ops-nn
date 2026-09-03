@@ -28,6 +28,8 @@
 #include "error_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_api/runtime2_util_nn.h"
+#include "version/metadef_version.h"
+#include "embedding_tiling_simd.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
@@ -46,6 +48,9 @@ struct EmbeddingCompileInfo {
     uint64_t coreNum;
     uint64_t ubSize;
 };
+
+static constexpr int32_t TILING_SIMD_TWO_DIM = 5;
+static constexpr int32_t TILING_SIMT_TWO_DIM = 6;
 
 class EmbeddingTilingBase : public TilingBaseClass {
 public:
@@ -81,13 +86,18 @@ private:
     inline ge::graphStatus GetXInfoAndCheck();
     inline ge::graphStatus GetIndicesInfoAndCheck();
     void ShowBaseTilingData();
+    void ShowSimdTilingData();
     ge::graphStatus MargeAxis();
     ge::graphStatus SimtTwoDimTiling();
+    ge::graphStatus SimdTwoDimTiling();
     int64_t XDtypeImprove();
     bool IsSimtTwoDim();
+    bool IsPcieThrough();
+    ge::graphStatus DoOpTilingForSimd();
     int64_t aivNum_;
     const char* opName_ = "";
     EmbeddingTilingDataSimtTwoDim simtTwoDimTilingData_;
+    EmbeddingTilingDataSimdTwoDim simdTwoDimTilingData_;
 #ifdef DAVID_FPGA
     int64_t threadNum_ = 128;
 #else

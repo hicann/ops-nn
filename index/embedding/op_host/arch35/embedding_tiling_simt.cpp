@@ -49,8 +49,6 @@ const static uint64_t DTYPE_B64_KEY = 3;
 const static uint64_t DTYPE_B32_KEY = 2;
 const static uint64_t DTYPE_B16_KEY = 1;
 const static uint64_t DTYPE_B8_KEY = 0;
-const static uint64_t SIMD_TILING_KEY = 1000000099UL;
-const static uint64_t SIMD_TWO_DIM_TILING_KEY = 1000000299UL;
 const static uint64_t SIMT_TWO_DIM_BASE_KEY = 2000000000UL;
 const static uint64_t EMPTY_TILING_KEY = 3000000000UL;
 const static int64_t MIN_OUTPUT_FULL_LOAD_SIZE = 2048;
@@ -67,8 +65,6 @@ const static int32_t TILING_SIMD = 1;
 const static int32_t TILING_LAST_GATHER = 2;
 const static int32_t TILING_GA_ALL_LOAD = 3;
 const static int32_t TILING_AFTER_GDIM = 4;
-const static int32_t TILING_SIMD_TWO_DIM = 5;
-const static int32_t TILING_SIMT_TWO_DIM = 6;
 const static int32_t TILING_EMPTY = 7;
 const static int32_t B8_AND_B16_GATHER_UPPER = 65536;
 const static int64_t SPLIT_OUT_THRES = 2048;
@@ -264,28 +260,28 @@ ge::graphStatus EmbeddingTilingBase::DoOpTiling()
     if (MargeAxis() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    if (IsPcieThrough()) {
+        return DoOpTilingForSimd();
+    }
     if (IsSimtTwoDim()) {
         tilingMode_ = TILING_SIMT_TWO_DIM;
         return SimtTwoDimTiling();
     } else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", xShape_.GetDimNum() + "D", "2D");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", (std::to_string(xShape_.GetDimNum()) + "D").c_str(), "2D");
         return ge::GRAPH_FAILED;
     }
 }
 
 ge::graphStatus EmbeddingTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t EmbeddingTilingBase::GetTilingKey() const
+void EmbeddingTilingBase::DumpTilingInfo()
 {
-    uint64_t tilingKey = 0UL;
-    if (tilingMode_ == TILING_SIMT_TWO_DIM) {
-        tilingKey = SIMT_TWO_DIM_BASE_KEY + static_cast<uint64_t>(improveDtypeSize_);
+    if (tilingMode_ == TILING_SIMD_TWO_DIM) {
+        ShowSimdTilingData();
+    } else if (tilingMode_ == TILING_SIMT_TWO_DIM) {
+        ShowBaseTilingData();
     }
-    OP_LOGD(opName_, "tilingKey is %lu", tilingKey);
-    return tilingKey;
 }
-
-void EmbeddingTilingBase::DumpTilingInfo() { ShowBaseTilingData(); }
 ge::graphStatus EmbeddingTilingBase::GetWorkspaceSize()
 {
     // 计算workspace大小
@@ -298,13 +294,14 @@ ge::graphStatus EmbeddingTilingBase::PostTiling()
     context_->SetBlockDim(needCoreNum_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    if (tilingMode_ == TILING_SIMT_TWO_DIM) {
+    if (tilingMode_ == TILING_SIMD_TWO_DIM) {
+        simdTwoDimTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                           context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(simdTwoDimTilingData_.GetDataSize());
+    } else if (tilingMode_ == TILING_SIMT_TWO_DIM) {
         simtTwoDimTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
                                            context_->GetRawTilingData()->GetCapacity());
         context_->GetRawTilingData()->SetDataSize(simtTwoDimTilingData_.GetDataSize());
-    }
-
-    if (tilingMode_ == TILING_SIMT_TWO_DIM) {
         context_->SetLocalMemorySize(static_cast<uint32_t>(ubSize_ - DCACHE_SIZE));
     }
     return ge::GRAPH_SUCCESS;

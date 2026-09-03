@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -14,11 +14,13 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "version/metadef_version.h"
 
 using namespace ge;
 namespace ops {
 const size_t INPUT_IDX_X = 0;
 const size_t INPUT_IDX_INDICES = 1;
+const size_t OUTPUT_IDX_Y = 0;
 const int64_t DIM_TWO = 2;
 
 static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context)
@@ -49,5 +51,20 @@ static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(Embedding).InferShape(InferShapeForEmbedding);
+static ge::graphStatus InferDtypeForEmbedding(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDtypeForEmbedding");
+    auto xDtype = context->GetInputDataType(INPUT_IDX_X);
+    context->SetOutputDataType(OUTPUT_IDX_Y, xDtype);
+    OP_LOGD(context->GetNodeName(), "End to do InferDtypeForEmbedding");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(Embedding)
+    .InferShape(InferShapeForEmbedding)
+    .InferDataType(InferDtypeForEmbedding)
+#if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90200000
+    .SetSupportPcieThrough()
+#endif
+    ;
 } // namespace ops
