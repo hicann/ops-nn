@@ -207,6 +207,9 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyOut(int64_t progress, 
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Process()
 {
+    if (ubLength_ == 0 || blockLength_ <= 0) {
+        return;
+    }
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
         int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;

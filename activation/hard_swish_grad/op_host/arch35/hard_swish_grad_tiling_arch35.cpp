@@ -149,6 +149,11 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     int64_t alignUnit = std::max(ubBlockSize, VECTOR_ALIGN_ELEM);
     tiling->ubFactor = FloorAlign(FloorDiv((static_cast<int64_t>(ubSize) / typeSize), bufferNum), alignUnit);
 
+    OP_CHECK_IF(tiling->ubFactor <= 0,
+                OP_LOGE(context, "HardSwishGrad: ubFactor is %ld after FloorAlign, ubSize=%lu dtype=%d",
+                        tiling->ubFactor, ubSize, static_cast<int>(dataType)),
+                return ge::GRAPH_FAILED);
+
     context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
