@@ -26,12 +26,16 @@ namespace ge {
  *@brief Computes gradients of MaxPoolV3 function.
  *@par Inputs:
  *Three inputs, including:
- * @li orig_input: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32.
- * @li orig_output: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32.
- * @li grad: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32. \n
+ * @li orig_input: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32, bfloat16,
+ * int8, int16, int32, int64, uint8, uint16.
+ * @li orig_output: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32, bfloat16,
+ * int8, int16, int32, int64, uint8, uint16.
+ * @li grad: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32, bfloat16,
+ * int8, int16, int32, int64, uint8, uint16. \n
 
  *@par Outputs:
- *out_grad: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32.
+ *out_grad: A 4D Tensor of NCHW or NHWC format. Must be one of the following types: float16, float32, bfloat16,
+ * int8, int16, int32, int64, uint8, uint16.
  *@par Attributes:
  * @li ksize: A required list of int64. The kernel size of max pool.
  * @li strides: A required list of int64. The stride of max pool.
@@ -40,7 +44,7 @@ namespace ge {
  * @li pads: An optional list of int64. The padding values [pad_top, pad_bottom, pad_left, pad_right], effective only
  under "CALCULATED" mode. Defaults to {0, 0, 0, 0}.
  * @li data_format: An optional string. The logical data format, either "NCHW" or "NHWC". Defaults to "NCHW".
- * @li global_pooling: An optional bool. Whether to use global pooling, must be false. Defaults to false.
+ * @li global_pooling: An optional bool. Whether to use global pooling. Defaults to false.
  * @li ceil_mode: An optional bool. Whether to use ceil mode to compute output size. Defaults to false.
  *@par Third-party framework compatibility
  *Compatible with the TensorFlow operator MaxPoolGrad.

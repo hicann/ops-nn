@@ -278,10 +278,18 @@ class MaxPoolV3GradKernelSpec:
     def golden(orig_input, orig_output, grad, **kwargs):
         return [_golden(orig_input, orig_output, grad, kwargs)]
 
+    class ThirdPartyImpl:
+        def __init__(self, **kwargs):
+            self.params = kwargs
+
+        def __call__(self, orig_input, orig_output, grad, **kwargs):
+            return [_golden(orig_input, orig_output, grad, self.params)]
+
+    third_party = {"tf": ThirdPartyImpl}
     tolerance = {
-        "float16": {"standard": "stat_rel_err"},
-        "float32": {"standard": "stat_rel_err"},
-        "bfloat16": {"standard": "stat_rel_err"},
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "float32": {"standard": "cross_check", "level": "L1"},
+        "bfloat16": {"standard": "cross_check", "level": "L1"},
         "int8": {"standard": "binary_equal"},
         "uint8": {"standard": "binary_equal"},
         "int16": {"standard": "binary_equal"},

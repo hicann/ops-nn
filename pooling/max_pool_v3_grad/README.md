@@ -7,7 +7,7 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                     |     √    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>    |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    x     |
 | <term>Atlas 推理系列产品</term>                               |    √     |
 | <term>Atlas 训练系列产品</term>                               |    √     |
 
@@ -102,7 +102,7 @@
 |ksize|属性|池化窗口大小，长度为4的列表。N维和C维必须为1，H/W维取值范围为[1, 255]。global_pooling为true时忽略。|INT64|-|
 |strides|属性|池化步长，长度为4的列表。N维和C维必须为1，H/W维取值范围为[1, 63]。|INT64|-|
 |padding_mode|属性|padding模式，支持"CALCULATED"、"SAME"、"VALID"，默认"CALCULATED"。|STRING|-|
-|pads|属性|padding大小，长度为4的列表，顺序为[pad_top, pad_bottom, pad_left, pad_right]，仅在padding_mode为"CALCULATED"时生效，每个值必须大于等于0，默认[0, 0, 0, 0]。|INT64|-|
+|pads|属性|padding大小，长度为4的列表，顺序为[pad_top, pad_bottom, pad_left, pad_right]，仅在padding_mode为"CALCULATED"时生效，pad_top/pad_bottom取值范围为[0, ksize[H])，pad_left/pad_right取值范围为[0, ksize[W])，默认[0, 0, 0, 0]。|INT64|-|
 |data_format|属性|逻辑数据格式，支持"NCHW"、"NHWC"，默认"NCHW"。决定H、W、C维度的索引位置，输入输出均为4D ND格式，不做5HD格式转换。|STRING|-|
 |global_pooling|属性|是否全局池化，默认false。为true时忽略ksize和pads，池化窗口覆盖整个H/W维度，输出H/W维度为1。|BOOL|-|
 |ceil_mode|属性|是否使用ceil模式计算输出尺寸，默认false。仅在padding_mode为"CALCULATED"时生效。|BOOL|-|
@@ -138,20 +138,21 @@
 - **padding_mode约束：**
   - 仅支持"CALCULATED"、"SAME"、"VALID"三种模式，其他值报错。
   - pads属性仅在padding_mode为"CALCULATED"时生效，pads长度必须为4，顺序为[pad_top, pad_bottom, pad_left, pad_right]，每个值必须大于等于0。
+  - pads每个值必须小于对应空间轴的ksize，即pad_top、pad_bottom小于ksize[H]，pad_left、pad_right小于ksize[W]，超出范围报错。该约束与正向MaxPoolV3保持一致。global_pooling为true时忽略pads，不做该校验。
   - ceil_mode仅在padding_mode为"CALCULATED"时生效；SAME、VALID模式下忽略ceil_mode。
 
 - **global_pooling约束：**
   - global_pooling支持true和false。为true时池化窗口覆盖整个H/W维度，输出H/W维度为1，忽略ksize和pads。
 
 - **特殊值处理：**
-  - NaN输入：窗口内存在数值（非NaN）时，NaN不参与最大值比较；窗口内全为NaN时，梯度回传给行优先扫描遇到的第一个有效输入位置（与TensorFlow MaxPoolGrad一致）。
+  - NaN输入：窗口内存在数值（非NaN）时，NaN不参与最大值比较，也不参与梯度累加；窗口内全为NaN时，该窗口不存在有效的最大值位置，对应梯度不回传。
   - Inf输入：Inf作为最大值正常参与比较和梯度传播。
   - +0.0与-0.0遵循IEEE 754标准，比较相等。
   - 多个输入位置具有相同最大值时，仅第一个最大值位置接收梯度（first-wins策略）。
   - padding区域不接收梯度。
 
 - **边界条件处理：**
-  - 空张量（shape含0维）：返回全0的out_grad，shape与orig_input一致。
+  - 空张量（shape含0维）：out_grad的shape与orig_input一致，安全返回不产生非法访问；orig_input为空时out_grad为空张量，orig_input非空而池化输出为空（无梯度回传）时out_grad为全0。
   - 非连续张量：通过AutoContiguous自动转为连续后计算。
   - ceil_mode为true时部分窗口可能超出输入边界，超出部分不接收梯度。
 

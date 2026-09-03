@@ -40,6 +40,7 @@ constexpr uint64_t DCACHE_SIZE = 128UL * 1024UL;
 constexpr int64_t PER_CORE_MIN_ELEMENTS = 1024;
 constexpr int64_t INT32_SIZE = 4;
 constexpr int64_t INT64_SIZE = 8;
+constexpr uint32_t BATCH_MODE = 1;
 
 constexpr int32_t ATTR_INDEX_KSIZE = 0;
 constexpr int32_t ATTR_INDEX_STRIDES = 1;
@@ -180,6 +181,16 @@ ge::graphStatus ValidateAttrs(gert::TilingContext* context, const std::string& p
             OP_LOGE(context->GetNodeName(), "pads must be nonnegative under CALCULATED mode.");
             return ge::GRAPH_FAILED;
         }
+
+        // 该约束与正向 MaxPoolV3 保持一致。
+        if (paddingMode == "CALCULATED" && (pads[0] >= ksize[heightIndex] || pads[1] >= ksize[heightIndex] ||
+                                            pads[2] >= ksize[widthIndex] || pads[3] >= ksize[widthIndex])) {
+            OP_LOGE(context->GetNodeName(),
+                    "pads must be less than the corresponding ksize under CALCULATED mode, "
+                    "ksize H=%ld, W=%ld.",
+                    ksize[heightIndex], ksize[widthIndex]);
+            return ge::GRAPH_FAILED;
+        }
     }
 
     return ge::GRAPH_SUCCESS;
@@ -196,7 +207,6 @@ ge::graphStatus ComputeOneDim(gert::TilingContext* context, int64_t inputSize, i
         int64_t coveredSize = 0;
         int64_t requiredSize = 0;
         int64_t totalPadding = 0;
-        // 改成和maxpoolV3一样的
         if (ge::MulOverflow(outputMinusOne, stride, coveredSize) ||
             ge::AddOverflow(coveredSize, kernelSize, requiredSize) ||
             SubOverflow(requiredSize, inputSize, totalPadding)) {
@@ -232,22 +242,22 @@ ge::graphStatus ComputeOneDim(gert::TilingContext* context, int64_t inputSize, i
         return ge::GRAPH_FAILED;
     }
 
-    effectivePadBefore = padBefore;
-
-    if (useCeilMode && outputSize > 0) {
+    // 与正向 MaxPoolV3 一致的 ceil 末窗口回退：若 (outputSize - 1) * stride >= inputSize + padBefore，
+    // 末窗口起始位置落在下侧 pad 填充位，该窗口被舍弃，输出尺寸减 1
+    if (useCeilMode) {
         int64_t lastWindowStart = 0;
-        int64_t validLimit = 0;
-
+        int64_t inputWithPadBefore = 0;
         if (ge::MulOverflow(outputSize - 1, stride, lastWindowStart) ||
-            ge::AddOverflow(inputSize, effectivePadBefore, validLimit)) {
-            OP_LOGE(context->GetNodeName(), "Overflow occurred during ceil_mode adjustment.");
+            ge::AddOverflow(inputSize, padBefore, inputWithPadBefore)) {
+            OP_LOGE(context->GetNodeName(), "Overflow occurred while computing the output size.");
             return ge::GRAPH_FAILED;
         }
-
-        if (lastWindowStart >= validLimit) {
+        if (lastWindowStart >= inputWithPadBefore) {
             --outputSize;
         }
     }
+
+    effectivePadBefore = padBefore;
 
     outputSize = std::max(outputSize, static_cast<int64_t>(0));
     return ge::GRAPH_SUCCESS;
@@ -443,16 +453,26 @@ ge::graphStatus MaxPoolV3GradTilingFunc(gert::TilingContext* context)
         needCoreNum = static_cast<int32_t>(std::min(coreNum, std::max(desiredCoreNum, static_cast<int64_t>(1))));
     }
 
-    // argmax workspace：对齐 MaxPoolGrad SIMT，hIn * wIn <= INT32_MAX 用 int32 indices，
-    // 否则用 int64 indices；argmax 数量 = n * c * hOut * wOut。
+    // int32 模板的循环变量为 uint32 且按 gridStride 递增，安全上界需再前移一个 gridStride 防回绕。
+    constexpr int64_t MAX_UINT32 = 4294967295LL;
+    constexpr int64_t SIMT_THREAD_DIM = 256; // 必须与 kernel 侧 MaxPoolGrad::THREAD_DIM 一致
+    const int64_t gridStride = static_cast<int64_t>(needCoreNum) * SIMT_THREAD_DIM;
+    const int64_t maxUint32LoopCount = MAX_UINT32 + 1 - gridStride;
     const int64_t planeSize = inputHW;
-    const size_t indicesSize = (planeSize > MAX_INT32) ? static_cast<size_t>(INT64_SIZE) :
-                                                         static_cast<size_t>(INT32_SIZE);
+    const bool needInt64Indices = planeSize > MAX_INT32 || totalInputElements > maxUint32LoopCount ||
+                                  totalOutputElements > maxUint32LoopCount;
+    const size_t indicesSize = needInt64Indices ? static_cast<size_t>(INT64_SIZE) : static_cast<size_t>(INT32_SIZE);
     const int64_t argmaxCount = totalOutputElements;
 
     size_t* workspaceSizes = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaceSizes);
-    workspaceSizes[0] = static_cast<size_t>(argmaxCount) * indicesSize + WS_SYS_SIZE;
+    size_t argmaxWorkspaceSize = 0;
+    if (ge::MulOverflow(static_cast<size_t>(argmaxCount), indicesSize, argmaxWorkspaceSize) ||
+        ge::AddOverflow(argmaxWorkspaceSize, WS_SYS_SIZE, argmaxWorkspaceSize)) {
+        OP_LOGE(context->GetNodeName(), "The argmax workspace size computation overflowed.");
+        return ge::GRAPH_FAILED;
+    }
+    workspaceSizes[0] = argmaxWorkspaceSize;
 
     MaxPoolGradWithArgmaxSimtTilingCommonData*
         tilingData = context->GetTilingData<MaxPoolGradWithArgmaxSimtTilingCommonData>();
@@ -478,9 +498,12 @@ ge::graphStatus MaxPoolV3GradTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(needCoreNum);
 
+    // kernel 的 Process() 中有 SyncAll()，必须 batch mode 保证 block 同时启动，否则跨 block 同步死锁。
+    context->SetScheduleMode(BATCH_MODE);
+
     const uint32_t kernelMode = TPL_SIMT_KERNEL;
     const uint32_t format = inputFormat == 0 ? TPL_NCHW_FORMAT : TPL_NHWC_FORMAT;
-    const uint32_t indicesDtype = (planeSize > MAX_INT32) ? TPL_INT64 : TPL_INT32;
+    const uint32_t indicesDtype = needInt64Indices ? TPL_INT64 : TPL_INT32;
     const uint32_t isCheckRange = TPL_NO_CHECK_RANGE;
     const uint64_t tilingKey = GET_TPL_TILING_KEY(kernelMode, format, indicesDtype, isCheckRange);
 

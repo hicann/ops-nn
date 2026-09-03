@@ -150,112 +150,43 @@ TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_fail_non_4d_shape)
 // ======================== Unknown Rank (-2) ========================
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_rank_orig_input)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3Grad")->infer_shape;
-    gert::StorageShape origInputS = {{-2}, {}};
-    gert::StorageShape origOutputS = {{1, 1, 2, 2}, {1, 1, 2, 2}};
-    gert::StorageShape gradS = {{1, 1, 2, 2}, {1, 1, 2, 2}};
-    gert::StorageShape outGradS = {{}, {}};
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                      .InputShapes({&origInputS, &origOutputS, &gradS})
-                      .OutputShapes({&outGradS})
-                      .Build();
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Shape2String(*output), "[-2]");
+    RunInfershape({-2}, {1, 1, 2, 2}, {1, 1, 2, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-2]");
 }
 
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_rank_grad)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3Grad")->infer_shape;
-    gert::StorageShape origInputS = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    gert::StorageShape origOutputS = {{1, 1, 2, 2}, {1, 1, 2, 2}};
-    gert::StorageShape gradS = {{-2}, {}};
-    gert::StorageShape outGradS = {{}, {}};
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                      .InputShapes({&origInputS, &origOutputS, &gradS})
-                      .OutputShapes({&outGradS})
-                      .Build();
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Shape2String(*output), "[-2]");
+    RunInfershape({1, 1, 4, 4}, {1, 1, 2, 2}, {-2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[1, 1, 4, 4]");
 }
 
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_rank_orig_output)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3Grad")->infer_shape;
-    gert::StorageShape origInputS = {{1, 1, 4, 4}, {1, 1, 4, 4}};
-    gert::StorageShape origOutputS = {{-2}, {}};
-    gert::StorageShape gradS = {{1, 1, 2, 2}, {1, 1, 2, 2}};
-    gert::StorageShape outGradS = {{}, {}};
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                      .InputShapes({&origInputS, &origOutputS, &gradS})
-                      .OutputShapes({&outGradS})
-                      .Build();
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Shape2String(*output), "[-2]");
+    RunInfershape({1, 1, 4, 4}, {-2}, {1, 1, 2, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[1, 1, 4, 4]");
 }
 
 // ======================== Unknown Dim (-1) ========================
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_dim_grad_skip_compare)
 {
     RunInfershape({1, 1, 4, 4}, {1, 1, 2, 2}, {1, 1, -1, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
-                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-1, -1, -1, -1]");
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[1, 1, 4, 4]");
 }
 
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_dim_orig_output_skip_compare)
 {
     RunInfershape({1, 1, 4, 4}, {1, 1, -1, 2}, {1, 1, -1, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
-                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-1, -1, -1, -1]");
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[1, 1, 4, 4]");
 }
 
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_dim_nc_skip_compare)
 {
     RunInfershape({-1, 1, 4, 4}, {1, 1, 2, 2}, {1, 1, 2, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
-                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-1, -1, -1, -1]");
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-1, 1, 4, 4]");
 }
 
 TEST_F(MaxPoolV3GradInfershapeTest, max_pool_v3_grad_unknown_dim_c_skip_compare)
 {
     RunInfershape({1, -1, 4, 4}, {1, 2, 2, 2}, {1, 2, 2, 2}, ge::DT_FLOAT, {1, 1, 2, 2}, {1, 1, 2, 2}, "CALCULATED",
-                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[-1, -1, -1, -1]");
+                  {0, 0, 0, 0}, "NCHW", false, false, ge::GRAPH_SUCCESS, "[1, -1, 4, 4]");
 }

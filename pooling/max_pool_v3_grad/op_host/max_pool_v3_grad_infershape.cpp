@@ -119,37 +119,94 @@ static ge::graphStatus CheckAttrsValid(const gert::InferShapeContext* context)
             OP_LOGE(context->GetNodeName(), "pads must be nonnegative under CALCULATED mode.");
             return ge::GRAPH_FAILED;
         }
+
+        // 该约束与正向 MaxPoolV3 保持一致。
+        if (paddingModeString == "CALCULATED" && (pads[0] >= ksize[heightIndex] || pads[1] >= ksize[heightIndex] ||
+                                                  pads[2] >= ksize[widthIndex] || pads[3] >= ksize[widthIndex])) {
+            OP_LOGE(context->GetNodeName(),
+                    "pads must be less than the corresponding ksize under CALCULATED mode, "
+                    "ksize H=%ld, W=%ld.",
+                    ksize[heightIndex], ksize[widthIndex]);
+            return ge::GRAPH_FAILED;
+        }
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus HandleShape(const gert::InferShapeContext* context, const gert::Shape* origInputShape,
-                                   const gert::Shape* origOutputShape, const gert::Shape* gradShape,
-                                   gert::Shape* outGradShape)
+// 仅比较双方均已知的维度，未知维度（-1）不参与比较，不能误判为不一致
+static bool IsDimCompatible(int64_t leftDim, int64_t rightDim)
 {
-    if (Ops::Base::IsUnknownRank(*origInputShape) || Ops::Base::IsUnknownRank(*origOutputShape) ||
-        Ops::Base::IsUnknownRank(*gradShape)) {
+    return leftDim < 0 || rightDim < 0 || leftDim == rightDim;
+}
+
+// -1 表示未知维，-2 表示未知 Rank，只有小于 -2 的维度值才非法
+static bool HasIllegalDimValue(const gert::Shape& shape)
+{
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        if (shape.GetDim(i) < -2) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static ge::graphStatus HandleShape(const gert::InferShapeContext* context, const std::string& dataFormat,
+                                   const gert::Shape* origInputShape, const gert::Shape* origOutputShape,
+                                   const gert::Shape* gradShape, gert::Shape* outGradShape)
+{
+    const bool origInputUnknownRank = Ops::Base::IsUnknownRank(*origInputShape);
+    const bool origOutputUnknownRank = Ops::Base::IsUnknownRank(*origOutputShape);
+    const bool gradUnknownRank = Ops::Base::IsUnknownRank(*gradShape);
+
+    // 已知 rank 的输入必须为 4D；含 -1 的 rank=3/5 仍非法，只有真正的 unknown rank([-2]) 放行
+    if (!origInputUnknownRank && origInputShape->GetDimNum() != EXPECTED_RANK) {
+        OP_LOGE(context->GetNodeName(), "orig_input must be a 4D tensor.");
+        return ge::GRAPH_FAILED;
+    }
+    if (!origOutputUnknownRank && origOutputShape->GetDimNum() != EXPECTED_RANK) {
+        OP_LOGE(context->GetNodeName(), "orig_output must be a 4D tensor.");
+        return ge::GRAPH_FAILED;
+    }
+    if (!gradUnknownRank && gradShape->GetDimNum() != EXPECTED_RANK) {
+        OP_LOGE(context->GetNodeName(), "grad must be a 4D tensor.");
+        return ge::GRAPH_FAILED;
+    }
+
+    // 必须在 unknown rank 提前返回之前拦截，避免非法动态维度被误放行
+    if (HasIllegalDimValue(*origInputShape) || HasIllegalDimValue(*origOutputShape) || HasIllegalDimValue(*gradShape)) {
+        OP_LOGE(context->GetNodeName(), "input shape contains an invalid dimension (less than -2).");
+        return ge::GRAPH_FAILED;
+    }
+
+    // out_grad 始终由 orig_input 决定：仅 orig_input 为 unknown rank 时输出才为 unknown rank
+    if (origInputUnknownRank) {
         Ops::Base::SetUnknownRank(*outGradShape);
         OP_LOGD(context->GetNodeName(), "MaxPoolV3Grad infershape handle unknown rank.");
         return ge::GRAPH_SUCCESS;
     }
 
-    if (Ops::Base::IsUnknownShape(*origInputShape) || Ops::Base::IsUnknownShape(*origOutputShape) ||
-        Ops::Base::IsUnknownShape(*gradShape)) {
-        Ops::Base::SetUnknownShape(EXPECTED_RANK, *outGradShape);
-        OP_LOGD(context->GetNodeName(), "MaxPoolV3Grad infershape handle unknown shape.");
-        return ge::GRAPH_SUCCESS;
-    }
-
-    if (origInputShape->GetDimNum() != EXPECTED_RANK || origOutputShape->GetDimNum() != EXPECTED_RANK ||
-        gradShape->GetDimNum() != EXPECTED_RANK) {
-        OP_LOGE(context->GetNodeName(), "orig_input, orig_output and grad must be 4D tensors.");
-        return ge::GRAPH_FAILED;
-    }
-
     *outGradShape = *origInputShape;
 
+    if (!origOutputUnknownRank) {
+        const size_t channelIndex = dataFormat == "NCHW" ? 1 : 3;
+        if (!IsDimCompatible(origInputShape->GetDim(0), origOutputShape->GetDim(0)) ||
+            !IsDimCompatible(origInputShape->GetDim(channelIndex), origOutputShape->GetDim(channelIndex))) {
+            OP_LOGE(context->GetNodeName(), "orig_output N/C dimensions must match orig_input.");
+            return ge::GRAPH_FAILED;
+        }
+
+        if (!gradUnknownRank) {
+            for (size_t i = 0; i < EXPECTED_RANK; ++i) {
+                if (!IsDimCompatible(origOutputShape->GetDim(i), gradShape->GetDim(i))) {
+                    OP_LOGE(context->GetNodeName(), "grad shape must match orig_output shape.");
+                    return ge::GRAPH_FAILED;
+                }
+            }
+        }
+    }
+
+    // ho/wo 输出尺寸公式由 Tiling 统一校验，InferShape 不重复推导
     OP_LOGD(context->GetNodeName(), "MaxPoolV3Grad infershape run success.");
     return ge::GRAPH_SUCCESS;
 }
@@ -183,7 +240,12 @@ ge::graphStatus InferShapeMaxPoolV3Grad(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, outGradShape);
 
-    return HandleShape(context, origInputShape, origOutputShape, gradShape, outGradShape);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const char* dataFormatAttr = attrs->GetAttrPointer<char>(ATTR_INDEX_DATA_FORMAT);
+    OP_CHECK_NULL_WITH_CONTEXT(context, dataFormatAttr);
+
+    return HandleShape(context, std::string(dataFormatAttr), origInputShape, origOutputShape, gradShape, outGradShape);
 }
 
 IMPL_OP_INFERSHAPE(MaxPoolV3Grad).InferShape(InferShapeMaxPoolV3Grad);

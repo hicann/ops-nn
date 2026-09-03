@@ -128,8 +128,16 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::In
 template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy>
 __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Process()
 {
-    ComputePos();
-    AscendC::SyncAll();
+    // 空张量需在 GetUintDivMagicAndShift 等除法与地址计算之前返回，维度为 0 时除数为 0。
+    const int64_t totalOutputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->hOutDim * tilingData_->wOutDim;
+    const int64_t totalInputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->hInDim * tilingData_->wInDim;
+    if (totalInputSize == 0) {
+        return;
+    }
+    if (totalOutputSize > 0) {
+        ComputePos();
+        AscendC::SyncAll();
+    }
     ComputeBack();
 }
 

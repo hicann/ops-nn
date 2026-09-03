@@ -20,7 +20,7 @@
  *   ATTR   : ksize/strides(ListInt, required), padding_mode/data_format(String),
  *            pads(ListInt), global_pooling/ceil_mode(Bool)
  *
- * dtype 矩阵 : FP32, FP16（不含 BF16）
+ * dtype 矩阵 : float16, float32, bfloat16, int8, int16, int32, int64, uint8, uint16
  * shape 场景: 4D NCHW 池化算子，输入 shape 存在依赖:
  *   - orig_output/grad shape = (N,C,Ho,Wo)，由 orig_input + ksize/strides/padding 推导
  *   - out_grad shape = orig_input shape
@@ -50,7 +50,6 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
 #include "nn_other.h"
 #include "../op_graph/max_pool_v3_grad_proto.h"
 
@@ -158,6 +157,8 @@ uint32_t GetDataTypeSize(DataType dt)
         dilation = eightByte;
     } else if (dt == ge::DT_INT8) {
         dilation = oneByte;
+    } else if (dt == ge::DT_UINT8) {
+        dilation = oneByte;
     }
     return dilation;
 }
@@ -198,7 +199,7 @@ int CreateOppInGraph(RunMode mode, DataType inDtype, const ShapeCombo& combo, st
     add1.set_attr_ksize({1, 1, 2, 2});   // ListInt, required
     add1.set_attr_strides({1, 1, 2, 2}); // ListInt, required
     add1.set_attr_pads({0, 0, 0, 0});    // ListInt, default {0,0,0,0}
-    add1.set_attr_global_pooling(false); // Bool, must be false
+    add1.set_attr_global_pooling(false); // Bool, default false
     add1.set_attr_ceil_mode(false);      // Bool, default false
     // 弱类型接口 SetAttr(name, const char*): String —— 必须传 const char*, 禁止传 std::string
     add1.SetAttr("padding_mode", "CALCULATED"); // String, default "CALCULATED"
@@ -305,8 +306,8 @@ int main(int argc, char* argv[])
         std::string name;
     };
     std::vector<DtypeEntry> dtype_list = {
-        {DT_FLOAT, "FP32"},
-        {DT_FLOAT16, "FP16"},
+        {DT_FLOAT, "FP32"},  {DT_FLOAT16, "FP16"}, {DT_BF16, "BF16"},   {DT_INT8, "INT8"},     {DT_INT16, "INT16"},
+        {DT_INT32, "INT32"}, {DT_INT64, "INT64"},  {DT_UINT8, "UINT8"}, {DT_UINT16, "UINT16"},
     };
 
     // shape 场景矩阵（4D NCHW, 池化算子）

@@ -33,18 +33,11 @@
 #include <string>
 #include <vector>
 
-#include "acl/acl_rt.h"
 #include "common/inc/error_util.h"
-#include "version/ge-compiler_version.h"
 #include "es_nn_ops.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
-#include "ge/ge_utils.h"
 #include "platform/platform_info.h"
-
-// D1 scenario: uses kCompatibleInherited stage (9.0.0+).
-// Strategy: compile-time macro guard + runtime version check + overall silence.
-#define GE_COMPILER_VERSION_900 90000000
 
 using namespace ge;
 using namespace fe;
@@ -60,16 +53,17 @@ const int64_t kCaptureGrad = 2L;
 const int64_t kCapturePool = 3L;
 const size_t kShapeAttrSize = 4U;
 
-inline static bool IsRegbasePlatform()
+inline static bool IsSupportedPlatform()
 {
     PlatformInfo info;
     OptionalInfo optInfo;
     OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS, false,
                kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
-    bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62");
-    OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
-    return isRegbasePlatform;
+    // 仅 Ascend950 有 MaxPoolV3Grad 二进制，其余平台改写后会得到无实现的算子。
+    bool isSupported = (socVersion == "Ascend950");
+    OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_supported: %d", socVersion.c_str(), isSupported);
+    return isSupported;
 }
 
 bool IsSupportedDtype(const DataType dtype)
@@ -144,14 +138,9 @@ std::vector<PatternUniqPtr> MaxPoolV3GradFusionPass::Patterns()
 
 bool MaxPoolV3GradFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    int32_t version = 0;
-    char geCompilerName[] = "ge_compiler";
-    aclsysGetVersionNum(geCompilerName, &version);
-    OPS_LOG_D(kPassName.c_str(), "GE compiler version num: %d", version);
-    if (version < GE_COMPILER_VERSION_900) {
-        return false;
-    }
-    if (!IsRegbasePlatform()) {
+    OPS_LOG_D(kPassName.c_str(), "Enter MeetRequirements for MaxPoolV3GradFusionPass");
+
+    if (!IsSupportedPlatform()) {
         return false;
     }
 
@@ -187,8 +176,14 @@ bool MaxPoolV3GradFusionPass::MeetRequirements(const std::unique_ptr<MatchResult
         return false;
     }
 
-    Format inputFormat = inputDesc.GetFormat();
-    if (inputFormat != FORMAT_NCHW && inputFormat != FORMAT_NHWC) {
+    // data_format 以源 MaxPoolGrad 节点属性为准：TensorDesc 的物理 Format 可能为 ND，
+    // 不能用其判断 NCHW/NHWC，也不能因其为 ND 而拒绝融合
+    AscendString dataFormat;
+    if (sourceNode.GetAttr("data_format", dataFormat) != SUCCESS) {
+        return false;
+    }
+    const std::string dataFormatString = dataFormat.GetString();
+    if (dataFormatString != "NCHW" && dataFormatString != "NHWC") {
         return false;
     }
     return true;
@@ -233,11 +228,12 @@ GraphUniqPtr MaxPoolV3GradFusionPass::Replacement(const std::unique_ptr<MatchRes
     OP_LOGE_IF(sourceNode.GetAttr("padding", paddingMode) != SUCCESS, nullptr, kPassName.c_str(),
                "Get padding failed.");
 
+    // data_format 原样取自源 MaxPoolGrad 节点属性，TensorDesc 的 Format 仅用于创建输入描述
+    AscendString dataFormat;
+    OP_LOGE_IF(sourceNode.GetAttr("data_format", dataFormat) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get data_format failed.");
+
     std::vector<int64_t> pads = {0, 0, 0, 0};
-    const char* dataFormat = "NCHW";
-    if (origInputDesc.GetFormat() == FORMAT_NHWC) {
-        dataFormat = "NHWC";
-    }
 
     auto graphBuilder = es::EsGraphBuilder("replacement");
     auto repOrigInput = graphBuilder.CreateInput(0, "orig_input", origInputDesc.GetDataType(),
@@ -247,7 +243,7 @@ GraphUniqPtr MaxPoolV3GradFusionPass::Replacement(const std::unique_ptr<MatchRes
     auto repGrad = graphBuilder.CreateInput(2, "grad", gradDesc.GetDataType(), gradDesc.GetFormat(),
                                             gradDesc.GetShape().GetDims());
     auto repY = es::MaxPoolV3Grad(repOrigInput, repOrigOutput, repGrad, ksize, strides, paddingMode.GetString(), pads,
-                                  dataFormat, false, false);
+                                  dataFormat.GetString(), false, false);
 
     TensorDesc outputDesc;
     OP_LOGE_IF(sourceNode.GetOutputDesc(0, outputDesc) != SUCCESS, nullptr, kPassName.c_str(),
@@ -262,20 +258,6 @@ GraphUniqPtr MaxPoolV3GradFusionPass::Replacement(const std::unique_ptr<MatchRes
     return replaceGraph;
 }
 
-#if GE_COMPILER_VERSION_NUM >= GE_COMPILER_VERSION_900
-namespace {
-CustomPassStage GetMaxPoolV3GradFusionPassStage()
-{
-    int32_t version = 0;
-    char geCompilerName[] = "ge_compiler";
-    aclsysGetVersionNum(geCompilerName, &version);
-    if (version >= GE_COMPILER_VERSION_900) {
-        return CustomPassStage::kCompatibleInherited;
-    }
-    return CustomPassStage::kBeforeInferShape;
-}
-} // namespace
-REG_FUSION_PASS(MaxPoolV3GradFusionPass).Stage(GetMaxPoolV3GradFusionPassStage());
-#endif
+REG_FUSION_PASS(MaxPoolV3GradFusionPass).Stage(CustomPassStage::kAfterInferShape);
 
 } // namespace ops
