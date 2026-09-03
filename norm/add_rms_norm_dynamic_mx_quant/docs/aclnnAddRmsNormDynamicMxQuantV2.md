@@ -225,7 +225,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>roundMode（char*）</td>
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的roundMode。</td>
-      <td><ul><li>当dstType为35/36时，仅支持{"rint"}。</li><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li></ul></td>
+      <td><ul><li>支持传入空指针，传入空指针时采用默认值"rint"。</li><li>当dstType为35/36时，仅支持{"rint"}。</li><li>当dstType为40/41时，支持{"rint", "floor", "round"}。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -359,10 +359,10 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2(
       <td>gamma的维度和x1的需要做norm的维度不相同，或rstdOut的维度和x1的不需要norm的维度不相同，或rstdOut对应x1归一化维度的轴长不为1。</td>
     </tr>
     <tr>
-      <td>scaleAlg不是0或1，roundMode不是 {rint, floor, round}。</td>
+      <td>scaleAlg不是0或1，或roundMode非空且不属于{"rint", "floor", "round"}。</td>
     </tr>
     <tr>
-      <td>dstType为fp8时，roundMode不是rint。</td>
+      <td>dstType为FP8时，roundMode非空且不是"rint"。</td>
     </tr>
     <tr>
       <td>dstType为fp4时，scaleAlg不是0，或者输入x1的尾轴不能被2整除。</td>

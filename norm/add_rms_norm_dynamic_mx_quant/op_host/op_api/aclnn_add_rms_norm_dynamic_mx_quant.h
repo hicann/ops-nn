@@ -48,6 +48,7 @@ extern "C" {
  * 支持取值0:OCP计算方法,和取值1:cuBLAS计算方法，当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。
  * @param [in] roundMode:
  * 公式中的round_mode，string 类型，数据转换的模式。
+ * 支持传入空指针，传入空指针时采用默认值"rint"。
  * 对应yOut数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}，
  * 对应yOut数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。
  * @param [in] dstType:
@@ -124,6 +125,7 @@ ACLNN_API aclnnStatus aclnnAddRmsNormDynamicMxQuant(void* workspace, uint64_t wo
  * 支持取值0:OCP计算方法,和取值1:cuBLAS计算方法，当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。
  * @param [in] roundMode:
  * 公式中的round_mode，string 类型，数据转换的模式。
+ * 支持传入空指针，传入空指针时采用默认值"rint"。
  * 对应yOut数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}，
  * 对应yOut数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。
  * @param [in] dstType:

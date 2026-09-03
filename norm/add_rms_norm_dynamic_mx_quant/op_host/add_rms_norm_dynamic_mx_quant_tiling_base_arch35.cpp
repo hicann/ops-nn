@@ -267,19 +267,18 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckMxQuantParams()
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
-    // 1. round_mode校验：必须为 rint/floor/round 之一
+    // 1. round_mode校验：未传时使用默认值 rint，否则必须为 rint/floor/round 之一
     const char* roundModeStr = attrs->GetAttrPointer<char>(ROUND_MODE_ATTR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, roundModeStr);
-    std::string rmStr(roundModeStr);
+    std::string rmStr = (roundModeStr == nullptr) ? "rint" : roundModeStr;
     MxRoundMode rm = ParseRoundMode(rmStr);
 
     OP_CHECK_IF((rm == MxRoundMode::UNDEFINED),
-                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModeStr, "rint, round or floor"),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", rmStr.c_str(), "rint, round or floor"),
                 return ge::GRAPH_FAILED);
 
     // FP8输出类型仅支持rint
     OP_CHECK_IF((Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0 && rm != MxRoundMode::RINT),
-                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModeStr, "rint"),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", rmStr.c_str(), "rint"),
                 return ge::GRAPH_FAILED);
 
     // 2. dst_type校验：必须与y的dtype对应

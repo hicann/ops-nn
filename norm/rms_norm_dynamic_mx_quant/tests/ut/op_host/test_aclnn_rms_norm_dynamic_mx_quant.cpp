@@ -63,6 +63,31 @@ TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_fp16_fp8_e4m3fn)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_null_round_mode_uses_default_rint)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto tensor_desc_x = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_y = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    auto tensor_desc_mxscale = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    auto tensor_desc_rstd = TensorDesc({8, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    double epsilon = 1e-6;
+    int64_t scaleAlg = 0;
+    char* roundMode = nullptr;
+    int64_t dstType = GE_DT_FLOAT8_E4M3FN;
+    bool outputRstd = true;
+
+    auto ut = OP_API_UT(
+        aclnnRmsNormDynamicMxQuant,
+        INPUT(tensor_desc_x, tensor_desc_gamma, nullptr, epsilon, scaleAlg, roundMode, dstType, outputRstd),
+        OUTPUT(tensor_desc_y, tensor_desc_mxscale, tensor_desc_rstd));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_fp16_fp8_e5m2)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
