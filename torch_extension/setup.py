@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DESCRIPTION = "AscendOpsNn"
-VERSION = "1.0.1"
+VERSION = "1.0.0"
 BASE_PACKAGE_NAME = "cann_ops_nn"
 
 HERE = os.path.dirname(os.path.abspath(__file__))

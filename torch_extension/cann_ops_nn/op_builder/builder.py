@@ -135,6 +135,7 @@ class OpBuilder(ABC):
         args = [
             "-O3",
             "-w",
+            "-std=c++17",
             "-fPIC",
             "-fstack-protector-all",
             "-Wl,-z,relro,-z,now,-z,noexecstack",
@@ -143,13 +144,6 @@ class OpBuilder(ABC):
             "-fvisibility=hidden",
             "-D_FORTIFY_SOURCE=2",
         ]
-        major, minor = torch.__version__.split(".")[:2]
-        major, minor = int(major), int(minor)
-        args.append(f"-DCURRENT_VERSION=V{major}R{minor}")
-        if major > 2 or (major == 2 and minor >= 14):
-            args.append("-std=c++20")
-        else:
-            args.append("-std=c++17")
         if torch._C._GLIBCXX_USE_CXX11_ABI:
             args.append("-D_GLIBCXX_USE_CXX11_ABI=1")
         else:
