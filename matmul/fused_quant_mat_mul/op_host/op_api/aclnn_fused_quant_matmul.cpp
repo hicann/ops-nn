@@ -295,6 +295,10 @@ aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor* x1, const acl
                    DFX_OUT(out));
     OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
+    if (fusedOpType == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Expected a proper string but got null for argument fusedOpType.");
+        return ACLNN_ERR_PARAM_NULLPTR;
+    }
     auto uniqueExecutor = CREATE_EXECUTOR();
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnFusedQuantMatmul interface
@@ -326,6 +330,10 @@ aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(
                    DFX_OUT(out));
     OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
+    if (fusedOpType == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Expected a proper string but got null for argument fusedOpType.");
+        return ACLNN_ERR_PARAM_NULLPTR;
+    }
 
     int64_t viewDimNum = x2->GetViewShape().GetDimNum();
     if (viewDimNum < MIN_DIM_NUM_ND) {

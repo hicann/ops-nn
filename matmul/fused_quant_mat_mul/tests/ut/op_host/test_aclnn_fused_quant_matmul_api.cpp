@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_host/op_api/aclnn_fused_quant_matmul.h"
+#include "../../../op_host/op_api/aclnn_fused_quant_matmul_weight_nz.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -211,4 +212,36 @@ TEST_F(l2_FusedQuantMatmul_test, ascend910B_gelu_erf_success)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_FusedQuantMatmul_test, ascend910B_fusedoptype_nullptr)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc out_desc = TensorDesc({27, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedQuantMatmul,
+                        INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, nullptr, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_FusedQuantMatmul_test, ascend910B_weightnz_fusedoptype_nullptr)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc out_desc = TensorDesc({27, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedQuantMatmulWeightNz,
+                        INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, nullptr, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_NULLPTR);
 }
