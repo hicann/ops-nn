@@ -234,7 +234,7 @@ stages:
           task_name: 'Compile_Ascend_X86_mobile_station_9030_ubuntu24'
           arch: 'x64'
           size: 'large'
-          package_name: 'cann-ops-nn-kirinx90_linux-x86_64_9030_ubuntu24.run'
+          package_name: 'cann-ops-nn-kirin9030_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_staticcheck_md_check:
         name: staticcheck_md_check
@@ -352,6 +352,30 @@ stages:
       JOB_st_test_950:
         name: ST_test_950
         uses: .gitcode/workflows/st_test_action.yml
+      PreSmoke_harmony-infer-chs-nn:
+        name: PreSmoke_harmony-infer-chs-nn
+        if: env.TARGET_BRANCH == 'master'
+        runs-on: [self-hosted, arch=x64, os=ubuntu, type=chs_phone]
+        steps:
+          - name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
+          - name: 执行 Kirin PreSmoke_harmony-infer-chs-nn 测试
+            run: bash .gitcode/scripts/kirin_smoke_chs.sh
+      PreSmoke_harmony-infer-cpro-nn:
+        name: PreSmoke_harmony-infer-cpro-nn
+        if: env.TARGET_BRANCH == 'master'
+        runs-on: [self-hosted, arch=x64, os=ubuntu, type=kirinx90]
+        steps:
+          - name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
+          - name: 执行 Kirin PreSmoke_harmony-infer-cpro-nn 测试
+            run: bash .gitcode/scripts/kirin_smoke_cpro.sh
     pre:
     - type: auto
     fail-fast: true

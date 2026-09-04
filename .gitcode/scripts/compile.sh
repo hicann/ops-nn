@@ -225,13 +225,13 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station_9030_ubuntu24)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --soc=kirinx9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16
+            bash build.sh --pkg --soc=kirin9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
-            echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+            echo "exec cmd: [bash build.sh --pkg --soc=kirin9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         else
             echo "not need build mobile_station"
             mkdir build_out
-            touch build_out/cann-ops-nn-kirinx90_linux-x86_64.run
+            touch build_out/cann-ops-nn-kirin9030_linux-x86_64.run
             exit 0
         fi
         ;;
