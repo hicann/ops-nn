@@ -4720,6 +4720,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool_grad/README.md">max_pool_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>正向最大池化的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool3d_grad_with_argmax/README.md">max_pool3d_grad_with_argmax</a></td>
     <td>✓</td>
     <td>✓</td>

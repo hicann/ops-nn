@@ -169,4 +169,6 @@ $$
 
 ## 调用说明
 
-不涉及。
+| 调用方式 | 样例代码 | 说明 |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| 图模式接口 | [test_geir_max_pool3d_grad](examples/test_geir_max_pool3d_grad.cpp) | 通过IR[MaxPool3DGrad](./op_graph/max_pool3d_grad_proto.h)构图方式调用MaxPool3DGrad算子。 |
