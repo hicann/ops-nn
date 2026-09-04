@@ -366,7 +366,7 @@ setup_cann_env() {
 # Find the source directory of an op by name
 find_op_code_path() {
     local op_name="$1"
-    local code_path=$(find "${framework_path}" -type d -name "${op_name}" -not -path "*/build/*" -not -path "*/.git/*" -not -path "*/build_out/*" | head -1)
+    local code_path=$(find "${framework_path}" -type d -name "${op_name}" -not -path "*/build/*" -not -path "*/.git/*" -not -path "*/build_out/*" -not -path "*/third_party/*" | head -1)
 
     if [[ -z "${code_path}" ]]; then
         return 1
