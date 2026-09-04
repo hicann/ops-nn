@@ -45,8 +45,17 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 
 static bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    OP_LOGI("ReluAclnn", "curArch is %u", static_cast<uint32_t>(curArch));
+    switch (curArch) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3510: {
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
 }
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)

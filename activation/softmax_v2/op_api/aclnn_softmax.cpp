@@ -49,8 +49,9 @@ static const int64_t AXIS_LIMIT = 8; // 底层算子不支持超过8维
 
 static inline const std::initializer_list<DataType>& GetDtypeSupportList(void)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    OP_LOGI("SoftmaxV2Aclnn", "curArch is %u", static_cast<uint32_t>(curArch));
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
