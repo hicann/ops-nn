@@ -133,8 +133,8 @@ bool ValidateGemmNode(const GNode& matchedNode)
                   aDesc.GetShape().GetDimNum(), bDesc.GetShape().GetDimNum(), cDesc.GetShape().GetDimNum());
         return false;
     }
-    if (alphaDesc.GetShape().GetDimNum() != kGemmScalarDimNum || betaDesc.GetShape().GetDimNum() != kGemmScalarDimNum) {
-        OPS_LOG_D(kPassName, "Gemm input alpha/beta dim num[%zu] [%zu] is not 1, skip fusion.",
+    if (alphaDesc.GetShape().GetDimNum() > kGemmScalarDimNum || betaDesc.GetShape().GetDimNum() > kGemmScalarDimNum) {
+        OPS_LOG_D(kPassName, "Gemm input alpha/beta dim num[%zu] [%zu] is not scalar or 1D, skip fusion.",
                   alphaDesc.GetShape().GetDimNum(), betaDesc.GetShape().GetDimNum());
         return false;
     }
