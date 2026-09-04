@@ -89,13 +89,17 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:${LD
 
 ### 5. 快速验证：运行算子样例
 
-通用的运行命令格式：`bash build.sh --run_example <算子名> <运行模式> <包模式>`。
+通用的运行命令格式：`bash build.sh --run_example <算子名> <运行模式> <包模式> --vendor_name=<自定义算子包名>`。
 
 以AddExample为例，其提供了简单算子样例`add_example/examples/test_aclnn_add_example.cpp`，运行该样例验证算子功能是否正常。
 
 ```bash
 bash build.sh --run_example add_example eager cust --vendor_name=custom
 ```
+- <算子名>:add_example
+- <运行模式>：eager
+- <包模式>:cust
+- --vendor_name(可选)：vendorname表示构建的自定义算子包名，默认名为custom.
 
 预期输出：打印算子`AddExample`的加法计算结果，表明算子已成功部署并正确执行。
 
@@ -145,6 +149,12 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
     ```bash
     bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
     ```
+
+    产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
+
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品：取值为ascend910b
+    - Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值为ascend910_93
+    - 950系列产品：取值为ascend950
 
 2. **重新安装**：
 

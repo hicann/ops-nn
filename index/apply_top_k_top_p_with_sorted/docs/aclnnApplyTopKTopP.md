@@ -67,7 +67,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnApplyTopKTopPGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnApplyTopKTopP”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnApplyTopKTopPGetWorkspaceSize(
   const aclTensor* logits,
   const aclTensor* p,
@@ -77,7 +77,7 @@ aclnnStatus aclnnApplyTopKTopPGetWorkspaceSize(
   aclOpExecutor**  executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnApplyTopKTopP(
   void*          workspace,
   uint64_t       workspaceSize,
@@ -261,7 +261,7 @@ aclnnStatus aclnnApplyTopKTopP(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
