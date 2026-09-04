@@ -59,14 +59,10 @@ union UnionDataXm {
     __aicore__ inline UnionDataXm() : n(0) {}
 };
 
-const static uint64_t L0A_SIZE = 65536;
-const static uint64_t L0B_SIZE = 65536;
-const static uint64_t L0C_SIZE = 262144;
-const static uint64_t L0A_HALF_SIZE = 32768;
-const static uint64_t L0B_HALF_SIZE = 32768;
-const static uint64_t L0C_HALF_SIZE = 131072;
+const static uint64_t L0A_HALF_SIZE = ASC_L0A_SIZE / 2;
+const static uint64_t L0B_HALF_SIZE = ASC_L0B_SIZE / 2;
+const static uint64_t L0C_HALF_SIZE = ASC_L0C_SIZE / 2;
 const static uint64_t C0_SIZE = 32;
-const static uint64_t BT_SIZE = 64;
 const static uint64_t PAD_IDX_T = 2;
 const static uint64_t PAD_IDX_B = 3;
 const static uint64_t PAD_IDX_L = 0;

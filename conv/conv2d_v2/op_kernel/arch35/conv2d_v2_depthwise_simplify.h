@@ -60,9 +60,9 @@ constexpr uint64_t G_MASK_6 = 0x3f;
 constexpr uint64_t G_NINTH_BIT_MASK = 0x100;
 
 // L0 buffer half sizes (bytes) for ping-pong double buffering
-constexpr uint32_t G_L0A_HALF_BYTES = 32768;  // 32KB, L0A single buffer half
-constexpr uint32_t G_L0B_HALF_BYTES = 32768;  // 32KB, L0B single buffer half
-constexpr uint32_t G_L0C_HALF_BYTES = 131072; // 128KB, L0C single buffer half
+constexpr uint32_t G_L0A_HALF_BYTES = ASC_L0A_SIZE / 2; // 32KB, L0A single buffer half
+constexpr uint32_t G_L0B_HALF_BYTES = ASC_L0B_SIZE / 2; // 32KB, L0B single buffer half
+constexpr uint32_t G_L0C_HALF_BYTES = ASC_L0C_SIZE / 2; // 128KB, L0C single buffer half
 // M_MTE1 event id base for L0A/L0B ping-pong (uses base and base+1)
 constexpr uint16_t G_MTE1_EVENT_BASE = 6;
 
@@ -742,8 +742,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
 
     // Load bias: GM→L1 (MTE2) + L1→C2 (MTE1), with sync
     if (enableBias_) {
-        constexpr uint32_t BT_SIZE = 64;
-        uint32_t btElemNum = GAlignUp(curN * sizeof(float), BT_SIZE) / sizeof(float);
+        uint32_t btElemNum = GAlignUp(curN * sizeof(float), ASC_BT_SIZE) / sizeof(float);
 
         // GM→L1: MTE2 writes bias to L1
         uint64_t biasByteNum = curN * sizeof(DTYPE);
@@ -809,10 +808,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
                 if (kIt + curK > kTotal)
                     curK = kTotal - kIt;
 
-                constexpr uint32_t L0A_HALF = G_L0A_HALF_BYTES;
-                constexpr uint32_t L0B_HALF = G_L0B_HALF_BYTES;
-                LocalTensor<DTYPE> al0(TPosition::A2, pingPongFlag * L0A_HALF, L0A_HALF / sizeof(DTYPE));
-                LocalTensor<DTYPE> bl0(TPosition::B2, pingPongFlag * L0B_HALF, L0B_HALF / sizeof(DTYPE));
+                LocalTensor<DTYPE> al0(TPosition::A2, pingPongFlag * G_L0A_HALF_BYTES,
+                                       G_L0A_HALF_BYTES / sizeof(DTYPE));
+                LocalTensor<DTYPE> bl0(TPosition::B2, pingPongFlag * G_L0B_HALF_BYTES,
+                                       G_L0B_HALF_BYTES / sizeof(DTYPE));
 
                 uint16_t mte1Flag = pingPongFlag + G_MTE1_EVENT_BASE;
                 WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(mte1Flag));
