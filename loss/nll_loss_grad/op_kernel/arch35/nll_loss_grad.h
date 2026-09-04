@@ -138,7 +138,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_)
 {
     int64_t localClassNum = classNum_;
-    ASSERT(localTotalWeight != 0 && "Input total weight must not be 0!");
     for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < batchNum_; i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
@@ -195,7 +194,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
     uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
 {
     int64_t localClassNum = classNum_;
-    ASSERT(localTotalWeight != 0 && "Input total weight must not be 0!");
     for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_; i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
