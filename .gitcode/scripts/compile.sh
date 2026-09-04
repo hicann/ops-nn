@@ -201,9 +201,6 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            wget -nv https://kiri-obs.obs.cn-north-4.myhuaweicloud.com/Cann%20Large%20Model%20Foundation%208.5.0.rc002/cann-bisheng-compiler_9.2.0_linux-x86_64.run
-            chmod +x *.run
-            sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
@@ -216,9 +213,6 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station_ubuntu24)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            wget -nv https://kiri-obs.obs.cn-north-4.myhuaweicloud.com/Cann%20Large%20Model%20Foundation%208.5.0.rc002/cann-bisheng-compiler_9.2.0_linux-x86_64.run
-            chmod +x *.run
-            sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
@@ -231,9 +225,6 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_mobile_station_9030_ubuntu24)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            wget -nv https://kiri-obs.obs.cn-north-4.myhuaweicloud.com/Cann%20Large%20Model%20Foundation%208.5.0.rc002/cann-bisheng-compiler_9.2.0_linux-x86_64.run
-            chmod +x *.run
-            sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
             bash build.sh --pkg --soc=kirinx9030 --cann_3rd_lib_path=/home/jenkins/opensource -j16
             DP_ASSERT_EQUAL $? 0 "build ${task_name}"
             echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
