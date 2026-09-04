@@ -351,8 +351,6 @@ inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, in
     OP_LOGD("X2Scale %s", op::ToString(x2Scale->GetViewShape()).GetString());
     auto dimTensorScale = x2Scale->GetViewShape().GetDimNum();
     if (isMxFp) {
-        int64_t scaleN = x2Scale->GetViewShape().GetDim((*permX2)[NUM_TWO]);
-        int64_t scaleGroupNum = x2Scale->GetViewShape().GetDim((*permX2)[1]);
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 OP_NAME, "x2Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
@@ -361,6 +359,8 @@ inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, in
                     .c_str());
             return false;
         }
+        int64_t scaleN = x2Scale->GetViewShape().GetDim((*permX2)[NUM_TWO]);
+        int64_t scaleGroupNum = x2Scale->GetViewShape().GetDim((*permX2)[1]);
         std::vector<int64_t> dims = {batch, numGroup, n, NUM_TWO};
         if (x2Scale->GetViewShape().GetDim(0) != batch || scaleN != n || scaleGroupNum != numGroup ||
             x2Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {

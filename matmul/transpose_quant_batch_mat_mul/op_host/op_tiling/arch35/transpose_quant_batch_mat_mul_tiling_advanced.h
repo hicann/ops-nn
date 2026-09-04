@@ -20,7 +20,7 @@ namespace transpose_quant_batch_mat_mul_advanced {
 using namespace matmul_v3_advanced;
 class TransposeQuantBatchMatMulTiling : public MatMulV3Tiling {
 public:
-    explicit TransposeQuantBatchMatMulTiling(gert::TilingContext* context) : MatMulV3Tiling(context){};
+    explicit TransposeQuantBatchMatMulTiling(gert::TilingContext* context) : MatMulV3Tiling(context) {};
 
     ~TransposeQuantBatchMatMulTiling() override = default;
 
@@ -38,6 +38,19 @@ protected:
 
     ge::graphStatus CheckScale(const int64_t b, const int64_t m, const int64_t n, const int64_t k,
                                const int64_t* bPerm) const;
+
+    bool CheckMxScaleDim(const size_t scaleDimNum, const char* scaleName) const;
+
+    ge::graphStatus CheckMxScaleShape(const gert::StorageShape* scaleX1ShapePtr,
+                                      const gert::StorageShape* scaleX2ShapePtr, const size_t scaleX1DimNum,
+                                      const size_t scaleX2DimNum, const int64_t b, const int64_t m, const int64_t n,
+                                      const int64_t k, const int64_t* bPerm) const;
+
+    ge::graphStatus CheckNonMxScaleShape(const gert::StorageShape* scaleX1ShapePtr,
+                                         const gert::StorageShape* scaleX2ShapePtr, const size_t scaleX1DimNum,
+                                         const size_t scaleX2DimNum, const int64_t m, const int64_t n) const;
+
+    MatMulV3BatchInfo batchInfo_{};
 
     bool isMXFP8_ = false;
     bool isHIFP8_ = false;

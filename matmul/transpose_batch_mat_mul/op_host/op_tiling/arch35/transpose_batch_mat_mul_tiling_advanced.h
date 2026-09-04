@@ -20,7 +20,7 @@ namespace transpose_batch_mat_mul_advanced {
 using namespace matmul_v3_advanced;
 class TransposeBatchMatMulTiling : public MatMulV3Tiling {
 public:
-    explicit TransposeBatchMatMulTiling(gert::TilingContext* context) : MatMulV3Tiling(context){};
+    explicit TransposeBatchMatMulTiling(gert::TilingContext* context) : MatMulV3Tiling(context) {};
 
     ~TransposeBatchMatMulTiling() override = default;
 
@@ -37,6 +37,8 @@ protected:
     ge::graphStatus CheckArgs() override;
 
     ge::graphStatus CheckScale(const gert::Shape& shape_scale) const;
+
+    MatMulV3BatchInfo batchInfo_{};
 };
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling

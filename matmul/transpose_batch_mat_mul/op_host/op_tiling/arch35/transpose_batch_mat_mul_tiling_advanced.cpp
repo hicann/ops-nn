@@ -361,10 +361,9 @@ ge::graphStatus TransposeBatchMatMulTiling::DoTiling()
     if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    MatMulV3BatchInfo tempBatchInfo;
-    OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
+    OP_TILING_CHECK((GetBatchInfo(*context_, args_, batchInfo_) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
-    args_.batchInfo = &tempBatchInfo;
+    args_.batchInfo = &batchInfo_;
     if (context_->GetOptionalInputShape(SCALE_IDX) != nullptr) {
         args_.hasScale = true;
         OP_LOGI(args_.opName, "Quant function is activated.");

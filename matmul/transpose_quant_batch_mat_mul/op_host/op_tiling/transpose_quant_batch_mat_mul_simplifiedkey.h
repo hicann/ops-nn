@@ -23,7 +23,6 @@ namespace optiling {
 namespace transpose_quant_batch_matmul {
 inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t* simplifiedKey)
 {
-    static const size_t DEST_MAX = 100;
     static const size_t MAX_LEN_SIMPLIFIED_KEY = 256;
     static const int32_t INPUT0_INDEX = 0;
     static const int32_t INPUT1_INDEX = 1;
@@ -64,7 +63,7 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
         x2ScaleDataType = context->GetOptionalInputDesc(X2_SCALE_INDEX)->GetDataType();
     }
     std::string simpleKeyTemp = "";
-    strcat_s(simplifiedKey, DEST_MAX, "diy,");
+    strcat_s(simplifiedKey, MAX_LEN_SIMPLIFIED_KEY, "diy,");
     simpleKeyTemp.append(std::to_string(input0Format))
         .append("/")
         .append(std::to_string(input1Format))
@@ -88,7 +87,7 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
         .append(std::to_string(x2ScaleDataType))
         .append("/")
         .append(std::to_string(outputDataType));
-    errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
+    errno_t err = strcat_s(simplifiedKey, MAX_LEN_SIMPLIFIED_KEY, simpleKeyTemp.c_str());
     if (err != 0) {
         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "strcat_s failed with error code %d.", err);
         return ge::GRAPH_FAILED;

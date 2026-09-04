@@ -298,13 +298,101 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::GetArgs()
     return IsValidDtype(*context_, args_, isHIFP8_);
 }
 
+bool TransposeQuantBatchMatMulTiling::CheckMxScaleDim(const size_t scaleDimNum, const char* scaleName) const
+{
+    if (scaleDimNum != EXPECTED_MX_SCALE_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args_.opName, scaleName, Ops::NN::FormatString("%zu", scaleDimNum).c_str(),
+            Ops::NN::FormatString("In %s case, the shape dim of %s must be %d", "MXFP8", scaleName,
+                                  static_cast<int>(EXPECTED_MX_SCALE_DIM))
+                .c_str());
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus TransposeQuantBatchMatMulTiling::CheckMxScaleShape(const gert::StorageShape* scaleX1ShapePtr,
+                                                                   const gert::StorageShape* scaleX2ShapePtr,
+                                                                   const size_t scaleX1DimNum,
+                                                                   const size_t scaleX2DimNum, const int64_t b,
+                                                                   const int64_t m, const int64_t n, const int64_t k,
+                                                                   const int64_t* bPerm) const
+{
+    int64_t numGroup = ops::CeilDiv(ops::CeilDiv(k, SUPPORTED_GROUP_SIZE), NUM_TWO);
+    if (!CheckMxScaleDim(scaleX1DimNum, "x1Scale") || !CheckMxScaleDim(scaleX2DimNum, "x2Scale")) {
+        return ge::GRAPH_FAILED;
+    }
+    bool invalidScaleX1 = scaleX1ShapePtr->GetStorageShape().GetDim(0) != m ||
+                          scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
+                          scaleX1ShapePtr->GetStorageShape().GetDim(NUM_TWO) != numGroup ||
+                          scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO;
+    if (invalidScaleX1) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args_.opName, "x1Scale", Ops::Base::ToString(scaleX1ShapePtr->GetStorageShape()).c_str(),
+            Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8", "x1Scale",
+                                  Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, b, numGroup).c_str())
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
+    int64_t scaleN = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[NUM_TWO]);
+    int64_t scaleGroupNum = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[1]);
+    bool invalidScaleX2 = scaleX2ShapePtr->GetStorageShape().GetDim(0) != b || scaleN != n ||
+                          scaleGroupNum != numGroup || scaleX2ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO;
+    if (invalidScaleX2) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(args_.opName, "x2Scale",
+                                              Ops::Base::ToString(scaleX2ShapePtr->GetStorageShape()).c_str(),
+                                              Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8",
+                                                                    "x2Scale", "[b, numGroup, n, 2] after permX2")
+                                                  .c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus TransposeQuantBatchMatMulTiling::CheckNonMxScaleShape(const gert::StorageShape* scaleX1ShapePtr,
+                                                                      const gert::StorageShape* scaleX2ShapePtr,
+                                                                      const size_t scaleX1DimNum,
+                                                                      const size_t scaleX2DimNum, const int64_t m,
+                                                                      const int64_t n) const
+{
+    if (!isHIFP8_) {
+        if (scaleX1DimNum != EXPECTED_SCALE_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                args_.opName, "x1Scale", Ops::NN::FormatString("%zu", scaleX1DimNum).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be %zu", "x1Scale", EXPECTED_SCALE_DIM).c_str());
+            return ge::GRAPH_FAILED;
+        }
+        if (scaleX1ShapePtr->GetStorageShape().GetDim(0) != m) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                args_.opName, "x1Scale",
+                Ops::NN::FormatString("%ld", scaleX1ShapePtr->GetStorageShape().GetDim(0)).c_str(),
+                Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x1Scale", "m-axis", "x1",
+                                      m)
+                    .c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+    if (scaleX2DimNum != EXPECTED_SCALE_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args_.opName, "x2Scale", Ops::NN::FormatString("%zu", scaleX2DimNum).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be %zu", "x2Scale", EXPECTED_SCALE_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (scaleX2ShapePtr->GetStorageShape().GetDim(0) != n) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            args_.opName, "x2Scale", Ops::NN::FormatString("%ld", scaleX2ShapePtr->GetStorageShape().GetDim(0)).c_str(),
+            Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x2Scale", "n-axis", "x2", n)
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, const int64_t m, const int64_t n,
                                                             const int64_t k, const int64_t* bPerm) const
 {
-    // scale
     auto scaleX1ShapePtr = context_->GetOptionalInputShape(SCALE_X1_IDX);
     auto scaleX2ShapePtr = context_->GetOptionalInputShape(SCALE_X2_IDX);
-    // scaleX1 can be nullptr in  hifp8 mode
     if ((!isHIFP8_ && scaleX1ShapePtr == nullptr) || scaleX2ShapePtr == nullptr) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             args_.opName, "x1Scale, x2Scale", "nullptr",
@@ -314,69 +402,9 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
     auto scaleX1DimNum = isHIFP8_ ? 1 : scaleX1ShapePtr->GetStorageShape().GetDimNum();
     auto scaleX2DimNum = scaleX2ShapePtr->GetStorageShape().GetDimNum();
     if (isMXFP8_) {
-        int64_t numGroup = ops::CeilDiv(ops::CeilDiv(k, SUPPORTED_GROUP_SIZE), NUM_TWO);
-        bool invalidScaleX1 = scaleX1DimNum != EXPECTED_MX_SCALE_DIM ||
-                              scaleX1ShapePtr->GetStorageShape().GetDim(0) != m ||
-                              scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
-                              scaleX1ShapePtr->GetStorageShape().GetDim(NUM_TWO) != numGroup ||
-                              scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO;
-        if (invalidScaleX1) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                args_.opName, "x1Scale", Ops::Base::ToString(scaleX1ShapePtr->GetStorageShape()).c_str(),
-                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8", "x1Scale",
-                                      Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, b, numGroup).c_str())
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
-        int64_t scaleN = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[NUM_TWO]);
-        int64_t scaleGroupNum = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[1]);
-        bool invalidScaleX2 = scaleX2DimNum != EXPECTED_MX_SCALE_DIM ||
-                              scaleX2ShapePtr->GetStorageShape().GetDim(0) != b || scaleN != n ||
-                              scaleGroupNum != numGroup ||
-                              scaleX2ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO;
-        if (invalidScaleX2) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                args_.opName, "x2Scale", Ops::Base::ToString(scaleX2ShapePtr->GetStorageShape()).c_str(),
-                Ops::NN::FormatString("In %s case, the shape of %s must be %s", "MXFP8", "x2Scale",
-                                      "[b, numGroup, n, 2] after permX2")
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
-    } else {
-        if (!isHIFP8_) {
-            if (scaleX1DimNum != EXPECTED_SCALE_DIM) {
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                    args_.opName, "x1Scale", Ops::NN::FormatString("%zu", scaleX1DimNum).c_str(),
-                    Ops::NN::FormatString("The shape dim of %s must be %zu", "x1Scale", EXPECTED_SCALE_DIM).c_str());
-                return ge::GRAPH_FAILED;
-            }
-            if (scaleX1ShapePtr->GetStorageShape().GetDim(0) != m) {
-                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-                    args_.opName, "x1Scale",
-                    Ops::NN::FormatString("%ld", scaleX1ShapePtr->GetStorageShape().GetDim(0)).c_str(),
-                    Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x1Scale", "m-axis",
-                                          "x1", m)
-                        .c_str());
-                return ge::GRAPH_FAILED;
-            }
-        }
-        if (scaleX2DimNum != EXPECTED_SCALE_DIM) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                args_.opName, "x2Scale", Ops::NN::FormatString("%zu", scaleX2DimNum).c_str(),
-                Ops::NN::FormatString("The shape dim of %s must be %zu", "x2Scale", EXPECTED_SCALE_DIM).c_str());
-            return ge::GRAPH_FAILED;
-        }
-        if (scaleX2ShapePtr->GetStorageShape().GetDim(0) != n) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-                args_.opName, "x2Scale",
-                Ops::NN::FormatString("%ld", scaleX2ShapePtr->GetStorageShape().GetDim(0)).c_str(),
-                Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x2Scale", "n-axis", "x2",
-                                      n)
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
+        return CheckMxScaleShape(scaleX1ShapePtr, scaleX2ShapePtr, scaleX1DimNum, scaleX2DimNum, b, m, n, k, bPerm);
     }
-    return ge::GRAPH_SUCCESS;
+    return CheckNonMxScaleShape(scaleX1ShapePtr, scaleX2ShapePtr, scaleX1DimNum, scaleX2DimNum, m, n);
 }
 
 ge::graphStatus TransposeQuantBatchMatMulTiling::CheckArgs()
@@ -469,10 +497,9 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::DoTiling()
     if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    MatMulV3BatchInfo tempBatchInfo;
-    OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
+    OP_TILING_CHECK((GetBatchInfo(*context_, args_, batchInfo_) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
-    args_.batchInfo = &tempBatchInfo;
+    args_.batchInfo = &batchInfo_;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
     NpuArch npuArch = static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
