@@ -123,6 +123,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionTwoIndicesSuccess)
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, SUCCESS);
@@ -149,6 +150,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOneIndexSuccess)
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, SUCCESS);
@@ -175,6 +177,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionDynamicShapeFail)
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
@@ -191,6 +194,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionFloat16Success)
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, SUCCESS);
@@ -217,6 +221,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionZeroIndicesFail)
                                              dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
@@ -233,6 +238,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOutputShapeAndParam
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, SUCCESS);
@@ -286,6 +292,7 @@ TEST_F(IndexByTensorStaticFusionPassTest, indexbytensorFusionOneIndexOutputShape
                                              indicesMask, dimsY);
 
     CustomPassContext passContext;
+    passContext.SetPassName("IndexByTensorStaticFusionPass");
     ops::IndexByTensorStaticFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, SUCCESS);
