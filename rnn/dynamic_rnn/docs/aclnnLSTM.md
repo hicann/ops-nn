@@ -417,9 +417,18 @@ aclnnStatus aclnnLSTM(
         <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
-        <td>如果传入参数类型为aclTensor且其数据类型不在支持的范围之内。</td>
+        <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="12">161002</td>
+        <td>如果传入参数为aclTensor或aclTensorList，数据类型不在支持的范围之内。</td>
+      </tr>
+      <tr>
+        <td>如果传入参数类型为aclTensor或aclTensorList，数据类型不同。</td>
+      </tr>
+      <tr>
+        <td>如果传入参数类型为aclTensor或aclTensorList，shape不满足对应的shape要求。</td>
+      </tr>
+      <tr>
+        <td>numLayers不满足>0。</td>
       </tr>
     </tbody>
     </table>
