@@ -35,7 +35,7 @@ namespace optiling {
 AdaptiveSlidingWindowCubeTiling::AdaptiveSlidingWindowCubeTiling(gert::TilingContext* context)
     : AdaptiveSlidingWindowTiling(context)
 {
-    Reset();
+    AdaptiveSlidingWindowTiling::ResetTilingData();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3TilingDataParams);
 }
 
@@ -43,7 +43,7 @@ AdaptiveSlidingWindowCubeTiling::AdaptiveSlidingWindowCubeTiling(gert::TilingCon
                                                                  DequantBmm::QuantBatchMatmulV3TilingDataParams* out)
     : AdaptiveSlidingWindowTiling(context, out)
 {
-    Reset();
+    AdaptiveSlidingWindowTiling::ResetTilingData();
     InitCompileInfo();
     inputParams_.Reset();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3TilingDataParams);

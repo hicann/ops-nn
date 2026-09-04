@@ -33,7 +33,7 @@ namespace optiling {
 AdaptiveSlidingWindowPerblockBasicAPITiling::AdaptiveSlidingWindowPerblockBasicAPITiling(gert::TilingContext* context)
     : AdaptiveSlidingWindowTiling(context), tilingData_(tilingDataSelf_)
 {
-    Reset();
+    AdaptiveSlidingWindowPerblockBasicAPITiling::ResetTilingData();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 }
 
@@ -41,14 +41,15 @@ AdaptiveSlidingWindowPerblockBasicAPITiling::AdaptiveSlidingWindowPerblockBasicA
     gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out)
     : AdaptiveSlidingWindowTiling(context, nullptr), tilingData_(*out)
 {
-    Reset();
+    AdaptiveSlidingWindowPerblockBasicAPITiling::ResetTilingData();
     InitCompileInfo();
     inputParams_.Reset();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 }
 
-void AdaptiveSlidingWindowPerblockBasicAPITiling::Reset()
+void AdaptiveSlidingWindowPerblockBasicAPITiling::ResetTilingData()
 {
+    AdaptiveSlidingWindowTiling::ResetTilingData();
     if (!isTilingOut_) {
         tilingData_ = DequantBmm::QuantBatchMatmulV3BasicAPITilingData();
     }
@@ -87,6 +88,7 @@ const void* AdaptiveSlidingWindowPerblockBasicAPITiling::GetTilingData() const {
 
 uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
+    (void)npuArch;
     return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 

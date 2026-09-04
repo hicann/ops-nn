@@ -53,7 +53,7 @@ AdaptiveSlidingWindowTiling::AdaptiveSlidingWindowTiling(gert::TilingContext* co
     : QuantBatchMatmulV3TilingBase(context, true), tilingData_(out == nullptr ? tilingDataSelf_ : *out)
 {}
 
-void AdaptiveSlidingWindowTiling::Reset()
+void AdaptiveSlidingWindowTiling::ResetTilingData()
 {
     isBf16Opt_ = false;
 
@@ -246,6 +246,7 @@ uint64_t AdaptiveSlidingWindowTiling::GetKernelType() const
 
 uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch npuArch) const
 {
+    (void)npuArch;
     return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
 }
 

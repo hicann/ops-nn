@@ -311,6 +311,7 @@ uint64_t QuantBatchMatmulV3IterbatchTiling::GetKernelType() const
 
 uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch npuArch) const
 {
+    (void)npuArch;
     return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
 }
 

@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "acl/acl_rt.h"
-#include "tiling/platform/platform_ascendc.h"
 
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"

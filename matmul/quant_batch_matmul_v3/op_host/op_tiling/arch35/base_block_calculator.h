@@ -16,9 +16,12 @@
 
 #include <cstdint>
 
-#include "../quant_batch_matmul_v3_tiling_base.h"
+#include "graph/types.h"
 
 namespace optiling {
+
+struct QuantBatchMatmulInfo;
+struct QuantBatchMatmulV3CompileInfo;
 
 struct BaseBlockRes {
     uint64_t baseM = 0UL;

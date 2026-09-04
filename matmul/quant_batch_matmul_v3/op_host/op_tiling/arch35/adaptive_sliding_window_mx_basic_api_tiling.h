@@ -14,6 +14,8 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "adaptive_sliding_window_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
@@ -37,7 +39,6 @@ private:
         bool isAFullLoad;
     };
 
-    void Reset();
     void CalculateNBufferNum();
     MxL1EstimateParams BuildL1EstimateParams(uint64_t kL1) const;
     void ApplyMultiBufferL1Tiling(const MxL1EstimateParams& params, uint32_t l1BufferNum);
@@ -60,6 +61,7 @@ private:
     void AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step, uint32_t baseK) const;
 
 protected:
+    void ResetTilingData() override;
     bool IsCapable() override;
     uint64_t GetBatchCoreCnt() const override;
     const void* GetTilingData() const override;

@@ -13,6 +13,8 @@
  * \brief Adaptive sliding-window tiling base definitions.
  */
 #pragma once
+
+#include <cstdint>
 #include <vector>
 
 #include "../quant_batch_matmul_v3_tiling_base.h"
@@ -66,7 +68,7 @@ public:
     ge::graphStatus PostTiling() override;
 
 protected:
-    void Reset();
+    virtual void ResetTilingData();
     ge::graphStatus CheckContext() override;
     ge::graphStatus CalcUbTiling() override;
     virtual uint64_t GetBatchCoreCnt() const;

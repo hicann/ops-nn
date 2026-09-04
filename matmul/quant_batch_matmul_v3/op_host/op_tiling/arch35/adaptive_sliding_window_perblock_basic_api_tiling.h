@@ -14,6 +14,8 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "adaptive_sliding_window_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
@@ -30,10 +32,10 @@ public:
     ge::graphStatus DoLibApiTiling() override;
 
 private:
-    void Reset();
     void CalculateNBufferNum4Perblock();
 
 protected:
+    void ResetTilingData() override;
     bool IsCapable() override;
     bool CheckCoreNum() const override;
     uint64_t GetBatchCoreCnt() const override;

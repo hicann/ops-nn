@@ -50,7 +50,7 @@ namespace optiling {
 AdaptiveSlidingWindowMixBasicAPITiling::AdaptiveSlidingWindowMixBasicAPITiling(gert::TilingContext* context)
     : AdaptiveSlidingWindowTiling(context), tilingData_(tilingDataSelf_)
 {
-    Reset();
+    AdaptiveSlidingWindowMixBasicAPITiling::ResetTilingData();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 }
 
@@ -58,14 +58,15 @@ AdaptiveSlidingWindowMixBasicAPITiling::AdaptiveSlidingWindowMixBasicAPITiling(
     gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out)
     : AdaptiveSlidingWindowTiling(context, nullptr), tilingData_(*out)
 {
-    Reset();
+    AdaptiveSlidingWindowMixBasicAPITiling::ResetTilingData();
     InitCompileInfo();
     inputParams_.Reset();
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 }
 
-void AdaptiveSlidingWindowMixBasicAPITiling::Reset()
+void AdaptiveSlidingWindowMixBasicAPITiling::ResetTilingData()
 {
+    AdaptiveSlidingWindowTiling::ResetTilingData();
     if (!isTilingOut_) {
         tilingData_ = DequantBmm::QuantBatchMatmulV3BasicAPITilingData();
     }
@@ -79,8 +80,9 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::IsWithoutBatchTilingData() const
     return !isTilingOut_ && inputParams_.batchC == 1UL;
 }
 
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetApiLevel(NpuArch) const
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
+    (void)npuArch;
     return static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL);
 }
 
@@ -133,11 +135,6 @@ const void* AdaptiveSlidingWindowMixBasicAPITiling::GetTilingData() const
 }
 
 uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseMAlignSize() const { return CUBE_BLOCK; }
-
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseNAlignSize() const
-{
-    return inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype);
-}
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo& info)
 {
