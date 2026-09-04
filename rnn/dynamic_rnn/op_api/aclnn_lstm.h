@@ -30,7 +30,7 @@ ACLNN_API aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const ac
  * @param [in] workspace: start address of the workspace memory allocated on the NPU device.
  * @param [in] workspaceSize: size of the workspace applied on the NPU device, which is obtained by calling the first
  * segment interface aclnnMaxPool3dWithArgmaxGetWorkspaceSize.
- * @param [in] exector: op executor, including the operator calculation process.
+ * @param [in] executor: op executor, including the operator calculation process.
  * @param [in] stream: acl stream.
  * @return aclnnStatus: returned status code
  */
