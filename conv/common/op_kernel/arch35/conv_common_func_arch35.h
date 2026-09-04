@@ -422,8 +422,8 @@ struct End {
 template <class Intf>
 __aicore__ inline void InitBufferWithDoubleBuf(Intf* self)
 {
-    self->ctx.pipe.InitBuffer(self->ctx.al0Buf, ASC_L0A_SIZE);
-    self->ctx.pipe.InitBuffer(self->ctx.bl0Buf, ASC_L0B_SIZE);
+    self->ctx.pipe.InitBuffer(self->ctx.al0Buf, L0A_SIZE);
+    self->ctx.pipe.InitBuffer(self->ctx.bl0Buf, L0B_SIZE);
     self->ctx.wholeAl0Tensor = self->ctx.al0Buf.template Get<typename Intf::FmapT>();
     self->ctx.wholeBl0Tensor = self->ctx.bl0Buf.template Get<typename Intf::WeightT>();
 
@@ -439,7 +439,7 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf* self)
             self->ctx.pipe.InitBuffer(self->ctx.queueCL0, DOUBLE_BUF, cl0Spacesize * Intf::sizeOfL0c);
         }
     } else {
-        self->ctx.pipe.InitBuffer(self->ctx.l0cBuf, ASC_L0C_SIZE);
+        self->ctx.pipe.InitBuffer(self->ctx.l0cBuf, L0C_SIZE);
         self->ctx.wholeCl0Tensor = self->ctx.l0cBuf.template Get<typename Intf::L0cT>();
     }
 
@@ -488,7 +488,7 @@ __aicore__ inline void InitBuffer(Intf* self)
             }
             uint64_t biasBTSpacesize = self->ctx.convTilingData->nL0;
             self->ctx.pipe.InitBuffer(self->ctx.queueBiasL1, 1, AlignB(biasl1Spacesize, C0_SIZE));
-            self->ctx.pipe.InitBuffer(self->ctx.queueBiasBT, 1, AlignB(biasBTSpacesize * Intf::sizeOfL0c, ASC_BT_SIZE));
+            self->ctx.pipe.InitBuffer(self->ctx.queueBiasBT, 1, AlignB(biasBTSpacesize * Intf::sizeOfL0c, BT_SIZE));
         }
     }
 

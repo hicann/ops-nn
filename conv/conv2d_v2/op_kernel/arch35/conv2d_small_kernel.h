@@ -18,8 +18,8 @@ using namespace AscendC;
 
 constexpr uint32_t GN0 = 16;
 constexpr uint32_t GM0 = 16;
-constexpr uint32_t AL0_BUF_BYTES = ASC_L0A_SIZE / 2;
-constexpr uint32_t BL0_BUF_BYTES = ASC_L0B_SIZE / 2;
+constexpr uint32_t AL0_BUF_BYTES = L0A_SIZE / 2;
+constexpr uint32_t BL0_BUF_BYTES = L0B_SIZE / 2;
 constexpr uint32_t AL0_BUF_ELEMS = AL0_BUF_BYTES / sizeof(int8_t);
 constexpr uint32_t BL0_BUF_ELEMS = BL0_BUF_BYTES / sizeof(int8_t);
 constexpr uint32_t PAD_LIST_NUM = 4;
@@ -72,7 +72,7 @@ public:
                                    const ExtendParams* extendParams);
 
 protected:
-    static constexpr uint32_t L0C_ELEMS = ASC_L0C_SIZE / sizeof(L0cT);
+    static constexpr uint32_t L0C_ELEMS = L0C_SIZE / sizeof(L0cT);
     __aicore__ inline void InitCommon(const Conv2DTilingData& tiling);
     __aicore__ inline uint32_t SetupL1Layout(uint32_t al1BufCount);
     __aicore__ inline void LoadFmapL1(GM_ADDR x, uint32_t bufIdx = 0);
