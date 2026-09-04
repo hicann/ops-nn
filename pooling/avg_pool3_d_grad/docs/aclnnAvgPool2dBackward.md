@@ -347,9 +347,13 @@ aclnnStatus aclnnAvgPool2dBackward(
 
 ## 约束说明
 
-<!-- npu="950" id19 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：aclnnAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-<!-- end id19 -->
+- 确定性计算：
+  <!-- npu="A3,910b,310p,910" id19 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：aclnnAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  <!-- end id19 -->
+  <!-- npu="950" id20 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAvgPool2dBackward默认确定性实现。
+  <!-- end id20 -->
 
 <!-- npu="910,310p" id7 -->
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。

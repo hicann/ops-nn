@@ -233,9 +233,13 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackward(
 
 ## 约束说明
 
-<!-- npu="950" id7 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：aclnnAdaptiveMaxPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-<!-- end id7 -->
+- 确定性计算：
+  <!-- npu="A3,910b" id11 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnAdaptiveMaxPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  <!-- end id11 -->
+  <!-- npu="950" id12 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAdaptiveMaxPool2dBackward默认确定性实现。
+  <!-- end id12 -->
 
 - 非整除场景下（self的后两个维度的维度值对gradOutput后两个维度的维度值取余不为0），shape不超过2的24次方。整除场景下，没有这个限制。
 - 举例整除场景：self=[a,b,c,d]，gradOutput=[a,b,e,f]。 c%e为0并且d%f为0就是整除场景。
