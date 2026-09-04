@@ -81,7 +81,7 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
 ```cpp
 aclnnStatus aclnnFusedSgd(
   void              *workspace,
-  uint64_t           workspace_size,
+  uint64_t           workspaceSize,
   aclOpExecutor     *executor,
   const aclrtStream  stream)
 ```
@@ -278,7 +278,6 @@ aclnnStatus aclnnFusedSgd(
       <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape不同。</li>
       <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中有空指针。</li>
       <li>lr、momentum、weightDecay、dampening的值小于0。</li>
-      <li>gradScale等于0。</li>
       </ul></td>
       </tr>
   </tbody>

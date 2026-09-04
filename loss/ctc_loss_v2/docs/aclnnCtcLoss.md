@@ -61,7 +61,7 @@ aclnnStatus aclnnCtcLossGetWorkspaceSize(
     const aclTensor*     logProbs,
     const aclTensor*     targets,
     const aclIntArray*   inputLengths,
-    const aclIntArray*   targetLengths,
+    const aclIntArray*   targetlengths,
     int64_t              blank,
     bool                 zeroInfinity,
     aclTensor*           negLogLikelihoodOut,
@@ -118,7 +118,7 @@ aclnnStatus aclnnCtcLoss(
         <td>targets（aclTensor*）</td>
         <td>输入</td>
         <td>表示包含目标序列的标签，公式中的π。</td>
-        <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
+        <td>当shape为(N,S)，S为不小于targetlengths中的最大值的值；或者shape为(SUM(targetlengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
         <td>INT64、INT32、BOOL、FLOAT、FLOAT16</td>
         <td>ND</td>
         <td>-</td>
@@ -135,9 +135,9 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
       </tr>
       <tr>
-        <td>targetLengths（aclIntArray*）</td>
+        <td>targetlengths（aclIntArray*）</td>
         <td>输入</td>
-        <td>表示目标序列的实际长度，公式中的l的长度为targetLengths中的元素。</td>
+        <td>表示目标序列的实际长度，公式中的l的长度为targetlengths中的元素。</td>
         <td>数组长度为N，当targets的shape为(N,S)时，数组中的每个值必须小于等于S。当logProbs为2维时，N=1。</td>
         <td>INT64、INT32</td>
         <td>-</td>
@@ -209,10 +209,10 @@ aclnnStatus aclnnCtcLoss(
   - logAlphaOut：
 
      <!-- npu="A3,910b" id7 -->
-     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)。
+     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetlengths)+8)/8*8$)。
      <!-- end id7 -->
      <!-- npu="950" id8 -->
-     - <term>Ascend 950PR/Ascend 950DT</term>：shape为($N, T, (2*max(targetLengths)+1)$)。
+     - <term>Ascend 950PR/Ascend 950DT</term>：shape为($N, T, (2*max(targetlengths)+1)$)。
      <!-- end id8 -->
 
 - **返回值：**
@@ -236,15 +236,15 @@ aclnnStatus aclnnCtcLoss(
       <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的logProbs、targets、inputLengths、targetLengths、negLogLikelihoodOut、logAlphaOut是空指针时。</td>
+      <td>传入的logProbs、targets、inputLengths、targetlengths、negLogLikelihoodOut、logAlphaOut是空指针时。</td>
       </tr>
       <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>logProbs、targets、inputLengths、targetLengths的数据类型不在支持的范围之内。</td>
+      <td>logProbs、targets、inputLengths、targetlengths的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-      <td>logProbs、targets、inputLengths、targetLengths、negLogLikelihoodOut、logAlphaOut的Tensor不满足对应的shape要求，或者inputLengths、targetLengths的ArrayList的长度不满足要求。</td>
+      <td>logProbs、targets、inputLengths、targetlengths、negLogLikelihoodOut、logAlphaOut的Tensor不满足对应的shape要求，或者inputLengths、targetlengths的ArrayList的长度不满足要求。</td>
       </tr>
       <tr>
       <td>blank不满足取值范围。</td>
@@ -299,8 +299,8 @@ aclnnStatus aclnnCtcLoss(
 - **值域限制说明：**
   - `targets`的值域要求为$[0, C - 1]$且不包括blank对应的数值，其中$C$代表`logProbs`中的最后一维，即类别数。
   - `inputLengths`的值域要求为$[1, T]$，其中$T$代表`logProbs`中的第0维，代表输入长度。
-  - `targetLengths`的值域要求为大于等于1。
-  - `targetLengths`中的元素要求小于等于`inputLengths`中对应的元素。
+  - `targetlengths`的值域要求为大于等于1。
+  - `targetlengths`中的元素要求小于等于`inputLengths`中对应的元素。
 
   若不满足前三条值域约束，CPU/GPU可能存在越界行为，导致negLogLikelihoodOut和logAlphaOut的计算结果可能与CPU/GPU存在差异。若不满足第四条值域约束，logAlphaOut在对应batch上的计算结果与CPU/GPU存在差异。
 

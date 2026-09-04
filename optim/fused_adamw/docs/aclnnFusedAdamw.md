@@ -313,7 +313,7 @@ aclnnStatus aclnnFusedAdamw(
       <td>paramsRef、grads、expAvgsRef、expAvgSqsRef、maxExpAvgSqsRef的数据类型不在支持的范围内时。</td>
       </tr>
       <tr>
-      <td>paramsRef、grads、expAvgsRef、expAvgSqsRef、maxExpAvgSqsRef的数据格式不在支持的范围内时。</td>
+      <td>paramsRef、grads、expAvgsRef、expAvgSqsRef、maxExpAvgSqsRef的数据类型不同时。</td>
       </tr>
       <tr>
       <td>grads、expAvgsRef、expAvgSqsRef和paramsRef的shape不一致时。</td>
