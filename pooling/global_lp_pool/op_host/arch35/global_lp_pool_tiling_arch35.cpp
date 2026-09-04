@@ -587,6 +587,10 @@ ge::graphStatus GlobalLpPoolTilingFunc::ComputeTiling(gert::TilingContext* ctx)
     if (ctx == nullptr)
         return ge::GRAPH_FAILED;
     TilingCtx tc;
+    size_t* workSpaceSize = ctx->GetWorkspaceSizes(1);
+    if (workSpaceSize != nullptr) {
+        workSpaceSize[0] = 0;
+    }
     if (GetPlatformInfoFromCtx(ctx, tc) != ge::GRAPH_SUCCESS)
         return ge::GRAPH_FAILED;
     if (GetShapeAttrsInfo(ctx, tc) != ge::GRAPH_SUCCESS)
