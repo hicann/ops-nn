@@ -240,6 +240,141 @@ static bool isConv3dDwV2Valid(const aclTensor* gradOutput, const aclTensor* inpu
     return IsPaddingValidFor3D(weight, params) && !IsExceedL1For3DDw(gradOutput, input, weight, params);
 }
 
+// dx 侧 L1 超限预估，对齐 cube tiling 的 CheckL1SizeLimit：超 L1 或 W 超限时改走 vector 兜底。
+struct Conv3DDxL1Estimate {
+    int64_t aL1Size = 0;
+    int64_t bL1Size = 0;
+    int64_t fillZeroSize = 0;
+    bool wSizeLimit = false;
+};
+
+static Conv3DDxL1Estimate CalcConv3DDxL1Estimate(int64_t aC, int64_t aD, int64_t aH, int64_t aW, int64_t kD, int64_t kH,
+                                                 int64_t kW, int64_t cW, bool isFp32, int32_t aDtypeBytes,
+                                                 int32_t bDtypeBytes, const ConvolutionBackwardParams& params)
+{
+    if (cW <= 0) {
+        return Conv3DDxL1Estimate{};
+    }
+    constexpr int64_t kBlockSize = 16;
+    constexpr int64_t kFP32BlockReduce = 8;
+    constexpr int64_t kDimWNormalUp = 4096;
+    constexpr int64_t kByteBlock = 32;
+
+    // stride/dilation 支持 3 维[d,h,w] / 5 维[n,c,d,h,w]
+    bool attr3d = (params.stride->Size() == CONV3D_ATTR_DIM);
+    int64_t strideD = (*params.stride)[attr3d ? 0 : 2];
+    int64_t strideH = (*params.stride)[attr3d ? 1 : 3];
+    int64_t strideW = (*params.stride)[attr3d ? 2 : 4];
+    int64_t dilationH = (*params.dilation)[attr3d ? 1 : 3];
+    int64_t filterHDilation = (kH - 1) * dilationH + 1;
+
+    // filter 转 FRACTAL_Z_3D 后的 co0/ci0（FP32 按字节块近似）
+    int64_t aC0 = isFp32 ? kFP32BlockReduce : kBlockSize;
+    int64_t filterCo0 = isFp32 ? (kByteBlock / bDtypeBytes) : kBlockSize;
+    int64_t filterCi0 = kBlockSize;
+
+    // w_value 与 h_value_max 对齐 cube tiling 的 CheckL1SizeLimit
+    int64_t wValue = aW * strideW;
+    int64_t hValueMax = (filterHDilation - 1) + kBlockSize / cW + 2;
+    if (kBlockSize < cW) {
+        hValueMax = filterHDilation + 1;
+    } else if (kBlockSize % cW == 0) {
+        hValueMax = (filterHDilation - 1) + kBlockSize / cW;
+    }
+    hValueMax = std::min(hValueMax, aH * strideH);
+
+    // aL1D 对齐 GetDfactor 的 estimate_d，保守估计避免漏判超限
+    int64_t aC1 = (aC + aC0 - 1) / aC0;
+    int64_t l1RealDkCheck = (aC1 == 1) ? kD : 1;
+    int64_t kdFactorNumerator = l1RealDkCheck - 2 + 1;
+    int64_t aL1D = (kdFactorNumerator + strideD - 1) / strideD + 1;
+    aL1D = std::max(std::min(aL1D, aD), static_cast<int64_t>(1));
+
+    Conv3DDxL1Estimate est;
+    est.aL1Size = hValueMax * wValue * aL1D * aC0 * aDtypeBytes;
+    est.bL1Size = 1 * kH * filterCo0 * kW * filterCi0 * bDtypeBytes;
+    est.fillZeroSize = isFp32 ? 0 : kBlockSize * kBlockSize * bDtypeBytes;
+    est.wSizeLimit = std::max(cW, wValue) <= kDimWNormalUp;
+    return est;
+}
+
+static bool IsExceedL1For3DDx(const ConvolutionBackwardInputTensor& inputTensor,
+                              const ConvolutionBackwardParams& params)
+{
+    auto gradOutputShape = inputTensor.gradOutput->GetViewShape();
+    auto inputShape = inputTensor.input->GetViewShape();
+    auto weightShape = inputTensor.weight->GetViewShape();
+    if (gradOutputShape.GetDimNum() != CONV3DINPUTDIM || weightShape.GetDimNum() != CONV3DINPUTDIM ||
+        inputShape.GetDimNum() != CONV3DINPUTDIM) {
+        return false;
+    }
+
+    // 5D NCDHW: N=0,C=1,D=2,H=3,W=4
+    constexpr int64_t k5dCIdx = 1;
+    constexpr int64_t k5dDIdx = 2;
+    constexpr int64_t k5dHIdx = 3;
+    constexpr int64_t k5dWIdx = 4;
+
+    int64_t aC = gradOutputShape.GetDim(k5dCIdx);
+    int64_t aD = gradOutputShape.GetDim(k5dDIdx);
+    int64_t aH = gradOutputShape.GetDim(k5dHIdx);
+    int64_t aW = gradOutputShape.GetDim(k5dWIdx);
+    int64_t kD = weightShape.GetDim(k5dDIdx);
+    int64_t kH = weightShape.GetDim(k5dHIdx);
+    int64_t kW = weightShape.GetDim(k5dWIdx);
+    int64_t cW = inputShape.GetDim(k5dWIdx);
+    if (cW <= 0) {
+        return false;
+    }
+
+    DataType aDtype = inputTensor.gradOutput->GetDataType();
+    DataType bDtype = inputTensor.weight->GetDataType();
+    int32_t aDtypeBytes = static_cast<int32_t>(ge::GetSizeByDataType(aDtype));
+    int32_t bDtypeBytes = static_cast<int32_t>(ge::GetSizeByDataType(bDtype));
+    bool isFp32 = (aDtype == DataType::DT_FLOAT);
+
+    Conv3DDxL1Estimate est = CalcConv3DDxL1Estimate(aC, aD, aH, aW, kD, kH, kW, cW, isFp32, aDtypeBytes, bDtypeBytes,
+                                                    params);
+
+    uint64_t l1Size = 0;
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo != nullptr) {
+        platformInfo->GetLocalMemSize(fe::LocalMemType::L1, l1Size);
+    }
+
+    OP_LOGD("IsExceedL1For3DDx: aL1=%ld, bL1=%ld, fillZero=%ld, l1=%lu, wLimit=%d", est.aL1Size, est.bL1Size,
+            est.fillZeroSize, l1Size, est.wSizeLimit ? 1 : 0);
+    return (static_cast<uint64_t>(est.aL1Size + est.bL1Size + est.fillZeroSize) > l1Size) || !est.wSizeLimit;
+}
+
+// vec 兜底能力圈：超 L1 且满足 vector 分支约束（dtype/分组/910b/dx 未被 matmul 承接）才启用
+static bool IsConv3DVecFallbackCase(const ConvolutionBackwardInputTensor& inputTensor,
+                                    const ConvolutionBackwardParams& params, const NpuArch curArch,
+                                    const aclBoolArray* outputMask, const vector<bool>& matmulMask)
+{
+    OP_LOGI("conv3d dx vec check: groups=%d, curArch=%d, outputMask0=%d, matmulMask0=%d", params.groups,
+            static_cast<int>(curArch), (*outputMask)[0] ? 1 : 0, matmulMask[0] ? 1 : 0);
+    if (curArch != NpuArch::DAV_2201) {
+        return false;
+    }
+    if (!(*outputMask)[0] || matmulMask[0]) {
+        return false;
+    }
+    if ((*outputMask)[1] && !matmulMask[1]) {
+        // dw 未由 matmul 承接时仍需走 cube，不能进 vec 兜底
+        return false;
+    }
+    auto dtype = inputTensor.input->GetDataType();
+    if (dtype != DataType::DT_FLOAT16 && dtype != DataType::DT_BF16 && dtype != DataType::DT_FLOAT) {
+        return false;
+    }
+    if (inputTensor.weight->GetDataType() != dtype || inputTensor.gradOutput->GetDataType() != dtype) {
+        // 三输入必须同 dtype，防 promote 改变 dtype 导致 def 组合失配
+        return false;
+    }
+    return IsExceedL1For3DDx(inputTensor, params);
+}
+
 static bool ConvBackGoHf32(const ConvolutionBackwardInputTensor& inputTensor, int8_t cubeMathType)
 {
     auto promoteType = op::PromoteType(inputTensor.input->GetDataType(), inputTensor.weight->GetDataType());
@@ -570,18 +705,18 @@ static aclnnStatus AttrPreProcess(ConvolutionBackwardParams& params, aclOpExecut
 
 static aclnnStatus InputPreProcess(const aclTensor*& inputTensor, const string& tensorName,
                                    ConvolutionBackwardParams& params, const op::DataType promoteDtype,
-                                   aclOpExecutor* executor, bool c04Flag = false, bool transDataFlag = true)
+                                   aclOpExecutor* executor, bool c04Flag = false, bool transDataFlag = true,
+                                   bool vecMode = false)
 {
     // API输入预处理 l0ResultTensor -> l0op::Contiguous -> l0op::Cast -> l0op::TransData -> inputTensor
     inputTensor = l0op::Contiguous(inputTensor, executor);
     OP_CHECK(inputTensor != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                     "The input preprocess failed, "
-                     "%s with Contiguous return nullptr.",
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Contiguous return nullptr.",
                      tensorName.c_str()),
              return ACLNN_ERR_INNER_NULLPTR);
-    bool useFp16Input = (params.cubeMathType == USE_FP16 ||
-                         (!IsInputSupportFp32Local() && params.cubeMathType == ALLOW_FP32_DOWN_PRECISION));
+    // vector 兜底保持原始 dtype 与 ND 系格式，跳过 Cast/TransData
+    bool useFp16Input = !vecMode && (params.cubeMathType == USE_FP16 ||
+                                     (!IsInputSupportFp32Local() && params.cubeMathType == ALLOW_FP32_DOWN_PRECISION));
     if (useFp16Input) {
         if (Ops::NN::AclnnUtil::IsRegbase() &&
             (promoteDtype == DataType::DT_HIFLOAT8 || promoteDtype == DataType::DT_FLOAT8_E4M3FN)) {
@@ -591,23 +726,19 @@ static aclnnStatus InputPreProcess(const aclTensor*& inputTensor, const string& 
             OP_LOGD("According to the configuration of cubeMathType, use Fp16 to calculation.");
             inputTensor = l0op::Cast(inputTensor, DataType::DT_FLOAT16, executor);
             OP_CHECK(inputTensor != nullptr,
-                     OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                             "The input preprocess failed, "
-                             "%s with Cast return nullptr.",
+                     OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Cast return nullptr.",
                              tensorName.c_str()),
                      return ACLNN_ERR_INNER_NULLPTR);
         }
-    } else {
+    } else if (!vecMode) {
         inputTensor = l0op::Cast(inputTensor, promoteDtype, executor);
         OP_CHECK(inputTensor != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                         "The input preprocess failed,"
-                         " %s with Cast return nullptr.",
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Cast return nullptr.",
                          tensorName.c_str()),
                  return ACLNN_ERR_INNER_NULLPTR);
     }
     auto inputDim = inputTensor->GetViewShape().GetDimNum();
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || vecMode) {
         return ACLNN_SUCCESS;
     }
     if (inputDim == CONV3DINPUTDIM) {
@@ -2680,7 +2811,7 @@ static const aclTensor* Conv3DBackpropFilterBy1x1Dw(ConvolutionBackwardInputTens
 
 static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTensor& tempTensor,
                                                     ConvolutionBackwardParams& params, AdaptParam& adptParams,
-                                                    aclOpExecutor* executor)
+                                                    aclOpExecutor* executor, bool vecMode = false)
 {
     GetConv3DBackpropAdapterParam(tempTensor.input, params.stride, params.padding, params.dilation, executor,
                                   &adptParams);
@@ -2696,7 +2827,8 @@ static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTens
         }
     }
 
-    if (CheckWeightPreTransposeEnable(tempTensor.weight, tempTensor.input, stride5, params.groups)) {
+    if (!vecMode && CheckWeightPreTransposeEnable(tempTensor.weight, tempTensor.input, stride5, params.groups)) {
+        // vector 兜底时 weight 需保持原始 NCDHW/ND 布局，不做 NDHWC 预转置
         OP_LOGD("Conv3d backpropInput v2 support weight pre transpose.");
         // transpose weight NCDHW -> NDHWC
         auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(),
@@ -2711,6 +2843,53 @@ static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTens
         mutableWeight->SetStorageFormat(Format::FORMAT_NDHWC);
         mutableWeight->SetViewFormat(Format::FORMAT_NDHWC);
     }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CalculateConv3DBackwardDx(ConvolutionBackwardInputTensor& inputTensor,
+                                             ConvolutionBackwardResult& outputTensor, ConvolutionBackwardParams& params,
+                                             aclOpExecutor* executor, bool useHf32, bool vecModeFlag, bool useV2Flag,
+                                             const NpuArch curArch)
+{
+    OP_LOGD("Enter dx Calculate");
+    const aclTensor* gradInputNDC1HWC0 = nullptr;
+    AdaptParam adptParams = {nullptr};
+    auto tempTensor = inputTensor;
+    bool outputTransdataFlag = true;
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        outputTransdataFlag = false;
+    }
+    adptParams.vecMode = vecModeFlag;
+    CHECK_RET(PrepareConv3DBackpropInputParams(tempTensor, params, adptParams, executor, vecModeFlag) == ACLNN_SUCCESS,
+              ACLNN_ERR_INNER_NULLPTR);
+    if (vecModeFlag) {
+        // NCDHW/ND 布局等价，仅重标签不搬数据
+        const_cast<aclTensor*>(tempTensor.weight)->SetStorageFormat(op::Format::FORMAT_NCDHW);
+        const_cast<aclTensor*>(tempTensor.weight)->SetViewFormat(op::Format::FORMAT_NCDHW);
+        const_cast<aclTensor*>(tempTensor.gradOutput)->SetStorageFormat(op::Format::FORMAT_NCDHW);
+        const_cast<aclTensor*>(tempTensor.gradOutput)->SetViewFormat(op::Format::FORMAT_NCDHW);
+    }
+    // vec 分支必须关闭 HF32，否则会回退 cube 路径再次触发 L1 超限
+    bool dxUseHf32 = useHf32 && !vecModeFlag;
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        useV2Flag = true;
+        gradInputNDC1HWC0 = l0op::Conv3DBackpropInput(tempTensor, params, executor, dxUseHf32, &adptParams);
+    } else {
+        gradInputNDC1HWC0 = GetGradInputNDC1HWC0(tempTensor, params, executor, dxUseHf32, &adptParams);
+    }
+    if (useV2Flag && (vecModeFlag || (!useHf32 && tempTensor.weight->GetDataType() != DataType::DT_FLOAT))) {
+        // vec 输出为 NCDHW，FP32 同样无需 TransData
+        outputTransdataFlag = false;
+    }
+    OP_CHECK(gradInputNDC1HWC0 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                     "The calculation with empty tensor failed, Conv3DBackpropInput return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+    aclnnStatus status = outputTransdataFlag ? OutputPostProcess(outputTensor.gradInput, gradInputNDC1HWC0, "gradInput",
+                                                                 params.groups, executor) :
+                                               OutputPostProcessWithoutTransdata(
+                                                   outputTensor.gradInput, gradInputNDC1HWC0, "gradInput", executor);
+    CHECK_RET(status == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
@@ -2744,14 +2923,23 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor& input
         OP_LOGD("Input transdata flag is %d", static_cast<int>(inputTransDataFlag));
     }
     auto promoteType = CalcPromoteType(inputTensor);
-    CHECK_RET(InputPreProcess(inputTensor.gradOutput, "gradOutput", params, promoteType, executor) == ACLNN_SUCCESS,
+    bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
+    // 超 L1 且在 vec 能力圈内时保持 ND 原始格式直接走 vector 分支
+    bool vecModeFlag = IsConv3DVecFallbackCase(inputTensor, params, curArch, params.outputMask, conv3DBp2MatmulMask);
+    if (vecModeFlag) {
+        useV2Flag = true;
+        OP_LOGI("Conv3dBackpropInput cube exceeds L1 size, fallback to vector branch.");
+    }
+    CHECK_RET(InputPreProcess(inputTensor.gradOutput, "gradOutput", params, promoteType, executor, false, true,
+                              vecModeFlag) == ACLNN_SUCCESS,
               ACLNN_ERR_INNER_NULLPTR);
 
-    CHECK_RET(InputPreProcess(inputTensor.input, "input", params, promoteType, executor, false, inputTransDataFlag) ==
+    CHECK_RET(InputPreProcess(inputTensor.input, "input", params, promoteType, executor, false, inputTransDataFlag,
+                              vecModeFlag) == ACLNN_SUCCESS,
+              ACLNN_ERR_INNER_NULLPTR);
+
+    CHECK_RET(InputPreProcess(inputTensor.weight, "weight", params, promoteType, executor, false, true, vecModeFlag) ==
                   ACLNN_SUCCESS,
-              ACLNN_ERR_INNER_NULLPTR);
-
-    CHECK_RET(InputPreProcess(inputTensor.weight, "weight", params, promoteType, executor) == ACLNN_SUCCESS,
               ACLNN_ERR_INNER_NULLPTR);
 
     OP_LOGD("after InputPreProcess with input");
@@ -2759,37 +2947,10 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor& input
     OP_LOGD("inputTensor.weight is: %s", inputTensor.weight->ToString().GetString());
     OP_LOGD("inputTensor.gradOutput is: %s", inputTensor.gradOutput->ToString().GetString());
 
-    bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
-    bool outputTransdataFlag = true;
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        outputTransdataFlag = false;
-    }
     if ((*params.outputMask)[0] && !conv3DBp2MatmulMask[0]) {
-        OP_LOGD("Enter dx Calculate");
-        const aclTensor* gradInputNDC1HWC0 = nullptr;
-        AdaptParam adptParams = {nullptr};
-        auto tempTensor = inputTensor;
-        CHECK_RET(PrepareConv3DBackpropInputParams(tempTensor, params, adptParams, executor) == ACLNN_SUCCESS,
-                  ACLNN_ERR_INNER_NULLPTR);
-        if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-            useV2Flag = true;
-            gradInputNDC1HWC0 = l0op::Conv3DBackpropInput(tempTensor, params, executor, useHf32, &adptParams);
-        } else {
-            gradInputNDC1HWC0 = GetGradInputNDC1HWC0(tempTensor, params, executor, useHf32, &adptParams);
-        }
-        if (useV2Flag && !useHf32 && tempTensor.weight->GetDataType() != DataType::DT_FLOAT) {
-            outputTransdataFlag = false; // V2，非HF32，非FP32，不在黑名单
-        }
-        OP_CHECK(gradInputNDC1HWC0 != nullptr,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                         "The calculation with empty tensor failed, Conv3DBackpropInput return nullptr."),
-                 return ACLNN_ERR_INNER_NULLPTR);
-        aclnnStatus status = outputTransdataFlag ?
-                                 OutputPostProcess(outputTensor.gradInput, gradInputNDC1HWC0, "gradInput",
-                                                   params.groups, executor) :
-                                 OutputPostProcessWithoutTransdata(outputTensor.gradInput, gradInputNDC1HWC0,
-                                                                   "gradInput", executor);
-        CHECK_RET(status == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+        aclnnStatus dxStatus = CalculateConv3DBackwardDx(inputTensor, outputTensor, params, executor, useHf32,
+                                                         vecModeFlag, useV2Flag, curArch);
+        CHECK_RET(dxStatus == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
 
     if ((*params.outputMask)[1] && !conv3DBp2MatmulMask[1]) {

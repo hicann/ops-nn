@@ -122,6 +122,7 @@ protected:
     bool enableKernelSplit_ = false;
     bool c0DbFlag_ = false;
     bool useBasicBlock_ = false;
+    bool useVecMode_ = false;
     int32_t coreNum_ = 1;
 
     int32_t blockSize_ = 16;

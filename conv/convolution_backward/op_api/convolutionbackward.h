@@ -52,6 +52,7 @@ struct tagAdaptParam {
     aclIntArray* adaptStride{nullptr};
     aclIntArray* adaptDilation{nullptr};
     aclIntArray* adaptPad{nullptr};
+    bool vecMode{false};
 };
 using AdaptParam = struct tagAdaptParam;
 // Conv2dBackpropInput

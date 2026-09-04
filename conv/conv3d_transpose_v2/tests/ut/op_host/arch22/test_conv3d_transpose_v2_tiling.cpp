@@ -253,7 +253,8 @@ static Conv3DTransposeV2TilingTestParam general_20_core_num_cases_params[] = {
      20,
      256,
      "1 1 4 1 1 5 20 0 1 256 256 16 16 16 16 16 4 62 66 66 120 128 128 4 4 4 1 2 2 2 3 3 3 3 3 3 0 0 0 0 0 1 1 1 2 2 2 "
-     "2 2 1 256 16 16 24 1 128 64 128 1 1 1 1 1 8 8 1 1 1 0 0 0 0 1 0 4096 0 256 0 "},
+     "2 2 1 256 16 16 24 1 128 64 128 1 1 1 1 1 8 8 1 1 1 0 0 0 0 1 0 4096 0 256 0 0 0 0 1 1 1 16 "
+     "2 "},
 
     {"Conv3d_transpose_binary_test_kernel_split2",
      "Ascend910B3",
@@ -289,7 +290,8 @@ static Conv3DTransposeV2TilingTestParam general_20_core_num_cases_params[] = {
      20,
      256,
      "1 1 4 1 1 5 20 0 1 3 256 16 1 16 1 16 4 122 130 130 240 256 256 4 4 4 1 2 2 2 3 3 3 3 3 3 0 0 0 0 0 1 1 1 2 2 2 "
-     "1 2 1 256 16 1 48 1 256 64 16 1 1 1 1 1 16 32 1 1 1 0 0 0 0 1 0 16384 0 16 0 "}};
+     "1 2 1 256 16 1 48 1 256 64 16 1 1 1 1 1 16 32 1 1 1 0 0 0 0 1 0 16384 0 16 0 0 0 0 1 1 1 16 "
+     "2 "}};
 
 Conv3DTransposeV2TilingTestParam general_cases_params[] =
     {
@@ -362,7 +364,8 @@ Conv3DTransposeV2TilingTestParam general_cases_params[] =
          24,
          1,
          "8 1 1 1 1 3 24 0 128 256 64 4 16 4 16 16 4 2 15 15 3 16 16 2 2 2 1 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 1 2 2 1 1 "
-         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 16 0 256 0 256 0 "},
+         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 16 0 256 0 256 0 0 0 0 1 1 1 16 "
+         "2 "},
 
         {"Conv3d_transpose_binary_test",
          "Ascend910B2",
@@ -398,7 +401,8 @@ Conv3DTransposeV2TilingTestParam general_cases_params[] =
          21,
          1,
          "7 1 1 1 1 3 21 0 63 256 64 4 16 4 16 16 4 2 15 15 3 16 16 2 2 2 1 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 1 2 2 1 1 "
-         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 9 0 256 0 256 0 "},
+         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 9 0 256 0 256 0 0 0 0 1 1 1 16 "
+         "2 "},
 
         {"Conv3d_transpose_binary_test_hit_repo",
          "Ascend910B2",
@@ -434,7 +438,8 @@ Conv3DTransposeV2TilingTestParam general_cases_params[] =
          15,
          1,
          "5 1 1 1 1 3 15 0 65 256 64 4 16 4 16 16 4 2 15 15 3 16 16 2 2 2 1 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 1 2 2 1 1 "
-         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 13 0 256 0 256 0 ",
+         "2 1 64 4 16 1 1 128 64 256 1 1 1 1 1 4 2 1 1 1 0 0 0 0 13 0 256 0 256 0 0 0 0 1 1 1 16 "
+         "2 ",
          R"({"al1_bound":6272,"aub_bound":0,"batch_dim":24,"bl1_bound":32768,"d_dim":1,"d_al1":1,"d_bl1":1,"d_al0":1,"d_bl0":1,"d_cl0":1,"group_dim":1,"k_al1":1,"k_aub":1,"k_bl1":1,"k_l0":1,"m_al1":1,"m_aub":1,"m_dim":1,"m_l0":1,"n_bl1":1,"n_cub":1,"n_dim":1,"n_l0":1,"tiling_id":1,"wo_aub":1})"},
 
         {"Conv3d_transpose_binary_test_base_fp32",
@@ -471,7 +476,8 @@ Conv3DTransposeV2TilingTestParam general_cases_params[] =
          24,
          0,
          "12 1 1 1 2 1 24 0 128 256 64 8 32 8 32 8 3 2 15 15 3 16 16 2 2 2 1 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 1 2 2 1 2 "
-         "1 1 64 8 16 3 1 128 16 256 1 1 1 1 1 2 8 1 1 1 0 0 0 0 11 0 256 0 128 0 "},
+         "1 1 64 8 16 3 1 128 16 256 1 1 1 1 1 2 8 1 1 1 0 0 0 0 11 0 256 0 128 0 0 0 0 1 1 1 16 "
+         "2 "},
 
         {"Conv3d_transpose_group",
          "Ascend910B2",
@@ -507,7 +513,7 @@ Conv3DTransposeV2TilingTestParam general_cases_params[] =
          16,
          1,
          "1 1 16 1 1 1 16 0 1 64 64 4 4 1 1 16 4 63 31 32 64 32 32 2 4 1 4 1 1 1 0 0 1 1 0 0 1 2 2 0 0 1 1 1 2 2 1 1 1 "
-         "4 16 1 1 64 1 64 64 16 1 1 1 1 1 1 1 1 1 1 0 0 0 0 1 0 64 0 16 0 "},
+         "4 16 1 1 64 1 64 64 16 1 1 1 1 1 1 1 1 1 1 0 0 0 0 1 0 64 0 16 0 0 0 0 1 1 1 16 2 "},
 };
 
 static void ThreadFunc(const Conv3DTransposeV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,

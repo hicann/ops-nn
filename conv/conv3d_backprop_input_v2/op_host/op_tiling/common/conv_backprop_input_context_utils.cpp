@@ -42,6 +42,12 @@ bool IsArchAfter35(const gert::TilingContext* context)
     return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
 }
 
+static bool IsFilterDxStorageNcdhw(const gert::TilingContext* context)
+{
+    return ge::GetPrimaryFormat(context->GetInputDesc(static_cast<size_t>(FILTER_INDEX))->GetStorageFormat()) ==
+           ge::FORMAT_NCDHW;
+}
+
 bool IsSupportedDtypeForOutputPadding(const ge::DataType dtype)
 {
     return dtype == ge::DT_BF16 || dtype == ge::DT_FLOAT16 || dtype == ge::DT_FLOAT || dtype == ge::DT_INT8;
@@ -615,7 +621,8 @@ void ExtractStorageShapeInfo(const gert::TilingContext* context, size_t filter_i
     otherParams.filter_gdkci1ghw = filter_shape->GetStorageShape().GetDim(kDkCin1HkWkFRACTALZ3DIdx);
     // NOTE only support shape of filter is (g'*dk*ci1_g'*hk*wk, co1', co0, ci0)
     otherParams.co1g = filter_shape->GetStorageShape().GetDim(kCo1FRACTALZ3DIdx);
-    if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
+    if ((!IsArchAfter35(context) && !IsSocVersionFuse(context)) &&
+        ge::GetPrimaryFormat(context->GetInputDesc(filter_input_index)->GetStorageFormat()) != ge::FORMAT_NCDHW) {
         otherParams.co1g = filter_shape->GetStorageShape().GetDim(kCo1FRACTALZ3DIdx);
         if (context->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_FLOAT && runInfoV2.groups > 1) {
             otherParams.co1g *= 2; // 2: BLOCK_NUM / FP32_C0
@@ -762,12 +769,13 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
         auto out_backprop_format = static_cast<ge::Format>(ge::GetPrimaryFormat(out_backprop_desc->GetStorageFormat()));
         auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
         auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
-        OP_CHECK_IF(out_backprop_format != ge::FORMAT_NDC1HWC0 || filter_format != ge::FORMAT_FRACTAL_Z_3D,
+        // vector 兜底组合（NCDHW 原始格式），由 vec tiling 模板处理
+        auto formatStr = ge::TypeUtils::FormatToSerialString(out_backprop_format) + " and " +
+                         ge::TypeUtils::FormatToSerialString(filter_format);
+        OP_CHECK_IF(!(out_backprop_format == ge::FORMAT_NCDHW && filter_format == ge::FORMAT_NCDHW) &&
+                        (out_backprop_format != ge::FORMAT_NDC1HWC0 || filter_format != ge::FORMAT_FRACTAL_Z_3D),
                     OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-                        op_name, "out_backprop and filter",
-                        (ge::TypeUtils::FormatToSerialString(out_backprop_format) + " and " +
-                         ge::TypeUtils::FormatToSerialString(filter_format))
-                            .c_str(),
+                        op_name, "out_backprop and filter", formatStr.c_str(),
                         "The formats of out_backprop and filter must be NDC1HWC0 and FRACTAL_Z_3D"),
                     return false);
         if (!isV2Impl || op_type == optiling::OpTypeV2::kConv3DTransposeV2 ||
@@ -1100,6 +1108,25 @@ bool IsNeedTilingHkWk(gert::TilingContext* context, const Conv3dBpInputV2RunInfo
     return true;
 }
 
+// 分形 storage 维交叉校验（仅 cube 路径）：filter 为 NCDHW 时无分形维，跳过
+static bool CheckFilterFractalShape(gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                    const OtherParams& otherParams, int32_t co1g)
+{
+    int64_t filterGDkCi1gHW = static_cast<int64_t>(runInfoV2.real_g) * otherParams.b_shape.d * otherParams.ci1g *
+                              otherParams.b_shape.h * otherParams.b_shape.w;
+
+    OP_CHECK_IF(filterGDkCi1gHW != otherParams.filter_gdkci1ghw,
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 1st dim of filter shape",
+                                          std::to_string(otherParams.filter_gdkci1ghw).c_str(),
+                                          std::to_string(filterGDkCi1gHW).c_str()),
+                return false);
+    OP_CHECK_IF(co1g != otherParams.co1g,
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 2nd dim of filter shape",
+                                          std::to_string(otherParams.co1g).c_str(), std::to_string(co1g).c_str()),
+                return false);
+    return true;
+}
+
 bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams)
 {
     // calc real g and check shape
@@ -1157,19 +1184,10 @@ bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, O
         }
     }
 
-    if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
-        int64_t filterGDkCi1gHW = static_cast<int64_t>(runInfoV2.real_g) * otherParams.b_shape.d * otherParams.ci1g *
-                                  otherParams.b_shape.h * otherParams.b_shape.w;
-
-        OP_CHECK_IF(filterGDkCi1gHW != otherParams.filter_gdkci1ghw,
-                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 1st dim of filter shape",
-                                              std::to_string(otherParams.filter_gdkci1ghw).c_str(),
-                                              std::to_string(filterGDkCi1gHW).c_str()),
-                    return false);
-        OP_CHECK_IF(co1g != otherParams.co1g,
-                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 2nd dim of filter shape",
-                                              std::to_string(otherParams.co1g).c_str(), std::to_string(co1g).c_str()),
-                    return false);
+    // vector 兜底组合无分形 storage 维，跳过分形交叉校验
+    if (!IsArchAfter35(context) && !IsSocVersionFuse(context) && !IsFilterDxStorageNcdhw(context) &&
+        !CheckFilterFractalShape(context, runInfoV2, otherParams, co1g)) {
+        return false;
     }
     return true;
 }
@@ -1446,6 +1464,10 @@ int64_t GetDfactor(T kd_factor, Conv3dBpInputV2RunInfo& runInfoV2, int32_t l0c_d
 bool CheckL1SizeLimit(Conv3dBpInputV2RunInfo& runInfoV2, gert::TilingContext* context, OtherParams& otherParams)
 {
     if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+        return true;
+    }
+    // vector 兜底组合不依赖 L1 分形 tiling，跳过 L1 最小载入校验
+    if (IsFilterDxStorageNcdhw(context)) {
         return true;
     }
     int64_t w_value = otherParams.a_shape.w * runInfoV2.stride_w;

@@ -1235,9 +1235,11 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor* input, const acl
     const char* paddingString = "";
 
     ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
-    bool useV2Flag = IsConv3DBackpropInputV2(params);
-    if (useV2Flag && useHf32Flag == 0x0 && weight->GetDataType() != DataType::DT_FLOAT &&
-        (!Ops::NN::AclnnUtil::IsRegbase())) {
+    // vecMode为cube超L1的vector兜底：跳过白名单判定，强制走V2（调用方已保持ND原始格式不转私有格式）
+    bool useV2Flag = (adptParams != nullptr && adptParams->vecMode) || IsConv3DBackpropInputV2(params);
+    bool vecModeFlag = (adptParams != nullptr && adptParams->vecMode);
+    if (useV2Flag && useHf32Flag == 0x0 && !Ops::NN::AclnnUtil::IsRegbase() &&
+        (vecModeFlag || weight->GetDataType() != DataType::DT_FLOAT)) {
         output->SetStorageFormat(op::Format::FORMAT_NCDHW);
     }
     auto inputSize = GetOutputSize(input, executor);

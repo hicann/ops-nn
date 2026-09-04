@@ -22,6 +22,7 @@
 #include "./arch22/conv3d_dx_v2_basic_block.h"
 #include "./arch22/conv3d_backprop_input_v2_init_output.h"
 #include "./arch22/conv3d_backprop_input_v2.h"
+#include "./arch22/conv3d_dx_v2_vec_impl.h"
 #include "conv3d_backprop_input_v2_tiling_key.h"
 #endif
 
@@ -40,7 +41,35 @@ __global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR 
 #endif
 }
 #else
-template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock>
+template <typename T>
+__aicore__ inline void RunVecConv3dDx(GM_ADDR outBackprop, GM_ADDR filter, GM_ADDR y, GM_ADDR usrWsp,
+                                      const Conv3DBackpropInputV2TilingData* tilingData)
+{
+    KernelConv3dBackpropInputVecImpl<T> op;
+    op.Init(outBackprop, filter, y, usrWsp, tilingData);
+    op.Process();
+}
+
+__aicore__ inline void LaunchVecConv3dDx(GM_ADDR outBackprop, GM_ADDR filter, GM_ADDR y, GM_ADDR usrWsp,
+                                         const Conv3DBackpropInputV2TilingData* tilingData)
+{
+    if ASCEND_IS_AIV {
+        switch (tilingData->conv3DDxTiling.vecDtype) {
+            case static_cast<uint8_t>(Conv3DDxVecDtype::BF16):
+                RunVecConv3dDx<bfloat16_t>(outBackprop, filter, y, usrWsp, tilingData);
+                break;
+            case static_cast<uint8_t>(Conv3DDxVecDtype::FP32):
+                RunVecConv3dDx<float>(outBackprop, filter, y, usrWsp, tilingData);
+                break;
+            case static_cast<uint8_t>(Conv3DDxVecDtype::FP16):
+            default:
+                RunVecConv3dDx<half>(outBackprop, filter, y, usrWsp, tilingData);
+                break;
+        }
+    }
+}
+
+template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock, bool useVecMode = false>
 __global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y,
                                                     GM_ADDR workSpace, GM_ADDR tiling)
 {
@@ -57,8 +86,13 @@ __global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR 
 #if __CCE_AICORE__ == 220
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
+
+    if constexpr (useVecMode) {
+        LaunchVecConv3dDx(out_backprop, filter, y, usrWsp, &tilingData);
+        return;
+    }
+
     if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
-        // init output with L0C now
         Conv3dDxInitOutput<DTYPE_Y, FORMAT_Y, InitOutputFlag::L0_INIT> opInitOutput;
         opInitOutput.Init(y, &tilingData);
         opInitOutput.Process();

@@ -69,7 +69,12 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
         OP_LOGE(context_->GetNodeName(), "SetRunInfoToV2 failed");
         return ge::GRAPH_FAILED;
     }
-    if (!GetTbeTiling(context_, tbeTiling_, opType_)) {
+    // vector 兜底组合（filter 为 NCDHW 原始格式）：无分形数据，TBE cube tiling 无法计算也无需计算，
+    // 跳过 GetTbeTiling，交由后续 IsCapable 让位给 Conv3DDXV2VecTiling
+    auto filterDesc = context_->GetInputDesc(1); // 1 = filter 输入索引
+    bool isVecCombo = (filterDesc != nullptr &&
+                       ge::GetPrimaryFormat(filterDesc->GetStorageFormat()) == ge::FORMAT_NCDHW);
+    if (!isVecCombo && !GetTbeTiling(context_, tbeTiling_, opType_)) {
         OP_LOGE(context_->GetNodeName(), "GetTbeTiling failed");
         return ge::GRAPH_FAILED;
     }
@@ -98,6 +103,14 @@ bool Conv3DDXV2BasicBlockTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
         return false;
+    }
+    // FP16/BF16 + NCDHW 原始格式 filter 由 Conv3DDXV2VecTiling (priority 2) 处理，basic block 让位
+    auto filterDesc = context_->GetInputDesc(1); // 1 = filter 输入索引
+    if (filterDesc != nullptr && filterDesc->GetStorageFormat() == ge::FORMAT_NCDHW) {
+        auto dtype = filterDesc->GetDataType();
+        if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16) {
+            return false;
+        }
     }
     enableKernelSplit_ = CheckKernelSplitEnable();
     return !enableKernelSplit_ && runInfo_.real_g == 1 &&
@@ -173,7 +186,7 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::DoLibApiTiling()
 
 uint64_t Conv3DDXV2BasicBlockTiling::GetTilingKey() const
 {
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, false, true);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, false, true, false);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
     OP_LOGD(context_->GetNodeName(), "loadB2Condition is: [%u]", loadB2Condition_);
     return tilingKey;

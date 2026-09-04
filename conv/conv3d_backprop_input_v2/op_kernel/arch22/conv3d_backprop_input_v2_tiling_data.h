@@ -17,9 +17,12 @@
 #include <cstdint>
 
 namespace AscendC {
-// TConv3DInputV2Tiling对齐到第33行
-// TConv3DInputV2Tiling对齐到第33行
-// TConv3DInputV2Tiling对齐到第33行
+enum class Conv3DDxVecDtype : uint8_t {
+    FP16 = 0,
+    BF16 = 1,
+    FP32 = 2,
+};
+
 // TConv3DInputV2Tiling对齐到第33行
 struct TConv3DInputV2Tiling {
     uint32_t batch = 1;
@@ -88,6 +91,18 @@ struct TConv3DInputV2Tiling {
     uint64_t singleCoreBatch = 1;
     uint64_t singleCoreM = 1;
     uint64_t singleCoreCin = 1;
+
+    int32_t padHDx = 0;
+    int32_t padUDx = 0;
+    int32_t padLDx = 0;
+    uint32_t dilatedHk = 1;
+    uint32_t dilatedWk = 1;
+    uint32_t alignedDilatedW = 1;
+    uint32_t dataPerBlock = 16;
+    uint8_t dtypeBytes = 2;
+    uint8_t vecDtype = static_cast<uint8_t>(Conv3DDxVecDtype::FP16);
+    uint8_t vecScalarOnly = 0;
+    uint8_t useScalarAcc = 0;
 };
 
 struct Conv3DBackpropInputV2Params {

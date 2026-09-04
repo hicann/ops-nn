@@ -240,6 +240,14 @@ bool Conv3DBackpropInputV2Tiling::IsCapable()
     if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
         return false;
     }
+    // FP16/BF16/FP32 + NCDHW格式filter 由 Conv3DDXV2VecTiling (priority 2) 处理，跳过 Cube 路径
+    auto filterDesc = context_->GetInputDesc(FILTER_INDEX);
+    if (filterDesc != nullptr && filterDesc->GetStorageFormat() == ge::FORMAT_NCDHW) {
+        auto dtype = filterDesc->GetDataType();
+        if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16 || dtype == ge::DT_FLOAT) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -268,10 +276,11 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::DoLibApiTiling()
 
 uint64_t Conv3DBackpropInputV2Tiling::GetTilingKey() const
 {
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, enableKernelSplit_, useBasicBlock_);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, enableKernelSplit_, useBasicBlock_, useVecMode_);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
-    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, enableKernelSplit_, useBasicBlock_ is: [%u, %u, %u]",
-            loadB2Condition_, enableKernelSplit_, useBasicBlock_);
+    OP_LOGD(context_->GetNodeName(),
+            "loadB2Condition_, enableKernelSplit_, useBasicBlock_, useVecMode_ is: [%u, %u, %u, %u]", loadB2Condition_,
+            enableKernelSplit_, useBasicBlock_, useVecMode_);
     return tilingKey;
 }
 
@@ -279,6 +288,7 @@ ge::graphStatus Conv3DBackpropInputV2Tiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+
     // 框架预留16M
     workspaces[0] = WORKSIZE;
 
