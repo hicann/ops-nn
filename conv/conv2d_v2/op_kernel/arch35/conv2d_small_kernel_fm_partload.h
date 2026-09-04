@@ -195,6 +195,10 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
+    this->l0Pingpong_ = 0;
+    this->l1Pingpong_ = 0;
     if (this->singleCoreBatch_ <= 1) {
         ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, false);
     } else {
@@ -236,6 +240,8 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
             }
         }
     }
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
 }

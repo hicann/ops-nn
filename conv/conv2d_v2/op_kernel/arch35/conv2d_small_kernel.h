@@ -143,6 +143,7 @@ protected:
 
     uint32_t cinAligned_;
     uint32_t orgWin_;
+    uint32_t l0Pingpong_ = 0;
 
     // Group-axis iteration (M-mode only; HW-mode groups==1 so singleGroupIter_==1).
     //   NORMAL_CONV:     1 (no group loop)
@@ -403,9 +404,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     MmadParams mp;
     InitMmadParams(mp, curMAlign, mmadN);
 
-    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
-    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
-
     for (uint32_t kl0Iter = 0; kl0Iter < kL0MaxIter; kl0Iter++) {
         uint32_t kOff = kl0Iter * tiling_->kL0;
         uint32_t curK = tiling_->kL0;
@@ -415,7 +413,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             curKAL0 = curKAL0 == 0 ? tiling_->kL0 : curKAL0;
             curK = AlignB(curKAL0, GK0);
         }
-        uint32_t buf = kl0Iter & 1;
+        uint32_t buf = l0Pingpong_ & 1;
         event_t ev = static_cast<event_t>(buf);
 
         LocalTensor<FmapT> al0(TPosition::A2, buf * AL0_BUF_BYTES, AL0_BUF_ELEMS);
@@ -436,10 +434,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         mp.cmatrixInitVal = false;
         mp.cmatrixSource = false;
         SetFlag<HardEvent::M_MTE1>(ev);
+        l0Pingpong_++;
     }
-
-    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
-    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -1474,7 +1470,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
     LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
     uint32_t mmadN = AlignB(actualCo_, GN0);
-
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
+    l0Pingpong_ = 0;
     if constexpr (IsHwMode) {
         if (singleCoreBatch_ <= 1) {
             // HW-mode: groups==1, load once outside the loop.
@@ -1556,5 +1554,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
         ProcessMMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, x, filter, bias);
     }
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 }
 #endif

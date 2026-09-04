@@ -356,9 +356,6 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         kl0End = kL0Iters;
     }
 
-    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
-    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
-
     for (uint32_t kl0Iter = kl0Start; kl0Iter < kl0End; kl0Iter++) {
         uint32_t kOffInner = kl0Iter * kL0;
         uint32_t curKInner = kL0;
@@ -372,7 +369,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             curKInner = AlignB(curKInnerKAL0, this->GK0);
         }
 
-        uint32_t lbuf = kl0Iter % 2; // 2 pingpong
+        uint32_t lbuf = this->l0Pingpong_ % 2; // 2 pingpong
         event_t lev = static_cast<event_t>(lbuf);
 
         LocalTensor<FmapType> al0(TPosition::A2, lbuf * AL0_BUF_BYTES, AL0_BUF_ELEMS);
@@ -397,9 +394,8 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         mp.cmatrixSource = false;
 
         SetFlag<HardEvent::M_MTE1>(lev);
+        this->l0Pingpong_++;
     }
-    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
-    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -956,7 +952,9 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 
     uint32_t mmadN = AlignB(this->actualCo_, GN0);
     uint64_t hwOut = static_cast<uint64_t>(this->tiling_->hout) * this->tiling_->wout;
-
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
+    this->l0Pingpong_ = 0;
     if constexpr (IsHwMode) {
         // HW-mode: groups==1, load once outside the loop.
         this->LoadBiasScaleL1(bias, extendParams);
@@ -1021,6 +1019,8 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
         ProcessMMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, x, filter, bias);
     }
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
+    WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 }
 
 #endif
