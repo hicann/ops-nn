@@ -18,10 +18,12 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 #include "tiling/tiling_api.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
+#include "single_layer_lstm_grad_tiling_arch35.h"
 
 namespace optiling {
 const std::string OP_NAME = "SingleLayerLstmGrad";
@@ -36,6 +38,8 @@ const int64_t OPT_INPUT_Y = 3;
 const int64_t OPT_INPUT_SEQ = 16;
 const int64_t INPUT_DIM_NUM = 3;
 const int64_t DEFAULT_UB_RESERVE_SIZE = 1024;
+const int64_t REGBASE_DCACHE_SIZE = 40 * 1024;
+const uint32_t REGBASE_FALLBACK_AIC_NUM = 8;
 const int64_t BLOCK_BYTES = 32;
 const int64_t DEFAULT_ALIGNED_FP16 = 16;
 const int64_t DEFAULT_ALIGNED_FP32 = 8;
@@ -128,6 +132,7 @@ private:
     int64_t alignedPara_ = DEFAULT_ALIGNED_FP32;
     int64_t inputDSize_ = FP32_BYTES;
     int64_t tilingKey_ = 0;
+    bool isRegbase_ = false;
     CutBatchTilingParam dxhInputParam_;
     CutBatchTilingParam dxhHiddenParam_;
     CutBatchTilingParam xhInputParam_;
@@ -137,7 +142,7 @@ private:
 ge::graphStatus SingleLayerLstmGradTiling::GetMMDgateTiling()
 {
     matmul_tiling::MultiCoreMatmulTiling rnnMatmul1;
-    rnnParams_.usedCoreNum = context_->GetPlatformInfo()->GetCoreNum() * AIV_DOUBLE;
+    rnnParams_.usedCoreNum = rnnParams_.sysAivCoreNum;
     auto ret = rnnMatmul1.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                                    matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "mm1 SetAType fail."),
@@ -570,15 +575,24 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     context_->SetScheduleMode(1);
     auto platformInfo = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    isRegbase_ = Ops::NN::OpTiling::IsRegbaseSocVersion(context_);
     uint32_t aicCoreNum = ascendcPlatform.GetCoreNumAic();
     OP_TILING_CHECK((aicCoreNum <= 0), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
                     return ge::GRAPH_FAILED);
+    if (isRegbase_ && aicCoreNum > REGBASE_FALLBACK_AIC_NUM) {
+        // batch-mode (SyncAll) launches asking for the full MIX core set fail to schedule on
+        // Ascend950 with this runtime; a reduced block dim keeps the legacy pipeline usable
+        aicCoreNum = REGBASE_FALLBACK_AIC_NUM;
+    }
     uint32_t aivCoreNum = aicCoreNum * AIV_DOUBLE;
     OP_TILING_CHECK((aivCoreNum <= 0), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Failed to get core num."),
                     return ge::GRAPH_FAILED);
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    OP_TILING_CHECK(isRegbase_ && ubSizePlatForm <= REGBASE_DCACHE_SIZE + DEFAULT_UB_RESERVE_SIZE,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "Ascend950 UB size is insufficient."),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(!CheckParamsShape(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check shape fail."),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(!CheckParamsDtype(), VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check dtype fail."),
@@ -589,7 +603,8 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
     // get UB L1 size
     rnnParams_.sysAicCoreNum = static_cast<int64_t>(aicCoreNum);
     rnnParams_.sysAivCoreNum = static_cast<int64_t>(aivCoreNum);
-    rnnParams_.ubSize = ubSizePlatForm;
+    rnnParams_.ubSize = isRegbase_ ? static_cast<int64_t>(ubSizePlatForm) - REGBASE_DCACHE_SIZE :
+                                     static_cast<int64_t>(ubSizePlatForm);
     // get matmul tiling data
     OP_TILING_CHECK(GetMMTilingData() != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "get matmul tiling data fail."),
@@ -737,6 +752,13 @@ void SingleLayerLstmGradTiling::PrintTilingData()
 
 static ge::graphStatus TilingFunc4SingleLayerLstmGrad(gert::TilingContext* context)
 {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        bool handled = false;
+        ge::graphStatus ret = TilingSingleLayerLstmGrad4RegbaseSmall(context, handled);
+        if (handled || ret != ge::GRAPH_SUCCESS) {
+            return ret;
+        }
+    }
     SingleLayerLstmGradTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "Tiling Init failed!");

@@ -9,5 +9,11 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend910b ascend910_93 ascend950
+    COMPUTE_UNITS ascend910b ascend910_93
+)
+
+add_kernel_sources(
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush"
 )
