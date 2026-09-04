@@ -21,10 +21,29 @@ ONLINE_ST_WHITELIST=(
     "batch_mat_mul_v3"
 )
 
+# Ops running kernel RDV with dynamic-shape compilation (-d=true, no -b).
+# These ops' installed binary_info_config.json carries a mis-injected
+# formatMode=static_nd_agnostic on non-ND declared formats, so the TTK
+# simplified_key gets normalized (NCDHW->ND) and never matches the binary
+# keys -> BINARY_MATCH_FAILURE under -b=release. Dynamic compilation shares
+# the same template instantiation semantics as the prebuilt binaries.
+KERNEL_DYN_COMPILE_WHITELIST=(
+    "extend_conv_transpose"
+)
+
 # Check if an op is in the online ST mode whitelist
 is_op_in_online_whitelist() {
     local op="$1"
     for whitelisted in "${ONLINE_ST_WHITELIST[@]}"; do
+        [[ "${op}" == "${whitelisted}" ]] && return 0
+    done
+    return 1
+}
+
+# Check if an op is in the kernel dynamic-compile whitelist
+is_op_in_kernel_dyn_whitelist() {
+    local op="$1"
+    for whitelisted in "${KERNEL_DYN_COMPILE_WHITELIST[@]}"; do
         [[ "${op}" == "${whitelisted}" ]] && return 0
     done
     return 1
@@ -532,7 +551,14 @@ run_kernel_test() {
     if [[ -n "${testcase_filter}" ]]; then
         testcase_arg="-t ${testcase_filter}"
     fi
-    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
+
+    # Whitelisted ops run with dynamic-shape compilation to bypass the
+    # simplified_key format normalization mismatch on installed binary configs.
+    local compile_flags="-d=false -b=release"
+    if is_op_in_kernel_dyn_whitelist "${op_name}"; then
+        compile_flags="-d=true"
+    fi
+    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} ${compile_flags} --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -761,7 +787,12 @@ print_reproduction_commands() {
 
             local ttk_mode extra_flags
             case "${test_type}" in
-                kernel) ttk_mode="kernel"; extra_flags="-d=false -b=release";;
+                kernel) ttk_mode="kernel"
+                        if is_op_in_kernel_dyn_whitelist "${f_op}"; then
+                            extra_flags="-d=true"
+                        else
+                            extra_flags="-d=false -b=release"
+                        fi;;
                 aclnn)  ttk_mode="aclnn";  extra_flags="";;
                 e2e)    ttk_mode="e2e";    extra_flags="";;
                 *)      ttk_mode="${test_type}"; extra_flags="";;
