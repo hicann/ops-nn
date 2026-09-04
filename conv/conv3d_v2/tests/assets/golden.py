@@ -254,6 +254,8 @@ def process_output_format_a5(out, output_format, input_format):
         out = out.transpose((0, 2, 3, 4, 1))
     elif output_format == NCDHW_FORMAT and input_format == NDHWC_FORMAT:
         out = out.transpose((0, 4, 1, 2, 3))
+    elif output_format == NDHWC_FORMAT and input_format == NDHWC_FORMAT:
+        out = out.transpose((0, 2, 3, 4, 1))
 
     return out
 
