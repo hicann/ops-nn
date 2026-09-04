@@ -143,6 +143,17 @@ function(add_tiling_modules)
       set(ENABLE_DLOPEN_LEGACY ON)
     endif()
 
+    foreach(op_category ${OP_CATEGORY_LIST})
+      if(ENABLE_EXPERIMENTAL)
+        set(op_category_dir ${OPS_NN_DIR}/experimental/${op_category})
+      else()
+        set(op_category_dir ${OPS_NN_DIR}/${op_category})
+      endif()
+      if (IS_DIRECTORY ${op_category_dir})
+        target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${op_category_dir})
+      endif()
+    endforeach()
+
     target_compile_definitions(
       ${OPHOST_NAME}_tiling_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="OP_TILING" OP_SUBMOD_NAME="OPS_NN"
                                         $<$<BOOL:${ENABLE_TEST}>:ASCEND_OPTILING_UT> LOG_CPP
@@ -477,7 +488,7 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   if (OPTILING_SRCS OR SUB_OPTILING_SRC)
     add_tiling_modules()
     target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})
-    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir}/../../ ${source_dir})
+    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir})
   endif()
 endfunction()
 
