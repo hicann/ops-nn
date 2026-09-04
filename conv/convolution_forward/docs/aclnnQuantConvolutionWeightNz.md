@@ -256,7 +256,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
   aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
-  一段接口完成入参校验，出现以下场景时报错：
+  第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
     <col style="width:250px">
@@ -284,7 +284,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
     <tr><td align="left">scale和bias输入shape不对。</td></tr>
     <tr><td align="left">output的shape不满足infershape结果。</td></tr>
     <tr><td align="left">传入tensor中任意维度为零的均不满足要求。</td></tr>
-    <tr><td align="left">input空间尺度在padding操作后小于weight(经过dilation扩张（如存在dilation>1的情况）)的空间尺度。</td></tr>
+    <tr><td align="left">input空间尺度在padding操作后小于weight（经过dilation扩张（如存在dilation>1的情况））的空间尺度。</td></tr>
     <tr><td align="left">weight和input通道数不满足要求。</td></tr>
     <tr><td align="left">weight的转化前后shape不满足转化关系。</td></tr>
     <tr><td align="left">stride、dilation小于0情况下不满足要求。</td></tr>
@@ -422,14 +422,19 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 不同产品型号请参考使用不同的main函数。
 
-```Cpp
+示例中通过aclTensor的视图/存储格式设置接口构造FRACTAL_Z_3D格式的weight，依赖头文件"aclnn/opdev/common_types.h"，编译时C++标准需为C++14及以上（如add_compile_options(-std=c++17)）。
+
+```cpp
 #include <iostream>
 #include <memory>
 #include <vector>
 #include "acl/acl.h"
+#include "aclnn/opdev/common_types.h"
 #include "aclnnop/aclnn_npu_format_cast.h"
 #include "aclnnop/aclnn_quant_convolution.h"
 
+// aclnn/opdev/common_types.h中已定义同名宏，需先取消定义，避免宏重定义告警
+#undef CHECK_RET
 #define CHECK_RET(cond, return_expr) \
   do {                               \
     if (!(cond)) {                   \
@@ -560,7 +565,6 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   std::vector<int64_t> shapeResult = {2, 2, 32, 32, 32};
   std::vector<int64_t> convStrides;
   std::vector<int64_t> convPads;
-  std::vector<int64_t> convOutPads;
   std::vector<int64_t> convDilations;
 
   void* deviceDataA = nullptr;
@@ -583,7 +587,6 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   std::vector<uint16_t> outputData(GetShapeSize(shapeResult), 1);
   convStrides = {1, 1, 1};
   convPads = {1, 1, 1};
-  convOutPads = {1, 1, 1};
   convDilations = {1, 1, 1};
   aclDataType inputDtype = dtypesInfo[0];
   aclDataType weightDtype = dtypesInfo[1];
@@ -626,17 +629,12 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   aclIntArray *pads = aclCreateIntArray(convPads.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
   CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-  aclIntArray *outPads = aclCreateIntArray(convOutPads.data(), 3);
-  std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outPadsPtr(outPads, aclDestroyIntArray);
-  CHECK_FREE_RET(outPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
   aclIntArray *dilations = aclCreateIntArray(convDilations.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
   CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
   // 3. 调用CANN算子库API，需要修改为具体的API
-  uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  void* workspaceAddr = nullptr;
   void* workspaceAddrNz = nullptr;
 
   int64_t* dstShape = nullptr;
@@ -644,28 +642,43 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   int actualFormat;
   // weight转FRACTAL_Z_3D
   // 计算目标tensor的shape和format
-  ret = aclnnNpuFormatCastCalculateSizeAndFormat(weight, 33, -1, &dstShape, &dstShapeSize, &actualFormat);
+  ret = aclnnNpuFormatCastCalculateSizeAndFormat(weight, aclFormat::ACL_FRACTAL_Z_3D, -1, &dstShape, &dstShapeSize, &actualFormat);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastCalculateSizeAndFormat failed. ERROR: %d\n", ret); return ret);
-  std::vector<int8_t> weightNzData(GetShapeSize(shapeWeight), 1);
-  ret = CreateAclTensorWithFormat(weightNzData, shapeWeight, &dstShape, &dstShapeSize, &deviceDataBNz, weightDtype, &weightNz, static_cast<aclFormat>(actualFormat));
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
-
-  // 调用aclnnNpuFormatCastGetWorkspaceSize第一段接口
-  ret = aclnnNpuFormatCastGetWorkspaceSize(weight, weightNz, &workspaceSize, &executor);
-
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  if (workspaceSize > 0) {
-      ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+  // 当前CANN版本不支持通过aclnnNpuFormatCast直接将NCDHW数据转换为FRACTAL_Z_3D，
+  // 需在host侧按FRACTAL_Z_3D布局（D*C1*H*W, N1, N0, C0）重排weight数据，对齐部分用0填充，
+  // 其中C1=CEIL(Cin, C0)，N1=CEIL(Cout, N0)，N0=16，C0=32
+  std::vector<int64_t> shapeWeightNz(dstShape, dstShape + dstShapeSize);
+  std::vector<int8_t> weightNzData(GetShapeSize(shapeWeightNz), 0);
+  const int64_t cOut = shapeWeight[0], cIn = shapeWeight[1];
+  const int64_t kD = shapeWeight[2], kH = shapeWeight[3], kW = shapeWeight[4];
+  const int64_t c1 = shapeWeightNz[0] / (kD * kH * kW);
+  const int64_t n1 = shapeWeightNz[1], n0 = shapeWeightNz[2], c0 = shapeWeightNz[3];
+  for (int64_t co = 0; co < cOut; co++) {
+    for (int64_t ci = 0; ci < cIn; ci++) {
+      for (int64_t d = 0; d < kD; d++) {
+        for (int64_t h = 0; h < kH; h++) {
+          for (int64_t w = 0; w < kW; w++) {
+            int64_t dim0 = ((d * c1 + ci / c0) * kH + h) * kW + w;
+            int64_t dstIdx = ((dim0 * n1 + co / n0) * n0 + co % n0) * c0 + ci % c0;
+            weightNzData[dstIdx] = weightData[(((co * cIn + ci) * kD + d) * kH + h) * kW + w];
+          }
+        }
+      }
+    }
   }
-  // 调用aclnnNpuFormatCastGetWorkspaceSize第二段接口
-  ret = aclnnNpuFormatCast(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
+  // weightNz的viewShape/originalShape为5维NCDHW（与input/output维度一致），storageShape为4维FRACTAL_Z_3D
+  ret = CreateAclTensorWithFormat(weightNzData, shapeWeight, &dstShape, &dstShapeSize, &deviceDataBNz, weightDtype, &weightNz, aclFormat::ACL_FRACTAL_Z_3D);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
+  // aclCreateTensor以FRACTAL_Z_3D创建后，还需将视图/原始format和原始shape设置为NCDHW，算子才能正确解析weight的N/C/D/H/W轴信息
+  op::Shape weightNcdhwShape = {shapeWeight[0], shapeWeight[1], shapeWeight[2], shapeWeight[3], shapeWeight[4]};
+  weightNz->SetViewFormat(op::Format::FORMAT_NCDHW);
+  weightNz->SetOriginalFormat(op::Format::FORMAT_NCDHW);
+  weightNz->SetOriginalShape(weightNcdhwShape);
+
   uint64_t workspaceSizeNz = 0;
   // 调用aclnnConvolutionWeightNz第一段接口
   ret = aclnnQuantConvolutionWeightNzGetWorkspaceSize(input, weightNz, bias, scale, nullptr, strides, pads, dilations,
-                                              false, outPads, 1, 0, nullptr, result, &workspaceSizeNz, &executor);
+                                              false, nullptr, 1, 0, nullptr, result, &workspaceSizeNz, &executor);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT(
     "aclnnQuantConvolutionWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存

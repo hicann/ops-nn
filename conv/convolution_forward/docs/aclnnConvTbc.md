@@ -45,7 +45,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
     const aclTensor       *weight,
     const aclTensor       *bias,
     const int64_t          pad,
-    aclTensor             *out,
+    aclTensor             *output,
     int8_t                 cubeMathType,
     uint64_t              *workspaceSize,
     aclOpExecutor         **executor)
@@ -78,7 +78,7 @@ aclnnStatus aclnnConvTbc(
   <td>self（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的self，表示卷积输入。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。<li>shape为（N,C<sub>in</sub>,H<sub>in</sub>）。</li></li><li>N≥0，C≥1，H≥0。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。<li>shape为（H<sub>in</sub>,N,C<sub>in</sub>）。</li></li><li>H≥0，N≥0，C<sub>in</sub>≥1。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnConvTbc(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>shape为（C<sub>out</sub>,C<sub>in</sub>,K）。</li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>shape为（K,C<sub>in</sub>,C<sub>out</sub>）。</li><li>所有维度≥1。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -115,10 +115,10 @@ aclnnStatus aclnnConvTbc(
   <td style="text-align:center">-</td>
   </tr>
   <tr>
-  <td>out（aclTensor*）</td>
+  <td>output（aclTensor*）</td>
   <td>输出</td>
   <td>公式中的out，表示卷积输出。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与self一致。</li><li>shape为（N,C<sub>out</sub>,H<sub>out</sub>）。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型与self一致。</li><li>shape为（H<sub>out</sub>,N,C<sub>out</sub>）。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -181,11 +181,11 @@ aclnnStatus aclnnConvTbc(
   <tr>
   <td rowspan="9" align="left">ACLNN_ERR_PARAM_INVALID</td>
   <td rowspan="9" align="left">161002</td>
-  <td align="left">self、weight、bias、out的数据类型和格式不在支持的范围内。</td>
+  <td align="left">self、weight、bias、output的数据类型和格式不在支持的范围内。</td>
   </tr>
-  <tr><td align="left">self、weight、out数据类型不一致。</td></tr>
-  <tr><td align="left">out的shape不满足infershape结果。</td></tr>
-  <tr><td align="left">out的shape中存在小于0的情况。</td></tr>
+  <tr><td align="left">self、weight、output数据类型不一致。</td></tr>
+  <tr><td align="left">output的shape不满足infershape结果。</td></tr>
+  <tr><td align="left">output的shape中存在小于0的情况。</td></tr>
   <tr><td align="left">self的dim不为3。</td></tr>
   <tr><td align="left">weight的dim不为3。</td></tr>
   <tr><td align="left">bias的dim不为1。</td></tr>
@@ -271,8 +271,8 @@ aclnnStatus aclnnConvTbc(
      </td>
      <td>
         <ul>
-           <li>self、weight支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在out推导的L维度也等于0时支持）。</li>
-           <li>weight支持N维度大于等于0（等于0的场景仅在bias的N维度和out的C维度也等于0时支持），C维度大小的支持情况与self的C维度一致，L维度的大小应该在 [1,255] 的范围内。</li>
+           <li>self、weight支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在output推导的L维度也等于0时支持）。</li>
+           <li>weight支持N维度大于等于0（等于0的场景仅在bias的N维度和output的C维度也等于0时支持），C维度大小的支持情况与self的C维度一致，L维度的大小应该在 [1,255] 的范围内。</li>
         </ul>
      </td>
    </tr>
@@ -286,9 +286,9 @@ aclnnStatus aclnnConvTbc(
      </td>
    </tr>
    <tr>
-     <th scope="row">out</th>
+     <th scope="row">output</th>
      <td>
-        out支持N、C、L维度大于等于0（等于0的场景仅在self的N或C或L维度等于0时支持）。
+        output支持N、C、L维度大于等于0（等于0的场景仅在self的N或C或L维度等于0时支持）。
      </td>
      <td>
         <ul>
@@ -322,7 +322,7 @@ aclnnStatus aclnnConvTbc(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <memory>
 #include <vector>

@@ -145,7 +145,7 @@ aclnnStatus aclnnConvolution(
   <td>padding（aclIntArray*）</td>
   <td>输入</td>
   <td>对input的填充。</td>
-  <td>数组长度：conv1d非转置为1或2；conv1d转置为1；conv2d为2或4；conv3d为3。值应该大于等于0。</td>
+  <td>当input的维度为3且transposed=false时，padding数组长度需等于1或2。当input的维度为3且transposed=true时，padding数组长度需等于1。当input的维度为4时，padding数组长度需等于2或4。当input的维度为5时，padding数组长度需等于3。padding值应大于等于0。</td>
   <td>INT64</td>
   <td>-</td>
   <td>-</td>
@@ -272,8 +272,8 @@ aclnnStatus aclnnConvolution(
   <tr><td align="left">output的shape不满足infershape结果。</td></tr>
   <tr><td align="left">outputPadding值不满足要求。</td></tr>
   <tr><td align="left">input、weight、bias、output传入的空Tensor中部分维度为零的不满足要求。</td></tr>
-  <tr><td align="left">input空间尺度在padding操作后小于weight（经过dilation扩张（如存在dilation>1的情况））的空间尺度（非transpose模式下）。</td></tr>
-  <tr><td align="left">transpose模式下bias的shape不为1。</td></tr>
+  <tr><td align="left">transposed=false时，input空间尺度在padding操作后小于weight（经过dilation扩张（如存在dilation>1的情况））的空间尺度。</td></tr>
+  <tr><td align="left">transposed=true时，bias的shape不为1。</td></tr>
   <tr><td align="left">stride、dilation小于0情况下不满足要求。</td></tr>
   <tr><td align="left">当前处理器不支持卷积。</td></tr>
   <tr>
@@ -491,7 +491,7 @@ aclnnStatus aclnnConvolution(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <memory>
 #include <vector>

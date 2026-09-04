@@ -29,7 +29,7 @@
 
 - 计算公式：
 
-  假定输入（input）的shape是[N, inC, inH, inW]，输出的（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
+  假定输入（input）的shape是[N, inC, inH, inW]，输出（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
 
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
@@ -83,7 +83,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDeformableConv2dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeformableConv2d”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(
   const aclTensor*   x,
   const aclTensor*   weight,
@@ -102,7 +102,7 @@ aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(
   aclOpExecutor**    executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnDeformableConv2d(
   void*          workspace,
   uint64_t       workspaceSize,
@@ -416,7 +416,7 @@ aclnnStatus aclnnDeformableConv2d(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -568,7 +568,7 @@ int main()
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnDeformableConv2d第二段接口
     ret = aclnnDeformableConv2d(workspaceAddr, workspaceSize, executor, stream);

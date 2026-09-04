@@ -215,13 +215,13 @@ aclnnStatus aclnnConvDepthwise2d(
   <tr>
   <td rowspan="6" align="left">ACLNN_ERR_PARAM_INVALID</td>
   <td rowspan="6" align="left">161002</td>
-  <td align="left">self，weight，bias，out数据类型和数据格式不在支持的范围之内。</td>
+  <td align="left">self、weight、bias、out数据类型和数据格式不在支持的范围之内。</td>
   </tr>
-  <tr><td align="left">self，weight，out数据类型不一致。</td></tr>
-  <tr><td align="left">stride, padding, dilation输入shape不对。</td></tr>
+  <tr><td align="left">self、weight、out数据类型不一致。</td></tr>
+  <tr><td align="left">stride、padding、dilation输入shape不对。</td></tr>
   <tr><td align="left">weight和self通道数不满足要求。</td></tr>
   <tr><td align="left">out的shape不满足infer_shape结果。</td></tr>
-  <tr><td align="left">self, weight，bias，out为不支持的空Tensor输入或输出。</td></tr>
+  <tr><td align="left">self、weight、bias、out为不支持的空Tensor输入或输出。</td></tr>
   <tr>
   <td align="left">ACLNN_ERR_INNER_NULLPTR</td>
   <td align="left">561103</td>
@@ -337,7 +337,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <tr>
     <th scope="row">其他约束</th>
     <td colspan="2">
-      self, weight, bias中每一组tensor的每一维大小都应不大于1000000。
+      self、weight、bias中每一组tensor的每一维大小都应不大于1000000。
     </td>
   </tr>
   </tbody>

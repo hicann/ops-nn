@@ -143,7 +143,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>stride（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积扫描步长。</td>
-  <td><ul><li>2d场景下数组长度=2，3d场景下数组长度=3。</li><li>strideH和strideW应在 [1,63] 范围内。</li><li>conv3d场景下strideD应在 [1,1000000] 范围内。</li></ul></td>
+  <td><ul><li>2D场景下数组长度=2，3D场景下数组长度=3。</li><li>strideH和strideW应在 [1,63] 范围内。</li><li>conv3d场景下strideD应在 [1,1000000] 范围内。</li></ul></td>
   <td>INT64</td>
   <td>-</td>
   <td>-</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>dilation（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
-  <td><ul><li>2d场景下数组长度=2，3d场景下数组长度=3。</li><li>值应>0。</li><li>dilationH和dilationW应在 [1,255] 范围内。</li><li>conv3d场景下dilationD应在 [1,1000000] 范围内。</li></ul></td>
+  <td><ul><li>2D场景下数组长度=2，3D场景下数组长度=3。</li><li>值应>0。</li><li>dilationH和dilationW应在 [1,255] 范围内。</li><li>conv3d场景下dilationD应在 [1,1000000] 范围内。</li></ul></td>
   <td>INT64</td>
   <td>-</td>
   <td>-</td>
@@ -407,7 +407,7 @@ aclnnStatus aclnnQuantConvolution(
         <ul>
           <li>算子仅支持在推理场景下调用。</li>
           <li>仅支持正向三维卷积。</li>
-          <li>input, weight, bias, scale中每一组tensor的每一维大小都应小于1000000。</li>
+          <li>input、weight、bias、scale中每一组tensor的每一维大小都应小于1000000。</li>
         </ul>
      </td>
    </tr>
@@ -420,7 +420,7 @@ aclnnStatus aclnnQuantConvolution(
 
 不同产品型号请参考使用不同的main函数。
 
-```Cpp
+```cpp
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -535,7 +535,6 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
   std::vector<int64_t> shapeResult = {2, 2, 32, 32, 32};
   std::vector<int64_t> convStrides;
   std::vector<int64_t> convPads;
-  std::vector<int64_t> convOutPads;
   std::vector<int64_t> convDilations;
 
   void* deviceDataA = nullptr;
@@ -556,7 +555,6 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
   std::vector<uint16_t> outputData(GetShapeSize(shapeResult), 1);
   convStrides = {1, 1, 1};
   convPads = {1, 1, 1};
-  convOutPads = {1, 1, 1};
   convDilations = {1, 1, 1};
   aclDataType inputDtype = dtypesInfo[0];
   aclDataType weightDtype = dtypesInfo[1];
@@ -599,9 +597,6 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
   aclIntArray *pads = aclCreateIntArray(convPads.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
   CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-  aclIntArray *outPads = aclCreateIntArray(convOutPads.data(), 3);
-  std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outPadsPtr(outPads, aclDestroyIntArray);
-  CHECK_FREE_RET(outPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
   aclIntArray *dilations = aclCreateIntArray(convDilations.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
   CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
@@ -611,7 +606,7 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
   aclOpExecutor* executor;
   // 调用aclnnConvolution第一段接口
   ret = aclnnQuantConvolutionGetWorkspaceSize(input, weight, bias, scale, nullptr, strides, pads, dilations,
-                                              false, outPads, 1, 0, nullptr, result, &workspaceSize, &executor);
+                                              false, nullptr, 1, 0, nullptr, result, &workspaceSize, &executor);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
