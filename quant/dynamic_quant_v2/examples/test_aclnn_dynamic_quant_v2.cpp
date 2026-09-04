@@ -118,7 +118,8 @@ int main()
 
     std::vector<float> xHostData;
     std::vector<float> smoothHostData;
-    std::vector<int32_t> groupHostData = {2, rowNum};
+    // groupIndex中保存的是每个专家负责的累计行数，最后一个元素需等于x的总行数
+    std::vector<int32_t> groupHostData = {1, 2, 3, rowNum};
     std::vector<int8_t> yHostData;
     std::vector<float> scaleHostData;
     std::vector<float> offsetHostData;
@@ -188,6 +189,7 @@ int main()
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(x);
     aclDestroyTensor(smooth);
+    aclDestroyTensor(group);
     aclDestroyTensor(y);
     aclDestroyTensor(scale);
     aclDestroyTensor(offset);
@@ -195,6 +197,7 @@ int main()
     // 7. 释放device资源
     aclrtFree(xDeviceAddr);
     aclrtFree(smoothDeviceAddr);
+    aclrtFree(groupDeviceAddr);
     aclrtFree(yDeviceAddr);
     aclrtFree(scaleDeviceAddr);
     aclrtFree(offsetDeviceAddr);
