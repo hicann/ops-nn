@@ -90,7 +90,7 @@ struct CaseResult {
     input.push_back(tensor_placeholder##intputIndex);                                                                \
     graph.AddOp(placeholder##intputIndex);                                                                           \
     add1.set_input_##intputName(placeholder##intputIndex);                                                           \
-    inputs.push_back(placeholder##intputIndex);
+    inputs.push_back(placeholder##intputIndex)
 
 #define ADD_CONST_INPUT(intputIndex, intputName, intputDtype, inputShape)                                           \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
@@ -111,7 +111,7 @@ struct CaseResult {
     graph.AddOp(placeholder##intputIndex);                                                                          \
     add1.set_input_##intputName(placeholder##intputIndex);                                                          \
     add1.update_input_desc_##intputName(placeholder##intputIndex##_desc);                                           \
-    inputs.push_back(placeholder##intputIndex);
+    inputs.push_back(placeholder##intputIndex)
 
 // ADD_OUTPUT_MODE 内部封装了 S/D 模式 graph_shape 自动生成（D 模式含 -1），禁止重写。
 #define ADD_OUTPUT_MODE(outputIndex, outputName, outputDtype, outputShape, mode)                                    \
@@ -120,7 +120,7 @@ struct CaseResult {
                                                             outputShape;                                            \
     TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(output##outputIndex##_graph_shape), FORMAT_ND, \
                                                            outputDtype);                                            \
-    add1.update_output_desc_##outputName(outputName##outputIndex##_desc);
+    add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 string GetTime()
 {
