@@ -31,8 +31,7 @@ public:
         this->numColAlign = tiling->num_col_align;
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
-        this->rstdBufferFactor =
-            ((rowFactor + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32) * NUM_PER_BLK_FP32;
+        this->rstdBufferFactor = ((rowFactor + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32) * NUM_PER_BLK_FP32;
         this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
         this->avgFactor = tiling->avg_factor;
@@ -62,27 +61,26 @@ public:
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->InitParams(tiling);
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * this->blockFactor * this->numCol;
+        uint64_t calcNum = static_cast<uint64_t>(this->rowWork) * this->numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + calcOffset, calcNum);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
-                                this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
-                                this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, this->ubFactor * sizeof(T));
         Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, this->ubFactor * sizeof(T));
         Ppipe->InitBuffer(outQueueY, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         Ppipe->InitBuffer(outQueueRstd, BUFFER_NUM, rstdBufferFactor * sizeof(float));
 #else
         Ppipe->InitBuffer(rstdBuf, rstdBufferFactor * sizeof(float));
@@ -141,7 +139,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyInX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         LocalTensor<T> x1Local = inQueueX.AllocTensor<T>();
         if (isNumColAlign) {
@@ -185,7 +183,7 @@ private:
         return xLocal;
     }
 
-    __aicore__ inline void CopyOutX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         // CopyOut x1 + x2
         auto xOut = outQueueY.DeQue<T>();
@@ -242,8 +240,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void BroadcastRstd(
-        LocalTensor<float> tmpLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num)
+    __aicore__ inline void BroadcastRstd(LocalTensor<float> tmpLocal, LocalTensor<float> rstdLocal,
+                                         uint32_t calc_row_num)
     {
         uint32_t rowRepeatLoop1 = calc_row_num / RSTD_BROADCAST_ROWS;
         uint32_t rowRepeatTail1 = calc_row_num - rowRepeatLoop1 * RSTD_BROADCAST_ROWS;
@@ -262,8 +260,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeY(
-        LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num, uint32_t elementNum)
+    __aicore__ inline void ComputeY(LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal,
+                                    uint32_t calc_row_num, uint32_t elementNum)
     {
         LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
         BroadcastRstd(tmpLocal, rstdLocal, calc_row_num);
@@ -298,7 +296,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(uint64_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         if (isNumColAlign) {
@@ -321,7 +319,7 @@ private:
 
     template <typename U>
     __aicore__ inline void repeatByRow(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local,
-        const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t type)
+                                       const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t type)
     {
         // TWO_UINT=gammaFp16 ONE_UINT=rstd
         uint32_t strideParams[6] = {mulLoopFp32, mulTailFp32, 64, 1, dstRepStrideFp32, 0};
@@ -341,8 +339,8 @@ private:
         for (uint32_t rIndex = 0; rIndex < rowRepeatLoop; rIndex++) {
             offset2 = type == ONE_UINT ? (rIndex * RSTD_BROADCAST_ROWS * MOV_8) : 0;
             mulRepeat<U>(dstLocal[rIndex * RSTD_BROADCAST_ROWS * numColAlign],
-                src1Local[rIndex * RSTD_BROADCAST_ROWS * numColAlign], src2Local[offset2],
-                RSTD_BROADCAST_ROWS, strideParams);
+                         src1Local[rIndex * RSTD_BROADCAST_ROWS * numColAlign], src2Local[offset2], RSTD_BROADCAST_ROWS,
+                         strideParams);
         }
         if (rowRepeatTail > 0) {
             offset2 = type == ONE_UINT ? (rowRepeatLoop * RSTD_BROADCAST_ROWS * MOV_8) : 0;
@@ -353,7 +351,7 @@ private:
 
     template <typename U>
     __aicore__ inline void mulRepeat(const LocalTensor<U>& dstLocal, const LocalTensor<U>& src1Local,
-        const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t strideParams[6])
+                                     const LocalTensor<U>& src2Local, uint32_t calcRowNum, uint32_t strideParams[6])
     {
         uint32_t mulLoop = strideParams[0];
         uint32_t mulTail = strideParams[1];

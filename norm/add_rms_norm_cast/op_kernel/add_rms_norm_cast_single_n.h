@@ -39,13 +39,14 @@ public:
         this->rowWork = 1;
         blockIdx_ = GetBlockIdx();
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * numCol, numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * numCol, numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
-        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + blockIdx_ * numCol, numCol);
-        y2Gm.SetGlobalBuffer((__gm__ T*)y2 + blockIdx_ * numCol, numCol);
+        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + calcOffset, numCol);
+        y2Gm.SetGlobalBuffer((__gm__ T*)y2 + calcOffset, numCol);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_, 1);
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * numCol, numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, numCol);
 
         Ppipe->InitBuffer(unitBuf, MAXBUF); // (192 - 1) * 1024 byte
     }

@@ -42,21 +42,19 @@ public:
             this->rowWork = this->numRow - (GetBlockNum() - 1) * this->blockFactor;
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * this->blockFactor * this->numCol;
+        uint64_t calcNum = static_cast<uint64_t>(this->rowWork) * this->numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + calcOffset, calcNum);
 
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
-                                this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
-                                this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
 
         // pipe alloc memory to queue, the unit is Bytes
@@ -107,7 +105,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gm_bias)
+    __aicore__ inline void CopyIn(uint64_t gm_bias)
     {
         LocalTensor<T> x1Local_in = inQueueX.AllocTensor<T>();
         LocalTensor<T> x2Local = sqxBuf.Get<T>();
@@ -300,7 +298,7 @@ private:
         outQueueY.EnQue<half>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, numCol);

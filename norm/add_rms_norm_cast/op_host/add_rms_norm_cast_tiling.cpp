@@ -13,6 +13,7 @@
  * \brief
  */
 #include <iostream>
+#include <limits>
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_cast_tiling.h"
 
@@ -266,14 +267,19 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
                 OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
                                           "greater than or equal to zero"),
                 return ge::GRAPH_FAILED);
-    uint32_t numCol = gamma_shape.GetShapeSize();
-    float avgFactor = (numCol == 0U) ? 0 : 1.0 / numCol;
+    uint64_t numColTmp = static_cast<uint64_t>(gamma_shape.GetShapeSize());
+    uint64_t numRowTmp = 1U;
     size_t x1DimNum = x1_shape.GetDimNum();
     size_t gammaDimNum = gamma_shape.GetDimNum();
-    uint32_t numRow = 1;
     for (size_t i = 0; i < x1DimNum - gammaDimNum; i++) {
-        numRow *= x1_shape.GetDim(i);
+        numRowTmp *= static_cast<uint64_t>(x1_shape.GetDim(i));
     }
+    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
+                return ge::GRAPH_FAILED);
+    uint32_t numCol = static_cast<uint32_t>(numColTmp);
+    uint32_t numRow = static_cast<uint32_t>(numRowTmp);
+    float avgFactor = (numCol == 0U) ? 0 : 1.0 / numCol;
 
     OP_LOGD("Tiling4AddRmsNormCast", "Core Num: %u", numCore);
 

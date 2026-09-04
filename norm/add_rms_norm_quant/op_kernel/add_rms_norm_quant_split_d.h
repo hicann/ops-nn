@@ -49,19 +49,21 @@ public:
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_v1) * blockFactor * numCol;
+        uint64_t calcNum = static_cast<uint64_t>(rowWork) * numCol;
+        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ TX*)gamma, numCol);
         scales1Gm.SetGlobalBuffer((__gm__ TScale*)scales1, numCol);
         if (hasZeroPoints1) {
             zeroPoints1Gm.SetGlobalBuffer((__gm__ TOffset*)zero_points1, numCol);
         }
         // out
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
-        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + calcOffset, calcNum);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + calcOffset, calcNum);
+        xGm.SetGlobalBuffer((__gm__ TX*)x + calcOffset, calcNum);
         if constexpr (RN) {
-            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_v1 * blockFactor * numCol, rowWork * numCol);
+            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + calcOffset, calcNum);
         }
 
         // pipe alloc memory to queue, the unit is Bytes.
@@ -141,8 +143,9 @@ private:
         LocalTensor<TX> x1x2In = inQueueX.AllocTensor<TX>();
         LocalTensor<TX> x1In = x1x2In[0];
         LocalTensor<TX> x2In = x1x2In[ubFactor];
-        DataCopyCustom<TX>(x1In, x1Gm[iIdx * numCol + jIdx * ubFactor], num);
-        DataCopyCustom<TX>(x2In, x2Gm[iIdx * numCol + jIdx * ubFactor], num);
+        uint64_t gmOffset = static_cast<uint64_t>(iIdx) * numCol + static_cast<uint64_t>(jIdx) * ubFactor;
+        DataCopyCustom<TX>(x1In, x1Gm[gmOffset], num);
+        DataCopyCustom<TX>(x2In, x2Gm[gmOffset], num);
         inQueueX.EnQue(x1x2In);
         LocalTensor<TX> x1x2Local = inQueueX.DeQue<TX>();
 
@@ -192,7 +195,8 @@ private:
         if constexpr (A) {
             outQueueY1.EnQue(xLocal);
             auto x_out = outQueueY1.DeQue<TX>();
-            DataCopyCustom<TX>(xGm[iIdx * numCol + jIdx * ubFactor], x_out, num);
+            uint64_t gmOffset = static_cast<uint64_t>(iIdx) * numCol + static_cast<uint64_t>(jIdx) * ubFactor;
+            DataCopyCustom<TX>(xGm[gmOffset], x_out, num);
             outQueueY1.FreeTensor(x_out);
         } else {
             outQueueY1.FreeTensor(xLocal);
@@ -256,7 +260,7 @@ private:
         }
         for (uint32_t i_i = 0; i_i < calcRowNum; i_i++) {
             CopyInAndAdd(iOIdx * rowFactor + i_i, jIdx, num);
-            uint32_t computeParams[3] = {num, iOIdx * rowFactor + i_i, jIdx};
+            uint64_t computeParams[3] = {num, static_cast<uint64_t>(iOIdx) * rowFactor + i_i, jIdx};
             ComputeY(i_i, gammaLocal, rstdLocal, computeParams, betaLocal);
             CopyOutY(iOIdx * rowFactor + i_i, jIdx, num);
         }
@@ -294,11 +298,11 @@ private:
     }
 
     __aicore__ inline void ComputeY(uint32_t iIIdx, LocalTensor<TX>& gammaLocal, LocalTensor<float>& rstdLocal,
-                                    uint32_t* computeParams, LocalTensor<TX>& betaLocal = nullptr)
+                                    uint64_t* computeParams, LocalTensor<TX>& betaLocal = nullptr)
     {
-        uint32_t num = computeParams[0];
-        uint32_t iIdx = computeParams[1];
-        uint32_t jIdx = computeParams[2];
+        uint32_t num = static_cast<uint32_t>(computeParams[0]);
+        uint64_t iIdx = computeParams[1];
+        uint32_t jIdx = static_cast<uint32_t>(computeParams[2]);
         LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
         event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -331,7 +335,8 @@ private:
             doCast(rnLocal, xFp32Local, num);
             outQueueY1.EnQue(rnLocal);
             auto rnOut = outQueueY1.DeQue<TX>();
-            DataCopyCustom<TX>(resOutGm[iIdx * numCol + jIdx * ubFactor], rnOut, num);
+            uint64_t gmOffset = iIdx * numCol + static_cast<uint64_t>(jIdx) * ubFactor;
+            DataCopyCustom<TX>(resOutGm[gmOffset], rnOut, num);
             outQueueY1.FreeTensor(rnOut);
         }
         if (hasBeta) {
@@ -395,14 +400,15 @@ private:
     {
         LocalTensor<int8_t> y1Local = outQueueY1.DeQue<int8_t>();
         PipeBarrier<PIPE_ALL>();
-        DataCopyCustom<int8_t>(y1Gm[iIdx * numCol + jIdx * ubFactor], y1Local, num);
+        uint64_t gmOffset = static_cast<uint64_t>(iIdx) * numCol + static_cast<uint64_t>(jIdx) * ubFactor;
+        DataCopyCustom<int8_t>(y1Gm[gmOffset], y1Local, num);
         PipeBarrier<PIPE_ALL>();
         outQueueY1.FreeTensor(y1Local);
 
         if (hasScales2) {
             LocalTensor<int8_t> y2Local = outQueueY2.DeQue<int8_t>();
             PipeBarrier<PIPE_ALL>();
-            DataCopyCustom<int8_t>(y2Gm[iIdx * numCol + jIdx * ubFactor], y2Local, num);
+            DataCopyCustom<int8_t>(y2Gm[gmOffset], y2Local, num);
             PipeBarrier<PIPE_ALL>();
             outQueueY2.FreeTensor(y2Local);
         }

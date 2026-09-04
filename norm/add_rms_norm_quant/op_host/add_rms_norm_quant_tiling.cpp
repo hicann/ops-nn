@@ -13,6 +13,7 @@
  * \brief
  */
 #include <iostream>
+#include <limits>
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_quant_tiling.h"
 
@@ -140,13 +141,18 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     epsilon = *epsilonPtr;
     divMode = *divModePtr;
 
-    numCol = gammaShape.GetShapeSize();
+    uint64_t numColTmp = static_cast<uint64_t>(gammaShape.GetShapeSize());
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
-    numRow = 1U;
+    uint64_t numRowTmp = 1U;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
-        numRow *= xShape.GetDim(i);
+        numRowTmp *= static_cast<uint64_t>(xShape.GetDim(i));
     }
+    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
+                return ge::GRAPH_FAILED);
+    numCol = static_cast<uint32_t>(numColTmp);
+    numRow = static_cast<uint32_t>(numRowTmp);
     float avgFactor = (numCol == INT_ZERO) ? 0.0f : 1.0f / static_cast<float>(numCol);
     // 可选参数占用ubFactor的大小, 有beta和s2时，才是新增场景，否则不做改变
     if (hasScales2 > INT_ZERO || hasBeta > INT_ZERO) {

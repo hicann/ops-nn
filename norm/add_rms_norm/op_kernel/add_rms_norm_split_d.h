@@ -43,19 +43,18 @@ public:
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
-                             this->rowWork * this->numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * this->blockFactor * this->numCol;
+        uint64_t calcNum = static_cast<uint64_t>(this->rowWork) * this->numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + calcOffset, calcNum);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
-                                this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
         }
 
         // pipe alloc memory to queue, the unit is Bytes.
@@ -118,8 +117,9 @@ private:
         LocalTensor<T> splitX1X2In = inQueueX.AllocTensor<T>();
         LocalTensor<T> splitX1In = splitX1X2In[0];
         LocalTensor<T> splitX2In = splitX1X2In[this->ubFactor];
-        DataCopyCustom<T>(splitX1In, x1Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
-        DataCopyCustom<T>(splitX2In, x2Gm[i_idx * this->numCol + j_idx * this->ubFactor], num);
+        uint64_t gmOffset = static_cast<uint64_t>(i_idx) * this->numCol + static_cast<uint64_t>(j_idx) * this->ubFactor;
+        DataCopyCustom<T>(splitX1In, x1Gm[gmOffset], num);
+        DataCopyCustom<T>(splitX2In, x2Gm[gmOffset], num);
         inQueueX.EnQue(splitX1X2In);
     }
 
@@ -190,7 +190,8 @@ private:
         outQueueY.EnQue(splitXLocal);
         auto x_out = outQueueY.DeQue<T>();
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
-            DataCopyCustom<T>(xGm[i_idx * numCol + j_idx * ubFactor], x_out, num);
+            uint64_t gmOffset = static_cast<uint64_t>(i_idx) * numCol + static_cast<uint64_t>(j_idx) * ubFactor;
+            DataCopyCustom<T>(xGm[gmOffset], x_out, num);
         }
         outQueueY.FreeTensor(x_out);
     }
@@ -264,7 +265,8 @@ private:
     {
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
             LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
-            DataCopyCustom<T>(xLocal, xGm[i_idx * numCol + j_idx * ubFactor], num);
+            uint64_t gmOffset = static_cast<uint64_t>(i_idx) * numCol + static_cast<uint64_t>(j_idx) * ubFactor;
+            DataCopyCustom<T>(xLocal, xGm[gmOffset], num);
             inQueueX.EnQue<T>(xLocal);
         }
         if constexpr (MODE == POST_RMS_NORM_MODE) {
@@ -355,7 +357,8 @@ private:
     __aicore__ inline void CopyOutY(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> splitYLocalOut = outQueueY.DeQue<T>();
-        DataCopyCustom<T>(yGm[i_idx * this->numCol + j_idx * this->ubFactor], splitYLocalOut, num);
+        uint64_t gmOffset = static_cast<uint64_t>(i_idx) * this->numCol + static_cast<uint64_t>(j_idx) * this->ubFactor;
+        DataCopyCustom<T>(yGm[gmOffset], splitYLocalOut, num);
         outQueueY.FreeTensor(splitYLocalOut);
     }
 

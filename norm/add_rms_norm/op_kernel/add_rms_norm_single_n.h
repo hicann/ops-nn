@@ -39,17 +39,18 @@ public:
         this->rowWork = 1;
         blockIdx_ = GetBlockIdx();
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->numCol, this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->numCol, this->numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * this->numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, this->numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->numCol, this->numCol);
+        yGm.SetGlobalBuffer((__gm__ T*)y + calcOffset, this->numCol);
 
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_, 1);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->numCol, this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, this->numCol);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * numCol, numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, numCol);
         }
 
         Ppipe->InitBuffer(unitBuf, MAXBUFFER); // (192 - 1) * 1024 byte

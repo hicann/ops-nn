@@ -45,13 +45,15 @@ public:
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * blockFactor * numCol;
+        uint64_t calcNum = static_cast<uint64_t>(rowWork) * numCol;
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
-        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        y2Gm.SetGlobalBuffer((__gm__ T*)y2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ float*)y1 + calcOffset, calcNum);
+        y2Gm.SetGlobalBuffer((__gm__ T*)y2 + calcOffset, calcNum);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + calcOffset, calcNum);
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
@@ -109,7 +111,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyInX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         LocalTensor<T> x1Local = inQueueX.AllocTensor<T>();
         DataCopyCustom<T>(x1Local, x1Gm[gm_bias], calc_row_num * numCol);
@@ -133,7 +135,7 @@ private:
         return xLocal;
     }
 
-    __aicore__ inline void CopyOutX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         // CopyOut x1 + x2
         auto x_out = outQueueY.DeQue<T>();
@@ -189,7 +191,7 @@ private:
     }
 
     __aicore__ inline void ComputeY(LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal,
-                                    uint32_t calc_row_num, uint32_t gm_bias)
+                                    uint32_t calc_row_num, uint64_t gm_bias)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<uint32_t> offsetLocal = offsetBuf.Get<uint32_t>();
@@ -230,7 +232,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(uint64_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(y2Gm[progress], yLocal, calc_row_num * numCol);

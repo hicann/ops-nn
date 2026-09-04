@@ -44,8 +44,8 @@ public:
             this->rowWork = this->numRow - (GetBlockNum() - 1) * this->blockFactor;
         }
         // get start index for current core, core parallel
-        uint64_t calcOffset = blockIdx_ * this->blockFactor * this->numCol;
-        uint64_t calcNum = this->rowWork * this->numCol;
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * this->blockFactor * this->numCol;
+        uint64_t calcNum = static_cast<uint64_t>(this->rowWork) * this->numCol;
         x1Gm.SetGlobalBuffer((__gm__ T*)x1 + calcOffset, calcNum);
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
@@ -79,7 +79,7 @@ public:
     __aicore__ inline void SubProcess(uint32_t i_o, uint32_t calc_row_num)
     {
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            uint32_t gm_bias = (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) +
+            uint64_t gm_bias = (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) +
                                 static_cast<uint64_t>(i_i)) *
                                static_cast<uint64_t>(numCol);
             CopyIn(gm_bias);
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gm_bias)
+    __aicore__ inline void CopyIn(uint64_t gm_bias)
     {
         LocalTensor<T> x1Local_in = inQueueX.AllocTensor<T>();
         LocalTensor<T> x2Local = tmpBuf.Get<T>();
@@ -131,7 +131,7 @@ private:
         inQueueX.FreeTensor(x1Local);
     }
 
-    __aicore__ inline void Computebf16(uint32_t outer_progress, uint32_t inner_progress, uint32_t progress)
+    __aicore__ inline void Computebf16(uint32_t outer_progress, uint32_t inner_progress, uint64_t progress)
     {
         LocalTensor<float> xFp32 = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
@@ -191,7 +191,7 @@ private:
         WaitFlag<HardEvent::MTE3_V>(eventMte3V1);
     }
 
-    __aicore__ inline void Computefp16(uint32_t outer_progress, uint32_t inner_progress, uint32_t progress)
+    __aicore__ inline void Computefp16(uint32_t outer_progress, uint32_t inner_progress, uint64_t progress)
     {
         LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
         LocalTensor<float> sqxLocal = sqxBuf.Get<float>();
@@ -251,7 +251,7 @@ private:
         WaitFlag<HardEvent::MTE3_V>(eventMte3V1);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(y2Gm[progress], yLocal, numCol);

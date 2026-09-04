@@ -48,14 +48,16 @@ public:
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        uint64_t calcOffset = static_cast<uint64_t>(blockIdx_) * blockFactor * numCol;
+        uint64_t calcNum = static_cast<uint64_t>(rowWork) * numCol;
+        x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + calcOffset, calcNum);
+        x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + calcOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ TX*)gamma, numCol);
         scales1Gm.SetGlobalBuffer((__gm__ TScale*)scales1, numCol);
         // out
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        xGm.SetGlobalBuffer((__gm__ TX*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + calcOffset, calcNum);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + calcOffset, calcNum);
+        xGm.SetGlobalBuffer((__gm__ TX*)x + calcOffset, calcNum);
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(TX));
@@ -93,7 +95,9 @@ public:
             }
         }
         if (RN) {
-            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+            uint64_t resOutOffset = static_cast<uint64_t>(blockIdx_) * blockFactor * numCol;
+            uint64_t resOutCalcNum = static_cast<uint64_t>(rowWork) * numCol;
+            resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + resOutOffset, resOutCalcNum);
         }
     }
 
@@ -123,7 +127,7 @@ public:
                                          LocalTensor<TX>& betaLocal = nullptr)
     {
         for (uint32_t iI = 0; iI < calcRowNum; iI++) {
-            uint32_t gmBias = (iO * rowFactor + iI) * numCol;
+            uint64_t gmBias = (static_cast<uint64_t>(iO) * rowFactor + iI) * numCol;
             CopyIn(gmBias);
             Compute(iI, gammaLocal, gmBias, betaLocal);
             CopyOutY(gmBias);
@@ -131,7 +135,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gmBias)
+    __aicore__ inline void CopyIn(uint64_t gmBias)
     {
         LocalTensor<TX> x1LocalIn = inQueueX.AllocTensor<TX>();
         LocalTensor<TX> x2Local = sqxBuf.Get<TX>();
@@ -208,7 +212,7 @@ private:
         }
     }
 
-    __aicore__ inline void Compute(uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint32_t gmBias,
+    __aicore__ inline void Compute(uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint64_t gmBias,
                                    LocalTensor<TX> betaLocal = nullptr)
     {
         LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
@@ -246,7 +250,7 @@ private:
         ComputePart2(gammaLocal, gmBias, xFp32Local, sqx, betaLocal);
     }
 
-    __aicore__ inline void ComputePart2(LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<float> xFp32Local,
+    __aicore__ inline void ComputePart2(LocalTensor<TX> gammaLocal, uint64_t gmBias, LocalTensor<float> xFp32Local,
                                         LocalTensor<float> sqx, LocalTensor<TX> betaLocal = nullptr)
     {
         if constexpr (is_same<TX, half>::value && !PT) {
@@ -329,7 +333,7 @@ private:
         outQueueY1.EnQue<int8_t>(y1Local);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<int8_t> y1Local = outQueueY1.DeQue<int8_t>();
         DataCopyCustom<int8_t>(y1Gm[progress], y1Local, numCol);

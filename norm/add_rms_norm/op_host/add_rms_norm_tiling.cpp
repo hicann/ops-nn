@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <limits>
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_tiling.h"
 
@@ -311,22 +312,28 @@ static void GetCompileParameters(gert::TilingContext* context, uint32_t& numCore
     ubSize -= UB_USED;
 }
 
-static void CalculateRowAndColParameters(gert::TilingContext* context, uint32_t& numRow, uint32_t& numCol)
+static ge::graphStatus CalculateRowAndColParameters(gert::TilingContext* context, uint32_t& numRow, uint32_t& numCol)
 {
     const gert::Shape x1_shape = context->GetInputShape(0)->GetStorageShape();
     const size_t gammaIndex = 2;
     const gert::Shape gamma_shape = context->GetInputShape(gammaIndex)->GetStorageShape();
-    numCol = gamma_shape.GetShapeSize();
+    uint64_t numColTmp = static_cast<uint64_t>(gamma_shape.GetShapeSize());
 
     const size_t x1DimNum = x1_shape.GetDimNum();
     size_t gammaDimNum = gamma_shape.GetDimNum();
     if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
         gammaDimNum = gamma_shape.GetDimNum() - 1;
     }
-    numRow = 1U;
+    uint64_t numRowTmp = 1U;
     for (size_t i = 0; i < x1DimNum - gammaDimNum; ++i) {
-        numRow *= x1_shape.GetDim(i);
+        numRowTmp *= static_cast<uint64_t>(x1_shape.GetDim(i));
     }
+    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
+                return ge::GRAPH_FAILED);
+    numRow = static_cast<uint32_t>(numRowTmp);
+    numCol = static_cast<uint32_t>(numColTmp);
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetEpsilonParameter(gert::TilingContext* context, float& epsilon)
@@ -479,7 +486,8 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
 
     uint32_t num_row;
     uint32_t num_col;
-    CalculateRowAndColParameters(context, num_row, num_col);
+    OP_CHECK_IF(CalculateRowAndColParameters(context, num_row, num_col) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Calculate row and col parameters failed."), return ge::GRAPH_FAILED);
 
     float epsilon = 0;
     GetEpsilonParameter(context, epsilon);

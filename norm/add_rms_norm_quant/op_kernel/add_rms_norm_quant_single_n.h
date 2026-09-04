@@ -50,8 +50,8 @@ public:
             this->rowWork = numRow - blockNum * blockFactor;
         }
         // get start index for current core, core parallel
-        uint64_t gmOffset = blockIdx_ * blockFactor * numCol;
-        uint64_t calcNum = rowWork * numCol;
+        uint64_t gmOffset = static_cast<uint64_t>(blockIdx_) * blockFactor * numCol;
+        uint64_t calcNum = static_cast<uint64_t>(rowWork) * numCol;
         x1Gm.SetGlobalBuffer((__gm__ TX*)x1 + gmOffset, calcNum);
         x2Gm.SetGlobalBuffer((__gm__ TX*)x2 + gmOffset, calcNum);
         gammaGm.SetGlobalBuffer((__gm__ TX*)gamma, numCol);
