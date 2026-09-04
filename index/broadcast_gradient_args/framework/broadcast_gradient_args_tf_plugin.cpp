@@ -18,6 +18,6 @@ namespace domi {
 REGISTER_CUSTOM_OP("BroadcastGradientArgs")
     .FrameworkType(TENSORFLOW)
     .OriginOpType("BroadcastGradientArgs")
-    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ParseParamsFn(AutoMappingFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi
