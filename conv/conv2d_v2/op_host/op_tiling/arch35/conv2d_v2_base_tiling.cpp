@@ -534,7 +534,12 @@ ge::graphStatus Conv2dBaseTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = MIN_WORKSPACE_SIZE;
+    if (opInfo_->isCubeVectorFuse) {
+        workspaces[0] = 0;
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: Fuse workspace size is 0.", paramInfo_.nodeType.c_str());
+    } else {
+        workspaces[0] = MIN_WORKSPACE_SIZE;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

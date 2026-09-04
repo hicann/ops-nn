@@ -93,13 +93,6 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
                                          GM_ADDR relu_weight1, GM_ADDR clip_value1, GM_ADDR y0, GM_ADDR y1,
                                          GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    SetSysWorkspace(workspace);
-    __gm__ uint8_t* user = GetUserWorkspace(workspace);
-
     GET_TILING_DATA(tilingData, tiling);
 
 #if defined(DTYPE_X) && defined(DTYPE_FILTER) && defined(DTYPE_Y0)

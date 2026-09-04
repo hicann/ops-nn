@@ -93,13 +93,6 @@ template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0Pi
 __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y,
                                     GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    SetSysWorkspace(workspace);
-    GM_ADDR user = GetUserWorkspace(workspace);
-
     GET_TILING_DATA(tilingData, tiling);
 
 #if defined(DTYPE_X) && defined(DTYPE_FILTER) && defined(DTYPE_Y)
