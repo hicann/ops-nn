@@ -472,14 +472,6 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     FUSION_PASS_CHECK(graph == nullptr, OP_LOGE(convDescInfo.nodeNameStr, "Graph is nullptr."), return false);
 
     std::vector<GNode> nodesBeforeFuse = {convNode, *padNode};
-    if (backpropFilterNode != nullptr) {
-        nodesBeforeFuse.emplace_back(*backpropFilterNode);
-    }
-    if (sliceNode != nullptr) {
-        nodesBeforeFuse.emplace_back(*backpropInputNode);
-        nodesBeforeFuse.emplace_back(*sliceNode);
-    }
-
     AscendString failedReason;
 #if GE_COMPILER_VERSION_NUM >= 90100000U
     FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
@@ -491,12 +483,6 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     FUSION_PASS_CHECK_NOLOG(!UpdateCubeNodes(*graph, convNode), return false);
 
     std::vector<GNode> nodesAfterFuse = {convNode};
-    if (backpropFilterNode != nullptr) {
-        nodesAfterFuse.emplace_back(*backpropFilterNode);
-    }
-    if (backpropInputNode != nullptr) {
-        nodesAfterFuse.emplace_back(*backpropInputNode);
-    }
 #if GE_COMPILER_VERSION_NUM >= 90100000U
     FUSION_PASS_CHECK(
         ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS,
@@ -512,4 +498,7 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     return true;
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+REG_FUSION_PASS(PadConv2dFusionPass).Stage(CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops
