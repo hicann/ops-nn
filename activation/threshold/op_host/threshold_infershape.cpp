@@ -41,14 +41,6 @@ static ge::graphStatus InferShapeThreshold(gert::InferShapeContext* context)
         yShape->SetDim(i, xShape->GetDim(i));
     }
 
-    // Set output dtype = input dtype
-    auto computeNodeInfo = context->GetComputeNodeInfo();
-    auto inputDesc = computeNodeInfo->GetInputTdInfo(IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    auto outputDesc = computeNodeInfo->MutableOutputTdInfo(IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
-    outputDesc->SetDataType(inputDesc->GetDataType());
-
     OP_LOGD(context->GetNodeName(), "End to do InferShapeThreshold");
     return GRAPH_SUCCESS;
 }
