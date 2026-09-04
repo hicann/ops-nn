@@ -394,7 +394,7 @@ int main() {
   aclDestroyTensorList(tensorListOutput);
   aclDestroyScalarList(scalarlist);
 
-  // 7.释放device资源，需要根据具体API的接口定义修改
+  // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(input1DeviceAddr);
   aclrtFree(input2DeviceAddr);
   aclrtFree(out1DeviceAddr);

@@ -120,7 +120,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建weight aclScalar
     weight = aclCreateScalar(&weightValue, aclDataType::ACL_FLOAT);
-    CHECK_RET(weight != nullptr, return ret);
+    CHECK_RET(weight != nullptr, return -1);
     // 创建out1 aclTensor
     ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
