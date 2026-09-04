@@ -18,7 +18,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "../inc/platform.h"
+#include "op_kernel/platform_util.h"
 #include "../inc/kernel_utils.h"
 
 namespace ConfusionSoftmaxGradOps {
@@ -49,7 +49,7 @@ constexpr static int64_t CONST_SIX = 6;
 constexpr static int64_t CONST_SEVEN = 7;
 constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_SIXTY_THREE = 63;
-constexpr static uint32_t VL_FP32 = static_cast<int64_t>(platform::GetVRegSize()) / sizeof(float);
+constexpr static uint32_t VL_FP32 = static_cast<int64_t>(Ops::Base::GetVRegSize()) / sizeof(float);
 
 class ConfusionSoftmaxGradOpsBase {
 public:
@@ -223,7 +223,7 @@ __aicore__ inline void ConfusionSoftmaxGradOpsBase::UpdateCache(const LocalTenso
 {
     // UpdateCache
     uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
-                                           static_cast<int64_t>(platform::GetVRegSize()));
+                                           static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = cacheID;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -256,7 +256,7 @@ __aicore__ inline void ConfusionSoftmaxGradOpsBase::Normalize(const LocalTensor<
     // Normalize
     uint16_t outerLoopTimes = rowSize;
     uint16_t innerLoopTimes = ops::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
-                                           static_cast<int64_t>(platform::GetVRegSize()));
+                                           static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint32_t outerLoopStride = colSize;
     uint32_t innerLoopStride = VL_FP32;
     __VEC_SCOPE__

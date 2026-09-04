@@ -21,9 +21,7 @@ using namespace Ops::Base;
 using namespace ge;
 
 namespace optiling {
-static constexpr int64_t BLOCK_SIZE = 32;
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
-static constexpr int64_t R_MAX_VALUE = 16384;
 
 static int64_t FindNearestPower2(int64_t value)
 {
@@ -45,22 +43,23 @@ bool SoftmaxV2TilingAR::IsCapable()
     OP_CHECK_IF(a0_ != DIM_NUM_ONE || (enableBatchInvariant_ && reduceAxes_ != xShapeSize_ - DIM_NUM_ONE),
                 OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "), return false);
 
-    OP_CHECK_IF(r_ > R_MAX_VALUE,
+    const int64_t rMaxValue = CONST_FOUR * vlFp32_ * vlFp32_;
+    OP_CHECK_IF(r_ > rMaxValue,
                 OP_LOGI(context_->GetNodeName(),
-                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
+                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, rMaxValue),
                 return false);
     return true;
 }
 
 ge::graphStatus SoftmaxV2TilingAR::DoOpTiling()
 {
-    int64_t rAligned = CeilAlign(r_, (BLOCK_SIZE / xDtypeSize_));
+    int64_t rAligned = CeilAlign(r_, (blockSize_ / xDtypeSize_));
 
     int64_t binaryTmpPerRow = 0;
     if (r_ > CONST_TWO * vlFp32_) {
         int64_t ceilVLCount = CeilDiv(r_, vlFp32_);
         int64_t foldPoint = FindNearestPower2(ceilVLCount);
-        int64_t outerLoopDstStride = CeilAlign(foldPoint, FP32_BLOCK_ALIGN_NUM);
+        int64_t outerLoopDstStride = CeilAlign(foldPoint, blockSize_ / FLOAT32_BYTES);
         binaryTmpPerRow = outerLoopDstStride * FLOAT32_BYTES;
     }
 

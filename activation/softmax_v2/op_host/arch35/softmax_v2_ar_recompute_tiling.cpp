@@ -23,9 +23,8 @@ using namespace ge;
 
 using namespace Ops::Base;
 namespace optiling {
-constexpr int64_t AR_RECOMPUTE_MAX_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048; // sizeof(float) * 8 * 64
+constexpr int64_t AR_RECOMPUTE_SCALAR_BUFFER_NUM = 2;
+constexpr int64_t AR_RECOMPUTE_CACHE_SLOT_NUM = 64; // UB间二分累加Cache最大数量
 constexpr int64_t TRIPLE_BUFFER = 3;
 constexpr int64_t BIT_COUNT_64 = 64;
 
@@ -91,9 +90,8 @@ int64_t SoftmaxV2TilingARRecompute::Lcm(const int64_t a, const int64_t b)
 
 ge::graphStatus SoftmaxV2TilingARRecompute::DoOpTiling()
 {
-    // 检查ub空间是否足够
-    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_MAX_BUFFER_BTYES - AR_RECOMPUTE_SUM_BUFFER_BTYES -
-                  AR_RECOMPUTE_BINARY_CACHE_BTYES;
+    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_SCALAR_BUFFER_NUM * blockSize_ -
+                  AR_RECOMPUTE_CACHE_SLOT_NUM * blockSize_;
     baseFactor_ = xDtypeSize_ * TRIPLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER + sizeof(float);
 
     OP_CHECK_IF((baseFactor_ > ubFlexible_),

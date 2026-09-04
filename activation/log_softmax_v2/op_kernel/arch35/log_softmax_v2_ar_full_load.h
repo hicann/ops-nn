@@ -36,7 +36,7 @@ using AscendC::Reg::Reduce;
 using AscendC::Reg::StoreAlign;
 
 constexpr uint32_t DOUBLE_BUFFER = 2;
-constexpr uint32_t BLOCK_SIZE = 32; // 32B
+constexpr uint32_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 template <typename T_in, typename T_out>
 class LogSoftmaxV2AR : public SoftmaxV2OpsBase {

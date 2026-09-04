@@ -42,9 +42,9 @@ class LogSoftmaxGradARSmallR {
     static constexpr int32_t BUFFER_DEPTH = 1;
     static constexpr int64_t DATA_BLOCK_COUNT = 16;
     static constexpr int64_t DATA_BLOCK_COUNT_HALF = 8;
-    static constexpr uint16_t VECTOR_LENGTH = platform::GetVRegSize();
+    static constexpr uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
     static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
-    static constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
+    static constexpr int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 public:
     __aicore__ inline LogSoftmaxGradARSmallR(){};

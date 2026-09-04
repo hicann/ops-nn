@@ -17,7 +17,6 @@
 using namespace ge;
 
 namespace optiling {
-static constexpr int64_t R_MAX_VALUE = 16384;
 class ConfusionSoftmaxGradTilingAR : virtual public ConfusionSoftmaxGradTilingBase, public SoftmaxGradTilingAR {
 public:
     explicit ConfusionSoftmaxGradTilingAR(gert::TilingContext* context)
@@ -31,10 +30,11 @@ public:
 protected:
     bool IsCapable() override
     {
+        const int64_t rMaxValue = CONST_FOUR * vlFp32_ * vlFp32_;
         OP_TILING_CHECK(
-            r_ > R_MAX_VALUE,
+            r_ > rMaxValue,
             OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. actual r is %ld, larger than %ld",
-                    r_, R_MAX_VALUE),
+                    r_, rMaxValue),
             return false);
         return true;
     }

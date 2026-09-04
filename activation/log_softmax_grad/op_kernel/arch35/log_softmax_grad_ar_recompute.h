@@ -29,9 +29,10 @@
 
 namespace LogSoftmaxGradOps {
 using namespace AscendC;
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;
+constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = Ops::Base::GetUbBlockSize();
 constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / sizeof(float);
+constexpr int64_t AR_RECOMPUTE_CACHE_SLOT_NUM = 64; // UB间二分累加Cache最大数量
+constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = AR_RECOMPUTE_CACHE_SLOT_NUM * Ops::Base::GetUbBlockSize();
 constexpr int64_t A_IN_IN = 1;
 
 template <typename T>
@@ -363,7 +364,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
                                                                  const int64_t count)
 {
     uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = cacheId;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;

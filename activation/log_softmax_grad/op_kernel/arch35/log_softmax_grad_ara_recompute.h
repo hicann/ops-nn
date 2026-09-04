@@ -41,9 +41,9 @@ class LogSoftmaxGradARARecompute : public LogSoftmaxGradOpsBase {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
-    static constexpr uint16_t VECTOR_LENGTH = platform::GetVRegSize();
+    static constexpr uint16_t VECTOR_LENGTH = Ops::Base::GetVRegSize();
     static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
-    static constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
+    static constexpr int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 public:
     __aicore__ inline LogSoftmaxGradARARecompute(){};

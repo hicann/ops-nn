@@ -239,8 +239,8 @@ protected:
     const uint32_t CACHE_BUFF_SIZE = 256;
     const uint32_t MAX_CACHE_DEPTH = 3;
     const uint32_t CACHE_LEVEL0_IDX = 0;
-    const uint32_t CACHE_LEVEL1_IDX = 256;
-    const uint32_t CACHE_LEVEL2_IDX = 512;
+    const uint32_t CACHE_LEVEL1_IDX = CACHE_BUFF_SIZE;
+    const uint32_t CACHE_LEVEL2_IDX = 2 * CACHE_BUFF_SIZE;
     const uint32_t SPLIT_COUNT = 2;
     constexpr static uint32_t VecLen_ = GetVRegSize() / sizeof(float);
     const int32_t STAGE2_MODE_1 = 1;

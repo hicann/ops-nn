@@ -30,7 +30,7 @@ using AscendC::Reg::Reduce;
 using AscendC::Reg::StoreAlign;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
-constexpr static uint32_t BLOCK_SIZE = 32; // 32B
+constexpr static uint32_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 template <typename T>
 class ConfusionSoftmaxGradAR : public ConfusionSoftmaxGradOpsBase {
@@ -246,9 +246,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
     }
 
     int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)),
-                                       static_cast<int64_t>(platform::GetVRegSize()));
+                                       static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)),
-                                         static_cast<int64_t>(platform::GetVRegSize()));
+                                         static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -259,7 +259,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
     uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
-                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+                                               static_cast<int64_t>(Ops::Base::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;

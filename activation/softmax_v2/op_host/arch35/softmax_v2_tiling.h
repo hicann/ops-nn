@@ -154,8 +154,6 @@ constexpr int64_t DOUBLE_BUFFER = 2;
 
 constexpr int64_t FLOAT32_BYTES = 4;
 constexpr int64_t FLOAT16_BYTES = 2;
-constexpr int64_t FP32_BLOCK_ALIGN_NUM = 8;
-constexpr int64_t FP16_BLOCK_ALIGN_NUM = 16;
 constexpr int64_t DATA_BLOCK_COUNT = 16;
 constexpr int64_t MAX_A_LEN = 160;
 constexpr int64_t MIN_A_LEN = 5;

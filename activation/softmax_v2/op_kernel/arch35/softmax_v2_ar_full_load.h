@@ -33,7 +33,7 @@ using AscendC::Reg::Reduce;
 using AscendC::Reg::StoreAlign;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
-constexpr static uint32_t BLOCK_SIZE = 32; // 32B
+constexpr static uint32_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 template <typename T_in, typename T_out>
 class SoftmaxV2AR : public SoftmaxV2OpsBase {

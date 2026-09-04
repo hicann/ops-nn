@@ -18,7 +18,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "../inc/platform.h"
+#include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 
 namespace SoftmaxGradOps {
@@ -52,7 +52,7 @@ constexpr static int64_t CONST_SIX = 6;
 constexpr static int64_t CONST_SEVEN = 7;
 constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_SIXTY_THREE = 63;
-constexpr static uint32_t VL_FP32 = static_cast<int64_t>(platform::GetVRegSize()) / sizeof(float);
+constexpr static uint32_t VL_FP32 = static_cast<int64_t>(Ops::Base::GetVRegSize()) / sizeof(float);
 
 class SoftmaxGradOpsBase {
 public:
@@ -172,7 +172,7 @@ __aicore__ inline void SoftmaxGradOpsBase::CastToFp32From(const LocalTensor<floa
     // CastToFp32From T
     uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
     uint16_t innerLoopTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
-                                                                       static_cast<int64_t>(platform::GetVRegSize())));
+                                                                       static_cast<int64_t>(Ops::Base::GetVRegSize())));
     uint32_t outerLoopSrcStride = static_cast<uint32_t>(stride * CONST_TWO);
     uint32_t outerLoopDstStride = static_cast<uint32_t>(stride);
     uint32_t innerLoopStride = VL_FP32;
@@ -215,7 +215,7 @@ __aicore__ inline void SoftmaxGradOpsBase::CastFromFp32To(const LocalTensor<T>& 
     // CastFromFp32To T
     uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
     uint16_t innerLoopTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
-                                                                       static_cast<int64_t>(platform::GetVRegSize())));
+                                                                       static_cast<int64_t>(Ops::Base::GetVRegSize())));
     uint32_t outerLoopSrcStride = static_cast<uint32_t>(stride);
     uint32_t outerLoopDstStride = static_cast<uint32_t>(stride * CONST_TWO);
     uint32_t innerLoopStride = VL_FP32;
@@ -253,8 +253,8 @@ __aicore__ inline void SoftmaxGradOpsBase::CopyIn(const LocalTensor<T>& dstTenso
     params.blockLen = colSize * sizeof(T);
     params.srcStride = srcStride * sizeof(T) - params.blockLen;
     params.dstStride = (dstStride * sizeof(T) - ops::Aligned(static_cast<int64_t>(params.blockLen),
-                                                             static_cast<int64_t>(platform::GetUbBlockSize()))) /
-                       platform::GetUbBlockSize();
+                                                             static_cast<int64_t>(Ops::Base::GetUbBlockSize()))) /
+                       Ops::Base::GetUbBlockSize();
     DataCopyPadExtParams<T> padParams;
     padParams.isPad = false;
     DataCopyPad(dstTensor, srcTensor, params, padParams);
@@ -295,8 +295,8 @@ __aicore__ inline void SoftmaxGradOpsBase::CopyOut(const GlobalTensor<T>& dstTen
     params.blockLen = colSize * sizeof(T);
     params.dstStride = dstStride * sizeof(T) - params.blockLen;
     params.srcStride = (srcStride * sizeof(T) - ops::Aligned(static_cast<int64_t>(params.blockLen),
-                                                             static_cast<int64_t>(platform::GetUbBlockSize()))) /
-                       platform::GetUbBlockSize();
+                                                             static_cast<int64_t>(Ops::Base::GetUbBlockSize()))) /
+                       Ops::Base::GetUbBlockSize();
     DataCopyPad(dstTensor, srcTensor, params);
 }
 
@@ -306,7 +306,7 @@ __aicore__ inline void SoftmaxGradOpsBase::CopyUB2UB(const LocalTensor<float>& d
     // CopyUB2UB
     DataCopy(
         dstTensor, srcTensor,
-        ops::Aligned(static_cast<int64_t>(count), static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float))));
+        ops::Aligned(static_cast<int64_t>(count), static_cast<int64_t>(Ops::Base::GetUbBlockSize() / sizeof(float))));
 }
 
 __aicore__ inline void SoftmaxGradOpsBase::VectorAdd(const LocalTensor<float>& dstTensor,
@@ -318,7 +318,7 @@ __aicore__ inline void SoftmaxGradOpsBase::VectorAdd(const LocalTensor<float>& d
         return;
     }
     uint16_t loopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
-                                            static_cast<int64_t>(platform::GetVRegSize()));
+                                            static_cast<int64_t>(Ops::Base::GetVRegSize()));
     __VEC_SCOPE__
     {
         __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
@@ -345,7 +345,7 @@ __aicore__ inline void SoftmaxGradOpsBase::VectorAdd(const LocalTensor<float>& d
 {
     // VectorAdd
     uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(nSize * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = mSize;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -379,7 +379,7 @@ __aicore__ inline void SoftmaxGradOpsBase::VectorMul(const LocalTensor<float>& d
         return;
     }
     uint16_t loopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
-                                            static_cast<int64_t>(platform::GetVRegSize()));
+                                            static_cast<int64_t>(Ops::Base::GetVRegSize()));
     __VEC_SCOPE__
     {
         __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
@@ -412,7 +412,7 @@ __aicore__ inline void SoftmaxGradOpsBase::NlastBroadcastMul(const LocalTensor<f
         return;
     }
     uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(aSize * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = bSize;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = aSize;
@@ -510,9 +510,9 @@ __aicore__ inline void SoftmaxGradOpsBase::LastReduceSum(const LocalTensor<float
     }
 
     int64_t ceilVLCount = Ops::Base::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)),
-                                             static_cast<int64_t>(platform::GetVRegSize()));
+                                             static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)),
-                                         static_cast<int64_t>(platform::GetVRegSize()));
+                                         static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -523,7 +523,7 @@ __aicore__ inline void SoftmaxGradOpsBase::LastReduceSum(const LocalTensor<float
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
     uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
-                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+                                               static_cast<int64_t>(Ops::Base::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -706,7 +706,7 @@ __aicore__ inline void SoftmaxGradOpsBase::NlastReduceSumSmallR(const LocalTenso
 {
     // NlastReduceSumSmallR
     uint16_t loopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(aSize * sizeof(float)),
-                                            static_cast<int64_t>(platform::GetVRegSize()));
+                                            static_cast<int64_t>(Ops::Base::GetVRegSize()));
     if constexpr (RSize == 1) {
         __VEC_SCOPE__
         {
@@ -780,7 +780,7 @@ __aicore__ inline void SoftmaxGradOpsBase::NlastReduceSumLargeR(const LocalTenso
     constexpr static uint32_t COMPRESSION = 8;
     int64_t foldPoint = FindNearestPower2(rSize);
     uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(aSize * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t mainFoldLoopTimes = ops::FloorDiv(static_cast<int64_t>(rSize - foldPoint),
                                                static_cast<int64_t>(COMPRESSION));
     uint16_t tailFoldLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(rSize - foldPoint),
@@ -890,7 +890,7 @@ __aicore__ inline void SoftmaxGradOpsBase::UpdateCache(const LocalTensor<float>&
 {
     // UpdateCache
     uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = cacheID;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -923,7 +923,7 @@ __aicore__ inline void SoftmaxGradOpsBase::Normalize(const LocalTensor<float>& d
     // Normalize
     uint16_t outerLoopTimes = rowSize;
     uint16_t innerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
-                                                 static_cast<int64_t>(platform::GetVRegSize()));
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint32_t outerLoopStride = colSize;
     uint32_t innerLoopStride = VL_FP32;
     __VEC_SCOPE__

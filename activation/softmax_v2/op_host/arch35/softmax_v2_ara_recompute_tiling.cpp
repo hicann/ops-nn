@@ -69,7 +69,7 @@ ge::graphStatus SoftmaxV2ARARecomputeTiling::DoOpTiling()
         OP_LOGI(context_->GetNodeName(), "ARA recompute template is not capable, compute binary add tiling not ok."),
         return ge::GRAPH_PARAM_INVALID);
 
-    a0TileBase_ = xDtype_ == ge::DT_FLOAT ? FP32_BLOCK_ALIGN_NUM : FP16_BLOCK_ALIGN_NUM;
+    a0TileBase_ = xDtype_ == ge::DT_FLOAT ? blockSize_ / FLOAT32_BYTES : blockSize_ / FLOAT16_BYTES;
 
     int64_t factorMax = aicoreParams_.ubSize / a0TileBase_ /
                         (binAddRFactor_ * DOUBLE_BUFFER * (FLOAT32_BYTES + xDtypeSize_) +

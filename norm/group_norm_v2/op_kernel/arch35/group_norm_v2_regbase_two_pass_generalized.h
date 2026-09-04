@@ -197,7 +197,7 @@ private:
         int32_t realNumPerCore = numPerCore > innerNumPerCore ? innerNumPerCore : numPerCore;
         int32_t meanSize = RoundUp<T1>(realNumPerCore * (FLOAT_BYTE_SIZE / sizeof(T1)));
         int32_t rstdSize = RoundUp<T1>(realNumPerCore * (FLOAT_BYTE_SIZE / sizeof(T1)));
-        int32_t dichotomySize = RoundUp<T1>((dichotomyAddPower / FP32_ONE_REPEAT) * (FLOAT_BYTE_SIZE / sizeof(T1)));
+        int32_t dichotomySize = RoundUp<T1>((dichotomyAddPower / VL_FP32) * (FLOAT_BYTE_SIZE / sizeof(T1)));
         int32_t meanOutSize = 0;
         int32_t rstdOutSize = 0;
         if constexpr (IsSameType<T1, half>::value || IsSameType<T1, bfloat16_t>::value) {

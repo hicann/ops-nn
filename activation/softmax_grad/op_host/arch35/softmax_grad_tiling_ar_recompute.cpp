@@ -14,8 +14,7 @@ using namespace ge;
 
 namespace optiling {
 
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048; // sizeof(float) * 8 * 64
+constexpr int64_t AR_RECOMPUTE_CACHE_SLOT_NUM = 64; // UB间二分累加Cache最大数量
 
 bool SoftmaxGradTilingARRecompute::IsCapable()
 {
@@ -66,8 +65,7 @@ int64_t SoftmaxGradTilingARRecompute::Lcm(const int64_t a, const int64_t b)
 
 ge::graphStatus SoftmaxGradTilingARRecompute::DoOpTiling()
 {
-    // 检查ub空间是否足够
-    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_SUM_BUFFER_BTYES - AR_RECOMPUTE_BINARY_CACHE_BTYES;
+    ubFlexible_ = aicoreParams_.ubSize - blockSize_ - AR_RECOMPUTE_CACHE_SLOT_NUM * blockSize_;
     baseFactor_ = xDtypeSize_ * DOUBLE_BUFFER * CONST_TWO + FLOAT32_BYTES * DOUBLE_BUFFER;
 
     OP_CHECK_IF((baseFactor_ > ubFlexible_),

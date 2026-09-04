@@ -37,7 +37,7 @@ using AscendC::Reg::RegTensor;
 using AscendC::Reg::StoreDist;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
-constexpr static uint32_t BLOCK_SIZE = 32; // 32B
+constexpr static uint32_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 template <typename T>
 class LogSoftmaxGradAR : public LogSoftmaxGradOpsBase {
@@ -176,9 +176,9 @@ __aicore__ inline void LogSoftmaxGradAR<T>::NormCompute(const LocalTensor<T>& ds
     }
 
     int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(tl_->r * sizeof(float)),
-                                       static_cast<int64_t>(platform::GetVRegSize()));
+                                       static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(tl_->r * sizeof(float)),
-                                         static_cast<int64_t>(platform::GetVRegSize()));
+                                         static_cast<int64_t>(Ops::Base::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -189,7 +189,7 @@ __aicore__ inline void LogSoftmaxGradAR<T>::NormCompute(const LocalTensor<T>& ds
     uint32_t outerLoopStride = tl_->rAligned;
     uint32_t innerLoopStride = VL_FP32;
     uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
-                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+                                               static_cast<int64_t>(Ops::Base::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;

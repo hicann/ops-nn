@@ -15,6 +15,7 @@
 #ifndef GROUP_NORM_V2_REGBASE_BASE_H_
 #define GROUP_NORM_V2_REGBASE_BASE_H_
 #include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
 #include "../../norm_common/reduce_common_regbase.h"
 namespace GroupNormV2 {
 using namespace AscendC;
@@ -23,9 +24,8 @@ using AscendC::Reg::MaskReg;
 using AscendC::Reg::RegTensor;
 using AscendC::Reg::UnalignRegForLoad;
 using AscendC::Reg::UnalignRegForStore;
-static constexpr int32_t BLOCK_SIZE = 32;
+static constexpr int32_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 static constexpr int32_t FOUR_BUF = 4;
-static constexpr int32_t FP32_ONE_REPEAT = 64;
 static constexpr int32_t FLOAT_BYTE_SIZE = 4;
 static constexpr int32_t FOUR_UNROLL = 4;
 static constexpr int32_t HALF = 2;
@@ -36,7 +36,7 @@ static constexpr int32_t INDEX_3 = 3;
 static constexpr int32_t BASIC_NUM = 1024;
 static constexpr int32_t GROUP_NUM = 8;
 static constexpr int32_t MAX_ONCE_NUM_PER_CORE = 2048;
-static constexpr int32_t VL_FP32 = VECTOR_REG_WIDTH / sizeof(float);
+static constexpr int32_t VL_FP32 = Ops::Base::GetVRegSize() / sizeof(float);
 static constexpr float ZERO = 0.0f;
 constexpr static AscendC::Reg::CastTrait castTraitB162B32Even = {
     AscendC::Reg::RegLayout::ZERO, // even
@@ -84,7 +84,7 @@ __aicore__ inline uint32_t RoundUp(uint32_t x)
 template <typename T>
 __aicore__ inline uint16_t GetVLSize()
 {
-    return VECTOR_REG_WIDTH / sizeof(T);
+    return Ops::Base::GetVRegSize() / sizeof(T);
 }
 
 template <typename T>

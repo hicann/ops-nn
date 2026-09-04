@@ -23,9 +23,10 @@ using namespace AscendC;
 using AscendC::Reg::LoadAlign;
 using AscendC::Reg::StoreAlign;
 
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;
+constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = Ops::Base::GetUbBlockSize();
 constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / sizeof(float);
+constexpr int64_t AR_RECOMPUTE_CACHE_SLOT_NUM = 64; // UB间二分累加Cache最大数量
+constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = AR_RECOMPUTE_CACHE_SLOT_NUM * Ops::Base::GetUbBlockSize();
 constexpr static float CONST_FP32_MIN = -(__builtin_inff());
 constexpr int64_t A_IN_IN = 1;
 

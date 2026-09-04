@@ -14,7 +14,6 @@ using namespace ge;
 namespace optiling {
 
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
-static constexpr int64_t R_MAX_VALUE = 16384; // 二分累加支持最大值
 
 static int64_t FindNearestPower2(int64_t value)
 {
@@ -36,9 +35,10 @@ bool SoftmaxGradTilingAR::IsCapable()
     OP_CHECK_IF(a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "),
                 return false);
 
-    OP_CHECK_IF(r_ > R_MAX_VALUE,
+    const int64_t rMaxValue = CONST_FOUR * vlFp32_ * vlFp32_;
+    OP_CHECK_IF(r_ > rMaxValue,
                 OP_LOGI(context_->GetNodeName(),
-                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
+                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, rMaxValue),
                 return false);
     return true;
 }
@@ -51,7 +51,7 @@ ge::graphStatus SoftmaxGradTilingAR::DoOpTiling()
     if (r_ > CONST_TWO * vlFp32_) {
         int64_t ceilVLCount = Ops::Base::CeilDiv(r_, vlFp32_);
         int64_t foldPoint = FindNearestPower2(ceilVLCount);
-        int64_t outerLoopDstStride = Ops::Base::CeilAlign(foldPoint, FP32_BLOCK_ALIGN_NUM);
+        int64_t outerLoopDstStride = Ops::Base::CeilAlign(foldPoint, blockSize_ / FLOAT32_BYTES);
         binaryTmpPerRow = outerLoopDstStride * FLOAT32_BYTES;
     }
 

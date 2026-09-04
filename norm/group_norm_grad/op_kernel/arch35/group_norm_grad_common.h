@@ -17,6 +17,7 @@
 #pragma once
 
 #include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace GroupNormGrad {
@@ -40,16 +41,9 @@ using namespace NormCommon::NormCommonRegbase;
 constexpr int DOUBLE_BUFFER = 2;
 constexpr int TRIPLE_BUFFER = 3;
 
-__aicore__ inline constexpr uint32_t GetVRegSize()
-{
-#if __CCE_AICORE__ == 310
-    return AscendC::VECTOR_REG_WIDTH;
-#else
-    return 256U;
-#endif
-}
+__aicore__ inline constexpr uint32_t GetVRegSize() { return Ops::Base::GetVRegSize(); }
 
-__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return Ops::Base::GetUbBlockSize(); }
 
 constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
     AscendC::Reg::RegLayout::ZERO,

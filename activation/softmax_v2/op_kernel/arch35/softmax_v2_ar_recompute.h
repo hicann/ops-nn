@@ -24,10 +24,11 @@
 
 namespace SoftmaxV2Ops {
 using namespace AscendC;
-constexpr int64_t AR_RECOMPUTE_MAX_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;
+constexpr int64_t AR_RECOMPUTE_MAX_BUFFER_BTYES = Ops::Base::GetUbBlockSize();
+constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = Ops::Base::GetUbBlockSize();
 constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / sizeof(float);
+constexpr int64_t AR_RECOMPUTE_CACHE_SLOT_NUM = 64; // UB间二分累加Cache最大数量
+constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = AR_RECOMPUTE_CACHE_SLOT_NUM * Ops::Base::GetUbBlockSize();
 constexpr static uint32_t TRIPLE_BUFFER = 3;
 constexpr static float CONST_FP32_MIN = -(__builtin_inff());
 constexpr int64_t A_IN_IN = 1;
