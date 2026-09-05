@@ -236,12 +236,13 @@ __simt_vf__ __aicore__ __launch_bounds__(WITH_SORTED_THREAD_NUM) inline void Wit
 template <typename T, typename IdxT, typename CountT, bool IsSubset, typename KeyT, typename PermT,
           int ReduMode = REDU_ADD>
 __aicore__ inline void WithSortedProcess(AscendC::TPipe* pipe, GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                         GM_ADDR output, GM_ADDR workspace, const ScatterElementsV2AscTilingData* td)
+                                         GM_ADDR output, GM_ADDR userWorkspace,
+                                         const ScatterElementsV2AscTilingData* td)
 {
     __gm__ IdxT* idxGm = reinterpret_cast<__gm__ IdxT*>(indices);
     __gm__ T* srcGm = reinterpret_cast<__gm__ T*>(updates);
     __gm__ T* yGm = reinterpret_cast<__gm__ T*>(output);
-    __gm__ char* usrWs = reinterpret_cast<__gm__ char*>(AscendC::GetUserWorkspace(workspace));
+    __gm__ char* usrWs = reinterpret_cast<__gm__ char*>(userWorkspace);
 
     int64_t indicesTotalNum = td->sortTiling.indicesTotalNum;
     int64_t dataAxis = td->dataAxis;
@@ -364,13 +365,13 @@ public:
         : tilingData_(tilingData), pipe_(pipe)
     {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWorkspace)
     {
         var_ = var;
         indices_ = indices;
         updates_ = updates;
         y_ = y;
-        workspace_ = workspace;
+        userWorkspace_ = userWorkspace;
     }
 
     __aicore__ inline void Process()
@@ -416,10 +417,10 @@ private:
         // permSize = sortTiling.permSize（4=int32, 8=int64，host 按 countMode 决定）
         if (permSize == 4) {
             WithSortedProcess<T, IDX_T, CountT, IsSubset, KeyT, int32_t, ReduMode>(pipe_, var_, indices_, updates_, y_,
-                                                                                   workspace_, tilingData_);
+                                                                                   userWorkspace_, tilingData_);
         } else {
             WithSortedProcess<T, IDX_T, CountT, IsSubset, KeyT, int64_t, ReduMode>(pipe_, var_, indices_, updates_, y_,
-                                                                                   workspace_, tilingData_);
+                                                                                   userWorkspace_, tilingData_);
         }
     }
 
@@ -429,7 +430,7 @@ private:
     GM_ADDR indices_ = nullptr;
     GM_ADDR updates_ = nullptr;
     GM_ADDR y_ = nullptr;
-    GM_ADDR workspace_ = nullptr;
+    GM_ADDR userWorkspace_ = nullptr;
 };
 
 } // namespace ScatterElements
