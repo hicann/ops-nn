@@ -42,7 +42,7 @@ struct ApplyAdagradDUpdateSlots {
 
     using OpAccumSqrt = Bind<Vec::Sqrt<T>, OpAccumOut>;
     using OpLrMulGrad = Bind<Vec::Mul<T>, OpGradCast, OpLrCast>;
-    using OpVarT = Bind<Vec::DivHighPrecision<T>, OpLrMulGrad, OpAccumSqrt>;
+    using OpVarT = Bind<Vec::Div<T>, OpLrMulGrad, OpAccumSqrt>;
     using OpVarOut = Bind<Vec::Sub<T>, OpVarCast, OpVarT>;
     using OpVarOutCast = Bind<Vec::Cast<U, T, 1>, OpVarOut>;
     using OpCopyOutVar = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpVarOutCast>;
@@ -66,7 +66,7 @@ struct ApplyAdagradD {
 
     using OpAccumSqrt = Bind<Vec::Sqrt<T>, OpAccumCast>;
     using OpLrMulGrad = Bind<Vec::Mul<T>, OpGradCast, OpLrCast>;
-    using OpVarT = Bind<Vec::DivHighPrecision<T>, OpLrMulGrad, OpAccumSqrt>;
+    using OpVarT = Bind<Vec::Div<T>, OpLrMulGrad, OpAccumSqrt>;
     using OpVarOut = Bind<Vec::Sub<T>, OpVarCast, OpVarT>;
     using OpVarOutCast = Bind<Vec::Cast<U, T, 1>, OpVarOut>;
     using OpCopyOutVar = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpVarOutCast>;
