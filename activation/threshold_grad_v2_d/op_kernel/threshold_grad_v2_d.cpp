@@ -36,7 +36,7 @@ __global__ __aicore__ void threshold_grad_v2_d(GM_ADDR gradOutput, GM_ADDR self,
         BroadcastSch<schMode, ThresholdGradV2DDag<float>::OpDag> sch(tiling);
         sch.Process(gradOutput, self, out);
     } else if constexpr (dtype == static_cast<uint64_t>(THRESHOLD_GRAD_V2_D_TPL_INT32)) {
-        BroadcastSch<schMode, ThresholdGradV2DInt32Dag<int32_t>::OpDag> sch(tiling);
+        BroadcastSch<schMode, ThresholdGradV2DInt32Dag::OpDag> sch(tiling);
         sch.Process(gradOutput, self, out);
     } else if constexpr (dtype == static_cast<uint64_t>(THRESHOLD_GRAD_V2_D_TPL_INT8)) {
         BroadcastSch<schMode, ThresholdGradV2D8BDag<int8_t>::OpDag> sch(tiling);

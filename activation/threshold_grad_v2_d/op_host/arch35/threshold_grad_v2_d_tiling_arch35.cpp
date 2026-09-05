@@ -14,6 +14,8 @@
  */
 
 #include "threshold_grad_v2_d_tiling.h"
+#include <cmath>
+#include <limits>
 #include <graph/utils/type_utils.h>
 #include "log/log.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
@@ -87,13 +89,19 @@ ge::graphStatus ThresholdGradV2DTiling::DoOpTiling()
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), THRESHOLD_GRAD_V2_D_TPL_FP32);
         brcBaseTiling.SetScalar<float>(thresHold);
     } else if (input0DType == ge::DT_INT32) {
-        BroadcastBaseTiling<ThresholdGradV2DInt32Dag<int32_t>::OpDag> brcBaseTiling(context_);
+        constexpr float int32MinAsFloat = static_cast<float>(std::numeric_limits<int32_t>::min());
+        constexpr float int32MaxAsFloat = static_cast<float>(std::numeric_limits<int32_t>::max());
+        OP_CHECK_IF(!std::isfinite(thresHold) || thresHold < int32MinAsFloat || thresHold >= int32MaxAsFloat,
+                    OP_LOGE(context_->GetNodeName(), "threshold must be a finite value representable as int32"),
+                    return ge::GRAPH_FAILED);
+        const int32_t int32Threshold = static_cast<int32_t>(thresHold);
+        BroadcastBaseTiling<ThresholdGradV2DInt32Dag::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<ThresholdGradV2DDag<int32_t>::OpDag> failed"),
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<ThresholdGradV2DInt32Dag::OpDag> failed"),
                     return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), THRESHOLD_GRAD_V2_D_TPL_INT32);
-        brcBaseTiling.SetScalar<float>(thresHold);
+        brcBaseTiling.SetScalar<int32_t>(int32Threshold);
     } else if (input0DType == ge::DT_INT8) {
         BroadcastBaseTiling<ThresholdGradV2D8BDag<int8_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();

@@ -34,9 +34,13 @@ def threshold_grad_v2_d_golden(grad_output, self_tensor, *, threshold=1.0, **kwa
     grad_output_t = numpy_to_torch_tensor(grad_output)
     self_t = numpy_to_torch_tensor(self_tensor)
     grad_output_t, self_t = torch.broadcast_tensors(grad_output_t, self_t)
-    mask = self_t.to(torch.float32) > float(threshold)
-    result = torch.where(mask, grad_output_t, torch.zeros_like(grad_output_t))
-    return torch_to_numpy_tensor(result.cpu())
+    output_dtype = grad_output_t.dtype
+    # The kernel promotes every supported dtype to float32 for comparison and
+    # selection, then casts the selected gradient back to the output dtype.
+    result = torch.ops.aten.threshold_backward(
+        grad_output_t.to(torch.float32), self_t.to(torch.float32), threshold
+    )
+    return torch_to_numpy_tensor(result.to(output_dtype).cpu())
 
 
 def aclnn_threshold_backward_golden(gradOutput, self, threshold, out, **kwargs):
