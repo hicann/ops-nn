@@ -176,7 +176,7 @@ aclnnStatus aclnnClippedSwigluV2(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
-      <td><ul><li>支持空指针。</li><li>不为空指针时，维度要求为1维，长度不超过8192，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>支持空指针。</li><li>不为空指针时，维度要求为1维，元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</li><li>支持的group分组数量由UB空间大小决定。</li><li>不支持空Tensor。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>

@@ -126,7 +126,7 @@
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>公式中的输入group_index。维度必须是1维，且元素个数必须小于等于8192。</td>
+      <td>公式中的输入group_index。维度必须是1维，元素需大于等于0，支持的group分组数量由UB空间大小决定。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
