@@ -10,10 +10,41 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+import numpy as np
+import torch
+
 
 __golden__ = {
     "kernel": {"inplace_index_add_with_sorted": "inplace_index_add_with_sorted_golden"}
 }
+
+
+def _np_to_torch(arr):
+    """numpy -> torch，兼容 bfloat16（torch.from_numpy 不直接支持 ml_dtypes.bfloat16）。"""
+    if arr is None:
+        return None
+    if "bfloat16" in str(arr.dtype):
+        return torch.from_numpy(np.ascontiguousarray(arr).view(np.int16)).view(
+            torch.bfloat16
+        )
+    return torch.from_numpy(np.ascontiguousarray(arr))
+
+
+def _torch_to_np(t, ori_dtype):
+    """把 torch tensor 转回 numpy，并还原原始 dtype（含 bfloat16）。"""
+    if "bfloat16" in ori_dtype:
+        import ml_dtypes
+
+        return (
+            t.to(torch.bfloat16)
+            .view(torch.int16)
+            .cpu()
+            .numpy()
+            .view(ml_dtypes.bfloat16)
+        )
+    if "float16" in ori_dtype:
+        return t.to(torch.float16).cpu().numpy()
+    return t.cpu().numpy()
 
 
 def inplace_index_add_with_sorted_golden(
@@ -42,30 +73,26 @@ def inplace_index_add_with_sorted_golden(
         pos: numpy.ndarray (int32), inverse permutation mapping sorted order to
             value rows.
         alpha: numpy.ndarray or None, scalar scaling factor on value. Default 1.
-        axis: int, dimension of var along which indices apply.
+        axis: int, dimension of var along which indices apply, only 0.
         **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
                   full_soc_version, short_soc_version, testcase_name
 
     Returns:
         Output tensor (numpy.ndarray) of the same shape and dtype as var.
     """
-    import torch
+    # 统一升 fp32 计算：既规避 torch.from_numpy 不支持 bfloat16，也避免 fp16/bf16 累加精度损失
+    var_t = _np_to_torch(var).to(torch.float32)
+    value_t = _np_to_torch(value).to(torch.float32)
+    idx_t = _np_to_torch(sorted_indices).to(torch.int64)
+    pos_t = _np_to_torch(pos).to(torch.int64)
 
-    # Keep native var dtype for accumulation; value is cast to var dtype so the
-    # index_add accumulation matches the kernel's compute precision.
-    tensor_var = torch.from_numpy(var.copy())
-    tensor_value = torch.from_numpy(value).to(tensor_var.dtype)
-    tensor_sorted_indices = torch.from_numpy(sorted_indices.ravel()).to(torch.int64)
-    tensor_pos = torch.from_numpy(pos.ravel()).to(torch.int64)
-
-    # Reorder value rows by pos: value[pos[i]] aligns with sorted_indices[i]
-    tensor_updates = tensor_value[tensor_pos]
-
-    alpha_value = 1
+    alpha_val = 1.0
     if alpha is not None:
-        alpha_value = torch.from_numpy(alpha).item()
+        alpha_val = float(_np_to_torch(alpha).item())
 
-    tensor_var.index_add_(
-        axis, tensor_sorted_indices, tensor_updates, alpha=alpha_value
-    )
-    return tensor_var.numpy()
+    # 按 pos 重排 value，再按 sorted_indices 累加到 var
+    value_reordered = value_t[pos_t] * alpha_val
+    out = var_t.clone()
+    out.index_add_(axis, idx_t, value_reordered)
+
+    return _torch_to_np(out, str(var.dtype))
