@@ -15,15 +15,17 @@
 #include "register/register.h"
 
 namespace domi {
-static Status AutoMappingFnEinSum(const ge::Operator& op_src, ge::Operator& op)
+static Status AutoMappingFnEinSum(const google::protobuf::Message* op_src, ge::Operator& op)
 {
-    AutoMappingByOpFn(op_src, op);
+    map<string, pair<string, string>> value;
+    value["in"] = pair<string, string>("x", "N");
+    (void)AutoMappingFnDynamic(op_src, op, value);
     return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("Einsum")
     .FrameworkType(TENSORFLOW)
     .OriginOpType("Einsum")
-    .ParseParamsByOperatorFn(AutoMappingFnEinSum)
+    .ParseParamsFn(AutoMappingFnEinSum)
     .ImplyType(ImplyType::TVM);
 } // namespace domi
