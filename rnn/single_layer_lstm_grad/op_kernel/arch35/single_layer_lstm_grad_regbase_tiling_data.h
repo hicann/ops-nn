@@ -63,6 +63,16 @@ LSTM_REGBASE_HOST_DEVICE int64_t CeilDivI64(int64_t x, int64_t a) { return (x + 
 // Every logical row is stored with a 32B-aligned pitch, because the regbase aligned
 // vector load/store (vlds/vsts) requires 32B-aligned addresses; masks cover the H tail.
 struct LstmGradRegbaseSmallUbLayout {
+    // semantic constants of the layout (class-scoped to stay independent from kernel-side names)
+    static constexpr int64_t GATE_NUM = 4;         // LSTM i/j/f/o gates; dgate holds one pitched H-row per gate
+    static constexpr int64_t FP32_BYTES = 4;       // dgate / recurrent state / accumulators are always fp32
+    static constexpr int64_t UB_ACCESS_ALIGN = 32; // bytes; aligned vlds/vsts require 32B-aligned addresses
+    static constexpr int64_t REGION_ALIGN = 64;    // bytes; region bases use a stricter 64B alignment
+    static constexpr int64_t PING_PONG_NUM = 2;    // dh/dc recurrent state alternates between two buffers
+    static constexpr int64_t PREV_STATE_NUM = 2;   // staged final outputs: dh_prev and dc_prev
+    static constexpr int64_t TAIL_PAD_BYTES = 256; // one vector register width (VL): full-VL loads may read
+                                                   // up to VL-1 elements past the last region
+
     int64_t hAlignT; // row pitch (elements) of dtype-T [.., H] rows: AlignUp(H*dsz,32)/dsz
     int64_t hAlignF; // row pitch (elements) of fp32 [.., H] rows: AlignUp(H*4,32)/4
     // resident inputs, dtype T, T*B rows of pitch hAlignT
@@ -96,13 +106,12 @@ struct LstmGradRegbaseSmallUbLayout {
     LSTM_REGBASE_HOST_DEVICE void Fill(int64_t timeStep, int64_t batch, int64_t hidden, int64_t chunkCols,
                                        int64_t mBlock, int64_t dtypeSize)
     {
-        const int64_t kAlign = 64;
         const int64_t rows = timeStep * batch;
-        const int64_t gates = 4 * hidden;
-        hAlignT = AlignUpI64(hidden * dtypeSize, 32) / dtypeSize;
-        hAlignF = AlignUpI64(hidden * 4, 32) / 4;
-        const int64_t resT = AlignUpI64(rows * hAlignT * dtypeSize, kAlign);
-        const int64_t resB = AlignUpI64(batch * hAlignT * dtypeSize, kAlign);
+        const int64_t gates = GATE_NUM * hidden;
+        hAlignT = AlignUpI64(hidden * dtypeSize, UB_ACCESS_ALIGN) / dtypeSize;
+        hAlignF = AlignUpI64(hidden * FP32_BYTES, UB_ACCESS_ALIGN) / FP32_BYTES;
+        const int64_t resT = AlignUpI64(rows * hAlignT * dtypeSize, REGION_ALIGN);
+        const int64_t resB = AlignUpI64(batch * hAlignT * dtypeSize, REGION_ALIGN);
 
         int64_t off = 0;
         dyOff = off;
@@ -130,25 +139,25 @@ struct LstmGradRegbaseSmallUbLayout {
         dc0Off = off;
         off += resB;
         whOff = off;
-        off += AlignUpI64(gates * hAlignT * dtypeSize, kAlign);
+        off += AlignUpI64(gates * hAlignT * dtypeSize, REGION_ALIGN);
         dgateOff = off;
-        off += AlignUpI64(rows * 4 * hAlignF * 4, kAlign);
+        off += AlignUpI64(rows * GATE_NUM * hAlignF * FP32_BYTES, REGION_ALIGN);
         dhCurOff = off;
-        off += AlignUpI64(2 * batch * hAlignF * 4, kAlign);
+        off += AlignUpI64(PING_PONG_NUM * batch * hAlignF * FP32_BYTES, REGION_ALIGN);
         dcCurOff = off;
-        off += AlignUpI64(2 * batch * hAlignF * 4, kAlign);
+        off += AlignUpI64(PING_PONG_NUM * batch * hAlignF * FP32_BYTES, REGION_ALIGN);
         wChunkOff = off;
-        off += AlignUpI64(gates * chunkCols * dtypeSize, kAlign);
+        off += AlignUpI64(gates * chunkCols * dtypeSize, REGION_ALIGN);
         xChunkOff = off;
-        off += AlignUpI64(mBlock * chunkCols * dtypeSize, kAlign);
+        off += AlignUpI64(mBlock * chunkCols * dtypeSize, REGION_ALIGN);
         dwAccOff = off;
-        off += AlignUpI64(gates * chunkCols * 4, kAlign);
+        off += AlignUpI64(gates * chunkCols * FP32_BYTES, REGION_ALIGN);
         const int64_t outRows = (mBlock > gates) ? mBlock : gates;
         outStageOff = off;
-        off += AlignUpI64(outRows * chunkCols * dtypeSize, kAlign);
+        off += AlignUpI64(outRows * chunkCols * dtypeSize, REGION_ALIGN);
         smallStageOff = off;
-        off += AlignUpI64((4 + 2 * batch) * hAlignT * dtypeSize, kAlign);
-        off += 256; // tail pad: full-VL vector loads may read up to VL-1 elements past a region
+        off += AlignUpI64((GATE_NUM + PREV_STATE_NUM * batch) * hAlignT * dtypeSize, REGION_ALIGN);
+        off += TAIL_PAD_BYTES; // full-VL vector loads may read up to VL-1 elements past a region
         totalBytes = off;
     }
 };

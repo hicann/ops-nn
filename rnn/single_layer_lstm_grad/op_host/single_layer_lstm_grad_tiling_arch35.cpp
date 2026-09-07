@@ -51,7 +51,8 @@ constexpr size_t IDX_TANHC = 15;
 constexpr size_t IDX_SEQ = 16;
 constexpr size_t ATTR_DIRECTION = 0;
 constexpr size_t ATTR_GATE_ORDER = 1;
-constexpr size_t DIM_NUM_3 = 3;
+constexpr size_t RANK_2D = 2; // matrix inputs: w is [4H, I+H]
+constexpr size_t RANK_3D = 3; // state/sequence inputs: [T, B, H] or [1, B, H]
 
 bool InputShapeIs2D(const gert::TilingContext* context, size_t idx, int64_t d0, int64_t d1)
 {
@@ -60,7 +61,7 @@ bool InputShapeIs2D(const gert::TilingContext* context, size_t idx, int64_t d0, 
         return false;
     }
     const gert::Shape& shape = s->GetStorageShape();
-    return shape.GetDimNum() == 2 && shape.GetDim(0) == d0 && shape.GetDim(1) == d1;
+    return shape.GetDimNum() == RANK_2D && shape.GetDim(0) == d0 && shape.GetDim(1) == d1;
 }
 
 bool InputShapeIs3D(const gert::TilingContext* context, size_t idx, int64_t d0, int64_t d1, int64_t d2)
@@ -70,7 +71,7 @@ bool InputShapeIs3D(const gert::TilingContext* context, size_t idx, int64_t d0, 
         return false;
     }
     const gert::Shape& shape = s->GetStorageShape();
-    return shape.GetDimNum() == DIM_NUM_3 && shape.GetDim(0) == d0 && shape.GetDim(1) == d1 && shape.GetDim(2) == d2;
+    return shape.GetDimNum() == RANK_3D && shape.GetDim(0) == d0 && shape.GetDim(1) == d1 && shape.GetDim(2) == d2;
 }
 
 // eligible shapes bypass the legacy validation, so they must be fully re-validated here
@@ -130,7 +131,7 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
 
     const gert::Shape& xShape = xShapePtr->GetStorageShape();
     const gert::Shape& initHShape = initHShapePtr->GetStorageShape();
-    if (xShape.GetDimNum() != DIM_NUM_3 || initHShape.GetDimNum() != DIM_NUM_3) {
+    if (xShape.GetDimNum() != RANK_3D || initHShape.GetDimNum() != RANK_3D) {
         return ge::GRAPH_SUCCESS;
     }
     const int64_t timeStep = xShape.GetDim(0);
