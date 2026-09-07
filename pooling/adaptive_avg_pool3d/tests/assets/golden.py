@@ -13,7 +13,12 @@
 import numpy as np
 
 
-__golden__ = {"kernel": {"adaptive_avg_pool3d": "adaptive_avg_pool3d_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnAdaptiveAvgPool3d": "aclnn_adaptive_avg_pool3d_golden",
+    },
+    "kernel": {"adaptive_avg_pool3d": "adaptive_avg_pool3d_golden"},
+}
 
 
 def adaptive_avg_pool3d_golden(x, output_size, data_format="NDHWC", **kwargs):
@@ -54,3 +59,22 @@ def adaptive_avg_pool3d_golden(x, output_size, data_format="NDHWC", **kwargs):
     output = output.numpy().astype(xDtype)
 
     return output
+
+
+def aclnn_adaptive_avg_pool3d_golden(self, outputSize=0, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnAdaptiveAvgPool3d.
+    Parameters follow @aclnnAdaptiveAvgPool3dGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    if hasattr(outputSize, "tolist"):
+        outputSize = outputSize.tolist()
+    elif isinstance(outputSize, int):
+        outputSize = [outputSize] * 3
+    orig_dtype = self.dtype
+    if orig_dtype in (torch.float16, torch.bfloat16):
+        self = self.to(torch.float32)
+    result = torch.nn.functional.adaptive_avg_pool3d(self, outputSize)
+    return [result.to(orig_dtype)]

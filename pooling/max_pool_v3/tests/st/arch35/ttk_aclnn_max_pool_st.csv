@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,output_tensor_indexes,input_data_ranges
+aclnnMaxPool_random_000001,aclnnMaxPool,"('float32', 'float32')","('NCHW', 'NCHW')","{'kernelShape': [2,2], 'strides': [2,2], 'autoPad' :0, 'pads' : [0], 'dilations': [1], 'ceilMode':False}","((1,1,2,2), (1,1,1,1))","(1,)","((0.001, 0.01),)"
+aclnnMaxPool_random_000002,aclnnMaxPool,"('float16', 'float16')","('NCHW', 'NCHW')","{'kernelShape': [2,2], 'strides': [2,2], 'autoPad' :0, 'pads' : [0], 'dilations': [1], 'ceilMode':False}","((1,1,2,2), (1,1,1,1))","(1,)","((-1000, -10),)"
+aclnnMaxPool_random_000003,aclnnMaxPool,"('bfloat16', 'bfloat16')","('NCHW', 'NCHW')","{'kernelShape': [2,2], 'strides': [2,2], 'autoPad' :0, 'pads' : [0], 'dilations': [1], 'ceilMode':False}","((1,1,2,2), (1,1,1,1))","(1,)","((1, 2),)"
+aclnnMaxPool_random_000004,aclnnMaxPool,"('float32', 'float32')","('NCHW', 'NCHW')","{'kernelShape': [2,2], 'strides': [2,2], 'autoPad' :0, 'pads' : [0], 'dilations': [1], 'ceilMode':False}","((64,1,16,16), (64,1,8,8))","(1,)","((-1, -0.01),)"
+aclnnMaxPool_random_000005,aclnnMaxPool,"('float32', 'float32')","('NCHW', 'NCHW')","{'kernelShape': [3], 'strides': [3], 'autoPad' :0, 'pads' : [1], 'dilations': [1], 'ceilMode':True}","((16,1,9,9), (16,1,4,4))","(1,)","((-0.01, 0.01),)"

@@ -11,7 +11,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"embedding_dense_grad_v2": "embedding_dense_grad_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnEmbeddingDenseBackward": "aclnn_embedding_dense_backward_golden",
+    },
+    "kernel": {"embedding_dense_grad_v2": "embedding_dense_grad_v2_golden"},
+}
 
 
 def embedding_dense_grad_v2_golden(
@@ -60,4 +65,37 @@ def embedding_dense_grad_v2_golden(
         result = result.numpy().astype(grad_dtype, copy=False)
     else:
         result = result.numpy()
+    return result
+
+
+def aclnn_embedding_dense_backward_golden(
+    grad, indices, numWeights=0, paddingIdx=0, scaleGradByFreq=0, out=None, **kwargs
+):
+    """
+    Aclnn golden for aclnnEmbeddingDenseBackward.
+    Parameters follow @aclnnEmbeddingDenseBackwardGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    grad_dtype = grad.dtype
+    indices_dtype = indices.dtype
+
+    if grad_dtype == torch.float16 or grad_dtype == torch.bfloat16:
+        grad = grad.to(torch.float32)
+
+    if indices_dtype != torch.int32 and indices_dtype != torch.int64:
+        if indices_dtype == torch.float64:
+            indices = indices.to(torch.int64)
+        else:
+            indices = indices.to(torch.int32)
+    attrs = kwargs.get("attributes", {})
+    num_weights = attrs.get("numWeights", -1)
+    padding_idx = attrs.get("paddingIdx", -1)
+    scale_grad_by_freq = attrs.get("scaleGradByFreq", False)
+    result = torch.ops.aten.embedding_dense_backward(
+        grad, indices, num_weights, padding_idx, scale_grad_by_freq
+    )
+    if grad_dtype == torch.float16 or grad_dtype == torch.bfloat16:
+        result = result.to(grad_dtype)
     return result

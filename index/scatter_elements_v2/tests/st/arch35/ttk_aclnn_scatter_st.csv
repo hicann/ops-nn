@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision
+aclnnScatter_001,aclnnScatter,"((1,), (1,), (1,), (1,))","('float32', 'int32', 'float32', 'float32')","{'dim': -1, 'reduce': 0}","(3,)","((-1, 100), (0, 0), (1, 100))",,
+aclnnScatter_002,aclnnScatter,"((1,), (1,), (1,), (1,))","('int8', 'int64', 'int8', 'int8')","{'dim': -1, 'reduce': 0}","(3,)","((-1, 100), (0, 0), (1, 100))",,
+aclnnScatter_003,aclnnScatter,"((1,), (1,), (1,), (1,))","('float16', 'int64', 'float16', 'float16')","{'dim': 0, 'reduce': 0}","(3,)","((-1, 100), (0, 0), (1, 100))",,
+aclnnScatter_004,aclnnScatter,"((1,), (1,), (1,), (1,))","('double', 'int64', 'double', 'double')","{'dim': 0, 'reduce': 0}","(3,)","((-1, 100), (0, 0), (1, 100))",,
+aclnnScatter_005,aclnnScatter,"((1,), (1,), (1,), (1,))","('uint8', 'int32', 'uint8', 'uint8')","{'dim': 0, 'reduce': 0}","(3,)","((-1, 100), (0, 0), (1, 100))",,

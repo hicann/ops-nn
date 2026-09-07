@@ -11,8 +11,18 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"repeat_interleave": "repeat_interleave_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnRepeatInterleaveWithDim": "aclnn_repeat_interleave_with_dim_golden",
+        "aclnnRepeatInterleaveTensor": "aclnn_repeat_interleave_tensor_golden",
+        "aclnnRepeatInterleaveIntWithDim": "aclnn_repeat_interleave_int_with_dim_golden",
+        "aclnnRepeatInterleaveInt": "aclnn_repeat_interleave_int_golden",
+        "aclnnRepeatInterleave": "aclnn_repeat_interleave_golden",
+    },
+    "kernel": {"repeat_interleave": "repeat_interleave_golden"},
+}
 
 
 def repeat_interleave_golden(x, repeats, *, axis=1000, **kwargs):
@@ -56,3 +66,69 @@ def repeat_interleave_golden(x, repeats, *, axis=1000, **kwargs):
     if input_dtype.name == "bfloat16":
         return res_torch.view(torch.int16).numpy().view(x.dtype)
     return res_torch.numpy().view(x.dtype)
+
+
+def aclnn_repeat_interleave_golden(self, repeats, outputSize=0, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnRepeatInterleave.
+    Parameters follow @aclnnRepeatInterleaveGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    input = self
+    repeats = repeats
+    return torch.repeat_interleave(input, repeats)
+
+
+def aclnn_repeat_interleave_int_golden(
+    self, repeats=0, outputSize=0, out=None, **kwargs
+):
+    """
+    Aclnn golden for aclnnRepeatInterleaveInt.
+    Parameters follow @aclnnRepeatInterleaveIntGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    input = self
+    if hasattr(repeats, "item"):
+        repeats = repeats.item()
+    return torch.repeat_interleave(input, repeats)
+
+
+def aclnn_repeat_interleave_int_with_dim_golden(
+    self, repeats=0, dim=0, outputSize=0, out=None, **kwargs
+):
+    """
+    Aclnn golden for aclnnRepeatInterleaveIntWithDim.
+    Parameters follow @aclnnRepeatInterleaveIntWithDimGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    input = self
+    if hasattr(repeats, "item"):
+        repeats = repeats.item()
+    if hasattr(dim, "item"):
+        dim = dim.item()
+    return torch.repeat_interleave(input, repeats, dim)
+
+
+def aclnn_repeat_interleave_tensor_golden(repeats, outputSize=0, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnRepeatInterleaveTensor.
+    Parameters follow @aclnnRepeatInterleaveTensorGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    repeats = repeats
+    return torch.repeat_interleave(repeats)
+
+
+def aclnn_repeat_interleave_with_dim_golden(
+    self, repeats, dim=0, outputSize=0, out=None, **kwargs
+):
+    """
+    Aclnn golden for aclnnRepeatInterleaveWithDim.
+    Parameters follow @aclnnRepeatInterleaveWithDimGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    input = self
+    repeats = repeats
+    if hasattr(dim, "item"):
+        dim = dim.item()
+    return torch.repeat_interleave(input, repeats, dim)

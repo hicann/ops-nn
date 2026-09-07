@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,output_tensor_indexes,input_data_ranges,precision_tolerances,strict_precision_mode,is_enabled
+repeat_interleave_test_000000,aclnnRepeatInterleaveWithDim,"('float32', 'int32', 'float32')","('ND',)","{'dim':0, 'outputSize':6}","((3, 4), (3,), (6, 4))","(2,)","((-100, 100), (2, 2))","((0.001, 0.001),)",,1
+repeat_interleave_test_000001,aclnnRepeatInterleaveWithDim,"('float32', 'int64', 'float32')","('ND',)","{'dim':0, 'outputSize':9}","((3, 4, 8), (3,), (9, 4, 8))","(2,)","((-100, 100), (3, 3))","((0.001, 0.001),)",,1
+repeat_interleave_test_000002,aclnnRepeatInterleaveWithDim,"('int32', 'int64', 'int32')","('ND',)","{'dim':1, 'outputSize':20}","((3, 4, 8), (4,), (3, 20, 8))","(2,)","((-100, 100), (5, 5))","((0.001, 0.001),)",,1
+repeat_interleave_test_000003,aclnnRepeatInterleave,"('float32', 'int32', 'float32')","('ND',)",{'outputSize':24},"((3, 4), (1,), (24,))","(2,)","((-100, 100), (2, 2))","((0.001, 0.001),)",,1
+repeat_interleave_test_000004,aclnnRepeatInterleave,"('float32', 'int64', 'float32')","('ND',)",{'outputSize':288},"((3, 4, 8), (96,), (288,))","(2,)","((-100, 100), (3, 3))","((0.001, 0.001),)",,1

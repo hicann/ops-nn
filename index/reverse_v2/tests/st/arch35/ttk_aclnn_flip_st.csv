@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_view_shapes,tensor_formats,tensor_dtypes,attributes,output_tensor_indexes,precision_tolerances,absolute_precision,is_enabled
+aclnn_flip_test_0000,aclnnFlip,"((512, 2048), (512, 2048))","('ND', 'ND')","('float16', 'float16')",{'dims': [0]},"(-1,)","((0.001, 0.001),)",0,TRUE
+aclnn_flip_test_0001,aclnnFlip,"((512, 2048), (512, 2048))","('ND', 'ND')","('bfloat16', 'bfloat16')",{'dims': [1]},"(-1,)","((0.001, 0.001),)",0,TRUE
+aclnn_flip_test_0002,aclnnFlip,"((512, 128), (512, 128))","('ND', 'ND')","('float32', 'float32')",{'dims': [0]},"(-1,)","((0.0001, 0.0001),)",0,TRUE
+aclnn_flip_test_0003,aclnnFlip,"((512, 128), (512, 128))","('ND', 'ND')","('int8', 'int8')",{'dims': [1]},"(-1,)","((0.0001, 0.0001),)",0,TRUE
+aclnn_flip_test_0004,aclnnFlip,"((16, 2048), (16, 2048))","('ND', 'ND')","('int32', 'int32')",{'dims': [1]},"(-1,)","((0.0001, 0.0001),)",0,TRUE

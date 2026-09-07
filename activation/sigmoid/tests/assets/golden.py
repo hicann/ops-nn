@@ -45,7 +45,7 @@ def sigmoid_golden(x, **kwargs):
     return res.astype(input_dtype, copy=False)
 
 
-def aclnn_inplace_sigmoid_golden(selfRef=None, **kwargs):
+def aclnn_inplace_sigmoid_golden(selfRef, **kwargs):
     """
     Aclnn golden for aclnnInplaceSigmoid.
     Parameters follow @aclnnInplaceSigmoidGetWorkspaceSize without workspaceSize & executor.

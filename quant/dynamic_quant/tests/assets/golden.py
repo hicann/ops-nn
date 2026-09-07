@@ -256,25 +256,51 @@ def dynamic_quant_golden(
     )
 
 
-def aclnn_dynamic_quant_golden(x, smoothScalesOptional, yOut, scaleOut, **kwargs):
+def aclnn_dynamic_quant_golden(
+    x, smoothScalesOptional, yOut=None, scaleOut=None, **kwargs
+):
     """
     Aclnn golden for aclnnDynamicQuant.
+    Parameters follow @aclnnDynamicQuantGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
     """
-    x_f = x.to(torch.float32) if x.dtype != torch.float32 else x
-    smooth_scales = (
-        smoothScalesOptional.to(torch.float32)
+    import numpy as np
+
+    x_np = x.to(torch.float32).numpy()
+    smooth_np = (
+        smoothScalesOptional.to(torch.float32).numpy()
         if smoothScalesOptional is not None
         else None
     )
-    x_scaled = x_f * smooth_scales if smooth_scales is not None else x_f
-    amax = torch.amax(
-        torch.abs(x_scaled).view(-1, x_scaled.shape[-1]), dim=-1, keepdim=True
-    )
-    scale = amax / 127.0
-    scale = torch.where(scale == 0, torch.ones_like(scale), scale)
-    quantized = torch.round(x_scaled / scale)
-    quantized = quantized.clamp(-128, 127).to(torch.int8)
-    return [quantized, scale]
+
+    output_dtype_str = str(kwargs.get("output_dtypes", ["int8"])[0])
+    quant_mode = "perToken"
+    is_symmetrical = True
+
+    if quant_mode == "perchannel":
+        result = _dynamic_quant_perchannel(
+            x_np,
+            smooth_np,
+            None,
+            2,
+            quant_mode,
+            is_symmetrical,
+            output_dtype_str,
+        )
+    else:
+        result = _dynamic_quant_common(
+            x_np,
+            smooth_np,
+            None,
+            2,
+            quant_mode,
+            is_symmetrical,
+            output_dtype_str,
+        )
+
+    y_torch = torch.from_numpy(np.array(result[0])).to(torch.int8)
+    scale_torch = torch.from_numpy(np.array(result[1])).to(torch.float32)
+    return [y_torch, scale_torch]
 
 
 def aclnn_dynamic_quant_v3_golden(
@@ -291,45 +317,57 @@ def aclnn_dynamic_quant_v3_golden(
 ):
     """
     Aclnn golden for aclnnDynamicQuantV3.
+    Parameters follow @aclnnDynamicQuantV3GetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
     """
+    import numpy as np
+
     if hasattr(dstType, "item"):
         dstType = dstType.item()
     if hasattr(isSymmetrical, "item"):
         isSymmetrical = bool(isSymmetrical.item())
-    if hasattr(quantMode, "item"):
+    if isinstance(quantMode, bytes):
+        quantMode = quantMode.decode()
+    elif hasattr(quantMode, "item"):
         quantMode = quantMode.item()
-    x_f = x.to(torch.float32) if x.dtype != torch.float32 else x
-    smooth_scales = (
-        smoothScalesOptional.to(torch.float32)
+
+    x_np = x.to(torch.float32).numpy()
+    smooth_np = (
+        smoothScalesOptional.to(torch.float32).numpy()
         if smoothScalesOptional is not None
         else None
     )
-    x_scaled = x_f * smooth_scales if smooth_scales is not None else x_f
-    scale_max = 127.0
-    scale_max_no_sym = 255.0
-    offset = None
-    if not isSymmetrical:
-        input_max = torch.max(x_scaled, dim=-1, keepdim=True).values
-        input_min = torch.min(x_scaled, dim=-1, keepdim=True).values
-        scale = (input_max - input_min) / scale_max_no_sym
-        scale = torch.where(scale == 0, torch.ones_like(scale), scale)
-        offset = scale_max - (input_max / scale)
-        input_scaled = x_scaled / scale + offset
+    group_np = groupIndexOptional.numpy() if groupIndexOptional is not None else None
+
+    output_dtype_str = str(kwargs.get("output_dtypes", ["int8"])[0])
+
+    if quantMode == "perchannel":
+        result = _dynamic_quant_perchannel(
+            x_np,
+            smooth_np,
+            group_np,
+            dstType,
+            quantMode,
+            isSymmetrical,
+            output_dtype_str,
+        )
     else:
-        input_abs = torch.abs(x_scaled)
-        input_max = torch.max(input_abs, dim=-1, keepdim=True).values
-        scale = input_max / scale_max
-        scale = torch.where(scale == 0, torch.ones_like(scale), scale)
-        input_scaled = x_scaled / scale
-    round_data = torch.round(input_scaled)
+        result = _dynamic_quant_common(
+            x_np,
+            smooth_np,
+            group_np,
+            dstType,
+            quantMode if isinstance(quantMode, str) else "pertoken",
+            isSymmetrical,
+            output_dtype_str,
+        )
+
+    y_torch = torch.from_numpy(np.array(result[0]))
     if dstType == 2:
-        if isSymmetrical:
-            round_data = round_data.clamp(-128, 127).to(torch.int8)
-        else:
-            round_data = round_data.clamp(0, 255).to(torch.uint8)
-    scale_out = scale.squeeze(-1)
-    if offset is not None:
-        offset_out = offset.squeeze(-1)
+        y_torch = y_torch.to(torch.int8)
+    scale_torch = torch.from_numpy(np.array(result[1])).to(torch.float32)
+    if len(result) > 2 and result[2] is not None:
+        offset_torch = torch.from_numpy(np.array(result[2])).to(torch.float32)
     else:
-        offset_out = torch.zeros_like(scale_out)
-    return [round_data, scale_out, offset_out]
+        offset_torch = torch.zeros_like(scale_torch)
+    return [y_torch, scale_torch, offset_torch]

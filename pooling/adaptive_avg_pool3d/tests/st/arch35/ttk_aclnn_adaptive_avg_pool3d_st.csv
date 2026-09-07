@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_view_shapes,tensor_formats,tensor_dtypes,output_tensor_indexes,attributes,input_data_ranges
+aclnnAdaptiveAvgPool3d_bf16_ND_acpw_000001,aclnnAdaptiveAvgPool3d,"((7, 8, 9, 10),(7, 3, 4, 5))","('ND','ND')","('bf16','bf16')","(1,)","{""outputSize"": [3, 4, 5]}","((-1.0, 1.0),(-1.0, 1.0))"
+aclnnAdaptiveAvgPool3d_fp32_ND_acpw_000002,aclnnAdaptiveAvgPool3d,"((7, 8, 9, 10),(7, 3, 4, 5))","('ND','ND')","('fp32','fp32')","(1,)","{""outputSize"": [3, 4, 5]}","((-1.0, 1.0),(-1.0, 1.0))"
+aclnnAdaptiveAvgPool3d_fp16_ND_acpw_000003,aclnnAdaptiveAvgPool3d,"((7, 8, 9, 10),(7, 3, 4, 5))","('ND','ND')","('fp16','fp16')","(1,)","{""outputSize"": [3, 4, 5]}","((-1.0, 1.0),(-1.0, 1.0))"
+aclnnAdaptiveAvgPool3d_bf16_NCDHW_acpw_000003,aclnnAdaptiveAvgPool3d,"((8, 2, 11, 12, 13),(8, 2, 6, 7, 5))","('NCDHW','NCDHW')","('bf16','bf16')","(1,)","{""outputSize"": [6, 7, 5]}","((-1.0, 1.0),(-1.0, 1.0))"
+aclnnAdaptiveAvgPool3d_fp32_NCDHW_acpw_000004,aclnnAdaptiveAvgPool3d,"((8, 2, 11, 12, 13),(8, 2, 6, 7, 5))","('NCDHW','NCDHW')","('fp32','fp32')","(1,)","{""outputSize"": [6, 7, 5]}","((-1.0, 1.0),(-1.0, 1.0))"

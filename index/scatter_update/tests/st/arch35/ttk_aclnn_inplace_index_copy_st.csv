@@ -1,0 +1,2 @@
+testcase_name,api_name,tensor_view_shapes,tensor_formats,tensor_dtypes,output_tensor_indexes,output_inplace_indexes,input_data_ranges,attributes,precision_tolerances,absolute_precision,is_enabled,tensor_storage_shapes,tensor_view_strides,tensor_view_offsets
+aclnnIndexCopy_float16_int32_ND_lower_boundary_000000,aclnnInplaceIndexCopy,"((1,), (1,), (1,))","('ND', 'ND', 'ND')","['float16', 'int32', 'float16']","(0,)","(0,)","[[-65504.0, 65504.0], [0, 0], [-10, -2]]",{'dim':0},"(0.001, 0.001)",0,True,"((8,), (1,), (1,))","((8,), (1,), (1,))","(0, 0, 0)"

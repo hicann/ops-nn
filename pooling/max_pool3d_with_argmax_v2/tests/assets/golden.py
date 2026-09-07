@@ -14,7 +14,11 @@ import numpy as np
 from copy import deepcopy
 
 __golden__ = {
-    "kernel": {"max_pool3d_with_argmax_v2": "max_pool3d_with_argmax_v2_golden"}
+    "aclnn": {
+        "aclnnMaxPool3dWithArgmax": "aclnn_max_pool3d_with_argmax_golden",
+        "aclnnMaxPool2dWithIndices": "aclnn_max_pool2d_with_indices_golden",
+    },
+    "kernel": {"max_pool3d_with_argmax_v2": "max_pool3d_with_argmax_v2_golden"},
 }
 
 
@@ -119,4 +123,145 @@ def max_pool3d_with_argmax_v2_golden(
 
     if out_argmax_format == "NDHWC":
         out_argmax = out_argmax.transpose(0, 2, 3, 4, 1)
+    return out_y, out_argmax
+
+
+def aclnn_max_pool3d_with_argmax_golden(
+    self,
+    kernelSize=0,
+    stride=0,
+    padding=0,
+    dilation=0,
+    ceilMode=0,
+    out=None,
+    indices=None,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnMaxPool3dWithArgmax.
+    Parameters follow @aclnnMaxPool3dWithArgmaxGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+    import torch.nn.functional as F
+    from copy import deepcopy
+
+    input_x = deepcopy(self)
+    inpu_x_dtype = input_x.dtype
+    input_x = input_x.to(torch.float32)
+    input_x_format = kwargs.get("tensor_formats", ["NCDHW"])[0]
+    output_indices = deepcopy(indices) if indices is not None else None
+    output_indices_dtype = (
+        output_indices.dtype if output_indices is not None else torch.int64
+    )
+    if input_x_format == "NDHWC":
+        input_x = input_x.permute(0, 4, 1, 2, 3)
+    elif input_x_format == "NHWC":
+        input_x = input_x.permute(3, 0, 1, 2)
+
+    attr = {"return_indices": True}
+    attr["kernel_size"] = kwargs.get("attributes", {}).get("kernelSize", kernelSize)
+    attr["stride"] = kwargs.get("attributes", {}).get("stride", stride)
+    attr["padding"] = kwargs.get("attributes", {}).get("padding", padding)
+    attr["dilation"] = kwargs.get("attributes", {}).get("dilation", dilation)
+    attr["ceil_mode"] = kwargs.get("attributes", {}).get("ceilMode", ceilMode)
+
+    out_y, out_argmax = F.max_pool3d(input_x, **attr)
+
+    out_y = out_y.to(inpu_x_dtype)
+    out_argmax = out_argmax.to(output_indices_dtype)
+    if input_x_format == "NDHWC":
+        out_y = out_y.permute(0, 2, 3, 4, 1)
+        out_argmax = out_argmax.permute(0, 2, 3, 4, 1)
+    elif input_x_format == "NHWC":
+        out_y = out_y.permute(1, 2, 3, 0)
+        out_argmax = out_argmax.permute(1, 2, 3, 0)
+
+    return out_y, out_argmax
+
+
+def aclnn_max_pool2d_with_indices_golden(
+    self,
+    kernelSize=0,
+    stride=0,
+    padding=0,
+    dilation=0,
+    ceilMode=0,
+    out=None,
+    indices=None,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnMaxPool2dWithIndices.
+    Parameters follow @aclnnMaxPool2dWithIndicesGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+    import torch.nn as nn
+    from copy import deepcopy
+
+    input_x = deepcopy(self)
+
+    inpu_x_dtype = input_x.dtype
+
+    input_x_format = kwargs.get("tensor_formats", ["NCHW"])[0]
+    output_indices = deepcopy(indices) if indices is not None else None
+    output_indices_dtype = (
+        output_indices.dtype if output_indices is not None else torch.int64
+    )
+    attrs = kwargs.get("attributes", {})
+    attr_re_ksize = attrs.get("kernelSize", kernelSize) if attrs else kernelSize
+    if isinstance(attr_re_ksize, list) and len(attr_re_ksize) == 4:
+        attr_re_ksize = [attr_re_ksize[1], attr_re_ksize[2]]
+    attr_re_strides = attrs.get("stride", stride) if attrs else stride
+    if isinstance(attr_re_strides, list) and len(attr_re_strides) == 4:
+        attr_re_strides = [attr_re_strides[1], attr_re_strides[2]]
+    attr_re_pads = attrs.get("padding", padding) if attrs else padding
+    if isinstance(attr_re_pads, list) and len(attr_re_pads) == 4:
+        attr_re_pads = [attr_re_pads[1], attr_re_pads[2]]
+
+    attr_op_dilations = attrs.get("dilation", dilation) if attrs else dilation
+    if isinstance(attr_op_dilations, list) and len(attr_op_dilations) == 4:
+        attr_op_dilations = [attr_op_dilations[1], attr_op_dilations[2]]
+    if attr_op_dilations == 0:
+        attr_op_dilations = None
+
+    attr_op_ceil_mode = attrs.get("ceilMode", ceilMode) if attrs else ceilMode
+    if attr_op_ceil_mode == 0:
+        attr_op_ceil_mode = False
+
+    if input_x_format == "NHWC":
+        input_x = input_x.permute(0, 3, 1, 2)
+
+    if "float16" == str(inpu_x_dtype) or "bfloat16" == str(inpu_x_dtype):
+        input_x = input_x.to(torch.float32)
+
+    attr = {
+        "kernel_size": attr_re_ksize,
+        "stride": attr_re_strides,
+        "padding": attr_re_pads,
+    }
+    if attr_op_dilations is not None:
+        attr["dilation"] = attr_op_dilations
+    if attr_op_ceil_mode is not None or attr_op_ceil_mode is False:
+        attr["ceil_mode"] = bool(attr_op_ceil_mode) if attr_op_ceil_mode else False
+    attr["return_indices"] = True
+    cpuMaxPool = nn.MaxPool2d(**attr)
+    max_out, max_indices = cpuMaxPool(input_x)
+
+    if "bfloat16" == str(inpu_x_dtype):
+        out_y = max_out.to(inpu_x_dtype, copy=False)
+    else:
+        out_y = max_out.to(inpu_x_dtype)
+    if input_x_format == "NHWC":
+        out_y = out_y.permute(0, 2, 3, 1)
+
+    if str(output_indices_dtype) == "torch.int32":
+        out_argmax = max_indices.to(torch.int32)
+    else:
+        out_argmax = max_indices.to(torch.int64)
+
+    if input_x_format == "NHWC":
+        out_argmax = out_argmax.permute(0, 2, 3, 1)
+
     return out_y, out_argmax

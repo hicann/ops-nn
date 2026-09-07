@@ -11,9 +11,16 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 from copy import deepcopy
 
-__golden__ = {"kernel": {"quant_update_scatter": "quant_update_scatter_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnInplaceQuantScatterV2": "aclnn_inplace_quant_scatter_v2_golden",
+        "aclnnInplaceQuantScatter": "aclnn_inplace_quant_scatter_golden",
+    },
+    "kernel": {"quant_update_scatter": "quant_update_scatter_golden"},
+}
 
 
 def quant_update_scatter_golden(
@@ -159,3 +166,169 @@ def quant_update_scatter_golden(
                             output[i][j][k][indices_key + m] = update_value[i][j][k][m]
 
     return [output]
+
+
+def aclnn_inplace_quant_scatter_golden(
+    selfRef,
+    indices,
+    updates,
+    quantScales,
+    quantZeroPoints,
+    axis,
+    quantAxis,
+    reduction,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnInplaceQuantScatter.
+    Parameters follow @aclnnInplaceQuantScatterGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import numpy as np
+    from copy import deepcopy
+
+    if hasattr(axis, "item"):
+        axis = axis.item()
+    if hasattr(quantAxis, "item"):
+        quantAxis = quantAxis.item()
+    if hasattr(reduction, "item"):
+        reduction = reduction.item()
+
+    def _to_np(t):
+        if t is None:
+            return None
+        if isinstance(t, np.ndarray):
+            return t
+        dt = t.dtype
+        dt_str = str(dt)
+        if dt == torch.bfloat16:
+            return t.to(torch.float32).numpy()
+        if "float8_e5m2" in dt_str:
+            from ml_dtypes import float8_e5m2 as np_f8_e5m2
+
+            return t.view(torch.uint8).numpy().view(np_f8_e5m2)
+        if "float8_e4m3fn" in dt_str:
+            from ml_dtypes import float8_e4m3fn as np_f8_e4m3
+
+            return t.view(torch.uint8).numpy().view(np_f8_e4m3)
+        if "hifloat8" in dt_str:
+            from en_dtypes import hifloat8 as np_hf8
+
+            return t.view(torch.uint8).numpy().view(np_hf8)
+        return t.numpy()
+
+    var_np = _to_np(selfRef)
+    indices_np = _to_np(indices)
+    updates_np = _to_np(updates)
+    scales_np = _to_np(quantScales)
+    zp_np = _to_np(quantZeroPoints)
+
+    result = quant_update_scatter_golden(
+        deepcopy(var_np),
+        indices_np,
+        updates_np,
+        scales_np,
+        zp_np,
+        reduce=reduction,
+        axis=axis,
+        quant_axis=quantAxis,
+    )
+
+    if isinstance(result, list):
+        result = result[0]
+    dt_str = str(selfRef.dtype)
+    if "float8" in dt_str or "hifloat8" in dt_str:
+        if isinstance(selfRef, np.ndarray):
+            return [result]
+        return [
+            torch.from_numpy(result.copy().view(np.uint8).copy()).view(selfRef.dtype)
+        ]
+    if isinstance(selfRef, np.ndarray):
+        return [result]
+    return [torch.from_numpy(np.ascontiguousarray(result.copy())).to(selfRef.dtype)]
+
+
+def aclnn_inplace_quant_scatter_v2_golden(
+    selfRef,
+    indices,
+    updates,
+    quantScales,
+    quantZeroPoints,
+    axis,
+    quantAxis,
+    reduction,
+    roundMode,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnInplaceQuantScatterV2.
+    Parameters follow @aclnnInplaceQuantScatterV2GetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import numpy as np
+    from copy import deepcopy
+
+    if hasattr(axis, "item"):
+        axis = axis.item()
+    if hasattr(quantAxis, "item"):
+        quantAxis = quantAxis.item()
+    if hasattr(reduction, "item"):
+        reduction = reduction.item()
+    if isinstance(roundMode, bytes):
+        roundMode = roundMode.decode()
+    elif hasattr(roundMode, "item"):
+        roundMode = roundMode.item()
+
+    def _to_np(t):
+        if t is None:
+            return None
+        if isinstance(t, np.ndarray):
+            return t
+        dt = t.dtype
+        dt_str = str(dt)
+        if dt == torch.bfloat16:
+            return t.to(torch.float32).numpy()
+        if "float8_e5m2" in dt_str:
+            from ml_dtypes import float8_e5m2 as np_f8_e5m2
+
+            return t.view(torch.uint8).numpy().view(np_f8_e5m2)
+        if "float8_e4m3fn" in dt_str:
+            from ml_dtypes import float8_e4m3fn as np_f8_e4m3
+
+            return t.view(torch.uint8).numpy().view(np_f8_e4m3)
+        if "hifloat8" in dt_str:
+            from en_dtypes import hifloat8 as np_hf8
+
+            return t.view(torch.uint8).numpy().view(np_hf8)
+        return t.numpy()
+
+    var_np = _to_np(selfRef)
+    indices_np = _to_np(indices)
+    updates_np = _to_np(updates)
+    scales_np = _to_np(quantScales)
+    zp_np = _to_np(quantZeroPoints)
+
+    result = quant_update_scatter_golden(
+        deepcopy(var_np),
+        indices_np,
+        updates_np,
+        scales_np,
+        zp_np,
+        reduce=reduction,
+        axis=axis,
+        quant_axis=quantAxis,
+        round_mode=roundMode if isinstance(roundMode, str) else "rint",
+    )
+
+    if isinstance(result, list):
+        result = result[0]
+    dt_str = str(selfRef.dtype)
+    if "float8" in dt_str or "hifloat8" in dt_str:
+        if isinstance(selfRef, np.ndarray):
+            return [result]
+        return [
+            torch.from_numpy(result.copy().view(np.uint8).copy()).view(selfRef.dtype)
+        ]
+    if isinstance(selfRef, np.ndarray):
+        return [result]
+    return [torch.from_numpy(np.ascontiguousarray(result.copy())).to(selfRef.dtype)]

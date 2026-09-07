@@ -11,7 +11,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"reverse_v2": "reverse_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnFlip": "aclnn_flip_golden",
+    },
+    "kernel": {"reverse_v2": "reverse_v2_golden"},
+}
 
 
 def reverse_v2_golden(x, axis, **kwargs):
@@ -36,3 +41,20 @@ def reverse_v2_golden(x, axis, **kwargs):
     with tf.Session() as sess:
         res = sess.run(out, feed_dict={x_holder: x})
     return res
+
+
+def aclnn_flip_golden(self, dims=0, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnFlip.
+    Parameters follow @aclnnFlipGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    if hasattr(dims, "item"):
+        dims = [dims.item()]
+    elif isinstance(dims, (list, tuple)):
+        dims = [int(d) for d in dims]
+    else:
+        dims = [int(dims)]
+    return [torch.flip(self, dims)]

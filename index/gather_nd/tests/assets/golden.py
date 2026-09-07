@@ -10,13 +10,17 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-import numpy as np
 
-__golden__ = {"kernel": {"gather_nd": "gather_nd_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnGatherNd": "aclnn_gather_nd_golden",
+    },
+    "kernel": {"gather_nd": "gather_nd_golden"},
+}
 
 
 def gather_nd_golden(params, indices, **kwargs):
-    '''
+    """
     Golden function for gather_nd.
     All the parameters (names and order) follow @gather_nd_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,25 +31,57 @@ def gather_nd_golden(params, indices, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import tensorflow as tf
+
     tf.compat.v1.disable_eager_execution()
 
     params_shape = params.shape
     indices_shape = indices.shape
 
     data_dtype = params.dtype
-    if data_dtype.name == 'bfloat16':
-        params = params.view('int16')
+    if data_dtype.name == "bfloat16":
+        params = params.view("int16")
 
     params_ph = tf.compat.v1.placeholder(dtype=params.dtype.name, shape=params_shape)
     indices_ph = tf.compat.v1.placeholder(dtype=indices.dtype.name, shape=indices_shape)
 
     with tf.compat.v1.Session() as sess:
-        gather_res = tf.compat.v1.gather_nd(params_ph, indices_ph, name=None, batch_dims=0)
+        gather_res = tf.compat.v1.gather_nd(
+            params_ph, indices_ph, name=None, batch_dims=0
+        )
         res = sess.run(gather_res, feed_dict={params_ph: params, indices_ph: indices})
 
-    if data_dtype.name == 'bfloat16':
+    if data_dtype.name == "bfloat16":
         res = res.view(data_dtype)
 
     return res
+
+
+def aclnn_gather_nd_golden(self, indices, negativeIndexSupport=0, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnGatherNd.
+    """
+    import torch
+    import tensorflow as tf
+
+    tf.compat.v1.disable_eager_execution()
+
+    params_data = self
+    indices_data = indices
+
+    params_shape = params_data.shape
+    indices_shape = indices_data.shape
+
+    params_dtype = str(params_data.dtype)[6:]
+    indices_dtype = str(indices_data.dtype)[6:]
+    params = tf.compat.v1.placeholder(dtype=params_dtype, shape=params_shape)
+    indices = tf.compat.v1.placeholder(dtype=indices_dtype, shape=indices_shape)
+
+    with tf.compat.v1.Session() as sess:
+        gather_res = tf.compat.v1.gather_nd(params, indices, name=None, batch_dims=0)
+        res = sess.run(
+            gather_res, feed_dict={params: params_data, indices: indices_data}
+        )
+
+    return torch.from_numpy(res)

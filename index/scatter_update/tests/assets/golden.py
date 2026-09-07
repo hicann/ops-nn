@@ -11,7 +11,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"scatter_update": "scatter_update_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnInplaceIndexCopy": "aclnn_inplace_index_copy_golden",
+    },
+    "kernel": {"scatter_update": "scatter_update_golden"},
+}
 
 
 def scatter_update_golden(var, indices, updates, *, use_locking=False, **kwargs):
@@ -45,3 +50,24 @@ def scatter_update_golden(var, indices, updates, *, use_locking=False, **kwargs)
         )
 
     return res
+
+
+def aclnn_inplace_index_copy_golden(selfRef, dim, index, source, **kwargs):
+    """
+    Aclnn golden for aclnnInplaceIndexCopy.
+    """
+    import torch
+
+    if hasattr(dim, "item"):
+        dim = dim.item()
+
+    if selfRef.dtype == torch.bfloat16:
+        var = selfRef.to(torch.float32)
+        updates = source.to(torch.float32)
+    else:
+        var = selfRef
+        updates = source
+
+    indices = index.to(torch.int64)
+    result = torch.index_copy(var, dim=dim, index=indices, source=updates)
+    return [result.to(selfRef.dtype)]

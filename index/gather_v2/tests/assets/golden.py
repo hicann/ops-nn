@@ -11,7 +11,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"gather_v2": "gather_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnGatherV2": "aclnn_gather_v2_golden",
+    },
+    "kernel": {"gather_v2": "gather_v2_golden"},
+}
 
 
 def gather_v2_golden(
@@ -66,3 +71,24 @@ def gather_v2_golden(
         res = res.view(data_dtype)
 
     return res
+
+
+def aclnn_gather_v2_golden(self, dim, index, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnGatherV2.
+    """
+    import tensorflow as tf
+    import torch
+
+    tensor_x = self
+    x_dtype = self.dtype
+    if "bfloat16" in str(x_dtype):
+        tensor_x = self.to(torch.float32)
+
+    if hasattr(dim, "item"):
+        dim = dim.item()
+
+    tf_out = tf.gather(tensor_x, index, axis=dim)
+    np_out = tf_out.numpy()
+    pt_out = torch.from_numpy(np_out)
+    return pt_out

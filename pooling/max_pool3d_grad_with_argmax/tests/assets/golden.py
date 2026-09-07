@@ -14,7 +14,10 @@ import numpy as np
 from copy import deepcopy
 
 __golden__ = {
-    "kernel": {"max_pool3d_grad_with_argmax": "max_pool3d_grad_with_argmax_golden"}
+    "aclnn": {
+        "aclnnMaxPool2dWithIndicesBackward": "aclnn_max_pool2d_with_indices_backward_golden",
+    },
+    "kernel": {"max_pool3d_grad_with_argmax": "max_pool3d_grad_with_argmax_golden"},
 }
 
 
@@ -91,4 +94,59 @@ def max_pool3d_grad_with_argmax_golden(
     if attr_op_format == "NDHWC":
         backward_out = backward_out.transpose(0, 2, 3, 4, 1)
 
+    return backward_out
+
+
+def aclnn_max_pool2d_with_indices_backward_golden(
+    gradOutput,
+    self,
+    indices,
+    kernelSize=0,
+    stride=0,
+    padding=0,
+    dilation=0,
+    ceilMode=0,
+    gradInput=None,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnMaxPool2dWithIndicesBackward.
+    Parameters follow @aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    grad = gradOutput
+    grad_dtype = grad.dtype
+    indices_dtype = indices.dtype
+
+    input_grad_format = kwargs.get("tensor_formats", ["NCHW"])[0]
+    if grad_dtype == torch.float16 or grad_dtype == torch.bfloat16:
+        grad = grad.to(torch.float32)
+        self = self.to(torch.float32)
+    if indices_dtype == torch.int32:
+        indices = indices.to(torch.int64)
+    if input_grad_format == "NHWC":
+        grad = grad.permute(0, 3, 1, 2)
+        self = self.permute(0, 3, 1, 2)
+        indices = indices.permute(0, 3, 1, 2)
+
+    ceilMode = bool(ceilMode) if ceilMode else False
+
+    backward_out = torch.ops.aten.max_pool2d_with_indices_backward(
+        grad,
+        self,
+        kernel_size=kernelSize,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+        ceil_mode=ceilMode,
+        indices=indices,
+    )
+    if grad_dtype == torch.float16:
+        backward_out = backward_out.to(torch.float16)
+    elif grad_dtype == torch.bfloat16:
+        backward_out = backward_out.to(torch.bfloat16)
+    if input_grad_format == "NHWC":
+        backward_out = backward_out.permute(0, 2, 3, 1)
     return backward_out

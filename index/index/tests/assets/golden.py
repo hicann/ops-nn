@@ -13,14 +13,15 @@ import numpy as np
 
 
 __golden__ = {
-    "kernel": {
-        "index": "index_golden"
-    }
+    "aclnn": {
+        "aclnnIndex": "aclnn_index_golden",
+    },
+    "kernel": {"index": "index_golden"},
 }
 
 
 def index_golden(x, mask, out, indices, **kwargs):
-    '''
+    """
     Golden function for index.
     All the parameters (names and order) follow @index_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -31,18 +32,18 @@ def index_golden(x, mask, out, indices, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
 
     bf16_mark = False
     if "bfloat16" in str(x.dtype):
         bf16_mark = True
         x = x.astype(np.float32)
-    
-    x_torch = torch.from_numpy(x)
+
+    x_torch = torch.from_numpy(x)  # noqa: F841
     indices_list = [arr.astype(np.int64) for arr in indices]
-    indices_torch = torch.from_numpy(np.array(indices_list))
-    
+    indices_torch = torch.from_numpy(np.array(indices_list))  # noqa: F841
+
     cmd = "x_torch["
     idx = 0
     for i in range(mask.size):
@@ -54,8 +55,29 @@ def index_golden(x, mask, out, indices, **kwargs):
         cmd += ","
     cmd += "]"
     res = eval(cmd)
-    
+
     if bf16_mark:
         res.to(torch.bfloat16)
     res = res.numpy()
     return res
+
+
+def aclnn_index_golden(self, indices, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnIndex.
+    Parameters follow @aclnnIndexGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    # Convert indices: empty tensors -> None
+    if isinstance(indices, (list, tuple)):
+        idx_list = []
+        for idx in indices:
+            if idx is None or idx.numel() == 0:
+                idx_list.append(None)
+            else:
+                idx_list.append(idx.to(torch.int64))
+        indices = tuple(idx_list)
+
+    return [torch.ops.aten.index(self, indices)]

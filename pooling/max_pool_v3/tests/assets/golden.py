@@ -12,7 +12,12 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"max_pool_v3": "max_pool_v3_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnMaxPool": "aclnn_max_pool_golden",
+    },
+    "kernel": {"max_pool_v3": "max_pool_v3_golden"},
+}
 
 
 def max_pool_v3_golden(
@@ -128,3 +133,55 @@ def max_pool_v3_golden(
     if data_format == "NCHW":
         result = np.transpose(result, (0, 3, 1, 2))
     return result.astype(input_dtype, copy=False)
+
+
+def aclnn_max_pool_golden(
+    self,
+    kernelShape=0,
+    strides=0,
+    autoPad=0,
+    pads=0,
+    dilations=0,
+    ceilMode=0,
+    out=None,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnMaxPool.
+    Parameters follow @aclnnMaxPoolGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import torch
+
+    x = self
+    attrs = kwargs.get("attributes", {})
+    kernel_size = attrs.get("kernelShape", kernelShape) if attrs else kernelShape
+    stride = attrs.get("strides", strides) if attrs else strides
+    padding = attrs.get("pads", pads) if attrs else pads
+    dilation = attrs.get("dilations", dilations) if attrs else dilations
+    ceil_mode = attrs.get("ceilMode", ceilMode) if attrs else ceilMode
+    tensor_format = kwargs.get("tensor_formats", ["NCHW"])[0]
+
+    is_nhwc = False
+    if tensor_format.lower() == "nhwc":
+        x = torch.permute(x, dims=[0, 2, 3, 1])
+        is_nhwc = True
+
+    input_dtype = x.dtype
+    if "float16" in str(input_dtype):
+        x = x.to(torch.float32)
+
+    res = torch.nn.functional.max_pool2d(
+        x,
+        kernel_size,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+        ceil_mode=bool(ceil_mode) if ceil_mode else False,
+        return_indices=False,
+    )
+
+    res = res.to(input_dtype)
+    if is_nhwc:
+        res = torch.permute(res, dims=[0, 3, 1, 2])
+    return res

@@ -1,0 +1,4 @@
+﻿id,testcase_name,api_name,tensor_dtypes,tensor_formats,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_inplace_indexes,absolute_precision
+1,aclnn_inplace_sigmoid_fuzz_1,aclnnInplaceSigmoid,('float32'),"('ND',)","((19, 2, 5, 8),)","((-1000, 1000),)","(-1,)","(-1,)",0.0001
+2,aclnn_inplace_sigmoid_fuzz_2,aclnnInplaceSigmoid,('float16'),"('ND',)","((19, 2, 5, 8),)","((-1000, 1000),)","(-1,)","(-1,)",0.0001
+6,aclnn_inplace_sigmoid_fuzz_6,aclnnInplaceSigmoid,('bfloat16'),"('ND',)","((19, 2, 5, 8),)","((-1000, 1000),)","(-1,)","(-1,)",0.0001

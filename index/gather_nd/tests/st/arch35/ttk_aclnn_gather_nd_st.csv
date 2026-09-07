@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,input_data_ranges,out_put_tensor_indexes,precision_tolerances
+testcase0,aclnnGatherNd,"('float16', 'int32', 'float16')","('ND',)",{'negativeIndexSupport': False},"((2, 2, 4, 2, 2, 1, 8), (6,), (8,))","((-1.0, 1.0), (0.0, 1))","(2,)","((0.001, 0.001),)"
+testcase1,aclnnGatherNd,"('float32', 'int64', 'float32')","('ND',)",{'negativeIndexSupport': True},"((240, 49, 7, 11), (1,), (49, 7, 11))","((1, 2), (0, 1))","(2,)","((0.001, 0.001),)"
+testcase2,aclnnGatherNd,"('float16', 'int64', 'float16')","('ND',)",{'negativeIndexSupport': True},"((43, 112, 80), (47, 1), (47, 112, 80))","((-0.001, 0), (0, 0))","(2,)","((0.001, 0.001),)"
+testcase3,aclnnGatherNd,"('float32', 'int32', 'float32')","('ND',)",{'negativeIndexSupport': True},"((1, 128, 1), (1, 1, 1, 1, 1, 2), (1, 1, 1, 1, 1, 1))","((-3.4e+38, 3.4e+38), (0, 1))","(2,)","((0.001, 0.001),)"
+testcase4,aclnnGatherNd,"('float16', 'int64', 'float16')","('ND',)",{'negativeIndexSupport': True},"((1, 1, 58, 122, 6, 90, 47, 1), (5,), (90, 47, 1))","((-0.01, -0.001), (0, 1))","(2,)","((0.001, 0.001),)"

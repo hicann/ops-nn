@@ -12,25 +12,56 @@
 
 import numpy as np
 
-__input__ = {"kernel": {"dynamic_quant": "dynamic_quant_input"}}
+__input__ = {
+    "kernel": {"dynamic_quant": "dynamic_quant_input"},
+    "aclnn": {
+        "aclnnDynamicQuant": "aclnn_dynamic_quant_input",
+        "aclnnDynamicQuantV3": "aclnn_dynamic_quant_v3_input",
+    },
+}
 
 
 def dynamic_quant_input(x, smooth_scales=None, group_index=None, **kwargs):
     """
-    Input function for dynamic_quant.
-    All the parameters (names and order) follow @dynamic_quant_def.cpp without outputs.
+    Input function for dynamic_quant (kernel).
     All the input Tensors are numpy.ndarray.
-
-    Returns:
-        List of input tensors (length must match Input count in _def.cpp)
     """
     if group_index is not None:
         S = np.prod(x.shape[:-1])
         E = group_index.shape[0]
-
         group_index = np.random.choice(np.arange(1, S + 1), size=E, replace=False)
         group_index.sort()
         group_index[-1] = S
         group_index = group_index.astype("int32")
+    return [x, smooth_scales, group_index]
 
+
+def aclnn_dynamic_quant_input(*args, **kwargs):
+    """
+    Input function for aclnnDynamicQuant.
+    TTK passes all tensor args; we only process the first two.
+    """
+    x = args[0] if len(args) > 0 else kwargs.get("x")
+    smooth_scales = args[1] if len(args) > 1 else kwargs.get("smoothScalesOptional")
+    return [x, smooth_scales]
+
+
+def aclnn_dynamic_quant_v3_input(*args, **kwargs):
+    """
+    Input function for aclnnDynamicQuantV3.
+    TTK passes all tensor args; we need to process group_index (3rd arg).
+    """
+    import torch
+
+    x = args[0] if len(args) > 0 else kwargs.get("x")
+    smooth_scales = args[1] if len(args) > 1 else kwargs.get("smoothScalesOptional")
+    group_index = args[2] if len(args) > 2 else kwargs.get("groupIndexOptional")
+
+    if group_index is not None:
+        S = np.prod(x.shape[:-1])
+        E = group_index.shape[0]
+        gi = np.random.choice(np.arange(1, S + 1), size=E, replace=False)
+        gi.sort()
+        gi[-1] = S
+        group_index = torch.from_numpy(gi.astype("int32"))
     return [x, smooth_scales, group_index]

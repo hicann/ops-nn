@@ -11,8 +11,14 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
-__golden__ = {"kernel": {"dynamic_quant_v2": "dynamic_quant_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnDynamicQuantV2": "aclnn_dynamic_quant_v2_golden",
+    },
+    "kernel": {"dynamic_quant_v2": "dynamic_quant_v2_golden"},
+}
 
 
 def _dynamic_quant_common(
@@ -252,3 +258,68 @@ def dynamic_quant_v2_golden(
         is_symmetrical,
         output_dtype_str,
     )
+
+
+def aclnn_dynamic_quant_v2_golden(
+    x,
+    smoothScalesOptional,
+    groupIndexOptional,
+    dstType,
+    yOut=None,
+    scaleOut=None,
+    offsetOut=None,
+    **kwargs,
+):
+    """
+    Aclnn golden for aclnnDynamicQuantV2.
+    Parameters follow @aclnnDynamicQuantV2GetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    import numpy as np
+
+    if hasattr(dstType, "item"):
+        dstType = dstType.item()
+
+    x_np = x.to(torch.float32).numpy()
+    smooth_np = (
+        smoothScalesOptional.to(torch.float32).numpy()
+        if smoothScalesOptional is not None
+        else None
+    )
+    group_np = groupIndexOptional.numpy() if groupIndexOptional is not None else None
+
+    output_dtype_str = str(kwargs.get("output_dtypes", ["int8"])[0])
+
+    quant_mode = "pertoken"
+    is_symmetrical = False
+
+    if quant_mode == "perchannel":
+        result = _dynamic_quant_perchannel(
+            x_np,
+            smooth_np,
+            group_np,
+            dstType,
+            quant_mode,
+            is_symmetrical,
+            output_dtype_str,
+        )
+    else:
+        result = _dynamic_quant_common(
+            x_np,
+            smooth_np,
+            group_np,
+            dstType,
+            quant_mode,
+            is_symmetrical,
+            output_dtype_str,
+        )
+
+    y_torch = torch.from_numpy(np.array(result[0]))
+    if dstType == 2:
+        y_torch = y_torch.to(torch.int8)
+    scale_torch = torch.from_numpy(np.array(result[1])).to(torch.float32)
+    if len(result) > 2 and result[2] is not None:
+        offset_torch = torch.from_numpy(np.array(result[2])).to(torch.float32)
+    else:
+        offset_torch = torch.zeros_like(scale_torch)
+    return [y_torch, scale_torch, offset_torch]

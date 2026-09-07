@@ -12,35 +12,61 @@
 
 import numpy as np
 
-__input__ = {"kernel": {"gather_nd": "gather_nd_input"}}
+__input__ = {
+    "kernel": {"gather_nd": "gather_nd_input"},
+    "aclnn": {"aclnnGatherNd": "aclnn_gather_nd_input"},
+}
 
 
 def gather_nd_input(x, indices, **kwargs):
-    '''
-    Input function for gather_nd.
-    All the parameters (names and order) follow @gather_nd_def.cpp without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    Args:
-        **kwargs: input_dtypes, full_soc_version, short_soc_version, testcase_name
-                  full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        Input tensors list
-    '''
+    """Input function for gather_nd (kernel)."""
     if str(x.dtype) != "bool":
         params = np.arange(0, x.size, 1, dtype=x.dtype).reshape(x.shape)
     else:
-        params = np.random.choice(a=[False, True], size=x.shape, p=[0.5, 0.5]).reshape(x.shape)
+        params = np.random.choice(a=[False, True], size=x.shape, p=[0.5, 0.5]).reshape(
+            x.shape
+        )
 
     ranks = indices.shape[-1]
     res_indices = []
     for rank in range(0, ranks):
-        indices_rank = np.random.uniform(0, params.shape[rank], (1,)).astype(indices.dtype)
+        indices_rank = np.random.uniform(0, params.shape[rank], (1,)).astype(
+            indices.dtype
+        )
         res_indices.append(indices_rank.item())
 
     for index in indices.shape[0:-1]:
         res_indices = res_indices * index
-    res_indices = np.reshape(res_indices, indices.shape).astype(indices.dtype, copy=False)
+    res_indices = np.reshape(res_indices, indices.shape).astype(
+        indices.dtype, copy=False
+    )
 
     return [params, res_indices]
+
+
+def aclnn_gather_nd_input(*args, **kwargs):
+    """Input function for aclnnGatherNd. Generate valid indices."""
+    import torch
+
+    params = args[0] if len(args) > 0 else kwargs.get("self")
+    indices = args[1] if len(args) > 1 else kwargs.get("indices")
+
+    if params is None or indices is None:
+        return list(args)
+
+    params_shape = params.shape
+    ranks = indices.shape[-1]
+
+    res_indices = []
+    for rank in range(ranks):
+        max_idx = params_shape[rank] - 1
+        idx = np.random.uniform(0, max_idx + 1, (1,)).astype(np.int64)
+        res_indices.append(idx.item())
+
+    for index in indices.shape[0:-1]:
+        res_indices = res_indices * index
+    res_indices = np.reshape(res_indices, indices.shape).astype(np.int64)
+
+    # Convert to torch tensor with original dtype
+    indices_torch = torch.from_numpy(res_indices).to(indices.dtype)
+    indices.copy_(indices_torch)

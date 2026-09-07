@@ -1,0 +1,6 @@
+testcase_name,api_name,tensor_dtypes,tensor_formats,attributes,tensor_view_shapes,input_data_ranges,output_tensor_indexes,output_dtypes
+gather_v2_test_case_0,aclnnGatherV2,"('int32', 'int32', 'int32')","('ND',)",{ 'dim': 5},"((9, 6, 5, 6, 9, 5), (1,), (9, 6, 5, 6, 9, 1))","((-1, 1), (0, 4))","(2,)",('int32')
+gather_v2_test_case_1,aclnnGatherV2,"('float16', 'int64', 'float16')","('ND',)",{ 'dim': -1},"((1, 1, 1, 1), (1,), (1, 1, 1, 1))","((0, 0.001), (0, 0))","(2,)",('float16')
+gather_v2_test_case_2,aclnnGatherV2,"('float32', 'int32', 'float32')","('ND',)",{ 'dim': -2},"((1, 1), (17,), (17, 1))","((-1000, -10), (0, 0))","(2,)",('float32')
+gather_v2_test_case_3,aclnnGatherV2,"('float32', 'int64', 'float32')","('ND',)",{ 'dim': -2},"((18, 1), (16,), (16, 1))","((-1000, -10), (0, 17))","(2,)",('float32')
+gather_v2_test_case_4,aclnnGatherV2,"('float16', 'int32', 'float16')","('ND',)",{ 'dim': 1},"((5, 8), (5,), (5, 5))","((-1000, -10), (0, 7))","(2,)",('float16')

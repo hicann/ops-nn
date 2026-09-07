@@ -1,3 +1,4 @@
+import torch
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
@@ -11,7 +12,12 @@
 # ----------------------------------------------------------------------------
 
 
-__golden__ = {"kernel": {"scatter_elements_v2": "scatter_elements_v2_golden"}}
+__golden__ = {
+    "aclnn": {
+        "aclnnScatter": "aclnn_scatter_golden",
+    },
+    "kernel": {"scatter_elements_v2": "scatter_elements_v2_golden"},
+}
 
 
 def scatter_elements_v2_golden(
@@ -53,3 +59,31 @@ def scatter_elements_v2_golden(
     if "bfloat16" in str(x_dtype):
         res = res.astype(x_dtype, copy=False)
     return res
+
+
+def aclnn_scatter_golden(self, dim, index, src, reduce, out=None, **kwargs):
+    """
+    Aclnn golden for aclnnScatter.
+    Parameters follow @aclnnScatterGetWorkspaceSize without workspaceSize & executor.
+    All the input Tensors are torch.Tensor.
+    """
+    tensor_x = self
+    tensor_src = src
+
+    if hasattr(dim, "item"):
+        dim = dim.item()
+    if hasattr(reduce, "item"):
+        reduce = reduce.item()
+
+    tensor_index = index.to(torch.int64)
+    if reduce == 1:
+        out = torch.scatter_reduce(
+            tensor_x, dim, tensor_index, tensor_src, reduce="sum"
+        )
+    elif reduce == 2:
+        out = torch.scatter_reduce(
+            tensor_x, dim, tensor_index, tensor_src, reduce="prod"
+        )
+    else:
+        out = torch.scatter(tensor_x, dim, tensor_index, tensor_src)
+    return out
