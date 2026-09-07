@@ -304,6 +304,12 @@ protected:
 
     __aicore__ inline void ClearWorkspace(const GlobalTensor<float>& workspace)
     {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+        // 3510的CV配比是1:2，由vector_0进行WS清零
+        if (GetSubBlockIdx() > 0) {
+            return;
+        }
+#endif
         event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
