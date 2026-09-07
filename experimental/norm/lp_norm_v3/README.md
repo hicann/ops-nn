@@ -1,4 +1,4 @@
-# LpNormV2
+# LpNormV3
 
 ## 产品支持情况
 
@@ -34,7 +34,7 @@ $$
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 |------|---------------|------|---------|---------|
-| x | 输入 | 待进行 LpNormV2 计算的输入张量 | FLOAT、FLOAT16 | ND |
+| x | 输入 | 待进行 LpNormV3 计算的输入张量 | FLOAT、FLOAT16 | ND |
 | p | 属性 | Lp 范数的阶数 | FLOAT | - |
 | axis | 属性 | 范数计算维度：0（全局），1（列），2（行） | INT | - |
 | epsilon | 属性 | 数值稳定补偿项 | FLOAT | - |
@@ -44,7 +44,7 @@ $$
 
 | 调用方式 | 调用样例 | 说明 |
 |--------|---------|------|
-| aclnn 调用 | test_aclnn_lp_norm_v3.cpp | 通过 aclnn 接口方式调用 LpNormV2 算子 |
+| aclnn 调用 | test_aclnn_lp_norm_v3.cpp | 通过 aclnn 接口方式调用 LpNormV3 算子 |
 
 ---
 
@@ -52,4 +52,4 @@ $$
 
 | 贡献者 | 贡献方 | 贡献算子 | 贡献时间 | 贡献内容 |
 |------|------|--------|--------|--------|
-| shixiangyang | 个人开发者 | LpNormV2 | 2025/11/8 | LpNormV2 算子适配开源仓 |
+| shixiangyang | 个人开发者 | LpNormV3 | 2025/11/8 | LpNormV3 算子适配开源仓 |
