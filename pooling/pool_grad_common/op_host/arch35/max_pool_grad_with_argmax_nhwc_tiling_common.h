@@ -73,6 +73,9 @@ struct MaxPoolGradWithArgmaxNHWCSplitInfo {
 
 class MaxPoolGradWithArgmaxNHWCTilingCommon {
 public:
+    bool IsMeetTargetCoreNum() const;
+    bool IsMeetUBSize();
+    void DynamicAdjustmentWH();
     MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input) {}
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
     ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);
@@ -88,10 +91,7 @@ private:
     bool TrySplitAlignW();
     bool TrySplitAlignC();
     void SplitUnalignHWC();
-    bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
     void SearchBestTiling();
-    void DynamicAdjustmentWH();
     void SetTilingData(gert::TilingContext* context, uint64_t key);
     void PrintBaseData() const;
     void PrintSplitData() const;

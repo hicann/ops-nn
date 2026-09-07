@@ -14,6 +14,7 @@
  */
 
 #include "avg_pool_v2_grad_nchw_tiling.h"
+#include "../../../pool_grad_common/op_host/arch35/pool_grad_tiling_split_helper.h"
 
 namespace optiling {
 using namespace AvgPoolV2Grad;
@@ -116,17 +117,13 @@ void AvgPoolV2GradCommonNCHWTiling::DoBufferCalculate()
     int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize;
     splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
 }
-
 bool AvgPoolV2GradCommonNCHWTiling::IsMeetTargetCoreNum() const
 {
-    // The calculation only involves inner.
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(inputData.outShape[W_DIM], splitData.wOutputInner);
-    int64_t tmpHOutputOuter = Ops::Base::CeilDiv(inputData.outShape[H_DIM], splitData.hOutputInner);
-    int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-
-    return tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData.coreUsedForBestPerformance;
+    PoolGradTiling::PoolGradNchwDims dims{inputData.outShape[H_DIM], inputData.outShape[W_DIM], inputData.stride[H_DIM],
+                                          inputData.stride[W_DIM]};
+    return PoolGradTiling::IsMeetTargetCoreNumNchw(splitData, dims, baseData.inputNCSize,
+                                                   baseData.coreUsedForBestPerformance);
 }
-
 bool AvgPoolV2GradCommonNCHWTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
@@ -136,128 +133,32 @@ bool AvgPoolV2GradCommonNCHWTiling::IsMeetUBSize()
     }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
-
 bool AvgPoolV2GradCommonNCHWTiling::TrySplitNC()
 {
-    splitData.wOutputInner = inputData.outShape[W_DIM];
-    splitData.hOutputInner = inputData.outShape[H_DIM];
-
-    splitData.highAxisInner = Ops::Base::CeilDiv(baseData.inputNCSize, baseData.coreUsedForBestPerformance);
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        return true;
-    }
-
-    splitData.highAxisInner = 1;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = baseData.inputNCSize;
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.highAxisInner = mid;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.highAxisInner = bestSplit;
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNchwDims dims{inputData.outShape[H_DIM], inputData.outShape[W_DIM], inputData.stride[H_DIM],
+                                          inputData.stride[W_DIM]};
+    return PoolGradTiling::TrySplitNc(splitData, dims, baseData.inputNCSize, baseData.coreUsedForBestPerformance,
+                                      *this);
 }
-
 bool AvgPoolV2GradCommonNCHWTiling::TrySplitAlignH()
 {
-    splitData.highAxisInner = 1;
-    splitData.wOutputInner = inputData.outShape[W_DIM];
-
-    splitData.hOutputInner = inputData.stride[H_DIM];
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData.outShape[H_DIM] / 2, inputData.stride[H_DIM]);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.hOutputInner = mid * inputData.stride[H_DIM];
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.hOutputInner = bestSplit * inputData.stride[H_DIM];
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNchwDims dims{inputData.outShape[H_DIM], inputData.outShape[W_DIM], inputData.stride[H_DIM],
+                                          inputData.stride[W_DIM]};
+    return PoolGradTiling::TrySplitAlignH(splitData, dims, *this);
 }
-
 bool AvgPoolV2GradCommonNCHWTiling::TrySplitAlignW()
 {
-    splitData.highAxisInner = 1;
-    splitData.hOutputInner = inputData.stride[H_DIM];
-
-    splitData.wOutputInner = inputData.stride[W_DIM];
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData.outShape[W_DIM] / 2, inputData.stride[W_DIM]);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.wOutputInner = mid * inputData.stride[W_DIM];
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.wOutputInner = bestSplit * inputData.stride[W_DIM];
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNchwDims dims{inputData.outShape[H_DIM], inputData.outShape[W_DIM], inputData.stride[H_DIM],
+                                          inputData.stride[W_DIM]};
+    return PoolGradTiling::TrySplitAlignW(splitData, dims, *this);
 }
-
 void AvgPoolV2GradCommonNCHWTiling::SplitUnalignHW()
 {
-    splitData.highAxisInner = 1;
-    if (baseData.isPad == 0 && baseData.isOverlap == 0) {
-        splitData.hOutputInner = inputData.stride[H_DIM];
-        splitData.wOutputInner = inputData.stride[W_DIM];
-    } else {
-        splitData.hOutputInner = inputData.outShape[H_DIM];
-        splitData.wOutputInner = inputData.outShape[W_DIM];
-    }
-
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData.outShape[W_DIM], splitData.wOutputInner);
-    splitData.hOutputOuter = Ops::Base::CeilDiv(inputData.outShape[H_DIM], splitData.hOutputInner);
-
-    while (splitData.hOutputInner != 1 || splitData.wOutputInner > baseData.proDataNumInOneBeat) {
-        if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
-            DynamicAdjustmentWH();
-        } else {
-            return;
-        }
-    }
-
-    splitData.wOutputInner = std::min(inputData.outShape[W_DIM], baseData.proDataNumInOneBeat);
-    return;
+    PoolGradTiling::PoolGradNchwDims dims{inputData.outShape[H_DIM], inputData.outShape[W_DIM], inputData.stride[H_DIM],
+                                          inputData.stride[W_DIM]};
+    PoolGradTiling::SplitUnalignHw(splitData, dims, baseData.isPad, baseData.isOverlap, baseData.proDataNumInOneBeat,
+                                   *this);
 }
-
 void AvgPoolV2GradCommonNCHWTiling::DynamicAdjustmentWH()
 {
     if (splitData.hOutputInner == 1) {
@@ -319,16 +220,10 @@ void AvgPoolV2GradCommonNCHWTiling::DoUBTiling()
     int64_t tempHighAxisTail = baseData.inputNCSize % splitData.highAxisInner;
     splitData.highAxisTail = tempHighAxisTail == 0 ? splitData.highAxisInner : tempHighAxisTail;
 }
-
 void AvgPoolV2GradCommonNCHWTiling::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter;
-    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
-    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
-                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    PoolGradTiling::DoBlockTilingNchw(splitData, baseData.totalCoreNum);
 }
-
 void AvgPoolV2GradCommonNCHWTiling::PrintBaseData() const
 {
     OP_LOGI(context_->GetNodeName(), "PrintBaseData start running");

@@ -28,8 +28,8 @@ using MaxPoolGradNCHWNameSpace::DoMulNCNchw;
 using MaxPoolGradNCHWNameSpace::DoMulNCNchwFastDiv;
 using MaxPoolGradNCHWNameSpace::DoSingleNCNchw;
 using MaxPoolGradNCHWNameSpace::DoSingleNCNchwFastDiv;
-using MaxPoolGradNCHWNameSpace::Gen3DIndexOne;
-using MaxPoolGradNCHWNameSpace::GenInitial3DIndices;
+using MaxPoolGradNCHWNameSpace::Gen3DIndexOneNchw;
+using MaxPoolGradNCHWNameSpace::GenInitial3DIndicesNchw;
 
 constexpr int32_t BK_BUFFER_NUM = 2;
 constexpr int64_t RATIO = 2;
@@ -624,18 +624,19 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
         AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOne;
         AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
         AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
-        GenInitial3DIndices<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGrad, wProBatchSize, hProBatchSize,
-                                     wArgmaxAligned, wFullBatchCount, hFullBatchCount, hArgmaxActual);
-        Gen3DIndexOne<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGradOne, hProBatchSize, wArgmaxAligned,
-                               hFullBatchCount, hArgmaxActual);
+        GenInitial3DIndicesNchw<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGrad, wProBatchSize,
+                                         hProBatchSize, wArgmaxAligned, wFullBatchCount, hFullBatchCount,
+                                         hArgmaxActual);
+        Gen3DIndexOneNchw<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegGradOne, hProBatchSize,
+                                   wArgmaxAligned, hFullBatchCount, hArgmaxActual);
         PoolGradCommon::GenInitial2DIndices<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGrad, wProBatchSize,
                                                      hArgmaxActual, wArgmaxAligned, wFullBatchCount);
         PoolGradCommon::Gen2DIndexOne<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial2DRegGradOne, hArgmaxActual,
                                                wArgmaxAligned);
-        GenInitial3DIndices<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize, hProBatchSize,
-                                     wArgmaxActual, wFullBatchCount, hFullBatchCount, hArgmaxActual);
-        Gen3DIndexOne<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize, wArgmaxActual,
-                               hFullBatchCount, hArgmaxActual);
+        GenInitial3DIndicesNchw<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize,
+                                         hProBatchSize, wArgmaxActual, wFullBatchCount, hFullBatchCount, hArgmaxActual);
+        Gen3DIndexOneNchw<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize,
+                                   wArgmaxActual, hFullBatchCount, hArgmaxActual);
         PoolGradCommon::GenInitial2DIndices<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex,
                                                      wProBatchSize, hArgmaxActual, wArgmaxActual, wFullBatchCount);
         PoolGradCommon::Gen2DIndexOne<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndexOne, hArgmaxActual,

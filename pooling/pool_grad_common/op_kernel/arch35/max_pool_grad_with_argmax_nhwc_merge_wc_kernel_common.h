@@ -58,8 +58,8 @@ public:
         __VEC_SCOPE__
         {
             AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-            GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
-                                wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
+            GenInitial3DIndicesNhwc((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                    wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
             AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
             AscendC::Reg::DataCopy(helpAddr, initialRegIndex, allMask);
         }

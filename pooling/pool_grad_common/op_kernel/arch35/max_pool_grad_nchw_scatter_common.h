@@ -21,182 +21,22 @@
 #include "max_pool_grad_with_argmax_base_common.h"
 #include "../pool_3d_common/arch35/pool_3d_common.h"
 #include "pool_utils/arch35/compute/pool_fast_div.h"
+#include "pool_utils/arch35/index/pool_grad_nchw_scatter_index.h"
 #include "pool_grad_index_common.h"
 
 namespace MaxPoolGradNCHWNameSpace {
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
-
-template <typename T, const uint32_t IS_MUL_NC = 0>
-__aicore__ inline void IndexConvNchw(Reg::RegTensor<T>& argmaxReg, Reg::RegTensor<int32_t>& hIndexReg,
-                                     Reg::RegTensor<int32_t>& wIndexReg, Reg::RegTensor<T>& wOutputConstReg,
-                                     int64_t curHIndex, int64_t curWIndex, int32_t wOutputAligned,
-                                     int32_t highOutputOffset, int32_t highOutputPlaneActual,
-                                     int32_t highArgmaxPlaneActual)
-{
-    AscendC::Reg::RegTensor<T> hTmpIndexReg;
-    AscendC::Reg::RegTensor<T> wTmpIndexReg;
-    AscendC::Reg::RegTensor<T> tmpReg;
-    AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
-    AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-
-    AscendC::Reg::Div(hTmpIndexReg, argmaxReg, wOutputConstReg, allMask);
-    if constexpr (std::is_same<T, int64_t>::value) {
-        AscendC::Reg::Adds(tmpReg, hTmpIndexReg, T(-curHIndex), allMask);
-        AscendC::Reg::Cast<int32_t, int64_t, castTraitI64I32>(hIndexReg, tmpReg, allMask);
-        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint32_t>&)hIndexReg, (AscendC::Reg::RegTensor<int64_t>&)hIndexReg);
-    } else {
-        AscendC::Reg::Adds(hIndexReg, hTmpIndexReg, T(-curHIndex), allMask);
-    }
-
-    AscendC::Reg::Mul(wTmpIndexReg, hTmpIndexReg, wOutputConstReg, allMask);
-    AscendC::Reg::Sub(wTmpIndexReg, argmaxReg, wTmpIndexReg, allMask);
-    if constexpr (std::is_same<T, int64_t>::value) {
-        AscendC::Reg::Adds(tmpReg, wTmpIndexReg, T(-curWIndex), allMask);
-        AscendC::Reg::Cast<int32_t, int64_t, castTraitI64I32>(wIndexReg, tmpReg, allMask);
-        AscendC::Reg::Pack((AscendC::Reg::RegTensor<uint32_t>&)wIndexReg, (AscendC::Reg::RegTensor<int64_t>&)wIndexReg);
-    } else {
-        AscendC::Reg::Adds(wIndexReg, wTmpIndexReg, T(-curWIndex), allMask);
-    }
-
-    AscendC::Reg::Muls((AscendC::Reg::RegTensor<int32_t>&)argmaxReg, hIndexReg, T(wOutputAligned), allMaskU32);
-    AscendC::Reg::Add((AscendC::Reg::RegTensor<int32_t>&)argmaxReg, (AscendC::Reg::RegTensor<int32_t>&)argmaxReg,
-                      wIndexReg, allMaskU32);
-
-    AscendC::Reg::Adds((AscendC::Reg::RegTensor<int32_t>&)argmaxReg, (AscendC::Reg::RegTensor<int32_t>&)argmaxReg,
-                       highOutputOffset, allMaskU32);
-
-    if constexpr (IS_MUL_NC == 1) {
-        AscendC::Reg::RegTensor<int32_t> highIncReg;
-        AscendC::Reg::Arange(highIncReg, 0);
-        AscendC::Reg::RegTensor<int32_t> constReg;
-        AscendC::Reg::Duplicate(constReg, highArgmaxPlaneActual);
-        AscendC::Reg::Div(highIncReg, highIncReg, constReg, allMaskU32);
-        AscendC::Reg::Muls(highIncReg, highIncReg, highOutputPlaneActual, allMaskU32);
-        AscendC::Reg::Add((AscendC::Reg::RegTensor<int32_t>&)argmaxReg, (AscendC::Reg::RegTensor<int32_t>&)argmaxReg,
-                          highIncReg, allMaskU32);
-    }
-}
-
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void DoSingleNCNchw(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                      __local_mem__ T2* argmaxAddr, Reg::RegTensor<uint32_t>& parallelRegIndex,
-                                      Reg::RegTensor<uint32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
-                                      Reg::RegTensor<T3>& wOutputConstReg, int64_t curHIndex, int64_t curWIndex,
-                                      int32_t wOutputAligned, int32_t highOutputOffset,
-                                      Reg::RegTensor<int32_t>& zeroConstReg, Reg::RegTensor<int32_t>& wMaxReg,
-                                      Reg::RegTensor<int32_t>& hMaxReg)
-{
-    AscendC::Reg::RegTensor<computeType> gradReg;
-    AscendC::Reg::RegTensor<T3> argmaxReg;
-    // 相对索引
-    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-
-    uint32_t maskT1 = argmaxMaskCount;
-    uint32_t maskT2 = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
-    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2, T3>(maskT2);
-    GetConCurrentInput<T1, T2, T3>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, pregT1,
-                                   pregT2);
-    IndexConvNchw<T3>(argmaxReg, hIndexReg, wIndexReg, wOutputConstReg, curHIndex, curWIndex, wOutputAligned,
-                      highOutputOffset, 0, 0);
-    uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
-    if constexpr (IS_CHECK_RANGE == 1) {
-        FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
-    }
-
-    GradientAcc<T3>(yAddr, gradReg, argmaxReg, pregArgmax);
-}
-
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void DoMulNCNchw(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                   __local_mem__ T2* argmaxAddr, Reg::RegTensor<uint32_t>& parallelRegIndex,
-                                   Reg::RegTensor<uint32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
-                                   Reg::RegTensor<T3>& wOutputConstReg, int64_t curHIndex, int64_t curWIndex,
-                                   int32_t wOutputAligned, int32_t highOutputOffset,
-                                   Reg::RegTensor<int32_t>& zeroConstReg, Reg::RegTensor<int32_t>& wMaxReg,
-                                   Reg::RegTensor<int32_t>& hMaxReg, int32_t highOutputPlaneActual,
-                                   int32_t highArgmaxPlaneActual)
-{
-    AscendC::Reg::RegTensor<computeType> gradReg;
-    AscendC::Reg::RegTensor<T3> argmaxReg;
-    // 相对索引
-    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-
-    uint32_t maskT1 = argmaxMaskCount;
-    uint32_t maskT2 = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
-    AscendC::Reg::MaskReg pregT2 = GenT2Mask<T2, T3>(maskT2);
-    GetConCurrentInput<T1, T2, T3>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, pregT1,
-                                   pregT2);
-    IndexConvNchw<T3, 1>(argmaxReg, hIndexReg, wIndexReg, wOutputConstReg, curHIndex, curWIndex, wOutputAligned,
-                         highOutputOffset, highOutputPlaneActual, highArgmaxPlaneActual);
-    uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
-    if constexpr (IS_CHECK_RANGE == 1) {
-        FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
-    }
-
-    GradientAcc<T3>(yAddr, gradReg, argmaxReg, pregArgmax);
-}
-
-template <typename T>
-__aicore__ inline void GenInitial3DIndices(Reg::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
-                                           int64_t colNumAligned, int64_t fullBatchColNum, int64_t fullBatchRowNum,
-                                           int64_t rowNumCount)
-{
-    AscendC::Reg::Arange(indexReg, 0);
-    AscendC::Reg::RegTensor<T> segmentScalarReg;
-    AscendC::Reg::RegTensor<T> segmentIncReg;
-    AscendC::Reg::RegTensor<T> segmentScalarReg2;
-    AscendC::Reg::RegTensor<T> segmentIncReg2;
-    AscendC::Reg::RegTensor<T> constReg;
-    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
-
-    AscendC::Reg::Duplicate(constReg, T(fullBatchColNum * fullBatchRowNum));
-    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
-    AscendC::Reg::Muls(segmentIncReg, segmentScalarReg, T(fullBatchColNum * fullBatchRowNum), preg);
-    AscendC::Reg::Sub(segmentIncReg, indexReg, segmentIncReg, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rowNumCount * colNumAligned), preg);
-
-    AscendC::Reg::Duplicate(constReg, T(fullBatchColNum));
-    AscendC::Reg::Div(segmentScalarReg2, segmentIncReg, constReg, preg);
-    AscendC::Reg::Muls(segmentIncReg2, segmentScalarReg2, T(fullBatchColNum), preg);
-    AscendC::Reg::Sub(segmentIncReg2, segmentIncReg, segmentIncReg2, preg);
-    AscendC::Reg::Muls(segmentIncReg2, segmentIncReg2, colGenRate, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, T(rowGenRate * colNumAligned), preg);
-
-    AscendC::Reg::Add(indexReg, segmentIncReg2, segmentScalarReg2, preg);
-    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
-}
-
-template <typename T>
-__aicore__ inline void Gen3DIndexOne(Reg::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNumAligned,
-                                     int64_t fullBatchRowNum, int64_t rowNumCount)
-{
-    AscendC::Reg::Arange(indexReg, 0);
-    AscendC::Reg::RegTensor<T> segmentScalarReg;
-    AscendC::Reg::RegTensor<T> segmentIncReg;
-    AscendC::Reg::RegTensor<T> segmentScalarReg2;
-    AscendC::Reg::RegTensor<T> segmentIncReg2;
-    AscendC::Reg::RegTensor<T> constReg;
-    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
-
-    AscendC::Reg::Duplicate(constReg, T(1 * fullBatchRowNum));
-    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
-    AscendC::Reg::Muls(segmentIncReg, segmentScalarReg, T(1 * fullBatchRowNum), preg);
-    AscendC::Reg::Sub(segmentIncReg, indexReg, segmentIncReg, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rowNumCount * colNumAligned), preg);
-
-    AscendC::Reg::Muls(segmentIncReg, segmentIncReg, T(rowGenRate * colNumAligned), preg);
-
-    AscendC::Reg::Add(indexReg, segmentIncReg, segmentScalarReg, preg);
-}
+using PoolUtils::Index::ConvertIndexInt32FastDiv;
+using PoolUtils::Index::ConvertIndexInt32FastDivVF;
+using PoolUtils::Index::ConvertIndexNcInt32FastDivVF;
+using PoolUtils::Index::DoMulNCNchw;
+using PoolUtils::Index::DoMulNCNchwFastDiv;
+using PoolUtils::Index::DoSingleNCNchw;
+using PoolUtils::Index::DoSingleNCNchwFastDiv;
+using PoolUtils::Index::Gen3DIndexOneNchw;
+using PoolUtils::Index::GenInitial3DIndicesNchw;
+using PoolUtils::Index::IndexConvNchw;
+using PoolUtils::Index::IndexConvNchwFastDiv;
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0>
 class MaxPoolGradKernelNCHWBase {
@@ -857,10 +697,10 @@ __aicore__ inline void MaxPoolGradKernelNCHWBase<T1, T2, T3, IS_CHECK_RANGE>::mu
         AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
 
         AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-        GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize, hProBatchSize,
-                            wArgmaxAligned, wFullBatchCount, hFullBatchCount, hArgmaxActual);
-        Gen3DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize, wArgmaxAligned,
-                      hFullBatchCount, hArgmaxActual);
+        GenInitial3DIndicesNchw((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, hFullBatchCount, hArgmaxActual);
+        Gen3DIndexOneNchw((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize, wArgmaxAligned,
+                          hFullBatchCount, hArgmaxActual);
 
         PoolGradCommon::GenInitial2DIndices((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
                                             hArgmaxActual, wArgmaxAligned, wFullBatchCount);
@@ -1021,10 +861,10 @@ __aicore__ inline void MaxPoolGradKernelNCHWBase<T1, T2, T3, IS_CHECK_RANGE>::mu
         AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
         AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
 
-        GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize, hProBatchSize,
-                            wArgmaxAligned, wFullBatchCount, hFullBatchCount, hArgmaxActual);
-        Gen3DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize, wArgmaxAligned,
-                      hFullBatchCount, hArgmaxActual);
+        GenInitial3DIndicesNchw((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, hFullBatchCount, hArgmaxActual);
+        Gen3DIndexOneNchw((AscendC::Reg::RegTensor<int32_t>&)initial3DRegIndexOne, hProBatchSize, wArgmaxAligned,
+                          hFullBatchCount, hArgmaxActual);
 
         PoolGradCommon::GenInitial2DIndices((AscendC::Reg::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
                                             hArgmaxActual, wArgmaxAligned, wFullBatchCount);
@@ -1228,242 +1068,6 @@ __aicore__ inline void MaxPoolGradKernelNCHWBase<T1, T2, T3, IS_CHECK_RANGE>::mu
             }
         }
     }
-}
-
-template <const uint32_t IS_MUL_NC = 0>
-__aicore__ inline void IndexConvNchwFastDiv(Reg::RegTensor<int32_t>& argmaxReg, Reg::RegTensor<int32_t>& hIndexReg,
-                                            Reg::RegTensor<int32_t>& wIndexReg, Reg::RegTensor<uint32_t>& magicReg,
-                                            int16_t shift, int64_t curHIndex, int64_t curWIndex, int32_t wOutput,
-                                            int32_t wOutputAligned, int32_t highOutputOffset,
-                                            int32_t highOutputPlaneActual, int32_t highArgmaxPlaneActual)
-{
-    Reg::MaskReg allMask = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
-    Reg::RegTensor<uint32_t> hTmpU32;
-    Reg::RegTensor<uint32_t> wTmpU32;
-    Reg::RegTensor<int32_t> highIncReg;
-    Reg::RegTensor<uint32_t> magicHighReg;
-    Reg::RegTensor<uint32_t> highIncU32;
-
-    PoolUtils::Compute::FastDivImpl(hTmpU32, (Reg::RegTensor<uint32_t>&)argmaxReg, magicReg, shift, allMask);
-
-    Reg::Adds(hIndexReg, (Reg::RegTensor<int32_t>&)hTmpU32, int32_t(-curHIndex), allMask);
-
-    Reg::Muls(wTmpU32, hTmpU32, uint32_t(wOutput), allMask);
-    Reg::Sub(wTmpU32, (Reg::RegTensor<uint32_t>&)argmaxReg, wTmpU32, allMask);
-
-    Reg::Adds(wIndexReg, (Reg::RegTensor<int32_t>&)wTmpU32, int32_t(-curWIndex), allMask);
-
-    Reg::Muls(argmaxReg, hIndexReg, int32_t(wOutputAligned), allMask);
-    Reg::Add(argmaxReg, argmaxReg, wIndexReg, allMask);
-    Reg::Adds(argmaxReg, argmaxReg, highOutputOffset, allMask);
-
-    if constexpr (IS_MUL_NC == 1) {
-        Reg::RegTensor<int32_t> highIncReg;
-        Reg::Arange(highIncReg, 0);
-        Reg::RegTensor<uint32_t> magicHighReg;
-        uint32_t magicHigh = 0;
-        uint32_t shiftHigh = 0;
-        GetUintDivMagicAndShift<uint32_t>(magicHigh, shiftHigh, static_cast<uint32_t>(highArgmaxPlaneActual));
-        Reg::Duplicate(magicHighReg, magicHigh);
-        Reg::RegTensor<uint32_t> highIncU32;
-        PoolUtils::Compute::FastDivImpl(highIncU32, (Reg::RegTensor<uint32_t>&)highIncReg, magicHighReg,
-                                        static_cast<int16_t>(shiftHigh), allMask);
-        Reg::Muls(highIncReg, (Reg::RegTensor<int32_t>&)highIncU32, highOutputPlaneActual, allMask);
-        Reg::Add(argmaxReg, argmaxReg, highIncReg, allMask);
-    }
-}
-
-template <typename T1, const uint32_t IS_CHECK_RANGE, const bool IS_OVERLAP>
-__aicore__ inline void DoSingleNCNchwFastDiv(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                             __local_mem__ int32_t* argmaxAddr,
-                                             Reg::RegTensor<uint32_t>& parallelRegIndex,
-                                             Reg::RegTensor<uint32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
-                                             Reg::RegTensor<uint32_t>& magicReg, int16_t shift, int64_t curHIndex,
-                                             int64_t curWIndex, int32_t wOutput, int32_t wOutputAligned,
-                                             int32_t highOutputOffset, Reg::RegTensor<int32_t>& zeroConstReg,
-                                             Reg::RegTensor<int32_t>& wMaxReg, Reg::RegTensor<int32_t>& hMaxReg)
-{
-    AscendC::Reg::RegTensor<computeType> gradReg;
-    AscendC::Reg::RegTensor<int32_t> argmaxReg;
-    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-
-    uint32_t maskT1 = argmaxMaskCount;
-    uint32_t maskT2 = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
-    AscendC::Reg::MaskReg pregT2 = GenT2Mask<int32_t, int32_t>(maskT2);
-    GetConCurrentInput<T1, int32_t, int32_t>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex,
-                                             parallelRegGrad, pregT1, pregT2);
-    IndexConvNchwFastDiv<0>(argmaxReg, hIndexReg, wIndexReg, magicReg, shift, curHIndex, curWIndex, wOutput,
-                            wOutputAligned, highOutputOffset, 0, 0);
-    uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
-    if constexpr (IS_CHECK_RANGE == 1) {
-        FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
-    }
-    if constexpr (IS_OVERLAP) {
-        Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-    }
-
-    GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
-}
-
-template <typename T1, const uint32_t IS_CHECK_RANGE, const bool IS_OVERLAP>
-__aicore__ inline void DoMulNCNchwFastDiv(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                          __local_mem__ int32_t* argmaxAddr, Reg::RegTensor<uint32_t>& parallelRegIndex,
-                                          Reg::RegTensor<uint32_t>& parallelRegGrad, uint32_t argmaxMaskCount,
-                                          Reg::RegTensor<uint32_t>& magicReg, int16_t shift, int64_t curHIndex,
-                                          int64_t curWIndex, int32_t wOutput, int32_t wOutputAligned,
-                                          int32_t highOutputOffset, Reg::RegTensor<int32_t>& zeroConstReg,
-                                          Reg::RegTensor<int32_t>& wMaxReg, Reg::RegTensor<int32_t>& hMaxReg,
-                                          int32_t highOutputPlaneActual, int32_t highArgmaxPlaneActual)
-{
-    AscendC::Reg::RegTensor<computeType> gradReg;
-    AscendC::Reg::RegTensor<int32_t> argmaxReg;
-    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-
-    uint32_t maskT1 = argmaxMaskCount;
-    uint32_t maskT2 = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregT1 = AscendC::Reg::UpdateMask<T1>(maskT1);
-    AscendC::Reg::MaskReg pregT2 = GenT2Mask<int32_t, int32_t>(maskT2);
-    GetConCurrentInput<T1, int32_t, int32_t>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex,
-                                             parallelRegGrad, pregT1, pregT2);
-    IndexConvNchwFastDiv<1>(argmaxReg, hIndexReg, wIndexReg, magicReg, shift, curHIndex, curWIndex, wOutput,
-                            wOutputAligned, highOutputOffset, highOutputPlaneActual, highArgmaxPlaneActual);
-    uint32_t argmaxMask = argmaxMaskCount;
-    AscendC::Reg::MaskReg pregArgmax = AscendC::Reg::UpdateMask<int32_t>(argmaxMask);
-    if constexpr (IS_CHECK_RANGE == 1) {
-        FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
-    }
-    if constexpr (IS_OVERLAP) {
-        Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-    }
-
-    GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
-}
-
-template <typename T>
-__simd_callee__ inline void GenInitial1DIndicesVF(Reg::RegTensor<T>& indexReg, int64_t colGenRate)
-{
-    Reg::Arange(indexReg, 0);
-    Reg::MaskReg preg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
-    Reg::Muls(indexReg, indexReg, T(colGenRate), preg);
-}
-
-__simd_callee__ inline void FastDivImplVF(Reg::RegTensor<uint32_t>& res, Reg::RegTensor<uint32_t>& src,
-                                          Reg::RegTensor<uint32_t>& magic, int16_t shift, Reg::MaskReg& mask)
-{
-    Reg::RegTensor<uint32_t> tmp;
-    Reg::Mull(tmp, res, src, magic, mask);
-    Reg::Add(tmp, src, res, mask);
-    Reg::ShiftRights(res, tmp, shift, mask);
-}
-
-template <const uint32_t IS_PAD>
-__aicore__ inline void ConvertIndexInt32FastDiv(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left,
-                                                int32_t wInputActualNoPad, int32_t hIndexBase,
-                                                Reg::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic,
-                                                uint32_t shift)
-{
-    Reg::RegTensor<int32_t> hIndexReg;
-    Reg::RegTensor<int32_t> wIndexReg;
-    Reg::RegTensor<int32_t> zeroReg;
-    Reg::RegTensor<uint32_t> divResultU32;
-    Reg::RegTensor<uint32_t> magicReg;
-    Reg::MaskReg negInfMask;
-    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
-
-    Reg::Duplicate(zeroReg, static_cast<int32_t>(0));
-    Reg::Duplicate(magicReg, magic);
-    Reg::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
-
-    PoolUtils::Compute::FastDivImpl(divResultU32, (Reg::RegTensor<uint32_t>&)srcReg, magicReg,
-                                    static_cast<int16_t>(shift), allMaskB32);
-
-    Reg::Adds(hIndexReg, (Reg::RegTensor<int32_t>&)divResultU32, hIndexBase, allMaskB32);
-
-    if constexpr (IS_PAD) {
-        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskB32);
-        Reg::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
-    }
-
-    Reg::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskB32);
-
-    Reg::Muls(divResultU32, divResultU32, wStrideOffset, allMaskB32);
-    Reg::Sub((Reg::RegTensor<uint32_t>&)srcReg, (Reg::RegTensor<uint32_t>&)srcReg, divResultU32, allMaskB32);
-    Reg::Adds(wIndexReg, srcReg, left, allMaskB32);
-
-    if constexpr (IS_PAD) {
-        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskB32);
-        Reg::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
-    }
-
-    Reg::Add(dstReg, hIndexReg, wIndexReg, allMaskB32);
-}
-
-template <const uint32_t IS_PAD>
-__simd_callee__ inline void ConvertIndexInt32FastDivVF(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
-                                                       int32_t left, int32_t wInputActualNoPad, int32_t hIndexBase,
-                                                       Reg::RegTensor<int32_t>& dstReg, int32_t ncInputOffset,
-                                                       uint32_t magic, uint32_t shift)
-{
-    Reg::RegTensor<int32_t> hIndexReg;
-    Reg::RegTensor<int32_t> wIndexReg;
-    Reg::RegTensor<int32_t> zeroReg;
-    Reg::RegTensor<uint32_t> divResultU32;
-    Reg::RegTensor<uint32_t> magicReg;
-    Reg::MaskReg negInfMask;
-    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
-
-    Reg::Duplicate(zeroReg, static_cast<int32_t>(0));
-    Reg::Duplicate(magicReg, magic);
-    Reg::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
-
-    FastDivImplVF(divResultU32, (Reg::RegTensor<uint32_t>&)srcReg, magicReg, static_cast<int16_t>(shift), allMaskB32);
-
-    Reg::Adds(hIndexReg, (Reg::RegTensor<int32_t>&)divResultU32, hIndexBase, allMaskB32);
-
-    if constexpr (IS_PAD) {
-        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskB32);
-        Reg::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
-    }
-
-    Reg::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskB32);
-
-    Reg::Muls(divResultU32, divResultU32, wStrideOffset, allMaskB32);
-    Reg::Sub((Reg::RegTensor<uint32_t>&)srcReg, (Reg::RegTensor<uint32_t>&)srcReg, divResultU32, allMaskB32);
-    Reg::Adds(wIndexReg, srcReg, left, allMaskB32);
-
-    if constexpr (IS_PAD) {
-        Reg::Compare<int32_t, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskB32);
-        Reg::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
-    }
-
-    Reg::Add(dstReg, hIndexReg, wIndexReg, allMaskB32);
-}
-
-template <const uint32_t IS_PAD>
-__simd_callee__ inline void ConvertIndexNcInt32FastDivVF(Reg::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset,
-                                                         int32_t left, int32_t wInputActualNoPad, int32_t hIndexBase,
-                                                         Reg::RegTensor<int32_t>& dstReg, int32_t ncInputOffset,
-                                                         int32_t ncOutputCount, int32_t inputNcSize, uint32_t magicNc,
-                                                         uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride)
-{
-    Reg::RegTensor<int32_t> ncIndexReg;
-    Reg::RegTensor<uint32_t> divResultU32;
-    Reg::RegTensor<uint32_t> magicNcReg;
-    Reg::MaskReg allMaskB32 = Reg::CreateMask<int32_t, Reg::MaskPattern::ALL>();
-
-    Reg::Duplicate(magicNcReg, magicNc);
-    Reg::Arange(ncIndexReg, static_cast<int32_t>(0));
-    FastDivImplVF(divResultU32, (Reg::RegTensor<uint32_t>&)ncIndexReg, magicNcReg, static_cast<int16_t>(shiftNc),
-                  allMaskB32);
-    Reg::Muls(ncIndexReg, (Reg::RegTensor<int32_t>&)divResultU32, inputNcSize, allMaskB32);
-    Reg::Sub(srcReg, srcReg, ncIndexReg, allMaskB32);
-
-    ConvertIndexInt32FastDivVF<IS_PAD>(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg,
-                                       ncInputOffset, magicWStride, shiftWStride);
 }
 
 } // namespace MaxPoolGradNCHWNameSpace

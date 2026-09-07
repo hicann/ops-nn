@@ -13,6 +13,7 @@
  */
 #include "op_common/op_host/util/platform_util.h"
 #include "max_pool_grad_with_argmax_nhwc_tiling_common.h"
+#include "pool_grad_tiling_split_helper.h"
 #include <iostream>
 
 namespace optiling {
@@ -87,209 +88,48 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate()
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate() %d %d %d %d",
             inputData->hKernel, inputData->hStride, inputData->wKernel, inputData->wStride);
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::IsMeetTargetCoreNum() const
 {
-    // The calculation only involves inner.
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
-    int64_t tmpHOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
-    int64_t tmpNOutputOuter = Ops::Base::CeilDiv(inputData->nX, splitData.nOutputInner);
-    int64_t tmpCOutputOuter = Ops::Base::CeilDiv(inputData->cX, splitData.cOutputInner);
-
-    return tmpWOutputOuter * tmpHOutputOuter * tmpNOutputOuter * tmpCOutputOuter >= baseData.coreUsedForBestPerformance;
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::IsMeetTargetCoreNumNhwc(splitData, dims, baseData.coreUsedForBestPerformance);
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::IsMeetUBSize()
 {
     DoBufferCalculate();
     return splitData.totalBufferSize <= baseData.availableUb;
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::TrySplitN()
 {
-    splitData.wOutputInner = inputData->wX;
-    splitData.hOutputInner = inputData->hX;
-    splitData.cOutputInner = inputData->cX;
-
-    splitData.nOutputInner = Ops::Base::CeilDiv(inputData->nX, baseData.coreUsedForBestPerformance);
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        return true;
-    }
-
-    splitData.nOutputInner = 1;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = inputData->nX;
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.nOutputInner = mid;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.nOutputInner = bestSplit;
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::TrySplitN(splitData, dims, baseData.coreUsedForBestPerformance, *this);
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::TrySplitAlignH()
 {
-    splitData.nOutputInner = 1;
-    splitData.wOutputInner = inputData->wX;
-    splitData.cOutputInner = inputData->cX;
-
-    splitData.hOutputInner = inputData->hStride;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData->hX / 2, inputData->hStride);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.hOutputInner = mid * inputData->hStride;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.hOutputInner = bestSplit * inputData->hStride;
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::TrySplitAlignH(splitData, dims, *this);
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::TrySplitAlignW()
 {
-    splitData.nOutputInner = 1;
-    splitData.hOutputInner = inputData->hStride;
-    splitData.cOutputInner = inputData->cX;
-
-    splitData.wOutputInner = inputData->wStride;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData->wX / 2, inputData->wStride);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.wOutputInner = mid * inputData->wStride;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.wOutputInner = bestSplit * inputData->wStride;
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::TrySplitAlignW(splitData, dims, *this);
 }
-
 bool MaxPoolGradWithArgmaxNHWCTilingCommon::TrySplitAlignC()
 {
-    splitData.nOutputInner = 1;
-    splitData.hOutputInner = inputData->hStride;
-    splitData.wOutputInner = inputData->wStride;
-
-    int64_t tmpCAligned = inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX :
-                                                                            baseData.moveDataNumCacheLineT2;
-    splitData.cOutputInner = tmpCAligned;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData->cX / 2, baseData.moveDataNumCacheLineT2);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.cOutputInner = mid * baseData.moveDataNumCacheLineT2;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.cOutputInner = bestSplit * baseData.moveDataNumCacheLineT2;
-        return true;
-    } else {
-        // hw stride 较大场景 或者 nhwc超小场景  ---> 应该对hw做更小的切分
-        return false;
-    }
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::TrySplitAlignC(splitData, dims, baseData.moveDataNumCacheLineT2, *this);
 }
-
 void MaxPoolGradWithArgmaxNHWCTilingCommon::SplitUnalignHWC()
 {
-    splitData.nOutputInner = 1;
-    if (baseData.isPad == 0 && baseData.isOverlap == 0) {
-        splitData.hOutputInner = inputData->hStride;
-        splitData.wOutputInner = inputData->wStride;
-        int64_t tmpCAligned = inputData->cX < baseData.moveDataNumCacheLineT2 ? inputData->cX :
-                                                                                baseData.moveDataNumCacheLineT2;
-        splitData.cOutputInner = tmpCAligned;
-    } else {
-        splitData.wOutputInner = inputData->wX;
-        splitData.hOutputInner = inputData->hX;
-        splitData.cOutputInner = inputData->cX;
-    }
-
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
-    splitData.hOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
-
-    while (splitData.hOutputInner != 1 || splitData.wOutputInner != 1) {
-        if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
-            DynamicAdjustmentWH();
-        } else {
-            return;
-        }
-    }
-
-    // NHW全切为1  C 超大场景 或者 NHW超小场景
-    if (inputData->cX <= baseData.proDataNumInOneBeatT2) {
-        return;
-    } else if (IsMeetUBSize()) {
-        splitData.cOutputInner = baseData.proDataNumInOneBeatT2;
-        return;
-    } else {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(inputData->cX / 2, baseData.proDataNumInOneBeatT2);
-        int64_t bestSplit = 1;
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.cOutputInner = mid * baseData.proDataNumInOneBeatT2;
-
-            if (IsMeetUBSize()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-        splitData.cOutputInner = bestSplit * baseData.proDataNumInOneBeatT2;
-        return;
-    }
-    return;
+    PoolGradTiling::PoolGradNhwcDims dims{inputData->nX, inputData->cX,      inputData->hX,
+                                          inputData->wX, inputData->hStride, inputData->wStride};
+    PoolGradTiling::SplitUnalignHwc(splitData, dims, baseData.isPad, baseData.isOverlap,
+                                    baseData.moveDataNumCacheLineT2, baseData.proDataNumInOneBeatT2, *this);
 }
-
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DynamicAdjustmentWH()
 {
     if (splitData.hOutputInner == 1) {
@@ -348,17 +188,10 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::DoUBTiling()
     int64_t tempCOutputTail = inputData->cX % splitData.cOutputInner;
     splitData.cOutputTail = tempCOutputTail == 0 ? splitData.cOutputInner : tempCOutputTail;
 }
-
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum = splitData.nOutputOuter * splitData.cOutputOuter * splitData.hOutputOuter *
-                                  splitData.wOutputOuter;
-    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
-    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
-                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    PoolGradTiling::DoBlockTilingNhwc(splitData, baseData.totalCoreNum);
 }
-
 void MaxPoolGradWithArgmaxNHWCTilingCommon::PrintBaseData() const
 {
     std::ostringstream info;

@@ -16,6 +16,8 @@
 #ifndef AVG_POOL_V2_GRAD_BASE_H_
 #define AVG_POOL_V2_GRAD_BASE_H_
 
+#include "pool_utils/arch35/compute/pool_grad_scatter_compute.h"
+
 namespace AvgPoolV2Grad {
 using namespace AscendC;
 constexpr uint32_t BUFFER_NUM = 2;
@@ -29,26 +31,12 @@ constexpr uint32_t INDEX_FOUR = 4;
 
 using computeType = float;
 
-constexpr AscendC::Reg::CastTrait castTraitT1ComputeType = {
-    AscendC::Reg::RegLayout::ZERO,
-    AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN,
-};
-
-constexpr AscendC::Reg::CastTrait castTraitI64I32 = {
-    AscendC::Reg::RegLayout::ZERO,
-    AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_ROUND,
-};
-
-constexpr AscendC::Reg::CastTrait castTraitU32U16 = {
-    AscendC::Reg::RegLayout::ZERO,
-    AscendC::Reg::SatMode::NO_SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT,
-};
+using PoolUtils::Compute::castTraitI64I32;
+using PoolUtils::Compute::castTraitT1ComputeType;
+using PoolUtils::Compute::castTraitU32U16;
+using PoolUtils::Compute::FilterMask;
+using PoolUtils::Compute::PEnd;
+using PoolUtils::Compute::PStart;
 
 constexpr AscendC::Reg::CastTrait castTraitI32F32 = {AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
                                                      AscendC::Reg::MaskMergeMode::ZEROING,
@@ -143,30 +131,6 @@ __aicore__ inline void GenGatterIndex3D(Reg::RegTensor<T, Trait>& indexReg, T ra
 
     AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
     AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg2, preg);
-}
-
-__aicore__ inline int64_t PStart(int64_t index, int64_t pad, int64_t kernel, int64_t stride)
-{
-    return (index + pad < kernel) ? 0 : ops::FloorDiv(index + pad - kernel, stride) + 1;
-}
-__aicore__ inline int64_t PEnd(int64_t index, int64_t pad, int64_t stride, int64_t pooledSize)
-{
-    int64_t tmp = ops::FloorDiv(index + pad, stride) + 1;
-    return tmp < pooledSize ? tmp : pooledSize;
-}
-
-__aicore__ inline void FilterMask(Reg::MaskReg& preg, Reg::RegTensor<int32_t>& hIndexReg,
-                                  Reg::RegTensor<int32_t>& wIndexReg, Reg::RegTensor<int32_t>& zeroConstReg,
-                                  Reg::RegTensor<int32_t>& wMaxReg, Reg::RegTensor<int32_t>& hMaxReg)
-{
-    AscendC::Reg::MaskReg gtMask = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
-    AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<int32_t, AscendC::Reg::MaskPattern::ALL>();
-    AscendC::Reg::Compare<int32_t, CMPMODE::GE>(gtMask, hIndexReg, zeroConstReg, gtMask);
-    AscendC::Reg::Compare<int32_t, CMPMODE::GT>(gtMask, hMaxReg, hIndexReg, gtMask);
-
-    AscendC::Reg::Compare<int32_t, CMPMODE::GE>(gtMask, wIndexReg, zeroConstReg, gtMask);
-    AscendC::Reg::Compare<int32_t, CMPMODE::GT>(gtMask, wMaxReg, wIndexReg, gtMask);
-    AscendC::Reg::And(preg, preg, gtMask, allMask);
 }
 
 __aicore__ inline void FilterMaskForMergeW(Reg::MaskReg& preg, Reg::RegTensor<int32_t>& wIndexReg,

@@ -70,10 +70,10 @@ public:
         {
             AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
             AscendC::Reg::RegTensor<uint32_t> initialRegIndexOne;
-            GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
-                                wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
-            Gen3DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxActual,
-                          cOutputActual, cOutputAligned);
+            GenInitial3DIndicesNhwc((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                    wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
+            Gen3DIndexOneNhwc((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxActual,
+                              cOutputActual, cOutputAligned);
 
             AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
             AscendC::Reg::DataCopy(helpAddr, initialRegIndex, allMask);

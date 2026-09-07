@@ -20,11 +20,14 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
 #include "avg_pool_v2_grad_base.h"
+#include "pool_utils/arch35/index/pool_grad_nhwc_scatter_index.h"
 #include "avg_pool_v2_grad_tiling_data.h"
 
 namespace AvgPoolV2GradNHWCNameSpace {
 using namespace AscendC;
 using namespace AvgPoolV2Grad;
+using PoolUtils::Index::Gen3DIndexOneNhwc;
+using PoolUtils::Index::GenInitial3DIndicesNhwc;
 using computeType = float;
 
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
@@ -155,11 +158,11 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
     wOutputActual_ = wAxisIndex_ == (tilingData_->wOutputOuter - 1) ? tilingData_->wOutputTail :
                                                                       tilingData_->wOutputInner;
 
-    hGradActualStart_ = PStart(hAxisIndex_ * tilingData_->hOutputInner, tilingData_->padTop, tilingData_->hKernel,
+    hGradActualStart_ = PStart(hAxisIndex_ * tilingData_->hOutputInner, tilingData_->padTop, tilingData_->hKernel, 1,
                                tilingData_->hStride);
     int64_t hGradActualEnd = PEnd(hAxisIndex_ * tilingData_->hOutputInner + hOutputActual_ - 1, tilingData_->padTop,
                                   tilingData_->hStride, tilingData_->hGrad);
-    wGradActualStart_ = PStart(wAxisIndex_ * tilingData_->wOutputInner, tilingData_->padLeft, tilingData_->wKernel,
+    wGradActualStart_ = PStart(wAxisIndex_ * tilingData_->wOutputInner, tilingData_->padLeft, tilingData_->wKernel, 1,
                                tilingData_->wStride);
     int64_t wGradActualEnd = PEnd(wAxisIndex_ * tilingData_->wOutputInner + wOutputActual_ - 1, tilingData_->padLeft,
                                   tilingData_->wStride, tilingData_->wGrad);
@@ -505,59 +508,6 @@ __aicore__ inline void ComputeOutWHIndex(Reg::RegTensor<int32_t>& wIndexReg, Reg
     hIndexReg = (AscendC::Reg::RegTensor<int32_t>&)hIndexRegT;
 }
 
-template <typename T>
-__aicore__ inline void GenInitial3DIndices(Reg::RegTensor<T>& indexReg, int64_t colGenRate, int64_t rowGenRate,
-                                           int64_t colNum, int64_t fullBatchColNum, int64_t cOutputActual,
-                                           int64_t cOutputAligned)
-{
-    AscendC::Reg::Arange(indexReg, 0);
-    AscendC::Reg::RegTensor<T> segmentScalarReg;
-    AscendC::Reg::RegTensor<T> segmentIncReg;
-    AscendC::Reg::RegTensor<T> segmentScalarReg2;
-    AscendC::Reg::RegTensor<T> segmentIncReg2;
-    AscendC::Reg::RegTensor<T> constReg;
-    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
-    AscendC::Reg::Duplicate(constReg, static_cast<T>(fullBatchColNum * cOutputActual));
-
-    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
-
-    AscendC::Reg::Muls(segmentIncReg, segmentScalarReg, static_cast<T>(fullBatchColNum * cOutputActual), preg);
-    AscendC::Reg::Sub(segmentIncReg, indexReg, segmentIncReg, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, static_cast<T>(rowGenRate * colNum * cOutputAligned), preg);
-
-    AscendC::Reg::Duplicate(constReg, static_cast<T>(cOutputActual));
-    AscendC::Reg::Div(segmentScalarReg2, segmentIncReg, constReg, preg);
-
-    AscendC::Reg::Muls(segmentIncReg2, segmentScalarReg2, static_cast<T>(cOutputActual), preg);
-    AscendC::Reg::Sub(segmentIncReg2, segmentIncReg, segmentIncReg2, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg2, segmentScalarReg2, static_cast<T>(colGenRate * cOutputAligned), preg);
-
-    AscendC::Reg::Add(indexReg, segmentIncReg2, segmentScalarReg2, preg);
-    AscendC::Reg::Add(indexReg, indexReg, segmentScalarReg, preg);
-}
-
-template <typename T>
-__aicore__ inline void Gen3DIndexOne(Reg::RegTensor<T>& indexReg, int64_t rowGenRate, int64_t colNum,
-                                     int64_t cOutputActual, int64_t cOutputAligned)
-{
-    AscendC::Reg::Arange(indexReg, 0);
-    AscendC::Reg::RegTensor<T> segmentScalarReg;
-    AscendC::Reg::RegTensor<T> segmentIncReg;
-    AscendC::Reg::RegTensor<T> constReg;
-    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<T, AscendC::Reg::MaskPattern::ALL>();
-    AscendC::Reg::Duplicate(constReg, T(cOutputActual));
-
-    AscendC::Reg::Div(segmentScalarReg, indexReg, constReg, preg);
-
-    AscendC::Reg::Muls(segmentIncReg, segmentScalarReg, T(cOutputActual), preg);
-    AscendC::Reg::Sub(segmentIncReg, indexReg, segmentIncReg, preg);
-
-    AscendC::Reg::Muls(segmentScalarReg, segmentScalarReg, T(rowGenRate * colNum * cOutputAligned), preg);
-    AscendC::Reg::Add(indexReg, segmentScalarReg, segmentIncReg, preg);
-}
-
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
 __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::ProcessNoGradBlock()
 {
@@ -720,8 +670,8 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                 AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
                 AscendC::Reg::MaskReg allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
 
-                GenInitial3DIndices<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, 1,
-                                             wGradActual, wFullBatchCount, cOutputActual, cOutputAligned);
+                GenInitial3DIndicesNhwc<int32_t>((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, 1,
+                                                 wGradActual, wFullBatchCount, cOutputActual, cOutputAligned);
                 GenRepeatIndices<T3, Trait>(initialWRegIdx, wProBatchSize, cOutputActual);
                 AscendC::Reg::StoreAlign(helpAddr, initialRegIndex, allMask);
                 AscendC::Reg::StoreAlign(helpAddrT3, initialWRegIdx, allMaskT3);
@@ -996,10 +946,10 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
         AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
         AscendC::Reg::MaskReg allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
 
-        GenInitial3DIndices((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
-                            wGradActual, wFullBatchCount, cOutputActual, cOutputAligned);
-        Gen3DIndexOne((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wGradActual, cOutputActual,
-                      cOutputAligned);
+        GenInitial3DIndicesNhwc((AscendC::Reg::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                wGradActual, wFullBatchCount, cOutputActual, cOutputAligned);
+        Gen3DIndexOneNhwc((AscendC::Reg::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wGradActual,
+                          cOutputActual, cOutputAligned);
         GenRepeatIndicesWithLoop<T3, Trait>(initialWRegIdx, wFullBatchCount, cOutputActual, wProBatchSize);
         GenRepeatIndices<T3, Trait>(initialHRegIdx, hProBatchSize, wFullBatchCount * cOutputActual);
         GenRepeatIndicesWithLoop<T3, Trait>(initialWRegIdxOne, 1, cOutputActual, wProBatchSize);

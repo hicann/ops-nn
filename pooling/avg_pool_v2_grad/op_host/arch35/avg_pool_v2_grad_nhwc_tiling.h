@@ -80,22 +80,22 @@ struct AvgPoolV2GradNHWCSplitInfo {
 
 class AvgPoolV2GradCommonNHWCTiling : public TilingBaseClass {
 public:
+    bool IsMeetTargetCoreNum() const; // 当前切分是否满足核数 分块过大，块数小于核数会false
+    bool IsMeetUBSize();              // 当前切分是否满足ub大小 buffer小于ub大小
+    void DynamicAdjustmentWH();       // SplitUnalignHWC中动态查找h和w切分outer
     explicit AvgPoolV2GradCommonNHWCTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
     ~AvgPoolV2GradCommonNHWCTiling() override {}
 
 protected:
-    void DoUBTiling();                // 入口
-    void InitializationVars();        // tiling初始化
-    bool TrySplitN();                 // 尝试一次ub分多个n
-    bool TrySplitAlignH();            // 无pad无overlap，尝试一次ub分多个h
-    bool TrySplitAlignW();            // 无pad无overlap，ub分多个w
-    bool TrySplitAlignC();            // 无pad无overlap，ub分多个c
-    void SplitUnalignHWC();           // 非对齐加载
-    bool IsMeetTargetCoreNum() const; // 当前切分是否满足核数 分块过大，块数小于核数会false
-    bool IsMeetUBSize();              // 当前切分是否满足ub大小 buffer小于ub大小
-    void SearchBestTiling();    // 动态查找各维度outer TrySplitN TrySplitAlignH TrySplitAlignW SplitUnalignHWC
-    void DynamicAdjustmentWH(); // SplitUnalignHWC中动态查找h和w切分outer
+    void DoUBTiling();         // 入口
+    void InitializationVars(); // tiling初始化
+    bool TrySplitN();          // 尝试一次ub分多个n
+    bool TrySplitAlignH();     // 无pad无overlap，尝试一次ub分多个h
+    bool TrySplitAlignW();     // 无pad无overlap，ub分多个w
+    bool TrySplitAlignC();     // 无pad无overlap，ub分多个c
+    void SplitUnalignHWC();    // 非对齐加载
+    void SearchBestTiling();   // 动态查找各维度outer TrySplitN TrySplitAlignH TrySplitAlignW SplitUnalignHWC
     void SetTilingData();
     uint64_t GetTilingKey() const override;
     void PrintBaseData() const;

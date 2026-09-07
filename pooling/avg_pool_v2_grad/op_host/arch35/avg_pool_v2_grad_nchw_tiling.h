@@ -79,6 +79,9 @@ struct AvgPoolV2GradNCHWSplitInfo {
 
 class AvgPoolV2GradCommonNCHWTiling : public TilingBaseClass {
 public:
+    bool IsMeetTargetCoreNum() const;
+    bool IsMeetUBSize();
+    void DynamicAdjustmentWH();
     explicit AvgPoolV2GradCommonNCHWTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
     ~AvgPoolV2GradCommonNCHWTiling() override {}
@@ -90,10 +93,7 @@ protected:
     bool TrySplitAlignH();
     bool TrySplitAlignW();
     void SplitUnalignHW();
-    bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
     void SearchBestTiling();
-    void DynamicAdjustmentWH();
     void SetTilingData();
     uint64_t GetTilingKey() const override;
     void PrintBaseData() const;
