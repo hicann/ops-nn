@@ -56,6 +56,9 @@ private:
     bool HasSupportedSmallKernelPadding() const;
     bool HasSmallKernelComputationBudget() const;
     bool HasSmallKernelBufferBudget() const;
+    // 单核场景预判 kernel_split(98) 是否能接手: 复现 kernel_split 硬准入(不含 L1 软约束),
+    // 命中则让 small_kernel 退出, 避免抢占 kernel_split 适用算子导致劣化。
+    bool Has1CoreKernelSplitAlternative() const;
     // for small kernel optimize
     uint64_t CalSmallKernelLocalHo(uint64_t maxM, uint64_t wi, uint64_t hk, uint64_t dilationH, uint64_t hoExpand);
     uint64_t CalcSmallKernelA1Size(uint64_t baseM) const;

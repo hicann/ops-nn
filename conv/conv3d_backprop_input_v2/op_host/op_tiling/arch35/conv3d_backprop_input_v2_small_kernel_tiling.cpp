@@ -398,10 +398,6 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelBufferBudget() const
     if (tilingRunInfo_.n0 == 0 || tilingRunInfo_.m0 == 0) {
         return false;
     }
-    // The scheduling overhead of small kernel causes a severe performance regression in single-core scenarios.
-    if (coreNum_ == 1) {
-        return false;
-    }
     uint64_t cinAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_cin_g),
                                              static_cast<uint64_t>(tilingRunInfo_.n0));
     uint64_t maxMByL0C = CalcSmallKernelMaxMByL0C(cinAlign, DB_OFF);
@@ -413,6 +409,60 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelBufferBudget() const
            l1UsedSize <= platformInfo_.l1_size;
 }
 
+bool Conv3DDXV2SmallKernelTiling::Has1CoreKernelSplitAlternative() const
+{
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->core_num != 1) {
+        return false;
+    }
+
+    bool isA16W8 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
+                   static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_INT8);
+    if (isA16W8) {
+        return false;
+    }
+
+    // CheckBasicConstraints: dilation==1, filterFormat∈{NCDHW,NDHWC}, pad 上下左右对称
+    if (runInfo_.dilation_h != 1 || runInfo_.dilation_w != 1) {
+        return false;
+    }
+    if (runInfo_.pad_u != runInfo_.pad_d || runInfo_.pad_l != runInfo_.pad_r) {
+        return false;
+    }
+
+    // CheckShapeValue: mValue<256 且 groups==1 时无收益(isA16W8GroupNoEnlarge 在 groups==1 下恒 false)
+    uint64_t mValue = static_cast<uint64_t>(runInfo_.dedx_w) * runInfo_.dedx_h;
+    if (mValue < BASIC_BLOCK_SIZE_256 && runInfo_.groups == 1) {
+        return false;
+    }
+
+    if (runInfo_.offsetX != 0) {
+        return false;
+    }
+
+    // TryKernelSplitHW 硬准入 + CheckKernelSplitHWEnable 硬子集(不含 IsBaseShapeFitKernelSplitHW L1)
+    if (runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.yFormat == ge::FORMAT_NCDHW &&
+        runInfo_.stride_h == 2 && runInfo_.stride_w == 2 && runInfo_.kernel_w == runInfo_.kernel_h &&
+        (runInfo_.kernel_w == 1 || runInfo_.kernel_w == 2 || runInfo_.kernel_w == 3 || runInfo_.kernel_w == 4)) {
+        if (runInfo_.dedx_cin_g == 1 && runInfo_.dedy_cout_g == 1 && runInfo_.kernel_w == 2) {
+            return false;
+        }
+        if (runInfo_.dedx_w % 2 != 0 && runInfo_.dedx_w > static_cast<int32_t>(BASIC_BLOCK_SIZE_512)) {
+            return false;
+        }
+        return true;
+    }
+
+    // TryKernelSplitH 硬准入 + CheckKernelSplitHEnable 硬子集(不含 IsBaseShapeFitKernelSplitH L1)
+    // TryKernelSplitH: stride_h>=2 && kernel_h>=2; CheckKernelSplitHEnable: cin>=16 && cout>=16 && dedx_w>=32,
+    if (runInfo_.stride_h >= 2 && runInfo_.kernel_h >= 2 && runInfo_.dedx_cin_g >= BLOCK_CUBE &&
+        runInfo_.dedy_cout_g >= BLOCK_CUBE && runInfo_.dedx_w >= 32 && runInfo_.kernel_h >= runInfo_.stride_h &&
+        runInfo_.kernel_h <= BLOCK_CUBE) {
+        return true;
+    }
+
+    return false;
+}
+
 bool Conv3DDXV2SmallKernelTiling::CheckSmallKernelEnable()
 {
     if (!IsSocVersionFuse(context_)) {
@@ -422,6 +472,10 @@ bool Conv3DDXV2SmallKernelTiling::CheckSmallKernelEnable()
     // format要求: outBackprop/y=NCDHW, filter=NDHWC
     if (!HasSupportedSmallKernelDimensions() || !HasSupportedSmallKernelFormats() ||
         !HasSupportedSmallKernelPadding() || !HasSmallKernelComputationBudget()) {
+        return false;
+    }
+    // 单核场景优化: kernel_split 硬准入可接手时退出, 避免抢占 kernel_split 适用算子
+    if (Has1CoreKernelSplitAlternative()) {
         return false;
     }
     return HasSmallKernelBufferBudget();
