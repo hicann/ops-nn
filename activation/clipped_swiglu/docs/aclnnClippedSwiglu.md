@@ -148,7 +148,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>-</td>
+      <td>参见约束说明</td>
     </tr>
     <tr>
       <td>groupIndexOptional（aclTensor*）</td>
@@ -158,7 +158,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
-      <td>-</td>
+      <td>参见约束说明</td>
     </tr>
     <tr>
       <td>dim（int64_t）</td>
@@ -218,7 +218,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>-</td>
+      <td>参见约束说明</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -334,7 +334,16 @@ aclnnStatus aclnnClippedSwiglu(
 
 ## 约束说明
 
-确定性计算：aclnnClippedSwiglu默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
+- 确定性计算：aclnnClippedSwiglu默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
+- 张量参数非连续性说明：
+  <!-- npu="950" id9 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 所有输入张量参数支持非连续Tensor，输出张量参数不支持非连续tensor。
+  <!-- end id9 -->
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+    - 所有输入/输出张量参数均不支持非连续Tensor。
+  <!-- end id10 -->
 
 ## 调用示例
 

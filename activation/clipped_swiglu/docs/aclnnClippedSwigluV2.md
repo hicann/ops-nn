@@ -170,7 +170,7 @@ aclnnStatus aclnnClippedSwigluV2(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>groupIndexOptional（aclTensor*）</td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnClippedSwigluV2(
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>dim（int64_t）</td>
@@ -250,7 +250,7 @@ aclnnStatus aclnnClippedSwigluV2(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
