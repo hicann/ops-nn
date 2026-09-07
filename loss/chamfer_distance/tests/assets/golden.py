@@ -35,6 +35,16 @@ __spec__ = {
     "chamfer_distance": "ChamferDistanceKernelSpec",
 }
 
+# Spec.tolerance 只认官方四标准：stat_rel_err / binary_equal / cross_check / quant
+# （close、requant 是 CLI 专用别名，写进 Spec 会 InvalidSpecError）。
+_TOL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    # idx1/idx2 是最近点下标, 差 1 就是另一个点, 不套容差
+    "int32": {"standard": "binary_equal"},
+}
+
 # (B, N, N) 的全对比矩阵在大 N 上会撑爆内存, 按查询点分块算
 _CHUNK = 512
 
@@ -166,6 +176,7 @@ class ChamferDistanceKernelSpec:
         ]
 
     third_party = {"torch": _Compose}
+    tolerance = _TOL
 
 
 # 【不存在】aclnn 通路: canndev 老树 op_api 只有 aclnn_chamfer_distance_backward.h(反向),

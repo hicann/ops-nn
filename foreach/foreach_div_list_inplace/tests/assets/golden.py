@@ -108,7 +108,12 @@ def _tp_list(xs):
     out = []
     for a in xs:
         t = a if isinstance(a, torch.Tensor) else torch.as_tensor(_to_fp32(a))
-        out.append(t.to(torch.float32))
+        # 不抬精度: 三方按算子 dtype 算, 否则与 Promote 后的 golden 逐位相等、cross_check 分母塌陷
+        out.append(
+            t
+            if t.dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64)
+            else t.to(torch.float32)
+        )
     return out
 
 

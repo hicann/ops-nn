@@ -247,3 +247,6 @@ __golden__ = {"kernel": {"non_zero_with_value": "__golden_non_zero_with_value"}}
 # 【不存在】onnx / caffe 通路：onnx_plugin 仅映射普通 NonZero，caffe 无（01 §3.3）。
 #  tf 通路存在（tf_plugin/nonzero_with_value_plugin.cc），其验证走 aclgrphParseTensorFlow
 #  预生成 .pb，不在 TTK invoke_path 格式内（01 §3.3）。
+#  【三方腿为何不加 tf】OriginOpType "NonZeroWithValue" 是华为自定义 TF 类型，stock TF 无此
+#  算子，tf 腿只能用 tf.where/tf.gather_nd 拼等价语义；拼接体不是"TF 的那一个算子"，精度上
+#  相对现有 torch 拼接无增量，性能腿量的是一串算子总时延、与被测单算子不可比，故保持 torch。

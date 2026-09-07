@@ -91,9 +91,19 @@ _TOL_KERNEL = {
 
 
 def _tp_t(x):
-    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。
+
+    **不抬精度**: 三方标杆必须按算子自身 dtype 计算。此前统一 .to(float32) 会让三方与
+    走 Promote(fp32) 的 golden 逐位相等, cross_check 的分母塌到 safe_div 的 small_value
+    地板, 判据退化成"NPU 与 fp32 参照的绝对误差", 随输出量级线性放大而必红。
+    仅 bf16 需还原载体(torch 不收 ml_dtypes 的 bf16 视图), 其余保持原 dtype。
+    """
     t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
-    return t.to(torch.float32)
+    return (
+        t.to(torch.float32)
+        if t.dtype not in (torch.float16, torch.bfloat16, torch.float32, torch.float64)
+        else t
+    )
 
 
 def _tp_s(x):
@@ -152,6 +162,10 @@ __spec__ = {"lamb_apply_optimizer_assign": "LambApplyOptimizerAssignKernelSpec"}
 # 已注册: kernel + GEIR(复用 kernel spec)
 # 未在 __spec__ 中注册:
 # aclnn: 未交付——算子目录下无 docs/aclnn*.md。
-# TensorFlow: 有 framework 的 tf_plugin, 但 TF 不是 TestSpec 的注册通路,
-# 如需对标应以 third_party 的 tf vendor 形式补充, 本次未做。
+# TensorFlow: 有 framework 的 tf_plugin(OriginOpType "LambApplyOptimizerAssign"), 但**三方腿仍用 torch, 不补 tf**:
+#   该 OriginOpType 是华为自定义 TF 类型, stock TF 里没有对应算子, tf 腿只能用 TF 张量运算
+#   拼出等价语义。拼接体不是"TF 的那一个算子", 精度上相对 torch 拼接没有增量, 性能腿
+#   (--xpu-perf)量的更是一串算子的总时延, 与被测单算子不可比 → 补了也用不上。
+#   tf 通路的连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证(TTK 的 tf 通路是 e2e 前端,
+#   NPU 侧需 Ascend TF adapter, 当前环境未装)。
 # e2e / ONNX / 融合 pass: 均未交付。

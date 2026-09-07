@@ -165,6 +165,74 @@ def __golden_group_norm_silu_quant(x, gamma, beta, quant_scale, **kwargs):
 _golden_impl = __golden_group_norm_silu_quant
 
 
+class _Compose:
+    """竞品标杆(A100 上执行): 走 torch 的层级 API `F.group_norm` + `F.silu`。
+
+    与 golden 的张量算子拼接是**相互独立的实现路径**: golden 因 elemNum=1 的训练态保护
+    刻意绕开 F.group_norm, 三方腿这里正面用它 —— 竞品的真实用法就是这一句。
+    命中该保护(每通道只剩 1 个元素, 如 2 维输入 (N,C) 且 group=C)时回退到统计量拼接。
+
+    ⚠️ **mean/rstd 这两路的三方腿不构成独立证据**: 任何 torch 实现都只能是
+    `torch.var_mean(unbiased=False)`, 与 golden 逐位同源, cross_check 的分母会塌到
+    safe_div 的 err 地板。只有 y(int8) 那一路走的是真正不同的代码路径。
+
+    `**kwargs` 必须留: 用例 CSV 带 input_formats 时服务端会把逐输入 format 并进调用
+    kwargs, 不吞掉会直接 TypeError 让整条三方腿 FAIL。
+    """
+
+    def __call__(self, x, gamma=None, beta=None, quant_scale=None, **kwargs):
+        num_groups = int(_attr(kwargs, "num_groups", 1))
+        eps = float(_attr(kwargs, "eps", 1e-5))
+        silu = _attr(kwargs, "activate_silu", True)
+        if isinstance(silu, str):
+            silu = silu.strip().lower() in ("1", "true", "yes")
+
+        dev = x.device
+        xf = x.to(torch.float32)
+        N, C = xf.shape[0], xf.shape[1]
+        HW = int(torch.tensor(xf.shape[2:]).prod().item()) if xf.dim() > 2 else 1
+        G = num_groups
+
+        gt = (
+            torch.ones(C, dtype=torch.float32, device=dev)
+            if gamma is None
+            else gamma.to(torch.float32).reshape(-1)
+        )
+        bt = (
+            torch.zeros(C, dtype=torch.float32, device=dev)
+            if beta is None
+            else beta.to(torch.float32).reshape(-1)
+        )
+
+        x3 = xf.reshape(N, C, HW)
+        xg = x3.reshape(N, G, -1)
+        var_t, mean_t = torch.var_mean(xg, dim=-1, unbiased=False, keepdim=True)
+        rstd_t = torch.rsqrt(var_t + eps)
+
+        try:
+            out_t = F.group_norm(x3, G, weight=gt, bias=bt, eps=eps)
+        except (RuntimeError, ValueError):
+            # 每通道 1 元素触发 BN 训练态保护 —— 回退到与 golden 同形的统计量拼接
+            out_t = torch.addcmul(
+                bt.reshape(1, C, 1),
+                ((xg - mean_t) * rstd_t).reshape(N, C, HW),
+                gt.reshape(1, C, 1),
+            )
+        if silu:
+            out_t = F.silu(out_t)
+
+        qs = quant_scale.to(torch.float32).reshape(-1)
+        scale_t = qs.reshape(1, C, 1) if qs.numel() == C else qs[0]
+        q_t = torch.clamp(torch.round(out_t / scale_t), -128.0, 127.0)
+
+        y_i8 = q_t.to(torch.int8).reshape(x.shape)
+        return [
+            y_i8,
+            mean_t.reshape(N, G).to(x.dtype),
+            rstd_t.reshape(N, G).to(x.dtype),
+        ]
+
+
 class GroupNormSiluQuantSpec:
     """判据声明。**必须显式给 int8 输出声明 quant 标准**:
     y 是量化输出, 不声明时 TTK 会把 int8 硬路由到 binary_equal(逐位相等), 量化舍入产生的 ±1 LSB
@@ -178,6 +246,8 @@ class GroupNormSiluQuantSpec:
     2560 个 mean 元素里 10 个不相等, **每一个都恰好差 1 ULP**(ULP 倍数 max=1.0000, 超 1 ULP 的 0 个)
     —— 内核 fp32 累加后舍入到 bf16 与 torch 求和次序不同, 边界值差一格, 任何实现都做不到更好。
     """
+
+    third_party = {"torch": _Compose}
 
     tolerance = {
         "int8": {"standard": "quant"},

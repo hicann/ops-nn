@@ -154,12 +154,41 @@ class _ScatterMulCompose:
         return [work]
 
 
+class _ScatterMulTfCompose:
+    """tf 腿适配类。TF 侧对标算子是 ScatterMul(tf_plugin 的 OriginOpType), 但它是
+    **ref-variable 语义**: tf.raw_ops.ScatterMul 首参名叫 ref 且必须是可变引用, 与 def.cpp
+    的 var 既不同名、也不能直接喂 eager tensor, 故不能用 API 直调形式(那种写法只适用于
+    参数名与 def.cpp 一致的普通算子), 要在这里把 var 包成 tf.Variable 再调。
+
+    与 torch 腿的两处一致性(不一致就会系统性假红):
+    1) 非法下标(越界/负)按算子语义静默跳过——TF 自己会抛 InvalidArgumentError;
+    2) **不升精度**: 一律用算子自身 dtype 计算, 与 torch 腿同口径。
+    """
+
+    def __call__(self, var, indices, updates, **kwargs):
+        import tensorflow as tf
+
+        work = tf.convert_to_tensor(var)
+        upd = tf.reshape(
+            tf.convert_to_tensor(updates), tf.concat([[-1], tf.shape(work)[1:]], axis=0)
+        )
+        idx = tf.reshape(tf.cast(tf.convert_to_tensor(indices), tf.int64), [-1])
+        keep = tf.logical_and(idx >= 0, idx < tf.cast(tf.shape(work)[0], tf.int64))
+        idx, upd = tf.boolean_mask(idx, keep), tf.boolean_mask(upd, keep)
+        ref = tf.Variable(work)
+        if tf.size(idx) > 0:
+            tf.compat.v1.scatter_mul(
+                ref, tf.cast(idx, tf.int32), tf.cast(upd, ref.dtype)
+            )
+        return [tf.convert_to_tensor(ref)]
+
+
 _GOLDEN_FN = __golden_scatter_mul
 
 
 class ScatterMulKernelSpec:
     golden = _GOLDEN_FN
-    third_party = {"torch": _ScatterMulCompose}
+    third_party = {"torch": _ScatterMulCompose, "tf": _ScatterMulTfCompose}
     customize_inputs = scatter_mul_input
     tolerance = _TOL_KERNEL
 
@@ -219,7 +248,11 @@ class ScatterMulAclnnSpec:
 # 通路交付情况
 # 已注册: kernel + GEIR(复用 kernel spec) + aclnn
 # 未在 __spec__ 中注册:
-# TensorFlow: 算子目录下有 framework 的 tf_plugin, 但 TF 不是 TestSpec 的注册通路
-# (README 四通路为 Kernel/GEIR/ACLNN/E2E), 如需 TF 对标应以 third_party 的 tf
-# vendor 形式补充, 本次未做。
+# TensorFlow: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterMul")。
+#   三方标杆(精度/性能)已补: third_party["tf"] = _ScatterMulTfCompose, 跑 --provider tf。
+#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
+#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
+#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
+#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
+#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
 # e2e / ONNX / 融合 pass: 均未交付。

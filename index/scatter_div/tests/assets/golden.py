@@ -185,12 +185,66 @@ class _ScatterDivCompose:
         return [work]
 
 
+class _ScatterDivTfCompose:
+    """tf 腿适配类。TF 侧对标算子是 ScatterDiv(tf_plugin 的 OriginOpType), 但它是
+    **ref-variable 语义**: tf.raw_ops.ScatterDiv 首参名叫 ref 且必须是可变引用, 与
+    def.cpp 的 var 既不同名、也不能直接喂 eager tensor, 故用适配类包 tf.Variable 再调。
+
+    与 torch 腿逐条对齐的三处语义(不一致就会系统性假红):
+    1) 非法下标(越界/负)按算子语义静默跳过——TF 自己会抛 InvalidArgumentError;
+    2) 除数含 0 时不能直接调 TF 的 ScatterDiv: 它对**所有 dtype**硬性拒收零除数
+       (实测 tf 2.21: InvalidArgumentError "updates must not contain 0", 浮点也拒),
+       即"除数为 0"落在 TF 该算子的定义域之外。而本算子对零除数是有定义的:
+       整型保持原值、浮点按普通除法给 ±inf(见 golden 与 torch 腿)。故按 dtype 分流——
+         · 整型: 把 0 除数换成 1(x/1 == x, 等价于保持原值), 仍走单次 scatter_div;
+         · 浮点且含 0 除数: 退化成按索引顺序的链式 tf.divide(TF 自己的除法核, ±inf
+           与 nan 的产生方式与 TF 一致), 只有这条罕见分支走循环, 常规用例仍是单次调用;
+    3) **不升精度**: 一律用算子自身 dtype 算(见 _tp_t 的说明——本算子对重复索引是链式
+       运算, 三方升精度会让 cross_check 拿 fp16 实现够不到的参照去比, 系统性判红)。
+    TF 的整型除法本身就是截断除, 与算子/golden 的 trunc 语义一致, 无需额外处理。
+    """
+
+    def __call__(self, var, indices, updates, **kwargs):
+        import tensorflow as tf
+
+        work = tf.convert_to_tensor(var)
+        upd = tf.reshape(
+            tf.convert_to_tensor(updates), tf.concat([[-1], tf.shape(work)[1:]], axis=0)
+        )
+        idx = tf.reshape(tf.cast(tf.convert_to_tensor(indices), tf.int64), [-1])
+        keep = tf.logical_and(idx >= 0, idx < tf.cast(tf.shape(work)[0], tf.int64))
+        idx, upd = tf.boolean_mask(idx, keep), tf.boolean_mask(upd, keep)
+        if tf.size(idx) == 0:
+            return [work]
+        upd = tf.cast(upd, work.dtype)
+        has_zero = bool(tf.reduce_any(tf.equal(upd, tf.zeros_like(upd))))
+        # 整型判定与 golden/torch 腿同源(def 注册的整型面), 不用 is_floating 泛判。
+        is_int = work.dtype in (tf.int32, tf.int8, tf.uint8)
+
+        if is_int and has_zero:
+            upd = tf.where(tf.equal(upd, tf.zeros_like(upd)), tf.ones_like(upd), upd)
+            has_zero = False
+
+        if not has_zero:
+            ref = tf.Variable(work)
+            tf.compat.v1.scatter_div(ref, tf.cast(idx, tf.int32), upd)
+            return [tf.convert_to_tensor(ref)]
+
+        # 浮点 + 零除数: TF 的 ScatterDiv 拒收, 按索引顺序链式除(与算子/golden 同序)。
+        rows = idx.numpy().tolist()
+        for k, i in enumerate(rows):
+            work = tf.tensor_scatter_nd_update(
+                work, [[i]], tf.expand_dims(tf.divide(work[i], upd[k]), 0)
+            )
+        return [work]
+
+
 _GOLDEN_FN = __golden_scatter_div
 
 
 class ScatterDivKernelSpec:
     golden = _GOLDEN_FN
-    third_party = {"torch": _ScatterDivCompose}
+    third_party = {"torch": _ScatterDivCompose, "tf": _ScatterDivTfCompose}
     customize_inputs = scatter_div_input
     tolerance = _TOL_KERNEL
 
@@ -259,7 +313,11 @@ class ScatterDivAclnnSpec:
 # 通路交付情况
 # 已注册: kernel + GEIR(复用 kernel spec) + aclnn
 # 未在 __spec__ 中注册:
-# TensorFlow: 算子目录下有 framework 的 tf_plugin, 但 TF 不是 TestSpec 的注册通路
-# (README 四通路为 Kernel/GEIR/ACLNN/E2E), 如需 TF 对标应以 third_party 的 tf
-# vendor 形式补充, 本次未做。
+# TensorFlow: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterDiv")。
+#   三方标杆(精度/性能)已补: third_party["tf"] = _ScatterDivTfCompose, 跑 --provider tf。
+#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
+#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
+#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
+#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
+#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
 # e2e / ONNX / 融合 pass: 均未交付。

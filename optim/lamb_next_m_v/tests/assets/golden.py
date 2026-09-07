@@ -95,9 +95,19 @@ _TOL_KERNEL = {
 
 
 def _tp_t(x):
-    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。
+
+    **不抬精度**: 三方标杆必须按算子自身 dtype 计算。此前统一 .to(float32) 会让三方与
+    走 Promote(fp32) 的 golden 逐位相等, cross_check 的分母塌到 safe_div 的 small_value
+    地板, 判据退化成"NPU 与 fp32 参照的绝对误差", 随输出量级线性放大而必红。
+    仅 bf16 需还原载体(torch 不收 ml_dtypes 的 bf16 视图), 其余保持原 dtype。
+    """
     t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x))
-    return t.to(torch.float32)
+    return (
+        t.to(torch.float32)
+        if t.dtype not in (torch.float16, torch.bfloat16, torch.float32, torch.float64)
+        else t
+    )
 
 
 def _tp_s(x):

@@ -28,6 +28,14 @@ __spec__ = {
     "softmax_focal_loss_grad": "SoftmaxFocalLossGradKernelSpec",
 }
 
+# Spec.tolerance 只认官方四标准：stat_rel_err / binary_equal / cross_check / quant
+# （close、requant 是 CLI 专用别名，写进 Spec 会 InvalidSpecError）。
+# 输出 dtype 取自 op_host/softmax_focal_loss_grad_def.cpp: {fp16, fp32}
+_TOL = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+}
+
 # 判据: 浮点输出配 cross_check 才会去取三方数据; L1 见 verification.md §5.2
 
 
@@ -184,6 +192,7 @@ class SoftmaxFocalLossGradKernelSpec:
         ]
 
     third_party = {"torch": _Compose}
+    tolerance = _TOL
 
 
 # 【不存在】aclnn 通路: canndev 老树 ops/built-in/op_api 与新树 ops/ 下均无
