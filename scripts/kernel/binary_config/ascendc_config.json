@@ -34,7 +34,7 @@
     {"name":"MaskedScale", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"]}, "impl_mode" : ""},
     {"name":"EluGrad", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"]}, "impl_mode": ""},
     {"name":"EluGradV2", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"]}, "impl_mode": ""},
-    {"name":"LeakyRelu", "compute_units": ["ascend950", "mc62"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"], "mc62": ["--cce-no-dcache-flush"]}, "impl_mode" : ""},
+    {"name":"LeakyRelu", "compute_units": ["ascend950", "ascend350", "mc62"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"], "ascend350":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"], "mc62": ["--cce-no-dcache-flush"]}, "impl_mode" : ""},
     {"name":"MishGrad", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-no-dcache-flush"]}, "impl_mode" : ""},
     {"name":"Softplus", "compute_units": ["ascend950", "ascend350", "mc62"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"], "ascend350":["--cce-simd-vf-fusion=true", "--cce-simd-at-voss=true"], "mc62": ["--cce-no-dcache-flush"]}, "impl_mode" : ""},
     {"name":"SoftplusV2", "compute_units": ["ascend950"], "auto_sync" : false, "compile_options": {"ascend950":["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"]}, "impl_mode" : ""},
