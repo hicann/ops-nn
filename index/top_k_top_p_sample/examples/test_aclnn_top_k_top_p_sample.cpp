@@ -100,7 +100,7 @@ int main()
     aclTensor* topK = nullptr;
     aclTensor* topP = nullptr;
     aclTensor* q = nullptr;
-    aclTensor* logitsSelectedIdx = nullptr;
+    aclTensor* logitsSelectIdx = nullptr;
     aclTensor* logitsTopKPSelect = nullptr;
     std::vector<int16_t> logitsHostData(48 * 131072, 1);
     std::vector<int32_t> topKHostData(48, 128);
@@ -127,7 +127,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsSelected aclTensor
     ret = CreateAclTensor(logitsSelectedIdxHostData, topKPShape, &logitsSelectedIdxDeviceAddr, aclDataType::ACL_INT64,
-                          &logitsSelectedIdx);
+                          &logitsSelectIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsTopKPSelect aclTensor
     ret = CreateAclTensor(logitsTopKPSelectHostData, logitsShape, &logitsTopKPSelectDeviceAddr, aclDataType::ACL_FLOAT,
@@ -138,7 +138,7 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnTopKTopPSample第一段接口
-    ret = aclnnTopKTopPSampleGetWorkspaceSize(logits, topK, topP, q, eps, isNeedLogits, topKGuess, logitsSelectedIdx,
+    ret = aclnnTopKTopPSampleGetWorkspaceSize(logits, topK, topP, q, eps, isNeedLogits, topKGuess, logitsSelectIdx,
                                               logitsTopKPSelect, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTopKTopPSampleGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -158,12 +158,12 @@ int main()
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(topKPShape);
-    std::vector<float> resultData(size, 0);
+    std::vector<int64_t> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), logitsSelectedIdxDeviceAddr,
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
+        LOG_PRINT("result[%ld] is: %lld\n", i, static_cast<long long>(resultData[i]));
     }
 
     // 6. 释放aclTensor，需要根据具体API的接口定义修改
@@ -171,7 +171,7 @@ int main()
     aclDestroyTensor(topK);
     aclDestroyTensor(topP);
     aclDestroyTensor(q);
-    aclDestroyTensor(logitsSelectedIdx);
+    aclDestroyTensor(logitsSelectIdx);
     aclDestroyTensor(logitsTopKPSelect);
     // 7. 释放Device资源，需要根据具体API的接口定义修改
     aclrtFree(logitsDeviceAddr);
