@@ -33,6 +33,7 @@ public:
     /* for determinstic */
     int64_t varInAxis;
     int64_t varStorageInAxis;
+    int64_t indicesAxis;
     int64_t indexRankSize;
     int64_t afterAxis;
 

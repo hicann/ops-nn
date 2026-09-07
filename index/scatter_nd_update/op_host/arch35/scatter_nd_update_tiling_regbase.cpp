@@ -1082,6 +1082,7 @@ void ScatterNdUpdateTiling::SetTilingData()
     tilingData->outputStorageShapeSize = outputStorageShapeSize_;
     tilingData->varInAxis = varInAxis_;
     tilingData->varStorageInAxis = varStorageInAxis_;
+    tilingData->indicesAxis = indicesAxis_;
     tilingData->indexRankSize = rankSize_;
     tilingData->afterAxis = afterAxis_;
     tilingData->usedCoreNumBefore = usedCoreNumBefore_;

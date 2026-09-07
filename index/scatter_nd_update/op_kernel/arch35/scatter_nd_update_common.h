@@ -41,6 +41,7 @@ constexpr float SORT_HIST_THRESHOLD = 0.01f;
 constexpr uint32_t HASH_SCORE_BUF_SIZE = 128;
 constexpr uint32_t MASK_DEFAULT = 0;
 constexpr uint64_t LEAST_DEAL_SIZE = 256;
+constexpr uint32_t VARIDXGM_DEFAULT = -1;
 
 constexpr Reg::CastTrait castTraitB322B64 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING,
                                              RoundMode::UNKNOWN};
@@ -425,6 +426,7 @@ public:
     __aicore__ inline void CalcMask();
     __aicore__ inline void InitUpdateBuffer();
     __aicore__ inline void InitMaskGm(uint64_t totalSize, GM_ADDR workspace);
+    __aicore__ inline void InitVarIdxGm(uint64_t totalSize, GM_ADDR workspace);
     __aicore__ inline void CopyInIndices(uint64_t indicesGmOffset, uint32_t indicesCount);
     __aicore__ inline uint32_t DeterministicSortAndComputeUniqueIdx(int64_t rowLen,
                                                                     LocalTensor<OFFSET_T> indicesSrcLocal,
@@ -441,6 +443,7 @@ protected:
     GlobalTensor<TYPE_T> maskGm;
     GlobalTensor<TYPE_T> varIdxGm;
     GlobalTensor<TYPE_T> maskBlockGm;
+    GlobalTensor<TYPE_T> varIdxBlockGm;
 
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> inQueX;
     TQue<QuePosition::VECIN, 1> indicesQue_;
@@ -482,6 +485,31 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitVarIdxGm(
+    uint64_t totalSize, GM_ADDR workspace)
+{
+    uint64_t blockNum = GetBlockNum();
+    uint64_t perCoreInitNum = Ops::Base::CeilDiv(totalSize, blockNum);
+    uint64_t alignFactor = LEAST_DEAL_SIZE / sizeof(TYPE_T);
+    perCoreInitNum = Ops::Base::CeilDiv(perCoreInitNum, alignFactor) * alignFactor;
+
+    uint64_t initUsedCore = Ops::Base::CeilDiv(totalSize, perCoreInitNum);
+    if (GetBlockIdx() >= initUsedCore) {
+        return;
+    }
+    uint64_t tailCoreInitNum = totalSize - (initUsedCore - 1) * perCoreInitNum;
+
+    uint64_t varIdxBlockOffset = GetBlockIdx() * perCoreInitNum;
+    varIdxBlockGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + (tiling_.varStorageInAxis + 1) + varIdxBlockOffset);
+
+    uint64_t varIdxBlockLen = perCoreInitNum;
+    if (GetBlockIdx() == initUsedCore - 1) {
+        varIdxBlockLen = tailCoreInitNum;
+    }
+    InitGlobalMemory(varIdxBlockGm, varIdxBlockLen, static_cast<TYPE_T>(VARIDXGM_DEFAULT));
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitBase(
     GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
@@ -496,6 +524,14 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     varIdxGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + (tiling_.varStorageInAxis + 1));
 
     InitMaskGm(tiling_.varStorageInAxis, workspace);
+
+    auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+    WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+
+    // varIdxGm 防止非法索引行在 computer 阶段读到上一轮残留值导致误写，这里初始化设置为-1
+    InitVarIdxGm(tiling_.indicesAxis, workspace);
+
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
     }
