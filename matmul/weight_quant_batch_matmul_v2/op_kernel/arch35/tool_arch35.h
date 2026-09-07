@@ -42,7 +42,7 @@ namespace WeightQuantBatchMatmulV2::Arch35 {
 static constexpr int32_t QUADRUPLE_BUFFER_NUM = 4;
 static constexpr int32_t DOUBLE_BUFFER_NUM = 2;
 static constexpr int32_t SINGLE_BUFFER_NUM = 1;
-static constexpr int64_t L1_SIZE = 512;
+static constexpr int64_t L1_SIZE = ASC_L1_SIZE / 1024;
 
 // 参数约束定义
 static constexpr uint64_t MX_GROUPSIZE = 32;

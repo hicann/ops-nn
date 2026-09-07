@@ -23,15 +23,15 @@ struct DAV3510 {};
 } // namespace Arch
 
 // buffer size
-constexpr static int64_t L0A_SIZE = 64 * 1024;
-constexpr static int64_t L0B_SIZE = 64 * 1024;
+constexpr static int64_t L0A_SIZE = ASC_L0A_SIZE;
+constexpr static int64_t L0B_SIZE = ASC_L0B_SIZE;
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) // for DAV3510
-constexpr static int64_t L0C_SIZE = 256 * 1024;
+constexpr static int64_t L0C_SIZE = ASC_L0C_SIZE;
 #else
 constexpr static int64_t L0C_SIZE = 128 * 1024;
 #endif
 
-constexpr static int64_t L1_SIZE = 512 * 1024;
+constexpr static int64_t L1_SIZE = ASC_L1_SIZE;
 } // namespace Gemm
 } // namespace Cmct

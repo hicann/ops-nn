@@ -432,8 +432,8 @@ public:
 
 protected:
     static constexpr uint64_t FLAG_ID_MAX = 16;
-    static constexpr uint64_t L1_BUFFER_SIZE = 512 * 1024;
-    static constexpr uint64_t L1_BUFFER_HALF_SIZE = 256 * 1024;
+    static constexpr uint64_t L1_BUFFER_SIZE = ASC_L1_SIZE;
+    static constexpr uint64_t L1_BUFFER_HALF_SIZE = ASC_L1_SIZE / 2;
     static constexpr uint64_t SINGLE_BUFFER = 1;
     static constexpr uint64_t SYNC_AIV_AIC_FLAG = 2;
     static constexpr uint8_t SYNC_MODE4 = 4;
