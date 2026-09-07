@@ -132,8 +132,8 @@ aclnnStatus aclnnIndexPutImpl(
       <tr>
         <td>unsafe</td>
         <td>输入</td>
-        <td>检查索引是否在有效范围内标志位。</td>
-        <td><ul><li>unsafe为True时，索引越界会直接报错退出执行；</li><li>当unsafe为False时，如果出现了索引越界，就可能出现运行时异常。</li></ul></td>
+        <td>是否跳过索引越界检查的标志位。</td>
+        <td><ul><li>unsafe为True时，不检查索引是否越界；</li><li>unsafe为False时，检查索引是否越界。</li></ul></td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -383,16 +383,16 @@ int main() {
   // 3.调用CANN算子库API，需要修改为具体的算子接口
   // 调用aclnnIndexPutImpl第一段接口
   ret = aclnnIndexPutImplGetWorkspaceSize(self, indexTensorList, value, true, false, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexPutImplGetWorkspaceSizefailed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexPutImplGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnIndexPutImpl第二段接口
   ret = aclnnIndexPutImpl(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexPutImplfailed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexPutImpl failed. ERROR: %d\n", ret); return ret);
 
   // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
