@@ -97,7 +97,8 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckPertileDtype()
     inputParams_.scaleDtype = scaleDesc->GetDataType();
     inputParams_.perTokenScaleDtype = pertokenScaleDesc->GetDataType();
     auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
-    inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
+    inputParams_.hasBias = biasDesc != nullptr;
+    inputParams_.biasDtype = inputParams_.hasBias ? biasDesc->GetDataType() : ge::DT_INT32;
     auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
     inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
     auto outputDesc = context_->GetOutputDesc(0);
@@ -142,8 +143,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
     auto x2OriginShape = x2Shape->GetOriginShape();
     auto x1ScaleOriginShape = x1ScaleShape->GetOriginShape();
     auto x2ScaleOriginShape = x2ScaleShape->GetOriginShape();
-    CheckPerTileShape(x1OriginShape, x2OriginShape, x1ScaleOriginShape, x2ScaleOriginShape);
-    return true;
+    return CheckPerTileShape(x1OriginShape, x2OriginShape, x1ScaleOriginShape, x2ScaleOriginShape);
 }
 
 bool AdaptiveSlidingWindowBasicTilingV4::CheckDtype() const { return true; }

@@ -481,6 +481,16 @@ static bool CheckMxA8W4Dtype(const aclTensor* bias, const aclTensor* yScale, con
     return true;
 }
 
+static bool CheckA8W8PerblockBiasDtype(const aclTensor* bias)
+{
+    if (bias != nullptr && bias->GetDataType() != op::DataType::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "bias", op::ToString(bias->GetDataType()).GetString(),
+                                              "When the quant mode is G-B, the dtype of bias must be DT_FLOAT32");
+        return false;
+    }
+    return true;
+}
+
 static bool CheckDtype(const TupleInput& inputTensors, const TupleQuant& quantTensors, const aclTensor* out)
 {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
@@ -1080,6 +1090,10 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     bool& transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
     bool isA8W4 = false;
     CHECK_RET(CheckInputExistence(inputTensors, quantTensors, out, isA8W4), ACLNN_ERR_PARAM_NULLPTR);
+    const bool isA8W8Perblock = IsA8W8Perblock(x1, x2, x1Scale, x2Scale);
+    if (isA8W8Perblock) {
+        CHECK_RET(CheckA8W8PerblockBiasDtype(bias), ACLNN_ERR_PARAM_INVALID);
+    }
     bool isA8W4F = isA8W4Float(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4Int(x1, x2);
     if (isA8W4F) {
@@ -1145,7 +1159,6 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     const TupleQuant quantTuple = std::tie(reformatedX1Scale, reformatedX2Scale, reformatedYScale, x1Offset, x2Offset,
                                            yOffset, reformatedBias, groupSizeReal, interfaceType);
     bool isA8W4I = isA8W4IntAfterPre(x1, x2); // 前处理是将x2的数据类型转成了INT4
-    bool isA8W8Perblock = IsA8W8Perblock(x1, x2, x1Scale, x2Scale);
     uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
 
     auto castedScale = ProcessScaleTensor(reformatedX2Scale);
