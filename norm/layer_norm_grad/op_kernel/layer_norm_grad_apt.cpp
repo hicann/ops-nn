@@ -17,6 +17,8 @@
 #include "arch35/layer_norm_grad_recompute_backward_impl.h"
 #include "arch35/layer_norm_grad_grouped_reduce_big_m_impl.h"
 #include "arch35/layer_norm_grad_grouped_reduce_big_n_impl.h"
+#include "arch35/layer_norm_grad_transpose_backward_impl.h"
+#include "arch35/layer_norm_grad_transpose_gamma_beta_impl.h"
 
 using namespace LayerNormGrad;
 
@@ -25,6 +27,8 @@ using namespace LayerNormGrad;
 #define GROUPED_REDUCE_BIG_M 600
 
 #define GROUPED_REDUCE_BIG_N 700
+
+#define TRANSPOSE_REGBASE_KEY 800
 
 template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
 __aicore__ inline void InvokeLayerNormGradRecomputeImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR gamma,
@@ -101,6 +105,28 @@ __aicore__ inline void InvokeLayerNormGradGroupedReduceBigNImpl(GM_ADDR dy, GM_A
     opBackward.Process();
 }
 
+template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
+__aicore__ inline void InvokeLayerNormGradTransposeRegBaseImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean,
+                                                               GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma,
+                                                               GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
+{
+    GET_TILING_DATA_WITH_STRUCT(LayerNormGradTilingDataTransposeRegBase, tiling_data_in, tiling);
+    const LayerNormGradTilingDataTransposeRegBase* __restrict tilingData = &tiling_data_in;
+
+    PRELOAD(4);
+    TPipe pipeIn;
+    LayerNormGradTransposeRegBaseBackward<DY_TYPE, GAMMA_TYPE> opBackward;
+    opBackward.Init(dy, x, var, mean, gamma, pd_x, workspace, tilingData, &pipeIn);
+    opBackward.Process();
+    pipeIn.Destroy();
+
+    PRELOAD(4);
+    TPipe pipeGammaBetaBackward;
+    LayerNormGradTransposeGammaBeta<DY_TYPE, PD_GAMMA_TYPE> opGammaBetaBackward;
+    opGammaBetaBackward.Init(dy, x, var, mean, pd_gamma, pd_beta, workspace, tilingData, &pipeGammaBetaBackward);
+    opGammaBetaBackward.Process();
+}
+
 extern "C" __global__ __aicore__ void layer_norm_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR gamma,
                                                       GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
                                                       GM_ADDR workspace, GM_ADDR tiling)
@@ -121,6 +147,12 @@ extern "C" __global__ __aicore__ void layer_norm_grad(GM_ADDR dy, GM_ADDR x, GM_
 
     if (TILING_KEY_IS(GROUPED_REDUCE_BIG_N)) {
         InvokeLayerNormGradGroupedReduceBigNImpl<DTYPE_DY, DTYPE_GAMMA, DTYPE_PD_GAMMA>(
+            dy, x, var, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, tiling);
+        return;
+    }
+
+    if (TILING_KEY_IS(TRANSPOSE_REGBASE_KEY)) {
+        InvokeLayerNormGradTransposeRegBaseImpl<DTYPE_DY, DTYPE_GAMMA, DTYPE_PD_GAMMA>(
             dy, x, var, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, tiling);
         return;
     }

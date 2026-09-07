@@ -134,6 +134,32 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormGrad_600, LayerNormGradTilingDataGroupedReduceBigM)
 
+// LayerNormGradTilingDataTransposeRegBase
+BEGIN_TILING_DATA_DEF(LayerNormGradTilingDataTransposeRegBase)
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(float, epsilon);
+// backward (dx)
+TILING_DATA_FIELD_DEF(int64_t, backwardNAlign);
+TILING_DATA_FIELD_DEF(int64_t, backwardMAlign);
+TILING_DATA_FIELD_DEF(int64_t, backwardMPerCore);
+TILING_DATA_FIELD_DEF(int64_t, backwardUsedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, backwardMTailCore);
+// gamma_beta (dgamma/dbeta)
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaNAlign);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMAlign);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMPerCore);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaUsedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMTailCore);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaCacheBufferCount);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMainResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaTailResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMainCoreBasicBlock);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaTailCoreBasicBlock);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormGrad_800, LayerNormGradTilingDataTransposeRegBase) // TilingKey=800
+
 // LayerNormGradTilingDataGroupedReduceBigN
 BEGIN_TILING_DATA_DEF(LayerNormGradTilingDataGroupedReduceBigN)
 TILING_DATA_FIELD_DEF(int64_t, row);
@@ -194,7 +220,12 @@ enum class LNGDtypeKey : int {
     BFLOAT16_FLOAT = 5
 };
 
-enum class LNGTemplateKey : int { RECOMPUTE = 5, GROUPED_REDUCE_BIG_M = 6, GROUPED_REDUCE_BIG_N = 7 };
+enum class LNGTemplateKey : int {
+    RECOMPUTE = 5,
+    GROUPED_REDUCE_BIG_M = 6,
+    GROUPED_REDUCE_BIG_N = 7,
+    TRANSPOSE_REGBASE = 8
+};
 
 struct ParamsLayerNormGrad {
     uint32_t coreNum = 0;
@@ -304,6 +335,25 @@ protected:
 private:
     ge::graphStatus GammaBetaKernelTiling();
     ge::graphStatus BackwardKernelTiling();
+};
+
+class LayerNormGradTransposeRegBaseTiling : public LayerNormGradTilingBase {
+public:
+    explicit LayerNormGradTransposeRegBaseTiling(gert::TilingContext* context) : LayerNormGradTilingBase(context) {}
+    ~LayerNormGradTransposeRegBaseTiling() override = default;
+    LayerNormGradTilingDataTransposeRegBase td_;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+
+private:
+    ge::graphStatus GammaBetaKernelTiling();
+    ge::graphStatus BackwardKernelTiling();
+    int64_t CalcGammaBetaMMax(int64_t mFactorAlign, int64_t mPerCore, int64_t nAlign, int64_t ubSize);
 };
 
 } // namespace optiling

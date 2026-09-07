@@ -247,6 +247,35 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormGradV3_600, LayerNormGradV3TilingDataGroupedReduceBigM)
 
+// LayerNormGradV3TilingDataTransposeRegBase
+// LayerNormGradV3TilingDataTransposeRegBase
+BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingDataTransposeRegBase)
+TILING_DATA_FIELD_DEF(int64_t, row);
+TILING_DATA_FIELD_DEF(int64_t, col);
+TILING_DATA_FIELD_DEF(int32_t, pdxIsRequire);
+TILING_DATA_FIELD_DEF(int32_t, pdgammaIsRequire);
+TILING_DATA_FIELD_DEF(int32_t, pdbetaIsRequire);
+// backward (dx)
+TILING_DATA_FIELD_DEF(int64_t, backwardNAlign);
+TILING_DATA_FIELD_DEF(int64_t, backwardMAlign);
+TILING_DATA_FIELD_DEF(int64_t, backwardMPerCore);
+TILING_DATA_FIELD_DEF(int64_t, backwardUsedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, backwardMTailCore);
+// gamma_beta (dgamma/dbeta)
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaNAlign);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMAlign);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMPerCore);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaUsedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMTailCore);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaCacheBufferCount);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMainResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaTailResultCacheID);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaMainCoreBasicBlock);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaTailCoreBasicBlock);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormGradV3_800, LayerNormGradV3TilingDataTransposeRegBase) // TilingKey=800
+
 // LayerNormGradV3TilingDataGroupedReduceBigN
 BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingDataGroupedReduceBigN)
 TILING_DATA_FIELD_DEF(int64_t, row);
@@ -313,7 +342,8 @@ enum class LNGTemplateKey : int {
     COMMON = 4,
     RECOMPUTE = 5,
     GROUPED_REDUCE_BIG_M = 6,
-    GROUPED_REDUCE_BIG_N = 7
+    GROUPED_REDUCE_BIG_N = 7,
+    TRANSPOSE_REGBASE = 8
 };
 
 struct ParamsLayerNormGradV3 {
@@ -480,6 +510,25 @@ protected:
 private:
     ge::graphStatus GammaBetaKernelTiling();
     ge::graphStatus BackwardKernelTiling();
+};
+
+class LayerNormGradV3TransposeRegBaseTiling : public LayerNormGradV3TilingBase {
+public:
+    explicit LayerNormGradV3TransposeRegBaseTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
+    ~LayerNormGradV3TransposeRegBaseTiling() override = default;
+    LayerNormGradV3TilingDataTransposeRegBase td_;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+
+private:
+    ge::graphStatus GammaBetaKernelTiling();
+    ge::graphStatus BackwardKernelTiling();
+    int64_t CalcGammaBetaMMax(int64_t mFactorAlign, int64_t mPerCore, int64_t nAlign, int64_t ubSize);
 };
 
 class LayerNormGradV3GroupedReduceBigNTiling : public LayerNormGradV3TilingBase {

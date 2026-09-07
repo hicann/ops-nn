@@ -168,6 +168,13 @@ public:
     template <typename T>
     __aicore__ inline static void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::Reg::RegTensor<float>& src,
                                                        AscendC::Reg::MaskReg& preg, uint32_t offset);
+    template <typename T>
+    __aicore__ inline static void CopyInTranspose(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                                  const int64_t rowSize, const int64_t colSize,
+                                                  const int64_t dstStride);
+    template <typename T>
+    __aicore__ inline static void LoadTensorForDtypeT(const __ubuf__ T* src, AscendC::Reg::RegTensor<float>& dst,
+                                                      AscendC::Reg::MaskReg& preg, uint32_t offset);
 
 protected:
     TPipe* pipe_;
@@ -1276,6 +1283,38 @@ __aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__ubuf__ T* dst
         Cast<T, float, castTraitB322B16>(xFp16, src, preg);
         StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
+}
+
+template <typename T>
+__aicore__ inline void LayerNormGradV3Base::LoadTensorForDtypeT(const __ubuf__ T* src,
+                                                                AscendC::Reg::RegTensor<float>& dst,
+                                                                AscendC::Reg::MaskReg& preg, uint32_t offset)
+{
+    if constexpr (IsSameType<T, float>::value) {
+        LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
+    } else {
+        AscendC::Reg::RegTensor<T> tmpReg;
+        LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(tmpReg, (__ubuf__ T*)src + offset);
+        Cast<float, T, castTraitB162B32>(dst, tmpReg, preg);
+    }
+}
+
+template <typename T>
+__aicore__ inline void LayerNormGradV3Base::CopyInTranspose(const LocalTensor<T>& dstTensor,
+                                                            const GlobalTensor<T>& srcTensor, const int64_t rowSize,
+                                                            const int64_t colSize, const int64_t dstStride)
+{
+    static constexpr uint32_t CONST_TWO_DIM = 2;
+    static constexpr NdDmaConfig config = {false};
+    NdDmaLoopInfo<CONST_TWO_DIM> copyLoopInfo;
+    copyLoopInfo.loopSrcStride[0] = 1;
+    copyLoopInfo.loopSrcStride[1] = static_cast<uint32_t>(colSize);
+    copyLoopInfo.loopDstStride[0] = static_cast<uint32_t>(dstStride);
+    copyLoopInfo.loopDstStride[1] = 1;
+    copyLoopInfo.loopSize[0] = static_cast<uint32_t>(colSize);
+    copyLoopInfo.loopSize[1] = static_cast<uint32_t>(rowSize);
+    NdDmaParams<T, CONST_TWO_DIM> params = {copyLoopInfo, 0};
+    DataCopy<T, CONST_TWO_DIM, config>(dstTensor, srcTensor, params);
 }
 } // namespace LayerNormGradV3
 #endif

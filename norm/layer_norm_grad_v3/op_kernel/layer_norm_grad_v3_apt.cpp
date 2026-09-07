@@ -17,6 +17,8 @@
 #include "arch35/layer_norm_grad_v3_recompute_backward_impl.h"
 #include "arch35/layer_norm_grad_v3_grouped_reduce_big_m_impl.h"
 #include "arch35/layer_norm_grad_v3_grouped_reduce_big_n_impl.h"
+#include "arch35/layer_norm_grad_v3_transpose_backward_impl.h"
+#include "arch35/layer_norm_grad_v3_transpose_gamma_beta_impl.h"
 
 using namespace LayerNormGradV3;
 
@@ -25,6 +27,8 @@ using namespace LayerNormGradV3;
 #define GROUPED_REDUCE_BIG_M 600
 
 #define GROUPED_REDUCE_BIG_N 700
+
+#define TRANSPOSE_REGBASE_KEY 800
 
 template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
 __aicore__ inline void InvokeLayerNormGradV3RecomputeImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
@@ -101,6 +105,32 @@ __aicore__ inline void InvokeLayerNormGradV3GroupedReduceBigNImpl(GM_ADDR dy, GM
     opBackward.Process();
 }
 
+template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
+__aicore__ inline void InvokeLayerNormGradV3TransposeRegBaseImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                                 GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma,
+                                                                 GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
+{
+    GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataTransposeRegBase, tiling_data_in, tiling);
+    const LayerNormGradV3TilingDataTransposeRegBase* __restrict tilingData = &tiling_data_in;
+
+    if (tilingData->pdxIsRequire) {
+        PRELOAD(4);
+        TPipe pipeIn;
+        LayerNormGradV3TransposeRegBaseBackward<DY_TYPE, GAMMA_TYPE> opBackward;
+        opBackward.Init(dy, x, rstd, mean, gamma, pd_x, workspace, tilingData, &pipeIn);
+        opBackward.Process();
+        pipeIn.Destroy();
+    }
+
+    if (tilingData->pdbetaIsRequire || tilingData->pdgammaIsRequire) {
+        PRELOAD(4);
+        TPipe pipeGammaBetaBackward;
+        LayerNormGradV3TransposeGammaBeta<DY_TYPE, PD_GAMMA_TYPE> opGammaBetaBackward;
+        opGammaBetaBackward.Init(dy, x, rstd, mean, pd_gamma, pd_beta, workspace, tilingData, &pipeGammaBetaBackward);
+        opGammaBetaBackward.Process();
+    }
+}
+
 extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
                                                          GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
                                                          GM_ADDR workspace, GM_ADDR tiling)
@@ -121,6 +151,12 @@ extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, 
 
     if (TILING_KEY_IS(GROUPED_REDUCE_BIG_N)) {
         InvokeLayerNormGradV3GroupedReduceBigNImpl<DTYPE_DY, DTYPE_GAMMA, DTYPE_PD_GAMMA>(
+            dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, tiling);
+        return;
+    }
+
+    if (TILING_KEY_IS(TRANSPOSE_REGBASE_KEY)) {
+        InvokeLayerNormGradV3TransposeRegBaseImpl<DTYPE_DY, DTYPE_GAMMA, DTYPE_PD_GAMMA>(
             dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, tiling);
         return;
     }

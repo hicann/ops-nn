@@ -154,8 +154,31 @@ struct LayerNormGradTilingDataGroupedReduceBigN {
 };
 #pragma pack()
 
+// 与op_host TilingData框架布局一致(自然对齐), pack(1)会使epsilon后缺padding导致与tiling二进制错位
+struct LayerNormGradTilingDataTransposeRegBase {
+    int64_t row = 0;
+    int64_t col = 0;
+    float epsilon = 0;
+    int64_t backwardNAlign = 0;
+    int64_t backwardMAlign = 0;
+    int64_t backwardMPerCore = 0;
+    int64_t backwardUsedCoreNum = 0;
+    int64_t backwardMTailCore = 0;
+    int64_t gammaBetaNAlign = 0;
+    int64_t gammaBetaMAlign = 0;
+    int64_t gammaBetaMPerCore = 0;
+    int64_t gammaBetaUsedCoreNum = 0;
+    int64_t gammaBetaMTailCore = 0;
+    int64_t gammaBetaCacheBufferCount = 0;
+    int64_t gammaBetaMainResultCacheID = 0;
+    int64_t gammaBetaTailResultCacheID = 0;
+    int64_t gammaBetaMainCoreBasicBlock = 0;
+    int64_t gammaBetaTailCoreBasicBlock = 0;
+};
+
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataRecompute* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataRecompute* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradTilingDataRecompute) / 4; i++)
@@ -169,13 +192,13 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataRecompute* co
 #endif
 
 #ifdef __NPU_TILING__
-inline
-    [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data) {
-        const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
-        uint32_t* dst = (uint32_t*)const_data;
-        for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigM) / 4; i++)
-            *(dst + i) = *(src + i);
-    }
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigM) / 4; i++)
+        *(dst + i) = *(src + i);
+}
 #else
 inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data)
 {
@@ -184,17 +207,32 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduce
 #endif
 
 #ifdef __NPU_TILING__
-inline
-    [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data) {
-        const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
-        uint32_t* dst = (uint32_t*)const_data;
-        for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigN) / 4; i++)
-            *(dst + i) = *(src + i);
-    }
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigN) / 4; i++)
+        *(dst + i) = *(src + i);
+}
 #else
 inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data)
 {
     memcpy(const_data, tiling, sizeof(LayerNormGradTilingDataGroupedReduceBigN));
+}
+#endif
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataTransposeRegBase* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormGradTilingDataTransposeRegBase) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataTransposeRegBase* const_data)
+{
+    memcpy(const_data, tiling, sizeof(LayerNormGradTilingDataTransposeRegBase));
 }
 #endif
 

@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #ifndef _LAYER_NORM_GRAD_V3_TILING_H_
@@ -124,8 +123,33 @@ struct LayerNormGradV3TilingDataRecompute {
 };
 #pragma pack()
 
+// 与op_host TilingData框架布局一致(自然对齐), pack(1)会使pdbetaIsRequire后缺padding导致与tiling二进制错位
+struct LayerNormGradV3TilingDataTransposeRegBase {
+    int64_t row = 0;
+    int64_t col = 0;
+    int32_t pdxIsRequire = 0;
+    int32_t pdgammaIsRequire = 0;
+    int32_t pdbetaIsRequire = 0;
+    int64_t backwardNAlign = 0;
+    int64_t backwardMAlign = 0;
+    int64_t backwardMPerCore = 0;
+    int64_t backwardUsedCoreNum = 0;
+    int64_t backwardMTailCore = 0;
+    int64_t gammaBetaNAlign = 0;
+    int64_t gammaBetaMAlign = 0;
+    int64_t gammaBetaMPerCore = 0;
+    int64_t gammaBetaUsedCoreNum = 0;
+    int64_t gammaBetaMTailCore = 0;
+    int64_t gammaBetaCacheBufferCount = 0;
+    int64_t gammaBetaMainResultCacheID = 0;
+    int64_t gammaBetaTailResultCacheID = 0;
+    int64_t gammaBetaMainCoreBasicBlock = 0;
+    int64_t gammaBetaTailCoreBasicBlock = 0;
+};
+
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataSingleRead* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataSingleRead* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataSingleRead) / 4; i++)
@@ -139,7 +163,8 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataSingleRead*
 #endif
 
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataTranspose* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataTranspose* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataTranspose) / 4; i++)
@@ -153,7 +178,8 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataTranspose* 
 #endif
 
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataCommon* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataCommon* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataCommon) / 4; i++)
@@ -167,7 +193,8 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataCommon* con
 #endif
 
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataWorkspace) / 4; i++)
@@ -181,7 +208,8 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* 
 #endif
 
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataRecompute* const_data) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataRecompute* const_data)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataRecompute) / 4; i++)
@@ -191,6 +219,21 @@ inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV
 inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataRecompute* const_data)
 {
     memcpy(const_data, tiling, sizeof(LayerNormGradV3TilingDataRecompute));
+}
+#endif
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataTransposeRegBase* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataTransposeRegBase) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataTransposeRegBase* const_data)
+{
+    memcpy(const_data, tiling, sizeof(LayerNormGradV3TilingDataTransposeRegBase));
 }
 #endif
 
