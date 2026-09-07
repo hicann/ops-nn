@@ -76,7 +76,7 @@
 
   ```Cpp
   aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(
-   aclTensor*       selfRef,
+   aclTensor*       self,
    int64_t          dim,
    const aclTensor* index,
    const aclScalar* value,
@@ -306,7 +306,7 @@
       </tr></thead>
     <tbody>
       <tr>
-        <td>selfRef</td>
+        <td>self</td>
         <td>输入</td>
         <td>待被在指定位置的值用value替换的张量。</td>
         <td>-</td>
@@ -318,7 +318,7 @@
       <tr>
         <td>dim</td>
         <td>输入</td>
-        <td>指定了selfRef将要填充的维度。</td>
+        <td>指定了self将要填充的维度。</td>
         <td>当self为1-8维时，dim的取值范围在[-self.dim(), self.dim())，当self为0维时，dim的取值范围在[-1, 1)。</td>
         <td>int64</td>
         <td>-</td>
@@ -340,7 +340,7 @@
         <td>输入</td>
         <td>指定填充的数据值。</td>
         <td>-</td>
-        <td>与selfRef数据类型范围一致</td>
+        <td>与self数据类型范围一致</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -394,15 +394,15 @@
       <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的selfRef、index、value是空指针。</td>
+      <td>传入的self、index、value是空指针。</td>
       </tr>
       <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>selfRef、index、value的数据类型不在支持的范围之内。</td>
+      <td>self、index、value的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-      <td>dim的绝对值超出selfRef的dim最大值或超出8维。</td>
+      <td>dim的绝对值超出self的dim最大值或超出8维。</td>
       </tr>
     </tbody>
     </table>
@@ -538,7 +538,7 @@ int main() {
   aclScalar* value = nullptr;
   aclTensor* out = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-  std::vector<int> indexHostData = {0};
+  std::vector<int64_t> indexHostData = {0};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   int64_t dim = 1;
   float fillVal = 10;
@@ -603,7 +603,7 @@ int main() {
 }
 ```
 
-**aclnnInplaceIndexFillTensor调用示例：**
+**aclnnInplaceIndexFill调用示例：**
 
 ```Cpp
 #include <iostream>
@@ -681,7 +681,7 @@ int main() {
   aclTensor* index = nullptr;
   aclScalar* value = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-  std::vector<int> indexHostData = {0};
+  std::vector<int64_t> indexHostData = {0};
   int64_t dim = 1;
   float fillVal = 10;
   // 创建self aclTensor
@@ -699,7 +699,7 @@ int main() {
   aclOpExecutor* executor;
   // 调用aclnnInplaceIndexFill第一段接口
   ret = aclnnInplaceIndexFillGetWorkspaceSize(self, dim, index, value, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexFillGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceIndexFillGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {

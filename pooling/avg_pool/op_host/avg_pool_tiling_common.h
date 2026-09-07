@@ -16,8 +16,6 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_AVG_POOL_TILING_COMMON_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_AVG_POOL_TILING_COMMON_H_
 
-#include <array>
-
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"

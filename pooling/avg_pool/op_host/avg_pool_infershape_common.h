@@ -42,7 +42,13 @@ inline std::string OtherErrMsg(const std::string& error_detail)
 inline bool GetDimInFormat(const std::string& opName, const std::string& formatStr, const std::string& dimName,
                            int64_t& dimPosition)
 {
-    dimPosition = formatStr.find(dimName);
+    std::string::size_type pos = formatStr.find(dimName);
+    if (pos == std::string::npos) {
+        dimPosition = -1; // 明确表示未找到
+    } else {
+        dimPosition = static_cast<int64_t>(pos);
+    }
+
     if (dimPosition < 0) {
         CUBE_INNER_ERR_REPORT(opName.c_str(), "Position(%s) is invalid: %ld, which format is %s.", dimName.c_str(),
                               dimPosition, formatStr.c_str());
