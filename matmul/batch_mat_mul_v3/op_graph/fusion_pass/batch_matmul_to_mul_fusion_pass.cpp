@@ -67,7 +67,7 @@ constexpr int64_t kBlockByteSize = 32L;
 constexpr int64_t kBlockSize256 = 256L;
 constexpr int64_t kFloatSize = 4L;
 constexpr int64_t kFp16Size = 2L;
-constexpr int64_t kPingpong = 2L;
+constexpr uint64_t kPingpong = 2UL;
 constexpr int64_t kNRestrictValue = 4000L;
 constexpr int64_t kMRestrictValue = 8166L;
 constexpr int64_t kMnRestrictValue = 10000L;
@@ -111,8 +111,8 @@ int64_t GetDtypeSize(DataType dtype)
     return kFloatSize;
 }
 
-bool CheckSocNeedBatchMatMulToMul910B(const PlatformInfo& platformInfo, const BatchMatMulToMulArgs& args,
-                                      DataType x1Dtype, DataType x2Dtype, DataType outDtype)
+bool CheckSocNeedBatchMatMulToMul910B(const BatchMatMulToMulArgs& args, DataType x1Dtype, DataType x2Dtype,
+                                      DataType outDtype)
 {
     bool checkBf16Scene = (x1Dtype == DT_BF16) && (x2Dtype == DT_BF16) && (outDtype == DT_BF16) &&
                           (args.n < kNRestrictValue && args.m < kMRestrictValue &&
@@ -204,10 +204,12 @@ bool CheckSocNeedBatchMatMulToMul91095(const PlatformInfo& platformInfo, const B
     uint64_t alignKaValue = args.adjX1 ? ops::CeilAlign(args.k, kBlockSize) : ops::CeilAlign(args.k, c0);
     uint64_t alignKbValue = args.adjX2 ? ops::CeilAlign(args.k, c0) : ops::CeilAlign(args.k, kBlockSize);
     uint64_t alignNValue = ops::CeilAlign(args.n, kBlockSize);
-    bool lessThanL0a = alignMValue * alignKaValue * dtypeSize * kPingpong <= platformInfo.ai_core_spec.l0_a_size;
-    bool lessThanL0b = alignKbValue * alignNValue * dtypeSize * kPingpong <= platformInfo.ai_core_spec.l0_b_size;
-    bool lessThanL0c = alignMValue * alignNValue * kFloatSize * kPingpong <= platformInfo.ai_core_spec.l0_c_size;
-    bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSize * kPingpong <=
+    uint64_t dtypeSizeU = static_cast<uint64_t>(dtypeSize);
+    uint64_t floatSize = static_cast<uint64_t>(kFloatSize);
+    bool lessThanL0a = alignMValue * alignKaValue * dtypeSizeU * kPingpong <= platformInfo.ai_core_spec.l0_a_size;
+    bool lessThanL0b = alignKbValue * alignNValue * dtypeSizeU * kPingpong <= platformInfo.ai_core_spec.l0_b_size;
+    bool lessThanL0c = alignMValue * alignNValue * floatSize * kPingpong <= platformInfo.ai_core_spec.l0_c_size;
+    bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSizeU * kPingpong <=
                       platformInfo.ai_core_spec.l1_size;
     bool fitIterBatch = batchEqual && batchLargerThanAicnum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
     uint64_t batchNum = GetBatchDimAll(shapeX1);
@@ -228,7 +230,7 @@ bool CheckSocNeedBatchMatMulToMul(const PlatformInfo& platformInfo, const BatchM
     }
     const std::string soc = platformInfo.str_info.short_soc_version;
     if (soc == "Ascend910B" || soc == "Ascend910_93") {
-        return CheckSocNeedBatchMatMulToMul910B(platformInfo, args, x1Dtype, x2Dtype, outDtype);
+        return CheckSocNeedBatchMatMulToMul910B(args, x1Dtype, x2Dtype, outDtype);
     }
     if (soc == "Ascend950") {
         return CheckSocNeedBatchMatMulToMul91095(platformInfo, args, x1Dtype, x2Dtype, outDtype, shapeX1, shapeX2);
