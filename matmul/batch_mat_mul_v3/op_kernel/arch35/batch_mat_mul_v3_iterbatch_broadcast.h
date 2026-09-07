@@ -10,9 +10,8 @@
 
 #pragma once
 
-#include "blaze/gemm/kernel/kernel_batch_matmul_iterbatch_broadcast.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_iterbatch_broadcast.h"
 #include "blaze/gemm/block/block_scheduler_iterbatch_broadcast.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 

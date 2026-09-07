@@ -13,10 +13,11 @@
  * \brief
  */
 #pragma once
+
+#include "blaze/gemm/kernel/kernel_universal.h"
+#include "blaze/gemm/block/block_mmad.h"
 #include "blaze/gemm/block/block_scheduler_qbmm.h"
 #include "blaze/epilogue/block/block_epilogue_empty.h"
-#include "blaze/gemm/block/block_mmad_qbmm_mx.h"
-#include "blaze/gemm/kernel/kernel_tqbmm_mx.h"
 
 template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
           class cLayout, uint64_t FULL_LOAD_MODE = 0, uint64_t PERM_X1 = 0, uint64_t NON_CONTIGUOUS_TYPE = 0>

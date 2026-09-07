@@ -15,9 +15,8 @@
 #ifndef MAT_MUL_BL1_FULL_LOAD_H
 #define MAT_MUL_BL1_FULL_LOAD_H
 
-#include "blaze/gemm/kernel/kernel_matmul_bl1_full_load.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_bl1_full_load.h"
 #include "blaze/epilogue/block/block_epilogue_fixpipe.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"

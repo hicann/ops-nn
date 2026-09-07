@@ -14,8 +14,8 @@
  */
 #pragma once
 
-#include "blaze/gemm/kernel/kernel_matmul_streamk.h"
-#include "blaze/gemm/block/block_mmad_matmul_streamk_split_k.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
+#include "blaze/gemm/block/block_mmad.h"
 #include "blaze/gemm/block/block_scheduler_matmul_streamk.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 namespace MatmulV3Advanced {

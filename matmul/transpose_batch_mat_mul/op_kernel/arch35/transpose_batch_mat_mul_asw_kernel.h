@@ -15,9 +15,8 @@
 #ifndef TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_H
 #define TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_H
 
-#include "blaze/gemm/kernel/kernel_tbmm_basic.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_basic.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/epilogue/block/block_epilogue_empty.h"
 #include "blaze/gemm/policy/dispatch_policy.h"

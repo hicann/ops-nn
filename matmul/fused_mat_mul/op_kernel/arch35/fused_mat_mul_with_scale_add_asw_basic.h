@@ -15,9 +15,10 @@
 
 #pragma once
 
+#include "blaze/gemm/kernel/kernel_universal.h"
+#include "blaze/gemm/block/block_mmad.h"
 #include "blaze/epilogue/block/block_epilogue_fmm_with_scale_add.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
-#include "blaze/gemm/kernel/kernel_matmul_with_scale_add.h"
 #include "fused_mat_mul_tiling_data.h"
 
 namespace FusedMatMulAdvanced {

@@ -15,9 +15,8 @@
 #ifndef BATCH_MAT_MUL_ASW_BROADCAST_TENSORAPI_H
 #define BATCH_MAT_MUL_ASW_BROADCAST_TENSORAPI_H
 
-#include "blaze/gemm/kernel/kernel_batch_matmul_broadcast.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_basic.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 #include "blaze/gemm/utils/layout_utils.h"
