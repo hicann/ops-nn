@@ -601,7 +601,6 @@ bool CheckBatchMatMulNodePattern2(const GNode& bmmNode, TensorDesc& x1Desc, Tens
 
 // Pattern2 处理 4D 输入：x1=(B2,B1,1,K), x2=(1,B1,K,N) 或 (1,B1,N,K)。
 // 校验 dummy 维（x1[2]==1, x2[0]==1）和 B1 一致性，以及 x1 最后一维 K 等于 x2 的 K 或 N 维。
-// Pattern2 只支持 fp32，不支持 hf32（hf32 的精度特征与 Pattern2 的 TBE 模板不兼容）。
 bool CheckPattern2Limit(const GNode& bmmNode)
 {
     TensorDesc x1Desc;
@@ -632,11 +631,6 @@ bool CheckPattern2Limit(const GNode& bmmNode)
         x1Desc.GetDataType() != outputDesc.GetDataType()) {
         OPS_LOG_D(kPassName, "Pattern2 only supports fp32.");
         return false;
-    }
-    int64_t opImplModeEnum = 0;
-    if (bmmNode.GetAttr("_op_impl_mode_enum", opImplModeEnum) == GRAPH_SUCCESS) {
-        bool enableHf32 = (static_cast<uint64_t>(opImplModeEnum) & kHf32EnableBit) != 0UL;
-        FUSION_PASS_CHECK(enableHf32, OPS_LOG_W(kPassName, "Pattern2 does not support hf32."), return false);
     }
     return true;
 }
