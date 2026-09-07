@@ -3529,6 +3529,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/centralization/README.md">centralization</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算输入张量在指定轴上的均值，并从输入对应元素中逐元素减去，输出与输入保持相同的shape和数据类型。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/deep_norm/README.md">deep_norm</a></td>
     <td>✓</td>
     <td>✓</td>
