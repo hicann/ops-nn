@@ -65,11 +65,15 @@ jobs:
             exit 0
           fi
           pkg="${{ steps.process_checkout.outputs.path }}/${{ env.run_package_name }}"
-          if [[ -f "${pkg}" && $(stat -c%s "${pkg}") -gt 0 ]]; then
-            echo "need_st=yes" >> "$ATOMGIT_OUTPUT"
-          else
+          if [[ ! -f "${pkg}" || $(stat -c%s "${pkg}") -le 0 ]]; then
             echo "need_st=no" >> "$ATOMGIT_OUTPUT"
+            echo "Skip st_950: compiled package missing or empty: ${pkg}"
+            exit 0
           fi
+          cd ${{ steps.process_checkout.outputs.path }}
+          result=$(bash scripts/ci/ops_st_test.sh --ci_st_check --pr_filelist=./pr_filelist.txt \
+                   | grep -E '^need_st=' || true)
+          echo "${result:-need_st=no}" >> "$ATOMGIT_OUTPUT"
       -
         name: install_run_package
         if: ${{ steps.check_950_pkg.outputs.need_st == 'yes' }}
