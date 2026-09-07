@@ -115,7 +115,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</td>
+      <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>value（aclScalar*）</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</td>
+      <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出张量，公式中的输出out。</td>
-      <td><ul><li>数据类型是self与threshold、value推导之后可转换的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self一致。</li></ul></td>
+      <td>shape需要与self一致。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>ND</td>
       <td>0-8</td>
