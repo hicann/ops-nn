@@ -32,6 +32,7 @@ namespace optiling {
 
 constexpr size_t WORKSPACE_NUM = 1;
 constexpr int64_t TOTAL_INPUTS = 8;
+constexpr uint32_t USE_LOCKING_ATTR_INDEX = 0;
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
 {
@@ -71,6 +72,31 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     *dataType = inputDesc->GetDataType();
 
     const char* inputNames[] = {"var", "accum", "linear", "grad", "lr", "l1", "l2", "lr_power"};
+    const char* outputNames[] = {"var", "accum", "linear"};
+
+    // C1: format constraint — all inputs/outputs must be ND (README: 数据格式仅支持 ND)
+    for (int64_t i = 0; i < TOTAL_INPUTS; ++i) {
+        auto desc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        const auto format = desc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(
+            format != ge::FORMAT_ND,
+            OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: input %s format %d is unsupported, legal format=ND",
+                    inputNames[i], static_cast<int>(format)),
+            return ge::GRAPH_FAILED);
+    }
+    for (size_t i = 0; i < TOTAL_OUTPUTS; ++i) {
+        auto desc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        const auto format = desc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(
+            format != ge::FORMAT_ND,
+            OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: output %s format %d is unsupported, legal format=ND",
+                    outputNames[i], static_cast<int>(format)),
+            return ge::GRAPH_FAILED);
+    }
+
+    // C2: dtype consistency — 8 inputs must share the same dtype
     for (int64_t i = 1; i < TOTAL_INPUTS; ++i) {
         auto desc = context->GetInputDesc(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
@@ -78,6 +104,29 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         OP_CHECK_IF(dt != *dataType,
                     OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: input %s dtype %d mismatch with var dtype %d",
                             inputNames[i], static_cast<int>(dt), static_cast<int>(*dataType)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // C3: lr/l1/l2/lr_power must be rank-0 scalars (GE normalizes rank-0 to storage
+    // shape {1}, so an explicit 1-element {1} tensor is also accepted)
+    for (size_t i = IDX_LR; i <= IDX_LR_POWER; ++i) {
+        auto inputShape = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+        const auto& s = inputShape->GetStorageShape();
+        OP_CHECK_IF(s.GetDimNum() != 0 && !(s.GetDimNum() == 1 && s.GetDim(0) == 1),
+                    OP_LOGE(context->GetNodeName(),
+                            "InplaceApplyFtrl: input %s must be a rank-0 scalar (or {1} after GE normalization), "
+                            "got %zu-dim shape",
+                            inputNames[i], s.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // C4: use_locking only supports false (README: use_locking 当前仅支持默认值 false)
+    const auto* attrs = context->GetAttrs();
+    if (attrs != nullptr) {
+        const bool* useLockingPtr = attrs->GetBool(USE_LOCKING_ATTR_INDEX);
+        OP_CHECK_IF(useLockingPtr != nullptr && *useLockingPtr,
+                    OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: use_locking only supports false"),
                     return ge::GRAPH_FAILED);
     }
 

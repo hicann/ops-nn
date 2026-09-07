@@ -49,7 +49,12 @@ constexpr size_t IDX_VAR = 0;
 constexpr size_t IDX_ACCUM = 1;
 constexpr size_t IDX_LINEAR = 2;
 constexpr size_t IDX_GRAD = 3;
+constexpr size_t IDX_LR = 4;
+constexpr size_t IDX_L1 = 5;
+constexpr size_t IDX_L2 = 6;
 constexpr size_t IDX_LR_POWER = 7;
+
+constexpr size_t TOTAL_OUTPUTS = 3;
 
 constexpr int64_t DMA_ALIGN_BYTES = 32;
 

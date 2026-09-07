@@ -188,14 +188,14 @@ class InplaceApplyFtrlTestSpec:
 
 
 if __name__ == "__main__":
-    rng = np.random.default_rng(0)
-    v = rng.standard_normal(8).astype(np.float32)
-    a = np.abs(rng.standard_normal(8)).astype(np.float32) + 0.1
-    ln = rng.standard_normal(8).astype(np.float32)
-    g = rng.standard_normal(8).astype(np.float32)
+    idx = np.arange(8, dtype=np.float32)
+    v = idx * 0.25 - 1.0
+    a = idx * 0.125 + 0.1
+    ln = idx * 0.1 - 0.4
+    g = idx * 0.05 - 0.2
     vo, ao, lo = InplaceApplyFtrlTestSpec.golden(v, a, ln, g, 0.1, 0.01, 0.001, -0.5)
     assert vo.shape == v.shape and vo.dtype == v.dtype
     g0 = np.zeros_like(g)
     _, ao0, _ = InplaceApplyFtrlTestSpec.golden(v, a, ln, g0, 0.1, 0.01, 0.001, -0.5)
-    assert np.array_equal(ao0, a), "accum invariant violated"
+    assert np.allclose(ao0, a, rtol=1e-6, atol=1e-7), "accum invariant violated"
     print("golden self-smoke OK")

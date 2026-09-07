@@ -139,12 +139,15 @@ $$
 ## 约束说明
 
 - `var`、`accum`、`linear`、`grad` 四个张量的 shape 必须完全相同，不支持张量间广播。
-- `lr`、`l1`、`l2`、`lr_power` 必须为 rank-0 标量（0-d Tensor），数据类型与 `var` 一致。
+- `lr`、`l1`、`l2`、`lr_power` 必须为 rank-0 标量（0-d Tensor；GE 会将 0-d Tensor 规范化为存储 shape {1}，因此显式 shape 为 {1} 的单元素 Tensor 同样被接受），数据类型与 `var` 一致。
 - 八个输入端口必须使用相同的数据类型，不支持混合 dtype，仅支持 bfloat16、float16、float32 三种组合。
 - 张量秩 rank ∈ [0, 8]。
-- 数据格式仅支持 ND。
+- 数据格式仅支持 ND（Tiling 阶段对全部输入与输出做格式校验，非 ND 将拒绝执行）。
+- `lr > 0`、`l1 ≥ 0`、`l2 ≥ 0`、`lr_power ≤ 0`。标量超参以 Tensor 输入、数据位于 device 侧，host 侧无法读取其数值，该值域约束由调用方保证，违反时计算结果未定义。
 - 内部计算固定使用 fp32，bfloat16 与 float16 输入会先提升为 fp32 计算再回写原 dtype。
-- `use_locking` 当前仅支持默认值 false。
+- `use_locking` 当前仅支持默认值 false，传入 true 时 Tiling 阶段报错。
+- `var`、`accum`、`linear`、`grad` 四个输入与 `var`、`accum`、`linear` 三个输出在算子定义层声明了 AutoContiguous：非连续 Tensor（如经切片、转置得到）会被框架自动转换为连续布局后再参与计算，调用方无需手动连续化。
+- 支持空 Tensor（numel=0）：Tiling 阶段设置 BlockDim=1 直接返回，kernel 跳过计算。
 
 ## 调用说明
 
