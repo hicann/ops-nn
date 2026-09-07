@@ -30,7 +30,7 @@ static constexpr int32_t kDataIdx = 0;
 
 static constexpr int32_t OUTPUT_ELEMENT_COUNT = 8;
 
-static ge::graphStatus ValidateDtype(gert::TilingContext* context)
+static ge::graphStatus ValidateDtype(const gert::TilingContext* context)
 {
     auto outputDesc = context->GetOutputDesc(kDataIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
@@ -43,7 +43,7 @@ static ge::graphStatus ValidateDtype(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateFormat(gert::TilingContext* context)
+static ge::graphStatus ValidateFormat(const gert::TilingContext* context)
 {
     auto outputDesc = context->GetOutputDesc(kDataIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
@@ -54,7 +54,7 @@ static ge::graphStatus ValidateFormat(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateShape(gert::TilingContext* context)
+static ge::graphStatus ValidateShape(const gert::TilingContext* context)
 {
     auto outputShape = context->GetOutputShape(kDataIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);

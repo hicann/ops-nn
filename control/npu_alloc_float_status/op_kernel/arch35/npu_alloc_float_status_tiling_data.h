@@ -13,6 +13,8 @@
 #ifndef __NPU_ALLOC_FLOAT_STATUS_TILING_DATA_H__
 #define __NPU_ALLOC_FLOAT_STATUS_TILING_DATA_H__
 
+#include <cstdint>
+
 struct NPUAllocFloatStatusTilingData {
     int32_t needCoreNum = 0;
 };

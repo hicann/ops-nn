@@ -21,6 +21,7 @@
 #include <string>
 #include <map>
 #include "assert.h"
+#include "securec.h"
 
 #include "graph.h"
 #include "types.h"
@@ -59,7 +60,7 @@ struct CaseResult {
                                                             outputShape;                                            \
     TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(output##outputIndex##_graph_shape), FORMAT_ND, \
                                                            outputDtype);                                            \
-    add1.update_output_desc_##outputName(outputName##outputIndex##_desc);
+    add1.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 string GetTime()
 {
@@ -122,7 +123,11 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
             *(pDataInt + i) = value;
         }
     } else {
-        memset(pData, value, data_len);
+        if (memset_s(pData, data_len, value, data_len) != EOK) {
+            printf("%s - ERROR - [XIR]: memset_s failed\n", GetTime().c_str());
+            delete[] pData;
+            return FAILED;
+        }
     }
     input_tensor = Tensor(input_tensor_desc, pData, data_len);
     return SUCCESS;
