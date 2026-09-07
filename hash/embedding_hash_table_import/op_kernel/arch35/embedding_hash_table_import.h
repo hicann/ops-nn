@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include "../../inc/hashtable_common.h"
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_atomic_functions.h"
+#include "simt_api/vector_functions.h"
 
 namespace EmbeddingHashTable {
 using namespace AscendC;
@@ -49,6 +50,29 @@ constexpr int64_t FLAG_OFFSET = 2;
 constexpr int64_t VALUE_OFFSET = 3;
 constexpr uint8_t FILTER_FLAG_MASK = 0b00000101;
 constexpr uint8_t EXPORT_FLAG_MASK = 0b00000100;
+
+// SIMT 访存合并（b64/b128 短向量，见 simt_api/vector_functions.h）：读侧按 MERGE 个连续
+// float 为一组读，MERGE 由调用方按对齐给出（dim%4==0 且行基址 16B 对齐→4 / dim%2==0→2 /
+// 否则→1，MERGE 必整除 dim 无尾部）。桶 values 区偏移 24B、仅 8B 对齐 → 写侧封顶
+// float2(B64)（24B 桶头为跨算子契约，与 lookup 相同约束，本算子是"读外部写桶"镜像）。
+template <int MERGE>
+__simt_callee__ __aicore__ inline void CopyImportValuesMerged(__gm__ uint8_t* pBucketValues,
+                                                              const __gm__ float* pSrcRow, int64_t embeddingDim)
+{
+    for (int64_t j0 = 0; j0 < embeddingDim; j0 += MERGE) {
+        if constexpr (MERGE == 4) {
+            float4 v = *reinterpret_cast<const __gm__ float4*>(pSrcRow + j0);
+            __gm__ float2* pDst = reinterpret_cast<__gm__ float2*>(pBucketValues + j0 * sizeof(float));
+            pDst[0] = make_float2(v.x, v.y);
+            pDst[1] = make_float2(v.z, v.w);
+        } else if constexpr (MERGE == 2) {
+            *reinterpret_cast<__gm__ float2*>(
+                pBucketValues + j0 * sizeof(float)) = *reinterpret_cast<const __gm__ float2*>(pSrcRow + j0);
+        } else {
+            *reinterpret_cast<__gm__ float*>(pBucketValues + j0 * sizeof(float)) = pSrcRow[j0];
+        }
+    }
+}
 
 template <typename T>
 class EmbeddingHashTableImport {
@@ -225,11 +249,19 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
                 *filterFlagValue = filterFlagGm[i]; // actually not exist
             }
 
-            // 插入value值
-            for (int64_t j = 0; j < embeddingDim; ++j) {
-                int64_t valueOffset = blockOffset + (VALUE_OFFSET * INT64_TYPE_BYTES) + (j * bitWidth);
-                __gm__ T* tableValue = reinterpret_cast<__gm__ T*>(tableGm + valueOffset);
-                *tableValue = valueGm[i * embeddingDim + j];
+            // 插入value值（访存合并；merge 档位逐 key 相同、warp 内无分化。
+            // binary 仅 fp32 单 bin，T 恒为 float，按 4B 元素处理。
+            // dim<=4 走原始标量路径：该区间每桶写数太少，宽写收益抵不过开销——
+            // 实测 dim=4 float4 路径较旧标量版回退 16%（与 init 算子 d3/d4 同因））
+            __gm__ uint8_t* pBucketValues = tableGm + blockOffset + (VALUE_OFFSET * INT64_TYPE_BYTES);
+            const __gm__ float* pSrcRow = reinterpret_cast<const __gm__ float*>(valueGm) + i * embeddingDim;
+            const bool srcAligned16 = (reinterpret_cast<uintptr_t>(pSrcRow) & 15) == 0;
+            if (embeddingDim % 4 == 0 && srcAligned16 && embeddingDim > 4) {
+                CopyImportValuesMerged<4>(pBucketValues, pSrcRow, embeddingDim);
+            } else if (embeddingDim % 2 == 0 && embeddingDim > 4) {
+                CopyImportValuesMerged<2>(pBucketValues, pSrcRow, embeddingDim);
+            } else {
+                CopyImportValuesMerged<1>(pBucketValues, pSrcRow, embeddingDim);
             }
         } // need consider else, which means table is full
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include "kernel_operator_list_tensor_intf.h"
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_atomic_functions.h"
+#include "simt_api/vector_functions.h"
 
 namespace EmbeddingHashTableExportAicore {
 using namespace AscendC;
@@ -38,6 +39,29 @@ constexpr uint8_t EVICTED_FLAG_MASK = 0b00001000;
 constexpr uint8_t EXPORT_FLAG_MASK = 0b00000100;
 constexpr uint8_t FILTER_FLAG_MASK = 0b00000010;
 constexpr uint8_t VALID_FLAG_MASK = 0b00000001;
+
+// SIMT 访存合并（b64/b128 短向量，见 simt_api/vector_functions.h）：写侧按 MERGE 个连续
+// float 为一组写，MERGE 由调用方按对齐给出（dim%4==0 且行基址 16B 对齐→4 / dim%2==0→2 /
+// 否则→1，MERGE 必整除 dim 无尾部）。桶 values 区偏移 24B、仅 8B 对齐 → 读侧封顶
+// float2(B64)（24B 桶头为跨算子契约，与 lookup/import 相同约束）。
+template <int MERGE>
+__simt_callee__ __aicore__ inline void CopyExportValuesMerged(__gm__ uint8_t* pBucketValues, __gm__ float* pDstRow,
+                                                              int64_t embeddingDim)
+{
+    for (int64_t j0 = 0; j0 < embeddingDim; j0 += MERGE) {
+        if constexpr (MERGE == 4) {
+            __gm__ float2* pSrc = reinterpret_cast<__gm__ float2*>(pBucketValues + j0 * sizeof(float));
+            float2 lo = pSrc[0];
+            float2 hi = pSrc[1];
+            *reinterpret_cast<__gm__ float4*>(pDstRow + j0) = make_float4(lo.x, lo.y, hi.x, hi.y);
+        } else if constexpr (MERGE == 2) {
+            *reinterpret_cast<__gm__ float2*>(pDstRow + j0) = *(
+                reinterpret_cast<__gm__ float2*>(pBucketValues + j0 * sizeof(float)));
+        } else {
+            pDstRow[j0] = *reinterpret_cast<__gm__ float*>(pBucketValues + j0 * sizeof(float));
+        }
+    }
+}
 
 template <typename T>
 class EmbeddingHashTableExport {
@@ -269,7 +293,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
     __gm__ int64_t* tableAddrI64 = reinterpret_cast<__gm__ int64_t*>(tableAddr);
     __gm__ uint64_t* tableAddrU64 = reinterpret_cast<__gm__ uint64_t*>(tableAddr);
     __gm__ uint8_t* tableAddrU8 = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
-    __gm__ T* tableAddrT = reinterpret_cast<__gm__ T*>(tableAddrU8);
 
     int64_t curThreadRefreshExportFlagNum = 0;
     int64_t positionIndex = 0;
@@ -294,11 +317,24 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
             } else {
                 outFilterFlagGm[offset + positionIndex] = 0;
             }
-            for (int64_t j = 0; j < embeddingDims; j++) {
-                outValueGm[(offset + positionIndex) * embeddingDims +
-                           j] = tableAddrT[keyWidthByteDT * (blockIdx * normalCoreProcessKeys +
-                                                             threadIdx.x * normalThreadProcessKeys + i) +
-                                           KEY_VALUE_OFFSET_OF_BYTE / sizeof(T) + j];
+            // 拷出 values（访存合并；merge 档位逐 key 相同、warp 内无分化。
+            // binary 仅 fp32 单 bin，T 恒为 float，按 4B 元素处理。
+            // dim<=4 走原始标量路径：小 dim 宽访存收益抵不过开销——
+            // 与 import 算子 dim=4 实测回退 16% 同因，直接带fallback）
+            int64_t bucketByteBase = keyWidthByte *
+                                     (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i);
+            __gm__ float* pDstRow = reinterpret_cast<__gm__ float*>(outValueGm) +
+                                    (offset + positionIndex) * embeddingDims;
+            const bool dstAligned16 = (reinterpret_cast<uintptr_t>(pDstRow) & 15) == 0;
+            if (embeddingDims % 4 == 0 && dstAligned16 && embeddingDims > 4) {
+                CopyExportValuesMerged<4>(tableAddrU8 + bucketByteBase + KEY_VALUE_OFFSET_OF_BYTE, pDstRow,
+                                          embeddingDims);
+            } else if (embeddingDims % 2 == 0 && embeddingDims > 4) {
+                CopyExportValuesMerged<2>(tableAddrU8 + bucketByteBase + KEY_VALUE_OFFSET_OF_BYTE, pDstRow,
+                                          embeddingDims);
+            } else {
+                CopyExportValuesMerged<1>(tableAddrU8 + bucketByteBase + KEY_VALUE_OFFSET_OF_BYTE, pDstRow,
+                                          embeddingDims);
             }
             // 刷新导出flag, 只在第一次导出时刷新
             if (!(flag & EXPORT_FLAG_MASK)) {
