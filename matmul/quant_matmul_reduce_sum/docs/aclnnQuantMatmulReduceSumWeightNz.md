@@ -365,16 +365,15 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
+  #include <cstdint>
+  #include <cstring>
   #include <iostream>
   #include <memory>
   #include <vector>
 
   #include "acl/acl.h"
-  #include "aclnnop/aclnn_permute.h"
-  #include "aclnnop/aclnn_quant_matmul_weight_nz.h"
-  #include "aclnnop/aclnn_trans_matmul_weight.h"
-  #include "aclnnop/aclnn_trans_quant_param_v2.h"
   #include "aclnnop/aclnn_quant_matmul_reduce_sum.h"
+  #include "aclnnop/aclnn_trans_matmul_weight.h"
 
   #define CHECK_RET(cond, return_expr) \
       do {                             \
@@ -403,6 +402,15 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
           shapeSize *= i;
       }
       return shapeSize;
+  }
+
+  float Bfloat16ToFloat(uint16_t value)
+  {
+      // BF16是FP32的高16位，低16位补0后即可得到对应的FP32位表示。
+      const uint32_t bits = static_cast<uint32_t>(value) << 16U;
+      float result = 0.0F;
+      std::memcpy(&result, &bits, sizeof(result));
+      return result;
   }
 
   int Init(int32_t deviceId, aclrtStream *stream)
@@ -523,7 +531,8 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       std::vector<int64_t> x2ScaleShape = {n};
       void *x2ScaleDeviceAddr = nullptr;
       aclTensor *x2Scale = nullptr;
-      std::vector<uint16_t> x2ScaleHostData(n, 1);  // 实际上是bfloat16半精度方式
+      constexpr uint16_t bf16One = 0x3F80U;
+      std::vector<uint16_t> x2ScaleHostData(n, bf16One);  // BF16数值1.0的位表示
       ret = CreateAclTensor(x2ScaleHostData, x2ScaleShape, &x2ScaleDeviceAddr, aclDataType::ACL_BF16, &x2Scale);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x2ScaleTensorPtr(x2Scale, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x2ScaleDeviceAddrPtr(x2ScaleDeviceAddr, aclrtFree);
@@ -532,7 +541,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       std::vector<int64_t> outShape = {m, n};
       void *outDeviceAddr = nullptr;
       aclTensor *out = nullptr;
-      std::vector<uint16_t> outHostData(m * n, 1);  // 实际上是bfloat16半精度方式
+      std::vector<uint16_t> outHostData(m * n, 0);  // BF16数值0.0的位表示
       ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_BF16, &out);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> outTensorPtr(out, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
@@ -572,14 +581,14 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(outShape);
-      std::vector<uint16_t> resultData(
-          size, 0);  // C语言中无法直接打印bfloat16的数据，需要用uint16读出来，自行通过二进制转成fp16
+      // C++无法直接打印BF16，先用uint16_t读取其位表示，再将BF16转换为FP32。
+      std::vector<uint16_t> resultData(size, 0);
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                 return ret);
       for (int64_t i = 0; i < 5; i++) {
-          LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
+          LOG_PRINT("result[%ld] is: %f\n", i, Bfloat16ToFloat(resultData[i]));
       }
       return ACL_SUCCESS;
   }
