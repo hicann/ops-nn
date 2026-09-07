@@ -24,7 +24,7 @@ constexpr uint64_t MTE2_MIN_LOAD_SIZE = 32768UL;
 constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32UL * 1024UL;
 constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64UL * 1024UL;
 constexpr uint64_t CACHE_LINE_512B = 512UL;
-constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
+constexpr uint32_t MAX_STEPK_WITH_BL1_FULL = 8U;
 
 uint64_t GetSizeWithDataTypeLut(uint64_t shape, ge::DataType dtype)
 {
@@ -858,7 +858,7 @@ void L1TilingDataCalculator::L1FullLoadCacheLinePass(uint64_t& tempStepKa, uint6
                                                      uint64_t bCacheLine)
 {
     if (aCacheLine == 0 || bCacheLine == 0) {
-        OP_LOGE(inputParams_.opName, "Invalid aCacheLine or bCacheLine.");
+        OP_LOGE(inputParams_.opName, "aCacheLine(%lu) or bCacheLine(%lu) must not be 0.", aCacheLine, bCacheLine);
         return;
     }
     uint32_t maxStepKWithSmallCase = 4U * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
@@ -872,7 +872,7 @@ void L1TilingDataCalculator::L1FullLoadCacheLinePass(uint64_t& tempStepKa, uint6
             tempStepKb *= (CACHE_LINE_512B / bCacheLine);
         }
     } else {
-        if (ops::CeilDiv(inputParams_.kSize, baseK_) < MAX_STEPK_With_BL1_FULL) {
+        if (ops::CeilDiv(inputParams_.kSize, baseK_) < MAX_STEPK_WITH_BL1_FULL) {
             return;
         }
         if (!inputParams_.transA && isEnableA && (baseM_ * aCacheLine <= FULL_LOAD_DATA_SIZE_64K)) {
@@ -885,7 +885,7 @@ void L1TilingDataCalculator::NONL1FullLoadCacheLinePass(uint64_t& tempStepKa, ui
                                                         uint64_t bCacheLine)
 {
     if (aCacheLine == 0 || bCacheLine == 0) {
-        OP_LOGE(inputParams_.opName, "Invalid aCacheLine or bCacheLine.");
+        OP_LOGE(inputParams_.opName, "aCacheLine(%lu) or bCacheLine(%lu) must not be 0.", aCacheLine, bCacheLine);
         return;
     }
     bool isEnableA = CACHE_LINE_512B % aCacheLine == 0UL;
