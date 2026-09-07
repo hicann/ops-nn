@@ -1109,7 +1109,7 @@ bool IsNeedTilingHkWk(gert::TilingContext* context, const Conv3dBpInputV2RunInfo
 }
 
 // 分形 storage 维交叉校验（仅 cube 路径）：filter 为 NCDHW 时无分形维，跳过
-static bool CheckFilterFractalShape(gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
+static bool CheckFilterFractalShape(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
                                     const OtherParams& otherParams, int32_t co1g)
 {
     int64_t filterGDkCi1gHW = static_cast<int64_t>(runInfoV2.real_g) * otherParams.b_shape.d * otherParams.ci1g *

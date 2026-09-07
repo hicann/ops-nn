@@ -21,6 +21,13 @@
 
 using namespace AscendC;
 
+namespace {
+// 32：向量搬移块粒度（字节），也是 DataCopyPad 单侧填充的字节上限
+constexpr int32_t VEC_BLOCK_BYTES = 32;
+// 255：DataCopyPadExtParams 单侧填充/拷贝元素计数上限（uint8_t 编码）
+constexpr int32_t DATACOPY_PAD_MAX_ELEMS = 255;
+} // namespace
+
 template <typename T>
 __aicore__ inline float VecToFloat(T value)
 {
@@ -80,7 +87,7 @@ public:
         dilatedHk = dx.dilatedHk;
         dilatedWk = dx.dilatedWk;
         alignedDilatedW = dx.alignedDilatedW;
-        dataPerBlock = dx.dataPerBlock == 0 ? static_cast<uint32_t>(32 / sizeof(T)) : dx.dataPerBlock;
+        dataPerBlock = dx.dataPerBlock == 0 ? static_cast<uint32_t>(VEC_BLOCK_BYTES / sizeof(T)) : dx.dataPerBlock;
         alignedWi = ((gradInW + dataPerBlock - 1) / dataPerBlock) * dataPerBlock;
         // strideW>1 时相位分解的类缓冲长度 ≈ gradInW/strideW
         const uint32_t sW = strideW > 1 ? static_cast<uint32_t>(strideW) : 1;
@@ -136,19 +143,20 @@ private:
         if (strideW != 1) {
             return false;
         }
-        if (padLDx < 0 || padLDx > 255) {
+        if (padLDx < 0 || padLDx > DATACOPY_PAD_MAX_ELEMS) {
             return false;
         }
-        if (dilatedWk > 255 || gradInW == 0 || gradOutW == 0 || dataPerBlock == 0) {
+        if (dilatedWk > static_cast<uint32_t>(DATACOPY_PAD_MAX_ELEMS) || gradInW == 0 || gradOutW == 0 ||
+            dataPerBlock == 0) {
             return false;
         }
         // DataCopyPad 左右填充按字节计不能超过 32B（bf16/fp16 元素上限不够）
-        if (static_cast<int64_t>(padLDx) * sizeof(T) > 32) {
+        if (static_cast<int64_t>(padLDx) * sizeof(T) > VEC_BLOCK_BYTES) {
             return false;
         }
         const int64_t rightPadMax = static_cast<int64_t>(gradInW) - static_cast<int64_t>(gradOutW) +
                                     (static_cast<int64_t>(kernelW) - 1) * dilationW - padLDx;
-        if (rightPadMax > 0 && rightPadMax * sizeof(T) > 32) {
+        if (rightPadMax > 0 && rightPadMax * sizeof(T) > VEC_BLOCK_BYTES) {
             return false;
         }
         return alignedWi <= 0xFFFFU;
@@ -160,10 +168,11 @@ private:
         if (strideW <= 1) {
             return false;
         }
-        if (padLDx < 0 || padLDx > 255) {
+        if (padLDx < 0 || padLDx > DATACOPY_PAD_MAX_ELEMS) {
             return false;
         }
-        if (dilatedWk > 255 || gradInW == 0 || gradOutW == 0 || dataPerBlock == 0) {
+        if (dilatedWk > static_cast<uint32_t>(DATACOPY_PAD_MAX_ELEMS) || gradInW == 0 || gradOutW == 0 ||
+            dataPerBlock == 0) {
             return false;
         }
         if (classAlignedWi == 0 || classAlignedWi > 0xFFFFU) {
@@ -190,11 +199,12 @@ private:
                 if (endExclusive <= first) {
                     continue;
                 }
-                if (first > 255 || static_cast<int32_t>(kAligned) - endExclusive > 255) {
+                if (first > DATACOPY_PAD_MAX_ELEMS ||
+                    static_cast<int32_t>(kAligned) - endExclusive > DATACOPY_PAD_MAX_ELEMS) {
                     return false;
                 }
                 // DataCopyPad 左填充按字节计不能超 32B，否则降级标量路径
-                if (first * static_cast<int32_t>(sizeof(T)) > 32) {
+                if (first * static_cast<int32_t>(sizeof(T)) > VEC_BLOCK_BYTES) {
                     return false;
                 }
             }
