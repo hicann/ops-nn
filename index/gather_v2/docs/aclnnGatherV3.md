@@ -98,7 +98,7 @@ aclnnStatus aclnnGatherV3(
         <td>输入</td>
         <td>待收集的数据。</td>
         <td>-</td>
-        <td>FLOAT、FLOAT16、INT64、INT32、INT16、INT8、UINT8、BOOL、DOUBLE、COMPLEX64</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、BOOL、DOUBLE、COMPLEX64</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
