@@ -77,6 +77,24 @@ static __aicore__ inline void LoadL0c2GMFixPipe(Intf* self, const int64_t srcOff
 }
 
 template <class Intf>
+static __aicore__ inline void LoadL0c2GMFixPipeRow(Intf* self, const int64_t srcOffset, const int64_t dstOffset,
+                                                   const GlobalTensor<typename Intf::DstT>& output,
+                                                   const LocalTensor<typename Intf::L0cT>& useC1Buf,
+                                                   FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& fixPipeParams)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        Convolution3DBackprop::GetOutputQuantMode<Intf>(self) ==
+            static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(
+            output[dstOffset], useC1Buf[srcOffset], GetScaleL1Buf<Intf>(self)[scaleAddr], fixPipeParams);
+    } else {
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[dstOffset], useC1Buf[srcOffset],
+                                                                         fixPipeParams);
+    }
+}
+
+template <class Intf>
 static __aicore__ inline void LoadL0c2UbFixPipe(Intf* self, const int64_t srcOffset, const int64_t dstOffset,
                                                 const LocalTensor<typename Intf::DstT>& vecOutBuf,
                                                 const LocalTensor<typename Intf::L0cT>& useC1Buf,

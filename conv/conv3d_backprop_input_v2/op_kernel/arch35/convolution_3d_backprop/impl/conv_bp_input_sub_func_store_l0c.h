@@ -105,7 +105,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<
         }
 #endif
     } else {
-        LoadL0c2GMFixPipe<Intf>(self, 0, dstOffset, output, useC1Buf, fixPipeParams);
+        LoadL0c2GMFixPipe(self, 0, dstOffset, output, useC1Buf, fixPipeParams);
     }
 }
 
@@ -134,21 +134,15 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf* self, const GlobalTensor<
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element
     fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
-
-    if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                                                QuantMode_t::F322BF16;
-    } else if constexpr (std::is_same<typename Intf::DstT, half>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                                                QuantMode_t::F322F16;
-    } else if constexpr (std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                    QuantMode_t::QF322HIF8_PRE; // Half to Away Round
-        fixPipeParams.deqScalar = DQ_SCALAR_ONE;
-    } else if constexpr (std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322FP8_PRE;
-        fixPipeParams.deqScalar = DQ_SCALAR_ONE;
+    SetFixPipeQuantVal<Intf, CO2Layout::ROW_MAJOR>(self, fixPipeParams);
+    if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
+        fixPipeParams.quantPre = QuantMode_t::NoQuant;
     }
+    fixPipeParams.reluEn = Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 : self->ctx.tiling_->enRelu0;
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+    fixPipeParams.preReluMode = static_cast<ReluMode>(Intf::IsSecondOutput ? self->ctx.tiling_->enRelu1 :
+                                                                             self->ctx.tiling_->enRelu0);
+#endif
     if (self->ctx.useUbAccumForSplitK_) {
 #if !__CUBE_VECTOR_FUSION_ONLY__
         // 写入workspace需要保证数据连续便于UB搬运和Cast
@@ -156,7 +150,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf* self, const GlobalTensor<
         Fixpipe<float, float, CFG_ROW_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
 #endif
     } else {
-        Fixpipe<typename Intf::DstT, float, CFG_ROW_MAJOR>(output[dstOffset], useC1Buf, fixPipeParams);
+        LoadL0c2GMFixPipeRow(self, 0, dstOffset, output, useC1Buf, fixPipeParams);
     }
 }
 
@@ -293,7 +287,7 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const Glob
         fixPipeParams.params.dstNdStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = self->ctx.headWi_; // M: 首块的长度
-        LoadL0c2GmRowForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+        LoadL0c2GMFixPipeRow(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.headWi_ * BLOCK_CUBE; // headWi_/2是一个子kernel首块w的长度
         dstOffset += self->ctx.headWi_ * self->ctx.tiling_->cin + skipDstOffset;
@@ -306,7 +300,7 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const Glob
                                            self->ctx.tiling_->wi * self->ctx.tiling_->cin; // loop3_dst_stride
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度
-        LoadL0c2GmRowForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+        LoadL0c2GMFixPipeRow(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi * BLOCK_CUBE; // srcWi是一个子kernel中间块w的长度
         dstOffset += self->ctx.midHi_ * (fixPipeParams.params.dstNdStride);
@@ -318,7 +312,7 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const Glob
         fixPipeParams.params.dstNdStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = self->ctx.tailWi_; // M: 尾块的长度
-        LoadL0c2GmRowForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+        LoadL0c2GMFixPipeRow(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
     }
 }
 

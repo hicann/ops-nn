@@ -78,20 +78,30 @@ bool ValidateConvBackpropContext(const gert::TilingContext* context)
     return true;
 }
 
-bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* dilations)
+bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* dilations, optiling::OpTypeV2 op_type)
 {
     const auto op_name = context->GetNodeName();
     auto y_ori_format = context->GetOutputDesc(Y_INDEX)->GetOriginFormat();
     int32_t kDilationUpTmp = (IsArchAfter35(context) || IsSocVersionFuse(context)) ? kDimUp : kDilationUp;
-    if (y_ori_format == ge::FORMAT_NCDHW) {
-        OP_CHECK_IF(!CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-                    OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
-                                              std::to_string(K_DEFAULT_DILATIONS).c_str()),
-                    return false);
-        OP_CHECK_IF(!CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-                    OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
-                                              std::to_string(K_DEFAULT_DILATIONS).c_str()),
-                    return false);
+    bool isFuseInputNCDHW = false;
+    if (IsSocVersionFuse(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+        isFuseInputNCDHW = context->GetInputDesc(FILTER_INDEX)->GetOriginFormat() == ge::FORMAT_NCDHW;
+    }
+    if (y_ori_format == ge::FORMAT_NCDHW || isFuseInputNCDHW) {
+        OP_CHECK_IF(
+            !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
+                FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
+                    .c_str()),
+            return false);
+        OP_CHECK_IF(
+            !CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
+                FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS)
+                    .c_str()),
+            return false);
         OP_CHECK_IF(
             !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -142,11 +152,15 @@ bool CheckAttrRangeDilations(const gert::TilingContext* context, const int64_t* 
     return true;
 }
 
-bool CheckAttrRangeStrides(const gert::TilingContext* context, const int64_t* strides)
+bool CheckAttrRangeStrides(const gert::TilingContext* context, const int64_t* strides, optiling::OpTypeV2 op_type)
 {
     const auto op_name = context->GetNodeName();
     auto y_ori_format = context->GetOutputDesc(Y_INDEX)->GetOriginFormat();
-    if (y_ori_format == ge::FORMAT_NCDHW) {
+    bool isFuseInputNCDHW = false;
+    if (IsSocVersionFuse(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+        isFuseInputNCDHW = context->GetInputDesc(FILTER_INDEX)->GetOriginFormat() == ge::FORMAT_NCDHW;
+    }
+    if (y_ori_format == ge::FORMAT_NCDHW || isFuseInputNCDHW) {
         OP_CHECK_IF(!CheckRangeInt64(strides[K_N_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
                     OP_LOGE_FOR_INVALID_VALUE(op_name, "stride_n", std::to_string(strides[K_N_DIM_NCDHW]).c_str(),
                                               std::to_string(K_DEFAULT_STRIDES).c_str()),
@@ -248,12 +262,13 @@ bool CheckAttrRangePads(const gert::TilingContext* context, const int64_t* pads)
 }
 
 bool CheckAttrRange(gert::TilingContext* context, const int64_t* strides, const int64_t* pads, const int64_t* dilations,
-                    const int64_t* groups)
+                    const int64_t* groups, optiling::OpTypeV2 op_type)
 {
     const auto op_name = context->GetNodeName();
-    OP_CHECK_IF(!CheckAttrRangeDilations(context, dilations), OP_LOGE(op_name, "check dilations range failed"),
+    OP_CHECK_IF(!CheckAttrRangeDilations(context, dilations, op_type), OP_LOGE(op_name, "check dilations range failed"),
                 return false);
-    OP_CHECK_IF(!CheckAttrRangeStrides(context, strides), OP_LOGE(op_name, "check strides range failed"), return false);
+    OP_CHECK_IF(!CheckAttrRangeStrides(context, strides, op_type), OP_LOGE(op_name, "check strides range failed"),
+                return false);
     // Exclude (pad_u,pad_d,pad_l,pad_r) =-1 while paddings is "SAME"
     if (pads[K_CONV3D_PAD_UP_IDX] != -1 && pads[K_CONV3D_PAD_DOWN_IDX] != -1 && pads[K_CONV3D_PAD_LEFT_IDX] != -1 &&
         pads[K_CONV3D_PAD_RIGHT_IDX] != -1) {
@@ -536,9 +551,8 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
     }
 
     std::unordered_set<ge::Format> valid_y_format;
-    if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
-        (op_type == optiling::OpTypeV2::kExtendConvTranspose ||
-         op_type == optiling::OpTypeV2::kExtendConvTransposeV2)) {
+    if (op_type == optiling::OpTypeV2::kExtendConvTransposeV2 ||
+        (op_type == optiling::OpTypeV2::kExtendConvTranspose && IsArchAfter35(context))) {
         valid_y_format = {ge::FORMAT_NCDHW};
     } else {
         valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
@@ -738,13 +752,16 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
     auto filter_ori_format = filter_desc->GetOriginFormat();
     auto y_ori_format = y_desc->GetOriginFormat();
-    OP_CHECK_IF(out_backprop_ori_format != y_ori_format,
-                OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and y",
-                                                        (ge::TypeUtils::FormatToSerialString(out_backprop_ori_format) +
-                                                         " and " + ge::TypeUtils::FormatToSerialString(y_ori_format))
-                                                            .c_str(),
-                                                        "The formats of out_backprop and y must be the same"),
-                return false);
+    if (!IsSocVersionFuse(context)) {
+        OP_CHECK_IF(
+            out_backprop_ori_format != y_ori_format,
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and y",
+                                                    (ge::TypeUtils::FormatToSerialString(out_backprop_ori_format) +
+                                                     " and " + ge::TypeUtils::FormatToSerialString(y_ori_format))
+                                                        .c_str(),
+                                                    "The formats of out_backprop and y must be the same"),
+            return false);
+    }
     OP_CHECK_IF(out_backprop_ori_format != ge::FORMAT_NDHWC && out_backprop_ori_format != ge::FORMAT_NCDHW,
                 OP_LOGE_FOR_INVALID_FORMAT(op_name, "out_backprop",
                                            ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str(),
@@ -1575,7 +1592,7 @@ bool GetAttrAndDtypeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo&
     const auto strides_data = static_cast<const int64_t*>(strides->GetData());
     const auto pads_data = static_cast<const int64_t*>(pads->GetData());
     const auto dilations_data = static_cast<const int64_t*>(dilations->GetData());
-    OP_CHECK_IF(!CheckAttrRange(context, strides_data, pads_data, dilations_data, groups),
+    OP_CHECK_IF(!CheckAttrRange(context, strides_data, pads_data, dilations_data, groups, op_type),
                 OP_LOGW(context, "check attr range failed"), return false);
 
     Shape strides_ncdhw;

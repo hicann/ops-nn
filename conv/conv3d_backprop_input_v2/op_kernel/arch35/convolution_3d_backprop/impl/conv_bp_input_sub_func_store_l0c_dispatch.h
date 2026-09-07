@@ -133,9 +133,7 @@ static __aicore__ inline void LoadL0c2Gm(Intf* self, const GlobalTensor<typename
     if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         LoadL0c2OutForNz2Dn<Intf>(self, output, useC1Buf);
     } else {
-#if !__CUBE_VECTOR_FUSION_ONLY__
         LoadL0c2OutForNz2Nd<Intf>(self, output, useC1Buf);
-#endif
     }
     if constexpr (std::is_same<typename Intf::DstT, float>::value ||
                   std::is_same<typename Intf::DstT, bfloat16_t>::value ||

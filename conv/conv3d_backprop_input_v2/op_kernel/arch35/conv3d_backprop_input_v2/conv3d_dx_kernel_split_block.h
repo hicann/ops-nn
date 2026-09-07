@@ -256,12 +256,15 @@ protected:
     {
         uint32_t alignedHoStartIdx = this->curHoStartIdx_ < 0 ? 0 : this->curHoStartIdx_;
         this->offsetB_ += static_cast<uint64_t>(this->kSCoreIdx_) * kernelSplitStrideB_;
-        if (this->yCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
-            this->offsetC_ += static_cast<uint64_t>(kernelIdx) * this->tiling_->wi;
+        if (this->dedyCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
             this->offsetA_ += static_cast<uint64_t>(alignedHoStartIdx) * this->tiling_->wo;
         } else {
-            this->offsetC_ += static_cast<uint64_t>(kernelIdx) * this->tiling_->wi * this->tiling_->cin;
             this->offsetA_ += static_cast<uint64_t>(alignedHoStartIdx) * this->tiling_->wo * this->tiling_->cout;
+        }
+        if (this->yCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
+            this->offsetC_ += static_cast<uint64_t>(kernelIdx) * this->tiling_->wi;
+        } else {
+            this->offsetC_ += static_cast<uint64_t>(kernelIdx) * this->tiling_->wi * this->tiling_->cin;
         }
     }
 
