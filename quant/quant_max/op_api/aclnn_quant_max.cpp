@@ -225,7 +225,7 @@ aclnnStatus aclnnQuantMaxGetWorkspaceSize(const aclTensor* x, const aclTensor* s
                                           const aclTensor* y, const aclTensor* amax, uint64_t* workspaceSize,
                                           aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnQuantMax, DFX_IN(x, scale), DFX_OUT(y, amax));
+    L2_DFX_PHASE_1(aclnnQuantMax, DFX_IN(x, scale, roundMode, dstType), DFX_OUT(y, amax));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
