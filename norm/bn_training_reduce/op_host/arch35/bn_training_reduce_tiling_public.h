@@ -20,6 +20,9 @@
 
 namespace optiling {
 
+// Max supported input rank of the normalized pattern (NCDHW 5-D)
+constexpr size_t kMaxInputRank = 5U;
+
 enum class BNTrainingReducePublicStatus : int32_t {
     SUCCESS = 0,
     SHAPE_MISMATCH,
@@ -62,7 +65,7 @@ enum class BNTrainingReduceTilingKey : int64_t {
 struct BNTrainingReducePublicInputs {
     bool inputPresent = true;
     int32_t rank = 4;
-    std::array<int64_t, 5> shape = {1, 1, 1, 1, 1};
+    std::array<int64_t, kMaxInputRank> shape = {1, 1, 1, 1, 1};
     BNTrainingReducePublicFormat format = BNTrainingReducePublicFormat::NCHW;
     BNTrainingReducePublicDType inputDtype = BNTrainingReducePublicDType::FLOAT32;
 

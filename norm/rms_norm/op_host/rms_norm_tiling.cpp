@@ -47,6 +47,7 @@ constexpr uint32_t ALIGN_WEIGHT = 100;
 constexpr uint32_t DTYPE_WEIGHT = 10;
 constexpr uint32_t DIV_TO_HALF = 2;
 constexpr uint32_t SMALL_REDUCE_NUM = 2000;
+constexpr uint32_t FP16_MERGE_N_COL_NUM = 128;
 constexpr uint32_t MODE_MERGE_N = 2;
 constexpr uint32_t MODE_SINGLE_ROW = 3;
 constexpr size_t MAX_DIM_NUM = 8;
@@ -445,7 +446,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         }
 
         if ((numColAlign <= SMALL_REDUCE_NUM && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) ||
-            (xDtypeKey == DTYPE_KEY_FP16 && numCol == 128 &&
+            (xDtypeKey == DTYPE_KEY_FP16 && numCol == FP16_MERGE_N_COL_NUM &&
              curSocVersion == platform_ascendc::SocVersion::ASCEND310P && numRow % BYTE_SIZE_2_BLOCK_ALIGN_NUM == 0)) {
             modeKey = MODE_MERGE_N;
         }

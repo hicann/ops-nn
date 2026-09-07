@@ -69,7 +69,8 @@ static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTens
 
 static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
                             const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
-                            const aclTensor* zeroPoints2Optional, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
+                            const aclTensor* zeroPoints2Optional, const aclTensor* y1Out, const aclTensor* y2Out,
+                            const aclTensor* xOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);

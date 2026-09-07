@@ -22,6 +22,7 @@ using namespace AscendC;
 
 constexpr uint32_t kSmallRVlBytes = 256U;
 constexpr uint32_t kSmallRRepF32 = kSmallRVlBytes / sizeof(float);
+constexpr uint32_t kSmallRCopyLoopDims = 2U; // nested loop dims of the transposed copy (R and C)
 
 constexpr AscendC::Reg::CastTrait kSmallRCastTraitToFp32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
                                                          AscendC::Reg::MaskMergeMode::ZEROING,
@@ -150,16 +151,16 @@ private:
     __aicore__ inline void CopyInTranspose(int64_t channelStart, int64_t channelCount)
     {
         static constexpr MultiCopyConfig config = {false};
-        MultiCopyLoopInfo<2> loopInfo;
+        MultiCopyLoopInfo<kSmallRCopyLoopDims> loopInfo;
         loopInfo.loopSrcStride[0] = 1;
         loopInfo.loopSrcStride[1] = reduceLen_;
         loopInfo.loopDstStride[0] = tileChannelsAlign_;
         loopInfo.loopDstStride[1] = 1;
         loopInfo.loopSize[0] = reduceLen_;
         loopInfo.loopSize[1] = channelCount;
-        MultiCopyParams<D_T, 2> params = {loopInfo, 0};
+        MultiCopyParams<D_T, kSmallRCopyLoopDims> params = {loopInfo, 0};
         auto inputLocal = inputBuf_.Get<D_T>();
-        DataCopy<D_T, 2, config>(inputLocal, xGm_[channelStart * reduceLen_], params);
+        DataCopy<D_T, kSmallRCopyLoopDims, config>(inputLocal, xGm_[channelStart * reduceLen_], params);
     }
 
     int64_t channels_ = 0;

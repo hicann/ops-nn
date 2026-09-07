@@ -12,7 +12,6 @@
 #define BN_TRAINING_REDUCE_TILING_ARCH35_H
 
 #include "exe_graph/runtime/tiling_context.h"
-#include "graph/types.h"
 
 namespace optiling {
 ge::graphStatus TilingFunc(gert::TilingContext* context);

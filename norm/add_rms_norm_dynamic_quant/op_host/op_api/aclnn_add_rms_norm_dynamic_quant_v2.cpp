@@ -137,7 +137,8 @@ static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTens
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor* x1, aclTensor* y1Out, aclTensor* y2Out, bool processOut1, bool processOut2)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* y1Out, const aclTensor* y2Out, bool processOut1,
+                            bool processOut2)
 {
     auto x1Shape = x1->GetViewShape();
     auto y1Shape = y1Out->GetViewShape();

@@ -37,6 +37,7 @@ static const size_t DIMS_ONE_NUMS = 1;
 static const size_t DIMS_TWO_NUMS = 2;
 static const size_t MAX_DIM_LEN = 8;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
+static constexpr size_t kRmsNormQuantResultNum = 2U; // output tensor count of RmsNormQuantV2
 static constexpr int32_t IDX_0 = 0;
 
 static const std::initializer_list<op::DataType> EXTEND_ATB_DTYPE_SUPPORT_LIST_X = {op::DataType::DT_FLOAT16,
@@ -330,9 +331,9 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
         auto betaCont = l0op::Contiguous(inputTensorOri.beta, uniqueExecutor.get());
         CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        std::array<aclTensor*, 2> addRmsNormQuantOuts = l0op::RmsNormQuantV2(xCont, gammaCont, scaleCont, nullptr,
-                                                                             offsetCont, nullptr, betaCont, epsilon,
-                                                                             divMode, yType, uniqueExecutor.get());
+        std::array<aclTensor*, kRmsNormQuantResultNum> addRmsNormQuantOuts = l0op::RmsNormQuantV2(
+            xCont, gammaCont, scaleCont, nullptr, offsetCont, nullptr, betaCont, epsilon, divMode, yType,
+            uniqueExecutor.get());
         aclTensor* resultTensor = std::get<IDX_0>(addRmsNormQuantOuts);
         CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* outTensor = resultTensor;

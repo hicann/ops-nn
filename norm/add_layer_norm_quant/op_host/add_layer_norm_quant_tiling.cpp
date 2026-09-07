@@ -24,6 +24,7 @@ static constexpr int64_t BLOCK_SIZE = 32;
 static constexpr int64_t FLOAT_BLOCK_ELEM = 8;
 static constexpr int64_t RESERVED_WORKSPACE_SIZE_910B = 16 * 1024 * 1024;
 static constexpr int64_t ROW_FACTOR = 16;
+static constexpr int64_t PER_TENSOR_GAMMA_RANK = 2; // per-tensor gamma keeps the 2-D [1, hidden] shape
 
 // Dtype Tiling: 1, 2, 3
 static constexpr uint64_t TILING_DATATYPE_FP16 = 1000; // 3
@@ -551,7 +552,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2Membase(gert::TilingContext* co
     tiling.set_isPerTensor(0);
     if (!isDynamicQuant && (nullptr != scales1Shape)) {
         auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
-        if (gammaShape.GetDimNum() == 2 && gammaShape.GetDim(0) == 1 &&
+        if (gammaShape.GetDimNum() == PER_TENSOR_GAMMA_RANK && gammaShape.GetDim(0) == 1 &&
             scales1Shape->GetStorageShape().GetShapeSize() == 1) {
             tiling.set_isPerTensor(1);
             OP_LOGD(context, "AddLayerNormQuantV2 PerTensor Mode Open. ");

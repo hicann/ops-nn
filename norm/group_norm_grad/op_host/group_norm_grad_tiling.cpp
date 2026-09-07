@@ -281,7 +281,7 @@ ge::graphStatus GroupNormGradTiling::ComputeAllocUBStage2(uint32_t coreBatchCoun
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::DataType dtypeStrLocal,
+ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::DataType dtypeStr,
                                                          uint32_t isDeterministicKey, size_t sysWorkspaceSize)
 {
     size_t* currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
@@ -294,7 +294,7 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
     if (isDeterministicKey == 1) {
         tilingParams->workSpaceSize = DivCeil(tilingParams->n, SPLIT_COUNT) * tilingParams->c;
         usrWorkspaceSize = WORKSPACE_COPIES * static_cast<int64_t>(tilingParams->workSpaceSize) * FLOAT_DTYPE_BYTES;
-        if (dtypeStrLocal == ge::DT_FLOAT) {
+        if (dtypeStr == ge::DT_FLOAT) {
             // task ReduceSum
             tilingParams->castEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed / SPLIT_COUNT),
                                             STEP_SIZE);
@@ -327,7 +327,7 @@ ge::graphStatus GroupNormGradTiling::CalStage2TilingInfo(uint64_t UB_size, ge::D
                             return ge::GRAPH_FAILED);
         }
     } else {
-        if (dtypeStrLocal == ge::DT_FLOAT) {
+        if (dtypeStr == ge::DT_FLOAT) {
             // no stage2 task
             usrWorkspaceSize = 0;
         } else {
@@ -396,9 +396,9 @@ ge::graphStatus GroupNormGradTiling::CalStage1TilingInfo(uint32_t reserveSpace)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupNormGradTiling::SetTilingKeyMode(ge::DataType dtypeStrLocal, uint32_t isDeterministicKey) const
+ge::graphStatus GroupNormGradTiling::SetTilingKeyMode(ge::DataType dtypeStr, uint32_t isDeterministicKey) const
 {
-    switch (dtypeStrLocal) {
+    switch (dtypeStr) {
         case ge::DT_BF16:
             tilingContext->SetTilingKey(BF16_MODE + isDeterministicKey * TEN);
             return ge::GRAPH_SUCCESS;
@@ -410,15 +410,15 @@ ge::graphStatus GroupNormGradTiling::SetTilingKeyMode(ge::DataType dtypeStrLocal
             return ge::GRAPH_SUCCESS;
         default:
             OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
-                                      ge::TypeUtils::DataTypeToSerialString(dtypeStrLocal).c_str(),
+                                      ge::TypeUtils::DataTypeToSerialString(dtypeStr).c_str(),
                                       "float32, float16 or bfloat16");
             return ge::GRAPH_FAILED;
     }
 }
 
-uint32_t GroupNormGradTiling::GetDataTypeSize(ge::DataType dtypeStrLocal) const
+uint32_t GroupNormGradTiling::GetDataTypeSize(ge::DataType dtypeStr) const
 {
-    switch (dtypeStrLocal) {
+    switch (dtypeStr) {
         case ge::DT_FLOAT:
             return FLOAT_DTYPE_BYTES;
         case ge::DT_BF16:
@@ -427,15 +427,15 @@ uint32_t GroupNormGradTiling::GetDataTypeSize(ge::DataType dtypeStrLocal) const
             return FLOAT16_DTYPE_BYTES + FLOAT_DTYPE_BYTES;
         default:
             OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
-                                      ge::TypeUtils::DataTypeToSerialString(dtypeStrLocal).c_str(),
+                                      ge::TypeUtils::DataTypeToSerialString(dtypeStr).c_str(),
                                       "float32, float16 or bfloat16");
             return 0;
     }
 }
 
-uint32_t GroupNormGradTiling::GetElePerBlock(uint32_t dtypeBytesLocal) const
+uint32_t GroupNormGradTiling::GetElePerBlock(uint32_t dtypeBytes) const
 {
-    switch (dtypeBytesLocal) {
+    switch (dtypeBytes) {
         case FLOAT_DTYPE_BYTES:
             return BLOCK_BYTES / FLOAT_DTYPE_BYTES;
         case FLOAT16_DTYPE_BYTES + FLOAT_DTYPE_BYTES:

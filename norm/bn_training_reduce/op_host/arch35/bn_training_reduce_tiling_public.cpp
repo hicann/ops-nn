@@ -22,7 +22,16 @@ namespace {
 
 constexpr int64_t kCacheBytes = 16 * 1024;
 constexpr int64_t kFp32Bytes = 4;
+constexpr int64_t kFp16Bytes = 2;
 constexpr int64_t kVectorBytes = 256;
+constexpr int32_t kAxisPairStride = 2;      // step/parity used when walking the interleaved A/R axis pairs
+constexpr int64_t kHalveFactor = 2;         // halving factor
+constexpr int32_t kMinAxisNum = 2;          // a normalized pattern keeps at least one A+R axis pair
+constexpr int32_t kMinInputRank = 2;        // min supported NCHW input rank
+constexpr int32_t kNchwMaxRank = 4;         // max supported NCHW input rank
+constexpr int32_t kNhwcRank = 4;            // NHWC always keeps 4 dims
+constexpr int32_t kNcdhwRank = 5;           // NCDHW always keeps 5 dims
+constexpr int64_t kMinRLoopCntForGroup = 2; // min outer R loop count that enables the group split
 using Ops::Base::CeilDiv;
 
 bool TryAddNonNegative(int64_t lhs, int64_t rhs, int64_t& result)
@@ -58,9 +67,9 @@ int64_t DTypeSize(BNTrainingReducePublicDType dtype)
     switch (dtype) {
         case BNTrainingReducePublicDType::FLOAT16:
         case BNTrainingReducePublicDType::BFLOAT16:
-            return 2;
+            return kFp16Bytes;
         case BNTrainingReducePublicDType::FLOAT32:
-            return 4;
+            return kFp32Bytes;
         default:
             return 0;
     }
@@ -139,11 +148,11 @@ bool IsSupportedFormatAndRank(const BNTrainingReducePublicInputs& inputs)
 {
     switch (inputs.format) {
         case BNTrainingReducePublicFormat::NCHW:
-            return inputs.rank >= 2 && inputs.rank <= 4;
+            return inputs.rank >= kMinInputRank && inputs.rank <= kNchwMaxRank;
         case BNTrainingReducePublicFormat::NHWC:
-            return inputs.rank == 4;
+            return inputs.rank == kNhwcRank;
         case BNTrainingReducePublicFormat::NCDHW:
-            return inputs.rank == 5;
+            return inputs.rank == kNcdhwRank;
         default:
             return false;
     }
@@ -203,7 +212,7 @@ bool NormalizePattern(const BNTrainingReducePublicInputs& inputs, TilingContext&
     ctx.cacheLineSize = inputs.cacheLineSize;
     ctx.dtypeSize = DTypeSize(inputs.inputDtype);
 
-    std::array<bool, 5> initialTypes = {true, true, true, true, true};
+    std::array<bool, kMaxInputRank> initialTypes = {true, true, true, true, true};
     initialTypes[ChannelIndex(inputs.format)] = false;
     for (size_t i = 0; i < static_cast<size_t>(inputs.rank); ++i) {
         if (inputs.shape[i] != 1) {
@@ -265,7 +274,7 @@ bool NormalizePattern(const BNTrainingReducePublicInputs& inputs, TilingContext&
         ctx.arithmeticOverflow = true;
         return false;
     }
-    ctx.isTailR = (ctx.axisNum % 2 == 0);
+    ctx.isTailR = (ctx.axisNum % kAxisPairStride == 0);
     return true;
 }
 
@@ -296,7 +305,7 @@ bool ComputeAUbFactor(TilingContext& ctx, int64_t maxInnerAElems)
     int64_t target = maxInnerAElems;
     if (ctx.isTailR) {
         int64_t totalA = 1;
-        for (int32_t i = 0; i < ctx.axisNum; i += 2) {
+        for (int32_t i = 0; i < ctx.axisNum; i += kAxisPairStride) {
             if (!TryMulNonNegative(totalA, ctx.axisShape[static_cast<size_t>(i)], totalA)) {
                 ctx.arithmeticOverflow = true;
                 return false;
@@ -465,7 +474,7 @@ bool ExpandAIfRFullyLoaded(TilingContext& ctx)
     }
     const int64_t solvedA = (ctx.ubSize - kCacheBytes) / bytesPerA;
     int64_t totalA = 1;
-    for (int32_t i = 0; i < ctx.axisNum; i += 2) {
+    for (int32_t i = 0; i < ctx.axisNum; i += kAxisPairStride) {
         if (!TryMulNonNegative(totalA, ctx.axisShape[static_cast<size_t>(i)], totalA)) {
             ctx.arithmeticOverflow = true;
             return false;
@@ -536,7 +545,7 @@ bool ExpandAIfRFullyLoaded(TilingContext& ctx)
 bool ComputeRLoopCnt(TilingContext& ctx)
 {
     int64_t outerRProd = 1;
-    for (int32_t i = 1; i < ctx.rSplitAxisIdx; i += 2) {
+    for (int32_t i = 1; i < ctx.rSplitAxisIdx; i += kAxisPairStride) {
         if (!TryMulNonNegative(outerRProd, ctx.axisShape[static_cast<size_t>(i)], outerRProd)) {
             ctx.arithmeticOverflow = true;
             return false;
@@ -552,11 +561,14 @@ bool ComputeRLoopCnt(TilingContext& ctx)
 
 int64_t ComputeCacheCount(int64_t rLoopCntTotal)
 {
-    int64_t cacheCount = 0;
-    for (int64_t loops = rLoopCntTotal; loops > 0; loops >>= 1) {
+    if (rLoopCntTotal <= 0) {
+        return 0;
+    }
+    uint64_t cacheCount = 0;
+    for (uint64_t loops = static_cast<uint64_t>(rLoopCntTotal); loops > 0; loops >>= 1) {
         ++cacheCount;
     }
-    return cacheCount;
+    return static_cast<int64_t>(cacheCount);
 }
 
 bool FitsCache(TilingContext& ctx)
@@ -639,7 +651,7 @@ bool ComputeUbSplit(TilingContext& ctx)
         if (aTarget == 1) {
             break;
         }
-        aTarget = std::max<int64_t>(1, aTarget / 2);
+        aTarget = std::max<int64_t>(1, aTarget / kHalveFactor);
     }
     return false;
 }
@@ -647,7 +659,7 @@ bool ComputeUbSplit(TilingContext& ctx)
 bool ComputeFusedALoopSplit(TilingContext& ctx)
 {
     int64_t outerAProd = 1;
-    for (int32_t i = 0; i < ctx.aSplitAxisIdx; i += 2) {
+    for (int32_t i = 0; i < ctx.aSplitAxisIdx; i += kAxisPairStride) {
         if (!TryMulNonNegative(outerAProd, ctx.axisShape[static_cast<size_t>(i)], outerAProd)) {
             ctx.arithmeticOverflow = true;
             return false;
@@ -800,7 +812,8 @@ BNTrainingReducePublicResult ComputeAllRoutes(const BNTrainingReducePublicInputs
     }
 
     TilingContext ctx;
-    if (!NormalizePattern(inputs, ctx) || ctx.axisNum < 2 || ctx.axisNum > MAX_PATTERN_RANK || !ComputeUbSplit(ctx)) {
+    if (!NormalizePattern(inputs, ctx) || ctx.axisNum < kMinAxisNum || ctx.axisNum > MAX_PATTERN_RANK ||
+        !ComputeUbSplit(ctx)) {
         result.status = BNTrainingReducePublicStatus::TILING_FAILED;
         return result;
     }
@@ -808,7 +821,7 @@ BNTrainingReducePublicResult ComputeAllRoutes(const BNTrainingReducePublicInputs
         result.status = BNTrainingReducePublicStatus::TILING_FAILED;
         return result;
     }
-    if (ctx.aLoopCntTotal <= ctx.coreNum / 2 && ctx.rLoopCntTotal >= 2) {
+    if (ctx.aLoopCntTotal <= ctx.coreNum / kHalveFactor && ctx.rLoopCntTotal >= kMinRLoopCntForGroup) {
         if (!ComputeGroupSplit(ctx)) {
             result.status = BNTrainingReducePublicStatus::TILING_FAILED;
             return result;

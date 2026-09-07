@@ -260,16 +260,16 @@ int64_t RmsNormGradQuantBigMTiling::GetCacheID(const int64_t idx)
     return __builtin_popcountll(idx ^ (idx + CONST_ONE)) - CONST_ONE;
 }
 
-int64_t RmsNormGradQuantBigMTiling::FindNearestPower2(const int64_t quantValue)
+int64_t RmsNormGradQuantBigMTiling::FindNearestPower2(const int64_t value)
 {
-    if (quantValue <= CONST_ONE) {
+    if (value <= CONST_ONE) {
         return CONST_ZERO;
-    } else if (quantValue <= CONST_TWO) {
+    } else if (value <= CONST_TWO) {
         return CONST_ONE;
-    } else if (quantValue <= CONST_FOUR) {
+    } else if (value <= CONST_FOUR) {
         return CONST_TWO;
     } else {
-        const int64_t quantNum = quantValue - CONST_ONE;
+        const int64_t quantNum = value - CONST_ONE;
         const int64_t quantPower = CONST_SIXTY_THREE - __builtin_clzl(quantNum);
         return (CONST_ONE << quantPower);
     }

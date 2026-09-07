@@ -25,6 +25,11 @@ namespace optiling {
 namespace {
 constexpr int64_t kSmallRTileChannels = 64;
 constexpr int64_t kBlockBytes = 32;
+constexpr int64_t kFp32Bytes = 4;
+constexpr int64_t kFp16Bytes = 2;
+constexpr int32_t kNchwRank = 4;
+constexpr int32_t kSmallRAxisNum = 2;
+constexpr std::array<int64_t, 4> kFirstRoundSmallRLens = {1, 3, 10, 17};
 
 struct BNTrainingReduceCompileInfo {};
 
@@ -36,10 +41,10 @@ ge::graphStatus TilingParseForBNTrainingReduce([[maybe_unused]] gert::TilingPars
 int64_t DTypeBytes(BNTrainingReducePublicDType dtype)
 {
     if (dtype == BNTrainingReducePublicDType::FLOAT32) {
-        return 4;
+        return kFp32Bytes;
     }
     if (dtype == BNTrainingReducePublicDType::FLOAT16 || dtype == BNTrainingReducePublicDType::BFLOAT16) {
-        return 2;
+        return kFp16Bytes;
     }
     return 0;
 }
@@ -48,7 +53,8 @@ int64_t AlignBytes(int64_t bytes) { return (bytes + kBlockBytes - 1) / kBlockByt
 
 bool IsFirstRoundSmallR(int64_t reduceLen)
 {
-    return reduceLen == 1 || reduceLen == 3 || reduceLen == 10 || reduceLen == 17;
+    return std::find(kFirstRoundSmallRLens.cbegin(), kFirstRoundSmallRLens.cend(), reduceLen) !=
+           kFirstRoundSmallRLens.cend();
 }
 
 bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTrainingReducePublicResult& result)
@@ -58,8 +64,8 @@ bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTraining
     const int64_t h = inputs.shape[2];
     const int64_t w = inputs.shape[3];
     const int64_t dtypeBytes = DTypeBytes(inputs.inputDtype);
-    if (!inputs.inputPresent || inputs.rank != 4 || inputs.format != BNTrainingReducePublicFormat::NCHW || n != 1 ||
-        channels <= 0 || h <= 0 || w <= 0 || dtypeBytes == 0 || inputs.coreNum <= 0 || inputs.ubSize <= 0 ||
+    if (!inputs.inputPresent || inputs.rank != kNchwRank || inputs.format != BNTrainingReducePublicFormat::NCHW ||
+        n != 1 || channels <= 0 || h <= 0 || w <= 0 || dtypeBytes == 0 || inputs.coreNum <= 0 || inputs.ubSize <= 0 ||
         h > std::numeric_limits<int64_t>::max() / w) {
         return false;
     }
@@ -89,7 +95,7 @@ bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTraining
     result.workspaceSize = inputs.systemWorkspaceSize;
     result.scheduleMode = 0;
     auto& td = result.tilingData;
-    td.axisNum = 2;
+    td.axisNum = kSmallRAxisNum;
     for (int32_t i = 0; i < MAX_PATTERN_RANK; ++i) {
         td.axisShape[i] = 1;
         td.axisStride[i] = 0;

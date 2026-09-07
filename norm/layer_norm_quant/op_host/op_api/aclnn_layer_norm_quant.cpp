@@ -198,8 +198,9 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTen
     auto zeroPointsOptionalCont = l0op::Contiguous(zeroPointsOptional, uniqueExecutor.get());
     CHECK_RET(zeroPointsOptionalCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 调用LayerNormQuant算子进行计算
-    std::array<aclTensor*, 2> result = l0op::LayerNormQuant(
+    // LayerNormQuant returns two tensors: y and the optional scaleOut
+    constexpr size_t kLayerNormQuantResultNum = 2U;
+    std::array<aclTensor*, kLayerNormQuantResultNum> result = l0op::LayerNormQuant(
         xCont, gammmaCont, betaCont, scaleCont, zeroPointsOptionalCont, quantMode, epsilon, uniqueExecutor.get());
     CHECK_RET(result[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

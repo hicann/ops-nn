@@ -683,7 +683,9 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
     auto saveMeanContiguous = l0op::Contiguous(saveMean, executor);
     CHECK_RET(saveMeanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (saveMeanContiguous->IsEmpty()) {
-        auto saveMeanTmp = const_cast<aclTensor*>(saveMeanContiguous);
+        auto saveMeanTmp = executor->CreateView(saveMeanContiguous, saveMeanContiguous->GetViewShape(),
+                                                saveMeanContiguous->GetViewOffset());
+        CHECK_RET(saveMeanTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         saveMeanTmp->SetDataType(op::DataType::DT_FLOAT);
         saveMeanContiguous = saveMeanTmp;
     }
@@ -693,7 +695,9 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
     auto saveInvstdContiguous = l0op::Contiguous(saveInvstd, executor);
     CHECK_RET(saveInvstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (saveInvstdContiguous->IsEmpty()) {
-        auto saveInvstdTmp = const_cast<aclTensor*>(saveInvstdContiguous);
+        auto saveInvstdTmp = executor->CreateView(saveInvstdContiguous, saveInvstdContiguous->GetViewShape(),
+                                                  saveInvstdContiguous->GetViewOffset());
+        CHECK_RET(saveInvstdTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         saveInvstdTmp->SetDataType(op::DataType::DT_FLOAT);
         saveInvstdContiguous = saveInvstdTmp;
     }
@@ -771,7 +775,10 @@ aclnnStatus BatchNormBackwardRegbase(const aclTensor* gradOut, const aclTensor* 
         auto outputFormat = op::ResizeToND(result, input, executor);
         CHECK_RET(outputFormat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        *gradInput = const_cast<aclTensor*>(outputFormat);
+        auto gradInputNd = executor->CreateView(outputFormat, outputFormat->GetViewShape(),
+                                                outputFormat->GetViewOffset());
+        CHECK_RET(gradInputNd != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        *gradInput = gradInputNd;
     }
     return ACLNN_SUCCESS;
 }
