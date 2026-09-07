@@ -1012,15 +1012,16 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessTo
     sortedValueLocal = sortedValueInQueue_.AllocTensor<inputT>();
     sortedIndicesLocal = sortedIndicesInQueue_.AllocTensor<int32_t>();
     Duplicate(negInfLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, DATA_PER_BLOCK_B32);
+    const uint32_t topKOutputLength = ubFactorElementAligned_;
     if constexpr (IsSameType<inputT, float>::value) {
         calLocalFp32 = sortedValueLocal;
-        Duplicate(outTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, topKOutputLength);
     } else if constexpr (IsSameType<inputT, half>::value) {
         calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, topKOutputLength);
     } else {
         calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, topKOutputLength);
     }
     VToSSync();
     for (uint32_t loopBatch = 0; loopBatch < loopBatch_; loopBatch++) {

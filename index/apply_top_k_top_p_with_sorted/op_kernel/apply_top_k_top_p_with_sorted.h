@@ -755,15 +755,16 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessTo
     sortedValueLocal = sortedValueInQueue_.AllocTensor<inputT>();
     sortedIndicesLocal = sortedIndicesInQueue_.AllocTensor<int32_t>();
     Duplicate(negInfLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, DATA_PER_BLOCK_B32);
+    const uint32_t topKOutputLength = ubFactorElementAligned_;
     if constexpr (IsSameType<inputT, float>::value) {
         calLocalFp32 = sortedValueLocal;
-        Duplicate(outTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, topKOutputLength);
     } else if constexpr (IsSameType<inputT, half>::value) {
         calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, topKOutputLength);
     } else {
         calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, ubFactorElementAligned_);
+        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, topKOutputLength);
     }
     VToMTE3Sync();
     for (uint32_t loopBatch = 0; loopBatch < loopBatch_; loopBatch++) {
@@ -887,15 +888,15 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ScatterCu
                                                                                              uint32_t offset)
 {
     // Reverse traversal, returning early to improve performance.
-    for (int32_t loopProb = static_cast<int32_t>(loopProbNum) - 1; loopProb >= 0; loopProb--) {
-        float curValue = calLocalFp32[offset].GetValue(loopProb);
-        if (curValue < kthValue) {
+    for (int32_t topKLoopProb = static_cast<int32_t>(loopProbNum) - 1; topKLoopProb >= 0; topKLoopProb--) {
+        float topKCurrentValue = calLocalFp32[offset].GetValue(topKLoopProb);
+        if (topKCurrentValue < kthValue) {
             break;
         }
-        scatterTensor.SetValue(0, sortedValueLocal[offset].GetValue(loopProb));
-        int32_t gmIndex = sortedIndicesLocal[offset].GetValue(loopProb);
+        scatterTensor.SetValue(0, sortedValueLocal[offset].GetValue(topKLoopProb));
+        int32_t topKGmIndex = sortedIndicesLocal[offset].GetValue(topKLoopProb);
         SToMTE3Sync();
-        DataCopyPad(mGmOut_[baseGmIdx_ + gmIndex], scatterTensor.template ReinterpretCast<outputT>(),
+        DataCopyPad(mGmOut_[baseGmIdx_ + topKGmIndex], scatterTensor.template ReinterpretCast<outputT>(),
                     {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
         MTE3ToSSync();
     }
@@ -935,15 +936,15 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProce
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessKLtKMaxTopK(uint32_t loopBatch)
 {
-    DataCopyExtParams copyParams{1, (uint32_t)(ubFactorElementAligned_ * sizeof(outputT)), 0, 0, 0};
+    DataCopyExtParams topKCopyParams{1, (uint32_t)(ubFactorElementAligned_ * sizeof(outputT)), 0, 0, 0};
     // Move out -infinity to fill GM
-    for (int32_t loopInner = 0; loopInner < loopInner_; loopInner++) {
-        int64_t currentGmIdxInner = baseGmIdx_ + loopInner * ubFactorElementAligned_;
-        if (loopInner == loopInner_ - 1) {
-            DataCopyPad(mGmOut_[currentGmIdxInner], outTensor,
+    for (int32_t topKLoopInner = 0; topKLoopInner < loopInner_; topKLoopInner++) {
+        int64_t topKCurrentGmIdx = baseGmIdx_ + topKLoopInner * ubFactorElementAligned_;
+        if (topKLoopInner == loopInner_ - 1) {
+            DataCopyPad(mGmOut_[topKCurrentGmIdx], outTensor,
                         {1, (uint32_t)(tailUbFactorElement_ * sizeof(outputT)), 0, 0, 0});
         } else {
-            DataCopyPad(mGmOut_[currentGmIdxInner], outTensor, copyParams);
+            DataCopyPad(mGmOut_[topKCurrentGmIdx], outTensor, topKCopyParams);
         }
     }
     // Scatter calculation

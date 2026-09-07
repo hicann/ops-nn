@@ -516,36 +516,36 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ReduceSumWith
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum(uint32_t loopBatch)
 {
-    uint32_t loopDataNum = softmaxLength;
+    uint32_t softmaxLoopDataNum = softmaxLength;
     for (int32_t loopInner = 0; loopInner < lineSfLoopTimes; loopInner++) {
         int64_t currentGmIdx = baseGmIdx_ + loopInner * softmaxLength;
         if (loopInner == (lineSfLoopTimes - 1)) {
-            loopDataNum = softmaxLengthTail;
+            softmaxLoopDataNum = softmaxLengthTail;
         }
         if constexpr (IsSameType<inputT, float>::value) {
-            Duplicate(outInfLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, loopDataNum);
+            Duplicate(outInfLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, softmaxLoopDataNum);
         } else if constexpr (IsSameType<inputT, half>::value) {
-            Duplicate(outInfLocal.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, loopDataNum);
+            Duplicate(outInfLocal.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, softmaxLoopDataNum);
         } else {
-            Duplicate(outInfLocal.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, loopDataNum);
+            Duplicate(outInfLocal.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, softmaxLoopDataNum);
         }
         VToMTE3Sync();
         DataCopyPad(mGmOut_[currentGmIdx], outInfLocal,
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0});
+                    {1, static_cast<uint32_t>(softmaxLoopDataNum * sizeof(inputT)), 0, 0, 0});
         MTE3ToMTE2Sync();
         if constexpr (!IsSameType<inputT, float>::value) {
             DataCopyPad(softMaxLocal, mGmSortedValue_[currentGmIdx],
-                        {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(softmaxLoopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
-            Cast(softMaxLocalFp32, softMaxLocal, RoundMode::CAST_NONE, loopDataNum);
+            Cast(softMaxLocalFp32, softMaxLocal, RoundMode::CAST_NONE, softmaxLoopDataNum);
             PipeBarrier<PIPE_V>();
         } else {
             DataCopyPad(softMaxLocalFp32, mGmSortedValue_[currentGmIdx],
-                        {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(softmaxLoopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
         }
 
-        ReduceSumWithAddsAndExpImpl(loopDataNum);
+        ReduceSumWithAddsAndExpImpl(softmaxLoopDataNum);
         VToSSync();
         reduceSumValue += reduceLocal.GetValue(0);
         SToVSync();

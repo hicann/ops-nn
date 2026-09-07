@@ -284,15 +284,16 @@ __aicore__ inline void ApplyTopKTopPOpt<inputT, calT, outputT>::ComputeSoftmaxSu
             }
         } else {
             uint32_t localOffset = kthStartIdx - tileStart;
+            const uint32_t partialTileDataNum = loopDataNum;
             if constexpr (!IsSameType<inputT, float>::value) {
                 DataCopyPad(sfLocalInput, mGmSortedValue_[gmIdx],
-                            {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+                            {1, static_cast<uint32_t>(partialTileDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
                 MTE2ToVSync();
-                Cast(sfLocalFp32, sfLocalInput, RoundMode::CAST_NONE, loopDataNum);
+                Cast(sfLocalFp32, sfLocalInput, RoundMode::CAST_NONE, partialTileDataNum);
                 PipeBarrier<PIPE_V>();
             } else {
                 DataCopyPad(sfLocalFp32, mGmSortedValue_[gmIdx],
-                            {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                            {1, static_cast<uint32_t>(partialTileDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 MTE2ToVSync();
             }
             Duplicate(sfLocalFp32, -1.0e30f, localOffset);
@@ -892,21 +893,21 @@ __aicore__ inline void ApplyTopKTopPOpt<inputT, calT, outputT>::ProcessTopKTopPO
             uint32_t scatterCount = topKActual - firstScatterIdx;
             int64_t scatterGmStart = topKStart + firstScatterIdx;
 
-            uint32_t tileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
-            uint32_t tileTail = vocabSize_ - (tileTimes - 1) * cmpSelTileLength;
-            for (uint32_t tIdx = 0; tIdx < tileTimes; tIdx++) {
-                uint32_t curLen = (tIdx == tileTimes - 1) ? tileTail : cmpSelTileLength;
-                int64_t gmOff = batchGmBase + static_cast<int64_t>(tIdx) * cmpSelTileLength;
+            uint32_t outputTileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
+            uint32_t outputTileTail = vocabSize_ - (outputTileTimes - 1) * cmpSelTileLength;
+            for (uint32_t outputTileIdx = 0; outputTileIdx < outputTileTimes; outputTileIdx++) {
+                uint32_t outputTileLen = (outputTileIdx == outputTileTimes - 1) ? outputTileTail : cmpSelTileLength;
+                int64_t outputGmOffset = batchGmBase + static_cast<int64_t>(outputTileIdx) * cmpSelTileLength;
                 if constexpr (IsSameType<inputT, float>::value) {
-                    Duplicate(cmpLogitsLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, curLen);
+                    Duplicate(cmpLogitsLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, outputTileLen);
                 } else if constexpr (IsSameType<inputT, half>::value) {
-                    Duplicate(cmpLogitsLocal.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, curLen);
+                    Duplicate(cmpLogitsLocal.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, outputTileLen);
                 } else {
-                    Duplicate(cmpLogitsLocal.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, curLen);
+                    Duplicate(cmpLogitsLocal.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, outputTileLen);
                 }
                 VToMTE3Sync();
-                DataCopyPad(mGmOut_[gmOff], cmpLogitsLocal,
-                            {1, static_cast<uint32_t>(curLen * sizeof(inputT)), 0, 0, 0});
+                DataCopyPad(mGmOut_[outputGmOffset], cmpLogitsLocal,
+                            {1, static_cast<uint32_t>(outputTileLen * sizeof(inputT)), 0, 0, 0});
                 MTE3ToMTE2Sync();
             }
 
@@ -1040,17 +1041,18 @@ __aicore__ inline void ApplyTopKTopPOpt<inputT, calT, outputT>::ProcessTopKOpt()
         int32_t kValue = mGmK_.GetValue(batchOffset_ + loopBatch);
 
         if (kValue <= 0 || static_cast<uint32_t>(kValue) >= vocabSize_) {
-            uint32_t tileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
-            uint32_t tileTail = vocabSize_ - (tileTimes - 1) * cmpSelTileLength;
-            for (uint32_t tIdx = 0; tIdx < tileTimes; tIdx++) {
-                uint32_t curLen = (tIdx == tileTimes - 1) ? tileTail : cmpSelTileLength;
-                int64_t gmOff = batchGmBase + static_cast<int64_t>(tIdx) * cmpSelTileLength;
-                DataCopyPad(cmpLogitsLocal, mGmLogits_[gmOff],
-                            {1, static_cast<uint32_t>(curLen * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+            uint32_t logitsCopyTileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
+            uint32_t logitsCopyTileTail = vocabSize_ - (logitsCopyTileTimes - 1) * cmpSelTileLength;
+            for (uint32_t logitsCopyTileIdx = 0; logitsCopyTileIdx < logitsCopyTileTimes; logitsCopyTileIdx++) {
+                uint32_t logitsCopyLen = (logitsCopyTileIdx == logitsCopyTileTimes - 1) ? logitsCopyTileTail :
+                                                                                          cmpSelTileLength;
+                int64_t logitsCopyGmOffset = batchGmBase + static_cast<int64_t>(logitsCopyTileIdx) * cmpSelTileLength;
+                DataCopyPad(cmpLogitsLocal, mGmLogits_[logitsCopyGmOffset],
+                            {1, static_cast<uint32_t>(logitsCopyLen * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
                 MTE2ToVSync();
                 VToMTE3Sync();
-                DataCopyPad(mGmOut_[gmOff], cmpLogitsLocal,
-                            {1, static_cast<uint32_t>(curLen * sizeof(inputT)), 0, 0, 0});
+                DataCopyPad(mGmOut_[logitsCopyGmOffset], cmpLogitsLocal,
+                            {1, static_cast<uint32_t>(logitsCopyLen * sizeof(inputT)), 0, 0, 0});
                 MTE3ToMTE2Sync();
             }
             continue;
@@ -1078,30 +1080,35 @@ __aicore__ inline void ApplyTopKTopPOpt<inputT, calT, outputT>::ProcessTopPOpt()
     for (uint32_t loopBatch = 0; loopBatch < loopBatch_; loopBatch++) {
         int64_t sortedBase = (batchOffset_ + loopBatch) * vocabSize_;
         int64_t batchGmBase = sortedBase;
+        const auto pGmIndex = batchOffset_ + loopBatch;
 
         if constexpr (IsSameType<inputT, float>::value) {
-            pValue = 1.0f - mGmP_[batchOffset_ + loopBatch].GetValue(0);
+            pValue = 1.0f - mGmP_[pGmIndex].GetValue(0);
         } else if constexpr (IsSameType<inputT, half>::value) {
-            pValue = 1.0f - static_cast<float>(mGmP_[batchOffset_ + loopBatch].GetValue(0));
+            pValue = 1.0f - static_cast<float>(mGmP_[pGmIndex].GetValue(0));
         } else {
-            pValue = 1.0f - ToFloat(mGmP_[batchOffset_ + loopBatch].GetValue(0));
+            pValue = 1.0f - ToFloat(mGmP_[pGmIndex].GetValue(0));
         }
 
         GetMaxValue(sortedBase);
 
         if (*reinterpret_cast<int32_t*>(&negMaxValue) == FLOAT32_NEG_INF ||
             *reinterpret_cast<int32_t*>(&negMaxValue) == FLOAT32_INF) {
-            uint32_t tileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
-            uint32_t tileTail = vocabSize_ - (tileTimes - 1) * cmpSelTileLength;
-            for (uint32_t tIdx = 0; tIdx < tileTimes; tIdx++) {
-                uint32_t curLen = (tIdx == tileTimes - 1) ? tileTail : cmpSelTileLength;
-                int64_t gmOff = batchGmBase + static_cast<int64_t>(tIdx) * cmpSelTileLength;
-                DataCopyPad(cmpLogitsLocal, mGmLogits_[gmOff],
-                            {1, static_cast<uint32_t>(curLen * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+            uint32_t topPLogitsCopyTileTimes = CeilDiv(vocabSize_, cmpSelTileLength);
+            uint32_t topPLogitsCopyTileTail = vocabSize_ - (topPLogitsCopyTileTimes - 1) * cmpSelTileLength;
+            for (uint32_t topPLogitsCopyTileIdx = 0; topPLogitsCopyTileIdx < topPLogitsCopyTileTimes;
+                 topPLogitsCopyTileIdx++) {
+                uint32_t topPLogitsCopyLen = (topPLogitsCopyTileIdx == topPLogitsCopyTileTimes - 1) ?
+                                                 topPLogitsCopyTileTail :
+                                                 cmpSelTileLength;
+                int64_t topPLogitsCopyGmOffset = batchGmBase +
+                                                 static_cast<int64_t>(topPLogitsCopyTileIdx) * cmpSelTileLength;
+                DataCopyPad(cmpLogitsLocal, mGmLogits_[topPLogitsCopyGmOffset],
+                            {1, static_cast<uint32_t>(topPLogitsCopyLen * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
                 MTE2ToVSync();
                 VToMTE3Sync();
-                DataCopyPad(mGmOut_[gmOff], cmpLogitsLocal,
-                            {1, static_cast<uint32_t>(curLen * sizeof(inputT)), 0, 0, 0});
+                DataCopyPad(mGmOut_[topPLogitsCopyGmOffset], cmpLogitsLocal,
+                            {1, static_cast<uint32_t>(topPLogitsCopyLen * sizeof(inputT)), 0, 0, 0});
                 MTE3ToMTE2Sync();
             }
             continue;
