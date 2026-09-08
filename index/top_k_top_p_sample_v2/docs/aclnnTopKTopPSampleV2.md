@@ -472,7 +472,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
         <td><ul><li>不支持空Tensor。</li><li>shape需要与`logits`一致。</li></ul></td>
         <td>FLOAT32</td>
         <td>ND</td>
-        <td>1</td>
+        <td>2</td>
         <td>√</td>
       </tr>
       <tr>
@@ -713,7 +713,7 @@ int main() {
     void* topPDeviceAddr = nullptr;
     void* qDeviceAddr = nullptr;
     void* minPsDeviceAddr = nullptr;
-    void* logitsSelectedIdxDeviceAddr = nullptr;
+    void* logitsSelectIdxDeviceAddr = nullptr;
     void* logitsTopKPSelectDeviceAddr = nullptr;
     void* logitsIdxDeviceAddr = nullptr;
     void* logitsSortMaskedDeviceAddr = nullptr;
@@ -723,7 +723,7 @@ int main() {
     aclTensor* topP = nullptr;
     aclTensor* q = nullptr;
     aclTensor* minPs = nullptr;
-    aclTensor* logitsSelectedIdx = nullptr;
+    aclTensor* logitsSelectIdx = nullptr;
     aclTensor* logitsTopKPSelect = nullptr;
     aclTensor* logitsIdx = nullptr;
     aclTensor* logitsSortMasked = nullptr;
@@ -733,15 +733,15 @@ int main() {
     std::vector<float> qHostData(48 * 131072, 1.0f);
     std::vector<int16_t> minPsHostData(48, 1);
 
-    std::vector<int64_t> logitsSelectedIdxHostData(48, 0);
+    std::vector<int64_t> logitsSelectIdxHostData(48, 0);
     std::vector<float> logitsTopKPSelectHostData(48 * 131072, 0);
     std::vector<int64_t> logitsIdxHostData(48 * 131072, 0);
     std::vector<float> logitsSortMaskedHostData(48 * 131072, 0);
 
     float eps = 1e-8;
-    int64_t isNeedLogits = 0;
-    int32_t topKGuess =32;
-    int32_t ks_max = 1024;
+    bool isNeedLogits = false;
+    int64_t topKGuess = 32;
+    int64_t ksMax = 1024;
     bool inputIsLogits = true;
     bool isNeedSampleResult = false;
 
@@ -760,8 +760,8 @@ int main() {
     // 创建minps aclTensor
     ret = CreateAclTensor(minPsHostData, topKPShape, &minPsDeviceAddr, aclDataType::ACL_BF16, &minPs);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建logitsSelected aclTensor
-    ret = CreateAclTensor(logitsSelectedIdxHostData, topKPShape, &logitsSelectedIdxDeviceAddr, aclDataType::ACL_INT64, &logitsSelectedIdx);
+    // 创建logitsSelectIdx aclTensor
+    ret = CreateAclTensor(logitsSelectIdxHostData, topKPShape, &logitsSelectIdxDeviceAddr, aclDataType::ACL_INT64, &logitsSelectIdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logitsTopKPSelect aclTensor
     ret = CreateAclTensor(logitsTopKPSelectHostData, logitsShape, &logitsTopKPSelectDeviceAddr, aclDataType::ACL_FLOAT, &logitsTopKPSelect);
@@ -777,8 +777,8 @@ int main() {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnTopKTopPSampleV2第一段接口
-    ret = aclnnTopKTopPSampleV2GetWorkspaceSize(logits, topK, topP, q, minPs, eps, isNeedLogits, topKGuess, ks_max, inputIsLogits,
-      isNeedSampleResult, logitsSelectedIdx, logitsTopKPSelect, logitsIdx, logitsSortMasked, &workspaceSize, &executor);
+    ret = aclnnTopKTopPSampleV2GetWorkspaceSize(logits, topK, topP, q, minPs, eps, isNeedLogits, topKGuess, ksMax, inputIsLogits,
+      isNeedSampleResult, logitsSelectIdx, logitsTopKPSelect, logitsIdx, logitsSortMasked, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTopKTopPSampleV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -797,7 +797,7 @@ int main() {
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(topKPShape);
     std::vector<int64_t> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), logitsSelectedIdxDeviceAddr,
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), logitsSelectIdxDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
@@ -809,14 +809,14 @@ int main() {
     aclDestroyTensor(topK);
     aclDestroyTensor(topP);
     aclDestroyTensor(q);
-    aclDestroyTensor(logitsSelectedIdx);
+    aclDestroyTensor(logitsSelectIdx);
     aclDestroyTensor(logitsTopKPSelect);
     // 7. 释放Device资源，需要根据具体API的接口定义修改
     aclrtFree(logitsDeviceAddr);
     aclrtFree(topKDeviceAddr);
     aclrtFree(topPDeviceAddr);
     aclrtFree(qDeviceAddr);
-    aclrtFree(logitsSelectedIdxDeviceAddr);
+    aclrtFree(logitsSelectIdxDeviceAddr);
     aclrtFree(logitsTopKPSelectDeviceAddr);
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);
