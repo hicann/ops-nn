@@ -10,13 +10,15 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-import numpy as np
 
-__golden__ = {"kernel": {"inplace_index_add": "inplace_index_add_golden"}}
+__golden__ = {
+    "kernel": {"inplace_index_add": "inplace_index_add_golden"},
+    "aclnn": {"aclnnIndexAdd": "aclnnIndexAdd_golden"},
+}
 
 
 def inplace_index_add_golden(x, index, src, alpha=None, *, axis=0, **kwargs):
-    '''
+    """
     Golden function for inplace_index_add.
     All the parameters (names and order) follow @inplace_index_add_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,7 +29,7 @@ def inplace_index_add_golden(x, index, src, alpha=None, *, axis=0, **kwargs):
 
     Returns:
         Output tensor
-    '''
+    """
     import torch
 
     tensor_x = torch.from_numpy(x).clone()
@@ -39,3 +41,23 @@ def inplace_index_add_golden(x, index, src, alpha=None, *, axis=0, **kwargs):
         alpha_value = tensor_alpha.item()
     tensor_x.index_add_(axis, tensor_index, tensor_src, alpha=alpha_value)
     return tensor_x.numpy()
+
+
+def aclnnIndexAdd_golden(selfT, dim, index, source, alphaTensor, out, **kwargs):
+    """
+    Golden function for aclnnIndexAdd.
+    All the parameters (names and order) follow function 'aclnnIndexAddGetWorkSpace' in \
+        @aclnn_index_add.h.
+    All the input Tensors are torch.Tensor.
+
+    Args:
+        **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
+                  full_soc_version, short_soc_version, testcase_name
+
+    Returns:
+        Output tensor
+    """
+
+    alpha_value = alphaTensor.item()
+    selfT.index_add_(dim, index, source, alpha=alpha_value)
+    return selfT
