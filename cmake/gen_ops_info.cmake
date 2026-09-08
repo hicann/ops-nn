@@ -623,7 +623,7 @@ function(gen_ops_info_and_python)
   )
   add_dependencies(ascendc_impl_gen ${ascendc_impl_gen_depends})
 
-  if(ENABLE_BINARY OR ENABLE_CUSTOM)
+  if(ENABLE_BINARY)
     foreach(compute_unit ${ASCEND_COMPUTE_UNIT})
       set(HAS_OP_COMPILE_OF_COMPUTE_UNIT FALSE)
       foreach(OP_DIR ${COMPILED_OP_DIRS})
