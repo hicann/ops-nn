@@ -207,10 +207,10 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScaleShif
     const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal, const LocalTensor<T>& scaleLocal,
     const LocalTensor<T>& shiftLocal, const uint64_t& rows, const uint64_t& calCount)
 {
-    __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* scaleAddr = (__local_mem__ T*)scaleLocal.GetPhyAddr();
-    __local_mem__ T* shiftAddr = (__local_mem__ T*)shiftLocal.GetPhyAddr();
-    __local_mem__ T* yAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* xAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
+    __ubuf__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
+    __ubuf__ T* yAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     using CAST_T = std::conditional_t<std::is_same_v<T, bfloat16_t>, float, T>;
     uint32_t dtypeSize = sizeof(CAST_T);
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -238,15 +238,15 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScaleShif
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
-                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
                 Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < rowLen; row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
                     Reg::Mul(xReg, xReg, scaleReg, preg);
                     Reg::Add(yReg, xReg, shiftReg, preg);
-                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }
@@ -268,9 +268,9 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(con
                                                                              const uint64_t& rows,
                                                                              const uint64_t& calCount)
 {
-    __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* scaleAddr = (__local_mem__ T*)scaleLocal.GetPhyAddr();
-    __local_mem__ T* yAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* xAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* scaleAddr = (__ubuf__ T*)scaleLocal.GetPhyAddr();
+    __ubuf__ T* yAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     using CAST_T = std::conditional_t<std::is_same_v<T, bfloat16_t>, float, T>;
     uint32_t dtypeSize = sizeof(CAST_T);
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -296,13 +296,13 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(con
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(scaleReg, scaleAddr + i * VL);
                 Reg::Adds(scaleReg, scaleReg, 1.0f, preg);
                 for (uint16_t row = 0; row < static_cast<uint16_t>(rows); row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
                     Reg::Mul(yReg, xReg, scaleReg, preg);
-                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }
@@ -324,9 +324,9 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(con
                                                                              const uint64_t& rows,
                                                                              const uint64_t& calCount)
 {
-    __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* shiftAddr = (__local_mem__ T*)shiftLocal.GetPhyAddr();
-    __local_mem__ T* yAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* xAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* shiftAddr = (__ubuf__ T*)shiftLocal.GetPhyAddr();
+    __ubuf__ T* yAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     using CAST_T = std::conditional_t<std::is_same_v<T, bfloat16_t>, float, T>;
     uint32_t dtypeSize = sizeof(CAST_T);
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -351,12 +351,12 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(con
                     ops::StoreOneTensorForDtypeT<T>(yAddr, yReg, preg, rowOffset + i * VL);
                 }
             } else {
-                Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
+                Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(shiftReg, shiftAddr + i * VL);
                 for (uint16_t row = 0; row < static_cast<uint16_t>(rows); row++) {
                     uint64_t rowOffset = row * calCountAlign;
-                    Reg::DataCopy<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
+                    Reg::LoadAlign<T, Reg::LoadDist::DIST_NORM>(xReg, xAddr + rowOffset + i * VL);
                     Reg::Add(yReg, xReg, shiftReg, preg);
-                    Reg::DataCopy<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
+                    Reg::StoreAlign<T, Reg::StoreDist::DIST_NORM>(yAddr + rowOffset + i * VL, yReg, preg);
                 }
             }
         }
