@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file max_pool_v3_grad_fusion_pass.cpp
+ * \file max_pool_grad_fusion_pass.cpp
  * \brief MaxPoolGrad fusion into MaxPoolV3Grad pass
  *   (MaxPoolGrad --> MaxPoolV3Grad)
  *
@@ -26,7 +26,7 @@
  * attributes consistent with the fused forward MaxPoolV3 node.
  */
 
-#include "max_pool_v3_grad_fusion_pass.h"
+#include "max_pool_grad_fusion_pass.h"
 
 #include <algorithm>
 #include <array>
@@ -45,7 +45,7 @@ using namespace fusion;
 
 namespace ops {
 namespace {
-const std::string kPassName = "MaxPoolV3GradFusionPass";
+const std::string kPassName = "MaxPoolGradFusionPass";
 const std::array<const char*, 1> kSourceOpTypes = {"MaxPoolGrad"};
 const int64_t kCaptureOrigInput = 0L;
 const int64_t kCaptureOrigOutput = 1L;
@@ -116,7 +116,7 @@ es::EsTensorHolder CreatePatternPoolGrad(es::EsGraphBuilder& graphBuilder, const
 }
 } // namespace
 
-std::vector<PatternUniqPtr> MaxPoolV3GradFusionPass::Patterns()
+std::vector<PatternUniqPtr> MaxPoolGradFusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> patterns;
     for (const char* opType : kSourceOpTypes) {
@@ -136,9 +136,9 @@ std::vector<PatternUniqPtr> MaxPoolV3GradFusionPass::Patterns()
     return patterns;
 }
 
-bool MaxPoolV3GradFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
+bool MaxPoolGradFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    OPS_LOG_D(kPassName.c_str(), "Enter MeetRequirements for MaxPoolV3GradFusionPass");
+    OPS_LOG_D(kPassName.c_str(), "Enter MeetRequirements for MaxPoolGradFusionPass");
 
     if (!IsSupportedPlatform()) {
         return false;
@@ -189,9 +189,9 @@ bool MaxPoolV3GradFusionPass::MeetRequirements(const std::unique_ptr<MatchResult
     return true;
 }
 
-GraphUniqPtr MaxPoolV3GradFusionPass::Replacement(const std::unique_ptr<MatchResult>& matchResult)
+GraphUniqPtr MaxPoolGradFusionPass::Replacement(const std::unique_ptr<MatchResult>& matchResult)
 {
-    OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolV3GradFusionPass");
+    OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolGradFusionPass");
 
     NodeIo origInputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureOrigInput, origInputIo) != SUCCESS, nullptr, kPassName.c_str(),
@@ -258,6 +258,6 @@ GraphUniqPtr MaxPoolV3GradFusionPass::Replacement(const std::unique_ptr<MatchRes
     return replaceGraph;
 }
 
-REG_FUSION_PASS(MaxPoolV3GradFusionPass).Stage(CustomPassStage::kAfterInferShape);
+REG_FUSION_PASS(MaxPoolGradFusionPass).Stage(CustomPassStage::kAfterInferShape);
 
 } // namespace ops

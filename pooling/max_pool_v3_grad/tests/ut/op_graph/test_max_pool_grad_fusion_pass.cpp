@@ -17,7 +17,7 @@
 #include "register/register_custom_pass.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
-#include "../../../op_graph/fusion_pass/max_pool_v3_grad_fusion_pass.h"
+#include "../../../op_graph/fusion_pass/max_pool_grad_fusion_pass.h"
 
 using namespace ge;
 using namespace fe;
@@ -138,15 +138,15 @@ void CheckFusedNodeExists(const std::shared_ptr<Graph>& graph, bool expectFound)
 }
 } // namespace
 
-class MaxPoolV3GradFusionPassTest : public testing::Test {
+class MaxPoolGradFusionPassTest : public testing::Test {
 protected:
     void SetUp() override { SetPlatform("Ascend950"); }
 };
 
 // test1: MaxPoolGrad NHWC SAME -> 融合成功
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_test_nhwc_same)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_test_nhwc_same)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_test_nhwc_same");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_test_nhwc_same");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -154,15 +154,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_test_nhwc_same)
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
     CheckFusedNodeExists(graph, true);
 }
 
 // test2: MaxPoolGrad NCHW VALID -> 融合成功
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_test_nchw_valid)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_test_nchw_valid)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_test_nchw_valid");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_test_nchw_valid");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NCHW, {1, 3, 8, 8});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NCHW, {1, 3, 4, 4});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NCHW, {1, 3, 4, 4});
@@ -170,15 +170,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_test_nchw_valid
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
     CheckFusedNodeExists(graph, true);
 }
 
 // test3: MaxPoolGrad missing ksize -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_ksize)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_missing_ksize)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_missing_ksize");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_missing_ksize");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -186,15 +186,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_ksize)
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }
 
 // test4: MaxPoolGrad missing strides -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_strides)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_missing_strides)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_missing_strides");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_missing_strides");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -202,15 +202,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_strides
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }
 
 // test5: MaxPoolGrad missing padding -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_padding)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_missing_padding)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_missing_padding");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_missing_padding");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -218,16 +218,16 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_missing_padding
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }
 
 // test6: unsupported soc Ascend310 -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_unsupported_soc)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_unsupported_soc)
 {
     SetPlatform("Ascend310");
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_unsupported_soc");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_unsupported_soc");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -235,15 +235,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_unsupported_soc
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }
 
 // test7: unsupported dtype DT_BOOL -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_unsupported_dtype)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_unsupported_dtype)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_unsupported_dtype");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_unsupported_dtype");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_BOOL, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_BOOL, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_BOOL, FORMAT_NHWC, {1, 4, 4, 3});
@@ -251,15 +251,15 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_unsupported_dty
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }
 
 // test8: invalid ksize size=3 -> 融合失败
-TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_invalid_ksize)
+TEST_F(MaxPoolGradFusionPassTest, max_pool_grad_fusion_pass_invalid_ksize)
 {
-    auto graphBuilder = es::EsGraphBuilder("max_pool_v3_grad_fusion_pass_invalid_ksize");
+    auto graphBuilder = es::EsGraphBuilder("max_pool_grad_fusion_pass_invalid_ksize");
     auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, {1, 8, 8, 3});
     auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
     auto grad = graphBuilder.CreateInput(2, "grad", DT_FLOAT, FORMAT_NHWC, {1, 4, 4, 3});
@@ -267,7 +267,7 @@ TEST_F(MaxPoolV3GradFusionPassTest, max_pool_v3_grad_fusion_pass_invalid_ksize)
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({y});
 
     CustomPassContext passContext;
-    MaxPoolV3GradFusionPass pass;
+    MaxPoolGradFusionPass pass;
     EXPECT_EQ(pass.Run(graph, passContext), GRAPH_NOT_CHANGED);
     CheckFusedNodeExists(graph, false);
 }

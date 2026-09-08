@@ -10,11 +10,12 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-"""MaxPoolV3Grad golden based on TensorFlow MaxPoolGrad."""
+"""MaxPoolV3Grad golden aligned with the common MaxPoolGrad SIMT kernel."""
 
 __spec__ = {"max_pool_v3_grad": "MaxPoolV3GradKernelSpec"}
 
 import ast
+import numpy as np
 import tensorflow as tf
 
 
@@ -45,6 +46,13 @@ def _attr(params, name, default=_MISSING):
     if default is not _MISSING:
         return default
     raise RuntimeError("Required attribute [{}] is missing.".format(name))
+
+
+def _as_bool(value):
+    value = _parse(value)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1")
+    return bool(value)
 
 
 def _tensor(value):
@@ -85,7 +93,7 @@ def _pool_params(input_nhwc, output_nhwc, params, data_format):
     stride_h, stride_w = _spatial(_attr(params, "strides"), data_format)
     mode = str(_attr(params, "padding_mode", "CALCULATED")).upper()
 
-    if bool(_attr(params, "global_pooling", False)):
+    if _as_bool(_attr(params, "global_pooling", False)):
         return input_h, input_w, 1, 1, 0, 0, output_h, output_w
     if mode == "SAME":
         pad_top = max((output_h - 1) * stride_h + kernel_h - input_h, 0) // 2
@@ -97,87 +105,22 @@ def _pool_params(input_nhwc, output_nhwc, params, data_format):
     return kernel_h, kernel_w, stride_h, stride_w, pad_top, pad_left, output_h, output_w
 
 
-def _encode(orig_input, orig_output):
-    if orig_input.dtype.is_floating:
-        input_data, output_data = (
-            tf.cast(orig_input, tf.float32),
-            tf.cast(orig_output, tf.float32),
-        )
-        input_valid, output_valid = (
-            ~tf.math.is_nan(input_data),
-            ~tf.math.is_nan(output_data),
-        )
-        has_special = tf.reduce_any(
-            ~input_valid | (tf.math.is_inf(input_data) & (input_data < 0))
-        )
-        if not bool(has_special.numpy()):
-            output_data = tf.where(
-                output_valid, output_data, tf.zeros_like(output_data)
-            )
-            return (
-                input_data,
-                output_data,
-                input_valid,
-                output_valid,
-                tf.constant(float("-inf")),
-                True,
-            )
-        valid_values, compute_dtype = (
-            tf.boolean_mask(input_data, input_valid),
-            tf.float32,
-        )
-    else:
-        input_data, output_data = (
-            tf.cast(orig_input, tf.int64),
-            tf.cast(orig_output, tf.int64),
-        )
-        input_valid, output_valid = (
-            tf.ones_like(input_data, tf.bool),
-            tf.ones_like(output_data, tf.bool),
-        )
-        min_value = int(tf.reduce_min(input_data).numpy())
-        if min_value > -9223372036854775808:
-            return (
-                input_data,
-                output_data,
-                input_valid,
-                output_valid,
-                tf.constant(min_value - 1, tf.int64),
-                True,
-            )
-        valid_values, compute_dtype = tf.reshape(input_data, [-1]), tf.int64
-
-    if int(tf.size(valid_values).numpy()) == 0:
-        return (
-            input_data,
-            output_data,
-            input_valid,
-            output_valid,
-            tf.cast(0, compute_dtype),
-            False,
-        )
-
-    unique_values = tf.unique(tf.sort(tf.reshape(valid_values, [-1]))).y
-
-    def rank(data, valid):
-        data = tf.where(valid, data, tf.zeros_like(data))
-        value = (
-            tf.searchsorted(
-                unique_values, tf.reshape(data, [-1]), side="left", out_type=tf.int64
-            )
-            + 1
-        )
-        value = tf.cast(tf.reshape(value, tf.shape(data)), compute_dtype)
-        return tf.where(valid, value, tf.zeros_like(value))
-
-    return (
-        rank(input_data, input_valid),
-        rank(output_data, output_valid),
-        input_valid,
-        output_valid,
-        tf.cast(0, compute_dtype),
-        True,
-    )
+def _select_index(window, floating):
+    batch, window_h, window_w, channels = window.shape
+    index = np.full((batch, channels), -1, dtype=np.int64)
+    value_dtype = np.float32 if floating else window.dtype
+    max_value = np.zeros((batch, channels), dtype=value_dtype)
+    spatial_index = 0
+    for h_index in range(window_h):
+        for w_index in range(window_w):
+            value = np.asarray(window[:, h_index, w_index, :], dtype=value_dtype)
+            update = (index < 0) | (value > max_value)
+            if floating:
+                update |= np.isnan(value)
+            np.copyto(max_value, value, where=update)
+            index[update] = spatial_index
+            spatial_index += 1
+    return index
 
 
 def _tf_max_pool_grad(orig_input, orig_output, grad, pool_params):
@@ -188,64 +131,43 @@ def _tf_max_pool_grad(orig_input, orig_output, grad, pool_params):
     if 0 in (batch, input_h, input_w, channels, output_h, output_w):
         return tf.zeros_like(orig_input)
 
-    target_h, target_w = (
-        (output_h - 1) * stride_h + kernel_h,
-        (output_w - 1) * stride_w + kernel_w,
-    )
-    if pad_top >= target_h or pad_left >= target_w:
-        return tf.zeros_like(orig_input)
-    keep_h, keep_w = min(input_h, target_h - pad_top), min(input_w, target_w - pad_left)
-    if keep_h <= 0 or keep_w <= 0:
-        return tf.zeros_like(orig_input)
+    input_data = orig_input.numpy()
+    grad_data = grad.numpy()
+    floating = orig_input.dtype.is_floating
+    if floating:
+        accumulator_dtype = np.float32
+    elif orig_input.dtype.name.startswith("uint"):
+        accumulator_dtype = np.uint64
+    else:
+        accumulator_dtype = np.int64
+    result = np.zeros(input_data.shape, dtype=accumulator_dtype)
+    grad_data = np.asarray(grad_data, dtype=accumulator_dtype)
+    batch_index = np.arange(batch)[:, np.newaxis]
+    channel_index = np.arange(channels)[np.newaxis, :]
 
-    input_data, _, input_valid, _, pad_value, has_valid = _encode(
-        orig_input, orig_output
-    )
-    if not has_valid:
-        return tf.zeros_like(orig_input)
+    for output_h_index in range(output_h):
+        raw_h_start = output_h_index * stride_h - pad_top
+        h_start = max(raw_h_start, 0)
+        h_end = min(raw_h_start + kernel_h, input_h)
+        if h_start >= h_end:
+            continue
+        for output_w_index in range(output_w):
+            raw_w_start = output_w_index * stride_w - pad_left
+            w_start = max(raw_w_start, 0)
+            w_end = min(raw_w_start + kernel_w, input_w)
+            if w_start >= w_end:
+                continue
 
-    size = [batch, keep_h, keep_w, channels]
-    input_data = tf.slice(input_data, [0, 0, 0, 0], size)
-    input_valid = tf.slice(input_valid, [0, 0, 0, 0], size)
-    pad_bottom, pad_right = target_h - pad_top - keep_h, target_w - pad_left - keep_w
-    paddings = [[0, 0], [pad_top, pad_bottom], [pad_left, pad_right], [0, 0]]
-    input_data = tf.pad(input_data, paddings, constant_values=pad_value)
-    input_valid = tf.pad(input_valid, paddings, constant_values=False)
-
-    valid_window = (
-        tf.nn.max_pool2d(
-            tf.cast(input_valid, tf.float32),
-            [1, kernel_h, kernel_w, 1],
-            [1, stride_h, stride_w, 1],
-            "VALID",
-            data_format="NHWC",
-        )
-        > 0
-    )
-    output_data = tf.nn.max_pool2d(
-        input_data,
-        [1, kernel_h, kernel_w, 1],
-        [1, stride_h, stride_w, 1],
-        "VALID",
-        data_format="NHWC",
-    )
-    grad_data = tf.cast(grad, input_data.dtype)
-    grad_data = tf.where(valid_window, grad_data, tf.zeros_like(grad_data))
-    padded_grad = tf.raw_ops.MaxPoolGrad(
-        orig_input=input_data,
-        orig_output=output_data,
-        grad=grad_data,
-        ksize=[1, kernel_h, kernel_w, 1],
-        strides=[1, stride_h, stride_w, 1],
-        padding="VALID",
-        explicit_paddings=[],
-        data_format="NHWC",
-    )
-    result = tf.slice(padded_grad, [0, pad_top, pad_left, 0], size)
-    result = tf.pad(
-        result, [[0, 0], [0, input_h - keep_h], [0, input_w - keep_w], [0, 0]]
-    )
-    return tf.cast(result, orig_input.dtype)
+            window = input_data[:, h_start:h_end, w_start:w_end, :]
+            index = _select_index(window, floating)
+            selected_h = h_start + index // (w_end - w_start)
+            selected_w = w_start + index % (w_end - w_start)
+            np.add.at(
+                result,
+                (batch_index, selected_h, selected_w, channel_index),
+                grad_data[:, output_h_index, output_w_index, :],
+            )
+    return tf.convert_to_tensor(result, dtype=orig_input.dtype)
 
 
 def _golden(orig_input, orig_output, grad, params):

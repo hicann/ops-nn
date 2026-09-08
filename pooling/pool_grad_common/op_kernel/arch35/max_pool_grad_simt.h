@@ -11,8 +11,6 @@
 #ifndef MAX_POOL_GRAD_KERNEL_H
 #define MAX_POOL_GRAD_KERNEL_H
 
-/* Minimal shared-SIMT NaN/Inf policy fix: 20260824_v5. */
-
 #include <cstdint>
 #include <type_traits>
 
@@ -41,29 +39,24 @@ enum SimtParamIndex {
     SIMT_PARAMS_NUM = 10
 };
 
-enum MaxSelectPolicy : int64_t { MAX_SELECT_NAN_PROPAGATE = 0, MAX_SELECT_NAN_IGNORE = 1 };
-
 template <typename VALUE_T>
 struct GradAccumType {
     using IntegerType = typename std::conditional<std::is_signed<VALUE_T>::value, int64_t, uint64_t>::type;
     using Type = typename std::conditional<std::is_integral<VALUE_T>::value, IntegerType, float>::type;
 };
 
-template <typename VALUE_T, typename PROCESS_T, int64_t Policy>
+// NaN propagates: a NaN always wins the max, so a window containing NaN routes its
+// gradient to the last NaN. maxIdx < 0 marks the still-empty accumulator, which keeps
+// the initial maxVal from taking part in the comparison and therefore works for the
+// integer dtypes as well.
+template <typename VALUE_T, typename PROCESS_T>
 __simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T* maxVal,
                                                           PROCESS_T* maxIdx)
 {
-    if constexpr (Policy == MAX_SELECT_NAN_PROPAGATE) {
-        if ((static_cast<VALUE_T>(val) > *maxVal) || isnan(static_cast<float>(val))) {
-            *maxIdx = idxOffset;
-            *maxVal = val;
-        }
-    } else {
-        if (!isnan(static_cast<float>(val)) &&
-            ((*maxIdx < static_cast<PROCESS_T>(0)) || static_cast<VALUE_T>(val) > *maxVal)) {
-            *maxIdx = idxOffset;
-            *maxVal = val;
-        }
+    if ((*maxIdx < static_cast<PROCESS_T>(0)) || (static_cast<VALUE_T>(val) > *maxVal) ||
+        isnan(static_cast<float>(val))) {
+        *maxIdx = idxOffset;
+        *maxVal = val;
     }
 }
 
@@ -88,7 +81,7 @@ __simt_callee__ __aicore__ inline static void CalcPoolWindowBounds(PROCESS_T ph,
     maxIdx = hStart * width + wStart;
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy = MAX_SELECT_NAN_PROPAGATE>
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
 class MaxPoolGradSIMT {
 public:
     using TilingData = MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData;
@@ -113,10 +106,9 @@ private:
     TBuf<TPosition::VECCALC> paramBuf_;
 };
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy>
-__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Init(GM_ADDR orig_x, GM_ADDR orig_y,
-                                                                                   GM_ADDR grad, GM_ADDR y,
-                                                                                   GM_ADDR workspace)
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
+__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::Init(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grad,
+                                                                           GM_ADDR y, GM_ADDR workspace)
 {
     origx_.SetGlobalBuffer((__gm__ VALUE_T*)(orig_x));
     grad_.SetGlobalBuffer((__gm__ VALUE_T*)(grad));
@@ -125,8 +117,8 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::In
     pipe_->InitBuffer(paramBuf_, SIMT_PARAMS_NUM * sizeof(INDICES_T));
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy>
-__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Process()
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
+__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::Process()
 {
     // 空张量需在 GetUintDivMagicAndShift 等除法与地址计算之前返回，维度为 0 时除数为 0。
     const int64_t totalOutputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->hOutDim * tilingData_->wOutDim;
@@ -141,7 +133,7 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Pr
     ComputeBack();
 }
 
-template <typename VAL_T, typename IDX_T, typename DIV_T, int64_t Policy>
+template <typename VAL_T, typename IDX_T, typename DIV_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNchw(
     const int64_t count, const __gm__ VAL_T* bottomData, const int64_t height, const int64_t width,
     const int32_t outputHeight, const int32_t outputWidth, const int32_t kernelH, const int32_t kernelW,
@@ -160,24 +152,20 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNchw(
         CalcPoolWindowBounds<PROCESS_T>(ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW,
                                         height, width, hStart, wStart, hEnd, wEnd, maxIdx);
         VAL_T maxVal = static_cast<VAL_T>(0);
-        if constexpr (Policy == MAX_SELECT_NAN_PROPAGATE) {
-            maxVal = AscendC::NumericLimits<VAL_T>::NegativeInfinity();
-        } else {
-            maxIdx = static_cast<PROCESS_T>(-1);
-        }
+        maxIdx = static_cast<PROCESS_T>(-1);
         auto firData = bottomData + nxc * height * width;
         for (PROCESS_T h = hStart; h < hEnd; h += dilationH) {
             for (PROCESS_T w = wStart; w < wEnd; w += dilationW) {
                 PROCESS_T idxOffset = h * width + w;
                 VAL_T val = static_cast<VAL_T>(firData[idxOffset]);
-                CycleUpdate<VAL_T, PROCESS_T, Policy>(val, idxOffset, &maxVal, &maxIdx);
+                CycleUpdate<VAL_T, PROCESS_T>(val, idxOffset, &maxVal, &maxIdx);
             }
         }
         topMask[index] = static_cast<IDX_T>(maxIdx);
     }
 }
 
-template <typename VAL_T, typename IDX_T, typename DIV_T, int64_t Policy>
+template <typename VAL_T, typename IDX_T, typename DIV_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNhwc(
     const int64_t count, const __gm__ VAL_T* bottomData, const int64_t channels, const int64_t height,
     const int64_t width, const int32_t outputHeight, const int32_t outputWidth, const int32_t kernelH,
@@ -198,17 +186,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNhwc(
         CalcPoolWindowBounds<PROCESS_T>(ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW,
                                         height, width, hStart, wStart, hEnd, wEnd, maxIdx);
         VAL_T maxVal = static_cast<VAL_T>(0);
-        if constexpr (Policy == MAX_SELECT_NAN_PROPAGATE) {
-            maxVal = AscendC::NumericLimits<VAL_T>::NegativeInfinity();
-        } else {
-            maxIdx = static_cast<PROCESS_T>(-1);
-        }
+        maxIdx = static_cast<PROCESS_T>(-1);
         auto firData = bottomData + (n * height * width * channels) + c;
         for (PROCESS_T h = hStart; h < hEnd; h += dilationH) {
             for (PROCESS_T w = wStart; w < wEnd; w += dilationW) {
                 PROCESS_T idxOffset = h * width + w;
                 VAL_T val = static_cast<VAL_T>(firData[idxOffset * channels]);
-                CycleUpdate<VAL_T, PROCESS_T, Policy>(val, idxOffset, &maxVal, &maxIdx);
+                CycleUpdate<VAL_T, PROCESS_T>(val, idxOffset, &maxVal, &maxIdx);
             }
         }
         topMask[index] = static_cast<IDX_T>(maxIdx);
@@ -335,8 +319,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolGradNhwc(
     }
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy>
-__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::ComputePos() const
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
+__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::ComputePos() const
 {
     auto inputData = (__gm__ VALUE_T*)origx_.GetPhyAddr();
     auto indicesData = (__gm__ volatile INDICES_T*)argmax_.GetPhyAddr();
@@ -347,7 +331,7 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Co
         if constexpr (Format_T == 0) {
             GetUintDivMagicAndShift(m0, shift0, static_cast<uint32_t>(tilingData_->wOutDim));
             GetUintDivMagicAndShift(m1, shift1, static_cast<uint32_t>(tilingData_->hOutDim));
-            asc_vf_call<MaxPoolNchw<VALUE_T, INDICES_T, uint32_t, Policy>>(
+            asc_vf_call<MaxPoolNchw<VALUE_T, INDICES_T, uint32_t>>(
                 dim3(THREAD_DIM), totalSize, inputData, tilingData_->hInDim, tilingData_->wInDim, tilingData_->hOutDim,
                 tilingData_->wOutDim, tilingData_->kSizeH, tilingData_->kSizeW, tilingData_->stridesH,
                 tilingData_->stridesW, tilingData_->padH, tilingData_->padW, tilingData_->dilationH,
@@ -357,7 +341,7 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Co
             GetUintDivMagicAndShift(m0, shift0, static_cast<uint32_t>(tilingData_->cDim));
             GetUintDivMagicAndShift(m1, shift1, static_cast<uint32_t>(tilingData_->wOutDim));
             GetUintDivMagicAndShift(m2, shift2, static_cast<uint32_t>(tilingData_->hOutDim));
-            asc_vf_call<MaxPoolNhwc<VALUE_T, INDICES_T, uint32_t, Policy>>(
+            asc_vf_call<MaxPoolNhwc<VALUE_T, INDICES_T, uint32_t>>(
                 dim3(THREAD_DIM), totalSize, inputData, tilingData_->cDim, tilingData_->hInDim, tilingData_->wInDim,
                 tilingData_->hOutDim, tilingData_->wOutDim, tilingData_->kSizeH, tilingData_->kSizeW,
                 tilingData_->stridesH, tilingData_->stridesW, tilingData_->padH, tilingData_->padW,
@@ -369,7 +353,7 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Co
         if constexpr (Format_T == 0) {
             GetUintDivMagicAndShift(m0, shift0, static_cast<uint64_t>(tilingData_->wOutDim));
             GetUintDivMagicAndShift(m1, shift1, static_cast<uint64_t>(tilingData_->hOutDim));
-            asc_vf_call<MaxPoolNchw<VALUE_T, INDICES_T, uint64_t, Policy>>(
+            asc_vf_call<MaxPoolNchw<VALUE_T, INDICES_T, uint64_t>>(
                 dim3(THREAD_DIM), totalSize, inputData, tilingData_->hInDim, tilingData_->wInDim, tilingData_->hOutDim,
                 tilingData_->wOutDim, tilingData_->kSizeH, tilingData_->kSizeW, tilingData_->stridesH,
                 tilingData_->stridesW, tilingData_->padH, tilingData_->padW, tilingData_->dilationH,
@@ -379,7 +363,7 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Co
             GetUintDivMagicAndShift(m0, shift0, static_cast<uint64_t>(tilingData_->cDim));
             GetUintDivMagicAndShift(m1, shift1, static_cast<uint64_t>(tilingData_->wOutDim));
             GetUintDivMagicAndShift(m2, shift2, static_cast<uint64_t>(tilingData_->hOutDim));
-            asc_vf_call<MaxPoolNhwc<VALUE_T, INDICES_T, uint64_t, Policy>>(
+            asc_vf_call<MaxPoolNhwc<VALUE_T, INDICES_T, uint64_t>>(
                 dim3(THREAD_DIM), totalSize, inputData, tilingData_->cDim, tilingData_->hInDim, tilingData_->wInDim,
                 tilingData_->hOutDim, tilingData_->wOutDim, tilingData_->kSizeH, tilingData_->kSizeW,
                 tilingData_->stridesH, tilingData_->stridesW, tilingData_->padH, tilingData_->padW,
@@ -389,8 +373,8 @@ __aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::Co
     }
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, int64_t Policy>
-__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T, Policy>::ComputeBack()
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
+__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::ComputeBack()
 {
     LocalTensor<INDICES_T> simtParam = paramBuf_.Get<INDICES_T>();
     using DIV_T = typename std::conditional<std::is_same<INDICES_T, int32_t>::value, uint32_t, uint64_t>::type;

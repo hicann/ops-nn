@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_MAX_POOL_V3_GRAD_FUSION_PASS_H
-#define OPS_MAX_POOL_V3_GRAD_FUSION_PASS_H
+#ifndef OPS_MAX_POOL_GRAD_FUSION_PASS_H
+#define OPS_MAX_POOL_GRAD_FUSION_PASS_H
 
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 
@@ -17,7 +17,7 @@ namespace ops {
 using namespace ge;
 using namespace fusion;
 
-class __attribute__((visibility("default"))) MaxPoolV3GradFusionPass : public PatternFusionPass {
+class __attribute__((visibility("default"))) MaxPoolGradFusionPass : public PatternFusionPass {
 protected:
     std::vector<PatternUniqPtr> Patterns() override;
 
@@ -27,4 +27,4 @@ protected:
 };
 } // namespace ops
 
-#endif // OPS_MAX_POOL_V3_GRAD_FUSION_PASS_H
+#endif // OPS_MAX_POOL_GRAD_FUSION_PASS_H
