@@ -45,6 +45,10 @@ constexpr uint32_t PERFORMANCE_ROW_LEN = 128;
 constexpr uint32_t MIN_CORE = 12;
 constexpr uint64_t USER_WORKSPACE = 16777216; // 16 * 1024 * 1024
 constexpr uint64_t BLOCK_BYTES = 32;
+constexpr uint64_t BYTES_PER_FP32 = sizeof(float);
+constexpr uint64_t BYTES_DEQUANT_BIAS_PER_ELEM = 2 * BYTES_PER_FP32; // bias按输入宽度2H展开
+constexpr uint64_t BYTES_QUANT_SCALE_DYNAMIC = BYTES_PER_FP32;       // 动态: smooth scale[H]
+constexpr uint64_t BYTES_QUANT_SCALE_STATIC = 2 * BYTES_PER_FP32;    // 静态: scale+offset[2H]
 
 constexpr size_t INDEX_IN_X = 0;
 constexpr size_t INDEX_IN_WEIGHT_SCALE = 1;
@@ -63,8 +67,8 @@ void DequantSituQuantTiling::Reset()
     totalCore = 0;
     totalUsedCoreNum = 0;
     inputDTypeLen = 1;
-    ubMinBlockLen = 32;
-    cacheLineLen = 512;
+    ubMinBlockLen = ALIGN_UINT_IN_CACHE_32B / inputDTypeLen;
+    cacheLineLen = PACK_UINT_IN_CACHE_512B / inputDTypeLen;
     maxTileLen = 0;
     optBaseRowLen = 0;
     optBaseColLen = 0;
@@ -471,11 +475,11 @@ ge::graphStatus DequantSituQuantTiling::GetShapeAttrsInfoInner()
     isPreDequantized_ = (xDtype_ == ge::DT_BF16 || xDtype_ == ge::DT_FLOAT16);
 
     if (xDtype_ == ge::DT_INT8) {
-        inputDTypeLen = 1;
+        inputDTypeLen = sizeof(int8_t);
     } else if (xDtype_ == ge::DT_INT32) {
-        inputDTypeLen = 4;
+        inputDTypeLen = sizeof(int32_t);
     } else {
-        inputDTypeLen = 2;
+        inputDTypeLen = sizeof(int16_t);
     }
 
     const gert::RuntimeAttrs* attrs = context_->GetAttrs();
@@ -495,10 +499,10 @@ bool DequantSituQuantTiling::CalcUbMaxTileLen(const uint64_t ubSize, uint32_t& m
 {
     uint64_t bytesPerElement = 8 + 2 + 16 + 16 + 4; // 46 (weightScale + inQueueX + tmpBuf + castBuf + outQueue)
     if (hasDequantBias) {
-        bytesPerElement += 8;
+        bytesPerElement += BYTES_DEQUANT_BIAS_PER_ELEM;
     }
     if (hasQuantScale && !quantIsOne) {
-        bytesPerElement += (quantType == QUANT_TYPE_DYNAMIC) ? 4 : 8;
+        bytesPerElement += (quantType == QUANT_TYPE_DYNAMIC) ? BYTES_QUANT_SCALE_DYNAMIC : BYTES_QUANT_SCALE_STATIC;
     }
 
     uint64_t availableUb = ubSize - UB_RESERVED_BUFF - ALIGN_UINT_IN_CACHE_32B;

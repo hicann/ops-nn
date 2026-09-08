@@ -17,7 +17,6 @@
 #define QUANT_SITU_MX_QUANT_TILING_ARCH35_H
 
 #include <cstdint>
-#include <vector>
 #include <string>
 #include <set>
 #include "register/op_def_registry.h"
@@ -118,7 +117,7 @@ private:
 
 // ==================== Main function declarations ====================
 ge::graphStatus Tiling4SituMxQuant(gert::TilingContext* context);
-ge::graphStatus TilingPrepare4SituMxQuant(gert::TilingParseContext* context);
+ge::graphStatus TilingPrepare4SituMxQuant(gert::TilingParseContext* /*context*/);
 
 } // namespace optiling
 #endif // QUANT_SITU_MX_QUANT_TILING_ARCH35_H

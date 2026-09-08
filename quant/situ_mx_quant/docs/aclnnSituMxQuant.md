@@ -355,6 +355,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cstring>
 
 #include "acl/acl.h"
 #include "aclnnop/aclnn_situ_mx_quant.h"

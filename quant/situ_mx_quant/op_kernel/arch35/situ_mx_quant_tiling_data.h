@@ -16,6 +16,8 @@
 #ifndef SITU_MX_QUANT_TILING_DATA_H
 #define SITU_MX_QUANT_TILING_DATA_H
 
+#include <cstdint>
+
 struct SituMxQuantTilingData {
     // Basic parameters
     int64_t usedCoreNum;

@@ -29,7 +29,6 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-using namespace Ops::NN::Optiling;
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(DequantSituQuantTilingData)
