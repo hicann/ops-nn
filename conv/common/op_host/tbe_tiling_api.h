@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <exe_graph/runtime/tiling_context.h>
 #include <tiling/platform/platform_ascendc.h>
+#include "conv/common/op_host/op_tiling/conv3d_op_type_v2.h"
 #include "graph/utils/type_utils.h"
 #include "platform/platform_infos_def.h"
 
@@ -46,14 +47,6 @@ struct Conv3dBackpropV2TBETilingData {
     int32_t m_dim;     // M dimension
     int32_t n_dim;     // N dimension
     int32_t k_dim;     // K dimension
-};
-
-enum OpTypeV2 : size_t {
-    kConv3DBackpropFilterV2,
-    kConv3DBackpropInputV2,
-    kConv3DTransposeV2,
-    kExtendConvTranspose,
-    kExtendConvTransposeV2,
 };
 
 // 兼容opp整包、静态库和子包场景，向算子业务侧代码屏蔽差异：

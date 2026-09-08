@@ -12,7 +12,7 @@
  * \file tbe_tiling_api.cpp
  * \brief
  */
-#include "op_host/tbe_tiling_api.h"
+#include "tbe_tiling_api.h"
 #include "log/log.h"
 #include "legacy_common_manager.h"
 

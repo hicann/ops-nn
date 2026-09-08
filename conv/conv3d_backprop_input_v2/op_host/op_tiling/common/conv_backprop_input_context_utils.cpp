@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <cstdarg>
 #include "error_util.h"
+#include "platform/platform_infos_def.h"
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "securec.h"

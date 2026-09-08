@@ -18,6 +18,7 @@
 
 #include <log/log.h>
 #include "op_host/tiling_base.h"
+#include "conv/common/op_host/tbe_tiling_api.h"
 #include "../common/conv_backprop_input_context_utils.h"
 #include "../../../op_kernel/arch22/conv3d_backprop_input_v2_tiling_data.h"
 

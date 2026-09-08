@@ -19,7 +19,7 @@
 #include <log/log.h>
 #include "../common/conv_backprop_filter_context_utils.h"
 #include "op_host/tiling_base.h"
-#include "tbe_tiling_api.h"
+#include "conv/common/op_host/tbe_tiling_api.h"
 #include "../../../op_kernel/arch22/conv3d_backprop_filter_v2_tiling_data.h"
 
 namespace Ops {
