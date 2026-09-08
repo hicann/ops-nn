@@ -23,11 +23,13 @@ namespace ge {
  * One inputs:
  * @li x: A tensor list containing multiple tensors
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are the exp value of the x
+ * @li y: A tensor list which store the tensors whose value are the exp value of the x.
+ * When the dtype of x is DT_INT16, DT_INT8 or DT_UINT8, the dtype of y is DT_FLOAT;
+ * otherwise the dtype of y is the same as that of x.
  */
 REG_OP(ForeachExp)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT8, DT_UINT8}))
-    .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT16, DT_INT8, DT_UINT8}))
+    .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachExp)
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_EXP_H_

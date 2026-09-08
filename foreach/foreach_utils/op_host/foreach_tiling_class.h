@@ -328,6 +328,10 @@ private:
                             OP_LOGE(tilingContext->GetNodeName(),
                                     "The tensor %u of output datatype should meet the conditions with input.", i),
                             return ge::GRAPH_FAILED);
+            } else if ((opCode == FOREACH_EXP_OP_CODE || opCode == ZERO_OP_CODE) &&
+                       (dataType == ge::DT_INT16 || dataType == ge::DT_INT8 || dataType == ge::DT_UINT8) &&
+                       dstDtype == ge::DT_FLOAT) {
+                // 整进浮出: exp/expm1 整数输入输出提升 DT_FLOAT
             } else {
                 OP_CHECK_IF(
                     dstDtype != dataType,

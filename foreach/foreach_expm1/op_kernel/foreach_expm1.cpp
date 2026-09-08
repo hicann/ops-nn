@@ -18,6 +18,7 @@
 // op kernel building at build_out directory, it's not fully aligned with source code structure
 // current op_kernel folder is absent in build_out directory, so the relative path to common has just one layer
 #include "../foreach_utils/foreach_implict_output.h"
+#include "../foreach_utils/foreach_int_to_float_unary.h"
 
 using namespace AscendC;
 using namespace Common::OpKernel;
@@ -54,15 +55,15 @@ extern "C" __global__ __aicore__ void foreach_expm1(GM_ADDR x, GM_ADDR y, GM_ADD
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(5)) {
-        ForeachImplictOutput<int16_t, float, Expm1Adapter<float>, 2, 1> op;
+        ForeachIntToFloatUnary<int16_t, Expm1Adapter<float>> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(7)) {
-        ForeachImplictOutput<int8_t, half, Expm1Adapter<half>, 2, 1> op;
+        ForeachIntToFloatUnary<int8_t, Expm1Adapter<float>> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(8)) {
-        ForeachImplictOutput<uint8_t, half, Expm1Adapter<half>, 2, 1> op;
+        ForeachIntToFloatUnary<uint8_t, Expm1Adapter<float>> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     }

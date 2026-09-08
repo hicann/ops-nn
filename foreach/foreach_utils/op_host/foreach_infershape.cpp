@@ -73,6 +73,31 @@ static ge::graphStatus InferShape4ForeachInplace(gert::InferShapeContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
+// 整进浮出: 整数输入(int16/int8/uint8)推导输出 DT_FLOAT, 浮点输入输出同 dtype
+static ge::graphStatus InferDataType4ForeachIntToFloat(gert::InferDataTypeContext* context)
+{
+    uint32_t outputNumDataType = context->GetComputeNodeOutputNum();
+    const auto inputInfoDataType = context->GetIrInputInstanceInfo(0);
+    if (inputInfoDataType == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+
+    std::string errMsg = optiling::ConcatString("num of dynamic input0 ", inputInfoDataType->GetInstanceNum(),
+                                                "not equal num of dynamic output0 ", outputNumDataType);
+    OP_CHECK_IF(inputInfoDataType->GetInstanceNum() != outputNumDataType,
+                OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
+
+    for (uint32_t i = 0; i < inputInfoDataType->GetInstanceNum(); i++) {
+        auto xDtype = context->GetDynamicInputDataType(0, i);
+        if (xDtype == ge::DT_INT16 || xDtype == ge::DT_INT8 || xDtype == ge::DT_UINT8) {
+            context->SetOutputDataType(i, ge::DT_FLOAT);
+        } else {
+            context->SetOutputDataType(i, xDtype);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferDataType4ForeachInplace(gert::InferDataTypeContext* context)
 {
     (void)context;
@@ -314,11 +339,11 @@ IMPL_OP_INFERSHAPE(ForeachErfc)
 
 IMPL_OP_INFERSHAPE(ForeachExp)
     .InferShape(ops::InferShape4ForeachCommon)
-    .InferDataType(ops::InferDataType4ForeachCommon);
+    .InferDataType(ops::InferDataType4ForeachIntToFloat);
 
 IMPL_OP_INFERSHAPE(ForeachExpm1)
     .InferShape(ops::InferShape4ForeachCommon)
-    .InferDataType(ops::InferDataType4ForeachCommon);
+    .InferDataType(ops::InferDataType4ForeachIntToFloat);
 
 IMPL_OP_INFERSHAPE(ForeachLerpList)
     .InferShape(ops::InferShape4ForeachCommon)
