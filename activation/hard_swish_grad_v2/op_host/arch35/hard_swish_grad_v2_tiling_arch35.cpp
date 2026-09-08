@@ -54,9 +54,9 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(const gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    auto platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -69,7 +69,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 }
 
 // grad_output/self/out 三者 shape 必须相同,且维度数不超过 8;输出 shapeGradOutput 供后续计算 totalIdx。
-static ge::graphStatus CheckShapeInfo(gert::TilingContext* context, gert::Shape& shapeGradOutput)
+static ge::graphStatus CheckShapeInfo(const gert::TilingContext* context, gert::Shape& shapeGradOutput)
 {
     auto inputGradOutput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGradOutput);
@@ -104,7 +104,7 @@ static ge::graphStatus CheckShapeInfo(gert::TilingContext* context, gert::Shape&
 }
 
 // grad_output dtype 须为 float32/float16/bfloat16,且 self/out 与 grad_output 一致。
-static ge::graphStatus CheckDtypeInfo(gert::TilingContext* context, ge::DataType& dataType)
+static ge::graphStatus CheckDtypeInfo(const gert::TilingContext* context, ge::DataType& dataType)
 {
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     auto inputDesc = context->GetInputDesc(0);
