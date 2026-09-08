@@ -133,8 +133,7 @@ static bool CheckDtypeValidV2(const aclTensor* x1, const aclTensor* x2, const ac
 }
 
 static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const aclTensor* beta,
-                            const aclTensor* scales1Optional, const aclTensor* zeroPoints1Optional,
-                            const aclTensor* outScales1Out, bool isDynQuant)
+                            const aclTensor* scales1Optional, const aclTensor* outScales1Out, bool isDynQuant)
 {
     OP_CHECK_MAX_DIM(x1, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(gamma, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -202,10 +201,13 @@ static bool ShapeEqs2OptV2(const aclTensor* req, const aclTensor* opt)
     if (opt == nullptr) {
         return true;
     }
+    if (req == nullptr) {
+        return false;
+    }
     return (req->GetViewShape() == opt->GetViewShape());
 }
 
-static bool CheckShapeEqsV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta,
+static bool CheckShapeEqsV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
                             const aclTensor* biasOptional, const aclTensor* scales1Optional,
                             const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
                             const aclTensor* zeroPoints2Optional, const aclTensor* y1Out, const aclTensor* y2Out,
@@ -261,11 +263,10 @@ static aclnnStatus CheckParamsV2(const aclTensor* x1, const aclTensor* x2, const
               ACLNN_ERR_PARAM_INVALID);
 
     // 4. 查 x1, gamma, outScales1Out 的等量关系
-    CHECK_RET(CheckShapeRelV2(x1, gamma, beta, scales1Optional, zeroPoints1Optional, outScales1Out, isDynQuant),
-              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeRelV2(x1, gamma, beta, scales1Optional, outScales1Out, isDynQuant), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 查 所有shape 的等量关系
-    CHECK_RET(CheckShapeEqsV2(x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
+    CHECK_RET(CheckShapeEqsV2(x1, x2, gamma, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
                               zeroPoints2Optional, y1Out, y2Out, xOut, layernormRes, outScales1Out, outScales2Out,
                               isDynQuant),
               ACLNN_ERR_PARAM_INVALID);
@@ -395,8 +396,11 @@ aclnnStatus GetOptTensorContiguousV2(const aclTensor* opt, aclTensor** optionalC
     if (nullptr == opt) {
         return ACLNN_SUCCESS;
     }
-    *optionalCont = const_cast<aclTensor*>(l0op::Contiguous(opt, executor));
-    CHECK_RET(optionalCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto cont = l0op::Contiguous(opt, executor);
+    CHECK_RET(cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto optionalContView = executor->CreateView(cont, cont->GetViewShape(), cont->GetViewOffset());
+    CHECK_RET(optionalContView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    *optionalCont = optionalContView;
     return ACLNN_SUCCESS;
 }
 

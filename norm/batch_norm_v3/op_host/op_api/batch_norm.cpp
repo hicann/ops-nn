@@ -119,8 +119,8 @@ const std::array<aclTensor*, 3> BN3DTrainingUpdate(const aclTensor* x, const acl
 OP_TYPE_REGISTER(BatchNormV3);
 
 const std::array<aclTensor*, 3> BatchNormV3(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                            aclTensor* running_mean, aclTensor* running_var, float momentum, float eps,
-                                            aclOpExecutor* executor)
+                                            const aclTensor* running_mean, const aclTensor* running_var, float momentum,
+                                            float eps, aclOpExecutor* executor)
 {
     L0_DFX(BatchNormV3, x, weight, bias, running_mean, running_var, momentum, eps);
 
@@ -144,8 +144,8 @@ const std::array<aclTensor*, 3> BatchNormV3(const aclTensor* x, const aclTensor*
 }
 
 const std::array<aclTensor*, 3> BatchNormV3(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                            aclTensor* running_mean, aclTensor* running_var, float momentum, float eps,
-                                            bool training, aclOpExecutor* executor)
+                                            const aclTensor* running_mean, const aclTensor* running_var, float momentum,
+                                            float eps, bool training, aclOpExecutor* executor)
 {
     L0_DFX(BatchNormV3, x, weight, bias, running_mean, running_var, momentum, eps, training);
 

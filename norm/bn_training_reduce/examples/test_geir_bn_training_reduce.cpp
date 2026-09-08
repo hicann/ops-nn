@@ -28,8 +28,25 @@
 #include "ge_error_codes.h"
 #include "graph.h"
 #include "ops_proto_nn.h"
+#include "securec.h"
 #include "tensor.h"
 #include "types.h"
+
+// 进程退出码约定
+constexpr int32_t kExitError = 2;           // GE 初始化/参数用法/用例加载类错误
+constexpr int32_t kExitAddGraphFailed = 3;  // AddGraph 失败
+constexpr int32_t kExitShapeInitFailed = 4; // 输入 Shape 初始化校验失败
+constexpr int32_t kExitRunFailed = 5;       // 正向用例执行失败
+constexpr int32_t kExitFinalizeFailed = 6;  // GEFinalize 失败
+// 命令行入参数目约定(不含程序名)
+constexpr int32_t kArgcCommand = 2; // 仅命令名(缺省走 route)
+constexpr int32_t kArgcTest = 3;    // --test <manifest>
+constexpr int32_t kArgcCase = 4;    // --case <id> <manifest>
+// fp16/fp32 位格式转换常量
+constexpr int32_t kFp32ExpBias = 127;           // fp32 有偏指数偏置
+constexpr int32_t kFp16ExpBias = 15;            // fp16 有偏指数偏置
+constexpr int32_t kFp16ExpOverflow = 31;        // 有偏指数达到 31 视为溢出(Inf)
+constexpr int32_t kFp16SubnormalExpFloor = -10; // 有偏指数低于该值直接下溢为 0
 
 // The selected standard domain header owns BNTrainingReduce. Data remains in
 // ops_proto_legacy.h in this CANN release, so keep its tiny construction class
@@ -253,7 +270,7 @@ uint32_t RoundRightShiftToEven(uint32_t value, uint32_t shift)
 aclFloat16 FloatToFloat16(float value)
 {
     uint32_t bits = 0U;
-    std::memcpy(&bits, &value, sizeof(bits));
+    (void)memcpy_s(&bits, sizeof(bits), &value, sizeof(bits));
     const uint32_t sign = (bits >> 16U) & 0x8000U;
     const uint32_t exponent = (bits >> 23U) & 0xFFU;
     const uint32_t mantissa = bits & 0x7FFFFFU;
@@ -264,15 +281,15 @@ aclFloat16 FloatToFloat16(float value)
         return static_cast<aclFloat16>(sign);
     }
 
-    int32_t halfExponent = static_cast<int32_t>(exponent) - 127 + 15;
+    int32_t halfExponent = static_cast<int32_t>(exponent) - kFp32ExpBias + kFp16ExpBias;
     if (halfExponent <= 0) {
-        if (halfExponent < -10) {
+        if (halfExponent < kFp16SubnormalExpFloor) {
             return static_cast<aclFloat16>(sign);
         }
         const uint32_t rounded = RoundRightShiftToEven(mantissa | 0x800000U, 14U - halfExponent);
         return static_cast<aclFloat16>(sign | rounded);
     }
-    if (halfExponent >= 31) {
+    if (halfExponent >= kFp16ExpOverflow) {
         return static_cast<aclFloat16>(sign | 0x7C00U);
     }
 
@@ -280,7 +297,7 @@ aclFloat16 FloatToFloat16(float value)
     if (roundedMantissa == 0x400U) {
         roundedMantissa = 0U;
         ++halfExponent;
-        if (halfExponent >= 31) {
+        if (halfExponent >= kFp16ExpOverflow) {
             return static_cast<aclFloat16>(sign | 0x7C00U);
         }
     }
@@ -300,7 +317,7 @@ float Float16ToFloat(aclFloat16 value)
             --normalizedExponent;
         }
         mantissa &= 0x03FFU;
-        bits |= static_cast<uint32_t>(normalizedExponent + 127) << 23U;
+        bits |= static_cast<uint32_t>(normalizedExponent + kFp32ExpBias) << 23U;
         bits |= mantissa << 13U;
     } else if (exponent == 0x1FU) {
         bits |= 0x7F800000U | (mantissa << 13U);
@@ -309,14 +326,14 @@ float Float16ToFloat(aclFloat16 value)
         bits |= mantissa << 13U;
     }
     float result = 0.0F;
-    std::memcpy(&result, &bits, sizeof(result));
+    (void)memcpy_s(&result, sizeof(result), &bits, sizeof(result));
     return result;
 }
 
 uint16_t FloatToBfloat16(float value)
 {
     uint32_t bits = 0U;
-    std::memcpy(&bits, &value, sizeof(bits));
+    (void)memcpy_s(&bits, sizeof(bits), &value, sizeof(bits));
     const uint32_t roundingBias = 0x7FFFU + ((bits >> 16U) & 1U);
     return static_cast<uint16_t>((bits + roundingBias) >> 16U);
 }
@@ -325,7 +342,7 @@ float Bfloat16ToFloat(uint16_t value)
 {
     uint32_t bits = static_cast<uint32_t>(value) << 16U;
     float result = 0.0F;
-    std::memcpy(&result, &bits, sizeof(result));
+    (void)memcpy_s(&result, sizeof(result), &bits, sizeof(result));
     return result;
 }
 
@@ -396,7 +413,7 @@ InputData MakeInput(const CaseDef& test, const std::vector<int64_t>& shape)
         }
         bytes.resize(raw.size() * sizeof(aclFloat16));
         if (!bytes.empty()) {
-            std::memcpy(bytes.data(), raw.data(), bytes.size());
+            (void)memcpy_s(bytes.data(), bytes.size(), raw.data(), bytes.size());
         }
     } else if (dtype == ge::DT_BF16) {
         std::vector<uint16_t> raw(source.size());
@@ -406,7 +423,7 @@ InputData MakeInput(const CaseDef& test, const std::vector<int64_t>& shape)
         }
         bytes.resize(raw.size() * sizeof(uint16_t));
         if (!bytes.empty()) {
-            std::memcpy(bytes.data(), raw.data(), bytes.size());
+            (void)memcpy_s(bytes.data(), bytes.size(), raw.data(), bytes.size());
         }
     } else if (dtype == ge::DT_INT32) {
         std::vector<int32_t> raw(source.size());
@@ -416,13 +433,13 @@ InputData MakeInput(const CaseDef& test, const std::vector<int64_t>& shape)
         }
         bytes.resize(raw.size() * sizeof(int32_t));
         if (!bytes.empty()) {
-            std::memcpy(bytes.data(), raw.data(), bytes.size());
+            (void)memcpy_s(bytes.data(), bytes.size(), raw.data(), bytes.size());
         }
     } else {
         quantized = source;
         bytes.resize(source.size() * sizeof(float));
         if (!bytes.empty()) {
-            std::memcpy(bytes.data(), source.data(), bytes.size());
+            (void)memcpy_s(bytes.data(), bytes.size(), source.data(), bytes.size());
         }
     }
 
@@ -529,8 +546,10 @@ Observed ValidateOutputs(const CaseDef& test, const std::vector<int64_t>& feedSh
             actualNumel = "{0,0}";
             return observed;
         }
-        std::memcpy(observed.sum.data(), outputs[0].GetData(), observed.sum.size() * sizeof(float));
-        std::memcpy(observed.squareSum.data(), outputs[1].GetData(), observed.squareSum.size() * sizeof(float));
+        (void)memcpy_s(observed.sum.data(), observed.sum.size() * sizeof(float), outputs[0].GetData(),
+                       observed.sum.size() * sizeof(float));
+        (void)memcpy_s(observed.squareSum.data(), observed.squareSum.size() * sizeof(float), outputs[1].GetData(),
+                       observed.squareSum.size() * sizeof(float));
     }
     observed.readable = true;
 
@@ -819,7 +838,7 @@ bool InitializeGe()
 int RunRoute()
 {
     if (!InitializeGe()) {
-        return 2;
+        return kExitError;
     }
     ge::Session session(std::map<ge::AscendString, ge::AscendString>{});
     CaseDef route = {"route-target", "positive",  "static", "route",  "F32",   "NCHW",
@@ -832,25 +851,25 @@ int RunRoute()
     int probeExit = 0;
     bool businessPass = false;
     if (addStatus != ge::SUCCESS) {
-        probeExit = 3;
+        probeExit = kExitAddGraphFailed;
         std::printf("GRAPH-RUN mode=route case=route-target node=%s gid=%u actual_stage=ADD_GRAPH status=%u "
                     "error=%s value=FAIL\n",
                     bundle.node.c_str(), gid, addStatus, CurrentError().c_str());
     } else if (!PrintAndCheckShapeInit("route-target", bundle)) {
-        probeExit = 4;
+        probeExit = kExitShapeInitFailed;
     } else {
         bool completed = false;
         const Observed observed = RunPositiveFeed(session, gid, route, bundle, {1, 1, 1, 1}, "route-target", "route",
                                                   completed);
         if (!completed || !observed.readable) {
-            probeExit = 5;
+            probeExit = kExitRunFailed;
         }
         businessPass = observed.valuePass;
         session.RemoveGraph(gid);
     }
     const ge::Status finalizeStatus = ge::GEFinalize();
     if (finalizeStatus != ge::SUCCESS && probeExit == 0) {
-        probeExit = 6;
+        probeExit = kExitFinalizeFailed;
     }
     std::printf("ROUTE-PROBE op=BNTrainingReduce node=%s status=DONE value=%s probe_exit=%d\n", bundle.node.c_str(),
                 businessPass ? "PASS" : "FAIL", probeExit);
@@ -860,7 +879,7 @@ int RunRoute()
 int RunSelected(const std::vector<CaseDef>& cases, const std::string& selectedId, bool printSummary)
 {
     if (!InitializeGe()) {
-        return 2;
+        return kExitError;
     }
     ge::Session session(std::map<ge::AscendString, ge::AscendString>{});
     int total = 0;
@@ -895,16 +914,16 @@ int RunSelected(const std::vector<CaseDef>& cases, const std::string& selectedId
     }
     if (total == 0) {
         std::fprintf(stderr, "GEIR-INFRA selected=%s reason=no_matching_case value=FAIL\n", selectedId.c_str());
-        return 2;
+        return kExitError;
     }
-    return infraFailure ? 2 : 0;
+    return infraFailure ? kExitError : 0;
 }
 
 } // namespace
 
 int main(int argc, char** argv)
 {
-    if (argc < 2) {
+    if (argc < kArgcCommand) {
         return RunRoute();
     }
     if (std::string(argv[1]) == "--route") {
@@ -913,19 +932,19 @@ int main(int argc, char** argv)
     std::string manifest;
     std::string selected;
     bool printSummary = true;
-    if (std::string(argv[1]) == "--test" && argc == 3) {
+    if (std::string(argv[1]) == "--test" && argc == kArgcTest) {
         manifest = argv[2];
-    } else if (std::string(argv[1]) == "--case" && argc == 4) {
+    } else if (std::string(argv[1]) == "--case" && argc == kArgcCase) {
         selected = argv[2];
         manifest = argv[3];
         printSummary = false;
     } else {
         std::fprintf(stderr, "usage: %s {--route|--test|--case ID} cases.tsv\n", argv[0]);
-        return 2;
+        return kExitError;
     }
     std::vector<CaseDef> cases;
     if (!LoadCases(manifest, cases)) {
-        return 2;
+        return kExitError;
     }
     return RunSelected(cases, selected, printSummary);
 }

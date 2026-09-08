@@ -29,7 +29,7 @@ __aicore__ inline void UnravelALoop(int64_t aLoopIdx, int64_t& aLen, int64_t& in
     rem /= aSplitChunkCnt_;
     inputBaseOff = 0;
     outputOff = 0;
-    for (int32_t i = aSplit_ - 2; i >= 0; i -= 2) {
+    for (int32_t i = aSplit_ - kAxisPairStride; i >= 0; i -= kAxisPairStride) {
         const int64_t coord = rem % axisShape_[i];
         rem /= axisShape_[i];
         inputBaseOff += coord * axisStride_[i];
@@ -48,7 +48,7 @@ __aicore__ inline int64_t UnravelR(int64_t rLoopIdx, int64_t& rLen) const
     const int64_t rChunkIdx = rLoopIdx % rChunkCount;
     int64_t rem = rLoopIdx / rChunkCount;
     int64_t inputOff = 0;
-    for (int32_t i = rSplit_ - 2; i >= 1; i -= 2) {
+    for (int32_t i = rSplit_ - kAxisPairStride; i >= 1; i -= kAxisPairStride) {
         const int64_t coord = rem % axisShape_[i];
         rem /= axisShape_[i];
         inputOff += coord * axisStride_[i];
@@ -130,7 +130,7 @@ __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLe
     const int64_t copyPadBytes = (static_cast<int64_t>(ext.blockLen) + kBlockBytes - 1) / kBlockBytes * kBlockBytes;
     const int64_t targetRowBytes = ubAxes[0].paddedSize * typeBytes;
     ext.dstStride = (targetRowBytes - copyPadBytes) / kBlockBytes;
-    if (axisCount >= 2) {
+    if (axisCount >= kRowBlockAxes) {
         ext.blockCount = static_cast<uint16_t>(ubAxes[1].ubSize);
         ext.srcStride = ubAxes[1].gmStride * typeBytes - ext.blockLen;
     } else {
@@ -147,17 +147,17 @@ __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLe
     LoopModeParams loop = {};
     loop.loop1Size = 1;
     loop.loop2Size = 1;
-    if (axisCount >= 3) {
+    if (axisCount >= kLoop1Axes) {
         loop.loop1Size = static_cast<uint32_t>(ubAxes[2].ubSize);
         loop.loop1SrcStride = static_cast<uint64_t>(ubAxes[2].gmStride * typeBytes);
         loop.loop1DstStride = static_cast<uint64_t>(ubStride[2]);
     }
-    if (axisCount >= 4) {
+    if (axisCount >= kLoop2Axes) {
         loop.loop2Size = static_cast<uint32_t>(ubAxes[3].ubSize);
         loop.loop2SrcStride = static_cast<uint64_t>(ubAxes[3].gmStride * typeBytes);
         loop.loop2DstStride = static_cast<uint64_t>(ubStride[3]);
     }
-    const bool useLoopMode = axisCount >= 3;
+    const bool useLoopMode = axisCount >= kLoop1Axes;
     if (useLoopMode) {
         SetLoopModePara(loop, DataCopyMVType::OUT_TO_UB);
     }

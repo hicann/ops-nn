@@ -39,6 +39,7 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr uint32_t VL_FP32 = 256U / sizeof(float); // fp32 vector length (matches kernel)
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
+constexpr uint32_t POWER_TWO_FOLD = 2; // power-of-two fold factor
 constexpr uint32_t MIN_REDUCE_TMP_ELEMS = 2 * VL_FP32;
 constexpr uint32_t MAX_PARTIAL_TILE_LENGTH = 4096;
 // The legacy arch22 kernel switches from its intermediate Extra path to the
@@ -162,9 +163,9 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t nu
     powerSplit = VL_FP32;
     if (numCol > static_cast<int64_t>(VL_FP32)) {
         while (powerSplit < numCol) {
-            powerSplit *= 2;
+            powerSplit *= POWER_TWO_FOLD;
         }
-        powerSplit /= 2;
+        powerSplit /= POWER_TWO_FOLD;
     }
 
     // Range guard: tiling-data fields are uint32; reject shapes that would silently truncate.

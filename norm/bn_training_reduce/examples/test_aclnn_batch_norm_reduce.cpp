@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(sumShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), sumDeviceAddr, size * 4,
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), sumDeviceAddr, size * sizeof(float),
                       ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 

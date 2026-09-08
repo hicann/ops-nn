@@ -24,6 +24,13 @@ constexpr uint32_t kVlBytes = 256U;
 constexpr uint32_t kRepF32 = kVlBytes / sizeof(float);
 constexpr uint32_t kBlockBytes = 32U;
 constexpr uint32_t kBlockF32 = kBlockBytes / sizeof(float);
+constexpr int32_t kAxisPairStride = 2;      // step/parity used when walking the interleaved A/R axis pairs
+constexpr uint32_t kDoubleBufferDepth = 2U; // double-buffer depth
+constexpr int32_t kRowBlockAxes = 2;        // enable blockCount row copy when at least two axes exist
+constexpr int32_t kLoop1Axes = 3;           // enable loop1 copy when at least three axes exist
+constexpr int32_t kLoop2Axes = 4;           // enable loop2 copy when at least four axes exist
+constexpr uint64_t kPower2Lower2 = 2ULL;    // bisection-tree threshold: value <= 2 maps to 1
+constexpr uint64_t kPower2Upper4 = 4ULL;    // value <= 4 maps to 2
 
 constexpr AscendC::Reg::CastTrait kCastTraitToFp32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
                                                    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_NONE};
@@ -266,7 +273,7 @@ public:
         cacheBufElems_ = td->cacheBufUbSize / static_cast<int64_t>(sizeof(float));
 
         int64_t reductionTotal = 1;
-        for (int32_t i = 1; i < axisNum_; i += 2) {
+        for (int32_t i = 1; i < axisNum_; i += kAxisPairStride) {
             reductionTotal *= axisShape_[i];
         }
         uint64_t scaleSteps = static_cast<uint64_t>(reductionTotal - 1);
@@ -290,8 +297,8 @@ public:
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ D_T*>(x));
         sumGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sum));
         squareSumGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(squareSum));
-        pipe_.InitBuffer(preInQue_, 2, td->preReduceUbSize);
-        pipe_.InitBuffer(tmpBuf_, 2 * td->tmpBufUbSize);
+        pipe_.InitBuffer(preInQue_, kDoubleBufferDepth, td->preReduceUbSize);
+        pipe_.InitBuffer(tmpBuf_, kDoubleBufferDepth * td->tmpBufUbSize);
         pipe_.InitBuffer(cacheBuf_, td->cacheBufUbSize);
         pipe_.InitBuffer(outQue_, 1, td->postReduceUbSize);
     }
@@ -305,7 +312,7 @@ public:
         }
         rGroupCnt_ = td->rGroupCnt;
         aTotal_ = 1;
-        for (int32_t i = 0; i < axisNum_; i += 2) {
+        for (int32_t i = 0; i < axisNum_; i += kAxisPairStride) {
             aTotal_ *= axisShape_[i];
         }
         if constexpr (!isDeterministic) {
@@ -354,11 +361,11 @@ private:
         if (value == 0) {
             return 0;
         }
-        if (value <= 2) {
+        if (value <= kPower2Lower2) {
             return 1;
         }
-        if (value <= 4) {
-            return 2;
+        if (value <= kPower2Upper4) {
+            return kPower2Lower2;
         }
         const uint64_t reduced = value - 1;
         const uint64_t power = 63 - AscendC::ScalarCountLeadingZero(reduced);
