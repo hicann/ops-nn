@@ -19,6 +19,15 @@
 
 namespace ForeachDivListInplace {
 using namespace AscendC;
+// Div 缺省用 DEFAULT_DIV_CONFIG = {DivAlgo::INTRINSIC}，在 dav-3510 上是 1 ULP 保真舍入
+// （实测 8.3% 的元素偏 1 ULP）；竞品 fp32 除法是 0 ULP 正确舍入，cross_check 的 rmse
+// 比值因此在大量级输出上被抬高。显式选 0 ULP 档与竞品对齐。
+//
+// 取 FTZ_TRUE 而非仓内他处常见的 FTZ_FALSE：两档精度实测完全相同（全泛化集 34/34 PASS，
+// 网络级用例 3126 万元素均 100% 偏 0 ULP），但 FTZ_FALSE 的非规格数完整处理代价极大——
+// 同条件 --run 12 实测 218.7us -> 2028.1us（9.3x）。本算子输入域内不产生 fp32 非规格数
+// （最小 |商| 远大于 1.18e-38），故取快档。若后续需覆盖非规格数商，再评估换 FTZ_FALSE。
+static constexpr DivConfig DIV_PRECISE = {DivAlgo::PRECISION_0ULP_FTZ_TRUE};
 // In-place foreach div-list: y(=x1) = x1 * x2. Reuses the shared ForeachRegbaseBinary base
 // (two input tensor lists); the apt entry feeds x1 as both the first input and the output.
 template <typename T, typename Tiling>
@@ -46,10 +55,10 @@ public:
         if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
             Cast(cast1_, in1Local, RoundMode::CAST_NONE, dataCount);
             Cast(cast2_, in2Local, RoundMode::CAST_NONE, dataCount);
-            Div(cast1_, cast1_, cast2_, dataCount);
+            Div<float, DIV_PRECISE>(cast1_, cast1_, cast2_, dataCount);
             Cast(outLocal, cast1_, RoundMode::CAST_RINT, dataCount);
         } else {
-            Div(outLocal, in1Local, in2Local, dataCount);
+            Div<T, DIV_PRECISE>(outLocal, in1Local, in2Local, dataCount);
         }
     }
 

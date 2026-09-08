@@ -255,7 +255,9 @@ class _ScatterMaxTfCompose:
 
     与 torch 腿的两处一致性(不一致就会系统性假红):
     1) 非法下标(越界/负)按算子语义静默跳过——TF 自己会抛 InvalidArgumentError;
-    2) **不升精度**: 一律用算子自身 dtype 计算, 与 torch 腿同口径。
+    2) **按内核算法转写**: 内核对 fp16 是 LoadWiden 到 fp32 累加、NarrowStore 窄回
+       (scatter_reduce_common_simt.h: "ACC: float for fp16"), 故此处同样先加宽再窄回,
+       与 torch 腿同口径。只在窄类型上算会逐步截断/溢出, 与被测内核不是同一个算法。
     """
 
     def __call__(self, var, indices, updates, **kwargs):
@@ -264,6 +266,9 @@ class _ScatterMaxTfCompose:
         work = tf.convert_to_tensor(var)
         if _scatter_noop(work, updates):
             return [work]
+        _tf_dt = work.dtype  # 算子输出 dtype, 出口窄回用
+        if _tf_dt in (tf.float16, tf.bfloat16):
+            work = tf.cast(work, tf.float32)  # 复刻内核 LoadWiden
         upd = tf.reshape(
             tf.convert_to_tensor(updates), tf.concat([[-1], tf.shape(work)[1:]], axis=0)
         )
@@ -275,7 +280,10 @@ class _ScatterMaxTfCompose:
             tf.compat.v1.scatter_max(
                 ref, tf.cast(idx, tf.int32), tf.cast(upd, ref.dtype)
             )
-        return [tf.convert_to_tensor(ref)]
+        out = tf.convert_to_tensor(ref)
+        return [
+            tf.cast(out, _tf_dt) if out.dtype != _tf_dt else out
+        ]  # 复刻 NarrowStore
 
 
 _GOLDEN_FN = __golden_scatter_max

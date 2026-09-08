@@ -32,6 +32,13 @@ Mirrors the proven foreach_add_list_inplace golden (200/200), with - instead of 
 import numpy as np
 import torch
 
+import inspect as _kf_inspect
+
+try:
+    from ml_dtypes import bfloat16 as _KF_BF16
+except ImportError:
+    _KF_BF16 = None
+
 try:
     from ml_dtypes import bfloat16 as _bf16
 except ImportError:
@@ -64,16 +71,23 @@ def _to_fp32(a):
         a = a.view(_bf16)
     # dtype 已匹配时复用原缓冲: 大张量(单份 GB 级)无谓复制会把进程推向 OOM。
     # 下游 torch 算子均非原地，不会改写输入，故复用安全。
+    # Promote 后的 float64 是高精度真值, **不能砍回 fp32**: 砍了就与三方腿(fp32)
+    # 逐位相等, cross_check 三比值分母被夹到精度标准 §4.5.1 的 err ——
+    # 无量纲的 mare/mere 恒等于地板值(实测 fp32 档 mare 恒为 0.0019531 = 1ULP/2^-14),
+    # 有量纲的 RMSE 随输出量级放大而假红。fp32 档等于从未被真正验证。
+    if a.dtype == np.float64:
+        return a
     return a.astype(np.float32, copy=False)
 
 
 def __golden_foreach_sub_list_inplace(x1_list, x2_list, alpha, **kwargs):
     output_dtypes = _per_tensor_dtypes(kwargs.get("output_dtypes"))
 
-    # alpha is a 1-element tensor; take the scalar value in float32 for stable compute.
-    alpha_val = torch.from_numpy(np.asarray(alpha).astype(np.float32).reshape(-1)[:1])[
-        0
-    ]
+    # 标量落成 **0 维 float64** 张量: torch 的类型提升里 0 维张量不会抬高 dim>0 的张量,
+    # 所以数据是 fp32 时结果仍是 fp32、被 Promote 成 fp64 时标量自动跟到 fp64。
+    # 不能 astype(np.float32): golden 在 cross_check 下收到的是 Promote 后的入参
+    # (fp32 -> float64), 用一个先降到 fp32 的标量去乘/加会污染高精度真值。
+    alpha_val = torch.from_numpy(np.asarray(alpha, "float64").reshape(-1)[:1])[0]
 
     results = []
     for i, (a, b) in enumerate(zip(x1_list, x2_list)):
@@ -127,23 +141,48 @@ _TOL_KERNEL = {
 }
 
 
+def _tp_bf16_carrier(a):
+    """bf16 用 ml_dtypes 承载, torch 不认其 void 载体, 按位 view 回 bf16(同宽无损)。
+    这是**载体还原**, 不是精度干预。"""
+    a = np.asarray(a)
+    if a.dtype.kind == "V" and _bf16 is not None:
+        a = a.view(_bf16)
+    if _bf16 is not None and a.dtype == _bf16:
+        return torch.from_numpy(a.astype(np.float32)).to(torch.bfloat16)
+    return torch.from_numpy(a)
+
+
 def _tp_list(xs):
-    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
-    out = []
-    for a in xs:
-        t = a if isinstance(a, torch.Tensor) else torch.as_tensor(_to_fp32(a))
-        # 不抬精度: 三方按算子 dtype 算, 否则与 Promote 后的 golden 逐位相等、cross_check 分母塌陷
-        out.append(
-            t
-            if t.dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64)
-            else t.to(torch.float32)
-        )
-    return out
+    """third_party 入参(TensorList): 只做**载体还原**(bf16 用 ml_dtypes 承载, torch 不认其
+    void 视图, 按位 view 回来, 同宽无损), 不在这里干预精度。
+
+    ⚠️ 不能嵌套调用 golden 侧的 _to_compute/_to_fp32: 它们会把 bf16 抬成 fp32, 使三方腿
+    与走 Promote(bf16->fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母被夹到
+    精度标准 §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
+    整型同理必须整型进整型出, 走一趟 fp32 会把 >2^24 的 int32 抹掉低位(见 #85 的成因)。
+    计算精度统一由 _kf_widen/_kf_narrow 按内核算法处理。
+    """
+    return [
+        a if isinstance(a, torch.Tensor) else _tp_bf16_carrier(np.asarray(a))
+        for a in xs
+    ]
 
 
-def _tp_scalar(x):
-    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x, "float32"))
-    return float(t.reshape(-1)[0])
+def _tp_scalar(x, ref=None):
+    """三方标量: 必须返回 **Python 数值**。
+
+    torch 的 foreach 标量重载只接受 `Number scalar` / `tuple of Scalars` / `tuple of Tensors`,
+    传单元素张量会直接 TypeError(实测 `_foreach_sub(list, Tensor)` ->
+    "received an invalid combination of arguments")。
+
+    Python 标量在 torch 里是 **weak-typed**, 不会抬高张量 dtype ——
+    实测 `_foreach_sub([fp16 tensor], 2.0)` 结果仍是 fp16, `_foreach_mul` 同理;
+    (这一点与 numpy 相反, numpy 的 Python float 会把数组抬到 fp64。)
+    整型用 `int()` 保持精确: Python int 任意精度, 不存在 >2^24 丢低位的问题。
+    """
+    t = x if isinstance(x, torch.Tensor) else _tp_bf16_carrier(np.asarray(x))
+    v = t.reshape(-1)[0]
+    return float(v) if t.is_floating_point() else int(v)
 
 
 _GOLDEN_FN = __golden_foreach_sub_list_inplace
@@ -154,9 +193,75 @@ class _ForeachSubListInplaceCompose:
         return torch._foreach_sub(_tp_list(x1), _tp_list(x2), alpha=_tp_scalar(alpha))
 
 
+# ---------------------------------------------------------------------------
+# 三方(GPU)腿按内核算法转写: 入口复刻 Cast<U, T, 0>(窄类型加宽到内核计算类型),
+# 出口复刻 Cast<T, U, 1> / NarrowStore(窄回算子输出 dtype)。两者**必须成对**:
+#   * 缺入口加宽 -> 三方在窄类型上逐步截断, 与融合内核(中间量全程 fp32)不是同一算法;
+#     A100 实测 fp16 下 300*300 直接得 inf, 而 (a*a)/a 真值 300 明明存得下。
+#   * 缺出口窄回 -> 三方停在 fp32, 与走 TTK Promote(fp16->fp32) 的 golden 逐位相等,
+#     双标杆塌成单标杆, 三比值分母夹到精度标准 §4.5.1 的 err, 有量纲的 RMSE 比值随
+#     输出量级线性放大而假红(真机实测: 不窄回 rmse 比值 2348.6, 窄回后 1.0000)。
+# 整型不动: 内核对 int 也是原生/int32 累加, 走一趟 fp32 会把 >2^24 抹掉低位。
+# 只作用于 third_party(GPU); CPU golden 由 TTK 的 Promote 单独喂高精度输入, 不受影响。
+# ---------------------------------------------------------------------------
+
+
+def _kf_widen(a, seen):
+    if isinstance(a, (list, tuple)):
+        return type(a)(_kf_widen(x, seen) for x in a)
+    if isinstance(a, torch.Tensor):
+        if a.dtype in (torch.float16, torch.bfloat16):
+            seen.append(a.dtype)
+            return a.float()
+        return a
+    if isinstance(a, np.ndarray) or (_KF_BF16 is not None and hasattr(a, "dtype")):
+        n = np.asarray(a)
+        if n.dtype.kind == "V" and _KF_BF16 is not None:
+            n = n.view(_KF_BF16)
+        if _KF_BF16 is not None and n.dtype == _KF_BF16:
+            seen.append(torch.bfloat16)
+            return n.astype(np.float32)
+        if n.dtype == np.float16:
+            seen.append(torch.float16)
+            return n.astype(np.float32)
+        return a
+    return a
+
+
+def _kf_narrow(o, dt):
+    if isinstance(o, (list, tuple)):
+        return type(o)(_kf_narrow(x, dt) for x in o)
+    if isinstance(o, torch.Tensor) and o.is_floating_point():
+        return o.to(dt)
+    return o
+
+
+class _TpKernelFaithful:
+    _INNER = _ForeachSubListInplaceCompose
+
+    def __call__(self, *args, **kwargs):
+        seen = []
+        wa = [_kf_widen(a, seen) for a in args]
+        wk = {k: _kf_widen(v, seen) for k, v in kwargs.items()}
+        outs = self._INNER()(*wa, **wk)
+        return outs if not seen else _kf_narrow(outs, seen[0])
+
+
+# TTK 服务端按 __call__ 的**签名**做入参绑定(remote/server/executor.py::_bind ->
+# _function_param_names)。包装类若只写 *args/**kwargs, 服务端取不到形参名, 会退化成
+# 位置传参、同时又传同名关键字 -> "got multiple values for argument ..." 而三方腿整个不可用。
+# 故把内层 compose 的签名透传出去。
+try:
+    _TpKernelFaithful.__call__.__signature__ = _kf_inspect.signature(
+        _ForeachSubListInplaceCompose.__call__
+    )
+except (ValueError, TypeError):  # 内层无法内省时保持原样
+    pass
+
+
 class ForeachSubListInplaceKernelSpec:
     golden = _GOLDEN_FN
-    third_party = {"torch": _ForeachSubListInplaceCompose}
+    third_party = {"torch": _TpKernelFaithful}
     tolerance = _TOL_KERNEL
 
 
@@ -167,9 +272,12 @@ __spec__ = {
 
 
 def _tp_one(t):
-    """aclnn 通路: 框架传入的已是设备侧 torch.Tensor, 不经 numpy。"""
-    t = t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
-    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它(口径同 _tp_list)。
+
+    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 写在此处不生效
+    也无副作用; 待该通路支持三方后自动接上。
+    """
+    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
 
 def _tp_num(v):
@@ -206,7 +314,7 @@ class ForeachSubListInplaceAclnnSpec:
             torch._foreach_sub(a, torch._foreach_mul(b, _tp_num(alpha))), x1
         )
 
-    third_party = {"torch": _ForeachSubListInplaceCompose}
+    third_party = {"torch": _TpKernelFaithful}
     tolerance = _TOL_KERNEL
 
 

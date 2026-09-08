@@ -91,7 +91,7 @@ aclnnStatus aclnnScatterMin(
       <td>indices</td>
       <td>输入</td>
       <td>公式中的输入indices，要更新的索引位置。</td>
-      <td>-</td>
+      <td>索引值的取值范围为[0, varRef.shape[0])（varRef.shape[0]为varRef首维大小）。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1-8</td>

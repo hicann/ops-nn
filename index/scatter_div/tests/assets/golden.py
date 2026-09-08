@@ -53,13 +53,23 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     slice_shape = var.shape[1:]
     slice_size = int(np.prod(slice_shape)) if slice_shape else 1
 
-    # work in float32 for fp, int64 for int (avoid overflow during division)
+    # 工作 dtype: 整型走 int64 防连除溢出; 浮点**跟随 TTK 下发的 dtype, 只向上兜底不向下砍**。
+    # golden 在 cross_check 下收到的是 Promote 后的入参(fp16/bf16 -> fp32, fp32 -> float64),
+    # 若无条件 astype(np.float32) 就把 fp32 档的 float64 真值砍回 fp32 —— 等于撤销 Promote,
+    # 使 golden 与三方腿逼近逐位相等, 三比值分母被夹到精度标准 §4.5.1 的 err, RMSE 比值假红。
+    # bf16 无 numpy 原生类型, 只有它需要向上桥接到 fp32。
+    def _wd(a):
+        return (
+            np.float32 if a.dtype.kind == "V" or a.dtype.name == "bfloat16" else a.dtype
+        )
+
     if is_int:
         work = torch.from_numpy(var.astype(np.int64).reshape(var_first, slice_size))
         upd = torch.from_numpy(updates.astype(np.int64).reshape(-1, slice_size))
     else:
-        work = torch.from_numpy(var.astype(np.float32).reshape(var_first, slice_size))
-        upd = torch.from_numpy(updates.astype(np.float32).reshape(-1, slice_size))
+        wdt = np.promote_types(_wd(var), _wd(updates))
+        work = torch.from_numpy(var.astype(wdt).reshape(var_first, slice_size))
+        upd = torch.from_numpy(updates.astype(wdt).reshape(-1, slice_size))
 
     idx_flat = indices.reshape(-1).astype(np.int64)
     n = idx_flat.shape[0]
@@ -315,6 +325,9 @@ class _ScatterDivTfCompose:
         work = tf.convert_to_tensor(var)
         if _scatter_noop(work, updates):
             return [work]
+        _tf_dt = work.dtype  # 算子输出 dtype, 出口窄回用
+        if _tf_dt in (tf.float16, tf.bfloat16):
+            work = tf.cast(work, tf.float32)  # 复刻内核 LoadWiden
         upd = tf.reshape(
             tf.convert_to_tensor(updates), tf.concat([[-1], tf.shape(work)[1:]], axis=0)
         )
@@ -322,7 +335,7 @@ class _ScatterDivTfCompose:
         keep = tf.logical_and(idx >= 0, idx < tf.cast(tf.shape(work)[0], tf.int64))
         idx, upd = tf.boolean_mask(idx, keep), tf.boolean_mask(upd, keep)
         if tf.size(idx) == 0:
-            return [work]
+            return [tf.cast(work, _tf_dt) if work.dtype != _tf_dt else work]
         upd = tf.cast(upd, work.dtype)
         has_zero = bool(tf.reduce_any(tf.equal(upd, tf.zeros_like(upd))))
         # 整型判定与 golden/torch 腿同源(def 注册的整型面), 不用 is_floating 泛判。
@@ -335,7 +348,8 @@ class _ScatterDivTfCompose:
         if not has_zero:
             ref = tf.Variable(work)
             tf.compat.v1.scatter_div(ref, tf.cast(idx, tf.int32), upd)
-            return [tf.convert_to_tensor(ref)]
+            out = tf.convert_to_tensor(ref)
+            return [tf.cast(out, _tf_dt) if out.dtype != _tf_dt else out]
 
         # 浮点 + 零除数: TF 的 ScatterDiv 拒收, 按索引顺序链式除(与算子/golden 同序)。
         rows = idx.numpy().tolist()
@@ -343,7 +357,8 @@ class _ScatterDivTfCompose:
             work = tf.tensor_scatter_nd_update(
                 work, [[i]], tf.expand_dims(tf.divide(work[i], upd[k]), 0)
             )
-        return [work]
+        # 链式除同样要窄回: 上面的加宽只为复刻 LoadWiden, 不能泄漏到出参
+        return [tf.cast(work, _tf_dt) if work.dtype != _tf_dt else work]
 
 
 _GOLDEN_FN = __golden_scatter_div
