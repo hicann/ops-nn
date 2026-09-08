@@ -130,14 +130,14 @@ public:
         __ubuf__ T_X* dxAddr = (__ubuf__ T_X*)dxLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
-            RegTensor<float> gammaReg, dyReg, xReg, rstdReg, meanReg, dxReg, mulReg0, mulReg2, mulReg4, subReg;
+            RegTensor<float> gammaReg, dyReg, xReg, rstdReg, negMeanReg, dxReg, mulReg0, mulReg2;
             for (uint16_t r = 0; r < loopRow; r++) {
                 uint32_t sreg = cols_;
                 int64_t cols = colsAlignBlock_;
                 MaskReg maskReg = CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
-                LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
-                Muls(meanReg, meanReg, avgFactor1_, maskReg);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(negMeanReg, meanAddr + static_cast<uint32_t>(r));
+                Muls(negMeanReg, negMeanReg, -avgFactor1_, maskReg);
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
                     LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
@@ -147,9 +147,9 @@ public:
 
                     LoadAndCast(xReg, xAddr, maskReg, r * cols + i * oneRepeat);
                     Mul(mulReg0, xReg, rstdReg, maskReg);
-                    Mul(mulReg4, mulReg0, meanReg, maskReg);
-                    Sub(subReg, mulReg2, mulReg4, maskReg);
-                    Mul(dxReg, subReg, rstdReg, maskReg);
+                    // FMA: dy * gamma + (x * rstd) * (-mean).
+                    AscendC::Reg::MulAddDst(mulReg2, mulReg0, negMeanReg, maskReg);
+                    Mul(dxReg, mulReg2, rstdReg, maskReg);
                     if constexpr (IsSameType<T_X, float>::value) {
                         StoreAlign(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxReg, maskReg);
                     } else {

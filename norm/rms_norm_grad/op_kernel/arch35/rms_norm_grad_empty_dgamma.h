@@ -62,7 +62,7 @@ public:
 
     __aicore__ inline void VFDuplicateRows(LocalTensor<float>& dstAddr, uint32_t currentCols)
     {
-        AscendC::NumericLimits<float>::QuietNaN(dstAddr, currentCols);
+        Duplicate<float>(dstAddr, 0.0f, currentCols);
     }
 
     __aicore__ inline void CalcDgamma(uint32_t gmOffset_, uint32_t currentCols)

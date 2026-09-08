@@ -67,7 +67,7 @@ def rms_norm_grad_golden(dy, x, rstd, gamma, **kwargs):
 
     if n == 0 and d != 0:
         dx = torch.empty(x_torch.shape)
-        dgamma = torch.full((d,), torch.nan)
+        dgamma = torch.zeros(gamma_torch.shape)
         if ori_dtype.name == "bfloat16":
             dx = _torch_to_np(dx.to(torch.bfloat16))
         else:
@@ -95,6 +95,6 @@ def rms_norm_grad_golden(dy, x, rstd, gamma, **kwargs):
         dx = _torch_to_np(dx.to(torch.bfloat16))
     else:
         dx = dx.to(_np_to_torch[ori_dtype.type]).numpy()
-    dgamma = dgamma.to(torch.float32)
+    dgamma = dgamma.reshape(gamma_torch.shape).to(torch.float32)
 
     return dx, dgamma.numpy()
