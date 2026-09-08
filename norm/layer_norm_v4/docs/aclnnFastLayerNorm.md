@@ -159,7 +159,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>meanOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的均值。对应公式中的`meanOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`rstdOutOptional`存在时与`rstdOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。当`rstdOutOptional`存在时，shape与`rstdOutOptional`相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>rstdOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`rstdOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`meanOutOptional`存在时与`meanOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。当`meanOutOptional`存在时，shape与`meanOutOptional`相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -223,8 +223,8 @@ aclnnStatus aclnnFastLayerNorm(
       <td>传入的input、normalizedShape或out为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="9">161002</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
       <td>input、weightOptional（非空时）、biasOptional（非空时）、out、meanOutOptional（非空时）、rstdOutOptional（非空时），shape的维度超过8维。</td>
     </tr>
     <tr>
@@ -250,6 +250,9 @@ aclnnStatus aclnnFastLayerNorm(
     </tr>
     <tr>
       <td>input和out的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>meanOutOptional（非空时）或rstdOutOptional（非空时）的shape不是[A1,...,Ai,1,...,1]。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_NULLPTR</td>

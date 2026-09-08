@@ -181,6 +181,24 @@ static bool CheckNormalizeShape(const aclTensor* input, const aclIntArray* fastN
     return true;
 }
 
+static bool CheckMeanRstdOutputShape(const aclTensor* input, const aclIntArray* normalizedShape,
+                                     const aclTensor* meanOutOptional, const aclTensor* rstdOutOptional)
+{
+    auto expectedShape = input->GetViewShape();
+    const size_t beginAxis = expectedShape.GetDimNum() - normalizedShape->Size();
+    for (size_t index = beginAxis; index < expectedShape.GetDimNum(); index++) {
+        expectedShape.SetDim(index, 1);
+    }
+
+    if (meanOutOptional) {
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(meanOutOptional, expectedShape, return false);
+    }
+    if (rstdOutOptional) {
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(rstdOutOptional, expectedShape, return false);
+    }
+    return true;
+}
+
 static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
                        const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
                        const aclTensor* rstdOutOptional)
@@ -217,6 +235,9 @@ static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShap
 
     // 7.校验三个输出的shape
     OP_CHECK_SHAPE_NOT_EQUAL(input, out, return false);
+    if (!CheckMeanRstdOutputShape(input, normalizedShape, meanOutOptional, rstdOutOptional)) {
+        return false;
+    }
     return true;
 }
 
