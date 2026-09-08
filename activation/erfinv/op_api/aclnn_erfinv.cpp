@@ -15,6 +15,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -32,8 +33,8 @@ static const std::initializer_list<DataType> FLOAT_LIST = {DataType::DT_FLOAT16,
 
 static const std::initializer_list<DataType> GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= op::SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND_DTYPE_SUPPORT_LIST;
