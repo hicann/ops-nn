@@ -104,6 +104,7 @@ private:
     TBuf<QuePosition::VECCALC> maxUb_;
     TBuf<QuePosition::VECCALC> sumUb_;
     TBuf<QuePosition::VECCALC> clearUb_;
+    TBuf<QuePosition::VECCALC> allReduceUb_;
     GlobalTensor<T1> inputGm_;
     GlobalTensor<T2> targetGm_;
     GlobalTensor<float> weightGm_;
@@ -145,6 +146,7 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         workspaceGm_.SetGlobalBuffer((__gm__ float*)workspace);
         pipe_->InitBuffer(partSumUb_, clearUbNum);
         pipe_->InitBuffer(clearUb_, clearUbNum);
+        pipe_->InitBuffer(allReduceUb_, static_cast<uint32_t>(tilingData_->realCoreNum * sumNum * BLOCK_UB));
     }
     int32_t ncOnce = static_cast<int32_t>(tilingData_->onceNSize * tilingData_->cOnceNum);
     int32_t perBlockF32 = BLOCK_UB / FP32_DTYPE;
@@ -875,7 +877,7 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         padParams.leftPadding = 0;
         padParams.rightPadding = (ONE_FP32 - 1);
         padParams.paddingValue = 0.0f;
-        LocalTensor<float> allReduceUb = inputQueue_.AllocTensor<float>();
+        LocalTensor<float> allReduceUb = allReduceUb_.Get<float>();
         AscendC::DataCopyPad(allReduceUb, workspaceGm_[0], copyParams, padParams);
         MTE2ToV();
         int32_t num = static_cast<int32_t>(tilingData_->realCoreNum) * ONE_FP32;
@@ -883,7 +885,6 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         LocalTensor<T1> clearUbT1 = clearUb_.Get<T1>();
         VfAllSum(num, allReduceUb, clearUb);
         DataCopyOutLoss(clearUb, clearUbT1);
-        inputQueue_.FreeTensor(allReduceUb);
     }
 }
 

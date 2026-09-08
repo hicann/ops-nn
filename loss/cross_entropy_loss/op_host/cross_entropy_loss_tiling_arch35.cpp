@@ -104,7 +104,7 @@ int64_t countOnes(uint64_t num)
 
 class CrossEntropyLossRegbaseTiling {
 public:
-    explicit CrossEntropyLossRegbaseTiling(gert::TilingContext* context) : context_(context){};
+    explicit CrossEntropyLossRegbaseTiling(gert::TilingContext* context) : context_(context) {};
 
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
@@ -198,15 +198,18 @@ bool CrossEntropyLossRegbaseTiling::IsAllC()
     int64_t perBlock = blockSize / dtypeX;
     int64_t cAligned = (BaseTiling_.C + perBlock - 1) / perBlock * perBlock;
     int64_t allUbSize = static_cast<int64_t>(ubSize);
+    int64_t allReduceUbSize = reduction == REDUCTION_NONE ? 0 : BaseTiling_.realCoreNum * CONST_3 * blockSize;
     int64_t arBuf_db2 = DOUBLE_BUFFER_2 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
     int64_t aBuf_db2 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
-    int64_t aNum_db2 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) / (arBuf_db2 + aBuf_db2);
+    int64_t aNum_db2 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize - allReduceUbSize) /
+                       (arBuf_db2 + aBuf_db2);
     auto shape = ge::Shape({aNum_db2, cAligned});
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
     AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
                                        minValue);
-    int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
+    int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize -
+                        allReduceUbSize) /
                        (arBuf_db2 + aBuf_db2);
     OP_LOGI(context_,
             "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db2:%ld, aNum_db2:%ld, maxValue:%u, aNum_res:%ld",
@@ -214,11 +217,13 @@ bool CrossEntropyLossRegbaseTiling::IsAllC()
     if (aNum_res < perBlock) {
         int64_t arBuf_db1 = DOUBLE_BUFFER_1 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
         int64_t aBuf_db1 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
-        int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) / (arBuf_db1 + aBuf_db1);
+        int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize - allReduceUbSize) /
+                           (arBuf_db1 + aBuf_db1);
         shape = ge::Shape({aNum_db1, cAligned});
         AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
                                            minValue);
-        aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
+        aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize -
+                    allReduceUbSize) /
                    (arBuf_db1 + aBuf_db1);
         OP_LOGI(context_,
                 "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db1:%ld, aNum_db1:%ld, maxValue:%u, aNum_res:%ld",
