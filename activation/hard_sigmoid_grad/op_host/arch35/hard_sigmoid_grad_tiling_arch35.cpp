@@ -115,7 +115,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // collapses HardSigmoid into a constant beta, output gradient is identically 0
     // which is degenerate); beta must be finite. NaN/Inf would propagate through
     // Muls/Adds/CompareScalar leading to undefined behavior.
-    OP_CHECK_IF(!std::isfinite(alpha) || alpha == 0.0f,
+    OP_CHECK_IF(!std::isfinite(alpha) || std::fpclassify(alpha) == FP_ZERO,
                 OP_LOGE(context, "HardSigmoidGrad: alpha must be finite and nonzero, got %f", alpha),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!std::isfinite(beta), OP_LOGE(context, "HardSigmoidGrad: beta must be finite, got %f", beta),

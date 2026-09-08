@@ -66,6 +66,9 @@ protected:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
     ge::graphStatus CheckAndGetXAndAttrs();
+    ge::graphStatus ParseAndCheckAttrs();
+    ge::graphStatus ParseXShapeInfo();
+    ge::graphStatus CheckGradYInfo();
     ge::graphStatus CheckAndGetGroupIndex();
     ge::graphStatus CheckGradX();
     ge::graphStatus CountMaxPair();

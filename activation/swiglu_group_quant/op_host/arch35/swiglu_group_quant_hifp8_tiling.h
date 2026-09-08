@@ -43,7 +43,7 @@ private:
     ge::graphStatus CheckWeightInfo();
     ge::graphStatus CheckGroupIndexInfo();
     ge::graphStatus CheckScaleInfo() const;
-    ge::graphStatus CheckOutputInfo();
+    ge::graphStatus CheckOutputInfo() const;
     ge::graphStatus CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape) const;
     ge::graphStatus CheckYScaleShape() const;
     ge::graphStatus CheckYOriginShape(size_t xDimNum, const gert::Shape& xStorageShape) const;
