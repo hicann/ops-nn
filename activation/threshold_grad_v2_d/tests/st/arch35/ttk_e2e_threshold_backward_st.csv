@@ -1,0 +1,13 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,golden_api,input_data_ranges,is_enabled
+e2e_threshold_backward_fp32_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('float32','float32')",,{'threshold': 0.0},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_fp32_th55,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('float32','float32')",,{'threshold': 5.5},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_fp16_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('float16','float16')",,{'threshold': 0.0},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_fp16_thm37,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('float16','float16')",,{'threshold': -3.7},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_bf16_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('bfloat16','bfloat16')",,{'threshold': 0.0},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_bf16_thm292,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('bfloat16','bfloat16')",,{'threshold': -292.5},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_int32_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('int32','int32')",,{'threshold': 0},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_int32_th5,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('int32','int32')",,{'threshold': 5},,,"((-1000,1000),(-1000,1000))",
+e2e_threshold_backward_int8_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('int8','int8')",,{'threshold': 0},,,"((-100,100),(-100,100))",
+e2e_threshold_backward_int8_thm3,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('int8','int8')",,{'threshold': -3},,,"((-100,100),(-100,100))",
+e2e_threshold_backward_uint8_th0,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('uint8','uint8')",,{'threshold': 0},,,"((0,255),(0,255))",
+e2e_threshold_backward_uint8_th5,torch.ops.aten.threshold_backward,"((19,2,5,8),(19,2,5,8))","('uint8','uint8')",,{'threshold': 5},,,"((0,255),(0,255))",
