@@ -660,10 +660,10 @@ private:
     uint64_t kTileCount_;
     uint64_t l1BufNum_;
 
-    static constexpr int32_t L0C_BUFFER_SIZE = ASC_L0C_SIZE;
-    static constexpr int32_t L0A_BUFFER_SIZE = ASC_L0A_SIZE;
-    static constexpr int32_t L0B_BUFFER_SIZE = ASC_L0B_SIZE;
-    static constexpr int32_t BIAS_TABLE_SIZE = ASC_BT_SIZE;
+    static constexpr int32_t L0C_BUFFER_SIZE = 262144;
+    static constexpr int32_t L0A_BUFFER_SIZE = 65536;
+    static constexpr int32_t L0B_BUFFER_SIZE = 65536;
+    static constexpr int32_t BIAS_TABLE_SIZE = 32 * 1024;
     static constexpr int32_t BUFFER_HALF_SHL = 15;
     static constexpr int32_t GROUP_SIZE_32 = 32;
     static constexpr int32_t SCALE_COPY_GROUP_SIZE = 2;
@@ -677,7 +677,7 @@ private:
     static constexpr uint64_t SYNC_AIV_AIC_FLAG = 2;
     static constexpr uint64_t QUADRUPLE_BUFFER = 4;
     static constexpr uint64_t FLAG_ID_MAX = 16;
-    static constexpr uint64_t L1_BUFFER_HALF_SIZE = ASC_L1_SIZE / 2;
+    static constexpr uint64_t L1_BUFFER_HALF_SIZE = 256 * 1024;
     static constexpr uint64_t DOUBLE_BUFFER = 2;
     static constexpr uint64_t C0_SIZE_B8 = 32;
     static constexpr uint64_t FRACTAL_SIZE = 512; // 16 * 32

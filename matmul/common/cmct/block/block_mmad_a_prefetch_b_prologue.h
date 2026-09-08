@@ -453,7 +453,7 @@ private:
     }
 
     static constexpr uint8_t AIV_NUM = AivNum;
-    static constexpr int64_t L1_SIZE = ASC_L1_SIZE / 1024;
+    static constexpr int64_t L1_SIZE = 512;
     static constexpr uint64_t SINGLE_BUFFER_NUM = 1;
     static constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
     static constexpr uint64_t SYNC_AIV_AIC_FLAG = 8;

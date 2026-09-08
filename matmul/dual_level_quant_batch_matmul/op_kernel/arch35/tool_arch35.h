@@ -38,10 +38,10 @@ using AscendC::PaddingMode;
 namespace DualLevelQuantBatchMatmul::Arch35 {
 // buffer相关定义
 static constexpr int32_t DOUBLE_BUFFER_NUM = 2;
-static constexpr uint32_t L1_BUFFER_SIZE_BYTE = ASC_L1_SIZE;
-static constexpr uint32_t L0C_BUFFER_SIZE_BYTE = ASC_L0C_SIZE;
-static constexpr uint32_t L0A_BUFFER_SIZE_BYTE = ASC_L0A_SIZE;
-static constexpr uint32_t L0B_BUFFER_SIZE_BYTE = ASC_L0B_SIZE;
+static constexpr uint32_t L1_BUFFER_SIZE_BYTE = 512 * 1024;
+static constexpr uint32_t L0C_BUFFER_SIZE_BYTE = 256 * 1024;
+static constexpr uint32_t L0A_BUFFER_SIZE_BYTE = 64 * 1024;
+static constexpr uint32_t L0B_BUFFER_SIZE_BYTE = 64 * 1024;
 
 // 参数约束定义
 static constexpr uint64_t MX_GROUPSIZE = 32;

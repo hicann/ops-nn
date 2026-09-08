@@ -25,7 +25,7 @@
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
-constexpr uint64_t L0C_SIZE_256K = ASC_L0C_SIZE;
+constexpr uint64_t L0C_SIZE_256K = 256 * 1024UL;
 constexpr uint8_t NO_NEED_BROADCAST = 0;
 constexpr uint8_t A_NEED_BROADCAST = 1;
 constexpr uint8_t B_NEED_BROADCAST = 2;

@@ -17,7 +17,7 @@
 namespace AscendC {
 constexpr uint32_t BUFFER_NUM = 2UL;
 constexpr uint32_t VECCORE_NUM = 2UL;
-constexpr uint32_t L1_MAX_SIZE_910B = ASC_L1_SIZE;
+constexpr uint32_t L1_MAX_SIZE_910B = 512 * 1024UL;
 constexpr uint32_t BASE_N_128 = 128UL;
 constexpr uint32_t BASE_N_256 = 256UL;
 constexpr uint32_t MUL_DATASIZE_READ_PER_ITER = 256UL;
