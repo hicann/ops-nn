@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- 接口功能：对指定层进行均值为0、标准差为1的归一化计算。aclnnLayerNormWithImplMode接口相比aclnnLayerNorm接口，可以通过配置impl_mode参数选择不同的归一化实现策略，以适应不同的应用场景和性能需求。
+- 接口功能：对指定层进行均值为0、标准差为1的归一化计算。aclnnLayerNormWithImplMode接口相比aclnnLayerNorm接口，可以通过配置implMode参数选择不同的归一化实现策略，以适应不同的应用场景和性能需求。
 
 - 计算公式：
 
