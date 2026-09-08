@@ -115,7 +115,7 @@ aclnnStatus aclnnFusedAdamw(
       <tr>
         <td>paramsRef（aclTensorList*）</td>
         <td>输入/输出</td>
-        <td>待计算的权重列表，公式中的θ。</td>
+        <td><ul><li>不支持空Tensor。</li><li>待计算的权重列表，公式中的θ。</li></ul></td>
         <td>-</td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnFusedAdamw(
       <tr>
         <td>grads（aclTensorList*）</td>
         <td>输入</td>
-        <td>梯度数据列表，公式中的g<sub>t</sub>。</td>
+        <td><ul><li>不支持空Tensor。</li><li>梯度数据列表，公式中的g<sub>t</sub>。</li></ul></td>
         <td>-</td>
         <td>与“paramsRef”参数一致。</td>
         <td>ND</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnFusedAdamw(
       <tr>
         <td>expAvgsRef（aclTensorList*）</td>
         <td>输入/输出</td>
-        <td>一阶动量列表，公式中的m。</td>
+        <td><ul><li>不支持空Tensor。</li><li>一阶动量列表，公式中的m。</li></ul></td>
         <td>-</td>
         <td>与“paramsRef”参数一致。</td>
         <td>ND</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnFusedAdamw(
       <tr>
         <td>expAvgSqsRef（aclTensorList*）</td>
         <td>输入/输出</td>
-        <td>二阶动量列表，公式中的v，不能为负数。</td>
+        <td><ul><li>不支持空Tensor。</li><li>二阶动量列表，公式中的v，不能为负数。</li></ul></td>
         <td>-</td>
         <td>与“paramsRef”参数一致。</td>
         <td>ND</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnFusedAdamw(
       <tr>
         <td>maxExpAvgSqsRef（aclTensorList*）</td>
         <td>输入/输出</td>
-        <td>保存最大二阶矩列表，与更新后的expAvgSqsRef比较后取最大值输出。</td>
+        <td><ul><li>不支持空Tensor。</li><li>保存最大二阶矩列表，与更新后的expAvgSqsRef比较后取最大值输出。</li></ul></td>
         <td>此参数在amsgrad参数为true时必选，在amsgrad参数为false时可选。</td>
         <td>与“paramsRef”参数一致。</td>
         <td>ND</td>
@@ -308,8 +308,8 @@ aclnnStatus aclnnFusedAdamw(
       <td>传入的paramsRef、grads、expAvgsRef、expAvgSqsRef、stateSteps是空指针时。</td>
       </tr>
       <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>paramsRef、grads、expAvgsRef、expAvgSqsRef、maxExpAvgSqsRef的数据类型不在支持的范围内时。</td>
       </tr>
       <tr>
@@ -317,12 +317,6 @@ aclnnStatus aclnnFusedAdamw(
       </tr>
       <tr>
       <td>grads、expAvgsRef、expAvgSqsRef和paramsRef的shape不一致时。</td>
-      </tr>
-      <tr>
-      <td>当amsgrad为true时，maxExpAvgSqsRef和paramsRef的shape不一致时。</td>
-      </tr>
-      <tr>
-      <td>stateSteps中每个Tensor的元素个数不为1时。</td>
       </tr>
     </tbody></table>
 
@@ -553,7 +547,7 @@ int main()
     aclTensorList* paramsRefList = aclCreateTensorList(paramsRefListData.data(), paramsRefListData.size());
     aclTensorList* gradsList = aclCreateTensorList(gradsListData.data(), gradsListData.size());
     aclTensorList* expavgsList = aclCreateTensorList(expavgsListData.data(), expavgsListData.size());
-    aclTensorList* expavgsqsListList = aclCreateTensorList(expavgsqsListData.data(), expavgsqsListData.size());
+    aclTensorList* expavgsqsList = aclCreateTensorList(expavgsqsListData.data(), expavgsqsListData.size());
     aclTensorList* maxexpavgsqsList = aclCreateTensorList(maxexpavgsqsData.data(), maxexpavgsqsData.size());
     aclTensorList* stepsList = aclCreateTensorList(stepsListData.data(), stepsListData.size());
 
@@ -568,7 +562,7 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    ret = aclnnFusedAdamwGetWorkspaceSize(paramsRefList, gradsList, expavgsList, expavgsqsListList, maxexpavgsqsList,
+    ret = aclnnFusedAdamwGetWorkspaceSize(paramsRefList, gradsList, expavgsList, expavgsqsList, maxexpavgsqsList,
                                         stepsList, gradScaleOptional, foundInfOptional, lr, beta1, beta2, weightDecay,
                                         eps, amsgrad, maximize, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedAdamwGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
@@ -606,7 +600,7 @@ int main()
     aclDestroyTensorList(paramsRefList);
     aclDestroyTensorList(gradsList);
     aclDestroyTensorList(expavgsList);
-    aclDestroyTensorList(expavgsqsListList);
+    aclDestroyTensorList(expavgsqsList);
     aclDestroyTensorList(maxexpavgsqsList);
     aclDestroyTensorList(stepsList);
     aclDestroyTensor(gradScaleOptional);
