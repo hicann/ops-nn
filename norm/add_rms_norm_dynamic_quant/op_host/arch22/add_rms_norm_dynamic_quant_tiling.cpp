@@ -281,7 +281,10 @@ bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutputDtype()
         if (!CheckOptionalShapeExisting(shape)) {
             return true;
         }
-        auto dtype = this->context_->GetInputDesc(idx)->GetDataType();
+        const auto* desc = this->context_->GetOptionalInputDesc(idx);
+        OP_TILING_CHECK(desc == nullptr, OP_LOGE(context_->GetNodeName(), "Get optional input descriptor failed."),
+                        return false);
+        auto dtype = desc->GetDataType();
         OP_TILING_CHECK(ge::GRAPH_SUCCESS != CheckDtypeVaild(dtype, supported),
                         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                             this->context_->GetNodeName(), name, Ops::Base::ToString(dtype).c_str(),

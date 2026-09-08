@@ -113,6 +113,27 @@ static void ExecuteTestCase(gert::StorageShape input_shape, gert::StorageShape g
                 .TilingData(param.get())
                 .Workspace(ws_size)
                 .Build();
+        } else if (num_inputs == 4) {
+            return gert::TilingContextFaker()
+                .NodeIoNum(4, 5)
+                .IrInstanceNum({1, 1, 1, 0, 0, 1})
+                .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape})
+                .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
+                .CompileInfo(&compile_info)
+                .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(0, output_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(1, output_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)}})
+                .TilingData(param.get())
+                .Workspace(ws_size)
+                .Build();
         } else {
             return gert::TilingContextFaker()
                 .NodeIoNum(5, 5)
@@ -205,4 +226,14 @@ TEST_F(AddRmsNormDynamicQuantTilingArch22, add_rms_norm_dynamic_quant_tiling_wit
     gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
     ExecuteTestCase(input_shape, gamma_shape, out_shape, reduce_shape, 6, ge::DT_INT8, 1);
+}
+
+TEST_F(AddRmsNormDynamicQuantTilingArch22, add_rms_norm_dynamic_quant_tiling_beta_without_smooth)
+{
+    gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
+    gert::StorageShape gamma_shape = {{16}, {16}};
+    gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
+    gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
+
+    ExecuteTestCase(input_shape, gamma_shape, out_shape, reduce_shape, 4, ge::DT_INT8, 1);
 }
