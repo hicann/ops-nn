@@ -25,6 +25,7 @@
 #include "bn_infer_grad_tiling_capacity.h"
 #include "../../op_kernel/arch35/bn_infer_grad_tiling_key.h"
 #include <algorithm>
+#include <limits>
 #include <sstream>
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
@@ -253,31 +254,18 @@ static std::string Arr2String(const int64_t* arr, int64_t n)
     return oss.str();
 }
 
+static constexpr int64_t kMaxDimSize = std::numeric_limits<int32_t>::max();
+
 BNInferGradTiling::BNInferGradTiling(gert::TilingContext* ctx) : ctx_(ctx) {}
 
-ge::graphStatus BNInferGradTiling::ValidateTensorDescs()
+ge::graphStatus BNInferGradTiling::ValidateInputTensorDescs(ge::DataType (&inputDtypes)[3],
+                                                            ge::Format (&inputFormats)[3])
 {
-    const char* inputNames[] = {"grads", "scale", "batch_variance"};
-    auto isFeatureFormat = [](ge::Format format) { return format == ge::FORMAT_NCHW || format == ge::FORMAT_NHWC; };
-    ge::DataType inputDtypes[3] = {};
-    ge::Format inputFormats[3] = {};
     for (size_t i = 0; i < 3; ++i) {
         auto inputDesc = ctx_->GetInputDesc(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
         inputDtypes[i] = inputDesc->GetDataType();
         inputFormats[i] = inputDesc->GetStorageFormat();
-    }
-    OP_CHECK_IF(!isFeatureFormat(inputFormats[0]),
-                OP_LOGE(ctx_->GetNodeName(),
-                        "BNInferGrad: grads format %d must be FORMAT_NCHW or FORMAT_NHWC on Ascend950; "
-                        "FORMAT_NC1HWC0 is not supported",
-                        static_cast<int>(inputFormats[0])),
-                return ge::GRAPH_FAILED);
-    for (size_t i = 1; i < 3; ++i) {
-        OP_CHECK_IF(inputFormats[i] != ge::FORMAT_ND,
-                    OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: input %s format %d must be FORMAT_ND", inputNames[i],
-                            static_cast<int>(inputFormats[i])),
-                    return ge::GRAPH_FAILED);
     }
 
     OP_CHECK_IF(
@@ -292,29 +280,34 @@ ge::graphStatus BNInferGradTiling::ValidateTensorDescs()
                 OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: batch_variance dtype %d must be DT_FLOAT",
                         static_cast<int>(inputDtypes[2])),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus BNInferGradTiling::ValidateOutputTensorDesc(ge::DataType gradsDtype, ge::Format gradsFormat)
+{
     auto outputDesc = ctx_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, outputDesc);
-    const ge::Format outputFormat = outputDesc->GetStorageFormat();
-    OP_CHECK_IF(!isFeatureFormat(outputFormat),
-                OP_LOGE(ctx_->GetNodeName(),
-                        "BNInferGrad: x_backprop format %d must be FORMAT_NCHW or FORMAT_NHWC on Ascend950; "
-                        "FORMAT_NC1HWC0 is not supported",
-                        static_cast<int>(outputFormat)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(outputFormat != inputFormats[0],
-                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop format %d must equal grads format %d",
-                        static_cast<int>(outputFormat), static_cast<int>(inputFormats[0])),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(outputDesc->GetDataType() != inputDtypes[0],
+    (void)gradsFormat;
+    OP_CHECK_IF(outputDesc->GetDataType() != gradsDtype,
                 OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop dtype %d must equal grads dtype %d",
-                        static_cast<int>(outputDesc->GetDataType()), static_cast<int>(inputDtypes[0])),
+                        static_cast<int>(outputDesc->GetDataType()), static_cast<int>(gradsDtype)),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BNInferGradTiling::ValidateTensorDescs()
+{
+    ge::DataType inputDtypes[3] = {};
+    ge::Format inputFormats[3] = {};
+    if (ValidateInputTensorDescs(inputDtypes, inputFormats) != ge::GRAPH_SUCCESS ||
+        ValidateOutputTensorDesc(inputDtypes[0], inputFormats[0]) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     data_format_ = inputFormats[0];
     OP_LOGI(ctx_->GetNodeName(),
-            "BNInferGrad: validated grads/x_backprop format=%d, scale/batch_variance format=ND, input dtypes "
-            "grads=%d scale=%d batch_variance=%d",
+            "BNInferGrad: validated input/output dtypes; format metadata is not rejected by tiling, grads format=%d, "
+            "input dtypes grads=%d scale=%d batch_variance=%d",
             static_cast<int>(data_format_), static_cast<int>(inputDtypes[0]), static_cast<int>(inputDtypes[1]),
             static_cast<int>(inputDtypes[2]));
     return ge::GRAPH_SUCCESS;
@@ -332,8 +325,14 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
                 return ge::GRAPH_FAILED);
 
     std::vector<int64_t> grads_dims;
-    for (int64_t d = 0; d < grads_rank; d++)
-        grads_dims.push_back(gradsShape.GetDim(d));
+    for (int64_t d = 0; d < grads_rank; d++) {
+        const int64_t dim = gradsShape.GetDim(d);
+        OP_CHECK_IF(
+            dim < 0 || dim > kMaxDimSize,
+            OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: grads dim %ld value %ld out of [0,%ld]", d, dim, kMaxDimSize),
+            return ge::GRAPH_FAILED);
+        grads_dims.push_back(dim);
+    }
 
     // 空 tensor（REQUIREMENTS §5.3 / DESIGN §5.4.1 / spec.yaml）：grads 任意维度为 0 时，
     // 直接返回空的 x_backprop，不执行 Kernel。此处仅记录标志，后续 DoTilingAndSet 强制走空路径
@@ -371,15 +370,16 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
     const int64_t gradsChannels = grads_dims[channelAxis];
     const int64_t scaleChannels = scaleShape.GetDim(0);
     const int64_t varianceChannels = varianceShape.GetDim(0);
-    OP_CHECK_IF(scaleChannels < 0 || scaleChannels != gradsChannels,
-                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: scale length %ld must equal grads channel count %ld",
-                        scaleChannels, gradsChannels),
+    OP_CHECK_IF(scaleChannels < 0 || scaleChannels > kMaxDimSize || scaleChannels != gradsChannels,
+                OP_LOGE(ctx_->GetNodeName(),
+                        "BNInferGrad: scale length %ld must be in [0,%ld] and equal grads channel count %ld",
+                        scaleChannels, kMaxDimSize, gradsChannels),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varianceChannels < 0 || varianceChannels != gradsChannels,
-        OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: batch_variance length %ld must equal grads channel count %ld",
-                varianceChannels, gradsChannels),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varianceChannels < 0 || varianceChannels > kMaxDimSize || varianceChannels != gradsChannels,
+                OP_LOGE(ctx_->GetNodeName(),
+                        "BNInferGrad: batch_variance length %ld must be in [0,%ld] and equal grads channel count %ld",
+                        varianceChannels, kMaxDimSize, gradsChannels),
+                return ge::GRAPH_FAILED);
 
     std::vector<int64_t> scale_dims = makeChannelShape(scaleChannels);
     std::vector<int64_t> variance_dims = makeChannelShape(varianceChannels);
@@ -398,9 +398,14 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
                         outShape.GetDimNum(), gradsShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
     for (size_t d = 0; d < gradsShape.GetDimNum(); ++d) {
-        OP_CHECK_IF(outShape.GetDim(d) != gradsShape.GetDim(d),
+        const int64_t outDim = outShape.GetDim(d);
+        OP_CHECK_IF(outDim < 0 || outDim > kMaxDimSize,
+                    OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop dim %zu value %ld out of [0,%ld]", d, outDim,
+                            kMaxDimSize),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(outDim != gradsShape.GetDim(d),
                     OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop dim %zu value %ld must equal grads value %ld",
-                            d, outShape.GetDim(d), gradsShape.GetDim(d)),
+                            d, outDim, gradsShape.GetDim(d)),
                     return ge::GRAPH_FAILED);
     }
     std::vector<int64_t> out_dims;

@@ -63,6 +63,8 @@ public:
 
 private:
     ge::graphStatus ValidateTensorDescs();
+    ge::graphStatus ValidateInputTensorDescs(ge::DataType (&inputDtypes)[3], ge::Format (&inputFormats)[3]);
+    ge::graphStatus ValidateOutputTensorDesc(ge::DataType gradsDtype, ge::Format gradsFormat);
     ge::graphStatus GetShapeInfo();
     template <int64_t R>
     ge::graphStatus DoTilingAndSet();
