@@ -218,8 +218,7 @@ __spec__ = {
 def _tp_one(t):
     """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它(口径同 _tp_list)。
 
-    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 写在此处不生效
-    也无副作用; 待该通路支持三方后自动接上。
+    aclnn 通路同样取用 third_party(按名绑定), 见下方 _TpAclnn。
     """
     return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
@@ -237,18 +236,32 @@ def _keep_dtype(res, ref):
     ]
 
 
+class _TpAclnn:
+    """aclnn 通路三方腿适配: 头文件形参名与 kernel 通路的 def 注册名**不同**。
+
+    inplace 算子的 aclnn 头文件把首个(被原地改写的)形参写作 `xRef`, 而 def 注册名是
+    `x`。服务端对 third_party 按名绑定(remote/server/execution_container.py::
+    bind_params), pool 的 key 取自头文件形参名; 直接复用 kernel 通路的竞品类会因
+    形参 `x` 不在 pool 中而抛 UnknownParamError, 三方腿整条起不来, cross_check
+    随即 GOLDEN_FAILURE。故按头文件形参名另立适配类, 内部转调同一个竞品类。
+    """
+
+    def __call__(self, xRef, **kwargs):
+        return _TpKernelFaithful()(xRef)
+
+
 class ForeachACosInplaceAclnnSpec:
     """aclnn 通路 spec。golden 收设备侧 torch.Tensor(README: ACLNN 传入已 H2D 的
     torch.Tensor), 由 TTK 按 aclnn 头文件形参**位置**下发(AclnnParamPlan.build_args),
     故签名逐项对齐 aclnnForeachACosInplaceGetWorkspaceSize 的形参;
-    third_party 走按名绑定(pool 的 key 取自头文件形参名), 复用 kernel 通路的竞品类
-    ——其形参名即 def 注册名, 与头文件一致。"""
+    third_party 走按名绑定(pool 的 key 取自头文件形参名), 因该名与 def 注册名不同,
+    另由 _TpAclnn 适配后转调同一个竞品类。"""
 
     @staticmethod
     def golden(x, **kwargs):
         return _keep_dtype(torch._foreach_acos([_tp_one(t) for t in x]), x)
 
-    third_party = {"torch": _TpKernelFaithful}
+    third_party = {"torch": _TpAclnn}
     tolerance = _TOL_KERNEL
 
 
