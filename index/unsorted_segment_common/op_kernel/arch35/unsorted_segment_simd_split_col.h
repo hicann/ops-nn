@@ -35,6 +35,7 @@ private:
     TQue<QuePosition::VECIN, SPLIT_COL_DB_BUF> xQue_;
     TQue<QuePosition::VECIN, SPLIT_COL_DB_BUF> idsQue_;
     TQue<QuePosition::VECOUT, 1> yQue_;
+    TBuf<TPosition::VECCALC> reduceBuf_;
     TPipe* pipe_ = nullptr;
     const UnsortedSegmentSimdSplitColTilingData* td_;
 };
@@ -52,6 +53,7 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorCompu
     pipe_->InitBuffer(idsQue_, SPLIT_COL_DB_BUF,
                       Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
     pipe_->InitBuffer(yQue_, 1, td_->outputOuterDim * td_->baseA * sizeof(X_T));
+    pipe_->InitBuffer(reduceBuf_, AllIdsInvalidReduceBufBytes<IDS_T>(static_cast<uint32_t>(td_->baseS)));
 }
 
 template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
@@ -65,6 +67,68 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorCompu
     uint64_t blockOffset = GetBlockIdx() * td_->normBlockData;
     uint64_t aLoopNum = Ops::Base::CeilDiv(curCoreCols, td_->baseA);
     uint64_t sLoopNum = Ops::Base::CeilDiv(td_->inputOuterDim, td_->baseS);
+
+    if (sLoopNum == 1UL) {
+        uint64_t rows = td_->inputOuterDim;
+        LocalTensor<IDS_T> idsLocal = idsQue_.AllocTensor<IDS_T>();
+        CopyIn(idsLocal, idsGm_, 0, 1, static_cast<uint32_t>(rows), 0);
+        idsQue_.EnQue<IDS_T>(idsLocal);
+        event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
+        WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
+        idsLocal = idsQue_.DeQue<IDS_T>();
+
+        LocalTensor<IDS_T> reduceDst = reduceBuf_.Get<IDS_T>();
+        bool hasValidIds = !AllIdsInvalidVectorized(idsLocal, static_cast<uint32_t>(rows),
+                                                    static_cast<int64_t>(td_->outputOuterDim), reduceDst);
+        if (hasValidIds) {
+            for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
+                uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * td_->baseA) : td_->baseA;
+                uint64_t colsAlign = Aligned(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
+
+                LocalTensor<X_T> yLocal = yQue_.AllocTensor<X_T>();
+                Duplicate(yLocal, InitValueType::Get(), td_->outputOuterDim * colsAlign);
+                yQue_.EnQue<X_T>(yLocal);
+                yLocal = yQue_.DeQue<X_T>();
+                LocalTensor<X_T> xLocal = xQue_.AllocTensor<X_T>();
+                uint64_t offset = blockOffset + aLoop * td_->baseA;
+                CopyIn(xLocal, xGm_, offset, rows, cols, td_->innerDim - cols);
+                xQue_.EnQue<X_T>(xLocal);
+
+                xLocal = xQue_.DeQue<X_T>();
+                for (uint64_t i = 0; i < rows; i++) {
+                    uint64_t dstIdx = idsLocal.GetValue(i);
+                    if (dstIdx < 0 || dstIdx >= td_->outputOuterDim) {
+                        continue;
+                    }
+                    uint64_t dstOffset = dstIdx * colsAlign;
+                    VectorComputeFunc()(yLocal, xLocal, dstOffset, i * colsAlign, cols);
+                }
+                xQue_.FreeTensor(xLocal);
+
+                yQue_.EnQue<X_T>(yLocal);
+                yLocal = yQue_.DeQue<X_T>();
+                uint64_t outOffset = blockOffset + aLoop * td_->baseA;
+                CopyOut(yGm_, yLocal, outOffset, td_->outputOuterDim, cols, 0, td_->innerDim - cols);
+                yQue_.FreeTensor(yLocal);
+            }
+        } else {
+            for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
+                uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * td_->baseA) : td_->baseA;
+                uint64_t colsAlign = Aligned(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
+
+                LocalTensor<X_T> yLocal = yQue_.AllocTensor<X_T>();
+                Duplicate(yLocal, InitValueType::Get(), td_->outputOuterDim * colsAlign);
+                yQue_.EnQue<X_T>(yLocal);
+                yLocal = yQue_.DeQue<X_T>();
+                uint64_t outOffset = blockOffset + aLoop * td_->baseA;
+                CopyOut(yGm_, yLocal, outOffset, td_->outputOuterDim, cols, 0, td_->innerDim - cols);
+                yQue_.FreeTensor(yLocal);
+            }
+        }
+        idsQue_.FreeTensor(idsLocal);
+        return;
+    }
 
     for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
         uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * td_->baseA) : td_->baseA;
@@ -80,16 +144,24 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorCompu
             LocalTensor<IDS_T> idsLocal = idsQue_.AllocTensor<IDS_T>();
             CopyIn(idsLocal, idsGm_, sLoop * td_->baseS, 1, rows, 0);
             idsQue_.EnQue<IDS_T>(idsLocal);
-            event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-            SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
-            WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
+            event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
+            WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
+            idsLocal = idsQue_.DeQue<IDS_T>();
+
+            LocalTensor<IDS_T> reduceDst = reduceBuf_.Get<IDS_T>();
+            bool hasValidIds = !AllIdsInvalidVectorized(idsLocal, static_cast<uint32_t>(rows),
+                                                        static_cast<int64_t>(td_->outputOuterDim), reduceDst);
+            if (!hasValidIds) {
+                idsQue_.FreeTensor(idsLocal);
+                continue;
+            }
 
             LocalTensor<X_T> xLocal = xQue_.AllocTensor<X_T>();
             uint64_t offset = blockOffset + sLoop * td_->baseS * td_->innerDim + aLoop * td_->baseA;
             CopyIn(xLocal, xGm_, offset, rows, cols, td_->innerDim - cols);
             xQue_.EnQue<X_T>(xLocal);
 
-            idsLocal = idsQue_.DeQue<IDS_T>();
             xLocal = xQue_.DeQue<X_T>();
             for (uint64_t i = 0; i < rows; i++) {
                 uint64_t dstIdx = idsLocal.GetValue(i);

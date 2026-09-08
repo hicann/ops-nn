@@ -470,5 +470,96 @@ __aicore__ inline void UniqueStat(LocalTensor<int32_t>& noDupRes, int64_t& arNum
     SetFlag<HardEvent::V_S>(eventIDVToS);
     WaitFlag<HardEvent::V_S>(eventIDVToS);
 }
+
+constexpr uint32_t ALL_IDS_INVALID_CAST_BLK = 1024;
+constexpr uint32_t REDUCE_ELEMENTS_PER_REPEAT_BITS = 256;
+
+template <typename Index>
+__aicore__ inline constexpr uint32_t AllIdsInvalidReduceBufBytes(uint32_t maxCount)
+{
+    if constexpr (sizeof(Index) == 8) {
+        constexpr uint32_t elementsPerBlock = static_cast<uint32_t>(ONE_BLOCK_SIZE / sizeof(int32_t));
+        constexpr uint32_t elementsPerRepeat = REDUCE_ELEMENTS_PER_REPEAT_BITS / static_cast<uint32_t>(sizeof(int32_t));
+        const uint32_t firstMaxRepeat = ALL_IDS_INVALID_CAST_BLK / elementsPerRepeat;
+        const uint32_t roundUp = (firstMaxRepeat * 2u + elementsPerBlock - 1u) / elementsPerBlock * elementsPerBlock;
+        const uint32_t needElements = elementsPerBlock + roundUp;
+        return ALL_IDS_INVALID_CAST_BLK * sizeof(int32_t) + needElements * sizeof(int32_t);
+    } else {
+        constexpr uint32_t elementsPerBlock = static_cast<uint32_t>(ONE_BLOCK_SIZE / sizeof(Index));
+        constexpr uint32_t elementsPerRepeat = REDUCE_ELEMENTS_PER_REPEAT_BITS / static_cast<uint32_t>(sizeof(Index));
+        const uint32_t firstMaxRepeat = maxCount / elementsPerRepeat;
+        const uint32_t iter1OutputCount = firstMaxRepeat * 2u;
+        const uint32_t roundUp = (iter1OutputCount + elementsPerBlock - 1u) / elementsPerBlock * elementsPerBlock;
+        const uint32_t needElements = elementsPerBlock + roundUp;
+        const uint32_t needBytes = needElements * static_cast<uint32_t>(sizeof(Index));
+        return (needBytes > 2u * ONE_BLOCK_SIZE) ? needBytes : static_cast<uint32_t>(2u * ONE_BLOCK_SIZE);
+    }
+}
+
+template <typename Index>
+__aicore__ inline bool AllIdsInvalidVectorized(const LocalTensor<Index>& idsUb, uint32_t count, int64_t outputOuterDim,
+                                               LocalTensor<Index>& reduceDst)
+{
+    if (count == 0) {
+        return true;
+    }
+    if constexpr (sizeof(Index) == 8) {
+        if (outputOuterDim > static_cast<int64_t>(INT32_MAX)) {
+            return false;
+        }
+        LocalTensor<int32_t> dst32 = reduceDst.template ReinterpretCast<int32_t>();
+        constexpr uint32_t minOffset32 = static_cast<uint32_t>(ONE_BLOCK_SIZE / sizeof(int32_t));
+        const uint32_t maxBlk = count / ALL_IDS_INVALID_CAST_BLK;
+        const uint32_t tailBlk = count % ALL_IDS_INVALID_CAST_BLK;
+        LocalTensor<int32_t> maxDst = dst32[ALL_IDS_INVALID_CAST_BLK];
+        LocalTensor<int32_t> minDst = dst32[ALL_IDS_INVALID_CAST_BLK + minOffset32];
+        LocalTensor<int32_t> tmp32 = dst32[ALL_IDS_INVALID_CAST_BLK + 2u * minOffset32];
+        int32_t runningMax = INT32_MIN;
+        int32_t runningMin = INT32_MAX;
+        event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        for (uint32_t b = 0; b <= maxBlk; ++b) {
+            const uint32_t blkLen = (b == maxBlk) ? tailBlk : ALL_IDS_INVALID_CAST_BLK;
+            if (blkLen == 0) {
+                continue;
+            }
+            const uint32_t srcOff = b * ALL_IDS_INVALID_CAST_BLK;
+            Cast(dst32, idsUb[srcOff], RoundMode::CAST_NONE, static_cast<int32_t>(blkLen));
+            PipeBarrier<PIPE_V>();
+            ReduceMax(maxDst, dst32, tmp32, static_cast<int32_t>(blkLen), false);
+            PipeBarrier<PIPE_V>();
+            ReduceMin(minDst, dst32, tmp32, static_cast<int32_t>(blkLen), false);
+            PipeBarrier<PIPE_V>();
+            SetFlag<HardEvent::V_S>(eventIDVToS);
+            WaitFlag<HardEvent::V_S>(eventIDVToS);
+            const int32_t maxVal = maxDst.GetValue(0);
+            const int32_t minVal = minDst.GetValue(0);
+            SetFlag<HardEvent::S_V>(eventIDSToV);
+            WaitFlag<HardEvent::S_V>(eventIDSToV);
+            if (maxVal > runningMax) {
+                runningMax = maxVal;
+            }
+            if (minVal < runningMin) {
+                runningMin = minVal;
+            }
+        }
+        return (static_cast<int64_t>(runningMax) < 0) || (static_cast<int64_t>(runningMin) >= outputOuterDim);
+    } else {
+        const int32_t reduceCount = static_cast<int32_t>(count);
+        ReduceMax(reduceDst, idsUb, reduceDst, reduceCount, false);
+        PipeBarrier<PIPE_V>();
+        const uint32_t minOffset = static_cast<uint32_t>(ONE_BLOCK_SIZE / sizeof(Index));
+        ReduceMin(reduceDst[minOffset], idsUb, reduceDst[minOffset], reduceCount, false);
+        PipeBarrier<PIPE_V>();
+        event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(eventIDVToS);
+        WaitFlag<HardEvent::V_S>(eventIDVToS);
+        const int64_t maxVal = static_cast<int64_t>(reduceDst.GetValue(0));
+        const int64_t minVal = static_cast<int64_t>(reduceDst.GetValue(minOffset));
+        SetFlag<HardEvent::S_V>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        WaitFlag<HardEvent::S_V>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        return (maxVal < 0) || (minVal >= outputOuterDim);
+    }
+}
 } // namespace UnsortedSegment
 #endif
