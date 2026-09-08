@@ -23,73 +23,175 @@
 
 ## 功能说明
 
-- 接口功能：SwigluGroupGrad算子实现SwiGLU激活函数反向传播计算。用于计算输入梯度`grad_x`和权重梯度`grad_weight`。
-- 计算公式：
+- 接口功能 : SwigluGroupGrad算子实现SwiGLU激活函数反向传播计算。用于计算输入梯度`grad_x`和权重梯度`grad_weight`。
 
-  步骤一 GroupIndex处理（可选）→ 计算trunc：
-  $$\text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]$$
+-  计算公式
 
-  其中$G$为MoE专家分组数，`grad_x`仅保留前$\text{trunc}$行的有效梯度；`grad_weight`不应用该行掩码。
+-  基础计算流程
 
-  步骤二 输入切分（将x切分为x0和x1）：
-  $$\mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)$$
+```
+步骤〇：GroupIndex处理（可选）→ 计算trunc
+步骤一：输入切分（将x切分为x0和x1）
+步骤二：Clamp处理（可选）
+步骤三：SwiGLU反向传播计算
+步骤四：Weight梯度计算（可选）
+步骤五：梯度拼接输出
+```
 
-  $$\mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)$$
+步骤〇：GroupIndex处理（可选）
 
-  步骤三 Clamp处理（可选）：
-  $$\mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)$$
+当提供 `groupIndex` 时，用于动态计算实际处理的token数量：
 
-  $$\mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)$$
+$$
+\text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]
+$$
 
-  其中$c$为`clamp_limit`。
+其中：
+- $G$ 为MoE专家分组数
+- 后续所有步骤仅处理前 $\text{trunc}$ 行数据
 
-  步骤四 SwiGLU反向传播计算：
+**MoE场景说明**：在MoE推理反向传播中，不同专家可能处理不同数量的token，groupIndex允许动态调整处理范围。
 
-  前向传播回顾：
-  $$\text{Swish}(\mathbf{x}_0) = \mathbf{x}_0 \cdot \sigma(\mathbf{x}_0)$$
+步骤一：输入切分
 
-  $$\mathbf{y}_{\text{swiglu}} = \text{Swish}(\mathbf{x}_0) \cdot \mathbf{x}_1$$
+输入张量 $\mathbf{x} \in \mathbb{R}^{T \times 2H}$ 或 $\mathbb{R}^{B \times S \times 2H}$ 沿最后一维切分为两部分：
 
-  Sigmoid计算：
-  $$\sigma(\mathbf{x}_0') = \frac{1}{1 + e^{-\mathbf{x}_0'}}$$
+$$
+\mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)
+$$
 
-  SiLU计算：
-  $$\text{SiLU}(\mathbf{x}_0') = \mathbf{x}_0' \cdot \sigma(\mathbf{x}_0')$$
+$$
+\mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)
+$$
 
-  SiLU梯度：
-  $$\frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)$$
+步骤二：Clamp处理（可选）
 
-  输入梯度计算：
-  $$\mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]$$
+当 `clamp_limit > 0` 时，对输入进行限制：
 
-  $$\mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])$$
+$$
+\mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)
+$$
 
-  其中$\mathbf{grad}_{y_0}$为处理后的梯度输入：如果提供了weight，则$\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}} \cdot \mathbf{weight}$；如果未提供weight，则$\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}}$。
+$$
+\mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)
+$$
 
-  步骤五 Weight梯度计算（可选）：
-  $$\mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{\text{output}}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]$$
+其中 $c$ 为 `clamp_limit`。
 
-  其中$\mathbf{y}_{\text{origin}}$为SwiGLU前向输出；存在weight时，该输出已乘weight。沿最后一维（H维度）求和。当提供`groupIndex`时，`grad_weight`仍按完整行计算，不应用$\mathbb{I}(t < \text{trunc})$掩码。
+步骤三：SwiGLU反向传播计算
 
-  步骤六 Clamp反向传播（可选）：
-  $$\mathbf{m}_{x_0}[t, h] = \mathbb{I}(\mathbf{x}_0[t, h] < c)$$
+**前向传播回顾**：
+$$
+\text{Swish}(\mathbf{x}_0) = \mathbf{x}_0 \cdot \sigma(\mathbf{x}_0)
+$$
 
-  $$\mathbf{m}_{x_1}[t, h] = \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)$$
+$$
+\mathbf{y}_{\text{swiglu}} = \text{Swish}(\mathbf{x}_0) \cdot \mathbf{x}_1
+$$
 
-  $$\mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbf{m}_{x_0}[t, h]$$
+**反向传播梯度计算**：
 
-  $$\mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbf{m}_{x_1}[t, h]$$
+首先计算Sigmoid：
 
-  步骤七 梯度拼接与GroupIndex处理：
-  $$\mathbf{grad}_x[t, h] = \begin{cases}
-  \mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\
-  \mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)
-  \end{cases}$$
+$$
+\sigma(\mathbf{x}_0') = \frac{1}{1 + e^{-\mathbf{x}_0'}}
+$$
 
-  当提供`groupIndex`时，仅前$\text{trunc}$行的梯度有效：
-  $$\mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})$$
+然后计算SiLU：
 
-- 关键特性：在MoE推理反向传播中，不同专家可能处理不同数量的token，groupIndex允许动态调整处理范围。
+$$
+\text{SiLU}(\mathbf{x}_0') = \mathbf{x}_0' \cdot \sigma(\mathbf{x}_0')
+$$
+
+**SiLU梯度公式**：
+
+$$
+\frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)
+$$
+
+**输入梯度计算**：
+
+$$
+\mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]
+$$
+
+$$
+\mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])
+$$
+
+其中：
+- $\mathbf{grad}_{y_0}$ 为处理后的梯度输入（见步骤四）
+- 如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}} \cdot \mathbf{weight}$
+- 如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{\text{output}}$
+
+步骤四：Weight梯度计算（可选）
+
+当提供 `weight` 时，计算权重梯度：
+
+$$
+\mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{\text{output}}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]
+$$
+
+其中：
+- $\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出
+- 沿最后一维（H维度）求和
+
+**GroupIndex处理**：
+
+当提供 `groupIndex` 时，仅前 $\text{trunc}$ 行的权重梯度有效：
+
+$$
+\mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})
+$$
+
+其中 $\mathbb{I}$ 为指示函数。
+
+步骤五：Clamp反向传播（可选）
+
+当 `clamp_limit > 0` 时，应用Clamp的梯度掩码：
+
+**x0的Clamp掩码**：
+
+$$
+\mathbf{m}_{x_0}[t, h] = \mathbb{I}(\mathbf{x}_0[t, h] < c)
+$$
+
+**x1的Clamp掩码**：
+
+$$
+\mathbf{m}_{x_1}[t, h] = \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)
+$$
+
+**梯度掩码应用**：
+
+$$
+\mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbf{m}_{x_0}[t, h]
+$$
+
+$$
+\mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbf{m}_{x_1}[t, h]
+$$
+
+步骤六：梯度拼接与GroupIndex处理
+
+**梯度拼接**：
+
+$$
+\mathbf{grad}_x[t, h] = \begin{cases}
+\mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\
+\mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)
+\end{cases}
+$$
+
+**GroupIndex处理**：
+
+当提供 `groupIndex` 时，仅前 $\text{trunc}$ 行的梯度有效：
+
+$$
+\mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})
+$$
+
+---
 
 ## 函数原型
 
