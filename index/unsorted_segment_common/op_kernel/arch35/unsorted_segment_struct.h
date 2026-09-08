@@ -47,6 +47,16 @@ struct UnsortedSegmentSimdSplitColTilingData {
     uint64_t baseA;
 };
 
+struct UnsortedSegmentProdInputPartTilingData {
+    uint64_t inputOuterDim;
+    uint64_t outputOuterDim;
+    uint64_t innerDim;
+    uint64_t normRowNum;
+    uint64_t baseS;
+    uint64_t partCoreNum;
+    uint64_t mergeNormNum;
+    uint64_t mergeChunk;
+};
 struct UnsortedSegmentSimdNonSortTilingData {
     uint64_t inputOuterDim;
     uint64_t outputOuterDim;
@@ -91,5 +101,12 @@ struct UnsortedSegmentOutFlTilingData {
     uint64_t accStride;
 };
 
+struct UnsortedSegmentProdSegmentSortTilingData {
+    uint64_t blockNum;
+    uint64_t blockTilingSize;
+    uint64_t tailBlockTilingSize;
+    uint64_t innerDim;
+    uint64_t outputOuterDim;
+};
 } // namespace UnsortedSegment
 #endif
