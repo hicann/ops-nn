@@ -21,7 +21,7 @@
 
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
-#include "scatter_elements.h"
+#include "scatter_elements_simt.h"
 
 namespace ScatterElements {
 using namespace AscendC;

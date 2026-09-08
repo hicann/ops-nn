@@ -12,7 +12,7 @@
  * \file scatter_elements.cpp
  * \brief scatter_elements
  */
-#include "arch35/scatter_elements.h"
+#include "arch35/scatter_elements_simt.h"
 #include "arch35/scatter_elements_deterministic.h"
 
 using namespace ScatterElements;

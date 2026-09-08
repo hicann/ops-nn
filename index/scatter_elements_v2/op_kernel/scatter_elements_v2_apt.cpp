@@ -12,7 +12,7 @@
  * \file scatter_elements_v2_apt.cpp
  * \brief scatter_elements_v2
  */
-#include "arch35/scatter_elements_v2.h"
+#include "arch35/scatter_elements_v2_multi.h"
 #include "arch35/scatter_elements_v2_deterministic.h"
 #include "arch35/scatter_elements_with_sorted.h"
 
