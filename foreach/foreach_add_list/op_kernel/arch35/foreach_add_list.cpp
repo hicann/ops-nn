@@ -27,6 +27,9 @@ enum class ForeachAddListTilingKey : uint32_t {
     TILING_KEY_FP32 = 1,
     TILING_KEY_INT32 = 2,
     TILING_KEY_BF16 = 3,
+    TILING_KEY_INT16 = 4,
+    TILING_KEY_INT8 = 5,
+    TILING_KEY_UINT8 = 6,
 };
 
 template <uint32_t schMode>
@@ -76,5 +79,20 @@ __global__ __aicore__ void foreach_add_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR alph
     if constexpr (schMode == static_cast<uint32_t>(ForeachAddListTilingKey::TILING_KEY_BF16)) {
         float alphaVal = *((__gm__ float*)alpha);
         ForeachAddListProcessBf16(alphaVal, x1, x2, y, &tilingData);
+    }
+
+    if constexpr (schMode == static_cast<uint32_t>(ForeachAddListTilingKey::TILING_KEY_INT16)) {
+        int32_t alphaVal = *((__gm__ int32_t*)alpha);
+        ForeachAddListProcessInt16(alphaVal, x1, x2, y, &tilingData);
+    }
+
+    if constexpr (schMode == static_cast<uint32_t>(ForeachAddListTilingKey::TILING_KEY_INT8)) {
+        int32_t alphaVal = *((__gm__ int32_t*)alpha);
+        ForeachAddListProcessInt8(alphaVal, x1, x2, y, &tilingData);
+    }
+
+    if constexpr (schMode == static_cast<uint32_t>(ForeachAddListTilingKey::TILING_KEY_UINT8)) {
+        int32_t alphaVal = *((__gm__ int32_t*)alpha);
+        ForeachAddListProcessUint8(alphaVal, x1, x2, y, &tilingData);
     }
 }

@@ -94,6 +94,48 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachA
     }
 }
 
+// ========== INT16 compute kernel: y = x1 + x2 * alpha (int32 integer mul-add, wraparound) ==========
+template <typename IDX_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListInt16CastSimt(
+    IDX_T count, __gm__ int16_t* x1, __gm__ int16_t* x2, int32_t alphaVal, __gm__ int16_t* y)
+{
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
+         index += static_cast<IDX_T>(Simt::GetThreadNum())) {
+        int32_t x1_val = static_cast<int32_t>(x1[index]);
+        int32_t x2_val = static_cast<int32_t>(x2[index]);
+        int32_t result = x1_val + x2_val * alphaVal;
+        y[index] = static_cast<int16_t>((result & 0x7FFF) - (result & 0x8000));
+    }
+}
+
+// ========== INT8 compute kernel: y = x1 + x2 * alpha (int32 integer mul-add, wraparound) ==========
+template <typename IDX_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListInt8CastSimt(
+    IDX_T count, __gm__ int8_t* x1, __gm__ int8_t* x2, int32_t alphaVal, __gm__ int8_t* y)
+{
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
+         index += static_cast<IDX_T>(Simt::GetThreadNum())) {
+        int32_t x1_val = static_cast<int32_t>(x1[index]);
+        int32_t x2_val = static_cast<int32_t>(x2[index]);
+        int32_t result = x1_val + x2_val * alphaVal;
+        y[index] = static_cast<int8_t>((result & 0x7F) - (result & 0x80));
+    }
+}
+
+// ========== UINT8 compute kernel: y = x1 + x2 * alpha (int32 integer mul-add, wraparound) ==========
+template <typename IDX_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListUint8CastSimt(
+    IDX_T count, __gm__ uint8_t* x1, __gm__ uint8_t* x2, int32_t alphaVal, __gm__ uint8_t* y)
+{
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
+         index += static_cast<IDX_T>(Simt::GetThreadNum())) {
+        int32_t x1_val = static_cast<int32_t>(x1[index]);
+        int32_t x2_val = static_cast<int32_t>(x2[index]);
+        int32_t result = x1_val + x2_val * alphaVal;
+        y[index] = static_cast<uint8_t>(result & 0xFF);
+    }
+}
+
 // ========== Process: per-core multi-tensor iteration with 32/64-bit dispatch ==========
 
 // FP16 Process: iterates tensors, dispatches FP16 Cast VF kernel with IDX_T selection
@@ -260,6 +302,126 @@ __aicore__ inline void ForeachAddListProcessBf16(float alphaVal, GM_ADDR x1, GM_
                 Simt::VF_CALL<OpForeachAddListBf16CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
                                                                      x1_t + localStart, x2_t + localStart, alphaVal,
                                                                      y_t + localStart);
+            }
+        }
+    }
+}
+
+// INT16 Process: iterates tensors, dispatches INT16 Cast VF kernel with IDX_T selection
+__aicore__ inline void ForeachAddListProcessInt16(int32_t alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachAddListTilingData* tilingData)
+{
+    int32_t coreId = GetBlockIdx();
+    if (coreId >= tilingData->needCoreNum) {
+        return;
+    }
+
+    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
+    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
+
+    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
+    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
+    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
+
+    for (int32_t t = startT; t <= endT; t++) {
+        __gm__ int16_t* x1_t = x1List.GetDataPtr<int16_t>(t);
+        __gm__ int16_t* x2_t = x2List.GetDataPtr<int16_t>(t);
+        __gm__ int16_t* y_t = yList.GetDataPtr<int16_t>(t);
+
+        int64_t totalCount = tilingData->tensorDataCountList[t];
+        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
+        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
+        int64_t localCount = localEnd - localStart;
+
+        if (localCount > 0) {
+            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
+                Simt::VF_CALL<OpForeachAddListInt16CastSimt<int32_t>>(
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
+            } else {
+                Simt::VF_CALL<OpForeachAddListInt16CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
+                                                                      x1_t + localStart, x2_t + localStart, alphaVal,
+                                                                      y_t + localStart);
+            }
+        }
+    }
+}
+
+// INT8 Process: iterates tensors, dispatches INT8 Cast VF kernel with IDX_T selection
+__aicore__ inline void ForeachAddListProcessInt8(int32_t alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                 const ForeachAddListTilingData* tilingData)
+{
+    int32_t coreId = GetBlockIdx();
+    if (coreId >= tilingData->needCoreNum) {
+        return;
+    }
+
+    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
+    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
+
+    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
+    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
+    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
+
+    for (int32_t t = startT; t <= endT; t++) {
+        __gm__ int8_t* x1_t = x1List.GetDataPtr<int8_t>(t);
+        __gm__ int8_t* x2_t = x2List.GetDataPtr<int8_t>(t);
+        __gm__ int8_t* y_t = yList.GetDataPtr<int8_t>(t);
+
+        int64_t totalCount = tilingData->tensorDataCountList[t];
+        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
+        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
+        int64_t localCount = localEnd - localStart;
+
+        if (localCount > 0) {
+            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
+                Simt::VF_CALL<OpForeachAddListInt8CastSimt<int32_t>>(
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
+            } else {
+                Simt::VF_CALL<OpForeachAddListInt8CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
+                                                                     x1_t + localStart, x2_t + localStart, alphaVal,
+                                                                     y_t + localStart);
+            }
+        }
+    }
+}
+
+// UINT8 Process: iterates tensors, dispatches UINT8 Cast VF kernel with IDX_T selection
+__aicore__ inline void ForeachAddListProcessUint8(int32_t alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachAddListTilingData* tilingData)
+{
+    int32_t coreId = GetBlockIdx();
+    if (coreId >= tilingData->needCoreNum) {
+        return;
+    }
+
+    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
+    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
+
+    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
+    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
+    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
+
+    for (int32_t t = startT; t <= endT; t++) {
+        __gm__ uint8_t* x1_t = x1List.GetDataPtr<uint8_t>(t);
+        __gm__ uint8_t* x2_t = x2List.GetDataPtr<uint8_t>(t);
+        __gm__ uint8_t* y_t = yList.GetDataPtr<uint8_t>(t);
+
+        int64_t totalCount = tilingData->tensorDataCountList[t];
+        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
+        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
+        int64_t localCount = localEnd - localStart;
+
+        if (localCount > 0) {
+            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
+                Simt::VF_CALL<OpForeachAddListUint8CastSimt<int32_t>>(
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
+            } else {
+                Simt::VF_CALL<OpForeachAddListUint8CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
+                                                                      x1_t + localStart, x2_t + localStart, alphaVal,
+                                                                      y_t + localStart);
             }
         }
     }

@@ -51,6 +51,15 @@ static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::Dat
         case ge::DT_BF16:
             tilingKey = 3;
             return ge::GRAPH_SUCCESS;
+        case ge::DT_INT16:
+            tilingKey = 4;
+            return ge::GRAPH_SUCCESS;
+        case ge::DT_INT8:
+            tilingKey = 5;
+            return ge::GRAPH_SUCCESS;
+        case ge::DT_UINT8:
+            tilingKey = 6;
+            return ge::GRAPH_SUCCESS;
         default:
             OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dtype));
             return ge::GRAPH_FAILED;
