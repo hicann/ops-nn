@@ -298,7 +298,6 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputInfo() const
     auto xShape = context_->GetInputShape(INPUT_INDEX_X);
     auto xStorageShape = xShape->GetStorageShape();
     size_t xDimNum = xStorageShape.GetDimNum();
-
     if (CheckYShape(xDimNum, xStorageShape) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

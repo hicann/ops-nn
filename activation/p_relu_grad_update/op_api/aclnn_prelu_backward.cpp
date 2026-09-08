@@ -225,12 +225,12 @@ aclnnStatus aclnnPreluBackwardGetWorkspaceSize(const aclTensor* gradOutput, cons
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnPreluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnPreluBackward(void* workspace, uint64_t workspace_size, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnPreluBackward);
 
     // 固定写法，调用框架能力，完成计算
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return CommonOpExecutorRun(workspace, workspace_size, executor, stream);
 }
 
 #ifdef __cplusplus
