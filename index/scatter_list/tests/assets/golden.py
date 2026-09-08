@@ -55,10 +55,22 @@ def __golden_scatter_list(var_list, indice, updates, mask=None, **kwargs):
     # 实测 int32 = 2^30+100 经 float32 中转变成 2^30+128，**静默丢 28**。
     # 参照本身有损时，int32/int64 这两个 dtype 的精度结论根本没被验证过。
     # bfloat16 numpy 侧没有原生类型，只有它走 fp32 桥接（拷贝无损）。
+    # torch 对 uint16/uint32 未实现 index_put（实测测试方原用例 ScatterList_L0_005/006:
+    # NotImplementedError: "index_put" not implemented for 'UInt16'/'UInt32'），而 def
+    # 注册了 DT_UINT16/DT_UINT32。本算子是纯拷贝，按**等宽有符号视图**中转逐位无损，
+    # 既绕开 torch 的能力缺口又不动数值（不能走 fp32：会丢整数低位）。
+    _BITVIEW = {"uint16": np.int16, "uint32": np.int32, "uint64": np.int64}
+
     def _work(a):
         return np.float32 if a.dtype.name == "bfloat16" else a.dtype
 
-    out = [torch.from_numpy(np.ascontiguousarray(v.astype(_work(v)))) for v in var_list]
+    def _t(a):
+        """numpy -> torch，uint16/uint32 走等宽有符号位视图（reinterpret，非数值转换）。"""
+        a = np.ascontiguousarray(a)
+        bv = _BITVIEW.get(a.dtype.name)
+        return torch.from_numpy(a.view(bv) if bv is not None else a)
+
+    out = [_t(v.astype(_work(v))) for v in var_list]
 
     # axis relative to updates dims; corresponding var axis is one less (updates has
     # the extra leading B dim).
@@ -81,9 +93,7 @@ def __golden_scatter_list(var_list, indice, updates, mask=None, **kwargs):
             n_rows = S2
         if n_rows <= 0:
             continue
-        upd_i = torch.from_numpy(
-            np.ascontiguousarray(updates[i].astype(_work(var_list[i])))
-        )
+        upd_i = _t(updates[i].astype(_work(var_list[i])))
         # indice 给出的是散射起点，算子按线性地址写入 var：起点乘上 scatter 轴的行跨度，
         # 加上前导维偏移，得到平坦偏移后整行拷贝。README「indice值域：不支持索引越界」，
         # 越界属契约外输入，算子不做边界检查、也没有负索引回绕语义——超出 scatter 轴长时
@@ -110,7 +120,12 @@ def __golden_scatter_list(var_list, indice, updates, mask=None, **kwargs):
         vt.reshape(-1)[flat_idx[sel]] = src[sel]
 
     var_dtype = var_list[0].dtype
-    return [o.numpy().astype(var_dtype) for o in out]
+    # 位视图中转的要按原 dtype view 回去（reinterpret），不能 astype（那是数值转换）。
+    _bv = _BITVIEW.get(var_dtype.name)
+    return [
+        (o.numpy().view(var_dtype) if _bv is not None else o.numpy().astype(var_dtype))
+        for o in out
+    ]
 
 
 __golden__ = {"kernel": {"scatter_list": "__golden_scatter_list"}}
@@ -189,7 +204,16 @@ class _ScatterListCompose:
             )
             return t.to(torch.float32) if t.dtype == torch.bfloat16 else t
 
-        var_list = var if isinstance(var, (list, tuple)) else [var]
+        # TensorList 可能以 **dtype=object 的 ndarray** 形态送达(远端三方腿把入参序列化
+        # 再反序列化后就是这个形态), 此时 isinstance(var, (list, tuple)) 落空, 整个 object
+        # 数组会被当成单个张量去转 -> "TypeError: can't convert np.ndarray of type
+        # numpy.object_"。与元素 dtype 无关(torch 对 uint16/uint32/int16 都支持)。
+        var_list = (
+            list(var)
+            if isinstance(var, (list, tuple))
+            or (isinstance(var, np.ndarray) and var.dtype == object)
+            else [var]
+        )
         outs = [_to_t(v).clone() for v in var_list]
         upd = _to_t(updates)
         idx = (
@@ -237,7 +261,16 @@ class ScatterListKernelSpec:
 __spec__ = {
     "scatter_list": "ScatterListKernelSpec",
     "aclnnScatterList": "ScatterListAclnnSpec",
+    "torch_npu.npu_scatter_list": "ScatterListTorchSpec",
 }
+
+
+def _golden_numpy(t):
+    """只转换输入；整数不经浮点，BF16 经无损 FP32 桥接。"""
+    if t is None:
+        return None
+    t = t.detach().cpu()
+    return t.float().numpy() if t.dtype == torch.bfloat16 else t.numpy()
 
 
 def _keep_dtype(res, ref):
@@ -271,12 +304,15 @@ class ScatterListAclnnSpec:
         axis=-2,
         **kwargs,
     ):
-        return _keep_dtype(
-            _ScatterListCompose()(
-                varRef, indice, updates, mask=maskOptional, axis=axis
-            ),
-            varRef,
+        # 复用 Kernel golden，计算与结果均在 CPU，不改写 varRef。
+        result = _GOLDEN_FN(
+            [_golden_numpy(v) for v in varRef],
+            _golden_numpy(indice),
+            _golden_numpy(updates),
+            _golden_numpy(maskOptional),
+            axis=axis,
         )
+        return _keep_dtype([torch.from_numpy(v) for v in result], varRef)
 
     class _Compose:
         def __call__(self, varRef, indice, updates, **kwargs):
@@ -288,8 +324,13 @@ class ScatterListAclnnSpec:
     tolerance = _TOL_KERNEL
 
 
-# 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——无 framework/ 插件、无 graph pass,
-# 也未发现 torch_npu 绑定到 aclnnScatterList。
+class ScatterListTorchSpec:
+    """注册名是 NPU 被测 API；golden 复用 CPU 参考实现。"""
+
+    @staticmethod
+    def golden(input, indices, updates, mask=None, reduce="update", axis=-2, **kwargs):
+        return ScatterListAclnnSpec.golden(
+            input, indices, updates, mask, reduce, axis, **kwargs
+        )
+
+    tolerance = _TOL_KERNEL

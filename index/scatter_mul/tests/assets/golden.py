@@ -39,9 +39,13 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
     var, indices, updates = input_arrays[0], input_arrays[1], input_arrays[2]
 
     out_dtype = var.dtype
-    # accumulate in a wider type to match the kernel's internal fp32/int32 precision
+    # 浮点跟随 TTK 下发的 dtype: 判据是 cross_check 时 TTK 走 golden_mode=Promote 抬一档
+    # (fp32->fp64) 下发, 让 golden 成为精度标准 §4.5「双标杆」要求的更高精度真值。此处若
+    # 无条件降回 fp32, golden 会与三方腿(fp32 GPU, 同一 torch 算子)逐位相等 -> GPU 误差恒 0
+    # -> 三比值分母全部夹到 §4.5.1 的 err -> 有量纲的 RMSE 比值随输出量级爆表。
+    # 非 Promote 档下发的仍是原 dtype, 行为与改动前一致。整型仍用 int64 中间量防溢出。
     if np.issubdtype(out_dtype, np.floating):
-        acc_dtype = np.float32
+        acc_dtype = np.float64 if var.dtype == np.float64 else np.float32
     else:
         acc_dtype = np.int64
 
@@ -87,20 +91,62 @@ _TOL_KERNEL = {
 }
 
 
-def _tp_t(x):
-    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。
+def _scatter_numel(t):
+    """张量元素数; 对 torch / numpy / tf 的 eager 张量都成立(只读 shape)。"""
+    shape = getattr(t, "shape", None)
+    if shape is None:
+        return None
+    n = 1
+    for d in tuple(shape):
+        n *= int(d)
+    return n
 
-    ⚠️ 不能把 fp16/bf16 升 fp32 再算。本算子对重复索引是**链式**运算, 误差随链长累积;
-    三方若用更高精度跑, cross_check 拿到的就是"内核误差 / 一个 fp16 实现物理上够不到的
-    参照"之比, 会系统性判红——实测 scatter_div fp16 链长中位 8 的用例 mare_ratio 12.78
-    (限值 5), 改回与算子同 dtype 的语义后 0.65 通过, 内核本身的误差 99.99% 落在 fp16
-    链式误差预算内。三方必须与算子同 dtype 语义, 内核误差才有可比对象。
-    golden 反过来要保持高精度(fp32 链), 它是两条腿共同的参照点。
+
+def _scatter_noop(var, updates):
+    """空张量短路判据: var 或 updates 无元素时 scatter 是 no-op, 原样返回 var。
+
+    必须在 updates 展平之前判。展平写的是 reshape((-1,) + var.shape[1:]), 当 var 的
+    **非首维含 0**(切片宽度为 0)时, 0 个元素铺进 [-1, 0] 的 -1 无法唯一推断, torch 抛
+    "cannot reshape tensor of 0 elements into shape [-1, 0] ... is ambiguous", tf 同理。
+    合法入参下 updates 为空 <=> indices 为空(shape 约束 updates = indices + var[1:],
+    且此时 var[1:] 全非 0), 两种情形都是 no-op, 故本判据既充分也不会误伤。
+
+    kernel 通路那份 golden 早有这道短路(sliceSize==0 直接返回原 var), 是 aclnn spec
+    与三方腿新增时漏带。算子侧同样是 no-op: scatter_reduce_common_tiling.cpp 对空张量
+    按结构合法放行, scatter_reduce_common_simt.h 的 Init/Process 在 tiling_.sliceSize == 0
+    时直接 return。
     """
+    nv = _scatter_numel(var)
+    nu = _scatter_numel(updates)
+    return nv == 0 or nu == 0
+
+
+def _tp_t(x):
+    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备(GPU)。
+    这里只做载体还原/拷贝, 精度由 _tp_widen/_tp_narrow 按内核算法统一处理。"""
     if isinstance(x, torch.Tensor):
         return x.clone()
-    t = torch.as_tensor(np.asarray(x))  # 仅本地自测兜底: 框架侧不会走到
-    return t.to(torch.float32) if t.dtype == torch.bfloat16 else t.clone()
+    return torch.as_tensor(np.asarray(x)).clone()  # 仅本地自测兜底: 框架侧不会走到
+
+
+def _tp_widen(t):
+    """加宽到**内核的累加类型**, 复刻 scatter_reduce_common_simt.h 的 LoadWiden
+    (该文件注释: "ACC: float for fp16, native for fp32/int32, int32 for int8/uint8",
+    "load srcGm into accUb, widening subword/fp16 to the ACC type")。
+
+    本算子对重复索引是链式规约, 内核**整条链都在 fp32 accUb 上做**, 只在 NarrowStore
+    时窄一次。三方若在 fp16 上逐步截断, 就不是同一个算法: 实测 A100 上中间量会溢出成
+    inf(链长 257 的用例 13 个位置), 而内核算得出有限值。整型保持整型(内核也是 int32 原生)。
+    """
+    return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
+def _tp_narrow(outs, dt):
+    """复刻 NarrowStore: 算完窄回算子输出 dtype。**必须与 _tp_widen 成对**——
+    少了它三方停在 fp32, 与走 Promote(fp16->fp32) 的 golden 逐位相等, 双标杆塌成单标杆,
+    三比值分母夹到 §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级放大而假红
+    (真机实测: 不窄回 rmse 比值 2348.6, 窄回后 1.0000)。"""
+    return [o.to(dt) if o.is_floating_point() else o for o in outs]
 
 
 def scatter_mul_input(var, indices, updates, **kwargs):
@@ -139,8 +185,12 @@ def scatter_mul_input(var, indices, updates, **kwargs):
 
 class _ScatterMulCompose:
     def __call__(self, var, indices, updates, **kwargs):
-        work = _tp_t(var)
-        upd = _tp_t(updates).reshape((-1,) + tuple(work.shape[1:]))
+        work0 = _tp_t(var)
+        if _scatter_noop(work0, updates):
+            return [work0]
+        _dt = work0.dtype
+        work = _tp_widen(work0)
+        upd = _tp_widen(_tp_t(updates)).reshape((-1,) + tuple(work.shape[1:]))
         it = (
             indices
             if isinstance(indices, torch.Tensor)
@@ -151,7 +201,7 @@ class _ScatterMulCompose:
         idx = idx[valid]
         if idx.numel() > 0:
             work = work.index_reduce(0, idx, upd[valid], "prod", include_self=True)
-        return [work]
+        return _tp_narrow([work], _dt)
 
 
 class _ScatterMulTfCompose:
@@ -162,13 +212,20 @@ class _ScatterMulTfCompose:
 
     与 torch 腿的两处一致性(不一致就会系统性假红):
     1) 非法下标(越界/负)按算子语义静默跳过——TF 自己会抛 InvalidArgumentError;
-    2) **不升精度**: 一律用算子自身 dtype 计算, 与 torch 腿同口径。
+    2) **按内核算法转写**: 内核对 fp16 是 LoadWiden 到 fp32 累加、NarrowStore 窄回
+       (scatter_reduce_common_simt.h: "ACC: float for fp16"), 故此处同样先加宽再窄回,
+       与 torch 腿同口径。只在窄类型上算会逐步截断/溢出, 与被测内核不是同一个算法。
     """
 
     def __call__(self, var, indices, updates, **kwargs):
         import tensorflow as tf
 
         work = tf.convert_to_tensor(var)
+        if _scatter_noop(work, updates):
+            return [work]
+        _tf_dt = work.dtype  # 算子输出 dtype, 出口窄回用
+        if _tf_dt in (tf.float16, tf.bfloat16):
+            work = tf.cast(work, tf.float32)  # 复刻内核 LoadWiden
         upd = tf.reshape(
             tf.convert_to_tensor(updates), tf.concat([[-1], tf.shape(work)[1:]], axis=0)
         )
@@ -180,7 +237,10 @@ class _ScatterMulTfCompose:
             tf.compat.v1.scatter_mul(
                 ref, tf.cast(idx, tf.int32), tf.cast(upd, ref.dtype)
             )
-        return [tf.convert_to_tensor(ref)]
+        out = tf.convert_to_tensor(ref)
+        return [
+            tf.cast(out, _tf_dt) if out.dtype != _tf_dt else out
+        ]  # 复刻 NarrowStore
 
 
 _GOLDEN_FN = __golden_scatter_mul
@@ -200,9 +260,17 @@ __spec__ = {
 
 
 def _tp_one(t):
-    """aclnn 通路: 框架传入的已是设备侧 torch.Tensor, 不经 numpy。"""
-    t = t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
-    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它。
+
+    三方腿的输入 dtype 与 NPU 一致, torch 算完自然就是同一 dtype, 无需人为抬档或回 cast;
+    是否在内部抬到 fp32 由 torch 的算子实现自行决定。此前无条件把 fp16/bf16 抬到 fp32,
+    会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
+    §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
+
+    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
+    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
+    """
+    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
 
 def _keep_dtype(res, ref):
@@ -228,6 +296,8 @@ class ScatterMulAclnnSpec:
     @staticmethod
     def golden(varRef, indices, updates, useLocking=None, **kwargs):
         work = _tp_one(varRef).clone()
+        if _scatter_noop(work, updates):
+            return _keep_dtype([work], varRef)
         upd = _tp_one(updates).reshape((-1,) + tuple(work.shape[1:]))
         it = indices if isinstance(indices, torch.Tensor) else torch.as_tensor(indices)
         idx = it.reshape(-1).to(torch.int64)

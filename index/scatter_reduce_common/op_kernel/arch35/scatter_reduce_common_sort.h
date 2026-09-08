@@ -320,6 +320,11 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         const event_t v2s = static_cast<event_t>(pipe_.FetchEventID(HardEvent::V_S));
         const event_t s2m3 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::S_MTE3));
         const event_t m3m2 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_MTE2));
+        // 循环尾除了 MTE3->MTE2(保护下一轮输入搬入), 还必须挡住下一轮对 shiftSorted/originUb 的写:
+        // 下一轮用 V(Sort/Adds) 和 S(补 SENT) 写这两个 UB, 而本轮的 DataCopyPad(MTE3) 仍在读它们。
+        // 只发 MTE3->MTE2 只同步了 MTE2 管道, V/S 会跑在前面覆盖缓冲 -> 写出坏的排序键/位置。
+        const event_t m3v = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_V));
+        const event_t m3s2 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_S));
         for (ADDR_T r = static_cast<ADDR_T>(blockIdx_); r < P2; r += blockN) {
             const ADDR_T cs = r * runLen0;
             const ADDR_T cl = (cs >= M) ? 0 : ((M - cs < runLen0) ? (M - cs) : runLen0);
@@ -360,6 +365,11 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             }
             SetFlag<HardEvent::MTE3_MTE2>(m3m2);
             WaitFlag<HardEvent::MTE3_MTE2>(m3m2);
+            // 本轮 MTE3 读完 shiftSorted/originUb 之前, 不许下一轮的 V(Sort/Adds) 和 S(补SENT) 覆写它们
+            SetFlag<HardEvent::MTE3_V>(m3v);
+            WaitFlag<HardEvent::MTE3_V>(m3v);
+            SetFlag<HardEvent::MTE3_S>(m3s2);
+            WaitFlag<HardEvent::MTE3_S>(m3s2);
         }
     }
     // flush this core's runs to GM + invalidate stale lines so other cores' scalar reads next see fresh data

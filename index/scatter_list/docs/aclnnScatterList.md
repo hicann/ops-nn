@@ -124,10 +124,10 @@ aclnnStatus aclnnScatterList(
       <td>maskOptional（aclTensor*）</td>
       <td>可选参数</td>
       <td>掩码张量。</td>
-      <td>-</td>
+      <td>取值仅支持0和1：0表示该列表元素不执行写入，1表示执行写入。其余取值行为未定义。<br>值位于Device侧，第一段接口无法校验，由调用方保证。</td>
       <td>UINT8</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>1</td>
       <td>√</td>
     </tr>
     <tr>
@@ -272,6 +272,8 @@ aclnnStatus aclnnScatterList(
   - indice为2维时：`0 <= indice[i][0]`、`0 <= indice[i][1] <= S` 且 `indice[i][0] + indice[i][1] <= D`。
 
   注意：仅保证`indice[i] < D`并不充分——写入是从起始位置开始的一段连续区间，需保证整段区间不越过`D`。
+
+- maskOptional取值范围（调用方保证，算子不做校验）：mask的值位于Device侧，第一段接口无法校验。取值仅支持`0`和`1`：`0`表示该列表元素不执行写入，`1`表示执行写入。其余取值行为未定义。
 
 ## 调用示例
 

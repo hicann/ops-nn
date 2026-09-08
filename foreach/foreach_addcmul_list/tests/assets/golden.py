@@ -35,6 +35,13 @@ shape [1] 的单元素张量，对应 totalTensorCount_ == 1。golden 直接对�
 import numpy as np
 import torch
 
+import inspect as _kf_inspect
+
+try:
+    from ml_dtypes import bfloat16 as _KF_BF16
+except ImportError:
+    _KF_BF16 = None
+
 try:
     from ml_dtypes import bfloat16 as _bf16
 except ImportError:
@@ -60,16 +67,36 @@ def _per_tensor_dtypes(od):
     return flat
 
 
-def _to_fp32(a):
-    """bf16 按 |V2 原始字节传入时先 view 回 bf16(torch 不收 bf16), 再升 fp32 计算。
+def _to_compute(a):
+    """**跟随 TTK 下发的 dtype 计算，不要自己强制降档。**
 
-    用 fp32 而不是 fp64：算子在 fp32 上算(arch35 DAG 的计算类型 U = float)，golden 抬到
-    fp64 会得出算子不会产出的中间量。"""
+    判据是 cross_check 时 TTK 会把 golden 切 golden_mode=Promote，按 DTYPE_PROMOTE_MAP
+    抬一档下发(fp32->float64, fp16/bf16->float32)，就是为了让 golden 成为精度标准 §4.5
+    「双标杆比对」要求的「**更高精度**的 CPU 实现为真值」。
+
+    原先无条件降回 fp32，导致 golden 与三方腿(fp32 GPU、同一串 torch._foreach_*、同一
+    结合序)在 IEEE-754 下**逐位相等**，双标杆塌成单标杆：GPU 误差恒 0，三比值分母全部
+    夹到 §4.5.1 的 err。夹底后 MARE/MERE 分子是无量纲相对误差、仍然小，唯独 RMSE 分子是
+    **有量纲**绝对误差，比值随输出量级线性放大 —— 「rmse 比 mare/mere 大 30 个数量级」由此而来。
+
+    fp64 保持 fp64(Promote 档)，其余一律 fp32 —— 与改动前一致，非 cross_check 判据行为不变。
+    bf16 必须转换：numpy/torch 不能直接在 |V2 视图或 ml_dtypes.bfloat16 上运算。
+    """
     a = np.asarray(a)
     if a.dtype.kind == "V" and _bf16 is not None:
         a = a.view(_bf16)
+    if a.dtype == np.float64:
+        return a
     # dtype 已匹配时复用原缓冲: 大张量(单份 GB 级)无谓复制会把进程推向 OOM。
     # 下游 torch 算子均非原地，不会改写输入，故复用安全。
+    return a.astype(np.float32, copy=False)
+
+
+def _to_fp32(a):
+    """三方腿沿用的 fp32 口径：三方必须按**算子自身精度**算，不跟着 golden 抬档。"""
+    a = np.asarray(a)
+    if a.dtype.kind == "V" and _bf16 is not None:
+        a = a.view(_bf16)
     return a.astype(np.float32, copy=False)
 
 
@@ -98,11 +125,13 @@ def __golden_foreach_addcmul_list(x1_list, x2_list, x3_list, scalars, **kwargs):
             prod = torch._foreach_mul(torch._foreach_mul([b_i], [c_i]), s_i)
             y = torch._foreach_add([a_i], prod)[0].to(narrow).numpy()
         else:
-            # 浮点路径在 fp32 中间量算,对齐算子的计算精度,再 cast 回目标 dtype。
-            ta = torch.from_numpy(_to_fp32(a))
-            tb = torch.from_numpy(_to_fp32(b))
-            tc = torch.from_numpy(_to_fp32(c))
-            ts = torch.from_numpy(np.asarray([s], dtype=np.float32))[0]
+            # 浮点路径跟随下发的计算精度(Promote 档为 fp64 真值,其余为 fp32),再 cast 回目标 dtype。
+            ta = torch.from_numpy(_to_compute(a))
+            tb = torch.from_numpy(_to_compute(b))
+            tc = torch.from_numpy(_to_compute(c))
+            # 标量落成 0 维张量: torch 类型提升里 0 维张量不抬 dim>0 张量的档,
+            # 故数据 fp32 时结果仍 fp32,数据 fp64 时标量自动跟到 fp64。
+            ts = torch.as_tensor(np.asarray(s, dtype=np.float64))
             prod = torch._foreach_mul(torch._foreach_mul([tb], [tc]), ts)
             out = torch._foreach_add([ta], prod)[0].numpy()
             if target == "bfloat16":
@@ -126,23 +155,49 @@ _TOL_KERNEL = {
 }
 
 
+def _tp_bf16_carrier(a):
+    """bf16 用 ml_dtypes 承载, torch.from_numpy 不认, 须按位 view 成 torch.bfloat16(同宽无损)。
+    这是**载体还原**, 不是精度干预。"""
+    a = np.asarray(a)
+    if a.dtype.kind == "V" and _bf16 is not None:
+        a = a.view(_bf16)
+    if _bf16 is not None and a.dtype == _bf16:
+        return torch.from_numpy(a.astype(np.float32)).to(torch.bfloat16)
+    return torch.from_numpy(a)
+
+
 def _tp_list(xs):
-    """third_party 入参: kernel 通路由框架把 numpy 转成 torch 并置于目标设备。"""
-    out = []
-    for a in xs:
-        t = a if isinstance(a, torch.Tensor) else torch.as_tensor(_to_fp32(a))
-        # 不抬精度: 三方按算子 dtype 算, 否则与 Promote 后的 golden 逐位相等、cross_check 分母塌陷
-        out.append(
-            t
-            if t.dtype in (torch.float16, torch.bfloat16, torch.float32, torch.float64)
-            else t.to(torch.float32)
-        )
-    return out
+    """third_party 入参: **不替 torch 决定精度**, 原样交给它。
+
+    是否在内部抬到 fp32 由 torch 的算子实现自行决定(CUDA 上不少算子对 fp16 输入会用
+    fp32 累加)。三方标杆的价值在于 CPU/NPU/GPU 三套**独立实现**互相制约, 一旦按内核的
+    算法去复刻, 它就不再独立、发现不了算法层面的缺陷。
+
+    ⚠️ 曾经在这里嵌套调用 _to_fp32(golden 侧的转换器), numpy 入参一进来就被转成 fp32,
+    下面那个"保持原 dtype"的判断**永远命中 fp32 分支、等于没生效** —— fp16 用例的三方腿
+    因此仍被抬到 fp32、与 Promote 后的 golden 逐位相等, 分母照塌。改为只做 bf16 载体还原。
+    """
+    return [a if isinstance(a, torch.Tensor) else _tp_bf16_carrier(a) for a in xs]
 
 
-def _tp_scalar(x):
-    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(np.asarray(x, "float32"))
-    return float(t.reshape(-1)[0])
+def _tp_scalars_t(v, ref):
+    """三方标量: **不转 Python float**(那是 fp64, 会触发 torch 类型提升、把整条链抬档);
+    整型标量尤其不能过 float —— 超过 2^24 的 int32 会被抹掉低位(同 #85 的成因)。
+
+    torch._foreach_addc{mul,div} 的 scalars 形参收 **Tensor** 或 Number 序列, 不收
+    0 维张量的列表, 因此这里返回一维 Tensor 并对齐数据 dtype。"""
+    t = v if isinstance(v, torch.Tensor) else _tp_bf16_carrier(np.asarray(v))
+    rd = (
+        ref.dtype
+        if isinstance(ref, torch.Tensor)
+        else torch.as_tensor(np.asarray(ref)).dtype
+    )
+    # ⚠️ 必须落在 **CPU**: torch._foreach_addc{mul,div} 的 scalars 形参要求在 CPU 上,
+    # 三方腿在 GPU 上跑, 标量跟着上 cuda 会报
+    # "RuntimeError: Expected scalars to be on CPU, got cuda:0"。
+    # dtype 仍对齐数据(不转 Python float —— 那是 fp64, 会触发类型提升;
+    # 整型标量过 float 还会把 >2^24 的 int32 抹掉低位, 见 #85)。
+    return t.reshape(-1).to(rd).cpu()
 
 
 _GOLDEN_FN = __golden_foreach_addcmul_list
@@ -155,32 +210,128 @@ class _ForeachAddcmulListCompose:
             if isinstance(scalars, torch.Tensor)
             else torch.as_tensor(np.asarray(scalars))
         )
-        sc = [float(v) for v in st.reshape(-1)]
-        return torch._foreach_addcmul(_tp_list(x1), _tp_list(x2), _tp_list(x3), sc)
+        a, b, c = _tp_list(x1), _tp_list(x2), _tp_list(x3)
+        sc = _tp_scalars_t(st, a[0])
+        return torch._foreach_addcmul(a, b, c, sc)
+
+
+# ---------------------------------------------------------------------------
+# 三方(GPU)腿按内核算法转写: 入口复刻 Cast<U, T, 0>(窄类型加宽到内核计算类型),
+# 出口复刻 Cast<T, U, 1> / NarrowStore(窄回算子输出 dtype)。两者**必须成对**:
+#   * 缺入口加宽 -> 三方在窄类型上逐步截断, 与融合内核(中间量全程 fp32)不是同一算法;
+#     A100 实测 fp16 下 300*300 直接得 inf, 而 (a*a)/a 真值 300 明明存得下。
+#   * 缺出口窄回 -> 三方停在 fp32, 与走 TTK Promote(fp16->fp32) 的 golden 逐位相等,
+#     双标杆塌成单标杆, 三比值分母夹到精度标准 §4.5.1 的 err, 有量纲的 RMSE 比值随
+#     输出量级线性放大而假红(真机实测: 不窄回 rmse 比值 2348.6, 窄回后 1.0000)。
+# 整型不动: 内核对 int 也是原生/int32 累加, 走一趟 fp32 会把 >2^24 抹掉低位。
+# 只作用于 third_party(GPU); CPU golden 由 TTK 的 Promote 单独喂高精度输入, 不受影响。
+# ---------------------------------------------------------------------------
+
+
+def _kf_widen(a, seen):
+    if isinstance(a, (list, tuple)):
+        return type(a)(_kf_widen(x, seen) for x in a)
+    if isinstance(a, torch.Tensor):
+        if a.dtype in (torch.float16, torch.bfloat16):
+            seen.append(a.dtype)
+            return a.float()
+        return a
+    if isinstance(a, np.ndarray) or (_KF_BF16 is not None and hasattr(a, "dtype")):
+        n = np.asarray(a)
+        if n.dtype.kind == "V" and _KF_BF16 is not None:
+            n = n.view(_KF_BF16)
+        if _KF_BF16 is not None and n.dtype == _KF_BF16:
+            seen.append(torch.bfloat16)
+            return n.astype(np.float32)
+        if n.dtype == np.float16:
+            seen.append(torch.float16)
+            return n.astype(np.float32)
+        return a
+    return a
+
+
+def _kf_narrow(o, dt):
+    if isinstance(o, (list, tuple)):
+        return type(o)(_kf_narrow(x, dt) for x in o)
+    if isinstance(o, torch.Tensor) and o.is_floating_point():
+        return o.to(dt)
+    return o
+
+
+class _TpKernelFaithful:
+    _INNER = _ForeachAddcmulListCompose
+
+    def __call__(self, *args, **kwargs):
+        seen = []
+        wa = [_kf_widen(a, seen) for a in args]
+        wk = {k: _kf_widen(v, seen) for k, v in kwargs.items()}
+        outs = self._INNER()(*wa, **wk)
+        return outs if not seen else _kf_narrow(outs, seen[0])
+
+
+# TTK 服务端按 __call__ 的**签名**做入参绑定(remote/server/executor.py::_bind ->
+# _function_param_names)。包装类若只写 *args/**kwargs, 服务端取不到形参名, 会退化成
+# 位置传参、同时又传同名关键字 -> "got multiple values for argument ..." 而三方腿整个不可用。
+# 故把内层 compose 的签名透传出去。
+try:
+    _TpKernelFaithful.__call__.__signature__ = _kf_inspect.signature(
+        _ForeachAddcmulListCompose.__call__
+    )
+except (ValueError, TypeError):  # 内层无法内省时保持原样
+    pass
 
 
 class ForeachAddcmulListKernelSpec:
     golden = _GOLDEN_FN
-    third_party = {"torch": _ForeachAddcmulListCompose}
+    third_party = {"torch": _TpKernelFaithful}
     tolerance = _TOL_KERNEL
 
 
 __spec__ = {
     "foreach_addcmul_list": "ForeachAddcmulListKernelSpec",
     "aclnnForeachAddcmulList": "ForeachAddcmulListAclnnSpec",
+    "torch._foreach_addcmul": "ForeachAddcmulListTorchSpec",
 }
 
 
 def _tp_one(t):
-    """aclnn 通路: 框架传入的已是设备侧 torch.Tensor, 不经 numpy。"""
-    t = t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
+    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它。
+
+    三方腿的输入 dtype 与 NPU 一致, torch 算完自然就是同一 dtype, 无需人为抬档或回 cast;
+    是否在内部抬到 fp32 由 torch 的算子实现自行决定。此前无条件把 fp16/bf16 抬到 fp32,
+    会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
+    §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
+
+    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
+    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
+    """
+    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
+
+
+def _golden_one(t):
+    """CPU golden: 低精度浮点使用 fp32 中间量，整型和 fp64 保持原精度。"""
+    t = _tp_one(t).detach().cpu()
     return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
 
 
 def _tp_scalars(v):
     if isinstance(v, torch.Tensor):
-        return [float(x) for x in v.reshape(-1)]
-    return [float(x) for x in v]
+        return v.detach().cpu().reshape(-1).tolist()
+    return list(v)
+
+
+def _tp_int_scalars(v, dtype):
+    """整型分支的标量: 保持精确整数。走 float() 会把超过 2^24 的 int32 抹掉低位
+    (1564714939 -> 1564714880), 整个整数结果随之偏掉。"""
+    t = v if isinstance(v, torch.Tensor) else torch.as_tensor(v)
+    return [int(x) for x in t.detach().cpu().reshape(-1).to(dtype)]
+
+
+def _bcast_scalars(sc, n):
+    """scalars 逐张量对齐; 数量不足时沿用最后一个(与 kernel 通路 golden 同规则)。"""
+    if not sc:
+        return [0] * n
+    return [sc[i] if i < len(sc) else sc[-1] for i in range(n)]
 
 
 def _keep_dtype(res, ref):
@@ -205,20 +356,41 @@ class ForeachAddcmulListAclnnSpec:
 
     @staticmethod
     def golden(x1, x2, x3, scalars, out=None, **kwargs):
-        a = [_tp_one(t) for t in x1]
-        b = [_tp_one(t) for t in x2]
-        c = [_tp_one(t) for t in x3]
+        a = [_golden_one(t) for t in x1]
+        b = [_golden_one(t) for t in x2]
+        c = [_golden_one(t) for t in x3]
+        # 整型(def 支持 int32)必须走 int64 中间量 + 精确整数标量, 与 kernel 通路 golden
+        # (__golden_foreach_addcmul_list 的整型分支)和算子实现同口径: 算子的 ComputeIntPath
+        # 全程在整型 RegTensor 上 Mul/Muls/Add, 即 int32 回绕算术。
+        # 若沿用浮点路径, _tp_scalars 的 float() 标量会把整条链提升到 float32,
+        # 乘积冲破 2^31 后 cast 回 int32 全部饱和成 -2147483648。
+        narrow = a[0].dtype if a else torch.int32
+        if not narrow.is_floating_point:
+            sc_i = _tp_int_scalars(scalars, narrow)
+            ai = [t.to(torch.int64) for t in a]
+            bi = [t.to(torch.int64) for t in b]
+            ci = [t.to(torch.int64) for t in c]
+            prod = [
+                torch.mul(bb, cc) * int(ss)
+                for bb, cc, ss in zip(bi, ci, _bcast_scalars(sc_i, len(bi)))
+            ]
+            return _keep_dtype(
+                [torch.add(aa, pp).to(narrow) for aa, pp in zip(ai, prod)], x1
+            )
         sc = _tp_scalars(scalars)
         return _keep_dtype(
             torch._foreach_add(a, torch._foreach_mul(torch._foreach_mul(b, c), sc)), x1
         )
 
-    third_party = {"torch": _ForeachAddcmulListCompose}
+    third_party = {"torch": _TpKernelFaithful}
     tolerance = _TOL_KERNEL
 
 
-# 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——算子目录下无 framework/ 插件、
-# 无 graph pass, 也未发现 torch_npu eager/aten 绑定到该 aclnn 接口。
+class ForeachAddcmulListTorchSpec:
+    """E2E Tensor/ScalarList overload: 无 ACLNN out 参数，返回 TensorList。"""
+
+    @staticmethod
+    def golden(self, tensor1, tensor2, scalars, **kwargs):
+        return ForeachAddcmulListAclnnSpec.golden(
+            self, tensor1, tensor2, scalars, **kwargs
+        )
