@@ -34,7 +34,7 @@ constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 
 struct SparseApplyProximalAdagradCompileInfo {};
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(const gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
@@ -58,7 +58,7 @@ static constexpr int64_t kStateTensorIdx[] = {kAccumIdx};
 static constexpr int64_t kDataInputIdx[] = {kAccumIdx, kLrIdx, kL1Idx, kL2Idx, kGradIdx};
 static constexpr int64_t kScalarInputIdx[] = {kLrIdx, kL1Idx, kL2Idx};
 
-static ge::graphStatus ValidateVarRank(gert::TilingContext* context, const gert::Shape& varStorage)
+static ge::graphStatus ValidateVarRank(const gert::TilingContext* context, const gert::Shape& varStorage)
 {
     OP_CHECK_IF(varStorage.GetDimNum() < 1,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var",
@@ -67,7 +67,7 @@ static ge::graphStatus ValidateVarRank(gert::TilingContext* context, const gert:
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateIndicesRank(gert::TilingContext* context)
+static ge::graphStatus ValidateIndicesRank(const gert::TilingContext* context)
 {
     auto indicesShape = context->GetInputShape(kIndicesIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
@@ -79,7 +79,7 @@ static ge::graphStatus ValidateIndicesRank(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateStateTensorShapes(gert::TilingContext* context, const gert::Shape& varStorage)
+static ge::graphStatus ValidateStateTensorShapes(const gert::TilingContext* context, const gert::Shape& varStorage)
 {
     for (int64_t idx : kStateTensorIdx) {
         auto stateShape = context->GetInputShape(idx);
@@ -95,7 +95,7 @@ static ge::graphStatus ValidateStateTensorShapes(gert::TilingContext* context, c
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateGradShape(gert::TilingContext* context, const gert::Shape& varStorage,
+static ge::graphStatus ValidateGradShape(const gert::TilingContext* context, const gert::Shape& varStorage,
                                          int64_t totalIndices)
 {
     auto gradShape = context->GetInputShape(kGradIdx);
@@ -122,7 +122,7 @@ static ge::graphStatus ValidateGradShape(gert::TilingContext* context, const ger
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateDtypes(gert::TilingContext* context)
+static ge::graphStatus ValidateDtypes(const gert::TilingContext* context)
 {
     auto indicesDesc = context->GetInputDesc(kIndicesIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
@@ -153,7 +153,7 @@ static ge::graphStatus ValidateDtypes(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateScalarInputs(gert::TilingContext* context)
+static ge::graphStatus ValidateScalarInputs(const gert::TilingContext* context)
 {
     for (int64_t idx : kScalarInputIdx) {
         auto scalarShape = context->GetInputShape(idx);
@@ -169,7 +169,7 @@ static ge::graphStatus ValidateScalarInputs(gert::TilingContext* context)
 }
 
 // Validate shapes and dtypes of all inputs per README constraints.
-static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t totalIndices)
+static ge::graphStatus ValidateInputs(const gert::TilingContext* context, int64_t totalIndices)
 {
     auto varShape = context->GetInputShape(kVarIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -191,7 +191,7 @@ static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t tota
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalIndices, int64_t& rowSize,
+static ge::graphStatus GetShapeInfo(const gert::TilingContext* context, int64_t& totalIndices, int64_t& rowSize,
                                     int64_t& varFirstDim)
 {
     auto varShape = context->GetInputShape(0);

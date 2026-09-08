@@ -18,6 +18,8 @@
 #ifndef SPARSE_APPLY_PROXIMAL_ADAGRAD_TILING_DATA_H_
 #define SPARSE_APPLY_PROXIMAL_ADAGRAD_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SparseApplyProximalAdagradTilingData {
     int32_t needCoreNum;
     int64_t totalIndices;

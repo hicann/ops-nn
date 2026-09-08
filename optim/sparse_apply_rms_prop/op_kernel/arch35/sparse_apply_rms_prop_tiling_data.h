@@ -18,6 +18,8 @@
 #ifndef SPARSE_APPLY_RMS_PROP_TILING_DATA_H_
 #define SPARSE_APPLY_RMS_PROP_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SparseApplyRMSPropTilingData {
     int32_t needCoreNum;
     int64_t totalIndices;
