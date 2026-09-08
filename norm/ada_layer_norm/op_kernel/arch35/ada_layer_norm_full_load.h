@@ -377,13 +377,13 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
 
         MaskReg pregLoop;
         for (uint16_t i = 0; i < rowLoopTimes; i++) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + i);
-            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale2, quantScaleAddr + i + rowLoopTimes);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + i);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(quantScale2, quantScaleAddr + i + rowLoopTimes);
             uint32_t sreg = hiddenDim;
             for (uint16_t j = 0; j < colLoopTimes; j++) {
                 pregLoop = UpdateMask<float>(sreg);
-                DataCopy(x1, outAddr + j * V_LENGTH);
-                DataCopy(x2, outAddr2 + j * V_LENGTH);
+                LoadAlign(x1, outAddr + j * V_LENGTH);
+                LoadAlign(x2, outAddr2 + j * V_LENGTH);
                 Div(x1, x1, quantScale1, pregLoop);
                 Div(x2, x2, quantScale2, pregLoop);
                 if constexpr (std::is_same_v<Y, hifloat8_t>) {
@@ -400,8 +400,8 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
                     Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
                     Cast<Y, float, castTraitF32Tofp8>(y2, x2, pregLoop);
                 }
-                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y1, pregLoop);
-                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y2, pregLoop);
+                StoreAlign<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y1, pregLoop);
+                StoreAlign<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y2, pregLoop);
             }
             outAddr += hiddenDimCeil;
             outAddr2 += hiddenDimCeil;
@@ -410,11 +410,11 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
         }
 
         for (uint16_t i = 0; i < tailLoopTimes; i++) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + rowLoopTimes + rowLoopTimes);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + rowLoopTimes + rowLoopTimes);
             uint32_t sreg = hiddenDim;
             for (uint16_t j = 0; j < colLoopTimes; j++) {
                 pregLoop = UpdateMask<float>(sreg);
-                DataCopy(x1, outAddr2 + j * V_LENGTH);
+                LoadAlign(x1, outAddr2 + j * V_LENGTH);
                 Div(x1, x1, quantScale1, pregLoop);
                 if constexpr (std::is_same_v<Y, hifloat8_t>) {
                     Cast<Y, float, castTraitF32Toh8>(y1, x1, pregLoop);
@@ -425,7 +425,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
                 } else {
                     Cast<Y, float, castTraitF32Tofp8>(y1, x1, pregLoop);
                 }
-                DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y1, pregLoop);
+                StoreAlign<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr2 + j * V_LENGTH, y1, pregLoop);
             }
         }
     }

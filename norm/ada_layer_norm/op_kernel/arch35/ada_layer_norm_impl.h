@@ -35,8 +35,8 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::WelfordInitialize(
         Duplicate(x, 0.0f);
         for (uint16_t j = 0; j < colLoopTimes; j++) {
             pregLoop = UpdateMask<float>(computeLength);
-            DataCopy(meanAddr + j * V_LENGTH, x, pregLoop);
-            DataCopy(varAddr + j * V_LENGTH, x, pregLoop);
+            StoreAlign(meanAddr + j * V_LENGTH, x, pregLoop);
+            StoreAlign(varAddr + j * V_LENGTH, x, pregLoop);
         }
     }
 }
@@ -145,10 +145,10 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::CalculateScale(int
         RegTensor<float> quantScale;
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
 
-        DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale, maxTmpAddr);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(quantScale, maxTmpAddr);
         Muls(quantScale, quantScale, quantFactor, pregMerge);
         // 拷出量化系数
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr, quantScale, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr, quantScale, pregMerge);
     }
 }
 

@@ -400,10 +400,10 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(uint3
 
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
-        DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale, quantScaleAddr);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(quantScale, quantScaleAddr);
         for (uint16_t j = 0; j < colLoopTimes; j++) {
             pregLoop = UpdateMask<float>(dataCount);
-            DataCopy(x, xAddr + j * V_LENGTH);
+            LoadAlign(x, xAddr + j * V_LENGTH);
             Div(x, x, quantScale, pregLoop);
             if constexpr (std::is_same_v<Y, int8_t>) {
                 Cast<int16_t, float, castTraitF32ToI16>(yInt16, x, pregLoop);
@@ -414,7 +414,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(uint3
             } else {
                 Cast<Y, float, castTraitF32Tofp8>(y, x, pregLoop);
             }
-            DataCopy<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y, pregLoop);
+            StoreAlign<Y, StoreDist::DIST_PACK4_B32>(quantOutAddr + j * V_LENGTH, y, pregLoop);
         }
     }
 

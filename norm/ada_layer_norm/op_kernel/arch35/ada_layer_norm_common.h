@@ -57,10 +57,10 @@ template <typename T>
 __simd_callee__ inline void LoadTensor(RegTensor<float>& dst, __ubuf__ T* srcAddr, MaskReg& pregLoop)
 {
     if constexpr (std::is_same_v<T, float>) {
-        DataCopy(dst, srcAddr);
+        LoadAlign(dst, srcAddr);
     } else {
         RegTensor<T> tmpFp16;
-        DataCopy<T, LoadDist::DIST_UNPACK_B16>(tmpFp16, srcAddr);
+        LoadAlign<T, LoadDist::DIST_UNPACK_B16>(tmpFp16, srcAddr);
         Cast<float, T, castTraitB16ToB32>(dst, tmpFp16, pregLoop);
     }
 }
@@ -69,11 +69,11 @@ template <typename T>
 __simd_callee__ inline void CopyToTensor(__ubuf__ T* dstAddr, RegTensor<float>& src, MaskReg& pregLoop)
 {
     if constexpr (std::is_same_v<T, float>) {
-        DataCopy(dstAddr, src, pregLoop);
+        StoreAlign(dstAddr, src, pregLoop);
     } else {
         RegTensor<T> tmpFp16;
         Cast<T, float, castTraitB32ToB16>(tmpFp16, src, pregLoop);
-        DataCopy<T, StoreDist::DIST_PACK_B32>(dstAddr, tmpFp16, pregLoop);
+        StoreAlign<T, StoreDist::DIST_PACK_B32>(dstAddr, tmpFp16, pregLoop);
     }
 }
 
@@ -90,11 +90,11 @@ __simd_callee__ inline void SingleComputeAdaption(RegTensor<float>& tmpMax, __ub
     MaskReg pregLoop;
     for (uint16_t j = 0; j < colLoopTimes; j++) {
         pregLoop = UpdateMask<float>(dataCount);
-        DataCopy(x, normAddr + j * V_LENGTH);
+        LoadAlign(x, normAddr + j * V_LENGTH);
         LoadTensor(scale, scaleAddr + j * V_LENGTH, pregLoop);
         LoadTensor(shift, shiftAddr + j * V_LENGTH, pregLoop);
         Adds(scale, scale, 1.0f, pregLoop);
-        FusedMulDstAdd(x, scale, shift, pregLoop);
+        MulDstAdd(x, scale, shift, pregLoop);
         if constexpr (hasSmooth) {
             RegTensor<float> smooth;
             LoadTensor(smooth, smoothAddr + j * V_LENGTH, pregLoop);
@@ -125,16 +125,16 @@ __simd_callee__ inline void DoubleComputeAdaption(RegTensor<float>& tmpMax1, Reg
     MaskReg pregLoop;
     for (uint16_t j = 0; j < colLoopTimes; j++) {
         pregLoop = UpdateMask<float>(dataCount);
-        DataCopy(x1, normAddr + j * V_LENGTH);
-        DataCopy(x2, normAddr + halfLength + j * V_LENGTH);
+        LoadAlign(x1, normAddr + j * V_LENGTH);
+        LoadAlign(x2, normAddr + halfLength + j * V_LENGTH);
         LoadTensor(scale1, scaleAddr + j * V_LENGTH, pregLoop);
         LoadTensor(scale2, scaleAddr + halfLength + j * V_LENGTH, pregLoop);
         LoadTensor(shift1, shiftAddr + j * V_LENGTH, pregLoop);
         LoadTensor(shift2, shiftAddr + halfLength + j * V_LENGTH, pregLoop);
         Adds(scale1, scale1, 1.0f, pregLoop);
         Adds(scale2, scale2, 1.0f, pregLoop);
-        FusedMulDstAdd(x1, scale1, shift1, pregLoop);
-        FusedMulDstAdd(x2, scale2, shift2, pregLoop);
+        MulDstAdd(x1, scale1, shift1, pregLoop);
+        MulDstAdd(x2, scale2, shift2, pregLoop);
         if constexpr (hasSmooth) {
             RegTensor<float> smooth;
             LoadTensor(smooth, smoothAddr + j * V_LENGTH, pregLoop);
@@ -178,13 +178,13 @@ __aicore__ inline void WelfordAdaptionVF(uint32_t dataCount, __ubuf__ float* nor
         MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         if constexpr (OP_CODE == QUANT_OP_CODE) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(tmpMax, maxTmpAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(tmpMax, maxTmpAddr);
         }
         SingleComputeAdaption<T, OUT_DTYPE, OP_CODE, hasSmooth>(tmpMax, normAddr, scaleAddr, shiftAddr, smoothAddr,
                                                                 outAddr, dataCount, colLoopTimes, pregFull);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
-            ReduceMax(tmpMax, tmpMax, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(maxTmpAddr, tmpMax, pregMerge);
+            Reduce<Reg::ReduceType::MAX>(tmpMax, tmpMax, pregFull);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(maxTmpAddr, tmpMax, pregMerge);
         }
     }
 }
@@ -217,13 +217,13 @@ __aicore__ inline void AdaptionVF(uint16_t rowNum, uint32_t hiddenDim, uint32_t 
                                                                     smoothAddr, outAddr, hiddenDim, colLoopTimes,
                                                                     halfLength, pregFull);
             if constexpr (OP_CODE == QUANT_OP_CODE) {
-                ReduceMax(quantScale1, tmpMax1, pregFull);
-                ReduceMax(quantScale2, tmpMax2, pregFull);
+                Reduce<Reg::ReduceType::MAX>(quantScale1, tmpMax1, pregFull);
+                Reduce<Reg::ReduceType::MAX>(quantScale2, tmpMax2, pregFull);
                 Muls(quantScale1, quantScale1, quantFactor, pregMerge);
                 Muls(quantScale2, quantScale2, quantFactor, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i, quantScale1, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i + rowLoopTimes, quantScale2,
-                                                                   pregMerge);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i, quantScale1, pregMerge);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + i + rowLoopTimes, quantScale2,
+                                                                     pregMerge);
             }
             normAddr += hiddenDimCeil;
             scaleAddr += hiddenDimCeil;
@@ -239,10 +239,10 @@ __aicore__ inline void AdaptionVF(uint16_t rowNum, uint32_t hiddenDim, uint32_t 
                 tmpMax1, normAddr + halfLength, scaleAddr + halfLength, shiftAddr + halfLength, smoothAddr,
                 outAddr + halfLength, hiddenDim, colLoopTimes, pregFull);
             if constexpr (OP_CODE == QUANT_OP_CODE) {
-                ReduceMax(quantScale1, tmpMax1, pregFull);
+                Reduce<Reg::ReduceType::MAX>(quantScale1, tmpMax1, pregFull);
                 Muls(quantScale1, quantScale1, quantFactor, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + rowLoopTimes + rowLoopTimes,
-                                                                   quantScale1, pregMerge);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(quantScaleAddr + rowLoopTimes + rowLoopTimes,
+                                                                     quantScale1, pregMerge);
             }
         }
     }
