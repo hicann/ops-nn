@@ -32,6 +32,15 @@ protected:
 };
 struct RmsNormCompileInfo {};
 
+// 对应 RmsNormGradRegbaseDxTilingData 的序列化前缀，用于校验原始 tiling 数据。
+struct RmsNormGradRegbaseDxTilingDataForUt {
+    int64_t rows;
+    int64_t cols;
+    int64_t blockFactorDx;
+    int64_t bodyPart;
+    int64_t usedCoreNumDx;
+};
+
 TEST_F(RmsNormGradTiling, rms_norm_grad_tiling_001)
 {
     // dlog_setlevel(0, 0, 0);
@@ -1655,6 +1664,70 @@ TEST_F(RmsNormGradTiling, rms_norm_grad_regbase_fullload_splitd_fp16)
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(RmsNormGradTiling, rms_norm_grad_regbase_fullload_splitd_body_part_fp16)
+{
+    gert::StorageShape dy_shape = {{8, 8193}, {8, 8193}};
+    gert::StorageShape x_shape = {{8, 8193}, {8, 8193}};
+    gert::StorageShape rstd_shape = {{8}, {8}};
+    gert::StorageShape gamma_shape = {{8193}, {8193}};
+    gert::StorageShape dx_shape = {{8, 8193}, {8, 8193}};
+    gert::StorageShape dgamma_shape = {{8193}, {8193}};
+
+    map<string, string> soc_infos, aicore_spec, intrinsics, soc_version;
+    map<string, string> npuarchs = {{{"NpuArch", "3510"}}};
+    fe::PlatFormInfos platform_info;
+    SetupRegbasePlatformInfo(platform_info, soc_infos, aicore_spec, intrinsics, soc_version);
+
+    RmsNormCompileInfo compile_info;
+    std::string op_type("RmsNormGrad");
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(regbase_compile_info_950.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    SetupRegbaseTilingParseContext(kernel_holder, platform_info, soc_infos, aicore_spec, intrinsics, soc_version,
+                                   npuarchs);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(8192);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(8);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+    ASSERT_NE(param, nullptr);
+
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({4})
+                      .InputShapes({&dy_shape, &x_shape, &rstd_shape, &gamma_shape})
+                      .OutputShapes({&dx_shape, &dgamma_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    SetupRegbaseTilingContext(holder, soc_infos, aicore_spec, intrinsics, npuarchs);
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto rawTilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(rawTilingData, nullptr);
+    ASSERT_NE(rawTilingData->GetData(), nullptr);
+    RmsNormGradRegbaseDxTilingDataForUt dxTilingData{};
+    ASSERT_GE(rawTilingData->GetDataSize(), sizeof(dxTilingData));
+    ASSERT_EQ(memcpy_s(&dxTilingData, sizeof(dxTilingData), rawTilingData->GetData(), sizeof(dxTilingData)), EOK);
+    EXPECT_EQ(dxTilingData.bodyPart, 8192);
 }
 
 TEST_F(RmsNormGradTiling, rms_norm_grad_regbase_ub_bisection_splitd_fp16)

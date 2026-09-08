@@ -272,11 +272,10 @@ ge::graphStatus RmsNormGradRegbaseTiling::CalcTilingDataDx()
     usedCoreNumDx_ = Ops::Base::CeilDiv(rows_, blockFactorDx_);
     if (cols_ > DX_UB_FACTOR) {
         tilingKey_ += DX_SPLIT_KEY;
-        bodyPart_ = 1; // only for splitD
-        int32_t powerofTwoValueDx = 0;
-        while (bodyPart_ < cols_ / TWO) {
-            powerofTwoValueDx += 1;
-            bodyPart_ = std::pow(TWO, powerofTwoValueDx);
+        // bodyPart_ 取小于 cols_ 的最大二次幂，确保 Split-D 前半段覆盖完整。
+        bodyPart_ = 1;
+        while (bodyPart_ < Ops::Base::CeilDiv(cols_, TWO)) {
+            bodyPart_ *= TWO;
         }
     }
 
