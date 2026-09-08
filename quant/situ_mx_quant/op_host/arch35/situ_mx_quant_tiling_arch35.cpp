@@ -334,8 +334,8 @@ void SituMxQuantRegbaseTiling::SetTilingKeyAndCore()
 {
     hasLinearBeta_ = attrParam_.hasLinearBeta ? TPL_HAS_LINEAR_BETA : TPL_NO_LINEAR_BETA;
 
-    int64_t tilingKey = GET_TPL_TILING_KEY(hasLinearBeta_, roundMode_);
-    OP_LOGI(context_->GetNodeName(), "hasLinearBeta=%lu, roundMode=%lu, tilingKey=%ld", hasLinearBeta_, roundMode_,
+    uint64_t tilingKey = GET_TPL_TILING_KEY(hasLinearBeta_, roundMode_);
+    OP_LOGI(context_->GetNodeName(), "hasLinearBeta=%lu, roundMode=%lu, tilingKey=%lu", hasLinearBeta_, roundMode_,
             tilingKey);
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(tilingData_->usedCoreNum);
@@ -387,7 +387,7 @@ ge::graphStatus Tiling4SituMxQuant(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingPrepare4SituMxQuant(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
+ge::graphStatus TilingPrepare4SituMxQuant(gert::TilingParseContext* /*context*/) { return ge::GRAPH_SUCCESS; }
 
 // ==================== Registration ====================
 IMPL_OP_OPTILING(SituMxQuant).Tiling(Tiling4SituMxQuant).TilingParse<SituMxQuantCompileInfo>(TilingPrepare4SituMxQuant);

@@ -336,13 +336,13 @@ protected:
         // src0 is a single datablock of 1.0f, reused across all repeats via
         // src0BlkStride=0 and src0RepStride=0.
         LocalTensor<float> onesBlock = castBuf_.template Get<float>();
-        Duplicate<float>(onesBlock, 1.0f, 8);
+        Duplicate<float>(onesBlock, 1.0f, BLOCK_ELEM);
         PipeBarrier<PIPE_V>();
 
         constexpr uint64_t maskFp32 = static_cast<uint64_t>(ELEM_PER_REP_FP32);
         uint32_t fullReps = static_cast<uint32_t>(H / maskFp32);
         uint32_t remainder = static_cast<uint32_t>(H % maskFp32);
-        BinaryRepeatParams divParams(1, 0, 1, 8, 0, 8);
+        BinaryRepeatParams divParams(1, 0, 1, MASK_BLK_STRIDE, 0, MASK_BLK_STRIDE);
 
         if (fullReps > 0) {
             Div(sigmoidResult, onesBlock, denomTmp, maskFp32, static_cast<uint8_t>(fullReps), divParams);
@@ -537,7 +537,7 @@ protected:
             PipeBarrier<PIPE_V>();
         }
         uint32_t mask = repsFp32 > 0 ? ELEM_PER_REP_FP32 : calCount;
-        WholeReduceMax(tempRes, tempRes, mask, 1, 8, 1, 8);
+        WholeReduceMax(tempRes, tempRes, mask, 1, MASK_BLK_STRIDE, 1, MASK_BLK_STRIDE);
     }
 
     __aicore__ inline void CopyOut(int64_t rowIdx, int64_t colOffset)

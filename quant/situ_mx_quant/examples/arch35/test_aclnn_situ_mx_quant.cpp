@@ -23,6 +23,12 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_situ_mx_quant.h"
 
+// aclnn错误码枚举仅随op_api实现环境的opdev/op_errno.h导出，example的公共头链不可见；
+// 与tests/ut/common/ut_string_utils.h的兜底方式一致，按文档错误码表补齐定义
+#ifndef ACLNN_ERR_PARAM_INVALID
+#define ACLNN_ERR_PARAM_INVALID static_cast<aclnnStatus>(161002)
+#endif
+
 #define CHECK_RET(cond, return_expr) \
     do {                             \
         if (!(cond)) {               \
