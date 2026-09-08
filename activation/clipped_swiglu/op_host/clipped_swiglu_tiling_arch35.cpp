@@ -44,6 +44,7 @@ constexpr int64_t CONST_7 = 7; // inputUb = 2x*db outputUb = x*db vectorUb = x
 constexpr int64_t CONST_8 = 8; // int64 size is 8
 constexpr int64_t MAX_GROUP_NUM = 8192;
 constexpr int64_t DB_BUFFER = 2;
+constexpr int64_t MAX_X_DIM = 8;
 
 constexpr float CLAMP_LIMIT_DEFAULT = 7.0;
 constexpr float GLU_ALPHA_DEFAULT = 1.702;
@@ -229,6 +230,9 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
     const gert::Shape& inputShapeX = shapeX->GetStorageShape();
     xDims_ = inputShapeX.GetDimNum();
     OP_CHECK_IF(xDims_ <= 0, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xDims_), "> 0"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDims_ > MAX_X_DIM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xDims_), "<= 8"),
                 return ge::GRAPH_FAILED);
     if (cutDim_ < 0) {
         cutDim_ = cutDim_ + xDims_;

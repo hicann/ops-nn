@@ -300,15 +300,26 @@ aclnnStatus aclnnClippedSwigluV2(
       <td>传入的x、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>输入或输出的参数维度不在支持的范围内。</td>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
+      <td>输入或输出的shape不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>dim或clamp_mode不在指定的取值范围内。</td>
+      <td>groupIndexOptional的数据类型或shape大小不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>dim不在输入x支持的维度范围内。</td>
+    </tr>
+    <tr>
+      <td>limit小于等于0。</td>
+    </tr>
+    <tr>
+      <td>clampMode既不是0也不是1。</td>
     </tr>
   </tbody>
   </table>
@@ -357,7 +368,8 @@ aclnnStatus aclnnClippedSwigluV2(
 
 ## 约束说明
 
-确定性计算：aclnnClippedSwigluV2默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
+- 确定性计算：aclnnClippedSwigluV2默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
+- 输出out超出groupIndexOptional所有元素之和的部分未进行清理处理，该部分内存为垃圾数据。
 
 ## 调用示例
 
