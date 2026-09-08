@@ -19,6 +19,7 @@
 // 兼容opp整包场景：整包不编译本文件，仅子包编译
 namespace Ops {
 namespace NN {
+#ifdef NN_ENABLE_DLOPEN_LEGACY
 bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
                   const optiling::OpTypeV2 opType)
 {
@@ -35,5 +36,6 @@ bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETil
         return func(context, tbeTilingForV2, opType);
     }
 }
+#endif
 } // namespace NN
 } // namespace Ops
