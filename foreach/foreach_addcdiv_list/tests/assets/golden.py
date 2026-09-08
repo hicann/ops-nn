@@ -292,6 +292,7 @@ class ForeachAddcdivListKernelSpec:
 __spec__ = {
     "foreach_addcdiv_list": "ForeachAddcdivListKernelSpec",
     "aclnnForeachAddcdivList": "ForeachAddcdivListAclnnSpec",
+    "torch._foreach_addcdiv": "ForeachAddcdivListTorchSpec",
 }
 
 
@@ -309,9 +310,15 @@ def _tp_one(t):
     return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
 
+def _golden_one(t):
+    """CPU golden: 低精度浮点使用 fp32 中间量，整型和 fp64 保持原精度。"""
+    t = _tp_one(t).detach().cpu()
+    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
 def _tp_scalars(v):
     if isinstance(v, torch.Tensor):
-        return [float(x) for x in v.reshape(-1)]
+        return [float(x) for x in v.detach().cpu().reshape(-1)]
     return [float(x) for x in v]
 
 
@@ -337,9 +344,9 @@ class ForeachAddcdivListAclnnSpec:
 
     @staticmethod
     def golden(x1, x2, x3, scalars, out=None, **kwargs):
-        a = [_tp_one(t) for t in x1]
-        b = [_tp_one(t) for t in x2]
-        c = [_tp_one(t) for t in x3]
+        a = [_golden_one(t) for t in x1]
+        b = [_golden_one(t) for t in x2]
+        c = [_golden_one(t) for t in x3]
         sc = _tp_scalars(scalars)
         # 两步拼接: 先 div 再按标量乘, 最后相加, 不用 addcdiv 的融合舍入
         return _keep_dtype(
@@ -350,8 +357,11 @@ class ForeachAddcdivListAclnnSpec:
     tolerance = _TOL_KERNEL
 
 
-# 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——算子目录下无 framework/ 插件、
-# 无 graph pass, 也未发现 torch_npu eager/aten 绑定到该 aclnn 接口。
+class ForeachAddcdivListTorchSpec:
+    """E2E Tensor/ScalarList overload: 无 ACLNN out 参数，返回 TensorList。"""
+
+    @staticmethod
+    def golden(self, tensor1, tensor2, scalars, **kwargs):
+        return ForeachAddcdivListAclnnSpec.golden(
+            self, tensor1, tensor2, scalars, **kwargs
+        )

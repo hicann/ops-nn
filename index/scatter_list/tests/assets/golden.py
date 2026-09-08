@@ -237,7 +237,16 @@ class ScatterListKernelSpec:
 __spec__ = {
     "scatter_list": "ScatterListKernelSpec",
     "aclnnScatterList": "ScatterListAclnnSpec",
+    "torch_npu.npu_scatter_list": "ScatterListTorchSpec",
 }
+
+
+def _golden_numpy(t):
+    """只转换输入；整数不经浮点，BF16 经无损 FP32 桥接。"""
+    if t is None:
+        return None
+    t = t.detach().cpu()
+    return t.float().numpy() if t.dtype == torch.bfloat16 else t.numpy()
 
 
 def _keep_dtype(res, ref):
@@ -271,12 +280,15 @@ class ScatterListAclnnSpec:
         axis=-2,
         **kwargs,
     ):
-        return _keep_dtype(
-            _ScatterListCompose()(
-                varRef, indice, updates, mask=maskOptional, axis=axis
-            ),
-            varRef,
+        # 复用 Kernel golden，计算与结果均在 CPU，不改写 varRef。
+        result = _GOLDEN_FN(
+            [_golden_numpy(v) for v in varRef],
+            _golden_numpy(indice),
+            _golden_numpy(updates),
+            _golden_numpy(maskOptional),
+            axis=axis,
         )
+        return _keep_dtype([torch.from_numpy(v) for v in result], varRef)
 
     class _Compose:
         def __call__(self, varRef, indice, updates, **kwargs):
@@ -288,8 +300,13 @@ class ScatterListAclnnSpec:
     tolerance = _TOL_KERNEL
 
 
-# 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——无 framework/ 插件、无 graph pass,
-# 也未发现 torch_npu 绑定到 aclnnScatterList。
+class ScatterListTorchSpec:
+    """注册名是 NPU 被测 API；golden 复用 CPU 参考实现。"""
+
+    @staticmethod
+    def golden(input, indices, updates, mask=None, reduce="update", axis=-2, **kwargs):
+        return ScatterListAclnnSpec.golden(
+            input, indices, updates, mask, reduce, axis, **kwargs
+        )
+
+    tolerance = _TOL_KERNEL

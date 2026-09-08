@@ -290,6 +290,7 @@ class ForeachAddcmulListKernelSpec:
 __spec__ = {
     "foreach_addcmul_list": "ForeachAddcmulListKernelSpec",
     "aclnnForeachAddcmulList": "ForeachAddcmulListAclnnSpec",
+    "torch._foreach_addcmul": "ForeachAddcmulListTorchSpec",
 }
 
 
@@ -307,17 +308,23 @@ def _tp_one(t):
     return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
 
+def _golden_one(t):
+    """CPU golden: 低精度浮点使用 fp32 中间量，整型和 fp64 保持原精度。"""
+    t = _tp_one(t).detach().cpu()
+    return t.to(torch.float32) if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
 def _tp_scalars(v):
     if isinstance(v, torch.Tensor):
-        return [float(x) for x in v.reshape(-1)]
-    return [float(x) for x in v]
+        return v.detach().cpu().reshape(-1).tolist()
+    return list(v)
 
 
 def _tp_int_scalars(v, dtype):
     """整型分支的标量: 保持精确整数。走 float() 会把超过 2^24 的 int32 抹掉低位
     (1564714939 -> 1564714880), 整个整数结果随之偏掉。"""
     t = v if isinstance(v, torch.Tensor) else torch.as_tensor(v)
-    return [int(x) for x in t.reshape(-1).to(dtype)]
+    return [int(x) for x in t.detach().cpu().reshape(-1).to(dtype)]
 
 
 def _bcast_scalars(sc, n):
@@ -349,9 +356,9 @@ class ForeachAddcmulListAclnnSpec:
 
     @staticmethod
     def golden(x1, x2, x3, scalars, out=None, **kwargs):
-        a = [_tp_one(t) for t in x1]
-        b = [_tp_one(t) for t in x2]
-        c = [_tp_one(t) for t in x3]
+        a = [_golden_one(t) for t in x1]
+        b = [_golden_one(t) for t in x2]
+        c = [_golden_one(t) for t in x3]
         # 整型(def 支持 int32)必须走 int64 中间量 + 精确整数标量, 与 kernel 通路 golden
         # (__golden_foreach_addcmul_list 的整型分支)和算子实现同口径: 算子的 ComputeIntPath
         # 全程在整型 RegTensor 上 Mul/Muls/Add, 即 int32 回绕算术。
@@ -379,8 +386,11 @@ class ForeachAddcmulListAclnnSpec:
     tolerance = _TOL_KERNEL
 
 
-# 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# e2e / TensorFlow / ONNX / 融合 pass: 均未交付——算子目录下无 framework/ 插件、
-# 无 graph pass, 也未发现 torch_npu eager/aten 绑定到该 aclnn 接口。
+class ForeachAddcmulListTorchSpec:
+    """E2E Tensor/ScalarList overload: 无 ACLNN out 参数，返回 TensorList。"""
+
+    @staticmethod
+    def golden(self, tensor1, tensor2, scalars, **kwargs):
+        return ForeachAddcmulListAclnnSpec.golden(
+            self, tensor1, tensor2, scalars, **kwargs
+        )
