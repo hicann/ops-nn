@@ -235,6 +235,12 @@ __aicore__ inline void OptGroupInitKValue(Intf* self)
     self->ctx.ci1Opt = CeilDiv(self->ctx.singleCoreCi, Intf::k0);
 
     if constexpr (Intf::isConv3D) {
+        self->ctx.cin1xcin0 = AlignB(self->ctx.singleCoreCi, Intf::k0);
+        self->ctx.bL1Dk = self->ctx.convTilingData->cinBInCore <= self->ctx.cin1xcin0 ?
+                              1 :
+                              self->ctx.convTilingData->cinBInCore / self->ctx.cin1xcin0;
+        self->ctx.bL1DkTail = self->ctx.convTilingData->kernelD % self->ctx.bL1Dk;
+        self->ctx.bL1DkTail = self->ctx.bL1DkTail == 0 ? self->ctx.bL1Dk : self->ctx.bL1DkTail;
         self->ctx.bL1Cin = self->ctx.convTilingData->cinBInCore / self->ctx.bL1Dk;
         self->ctx.bL1CinTail = self->ctx.bL1Dk > 1 ? self->ctx.bL1Cin : self->ctx.singleCoreCi % self->ctx.bL1Cin;
         self->ctx.bL1CinTail = self->ctx.bL1CinTail == 0 ? self->ctx.bL1Cin : self->ctx.bL1CinTail;
@@ -321,12 +327,6 @@ __aicore__ inline void OptGroupVecInit(Intf* self)
 
     if constexpr (Intf::isConv3D) {
         self->ctx.singleCoreDo = self->ctx.convTilingData->singleCoreDo;
-        self->ctx.cin1xcin0 = AlignB(self->ctx.singleCoreCi, Intf::k0);
-        self->ctx.bL1Dk = self->ctx.convTilingData->cinBInCore <= self->ctx.cin1xcin0 ?
-                              1 :
-                              self->ctx.convTilingData->cinBInCore / self->ctx.cin1xcin0;
-        self->ctx.bL1DkTail = self->ctx.convTilingData->kernelD % self->ctx.bL1Dk;
-        self->ctx.bL1DkTail = self->ctx.bL1DkTail == 0 ? self->ctx.bL1Dk : self->ctx.bL1DkTail;
     }
 
     OptGroupInitBuf<Intf>(self);

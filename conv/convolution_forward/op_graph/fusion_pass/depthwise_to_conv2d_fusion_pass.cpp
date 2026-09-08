@@ -90,7 +90,6 @@ bool DepthwiseToConv2dFusionPass::GetDepthwiseConvAttrs(const GNode& depthwiseNo
                           return false);
     }
 
-    depthwiseNode.GetAttr(PADDING, depthwiseAttrs.padding);
     return true;
 }
 
@@ -120,6 +119,7 @@ GraphUniqPtr DepthwiseToConv2dFusionPass::Replacement(const GNode& depthwiseNode
     }
 
     auto* replaceGraph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    FUSION_PASS_CHECK(replaceGraph == nullptr, OP_LOGE(FUSION_NAME, "get replacement graph failed."), return nullptr);
     GNode conv2dNode;
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::BuildConv2dNode(replaceGraph, convDescInfo.nodeNameStr + "_To_Conv2D",
                                                             inputs, conv2dNode),
@@ -156,8 +156,11 @@ bool DepthwiseToConv2dFusionPass::SetConv2dAttrs(GNode& conv2dNode, const GNode&
                           OP_LOGE(FUSION_NAME, "%s set offset_x failed.", convDescInfo.nodeNameStr.c_str()),
                           return false);
     }
-    FUSION_PASS_CHECK(conv2dNode.SetAttr(PADDING, depthwiseAttrs.padding) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s set padding failed.", convDescInfo.nodeNameStr.c_str()), return false);
+    if (depthwiseNode.GetAttr(PADDING, depthwiseAttrs.padding) == GRAPH_SUCCESS) {
+        FUSION_PASS_CHECK(conv2dNode.SetAttr(PADDING, depthwiseAttrs.padding) != GRAPH_SUCCESS,
+                          OP_LOGE(FUSION_NAME, "%s set padding failed.", convDescInfo.nodeNameStr.c_str()),
+                          return false);
+    }
 
     int64_t opImplModeEnum = 0;
     if (depthwiseNode.GetAttr(OP_IMPL_MODE_ENUM, opImplModeEnum) == GRAPH_SUCCESS) {
