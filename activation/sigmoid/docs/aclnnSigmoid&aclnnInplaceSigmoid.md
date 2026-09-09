@@ -102,7 +102,7 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>输入</td>
       <td>待进行Sigmoid计算的入参，公式中的input。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与out一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、BOOL、COMPLEX64、COMPLEX128、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>输出</td>
       <td>计算的出参。</td>
       <td>shape需要与self一致。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

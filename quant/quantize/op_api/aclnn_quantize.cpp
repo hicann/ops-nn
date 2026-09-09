@@ -137,7 +137,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* scales, const a
     op::DataType dtypeOP = op::ToOpDataType(dtype);
     // 检查dtype数据类型
     if (!CheckType(dtypeOP, outSupportList)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Param dtype %s should be in dtype support list [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Param dtype %s should be in dtype support list %s.",
                 op::ToString(dtypeOP).GetString(), op::ToString(outSupportList).GetString());
         return false;
     }
