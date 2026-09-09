@@ -433,6 +433,7 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/convolution_backward/op_api/
         - ops/ops-nn/conv/common/op_host/conv_backprop_infershape.cpp
         - ops/ops-nn/conv/extend_conv_transpose/op_host/
+        - ops/ops-nn/conv/extend_conv_transpose_v2/op_host/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -450,6 +451,9 @@ convolution_backprop@ops-nn:
       - ops/ops-nn/conv/extend_conv_transpose/op_host/*.h
       - ops/ops-nn/conv/extend_conv_transpose/op_host/*/*.h
       - ops/ops-nn/conv/extend_conv_transpose/op_host/extend_conv_transpose_def.cpp
+      - ops/ops-nn/conv/extend_conv_transpose_v2/op_host/*.h
+      - ops/ops-nn/conv/extend_conv_transpose_v2/op_host/*/*.h
+      - ops/ops-nn/conv/extend_conv_transpose_v2/op_kernel/
 activation-c@ops-nn:
   src:
     release:
