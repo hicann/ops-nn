@@ -493,7 +493,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     - 当前场景仅支持perTensor量化模式，即`scales1Optional`、`zeroPoints1Optional`的shape为[1]，`gamma`、`beta`的shape为[1，x1的最后一维]。
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
     - 当前场景不支持BFLOAT16类型。
-    - 入参`x1`、`x2`的norm轴长度必须大于等于32 Bytes。
+    - 入参`x1`、`x2`的norm轴长度必须大于等于32 Byte。
   <!-- end id8 -->
 
 - 功能维度：

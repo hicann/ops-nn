@@ -421,7 +421,7 @@ aclnnStatus aclnnSwigluGroupGrad(
 - weightOptional与yOriginOptional必须同时提供或同时为空；weightOptional的元素个数等于gradY非尾轴元素个数；yOriginOptional的最后一维与gradY相同，非尾轴元素个数与gradY相等。
 - groupIndexOptional非空时必须是一维非空Tensor。
 - gradY、x、yOriginOptional、gradXOut数据类型必须一致（FLOAT、FLOAT16或BFLOAT16）。
-- weightOptional、gradWeightOut必须为FLOAT类型。
+- weightOptional、gradWeightOutOptional必须为FLOAT类型。
 - groupIndexOptional必须为INT64类型。
 - clampLimit取值范围为-1.0或>0.0，clampLimit=-1.0表示不启用Clamp反向传播掩码，启用时clampLimit必须>0.0。
 

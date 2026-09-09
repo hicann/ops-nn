@@ -28,7 +28,7 @@
 - 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，batchDims代表运算批次。保存到out Tensor中。
 - 示例：
 
-  例如，当batchDims为0时，输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量index=[1, 0],。
+  例如，当batchDims为0时，输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量index=[1, 0]。
   - dim=0的结果：$out=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$
 
   - dim=1的结果： $out=\begin{bmatrix}2 & 1\\ 5 & 4\\ 8 & 7\end{bmatrix}$

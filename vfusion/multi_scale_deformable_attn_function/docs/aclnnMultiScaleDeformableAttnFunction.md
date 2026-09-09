@@ -165,7 +165,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
       <td>levelStartIndex（aclTensor*）</td>
       <td>输入</td>
       <td>每张特征图的起始索引。对应公式中的`levelStartIndex`。</td>
-      <td>shap为(num_levels)。</td>
+      <td>shape为(num_levels)。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>

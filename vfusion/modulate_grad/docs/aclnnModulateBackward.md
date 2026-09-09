@@ -295,7 +295,7 @@ aclnnStatus aclnnModulateBackward(
   - aclnnModulateBackward默认确定性实现。
 
 - scale和shift是二维向量，第一维需要和input的第一维shape相同，第二维需要和input的第三维shape相同。
-- 输入gradoutput的shape需要和输入input的shape保持一致。
+- 输入grad_output的shape需要和输入input的shape保持一致。
 
 ## 调用示例
 

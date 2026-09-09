@@ -235,7 +235,7 @@ aclnnStatus aclnnLayerNormQuant(
   <!-- npu="310p" id8 -->
   - <term>Atlas 推理系列产品</term>：
     - 入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
-    - 入参`x`、`gamma`、`beta`的尾轴长度必须大于等于32 Bytes。
+    - 入参`x`、`gamma`、`beta`的尾轴长度必须大于等于32 Byte。
   <!-- end id8 -->
 
 - **返回值**

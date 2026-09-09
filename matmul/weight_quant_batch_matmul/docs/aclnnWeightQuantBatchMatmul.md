@@ -468,7 +468,7 @@ int main() {
   }
   std::vector<uint64_t> deqScaleHostData(deqScaleData, deqScaleData + deqScaleSize);
 
-  // creat aclTensor
+  // create aclTensor
   aclTensor* x1 = nullptr;
   aclTensor* x2 = nullptr;
   aclTensor* addOffset = nullptr;
