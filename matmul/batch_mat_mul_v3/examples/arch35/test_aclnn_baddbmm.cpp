@@ -89,7 +89,7 @@ float bf16_to_float(uint16_t bf16)
     uint16_t exp = (bf16 >> 7) & 0xFF; // 8 位指数
     uint16_t mant = bf16 & 0x7F;
 
-    //特殊值处理
+    // 特殊值处理
     if (exp == 0) {
         if (mant == 0) {
             return sign ? -0.0f : 0.0f;
@@ -98,14 +98,14 @@ float bf16_to_float(uint16_t bf16)
             return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
     } else if (exp == 255) {
-        //无穷大或 NaN
+        // 无穷大或 NaN
         if (mant == 0) {
             return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
         } else {
             return std::numeric_limits<float>::quiet_NaN();
         }
     } else {
-        //规格化数
+        // 规格化数
         float f_exp = (float)(exp - 127);      // 偏移 127
         float f_mant = (float)mant / (1 << 7); // 7 位小数
         float f = (sign ? -1.0f : 1.0f) * (1.0f + f_mant) * (1 << (int)f_exp);
@@ -184,7 +184,7 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     // aclnnBaddbmm接口调用示例
     // 3. 调用CANN算子库API
     // 调用aclnnBaddbmm第一段接口
-    ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, out, cubeMathType, &workspaceSize, &executor);
+    ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, out, cubeMathType, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -217,7 +217,7 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     // 3. 调用CANN算子库API
     LOG_PRINT("\ntest aclnnInplaceBaddbmm\n");
     // 调用aclnnInplaceBaddbmm第一段接口
-    ret = aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSize,
+    ret = aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, cubeMathType, &workspaceSize,
                                               &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);

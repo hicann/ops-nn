@@ -78,7 +78,7 @@ float bf16_to_float(uint16_t bf16)
     uint16_t exp = (bf16 >> 7) & 0xFF; // 8 位指数
     uint16_t mant = bf16 & 0x7F;
 
-    //特殊值处理
+    // 特殊值处理
     if (exp == 0) {
         if (mant == 0) {
             return sign ? -0.0f : 0.0f;
@@ -87,14 +87,14 @@ float bf16_to_float(uint16_t bf16)
             return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
     } else if (exp == 255) {
-        //无穷大或 NaN
+        // 无穷大或 NaN
         if (mant == 0) {
             return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
         } else {
             return std::numeric_limits<float>::quiet_NaN();
         }
     } else {
-        //规格化数
+        // 规格化数
         float f_exp = (float)(exp - 127);      // 偏移 127
         float f_mant = (float)mant / (1 << 7); // 7 位小数
         float f = (sign ? -1.0f : 1.0f) * (1.0f + f_mant) * (1 << (int)f_exp);
@@ -193,8 +193,8 @@ int AclnnMatmulWeightNZTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* self = nullptr;
     aclTensor* mat2 = nullptr;
     aclTensor* out = nullptr;
-    std::vector<uint16_t> selfHostData(512, 0b0011111110000000); // float16_t 用0x3C00表示int_16的1
-    std::vector<uint16_t> mat2HostData(512, 0b0011111110000000); // float16_t 用0x3C00表示int_16的1
+    std::vector<uint16_t> selfHostData(512, 0b0011111110000000); // float16 的 1.0 用 0x3C00 表示
+    std::vector<uint16_t> mat2HostData(512, 0b0011111110000000); // float16 的 1.0 用 0x3C00 表示
     std::vector<uint16_t> outHostData(256, 0);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_BF16, &self);
