@@ -56,6 +56,13 @@ public:
             powerOfTwo_ *= NUM_TWO;
         }
 
+        uint64_t reducePowerOfTwo = 1;
+        while (reducePowerOfTwo < static_cast<uint64_t>(cols_)) {
+            reducePowerOfTwo *= NUM_TWO;
+        }
+        reduceScale_ = 1.0f / static_cast<float>(reducePowerOfTwo);
+        reduceScaleCorrection_ = static_cast<float>(reducePowerOfTwo) / static_cast<float>(cols_);
+
         uint64_t gmOffset;
         uint64_t meanOffset;
         if (coreIdx < tailCoreStartIndex_) {
@@ -234,7 +241,8 @@ public:
                                                           __ubuf__ float* dichotomyAddLocal, uint32_t reduceCount,
                                                           uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
                                                           uint32_t dichotomyAddLastNum, uint32_t offset,
-                                                          float reduceScale, float scale, float cnt, float eps)
+                                                          float reduceScale, float reduceScaleCorrection, float scale,
+                                                          float scaleCorrection, float cnt, float eps)
     {
         uint32_t dichotomyAddReminder = reduceCount - dichotomyAddPower;
         uint16_t dichotomyAddReminderLoopCount = CEIL_DIV(dichotomyAddReminder, VL_FP32);
@@ -284,6 +292,7 @@ public:
             }
 
             NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            Muls(mean, mean, scaleCorrection, pregMerge);
             StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
             Duplicate(one, float(1.0), pregMain);
@@ -330,6 +339,7 @@ public:
             }
 
             NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            Muls(var, var, reduceScaleCorrection, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
@@ -476,16 +486,16 @@ public:
                 outputOffsetTemp = inputOffsetTemp;
             }
 
-            float reduceScale = float(1.0) / static_cast<float>(cols_);
             if (colsTail_ != colsPerLoop_) {
                 VFWelfordParallelFinalizeNonAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr,
                                                   colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
-                                                  colsTail_, reduceScale, count - 1, eps_);
+                                                  colsTail_, reduceScale_, reduceScaleCorrection_, count - 1, eps_);
             } else {
-                float scale = float(1.0) / static_cast<float>(colsPerLoop_);
+                float scale = 1.0f / static_cast<float>(powerOfTwo_);
+                float scaleCorrection = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
                 VFWelfordParallelFinalizeAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr, colsPerLoop_,
-                                               binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0, reduceScale, scale,
-                                               count, eps_);
+                                               binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0, reduceScale_,
+                                               reduceScaleCorrection_, scale, scaleCorrection, count, eps_);
             }
 
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -626,6 +636,8 @@ private:
     int64_t colsPerLoopAlignB16_;
     int64_t colsPerLoopAlign_;
     int64_t powerOfTwo_;
+    float reduceScale_;
+    float reduceScaleCorrection_;
     int64_t binaryAddLastNum_;
     int64_t binaryAddK_;
     int64_t binaryAddNum_;

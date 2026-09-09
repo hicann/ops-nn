@@ -297,7 +297,8 @@ __aicore__ inline void VFWelfordParallelUpdateCommon(__ubuf__ X1_TYPE* x1Local, 
 __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
     __ubuf__ float* meanLocal, __ubuf__ float* rstdLocal, __ubuf__ float* tmpMeanLocal, __ubuf__ float* tmpVarLocal,
     __ubuf__ float* dichotomyAddLocal, uint32_t reduceCount, uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
-    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float cnt, float eps)
+    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float reduceScaleCorrection,
+    float cnt, float eps)
 {
     float tailCnt = cnt + float(1.0);
     float coeff = tailCnt / cnt;
@@ -394,6 +395,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
         }
         NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(mean, mean, reduceScaleCorrection, pregMerge);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
         // 计算rstd
@@ -488,6 +490,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
         }
         NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(var, var, reduceScaleCorrection, pregMerge);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
@@ -497,7 +500,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
     __ubuf__ float* meanLocal, __ubuf__ float* rstdLocal, __ubuf__ float* tmpMeanLocal, __ubuf__ float* tmpVarLocal,
     __ubuf__ float* dichotomyAddLocal, uint32_t reduceCount, uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
-    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float cnt, float eps)
+    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float reduceScaleCorrection,
+    float cnt, float eps)
 {
     float countScale = cnt * reduceScale;
     float tailCnt = cnt + float(1.0);
@@ -595,6 +599,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, meanReg, pregMerge);
         }
         NormCommon::DichotomyAdd(meanReg, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(meanReg, meanReg, reduceScaleCorrection, pregMerge);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, meanReg, pregMerge);
 
         // 计算rstd
@@ -691,6 +696,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, varReg, pregMerge);
         }
         NormCommon::DichotomyAdd(varReg, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(varReg, varReg, reduceScaleCorrection, pregMerge);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(varReg, rstdReg, pregMerge, eps);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstdReg, pregMerge);
     }
@@ -700,7 +706,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
     __ubuf__ float* meanLocal, __ubuf__ float* rstdLocal, __ubuf__ float* tmpMeanLocal, __ubuf__ float* tmpVarLocal,
     __ubuf__ float* dichotomyAddLocal, uint32_t reduceCount, uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
-    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float cnt, float eps)
+    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize, float reduceScale, float reduceScaleCorrection,
+    float cnt, float eps)
 {
     float tailCnt = cnt + float(1.0);
     float countScale = cnt * reduceScale;
@@ -791,6 +798,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         }
 
         NormCommon::DichotomyAdd(meanReg, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(meanReg, meanReg, reduceScaleCorrection, pregMerge);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, meanReg, pregMerge);
 
         // 计算rstd
@@ -870,6 +878,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         }
 
         NormCommon::DichotomyAdd(varReg, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+        Muls(varReg, varReg, reduceScaleCorrection, pregMerge);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(varReg, rstd, pregMerge, eps);
         StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
     }
@@ -880,7 +889,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlign(__ubuf__ float* meanLoc
                                                          __ubuf__ float* dichotomyAddLocal, uint32_t reduceCount,
                                                          uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
                                                          uint32_t dichotomyAddLastNum, uint32_t offset,
-                                                         uint32_t tailSize, float reduceScale, float cnt, float eps)
+                                                         uint32_t tailSize, float reduceScale,
+                                                         float reduceScaleCorrection, float cnt, float eps)
 {
     // 非对齐Welford finalize阶段由于自身存在整尾块，二分折叠存在整尾块，会出现多种不同的场景，每个场景都有独立的VF
     uint32_t dichotomyAddReminder = reduceCount - dichotomyAddPower;
@@ -888,18 +898,18 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlign(__ubuf__ float* meanLoc
     if (tailSize >= dichotomyAddPower) {
         VFWelfordParallelFinalizeNonAlignSituation1(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
                                                     reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
-                                                    offset, tailSize, reduceScale, cnt, eps);
+                                                    offset, tailSize, reduceScale, reduceScaleCorrection, cnt, eps);
         return;
     }
     if (tailSize <= dichotomyAddReminderRoundUp) {
         VFWelfordParallelFinalizeNonAlignSituation2(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
                                                     reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
-                                                    offset, tailSize, reduceScale, cnt, eps);
+                                                    offset, tailSize, reduceScale, reduceScaleCorrection, cnt, eps);
         return;
     }
     VFWelfordParallelFinalizeNonAlignSituation3(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
                                                 reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
-                                                offset, tailSize, reduceScale, cnt, eps);
+                                                offset, tailSize, reduceScale, reduceScaleCorrection, cnt, eps);
 }
 
 } // namespace AddLayerNorm

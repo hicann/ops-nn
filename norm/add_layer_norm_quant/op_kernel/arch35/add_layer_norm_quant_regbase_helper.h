@@ -563,7 +563,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlign(LocalTensor<float>& mea
     __ubuf__ float* dichotomyAddAddr = (__ubuf__ float*)dichotomyAddLocal.GetPhyAddr();
     AddLayerNorm::VFWelfordParallelFinalizeNonAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, dichotomyAddAddr,
                                                     reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
-                                                    offset, tailSize, reduceScale, cnt, eps);
+                                                    offset, tailSize, reduceScale, 1.0f, cnt, eps);
 }
 
 /*
