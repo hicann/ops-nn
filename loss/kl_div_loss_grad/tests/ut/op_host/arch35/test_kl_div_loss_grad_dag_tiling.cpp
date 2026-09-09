@@ -253,3 +253,263 @@ TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_david_tiling7)
     DoKlDivLossGradDagTilingCase(inputShape1, inputShape2, inputShape3, outputShape, ge::DT_FLOAT /*inputdtype*/,
                                  reduction, logTarget, expectStr);
 }
+
+namespace {
+// GET_TPL_TILING_KEY(schMode, logTarget): schMode occupies bit 0..15, logTarget occupies bit 16.
+// The logTarget param is declared as ASCENDC_TPL_UINT_DECL(logTarget, 1, UI_LIST, KDLG_TRUE, KDLG_FALSE),
+// and UINT params are encoded by their UI_LIST index: logTarget=true(1)->index 0 (bit cleared),
+// logTarget=false(0)->index 1 (bit set).
+constexpr uint64_t KDLG_LOG_TARGET_MASK = 1UL << 16;
+} // namespace
+
+// Status-oriented helper: drives one KlDivLossGrad tiling invocation with independent per-port dtypes
+// so that both the fp16/bf16 broadcast branches and the dtype-validation failure branches can be exercised.
+// On success the tiling key is returned so the logTarget bit can be asserted.
+static void DoKlDivLossGradStatusCase(std::initializer_list<int64_t>& gradShape,
+                                      std::initializer_list<int64_t>& inputShape,
+                                      std::initializer_list<int64_t>& targetShape,
+                                      std::initializer_list<int64_t>& outputShape, ge::DataType gradDtype,
+                                      ge::DataType inputDtype, ge::DataType targetDtype, ge::DataType outputDtype,
+                                      std::string& reduction, bool logTarget, ge::graphStatus expectedStatus,
+                                      uint64_t& outTilingKey)
+{
+    fe::PlatFormInfos platFormInfo;
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> socVersion;
+    InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersion);
+
+    optiling::KlDivLossGradCompileInfo compileInfo;
+    std::string opType("KlDivLossGrad");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+
+    string compileInfoStr = R"({})";
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+    ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
+    ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(16 * 4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+
+    gert::StorageShape gradShapeStorage = {gradShape, gradShape};
+    gert::StorageShape inputShapeStorage = {inputShape, inputShape};
+    gert::StorageShape targetShapeStorage = {targetShape, targetShape};
+    gert::StorageShape youtShapeStorage = {outputShape, outputShape};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(opType)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShapeStorage, &inputShapeStorage, &targetShapeStorage})
+                      .OutputShapes({&youtShapeStorage})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+                      .NodeInputTd(0, gradDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, targetDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, outputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
+                                  {"log_target", Ops::NN::AnyValue::CreateFrom<bool>(logTarget)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tilingFunc(tilingContext), expectedStatus);
+    if (expectedStatus == ge::GRAPH_SUCCESS) {
+        outTilingKey = tilingContext->GetTilingKey();
+    }
+}
+
+// fp16, logTarget=false: RunFp16BroadcastTiling takes the KDLGLogTargetFalse<half> dag.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_tiling_fp16_log_target_false)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                              ge::DT_FLOAT16, ge::DT_FLOAT16, reduction, logTarget, ge::GRAPH_SUCCESS, tilingKey);
+    EXPECT_NE(tilingKey & KDLG_LOG_TARGET_MASK, 0U); // false -> UI_LIST index 1 -> bit set
+}
+
+// fp16, logTarget=true: RunFp16BroadcastTiling takes the KDLGLogTargetTrue<half> dag.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_tiling_fp16_log_target_true)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = true;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                              ge::DT_FLOAT16, ge::DT_FLOAT16, reduction, logTarget, ge::GRAPH_SUCCESS, tilingKey);
+    EXPECT_EQ(tilingKey & KDLG_LOG_TARGET_MASK, 0U); // true -> UI_LIST index 0 -> bit cleared
+}
+
+// bf16, logTarget=false: RunFp16BroadcastTiling takes the KDLGLogTargetFalse<bfloat16_t> dag.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_tiling_bf16_log_target_false)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "sum";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                              ge::DT_BF16, reduction, logTarget, ge::GRAPH_SUCCESS, tilingKey);
+    EXPECT_NE(tilingKey & KDLG_LOG_TARGET_MASK, 0U); // false -> UI_LIST index 1 -> bit set
+}
+
+// bf16, logTarget=true: RunFp16BroadcastTiling takes the KDLGLogTargetTrue<bfloat16_t> dag.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_tiling_bf16_log_target_true)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "sum";
+    bool logTarget = true;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                              ge::DT_BF16, reduction, logTarget, ge::GRAPH_SUCCESS, tilingKey);
+    EXPECT_EQ(tilingKey & KDLG_LOG_TARGET_MASK, 0U); // true -> UI_LIST index 0 -> bit cleared
+}
+
+// fp32, reduction=none: reductionCof stays 1.0 without any dim accounting.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_tiling_fp32_reduction_none)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "none";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_SUCCESS, tilingKey);
+    EXPECT_NE(tilingKey & KDLG_LOG_TARGET_MASK, 0U); // false -> UI_LIST index 1 -> bit set
+}
+
+// unsupported grad dtype (int32) is rejected by CalcInputDtype.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_invalid_grad_dtype_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// grad/input dtype mismatch is rejected by CalcDiffDtype.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_dtype_mismatch_grad_input_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT16, ge::DT_FLOAT,
+                              ge::DT_FLOAT16, ge::DT_FLOAT16, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// grad/target dtype mismatch is rejected by CalcDiffDtype.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_dtype_mismatch_grad_target_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// grad/output dtype mismatch is rejected by CalcDiffDtype.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_dtype_mismatch_grad_output_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_BF16, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// invalid reduction string is rejected (reductionCof returns negative).
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_invalid_reduction_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2048, 1, 48};
+    std::initializer_list<int64_t> inputShape = {2048, 1, 1};
+    std::initializer_list<int64_t> targetShape = {1, 1, 48};
+    std::initializer_list<int64_t> outputShape = {2048, 1, 48};
+    std::string reduction = "avg";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// empty tensor with reduction=mean is rejected.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_mean_empty_tensor_failed)
+{
+    std::initializer_list<int64_t> gradShape = {2, 0, 4};
+    std::initializer_list<int64_t> inputShape = {2, 0, 4};
+    std::initializer_list<int64_t> targetShape = {2, 0, 4};
+    std::initializer_list<int64_t> outputShape = {2, 0, 4};
+    std::string reduction = "mean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
+
+// batchmean with a zero leading dim is rejected.
+TEST_F(KlDivLossGradDagTiling, kl_div_loss_grad_batchmean_zero_batch_failed)
+{
+    std::initializer_list<int64_t> gradShape = {0, 4};
+    std::initializer_list<int64_t> inputShape = {0, 4};
+    std::initializer_list<int64_t> targetShape = {0, 4};
+    std::initializer_list<int64_t> outputShape = {0, 4};
+    std::string reduction = "batchmean";
+    bool logTarget = false;
+    uint64_t tilingKey = 0;
+    DoKlDivLossGradStatusCase(gradShape, inputShape, targetShape, outputShape, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                              ge::DT_FLOAT, reduction, logTarget, ge::GRAPH_FAILED, tilingKey);
+}
