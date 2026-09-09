@@ -576,8 +576,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    // 框架预留16M
-    workspaces[0] = static_cast<size_t>(WORKSIZE);
+    workspaces[0] = 0;
 
     if (isGetTilingFromRepo) {
         workspaces[0] += usrSpaceSizeForKernelSplit_;

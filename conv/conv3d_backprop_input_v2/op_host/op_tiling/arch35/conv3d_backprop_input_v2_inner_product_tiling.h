@@ -32,8 +32,6 @@ using namespace Ops::NN::Optiling;
 constexpr uint8_t TILING_GROUP_MODE_ORIGIN = 0;
 constexpr uint8_t TILING_GROUP_MODE_ENLARGE = 1;
 
-constexpr int64_t WORKSIZE = static_cast<int64_t>(16 * 1024 * 1024);
-
 const int32_t PAD_DIM_LOW = 0;
 const int32_t PAD_DIM_UP = 255;
 constexpr uint32_t DB_ON = 2;

@@ -430,7 +430,6 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
 
 ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
 {
-    constexpr uint64_t WORKSPACE = 16777216; // 16777216 : 16 * 1024 * 1024 libapiworkspace
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t userWorkSpaceSize = 0;
@@ -438,7 +437,7 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
         constexpr uint64_t WORKSPACE_PIECE_NUM = 2; // 2: 1 space for Cube and 1 space for Vector
         userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.usedCoreNum * platformInfo_.l0c_size;
     }
-    workspaces[0] = WORKSPACE + userWorkSpaceSize;
+    workspaces[0] = userWorkSpaceSize;
     return ge::GRAPH_SUCCESS;
 }
 

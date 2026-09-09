@@ -34,15 +34,16 @@ template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMod
 __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop,
                                                            GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (workSpace == nullptr) {
-        return;
-    }
-
-    GM_ADDR usrWsp = GetUserWorkspace(workSpace);
-    if (usrWsp == nullptr) {
-        return;
-    }
     GET_TILING_DATA(tilingData, tiling);
+
+    GM_ADDR usrWsp = nullptr;
+    if (workSpace != nullptr) {
+        usrWsp = GetUserWorkspace(workSpace);
+    }
+    if (usrWsp == nullptr && (tilingData.enableVecTrans != 0 || tilingData.kSUseWorkSpace != 0 ||
+                              tilingData.useUbAccumForSplitK || tilingData.singleIterateDk != tilingData.dk)) {
+        return;
+    }
 
     if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
                   isBasicBlockTiling && loadB1Condition == TPL_SMALL_KERNEL) {

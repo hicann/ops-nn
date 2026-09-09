@@ -255,7 +255,6 @@ ge::graphStatus Conv3DBackpropFilterV2WinogradTiling::DoOpTiling()
 
 ge::graphStatus Conv3DBackpropFilterV2WinogradTiling::GetWorkspaceSize()
 {
-    constexpr uint64_t WORKSPACE = 16777216; // 16777216 : 16 * 1024 * 1024 libapiworkspace
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
 
@@ -287,7 +286,7 @@ ge::graphStatus Conv3DBackpropFilterV2WinogradTiling::GetWorkspaceSize()
     userWorkSpaceSize += SINGLE_SHAPE_C * SINGLE_SHAPE_C * WINO_KERNEL_SIZE_3 * WINO_KERNEL_SIZE_3 * sizeof(float) *
                          platformInfo_.core_num;
 
-    workspaces[0] = WORKSPACE + userWorkSpaceSize;
+    workspaces[0] = userWorkSpaceSize;
     return ge::GRAPH_SUCCESS;
 }
 

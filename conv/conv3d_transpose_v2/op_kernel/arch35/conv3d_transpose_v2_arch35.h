@@ -42,15 +42,16 @@ template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMod
 __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                       GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (workSpace == nullptr) {
-        return;
-    }
-
-    GM_ADDR usrWsp = GetUserWorkspace(workSpace);
-    if (usrWsp == nullptr) {
-        return;
-    }
     GET_TILING_DATA(tilingData, tiling);
+
+    GM_ADDR usrWsp = nullptr;
+    if (workSpace != nullptr) {
+        usrWsp = GetUserWorkspace(workSpace);
+    }
+    if (usrWsp == nullptr && (tilingData.enableVecTrans != 0 || tilingData.kSUseWorkSpace != 0 ||
+                              tilingData.useUbAccumForSplitK || tilingData.singleIterateDk != tilingData.dk)) {
+        return;
+    }
 #if defined(__DAV_310R6__)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)

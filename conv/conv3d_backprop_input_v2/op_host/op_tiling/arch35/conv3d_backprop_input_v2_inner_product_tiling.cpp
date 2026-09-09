@@ -1172,8 +1172,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    // 框架预留16M
-    workspaces[0] = static_cast<size_t>(WORKSIZE);
+    workspaces[0] = 0;
     // 前置transpose暂时与 kernel拆分、splitK 互斥
     if (tilingRunInfo_.enableVecTransFlag) {
         uint64_t usrSpaceSizeForVecTrans = static_cast<uint64_t>(runInfo_.dedy_cout) * runInfo_.kernel_d *

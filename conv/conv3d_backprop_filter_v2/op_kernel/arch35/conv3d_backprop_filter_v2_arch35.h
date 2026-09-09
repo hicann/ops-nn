@@ -35,12 +35,21 @@ template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge, 
 __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop,
                                                             GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (workSpace == nullptr) {
-        return;
+    REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData);
+    GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData, tilingData, tiling);
+
+    GM_ADDR user1 = nullptr;
+    if (workSpace != nullptr) {
+        SetSysWorkspace(workSpace);
+        user1 = GetUserWorkspace(workSpace);
     }
-    SetSysWorkspace(workSpace);
-    GM_ADDR user1 = GetUserWorkspace(workSpace);
-    if (user1 == nullptr) {
+    bool needUserWorkspace = false;
+    if constexpr (winogradTilingFlag != TPL_WINOGRAD_DISABLE) {
+        needUserWorkspace = true;
+    } else if constexpr (conv3DDWTemplateId == TPL_STREAM_K || conv3DDWTemplateId == TPL_MN_STREAM_K) {
+        needUserWorkspace = tilingData.dwTiling.streamkType != NO_STREAMK_CALC;
+    }
+    if (user1 == nullptr && needUserWorkspace) {
         return;
     }
 
@@ -49,9 +58,6 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
 #else
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
-
-    REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData);
-    GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData, tilingData, tiling);
     // 1982的AscendC::SyncAll()在camodel中不生效，因此在单算子运行camodel时需注释清零动作；
 
     if constexpr (winogradTilingFlag != TPL_WINOGRAD_DISABLE) {
