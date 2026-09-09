@@ -53,6 +53,7 @@ constexpr size_t ATTR_DIRECTION = 0;
 constexpr size_t ATTR_GATE_ORDER = 1;
 constexpr size_t RANK_2D = 2; // matrix inputs: w is [4H, I+H]
 constexpr size_t RANK_3D = 3; // state/sequence inputs: [T, B, H] or [1, B, H]
+constexpr size_t DIM_2 = 2;   // third dim index of a 3D shape
 
 bool InputShapeIs2D(const gert::TilingContext* context, size_t idx, int64_t d0, int64_t d1)
 {
@@ -71,7 +72,7 @@ bool InputShapeIs3D(const gert::TilingContext* context, size_t idx, int64_t d0, 
         return false;
     }
     const gert::Shape& shape = s->GetStorageShape();
-    return shape.GetDimNum() == RANK_3D && shape.GetDim(0) == d0 && shape.GetDim(1) == d1 && shape.GetDim(2) == d2;
+    return shape.GetDimNum() == RANK_3D && shape.GetDim(0) == d0 && shape.GetDim(1) == d1 && shape.GetDim(DIM_2) == d2;
 }
 
 // eligible shapes bypass the legacy validation, so they must be fully re-validated here
@@ -136,8 +137,8 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     }
     const int64_t timeStep = xShape.GetDim(0);
     const int64_t batch = xShape.GetDim(1);
-    const int64_t inputSize = xShape.GetDim(2);
-    const int64_t hidden = initHShape.GetDim(2);
+    const int64_t inputSize = xShape.GetDim(DIM_2);
+    const int64_t hidden = initHShape.GetDim(DIM_2);
     if (timeStep <= 0 || batch <= 0 || inputSize <= 0 || hidden <= 0 || hidden > SMALL_MAX_HIDDEN) {
         return ge::GRAPH_SUCCESS;
     }
