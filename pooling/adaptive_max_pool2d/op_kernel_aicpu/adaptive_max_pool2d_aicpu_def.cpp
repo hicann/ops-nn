@@ -20,6 +20,7 @@ public:
         this->Output("y").ParamType(REQUIRED).DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE});
         this->Output("argmax").ParamType(REQUIRED).DataType({ge::DT_INT32, ge::DT_INT64});
         this->Attr("output_size").AttrType(REQUIRED).ListInt();
+        this->Attr("argmax_dtype").AttrType(OPTIONAL).Int(3);
 
         ApplyNnAicpuDefaultCfg(*this);
         this->AICPU().ExtendCfgInfo(OP_INFO_FORMAT_AGNOSTIC.c_str(), TRUE_FORMAT_AGNOSTIC.c_str());

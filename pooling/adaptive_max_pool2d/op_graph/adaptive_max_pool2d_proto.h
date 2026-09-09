@@ -25,6 +25,8 @@ namespace ge {
  * @par Attributes:
  * @li output_size: A required list of 2 ints
  *    specifying the size (H,W) of the output tensor. \n
+ * @li argmax_dtype: An optional int. Data type of "argmax" output.
+ *    The value 3 indicates int32, and the value 9 indicates int64. The default value is 3. \n
  * @par Outputs:
  * @li y: A Tensor. Has the same data type as "x".
  * @li argmax: A Tensor. Describing the index of outputs.
@@ -36,6 +38,7 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT32, DT_DOUBLE}))
     .OUTPUT(argmax, TensorType::IndexNumberType())
     .REQUIRED_ATTR(output_size, ListInt)
+    .ATTR(argmax_dtype, Int, 3)
     .OP_END_FACTORY_REG(AdaptiveMaxPool2d)
 
 } // namespace ge

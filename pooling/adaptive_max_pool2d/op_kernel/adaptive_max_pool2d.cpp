@@ -26,8 +26,8 @@ extern "C" __global__ __aicore__ void adaptive_max_pool2d(GM_ADDR x, GM_ADDR y, 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
     if (TILING_KEY_IS(0)) {
-        AdaptiveMaxPool2DWithSimt::AdaptiveMaxPool2DSimt<DTYPE_X, DTYPE_INDICES, int32_t, uint32_t> op(&pipeBase,
-                                                                                                       &tilingData);
+        AdaptiveMaxPool2DWithSimt::AdaptiveMaxPool2DSimt<DTYPE_X, DTYPE_ARGMAX, int32_t, uint32_t> op(&pipeBase,
+                                                                                                      &tilingData);
         op.Init(x, y, indices);
         op.Process();
     }
