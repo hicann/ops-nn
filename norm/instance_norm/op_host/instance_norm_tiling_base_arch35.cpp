@@ -135,6 +135,12 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
                     return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
+        OP_CHECK_IF(a1 <= 0 || a0 <= 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
+                        "The N-dimension and C-dimension of input x must be positive numbers "
+                        "when the format of x is ND, where N is the 0th dim and C is the 1st dim"),
+                    return ge::GRAPH_FAILED);
         r = xStorageShape.GetShapeSize() / a1 / a0;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ToString(format).c_str(),
