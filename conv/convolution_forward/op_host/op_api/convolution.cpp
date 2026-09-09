@@ -23,6 +23,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/transpose.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -76,6 +77,9 @@ constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
 constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
 constexpr int64_t N2H_W_IN_SIXTY = 60;
 constexpr int64_t N2H_W_IN_FORTY = 40;
+constexpr uint64_t N2H_NO_HKWK_BASE_M = 1024;
+constexpr uint64_t N2H_NO_HKWK_BASE_N = 16;
+constexpr uint64_t N2H_CUBE_BLOCK_BYTES = 32;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 32;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
@@ -1138,6 +1142,23 @@ static bool CheckN2HTransposeAttrCriteria(int64_t wi, int64_t cin)
     return true;
 }
 
+static bool IsN2HTransposeDtype(DataType dataType)
+{
+    return dataType == DataType::DT_FLOAT16 || dataType == DataType::DT_BF16 || dataType == DataType::DT_FLOAT;
+}
+
+static bool CheckN2HTransposeDtypeAvailable(const aclTensor* input, const aclTensor* weight)
+{
+    const auto inputDtype = input->GetDataType();
+    const auto weightDtype = weight->GetDataType();
+    if (inputDtype != weightDtype || !IsN2HTransposeDtype(inputDtype) || !IsN2HTransposeDtype(weightDtype)) {
+        OP_LOGD("[N2H] only FP16, BF16 and FP32 are supported, but inputDtype=%d, weightDtype=%d.",
+                static_cast<int>(inputDtype), static_cast<int>(weightDtype));
+        return false;
+    }
+    return true;
+}
+
 static bool CheckN2HTransposeNativeAttrAvailable(const aclTensor* input, const aclTensor* weight)
 {
     auto inputShape = input->GetStorageShape();
@@ -1168,15 +1189,66 @@ static bool CheckN2HTransposeNativeAttrAvailable(const aclTensor* input, const a
         return false;
     }
     if (cout < 1 || cout > C_TRANSPOSE_N2H_RULE_MAX || cin < 1 || cin > C_TRANSPOSE_N2H_RULE_MAX) {
-        OP_LOGD("[N2H] the valid range for cout is [1, 128], and for cin is [1, 128], but cout=%lld, cin=%lld.", cout,
-                cin);
+        OP_LOGD("[N2H] the valid range for cout and cin is [1, 128], but "
+                "cout=%lld, cin=%lld.",
+                cout, cin);
         return false;
     }
     return CheckN2HTransposeAttrCriteria(wi, cin);
 }
 
+static bool CheckN2HNoHkWkL1Probe(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride5,
+                                  const aclIntArray* outputPadding5)
+{
+    if (stride5 == nullptr || outputPadding5 == nullptr || stride5->Size() != conv3dDimNum ||
+        outputPadding5->Size() != conv3dDimNum) {
+        return false;
+    }
+
+    const auto inputShape = input->GetStorageShape();
+    const auto weightShape = weight->GetStorageShape();
+    const int64_t batch = inputShape[N_DIM_NCDHW_INDEX];
+    const int64_t wi = inputShape[W_DIM_NCDHW_INDEX];
+    const int64_t wk = weightShape[W_DIM_NCDHW_INDEX];
+    const int64_t strideW = stride5->GetData()[W_DIM_NCDHW_INDEX];
+    const int64_t outputPaddingW = outputPadding5->GetData()[W_DIM_NCDHW_INDEX];
+    if (batch <= 0 || wi <= 0 || wk <= 0 || strideW <= 0 || outputPaddingW < 0) {
+        return false;
+    }
+
+    const uint64_t wo = (wi - 1) * strideW + wk + outputPaddingW;
+    uint64_t calHo = 0;
+    if (N2H_NO_HKWK_BASE_M % wo == 0 || wo % N2H_NO_HKWK_BASE_M == 0) {
+        calHo = N2H_NO_HKWK_BASE_M / wo + static_cast<uint64_t>(N2H_NO_HKWK_BASE_M % wo != 0);
+    } else if (N2H_NO_HKWK_BASE_M > wo) {
+        calHo = N2H_NO_HKWK_BASE_M / wo + 2;
+    } else {
+        calHo = 2;
+    }
+    const uint64_t curHo = std::min(static_cast<uint64_t>(batch), calHo);
+    const uint64_t aProbe = curHo * static_cast<uint64_t>(wi) * static_cast<uint64_t>(strideW) * N2H_CUBE_BLOCK_BYTES;
+    const uint64_t bProbe = static_cast<uint64_t>(wk) * N2H_CUBE_BLOCK_BYTES * N2H_NO_HKWK_BASE_N;
+    uint64_t requiredL1 = aProbe + bProbe;
+
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo == nullptr) {
+        return false;
+    }
+    uint64_t availableL1 = 0;
+    platformInfo->GetLocalMemSize(fe::LocalMemType::L1, availableL1);
+    if (availableL1 == 0) {
+        return false;
+    }
+
+    const bool enabled = requiredL1 <= availableL1;
+    OP_LOGD("[N2H] no-HkWk L1 probe %s: required=%lu, available=%lu, N=%lld, Wi=%lld, "
+            "Wk=%lld, strideW=%lld, outputPaddingW=%lld",
+            enabled ? "passed" : "rejected", requiredL1, availableL1, batch, wi, wk, strideW, outputPaddingW);
+    return enabled;
+}
+
 bool CheckTransposeN2HEnable(const aclTensor* input, const aclTensor* weight, aclIntArray* stride5,
-                             aclIntArray* dilation5, aclIntArray* pad5, int groups)
+                             aclIntArray* dilation5, aclIntArray* pad5, aclIntArray* outputPadding5, int groups)
 {
     OP_LOGD("Conv3d Transpose Check N2H attribute.");
     if (groups != 1) {
@@ -1186,8 +1258,18 @@ bool CheckTransposeN2HEnable(const aclTensor* input, const aclTensor* weight, ac
     if (!CheckN2HTransposeAttrAvailable(stride5, dilation5, pad5)) {
         return false;
     }
-    // check N, D, H, W, C and access criteria
-    return CheckN2HTransposeNativeAttrAvailable(input, weight);
+    if (!CheckN2HTransposeNativeAttrAvailable(input, weight)) {
+        return false;
+    }
+    // 非950分支保持原有方案
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
+    if (!CheckN2HTransposeDtypeAvailable(input, weight)) {
+        return false;
+    }
+    // 提前计算HkWk模板准入条件，防止性能劣化
+    return CheckN2HNoHkWkL1Probe(input, weight, stride5, outputPadding5);
 }
 
 bool CheckPreTransposeEnable(const aclTensor* weight, int groups)

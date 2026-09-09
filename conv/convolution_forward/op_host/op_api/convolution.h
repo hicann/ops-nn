@@ -154,7 +154,7 @@ bool IsSupportConv2DTransposeTo3D(const aclTensor* input, const aclTensor* weigh
                                   const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
                                   const aclIntArray* outputPadding, const int64_t groups, aclTensor* output);
 bool CheckTransposeN2HEnable(const aclTensor* input, const aclTensor* weight, aclIntArray* stride5,
-                             aclIntArray* dilation5, aclIntArray* pad5, int groups);
+                             aclIntArray* dilation5, aclIntArray* pad5, aclIntArray* outputPadding5, int groups);
 bool CheckPreTransposeEnable(const aclTensor* weight, int groups);
 aclnnStatus N2HChangeInput(const aclTensor*& input, aclOpExecutor* executor);
 void GetConv3DTransposeAdapterParam(const aclTensor* input, const aclIntArray* stride, const aclIntArray* padding,

@@ -5007,7 +5007,8 @@ private:
 static aclnnStatus CheckN2HAndTranspose(const aclTensor*& input, const aclTensor*& weight, int groups,
                                         aclOpExecutor* executor, TransposeAdaptParam* params)
 {
-    if (CheckTransposeN2HEnable(input, weight, params->adaptStride, params->adaptDilation, params->adaptPad, groups)) {
+    if (CheckTransposeN2HEnable(input, weight, params->adaptStride, params->adaptDilation, params->adaptPad,
+                                params->adaptoutputPad, groups)) {
         auto ret = N2HChangeInput(input, executor);
         if (ret != ACLNN_SUCCESS) {
             OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "N2H failed.");
