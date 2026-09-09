@@ -65,7 +65,7 @@ public:
         this->Attr("linear_beta").AttrType(OPTIONAL).Float(0.0f);
         this->Attr("activate_left").AttrType(OPTIONAL).Bool(false);
         this->Attr("axis").AttrType(OPTIONAL).Int(-1);
-        this->Attr("dst_type").AttrType(OPTIONAL).Int(40);
+        this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_FLOAT4_E2M1);
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
 
         // Ascend 950 (arch35) configuration using Regbase
