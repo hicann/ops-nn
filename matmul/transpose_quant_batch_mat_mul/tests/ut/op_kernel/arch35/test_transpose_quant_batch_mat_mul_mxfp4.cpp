@@ -9,14 +9,13 @@
  */
 
 /*!
- * \file test_transpose_quant_batch_mat_mul.cpp
- * \brief Kernel UT for the Ascend950 FP8 TENSOR_LEVEL mix tensor API path.
+ * \file test_transpose_quant_batch_mat_mul_mxfp4.cpp
+ * \brief Kernel UT for the Ascend950 MXFP4 TENSOR_LEVEL MX tensor API path.
  */
 
-#define DTYPE_X1 fp8_e5m2_t
-#define DTYPE_X2 fp8_e5m2_t
-#define DTYPE_X1_SCALE float
-#define DTYPE_X2_SCALE float
+#define DTYPE_X1 __fp4e2m1x2
+#define DTYPE_X2 __fp4e2m1x2
+#define DTYPE_X2_SCALE __fp8e8m0
 #define DTYPE_Y half
 
 #include <unistd.h>
@@ -37,10 +36,10 @@
 
 using namespace std;
 
-class transpose_quant_batch_mat_mul_test : public testing::Test {
+class transpose_quant_batch_mat_mul_mxfp4_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { cout << "transpose_quant_batch_mat_mul_test SetUp\n" << endl; }
-    static void TearDownTestCase() { cout << "transpose_quant_batch_mat_mul_test TearDown\n" << endl; }
+    static void SetUpTestCase() { cout << "transpose_quant_batch_mat_mul_mxfp4_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "transpose_quant_batch_mat_mul_mxfp4_test TearDown\n" << endl; }
 };
 
 struct HcclCombinOpParam {
@@ -50,8 +49,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-// Test 1: MXFP8, medium size (M=64, Batch=1, K=64, N=64)
-TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_medium)
+// MXFP4 TENSOR_LEVEL (M=64, Batch=1, K=64, N=64)
+TEST_F(transpose_quant_batch_mat_mul_mxfp4_test, transpose_quant_batch_mat_mul_mxfp4_tensor_level)
 {
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
@@ -60,10 +59,10 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     int32_t K = 64;
     int32_t N = 64;
 
-    size_t shape_x1 = M * Batch * K * sizeof(int8_t);
-    size_t shape_x2 = Batch * K * N * sizeof(int8_t);
-    size_t shape_x1_scale = M * sizeof(float);
-    size_t shape_x2_scale = N * sizeof(float);
+    size_t shape_x1 = M * Batch * K * sizeof(uint8_t);
+    size_t shape_x2 = Batch * K * N * sizeof(uint8_t);
+    size_t shape_x1_scale = M * Batch * ((K + 63) / 64) * 2 * sizeof(uint8_t);
+    size_t shape_x2_scale = Batch * ((K + 63) / 64) * N * 2 * sizeof(uint8_t);
     size_t shape_output = M * Batch * N * sizeof(uint16_t);
 
     size_t sysWorkspaceSize = 20UL * 1024UL * 1024UL;
@@ -75,7 +74,6 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
 
     uint8_t* x1GM = (uint8_t*)AscendC::GmAlloc(shape_x1);
     uint8_t* x2GM = (uint8_t*)AscendC::GmAlloc(shape_x2);
-    uint8_t* biasGM = nullptr;
     uint8_t* x1_scaleGM = (uint8_t*)AscendC::GmAlloc(shape_x1_scale);
     uint8_t* x2_scaleGM = (uint8_t*)AscendC::GmAlloc(shape_x2_scale);
     uint8_t* outputGM = (uint8_t*)AscendC::GmAlloc(shape_output);
@@ -97,10 +95,6 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     string path(path_);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x1.bin", shape_x1, x1GM, shape_x1);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x2.bin", shape_x2, x2GM, shape_x2);
-    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x1_scale.bin", shape_x1_scale, x1_scaleGM,
-             shape_x1_scale);
-    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x2_scale.bin", shape_x2_scale, x2_scaleGM,
-             shape_x2_scale);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_output.bin", shape_output, outputGM, shape_output);
 
     BatchMatMulV3TilingData* tiling_data = reinterpret_cast<BatchMatMulV3TilingData*>(tiling);
@@ -166,18 +160,18 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     tiling_data->bBatchDim3 = 1;
     tiling_data->cBatchDim3 = 1;
     tiling_data->iterBatch = 1;
-    tiling_data->batchOutNum = 1;
     tiling_data->batchSplitFactor = 1;
+    tiling_data->l1BufferNum = 2;
 
-    auto transpose_quant_batch_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
-                                                    GM_ADDR x2_scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::transpose_quant_batch_mat_mul<TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2,
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE,
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8, TRANSPOSE_QUANT_BATCH_MAT_MUL_HIGH_LEVEL>(
-            x1, x2, bias, x1_scale, x2_scale, y, workspace, tiling);
+    auto transpose_quant_batch_mat_mul_mxfp4_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
+                                                          GM_ADDR x2_scale, GM_ADDR y, GM_ADDR workspace,
+                                                          GM_ADDR tiling) {
+        ::transpose_quant_batch_mat_mul<
+            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2, TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
+            TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE, TRANSPOSE_QUANT_BATCH_MAT_MUL_MXFP4,
+            TRANSPOSE_QUANT_BATCH_MAT_MUL_TENSOR_LEVEL>(x1, x2, bias, x1_scale, x2_scale, y, workspace, tiling);
     };
-    ICPU_RUN_KF(transpose_quant_batch_mat_mul_wrapper, 4, x1GM, x2GM, nullptr, x1_scaleGM, x2_scaleGM, outputGM,
+    ICPU_RUN_KF(transpose_quant_batch_mat_mul_mxfp4_wrapper, 4, x1GM, x2GM, nullptr, x1_scaleGM, x2_scaleGM, outputGM,
                 workspace, tiling);
 
     AscendC::GmFree((void*)workspace);

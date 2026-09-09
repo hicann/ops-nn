@@ -23,21 +23,23 @@ namespace ge {
 * @par Inputs:
 * Five inputs, including:
 * @li x1: A matrix tensor. Must be one of the following types:
-* float8_e4m3fn, float8_e5m2, hifloat8. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2, float4_e2m1, hifloat8. 3D. Has format ND.
 * @li x2: A matrix tensor. Must be one of the following types:
-* float8_e4m3fn, float8_e5m2, hifloat8. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2, float4_e2m1, hifloat8. 3D. Has format ND.
 * @li bias: An optional tensor. Reserved parameter, currently not supported.
 * @li x1_scale: A matrix tensor, quantization parameter.
              Must be one of the following types: float32、float8_e8m0、uint64_t. The format
              supports ND. \n
              - In K-C quantification, the shape is 1D (m,), where m is the same as that of x1. \n
-             - In MX quantification, the shape is 4D (m, b, ceil(k / 64), 2), where m, b, k match those of x1. \n
+             - In MX quantification (MXFP8/MXFP4), the shape is 4D (m, b, ceil(k / 64), 2), where m, b, k match those of
+x1. \n
              - In T-C quantification, the shape can be empty or 1D (1,).
 * @li x2_scale: A matrix tensor, quantization parameter.
              Must be one of the following types: float32、float8_e8m0、uint64_t. The format
              supports ND. \n
              - In K-C and T-C quantification, the shape is 1D (n,), where n is the same as that of x2. \n
-              - In MX quantification, the shape is 4D. When perm_x2 is [0, 1, 2], the shape is (b, ceil(k / 64), n, 2);
+              - In MX quantification (MXFP8/MXFP4), the shape is 4D. When perm_x2 is [0, 1, 2], the shape is
+                (b, ceil(k / 64), n, 2);
                 when perm_x2 is [0, 2, 1], the shape is (b, n, ceil(k / 64), 2), where b, k, n match those of x2.
 
 * @par Attributes:
@@ -49,7 +51,8 @@ namespace ge {
 * 48-63 bits of group_size are noneffective. \n
 * If any of group_size_m, group_size_n, group_size_k calculated by group_size is 0, recalculate it by
 * input shape, eg: group_size_m = m / scale_m (m % scale_m must be 0). \n
-* In MX quantification, group_size_m and group_size_n only support 0 or 1, and group_size_k only supports 32.
+* In MX quantification (MXFP8/MXFP4), group_size_m and group_size_n only support 0 or 1, and group_size_k only
+supports 32.
 * In K-C and T-C quantification, group_size only supports 0, other values do not take effect. Default to be 0.
 * @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication.
 * Supports [1, 0, 2], the default value is [1, 0, 2].
@@ -65,8 +68,8 @@ namespace ge {
   The format supports ND. The shape dim must be 3D. \n
 */
 REG_OP(TransposeQuantBatchMatMul)
-    .INPUT(x1, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_HIFLOAT8}))
-    .INPUT(x2, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_HIFLOAT8}))
+    .INPUT(x1, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8}))
+    .INPUT(x2, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8}))
     .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64}))
     .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64}))

@@ -20,8 +20,8 @@ extern "C" {
  * @brief aclnnTransposeQuantBatchMatMul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现TransposeQuantBatchMatMul计算。
- * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn, float8_e5m2。
- * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn, float8_e5m2。
+ * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn, float8_e5m2, float4_e2m1（MX量化场景）, hifloat8。
+ * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn, float8_e5m2, float4_e2m1（MX量化场景）, hifloat8。
  * @param [in] bias: 偏置，当前不支持。
  * @param [in] x1Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0。
  * @param [in] x2Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0。
@@ -31,7 +31,7 @@ extern "C" {
  * @param [in] permX2: 表示输入x2的转置数组。
  * @param [in] permY: 表示输入y的转置数组。
  * @param [in] batchSplitFactor: 是否重新拆分shape。数据类型支持：int32。
- * @param [out] out: 计算结果，数据类型：float16, bfloat16。
+ * @param [out] out: 计算结果，数据类型：float16, bfloat16, hifloat8（HIFP8场景支持）。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
@@ -51,8 +51,8 @@ ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMul(void* workspace, uint64_t w
  * @brief aclnnTransposeQuantBatchMatMulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现TransposeQuantBatchMatMulWeightNz计算。
- * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn。
- * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn。
+ * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn, float4_e2m1（MX量化场景）。
+ * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn, float4_e2m1（MX量化场景）。
  * @param [in] bias: 偏置，当前不支持。
  * @param [in] x1Scale: 量化参数中的缩放因子，数据类型支持：float8_e8m0。
  * @param [in] x2Scale: 量化参数中的缩放因子，数据类型支持：float8_e8m0。

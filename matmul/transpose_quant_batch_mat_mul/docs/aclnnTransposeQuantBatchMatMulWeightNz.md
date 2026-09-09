@@ -93,7 +93,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>
           数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。
         </td>
-        <td>FLOAT8_E4M3FN</td>
+        <td>FLOAT8_E4M3FN、FLOAT4_E2M1</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
             <li>x2的k维度需要与x1的K维度大小相等。</li>
         </ul>
         </td>
-        <td>FLOAT8_E4M3FN</td>
+        <td>FLOAT8_E4M3FN、FLOAT4_E2M1</td>
         <td>NZ</td>
         <td>5</td>
         <td>√</td>
