@@ -29,9 +29,12 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
+        // 整数输入(int16/int8/uint8)按索引配对提升 float32 输出, 浮点输入输出同 dtype
+        std::vector<ge::DataType> output_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+                                                       ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT};
         this->Output("y")
             .ParamType(DYNAMIC)
-            .DataType(tensor_dtype_list)
+            .DataType(output_dtype_list)
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();

@@ -97,8 +97,8 @@ aclnnStatus aclnnForeachExpm1(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32、INT16、INT8、UINT8</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。</li><li>数据格式与入参`x`的数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

@@ -18,6 +18,7 @@
 // op kernel building at build_out directory, it's not fully aligned with source code structure
 // current op_kernel folder is absent in build_out directory, so the relative path to common has just one layer
 #include "../foreach_utils/foreach_one_scalar_binary.h"
+#include "foreach_add_scalar_wrap.h"
 
 using namespace AscendC;
 using namespace Common::OpKernel;
@@ -58,15 +59,15 @@ extern "C" __global__ __aicore__ void foreach_add_scalar(GM_ADDR inputs, GM_ADDR
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(5)) { // TILING_KEY_IS(6) is reserved for UINT16 (not yet supported)
-        ForeachOneScalarBinary<int16_t, float, AddsAdapter<float>, 1> op;
+        ForeachAddScalarWrap<int16_t> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(7)) {
-        ForeachOneScalarBinary<int8_t, half, AddsAdapter<half>, 1> op;
+        ForeachAddScalarWrap<int8_t> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(8)) {
-        ForeachOneScalarBinary<uint8_t, half, AddsAdapter<half>, 1> op;
+        ForeachAddScalarWrap<uint8_t> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
 #endif

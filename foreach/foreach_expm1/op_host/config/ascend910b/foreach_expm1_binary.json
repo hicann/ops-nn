@@ -1,191 +1,191 @@
 {
-    "op_type": "ForeachExpm1",
-    "op_list": [
-        {
-            "bin_filename": "ForeachExpm1_861dcd7fb7a97bf37ef3028ea5fc3398",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "float16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "float16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        },
-        {
-            "bin_filename": "ForeachExpm1_7eba7b141e95c3187653ec78959a3240",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "float32",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "float32",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        },
-        {
-            "bin_filename": "ForeachExpm1_15f24442e0fbe025d00336b2a0cbee04",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "bfloat16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "bfloat16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        },
-        {
-            "bin_filename": "ForeachExpm1_26cd2233fb00bd84b497158224c89a2f",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "int16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "int16",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        },
-        {
-            "bin_filename": "ForeachExpm1_91a8140448c01c25be8a2753016fe86b",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "int8",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "int8",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        },
-        {
-            "bin_filename": "ForeachExpm1_cadd0d4087956fb8cb0aaf94e2fa0dcd",
-            "inputs": [
-                [
-                    {
-                        "name": "x",
-                        "index": 0,
-                        "dtype": "uint8",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ],
-            "outputs": [
-                [
-                    {
-                        "name": "y",
-                        "index": 0,
-                        "dtype": "uint8",
-                        "format": "ND",
-                        "paramType": "dynamic",
-                        "shape": [
-                            -2
-                        ]
-                    }
-                ]
-            ]
-        }
+ "op_type": "ForeachExpm1",
+ "op_list": [
+  {
+   "bin_filename": "ForeachExpm1_861dcd7fb7a97bf37ef3028ea5fc3398",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "float16",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
     ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "float16",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "bin_filename": "ForeachExpm1_7eba7b141e95c3187653ec78959a3240",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "float32",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "float32",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "bin_filename": "ForeachExpm1_15f24442e0fbe025d00336b2a0cbee04",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "bfloat16",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "bfloat16",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "bin_filename": "ForeachExpm1_26cd2233fb00bd84b497158224c89a2f",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "int16",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "float32",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "bin_filename": "ForeachExpm1_91a8140448c01c25be8a2753016fe86b",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "int8",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "float32",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "bin_filename": "ForeachExpm1_cadd0d4087956fb8cb0aaf94e2fa0dcd",
+   "inputs": [
+    [
+     {
+      "name": "x",
+      "index": 0,
+      "dtype": "uint8",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ],
+   "outputs": [
+    [
+     {
+      "name": "y",
+      "index": 0,
+      "dtype": "float32",
+      "format": "ND",
+      "paramType": "dynamic",
+      "shape": [
+       -2
+      ]
+     }
+    ]
+   ]
+  }
+ ]
 }
