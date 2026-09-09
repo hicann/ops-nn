@@ -1036,7 +1036,7 @@ A16MxFp4调用示例，需要调用`aclnnConvertWeightToINT4Pack`接口辅助完
           workspaceCastAddrPtr.reset(workspaceCastAddr);
       }
       ret = aclnnCast(workspaceCastAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCast2 failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCast failed. ERROR: %d\n", ret); return ret);
 
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
