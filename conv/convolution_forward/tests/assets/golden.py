@@ -1164,3 +1164,45 @@ def aten_convolution_golden(
         out = out.to(orig_dtype)
 
     return out
+
+
+_FP8_COMPARE_DTYPES = ("float8_e5m2", "float8_e4m3fn", "float8_e8m0", "hifloat8")
+
+
+def _upcast_fp8_for_compare(arr):
+    dtype = getattr(arr, "dtype", None)
+    if dtype is None:
+        return arr
+    dtype_name = getattr(dtype, "name", None)
+    if dtype_name is not None:
+        if dtype_name in _FP8_COMPARE_DTYPES:
+            return arr.astype("float32")
+        return arr
+    dtype_str = str(dtype)
+    if any(t in dtype_str for t in _FP8_COMPARE_DTYPES):
+        return arr.float()
+    return arr
+
+
+class AclnnConvolutionSpec:
+    """pre_compare hook: upcast fp8/hifloat8 arrays to float32 (lossless).
+
+    numpy<2 raises DTypePromotionError inside np.isclose on fp8 arrays
+    (fp8 has no promotion with python scalars), which crashes the stock
+    TTK close-compare on fp8 outputs. Upcast output and golden sides
+    before the standard compare; other dtypes pass through unchanged.
+    """
+
+    @staticmethod
+    def pre_compare(*arrays, **kwargs):
+        return [_upcast_fp8_for_compare(arr) for arr in arrays]
+
+
+class AclnnQuantConvolutionSpec(AclnnConvolutionSpec):
+    """aclnnQuantConvolution shares the fp8 upcast pre_compare hook."""
+
+
+__spec__ = {
+    "aclnnConvolution": "AclnnConvolutionSpec",
+    "aclnnQuantConvolution": "AclnnQuantConvolutionSpec",
+}
