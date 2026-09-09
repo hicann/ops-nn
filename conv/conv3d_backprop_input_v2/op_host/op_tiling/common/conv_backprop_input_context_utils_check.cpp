@@ -40,8 +40,9 @@ bool GetFusionMode(Conv3dBpInputV2RunInfo& runInfoV2, const char* opName, const 
     if (idx < attrs->GetAttrNum()) {
         const int64_t* fusionMode = attrs->GetAttrPointer<int64_t>(idx);
         if (fusionMode != nullptr) {
-            runInfoV2.enRelu0 = (*fusionMode & 0x1) ? 1 : 0;
-            runInfoV2.enRelu1 = (*fusionMode & 0x2) ? 1 : 0;
+            const uint64_t fusionModeValue = static_cast<uint64_t>(*fusionMode);
+            runInfoV2.enRelu0 = ((fusionModeValue & 0x1ULL) != 0ULL) ? 1 : 0;
+            runInfoV2.enRelu1 = ((fusionModeValue & 0x2ULL) != 0ULL) ? 1 : 0;
         } else {
             OP_LOGW(opName, "relu flag is not support, so we set 0 as default");
             runInfoV2.enRelu0 = 0; // for extendConvTranspose fixpipe fusion pass, default value is 0
