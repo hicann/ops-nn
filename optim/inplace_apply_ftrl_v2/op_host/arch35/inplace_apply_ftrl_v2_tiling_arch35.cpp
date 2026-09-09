@@ -43,6 +43,7 @@ constexpr uint32_t HALF_DTYPE_SIZE = 2;     // sizeof(float16/bfloat16) in bytes
 constexpr size_t ATTR_USE_LOCKING_INDEX = 0;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t NUM_INPUTS = 9;
+constexpr size_t NUM_OUTPUTS = 3;
 constexpr size_t NUM_TENSOR_INPUTS = 4;
 constexpr size_t NUM_SCALAR_INPUTS = 5;
 constexpr size_t NUM_DTYPE_BITS = 8;
@@ -135,6 +136,45 @@ static ge::graphStatus ValidateInputDtypes(gert::TilingContext* context, const c
             return ge::GRAPH_FAILED;
         }
     }
+    for (size_t i = 0; i < NUM_OUTPUTS; i++) {
+        auto desc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        if (desc->GetDataType() != *dataType) {
+            OP_LOGE(opName, "output %zu dtype mismatch, expected same as var", i);
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateFormats(gert::TilingContext* context, const char* opName)
+{
+    for (size_t i = 0; i < NUM_INPUTS; i++) {
+        const auto inputDesc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        if (inputDesc->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(opName, "input %zu only supports FORMAT_ND", i);
+            return ge::GRAPH_FAILED;
+        }
+    }
+    for (size_t i = 0; i < NUM_OUTPUTS; i++) {
+        const auto outputDesc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+        if (outputDesc->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(opName, "output %zu only supports FORMAT_ND", i);
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateAttrs(gert::TilingContext* context, const char* opName)
+{
+    const auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const bool* useLocking = attrs->GetAttrPointer<bool>(ATTR_USE_LOCKING_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, useLocking);
+    OP_CHECK_IF(*useLocking, OP_LOGE(opName, "use_locking only supports false"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -158,6 +198,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                 OP_LOGE(context, "ValidateScalarInputs error"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(ValidateInputDtypes(context, opName, dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "ValidateInputDtypes error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateFormats(context, opName) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateFormats error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateAttrs(context, opName) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateAttrs error"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

@@ -34,7 +34,8 @@ protected:
 struct InplaceApplyFtrlV2UtCompileInfo {};
 
 static void DoTilingTest(ge::DataType varDtype, gert::StorageShape& varShape, gert::StorageShape& scalarShape,
-                         ge::graphStatus expectedStatus = ge::GRAPH_SUCCESS)
+                         ge::graphStatus expectedStatus = ge::GRAPH_SUCCESS, bool useLocking = false,
+                         ge::Format format = ge::FORMAT_ND, ge::DataType outputDtype = ge::DT_UNDEFINED)
 {
     std::string opType("InplaceApplyFtrlV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
@@ -58,7 +59,8 @@ static void DoTilingTest(ge::DataType varDtype, gert::StorageShape& varShape, ge
     ASSERT_NE(param, nullptr);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(32);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
-    ge::Format fmt = ge::FORMAT_ND;
+    ge::Format fmt = format;
+    ge::DataType outDtype = outputDtype == ge::DT_UNDEFINED ? varDtype : outputDtype;
     InplaceApplyFtrlV2UtCompileInfo compileInfo;
 
     auto holder = gert::TilingContextFaker()
@@ -79,10 +81,10 @@ static void DoTilingTest(ge::DataType varDtype, gert::StorageShape& varShape, ge
                       .NodeInputTd(6, varDtype, fmt, fmt)
                       .NodeInputTd(7, varDtype, fmt, fmt)
                       .NodeInputTd(8, varDtype, fmt, fmt)
-                      .NodeOutputTd(0, varDtype, fmt, fmt)
-                      .NodeOutputTd(1, varDtype, fmt, fmt)
-                      .NodeOutputTd(2, varDtype, fmt, fmt)
-                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeOutputTd(0, outDtype, fmt, fmt)
+                      .NodeOutputTd(1, outDtype, fmt, fmt)
+                      .NodeOutputTd(2, outDtype, fmt, fmt)
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -160,4 +162,25 @@ TEST_F(InplaceApplyFtrlV2TilingTest, tiling_reject_rank2_hyperparameter)
     gert::StorageShape varShape = {{8}, {8}};
     gert::StorageShape scalarShape = {{1, 1}, {1, 1}};
     DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceApplyFtrlV2TilingTest, tiling_reject_use_locking_true)
+{
+    gert::StorageShape varShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, ge::GRAPH_FAILED, true);
+}
+
+TEST_F(InplaceApplyFtrlV2TilingTest, tiling_reject_non_nd_format)
+{
+    gert::StorageShape varShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, ge::GRAPH_FAILED, false, ge::FORMAT_NCHW);
+}
+
+TEST_F(InplaceApplyFtrlV2TilingTest, tiling_reject_output_dtype_mismatch)
+{
+    gert::StorageShape varShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, ge::GRAPH_FAILED, false, ge::FORMAT_ND, ge::DT_FLOAT16);
 }

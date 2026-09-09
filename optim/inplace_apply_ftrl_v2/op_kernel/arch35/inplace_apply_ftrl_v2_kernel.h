@@ -48,6 +48,8 @@ constexpr float RELATIVE_MIN_Q_P15 = 2e-4f;
 constexpr float RELATIVE_MAX_Q_P15 = 0.01f;
 constexpr float RELATIVE_POLY_MIN_Q_P15 = 2e-6f;
 constexpr float RELATIVE_POLY_MAX_Q_P15 = 1e-5f;
+constexpr float RELATIVE_POLY_MAX_Q_FP32 = 0.05f;
+constexpr float P3_DIRECT_POWER_MIN_ACCUM = 100.0f;
 constexpr float LR_POWER_ZERO = 0.0f;
 
 static constexpr PowerConfig kDoubleFloatPowerConfig = {PowerAlgo::DOUBLE_FLOAT_TECH};
@@ -59,6 +61,7 @@ constexpr float LR_POWER_NEG_POINT_ONE = -0.1f;
 constexpr float LR_POWER_NEG_POINT_TWO_FIVE = -0.25f;
 constexpr float LR_POWER_NEG_POINT_SEVEN_FIVE = -0.75f;
 constexpr float LR_POWER_NEG_POINT_ZERO_ONE = -0.01f;
+constexpr float LR_POWER_NEG_POINT_ZERO_FIVE = -0.05f;
 constexpr float LR_POWER_NEG_POINT_NINE = -0.9f;
 constexpr float LR_POWER_NEG_ONE_POINT_FIVE = -1.5f;
 static constexpr SqrtConfig SQRT_0ULP_CONFIG = {SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
@@ -386,8 +389,14 @@ __aicore__ inline void InplaceApplyFtrlV2<T>::PrepareFp32Sources(int64_t nDma, i
 template <typename T>
 __aicore__ inline void InplaceApplyFtrlV2<T>::ComputePow(int32_t n)
 {
-    Mul(accumNew_, srcGrad_, srcGrad_, n);
-    Add(accumNew_, srcAccum_, accumNew_, n);
+    if constexpr (IS_FLOAT) {
+        // Use a single-rounding FMA for the FP32 accumulation update.
+        Adds(accumNew_, srcAccum_, FLOAT_ZERO, n);
+        MulAddDst(accumNew_, srcGrad_, srcGrad_, n);
+    } else {
+        Mul(accumNew_, srcGrad_, srcGrad_, n);
+        Add(accumNew_, srcAccum_, accumNew_, n);
+    }
 
     if (lrPowerScalar_ == LR_POWER_ZERO) {
         Duplicate(powNew_, FLOAT_ONE, n);
@@ -403,6 +412,13 @@ __aicore__ inline void InplaceApplyFtrlV2<T>::ComputePow(int32_t n)
         Mul(powNew_, tmpA_, accumNew_, n);
         Mul(tmpA_, srcAccum_, srcAccum_, n);
         Mul(tmpB_, tmpA_, srcAccum_, n);
+        if constexpr (IS_FLOAT) {
+            // Keep the repeated-multiply difference for p=3 while using Power
+            // for the denominator where its smaller absolute error matters.
+            Sub(tmpA_, powNew_, tmpB_, n);
+            Power<float, false, kDoubleFloatPowerConfig>(powNew_, accumNew_, negLrPower_, static_cast<uint32_t>(n));
+            Power<float, false, kDoubleFloatPowerConfig>(tmpB_, srcAccum_, negLrPower_, static_cast<uint32_t>(n));
+        }
     } else if (lrPowerScalar_ == LR_POWER_NEG_HALF) {
         Sqrt<float, SQRT_0ULP_CONFIG>(powNew_, accumNew_, n);
         Sqrt<float, SQRT_0ULP_CONFIG>(tmpB_, srcAccum_, n);
@@ -429,9 +445,66 @@ __aicore__ inline void InplaceApplyFtrlV2<T>::ComputePow(int32_t n)
 template <typename T>
 __aicore__ inline void InplaceApplyFtrlV2<T>::ComputeLinearAndQuad(int32_t n)
 {
-    if (lrPowerScalar_ == LR_POWER_NEG_POINT_ONE || lrPowerScalar_ == LR_POWER_NEG_POINT_TWO_FIVE ||
-        lrPowerScalar_ == LR_POWER_NEG_POINT_ZERO_ONE || lrPowerScalar_ == LR_POWER_NEG_POINT_NINE ||
-        lrPowerScalar_ == LR_POWER_NEG_ONE_POINT_FIVE) {
+    if (IS_FLOAT && lrPowerScalar_ == LR_POWER_NEG_THREE) {
+        // ComputePow has already retained the repeated-multiply cube
+        // difference in tmpA_ before replacing powNew_ for the denominator.
+        // grad_with_shrinkage has already been materialized in gs_, so the
+        // grad buffer is now available to retain the Power-based difference.
+        Sub(srcGrad_, powNew_, tmpB_, n);
+        // Average it with the factored cube difference. Their rounding errors
+        // are independent and commonly fall on opposite sides of the exact
+        // result, while they coincide for large exactly rounded values.
+        Mul(tmpB_, accumNew_, accumNew_, n);
+        Mul(quad_, accumNew_, srcAccum_, n);
+        Add(tmpB_, tmpB_, quad_, n);
+        Mul(quad_, srcAccum_, srcAccum_, n);
+        Add(tmpB_, tmpB_, quad_, n);
+        Sub(quad_, accumNew_, srcAccum_, n);
+        Mul(tmpB_, quad_, tmpB_, n);
+        Add(tmpA_, tmpA_, tmpB_, n);
+        Muls(tmpA_, tmpA_, FLOAT_HALF, n);
+        // For large accumulators the cubic magnitude, rather than close-value
+        // cancellation, dominates. Use the Power difference in that regime.
+        CompareScalar(mask_, accumNew_, P3_DIRECT_POWER_MIN_ACCUM, CMPMODE::GT, n);
+        Select(tmpA_, mask_, srcGrad_, tmpA_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+    } else if (IS_FLOAT && lrPowerScalar_ == LR_POWER_NEG_POINT_ZERO_FIVE) {
+        // Use a relative power difference when the direct subtraction is a
+        // cancellation-prone fraction of the new power.
+        Sub(quad_, powNew_, tmpB_, n);
+        Div<float, DIV_0ULP_CONFIG>(tmpA_, accumNew_, srcAccum_, n);
+        Power<float, false, kDoubleFloatPowerConfig>(tmpA_, tmpA_, negLrPower_, static_cast<uint32_t>(n));
+        Adds(tmpA_, tmpA_, FLOAT_NEG_ONE, n);
+        Mul(tmpA_, tmpA_, tmpB_, n);
+        CompareScalar(mask_, srcAccum_, FLOAT_ZERO, CMPMODE::GT, n);
+        Select(tmpA_, mask_, tmpA_, quad_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+        Abs(linearNew_, quad_, n);
+        Muls(tmpB_, powNew_, FLOAT_HALF, n);
+        Compare(mask_, linearNew_, tmpB_, CMPMODE::LT, n);
+        Select(tmpA_, mask_, tmpA_, quad_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+    } else if (IS_FLOAT &&
+               (lrPowerScalar_ == LR_POWER_NEG_POINT_NINE || lrPowerScalar_ == LR_POWER_NEG_ONE_POINT_FIVE)) {
+        // A direct subtraction of two close, independently rounded powers
+        // loses the significant bits of their difference. In the close-accum
+        // window evaluate old_pow * ((1 + q)^p - 1) with a third-order
+        // binomial polynomial; outside that window retain the direct result.
+        Sub(quad_, powNew_, tmpB_, n);
+        Div<float, DIV_0ULP_CONFIG>(tmpA_, accumNew_, srcAccum_, n);
+        Adds(linearNew_, tmpA_, FLOAT_NEG_ONE, n);
+        Duplicate(srcGrad_, relativeC3_, n);
+        Mul(srcGrad_, srcGrad_, linearNew_, n);
+        Adds(srcGrad_, srcGrad_, relativeC2_, n);
+        Mul(srcGrad_, srcGrad_, linearNew_, n);
+        Adds(srcGrad_, srcGrad_, negLrPower_, n);
+        Mul(srcGrad_, srcGrad_, linearNew_, n);
+        Mul(srcGrad_, srcGrad_, tmpB_, n);
+        CompareScalar(mask_, linearNew_, FLOAT_ZERO, CMPMODE::GE, n);
+        Select(srcGrad_, mask_, srcGrad_, quad_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+        CompareScalar(mask_, linearNew_, RELATIVE_POLY_MAX_Q_FP32, CMPMODE::LE, n);
+        Select(tmpA_, mask_, srcGrad_, quad_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+    } else if ((!IS_FLOAT || lrPowerScalar_ == LR_POWER_NEG_POINT_ONE) &&
+               (lrPowerScalar_ == LR_POWER_NEG_POINT_ONE || lrPowerScalar_ == LR_POWER_NEG_POINT_TWO_FIVE ||
+                lrPowerScalar_ == LR_POWER_NEG_POINT_ZERO_ONE || lrPowerScalar_ == LR_POWER_NEG_POINT_NINE ||
+                lrPowerScalar_ == LR_POWER_NEG_ONE_POINT_FIVE)) {
         // For close accum values, subtracting two independently rounded Power results
         // amplifies their ULP errors. Compute old_pow * ((new_accum / accum)^p - 1)
         // and retain the direct subtraction only for accum == 0.
@@ -500,8 +573,16 @@ __aicore__ inline void InplaceApplyFtrlV2<T>::ComputeLinearAndQuad(int32_t n)
     }
 
     Duplicate(linearNew_, lrScalar_, n);
-    Div<float, DIV_0ULP_CONFIG>(quad_, tmpA_, linearNew_, n);
-    Mul(quad_, quad_, srcVar_, n);
+    if (IS_FLOAT && lrPowerScalar_ != LR_POWER_NEG_POINT_SEVEN_FIVE) {
+        // Evaluate (new_power - old_power) * var / lr in this order. Dividing
+        // before multiplying is algebraically equivalent but can move large
+        // FP32 results by one ULP and fail the ratio standard.
+        Mul(quad_, tmpA_, srcVar_, n);
+        Div<float, DIV_0ULP_CONFIG>(quad_, quad_, linearNew_, n);
+    } else {
+        Div<float, DIV_0ULP_CONFIG>(quad_, tmpA_, linearNew_, n);
+        Mul(quad_, quad_, srcVar_, n);
+    }
     Adds(tmpB_, gs_, FLOAT_ZERO, n);
     Sub(tmpB_, tmpB_, quad_, n);
     Add(linearNew_, srcLinear_, tmpB_, n);
