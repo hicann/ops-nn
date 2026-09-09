@@ -15,6 +15,7 @@
  * \brief ApplyFtrlV2 形状推导：1 个输出 var（in-place，accum/linear 隐式更新）
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -34,17 +35,10 @@ static ge::graphStatus InferShape4ApplyFtrlV2(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, varRefShape);
     *varRefShape = *varShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*varRefShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4ApplyFtrlV2(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(VAR_INDEX, context->GetInputDataType(VAR_INDEX));
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ApplyFtrlV2)
-    .InferShape(InferShape4ApplyFtrlV2)
-    .InferDataType(InferDataType4ApplyFtrlV2);
+IMPL_OP_INFERSHAPE(ApplyFtrlV2).InferShape(InferShape4ApplyFtrlV2);
 
 } // namespace ops

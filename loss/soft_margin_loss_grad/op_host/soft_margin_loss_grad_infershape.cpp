@@ -12,6 +12,7 @@
  * \file soft_margin_loss_grad_infershape.cpp
  * \brief SoftMarginLossGrad 形状/类型推导：out = numpy broadcast(self, target, grad_output)
  */
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -52,6 +53,7 @@ static ge::graphStatus InferShape4SoftMarginLossGrad(gert::InferShapeContext* co
         int64_t d = BroadcastDim(BroadcastDim(dimAt(s0, i, r), dimAt(s1, i, r)), dimAt(s2, i, r));
         out->SetDim(i, d);
     }
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*out).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

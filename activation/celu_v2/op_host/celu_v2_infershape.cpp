@@ -14,6 +14,7 @@
  * \file celu_v2_infershape.cpp
  * \brief
  */
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -39,7 +40,7 @@ static ge::graphStatus InferShapeCeluV2(gert::InferShapeContext* context)
         yShape->SetDim(i, dim);
     }
 
-    OP_LOGD(context->GetNodeName(), "End to do InferShapeCeluV2");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*yShape).c_str());
     return GRAPH_SUCCESS;
 }
 

@@ -81,6 +81,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
@@ -132,8 +133,8 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
 
     // Logical UB buffers per tile: half-width types need the 2 extra in/out queues
     // (see HALF_PRECISION_MAX_BYTES / UB_LOGICAL_BUFFER_NUM_* above for the rationale).
-    uint32_t ubDataNumber =
-        (inputBytes <= HALF_PRECISION_MAX_BYTES) ? UB_LOGICAL_BUFFER_NUM_HALF : UB_LOGICAL_BUFFER_NUM_FP32;
+    uint32_t ubDataNumber = (inputBytes <= HALF_PRECISION_MAX_BYTES) ? UB_LOGICAL_BUFFER_NUM_HALF :
+                                                                       UB_LOGICAL_BUFFER_NUM_FP32;
     uint64_t tmp = (ubSize / BLOCK_SIZE / BUFFER_NUM);
     uint32_t tileBlockNum = 1U;
     if (tmp > 0) {

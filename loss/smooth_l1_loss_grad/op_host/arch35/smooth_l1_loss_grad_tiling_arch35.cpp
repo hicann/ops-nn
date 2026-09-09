@@ -237,6 +237,7 @@ static void ComputeTilingParams(int64_t totalLength, ge::DataType dataType, uint
 
 static ge::graphStatus SmoothL1LossGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter SmoothL1LossGradTilingFunc");
     // 1. 平台信息 + shape/dtype/属性 + workspace
     uint64_t ubSize;

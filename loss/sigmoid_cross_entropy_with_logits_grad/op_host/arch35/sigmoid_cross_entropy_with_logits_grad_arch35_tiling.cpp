@@ -31,6 +31,7 @@ static constexpr size_t MAX_DIM_NUM = 8;
 
 static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }

@@ -281,6 +281,7 @@ ge::graphStatus GroupQuantTiling::PostTiling()
 
 static ge::graphStatus Tiling4GroupQuant(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 初始化算子Tiling类
     GroupQuantTiling tiling(context);
     // 执行算子tiling框架

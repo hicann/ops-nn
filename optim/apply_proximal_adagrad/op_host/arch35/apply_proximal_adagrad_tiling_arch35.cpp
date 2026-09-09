@@ -215,6 +215,7 @@ static ge::graphStatus FillTilingForNonEmpty(gert::TilingContext* context, int64
 
 static ge::graphStatus ApplyProximalAdagradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

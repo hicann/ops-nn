@@ -12,6 +12,7 @@
  * \file heaviside_infershape.cpp
  * \brief
  */
+#include "util/shape_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
@@ -38,7 +39,7 @@ static ge::graphStatus InferShape4Heaviside(gert::InferShapeContext* context)
 
     *yShape = *xShape;
 
-    OP_LOGD(context, "End to do InferShape4Heaviside");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*yShape).c_str());
     return GRAPH_SUCCESS;
 }
 

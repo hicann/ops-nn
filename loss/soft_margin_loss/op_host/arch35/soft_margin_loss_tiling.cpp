@@ -22,6 +22,7 @@
 namespace optiling {
 ge::graphStatus TilingForSoftMarginLoss(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context->GetNodeName(), "start tiling");
     auto compileInfo = static_cast<const SoftMarginLossCompileInfo*>(context->GetCompileInfo());
 

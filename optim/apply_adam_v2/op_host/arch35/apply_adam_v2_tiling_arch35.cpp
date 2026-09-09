@@ -505,6 +505,7 @@ ge::graphStatus ApplyAdamV2Tiling::RunTiling()
 
 static ge::graphStatus TilingFuncApplyAdamV2(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ApplyAdamV2TilingFunc");
 
     // Read platform info

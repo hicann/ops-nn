@@ -207,6 +207,7 @@ static ge::graphStatus FillEleWiseTilingData(gert::TilingContext* context,
 
 static ge::graphStatus FusedMulApplyMomentumExternTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context, "Enter FusedMulApplyMomentumExternTilingFunc");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

@@ -16,8 +16,10 @@
  * @file shrink_infershape.cpp
  * @brief Shrink operator shape inference implementation
  */
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "op_common/log/log.h"
 
 using namespace ge;
 
@@ -47,6 +49,7 @@ static ge::graphStatus InferShape4Shrink(gert::InferShapeContext* context)
 
     *outputShape = *inputShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*outputShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

@@ -25,9 +25,10 @@
  *   accum.shape = input accum.shape
  */
 
+#include <string>
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
 #include "op_common/log/log.h"
 
 using namespace ge;
@@ -46,10 +47,12 @@ static ge::graphStatus InferShape4InplaceApplyAdagradV2(gert::InferShapeContext*
         const auto* inputTensor = context->GetInputTensor(i);
         if (inputTensor != nullptr) {
             auto format = inputTensor->GetStorageFormat();
-            OP_CHECK_IF(format != ge::FORMAT_ND,
-                        OP_LOGE(context, "InplaceApplyAdagradV2: unsupported format on input %u: %d, only ND is supported",
-                                i, static_cast<int>(format)),
-                        return ge::GRAPH_FAILED);
+            if (format != ge::FORMAT_ND) {
+                const std::string inputName = "input[" + std::to_string(i) + "]";
+                OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), inputName.c_str(), Ops::Base::ToString(format),
+                                           "ND");
+                return ge::GRAPH_FAILED;
+            }
         }
     }
 
@@ -67,19 +70,11 @@ static ge::graphStatus InferShape4InplaceApplyAdagradV2(gert::InferShapeContext*
     OP_CHECK_NULL_WITH_CONTEXT(context, outAccumShape);
     *outAccumShape = *accumShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outVarShape).c_str());
+
     return ge::GRAPH_SUCCESS;
 }
 
-// 输出 dtype 跟随输入：var(0)→output var(0)，accum(1)→output accum(1)
-static ge::graphStatus InferDataType4InplaceApplyAdagradV2(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(0, context->GetInputDataType(0));
-    context->SetOutputDataType(1, context->GetInputDataType(1));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(InplaceApplyAdagradV2)
-    .InferShape(InferShape4InplaceApplyAdagradV2)
-    .InferDataType(InferDataType4InplaceApplyAdagradV2);
+IMPL_OP_INFERSHAPE(InplaceApplyAdagradV2).InferShape(InferShape4InplaceApplyAdagradV2);
 
 } // namespace ops

@@ -14,6 +14,7 @@
  */
 #include "heaviside_tiling.h"
 #include <vector>
+#include "op_common/log/log.h"
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 
@@ -28,7 +29,7 @@ const static int32_t LENGTH_1024 = 1024;
 
 class HeavisideTiling {
 public:
-    explicit HeavisideTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit HeavisideTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -135,6 +136,7 @@ static ge::graphStatus TilingPrepare4HeavisideTiling(gert::TilingParseContext* /
 
 static ge::graphStatus TilingHeavisideTiling(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     HeavisideTiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }

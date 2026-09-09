@@ -218,6 +218,7 @@ static void CalcUbLoops(int64_t totalElements, ApplyFtrlV2TilingData* tiling)
 // Tiling 分发入口
 static ge::graphStatus ApplyFtrlV2TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ApplyFtrlV2TilingFunc");
     // 1. 获取平台信息
     uint64_t ubSize;

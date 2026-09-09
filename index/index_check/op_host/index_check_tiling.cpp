@@ -174,6 +174,7 @@ void IndexCheckTiling::TilingDataPrint() const
 
 ge::graphStatus TilingIndexCheck(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     IndexCheckTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context, "tiling init fail");

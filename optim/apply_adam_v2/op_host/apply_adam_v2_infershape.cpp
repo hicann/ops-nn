@@ -135,13 +135,5 @@ static ge::graphStatus InferShapeForApplyAdamV2(gert::InferShapeContext* context
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataTypeForApplyAdamV2(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(0, context->GetInputDataType(0));
-    context->SetOutputDataType(1, context->GetInputDataType(1));
-    context->SetOutputDataType(2, context->GetInputDataType(2));
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ApplyAdamV2).InferShape(InferShapeForApplyAdamV2).InferDataType(InferDataTypeForApplyAdamV2);
+IMPL_OP_INFERSHAPE(ApplyAdamV2).InferShape(InferShapeForApplyAdamV2);
 } // namespace ops

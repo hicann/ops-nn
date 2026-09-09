@@ -212,6 +212,7 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 
 static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context->GetNodeName(), "Enter HardSigmoidGradTilingFunc");
     uint64_t ubSize;
     int64_t coreNum;

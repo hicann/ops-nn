@@ -23,6 +23,7 @@
  *   按位对应更稳健，与同仓 relu6_d / cosh 范式一致）。
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -52,6 +53,7 @@ static ge::graphStatus InferShape4SmoothL1LossGrad(gert::InferShapeContext* cont
     // gradient.shape = predict.shape（无广播，OneInOneOutDynamicInfer）
     *gradientShape = *predictShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*gradientShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

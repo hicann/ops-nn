@@ -20,8 +20,10 @@
  * - Both output dtypes inherit from input var (all inputs same dtype).
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "log/log.h"
 using namespace ge;
 
 namespace ops {
@@ -52,6 +54,8 @@ static ge::graphStatus InferShape4InplaceApplyProximalAdagrad(gert::InferShapeCo
         return ge::GRAPH_FAILED;
     }
     *accumOutShape = *accumShape;
+
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*varOutShape).c_str());
 
     return ge::GRAPH_SUCCESS;
 }

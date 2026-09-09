@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -30,6 +31,7 @@ static ge::graphStatus InferShapeSigmoidCrossEntropyWithLogitsGrad(gert::InferSh
 
     *gradient_shape = *predict_shape;
     OP_LOGD(context->GetNodeName(), "End to do InferShapeSigmoidCrossEntropyWithLogitsGrad");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*gradient_shape).c_str());
     return GRAPH_SUCCESS;
 }
 

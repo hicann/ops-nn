@@ -199,6 +199,7 @@ ge::graphStatus ApplyMomentumRegbaseTiling::RunTiling()
 
 ge::graphStatus Tiling4ApplyMomentum(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context, "Tiling4ApplyMomentum running begin");
     ApplyMomentumRegbaseTiling tiling(context);
     return tiling.RunTiling();

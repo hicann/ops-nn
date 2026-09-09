@@ -484,6 +484,7 @@ ge::graphStatus FusedMulApplyMomentumTiling::RunTiling()
 
 static ge::graphStatus TilingFuncFusedMulApplyMomentum(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     if (context == nullptr) {
         OP_LOGE("FusedMulApplyMomentum", "Tiling context is null");
         return ge::GRAPH_FAILED;

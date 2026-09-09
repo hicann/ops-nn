@@ -43,8 +43,7 @@ static ge::graphStatus DoBroadcastTiling(gert::TilingContext* context)
 {
     Ops::Base::BroadcastBaseTiling<typename SoftplusGradDag<T>::OpDag> brcBaseTiling(context);
     OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-        OP_LOGE(context->GetNodeName(), "BroadcastBaseTiling DoTiling failed"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "BroadcastBaseTiling DoTiling failed"), return ge::GRAPH_FAILED);
     context->SetTilingKey(GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode()));
     return ge::GRAPH_SUCCESS;
 }
@@ -65,12 +64,11 @@ static ge::graphStatus DoOpTiling(gert::TilingContext* context)
 
     // spec.yaml 约束：gradients 和 features dtype 必须相同，backprops 与输入一致
     if ((input0DType != input1DType) || (outputDtype != input1DType)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(),
-            "gradients, features, backprops",
-            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " +
-            ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " +
-            ge::TypeUtils::DataTypeToSerialString(outputDtype),
-            "The dtypes of gradients, features and backprops must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "gradients, features, backprops",
+                                               ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " +
+                                                   ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " +
+                                                   ge::TypeUtils::DataTypeToSerialString(outputDtype),
+                                               "The dtypes of gradients, features and backprops must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -83,8 +81,7 @@ static ge::graphStatus DoOpTiling(gert::TilingContext* context)
     }
 
     OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "gradients, features",
-        ge::TypeUtils::DataTypeToSerialString(input0DType),
-        "DT_FLOAT16, DT_BF16, DT_FLOAT");
+                              ge::TypeUtils::DataTypeToSerialString(input0DType), "DT_FLOAT16, DT_BF16, DT_FLOAT");
     return ge::GRAPH_FAILED;
 }
 
@@ -95,16 +92,17 @@ static ge::graphStatus TilingForSoftplusGrad(gert::TilingContext* context)
         OP_LOGE("SoftplusGradTiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter SoftplusGradTilingFunc");
     return DoOpTiling(context);
 }
 
 // TilingParse 入口：填充 coreNum 和 ubSize
-static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -116,4 +114,4 @@ IMPL_OP_OPTILING(SoftplusGrad)
     .Tiling(TilingForSoftplusGrad)
     .TilingParse<BroadcastCompileInfo>(TilingPrepareForBroadcast);
 
-}  // namespace optiling
+} // namespace optiling

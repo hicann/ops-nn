@@ -154,6 +154,7 @@ static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingDat
 
 static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     int64_t coreNum = static_cast<int64_t>(GetAivCoreNum(context));
     OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     uint64_t ubSize = static_cast<uint64_t>(GetUbSize(context));

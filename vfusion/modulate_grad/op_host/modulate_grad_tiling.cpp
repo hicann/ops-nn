@@ -102,6 +102,7 @@ void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t numBlocks)
 }
 static ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     constexpr uint32_t INPUT_INDEX = 1;
     constexpr uint32_t SCALE_INDEX = 2;
     constexpr uint32_t SHIFT_INDEX = 3;

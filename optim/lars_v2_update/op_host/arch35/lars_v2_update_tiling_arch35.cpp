@@ -124,6 +124,7 @@ void FillTilingData(LarsV2UpdateTilingData<kRank>* td, const SplitResult& split,
 // key=4 -> TilingData4 (RANK=4 template), key=8 -> TilingData8 (RANK=8 template).
 static ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter LarsV2UpdateTilingFunc");
     // --- step 0: platform info ---
     auto platformInfo = context->GetPlatformInfo();

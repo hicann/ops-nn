@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "util/shape_util.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
 #include "register/op_impl_registry.h"
@@ -33,6 +34,8 @@ static ge::graphStatus InferShape4BNTrainingReduce(gert::InferShapeContext* cont
     if (isUnknownRank) {
         *sumShape = *xShape;
         *squareSumShape = *xShape;
+        OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s, output1 shape=%s",
+                Ops::Base::ToString(*sumShape).c_str(), Ops::Base::ToString(*squareSumShape).c_str());
         return GRAPH_SUCCESS;
     }
 
@@ -58,6 +61,8 @@ static ge::graphStatus InferShape4BNTrainingReduce(gert::InferShapeContext* cont
     sumShape->SetDim(0, channel);
     squareSumShape->SetDimNum(1);
     squareSumShape->SetDim(0, channel);
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s, output1 shape=%s",
+            Ops::Base::ToString(*sumShape).c_str(), Ops::Base::ToString(*squareSumShape).c_str());
     return GRAPH_SUCCESS;
 }
 

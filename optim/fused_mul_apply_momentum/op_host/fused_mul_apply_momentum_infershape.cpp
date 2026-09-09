@@ -15,6 +15,7 @@
  *        Logic aligned with canndev runtime/fused_mul_apply_momentum.cc:
  *        output[0]=input[0], output[1]=input[0] via InferShape4InIdxAndOutVector(ctx, 0, {0,1}).
  */
+#include "util/shape_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
@@ -38,7 +39,7 @@ static ge::graphStatus InferShapeForFusedMulApplyMomentum(gert::InferShapeContex
         }
         *outShape = *inShape;
     }
-    OP_LOGD(context, "InferShapeForFusedMulApplyMomentum end");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*inShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

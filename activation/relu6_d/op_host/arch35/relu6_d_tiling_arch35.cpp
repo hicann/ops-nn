@@ -175,6 +175,7 @@ static void ComputeTilingParams(Relu6DTilingData* tiling, int64_t dim0, ge::Data
 
 static ge::graphStatus Relu6DTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter Relu6DTilingFunc");
     // 1. 平台信息
     uint64_t ubSize;

@@ -385,6 +385,7 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context)
 // ===========================================================================
 static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context, "Enter TilingFuncFusedBiasLeakyReluGrad");
 
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();

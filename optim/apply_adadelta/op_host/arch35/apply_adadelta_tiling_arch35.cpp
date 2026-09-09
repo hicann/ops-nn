@@ -234,6 +234,7 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, int64_t tota
 
 static ge::graphStatus ApplyAdadeltaTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ApplyAdadeltaTilingFunc");
     uint64_t ubSize;
     int64_t coreNum;

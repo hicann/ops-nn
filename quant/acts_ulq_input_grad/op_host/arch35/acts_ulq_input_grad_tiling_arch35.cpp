@@ -219,6 +219,7 @@ static ge::graphStatus CalcTilingData(gert::TilingContext* context, ActsULQInput
 
 static ge::graphStatus ActsULQInputGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1、平台信息
     uint64_t ubSize = 0;
     int64_t availableCoreNum = 0;

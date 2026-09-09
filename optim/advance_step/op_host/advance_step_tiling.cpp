@@ -323,6 +323,7 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
 static ge::graphStatus Tiling4AdvanceStep(gert::TilingContext* context)
 {
     OP_CHECK_IF(nullptr == context, OP_LOGE("AdvanceStep", "Context is null"), return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context, "Enter Tiling4AdvanceStep");
     AdvanceStepTilingData tiling;
     AdvanceStepTilingHelper instanceAdvanceStepTilingHelper(context);

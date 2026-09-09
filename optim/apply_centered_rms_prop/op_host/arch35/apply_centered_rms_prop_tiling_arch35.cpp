@@ -19,20 +19,22 @@
  *   fp32:      9 T-queues (4B) + 7 FP32 queues (4B) = 36+28 = 64 B/elem
  *              (FP32 queues are allocated but unused for fp32 path; simplifies kernel code)
  */
+#include <string>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "util/shape_util.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "exe_graph/runtime/tensor.h"
 #include "../../op_kernel/arch35/apply_centered_rms_prop_tiling_data.h"
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -42,12 +44,13 @@ constexpr size_t WORKSPACE_NUM = 1;
 //   Input queues (T):  var, mg, ms, mom, grad = 5
 //   Output queues (T): var_out, mg_out, ms_out, mom_out = 4
 //   FP32 queues:       varF32, mgF32, msF32, momF32, gradF32, tmp1, tmp2 = 7
-constexpr int64_t T_QUEUE_COUNT = 9;   // 5 input + 4 output
+constexpr int64_t T_QUEUE_COUNT = 9; // 5 input + 4 output
 constexpr int64_t FP32_QUEUE_COUNT = 7;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -68,21 +71,24 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalIdx, ge::DataType* dataType)
 {
+    const char* inputNames[] = {"var", "mg", "ms", "mom", "lr", "rho", "momentum", "epsilon", "grad"};
     // Get var shape (input 0)
     auto inputVar = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
 
     // Verify all ND inputs have same shape
-    for (int idx : {1, 2, 3, 8}) {  // mg=1, ms=2, mom=3, grad=8
+    for (int idx : {1, 2, 3, 8}) { // mg=1, ms=2, mom=3, grad=8
         auto inputShape = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
         auto shape = EnsureNotScalar(inputShape->GetStorageShape());
-        OP_CHECK_IF(
-            varShape.GetShapeSize() != shape.GetShapeSize(),
-            OP_LOGE(context, "ApplyCenteredRMSProp: shape mismatch: var=%ld, input[%d]=%ld",
-                    varShape.GetShapeSize(), idx, shape.GetShapeSize()),
-            return ge::GRAPH_FAILED);
+        if (varShape.GetShapeSize() != shape.GetShapeSize()) {
+            const std::string paramName = std::string("var and ") + inputNames[idx];
+            const std::string shapeMsg = Ops::Base::ToString(varShape) + ", " + Ops::Base::ToString(shape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), paramName.c_str(), shapeMsg.c_str(),
+                                                   "The shape size must be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     *totalIdx = varShape.GetShapeSize();
@@ -100,8 +106,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
         ge::DataType dt = desc->GetDataType();
         OP_CHECK_IF(supportedDtype.count(dt) == 0,
-                    OP_LOGE(context, "ApplyCenteredRMSProp: unsupported dtype %d at input[%d], only FP16/FP32/BF16 allowed",
-                            static_cast<int>(dt), idx),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), inputNames[idx],
+                                                          Ops::Base::ToString(dt).c_str(),
+                                                          "The dtype must be one of DT_FLOAT16, DT_FLOAT or DT_BF16"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -117,8 +124,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 // SOLUTION: Always return 0.0f with ok=false. The kernel will read scalar
 // values from GM via GlobalTensor::GetValue() when scalarsValid == 0.
 // This is the safe fallback path that works in both Mock and Real modes.
-static float ReadScalarInput(gert::TilingContext* context, size_t flatIndex,
-                             ge::DataType dataType, bool& ok)
+static float ReadScalarInput(gert::TilingContext* context, size_t flatIndex, ge::DataType dataType, bool& ok)
 {
     ok = false;
     // Do NOT attempt to read device memory from host side.
@@ -136,24 +142,22 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and dtype
     int64_t totalIdx;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, &totalIdx, &dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, &totalIdx, &dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Set tiling data
     ApplyCenteredRMSPropTilingData* tiling = context->GetTilingData<ApplyCenteredRMSPropTilingData>();
@@ -169,10 +173,10 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
     // falls back to reading from GM via GlobalTensor::GetValue().
     {
         bool lrOk = false, rhoOk = false, momOk = false, epsOk = false;
-        tiling->lr       = ReadScalarInput(context, 4U, dataType, lrOk);
-        tiling->rho      = ReadScalarInput(context, 5U, dataType, rhoOk);
+        tiling->lr = ReadScalarInput(context, 4U, dataType, lrOk);
+        tiling->rho = ReadScalarInput(context, 5U, dataType, rhoOk);
         tiling->momentum = ReadScalarInput(context, 6U, dataType, momOk);
-        tiling->epsilon  = ReadScalarInput(context, 7U, dataType, epsOk);
+        tiling->epsilon = ReadScalarInput(context, 7U, dataType, epsOk);
         tiling->scalarsValid = (lrOk && rhoOk && momOk && epsOk) ? 1 : 0;
     }
 

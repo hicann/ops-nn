@@ -148,6 +148,7 @@ static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSiz
 
 static ge::graphStatus HardShrinkTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     HardShrinkPlatInfo platInfo;
     auto ret = GetPlatformInfo(context, platInfo);
     if (ret != ge::GRAPH_SUCCESS) {

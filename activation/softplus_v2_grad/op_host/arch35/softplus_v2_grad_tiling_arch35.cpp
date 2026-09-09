@@ -450,6 +450,7 @@ ge::graphStatus SoftplusV2GradTiling::RunTiling()
 
 static ge::graphStatus TilingFuncSoftplusV2Grad(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     SoftplusV2GradTiling softplusV2GradTiling(context);
     auto ret = softplusV2GradTiling.RunTiling();
     if (ret != GRAPH_SUCCESS)

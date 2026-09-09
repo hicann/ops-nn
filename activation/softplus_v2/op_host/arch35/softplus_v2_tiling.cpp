@@ -241,6 +241,7 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 
 static ge::graphStatus SoftplusV2TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1. Platform info
     uint64_t ubSize;
     int64_t coreNum;

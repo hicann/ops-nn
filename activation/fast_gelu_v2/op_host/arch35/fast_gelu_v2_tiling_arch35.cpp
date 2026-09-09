@@ -138,6 +138,7 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2
 
 static ge::graphStatus FastGeluV2TilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

@@ -17,8 +17,10 @@
  * 逻辑：varOut.shape = var.shape, varOut.dtype = var.dtype
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "log/log.h"
 
 using namespace ge;
 
@@ -35,6 +37,7 @@ static ge::graphStatus InferShape4ApplyProximalGradientDescent(gert::InferShapeC
         return ge::GRAPH_FAILED;
     }
     *outShape = *varShape;
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

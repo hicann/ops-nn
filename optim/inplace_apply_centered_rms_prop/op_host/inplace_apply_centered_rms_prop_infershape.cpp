@@ -23,6 +23,7 @@
  * 输出 dtype = 对应输入 dtype（same_as_input，由 def 文件 DataType 列表保证）
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -33,10 +34,6 @@ namespace ops {
 
 static graphStatus InferShape4InplaceApplyCenteredRmsProp(gert::InferShapeContext* context)
 {
-    // 4 个输出 shape = 对应输入 shape（var_out↔var, mg_out↔mg, ms_out↔ms, mom_out↔mom）
-    // 输入顺序：var(0), mg(1), ms(2), mom(3), lr(4), rho(5), momentum(6), epsilon(7), grad(8)
-    // 输出顺序：var(0), mg(1), ms(2), mom(3)
-
     for (size_t i = 0; i < 4; i++) {
         const gert::Shape* inputShape = context->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
@@ -45,20 +42,12 @@ static graphStatus InferShape4InplaceApplyCenteredRmsProp(gert::InferShapeContex
         *outputShape = *inputShape;
     }
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s",
+            Ops::Base::ToString(*context->GetOutputShape(0)).c_str());
+
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4InplaceApplyCenteredRmsProp(gert::InferDataTypeContext* context)
-{
-    // 4 个输出 dtype = 对应输入 dtype（var_out↔var, mg_out↔mg, ms_out↔ms, mom_out↔mom）
-    for (size_t i = 0; i < 4; i++) {
-        context->SetOutputDataType(i, context->GetInputDataType(i));
-    }
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(InplaceApplyCenteredRMSProp)
-    .InferShape(InferShape4InplaceApplyCenteredRmsProp)
-    .InferDataType(InferDataType4InplaceApplyCenteredRmsProp);
+IMPL_OP_INFERSHAPE(InplaceApplyCenteredRMSProp).InferShape(InferShape4InplaceApplyCenteredRmsProp);
 
 } // namespace ops

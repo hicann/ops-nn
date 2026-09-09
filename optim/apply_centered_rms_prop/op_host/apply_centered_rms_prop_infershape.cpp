@@ -17,6 +17,7 @@
  * Single output var has the same shape and dtype as var (input 0).
  */
 #include <set>
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "exe_graph/runtime/infer_datatype_context.h"
@@ -36,6 +37,7 @@ static ge::graphStatus InferShape4ApplyCenteredRMSProp(gert::InferShapeContext* 
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
     *outShape = *varShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -43,11 +45,13 @@ static ge::graphStatus InferShape4ApplyCenteredRMSProp(gert::InferShapeContext* 
 static ge::graphStatus InferDataType4ApplyCenteredRMSProp(gert::InferDataTypeContext* context)
 {
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    const char* inputNames[] = {"var", "mg", "ms", "mom", "lr", "rho", "momentum", "epsilon", "grad"};
     for (size_t idx = 0; idx < 9; idx++) {
         ge::DataType dt = context->GetInputDataType(idx);
         OP_CHECK_IF(supportedDtype.count(dt) == 0,
-                    OP_LOGE(context, "ApplyCenteredRMSProp: unsupported dtype %d at input[%zu], only FP16/FP32/BF16 allowed",
-                            static_cast<int>(dt), idx),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), inputNames[idx],
+                                                          Ops::Base::ToString(dt).c_str(),
+                                                          "The dtype must be one of DT_FLOAT16, DT_FLOAT or DT_BF16"),
                     return ge::GRAPH_FAILED);
     }
     ge::DataType varDt = context->GetInputDataType(0);

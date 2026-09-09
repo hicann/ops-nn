@@ -15,6 +15,7 @@
  * \brief SeluGrad 算子形状推导实现
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -68,6 +69,7 @@ static ge::graphStatus InferShape4SeluGrad(gert::InferShapeContext* context)
 
     *yShape = *gradShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*yShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

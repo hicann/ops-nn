@@ -115,6 +115,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context->GetNodeName(), "Enter HardShrinkGradTilingFunc");
     // 1. 获取平台信息
     uint64_t ubSize = 0;

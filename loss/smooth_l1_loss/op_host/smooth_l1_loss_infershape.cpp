@@ -55,6 +55,7 @@ static ge::graphStatus SmoothL1LossInferShapeFunc(gert::InferShapeContext* conte
     *loss = *predict;
 
     OP_LOGD(context->GetNodeName(), "SmoothL1LossInferShapeFunc end.");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*loss).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

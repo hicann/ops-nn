@@ -15,6 +15,7 @@
  * \brief FusedBiasLeakyRelu shape inference implementation
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "log/log.h"
@@ -30,6 +31,7 @@ static ge::graphStatus InferShape4FusedBiasLeakyRelu(gert::InferShapeContext* co
     gert::Shape* outputShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     *outputShape = *inputShape;
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outputShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

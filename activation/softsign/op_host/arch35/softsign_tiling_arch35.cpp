@@ -67,6 +67,7 @@ static ge::graphStatus PrepareWorkspace(gert::TilingContext* context)
 
 static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();

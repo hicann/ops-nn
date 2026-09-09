@@ -125,6 +125,7 @@ static ge::graphStatus BuildExpandedTable(gert::TilingContext* context, int32_t 
 
 static ge::graphStatus DataFormatDimMapTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter DataFormatDimMapTilingFunc");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

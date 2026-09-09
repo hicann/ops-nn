@@ -196,6 +196,7 @@ static void CalcUbLoopInfo(ApplyKerasMomentumTilingData* tiling, int64_t totalEl
 
 static ge::graphStatus ApplyKerasMomentumTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ApplyKerasMomentumTilingFunc");
 
     uint64_t ubSize;

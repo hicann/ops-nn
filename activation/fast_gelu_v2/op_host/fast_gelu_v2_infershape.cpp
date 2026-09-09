@@ -19,8 +19,10 @@
  * transparently by the framework and the Tiling layer (EnsureNotScalar).
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "log/log.h"
 
 using namespace ge;
 
@@ -39,6 +41,7 @@ static ge::graphStatus InferShape4FastGeluV2(gert::InferShapeContext* context)
     }
 
     *output_shape = *input_shape;
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*output_shape).c_str());
 
     return ge::GRAPH_SUCCESS;
 }

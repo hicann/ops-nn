@@ -246,6 +246,7 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, int64_t tota
 
 static ge::graphStatus ApplyRMSPropTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ApplyRMSPropTilingFunc");
     uint64_t ubSize = 0; // Minor-4 fix: 显式初始化
     int64_t coreNum = 0;

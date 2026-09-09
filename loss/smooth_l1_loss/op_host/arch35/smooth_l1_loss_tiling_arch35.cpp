@@ -61,6 +61,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 
 static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_CHECK_NULL_WITH_CONTEXT(context, context);
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

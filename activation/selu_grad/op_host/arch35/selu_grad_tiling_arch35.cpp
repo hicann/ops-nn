@@ -153,6 +153,7 @@ static void SetUsedCoreNum(gert::TilingContext* context, const SeluGradTilingDat
 // Tiling 分发入口
 static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1. 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;

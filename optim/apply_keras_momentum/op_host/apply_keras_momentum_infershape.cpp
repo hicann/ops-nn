@@ -15,6 +15,7 @@
  * \brief ApplyKerasMomentum 形状推导：1 个输出 var（in-place，accum 隐式更新）
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
@@ -34,6 +35,7 @@ static ge::graphStatus InferShape4ApplyKerasMomentum(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, varRefShape);
     *varRefShape = *varShape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*varRefShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

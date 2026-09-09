@@ -12,6 +12,7 @@
  * \file apply_momentum_infershape.cpp
  * \brief
  */
+#include "util/shape_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "op_host/infershape_elewise_util.h"
@@ -28,14 +29,10 @@ static ge::graphStatus InferShapeForApplyMomentum(gert::InferShapeContext* conte
     OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForApplyMomentum failed."),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context, "InferShapeForApplyMomentum end");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s",
+            Ops::Base::ToString(*context->GetOutputShape(0)).c_str());
     return ret;
 }
 
-static graphStatus InferDataTypeForApplyMomentum(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(VAR_INDEX, context->GetInputDataType(VAR_INDEX));
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ApplyMomentum).InferShape(InferShapeForApplyMomentum).InferDataType(InferDataTypeForApplyMomentum);
+IMPL_OP_INFERSHAPE(ApplyMomentum).InferShape(InferShapeForApplyMomentum);
 } // namespace ops

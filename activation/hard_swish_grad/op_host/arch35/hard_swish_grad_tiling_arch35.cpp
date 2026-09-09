@@ -97,6 +97,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
 
 static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;

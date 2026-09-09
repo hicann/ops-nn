@@ -20,8 +20,10 @@
  * 逐元素单目运算：输出 shape = 输入 shape
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "log/log.h"
 
 using namespace ge;
 
@@ -40,6 +42,7 @@ static ge::graphStatus InferShape4HardSwish(gert::InferShapeContext* context)
     }
 
     *outputShape = *inputShape;
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outputShape).c_str());
 
     return ge::GRAPH_SUCCESS;
 }

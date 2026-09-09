@@ -21,9 +21,9 @@
  * All 3 outputs have the same shape as input var (input 0).
  */
 
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
 #include "op_common/log/log.h"
 
 using namespace ge;
@@ -45,20 +45,12 @@ static ge::graphStatus InferShape4InplaceApplyAdagradDA(gert::InferShapeContext*
         *outShape = *varShape;
     }
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s",
+            Ops::Base::ToString(*context->GetOutputShape(0)).c_str());
+
     return ge::GRAPH_SUCCESS;
 }
 
-// 输出 dtype 均跟随输入 var (input 0)
-static ge::graphStatus InferDataType4InplaceApplyAdagradDA(gert::InferDataTypeContext* context)
-{
-    for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {
-        context->SetOutputDataType(i, context->GetInputDataType(0));
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(InplaceApplyAdagradDA)
-    .InferShape(InferShape4InplaceApplyAdagradDA)
-    .InferDataType(InferDataType4InplaceApplyAdagradDA);
+IMPL_OP_INFERSHAPE(InplaceApplyAdagradDA).InferShape(InferShape4InplaceApplyAdagradDA);
 
 } // namespace ops

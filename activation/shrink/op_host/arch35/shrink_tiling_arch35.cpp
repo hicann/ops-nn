@@ -141,6 +141,7 @@ static int64_t CalcUbFactor(int64_t totalIdx, ge::DataType dataType, uint64_t ub
 
 static ge::graphStatus ShrinkTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context->GetNodeName(), "Enter ShrinkTilingFunc");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

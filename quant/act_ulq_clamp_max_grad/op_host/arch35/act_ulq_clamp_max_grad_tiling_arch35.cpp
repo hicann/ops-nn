@@ -882,6 +882,7 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, Ctx& ctx)
 // ─────────────────────────────────────────────────────────────────────────────
 static ge::graphStatus ActULQClampMaxGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter ActULQClampMaxGradTilingFunc");
     OP_LOGD(context, "Begin ActULQClampMaxGradTilingFunc");
     Ctx ctx;

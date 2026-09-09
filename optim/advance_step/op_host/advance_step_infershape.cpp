@@ -12,6 +12,7 @@
  * \file advance_step_infershape.cc
  * \brief
  */
+#include "util/shape_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
@@ -52,6 +53,7 @@ static ge::graphStatus InferShape4AdvanceStep(gert::InferShapeContext* context)
     *y4Shape = *x1Shape;
 
     OP_LOGD(context, "End to do InferShape4AdvanceStep");
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*y1Shape).c_str());
     return GRAPH_SUCCESS;
 }
 

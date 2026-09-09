@@ -18,8 +18,13 @@
  * Output shape equals the first input (grad_output) shape.
  */
 
+#include <string>
+
+#include "util/shape_util.h"
+#include "infershape_elewise_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "log/log.h"
 
 using namespace ge;
 
@@ -27,15 +32,14 @@ namespace ops {
 
 static ge::graphStatus InferShape4HardSwishGrad(gert::InferShapeContext* context)
 {
-    const gert::Shape* input_shape = context->GetInputShape(0);
-    if (input_shape == nullptr) {
-        return ge::GRAPH_FAILED;
+    const ge::graphStatus ret = Ops::Base::InferShape4Elewise(context);
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
     }
-    gert::Shape* output_shape = context->GetOutputShape(0);
-    if (output_shape == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
-    *output_shape = *input_shape;
+    const gert::Shape* outputShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+    const std::string outputShapeText = Ops::Base::ToString(*outputShape);
+    OP_LOGI(context->GetNodeName(), "[InferShape] HardSwishGrad output0 shape=%s", outputShapeText.c_str());
     return ge::GRAPH_SUCCESS;
 }
 

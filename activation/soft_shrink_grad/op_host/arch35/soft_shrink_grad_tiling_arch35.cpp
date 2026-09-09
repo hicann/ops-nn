@@ -236,6 +236,7 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, ge::DataTy
 
 static ge::graphStatus SoftShrinkGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter SoftShrinkGradTilingFunc");
 
     uint64_t ubSize;

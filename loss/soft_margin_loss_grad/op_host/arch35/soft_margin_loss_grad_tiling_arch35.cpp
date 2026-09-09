@@ -206,6 +206,7 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx, const std::vecto
 
 static ge::graphStatus SoftMarginLossGradTiling(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context->GetNodeName(), "Start SoftMarginLossGradTiling.");
     const auto* predictDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, predictDesc);

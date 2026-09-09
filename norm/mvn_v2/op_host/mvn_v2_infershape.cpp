@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -33,9 +34,11 @@ static ge::graphStatus InferShape4MVNV2(gert::InferShapeContext* context)
 
     *output_shape = *input_shape;
 
+    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*output_shape).c_str());
+
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP(MVNV2).InferShape(InferShape4MVNV2);
+IMPL_OP_INFERSHAPE(MVNV2).InferShape(InferShape4MVNV2);
 
 } // namespace ops

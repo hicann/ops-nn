@@ -589,6 +589,7 @@ ge::graphStatus BNInferGradTiling::RunTiling()
 
 static ge::graphStatus BNInferGradTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter BNInferGradTilingFunc");
     BNInferGradTiling tiling(context);
     auto ret = tiling.RunTiling();
