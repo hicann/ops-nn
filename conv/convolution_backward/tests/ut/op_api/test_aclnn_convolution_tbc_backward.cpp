@@ -663,4 +663,48 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_tbc_backward_by3d_with
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+// cover convtbc_backward_checker.cpp CheckTbcShape validDim failure branch (L91-L92):
+// self must be 3-dim (TBC), a 2-dim self tensor makes res=false
+TEST_F(convolution_tbc_backward_test, case_shape_dim_invalid)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 1;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// cover convtbc_backward_checker.cpp CheckTbcCubeMathType invalid value branch (L159-L164):
+// cubeMathType out of range [0, 3] ({0: KEEP_DTYPE, 1: ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32})
+TEST_F(convolution_tbc_backward_test, case_cube_math_type_invalid)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 4;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
 } // namespace

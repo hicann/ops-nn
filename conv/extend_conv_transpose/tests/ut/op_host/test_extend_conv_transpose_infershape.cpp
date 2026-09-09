@@ -420,3 +420,406 @@ TEST_F(ExtendConvTransposeProtoTest, compute_from_scratch_groups_2)
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     ASSERT_EQ(Ops::Base::ToString(*output), "[1, 6, 4, 4, 4]");
 }
+
+// cover extend_conv_transpose_infershape.cpp GetConv3DXShape unsupported x format branch (L91-L94)
+// and InferShapeForExtendConvTranspose failure return (L388): input 0 desc origin format is NCHW,
+// which is neither NCDHW nor NDHWC
+TEST_F(ExtendConvTransposeProtoTest, compute_from_scratch_x_format_invalid)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {0, 0, 0, 0, 0};
+    gert::StorageShape input_size_shape = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
+    gert::StorageShape x_shape = {{1, 3, 2, 2, 2}, {1, 3, 2, 2, 2}};
+    gert::StorageShape filter_shape = {{6, 3, 3, 3, 3}, {6, 3, 3, 3, 3}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// cover extend_conv_transpose_infershape.cpp GetConv3DFilterShape DHWCN branch (L129-L134):
+// filter desc origin format DHWCN parses kd/kh/kw/kc/kn from dims 0-4
+TEST_F(ExtendConvTransposeProtoTest, compute_from_scratch_filter_dhwcn)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {0, 0, 0, 0, 0};
+    gert::StorageShape input_size_shape = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
+    gert::StorageShape x_shape = {{1, 3, 2, 2, 2}, {1, 3, 2, 2, 2}};
+    gert::StorageShape filter_shape = {{3, 3, 3, 3, 6}, {3, 3, 3, 3, 6}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[1, 3, 4, 4, 4]");
+}
+
+// cover extend_conv_transpose_infershape.cpp GetConv3DFilterShape unsupported format branch
+// (L135-L139): filter desc origin format NCHW is neither NCDHW, NDHWC nor DHWCN
+TEST_F(ExtendConvTransposeProtoTest, compute_from_scratch_filter_format_invalid)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {0, 0, 0, 0, 0};
+    gert::StorageShape input_size_shape = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
+    gert::StorageShape x_shape = {{1, 3, 2, 2, 2}, {1, 3, 2, 2, 2}};
+    gert::StorageShape filter_shape = {{6, 3, 3, 3, 3}, {6, 3, 3, 3, 3}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// cover conv_backprop_infershape.cpp SetOutputShapeDim invalid dtype branch (L260-L264):
+// 4-dim input_size with DT_FLOAT dtype fails in InferShapeForConvBackpropExtend3D
+TEST_F(ExtendConvTransposeProtoTest, input_size_2d_invalid_dtype)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    gert::StorageShape input_size_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape x_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape filter_shape = {{32, 8, 1, 1, 1}, {32, 8, 1, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_FLOAT,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// cover conv_backprop_infershape.cpp SetOutputShapeDim unsupported y format branch (L232-L236):
+// 4-dim input_size with ND output origin format, GetConvBackpropIndex returns -1
+TEST_F(ExtendConvTransposeProtoTest, input_size_2d_output_format_invalid)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {8, 8, 24, 32};
+    gert::StorageShape input_size_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape x_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape filter_shape = {{32, 8, 1, 1, 1}, {32, 8, 1, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// cover conv_backprop_infershape.cpp GetConvBackpropIndex NDHWC branch (L273-L274):
+// 4-dim input_size with NDHWC output origin format inserts the d dim (1) at index 1
+TEST_F(ExtendConvTransposeProtoTest, 2d_extend_3d_output_ndhwc)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {8, 8, 24, 32};
+    gert::StorageShape input_size_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape x_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape filter_shape = {{32, 8, 1, 1, 1}, {32, 8, 1, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[8, 1, 8, 24, 32]");
+}
+
+// cover conv_backprop_infershape.cpp GetConvBackpropIndex DHWCN branch (L275-L276):
+// 4-dim input_size with DHWCN output origin format inserts the d dim (1) at index 0
+TEST_F(ExtendConvTransposeProtoTest, 2d_extend_3d_output_dhwcn)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    vector<int64_t> input_size = {8, 8, 24, 32};
+    gert::StorageShape input_size_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape x_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape filter_shape = {{32, 8, 1, 1, 1}, {32, 8, 1, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(input_size_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
+                                                       total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[1, 8, 8, 24, 32]");
+}
+
+// cover conv_backprop_infershape.cpp IsConstTensor empty tensor branch (L22-L23) and
+// InferShapeForConvBackpropExtend3D unknown output branch (L215-L219): 4-dim input_size tensor
+// without data (addr is null) is not a const tensor, all y dims are set to -1
+TEST_F(ExtendConvTransposeProtoTest, 2d_extend_3d_empty_input_size)
+{
+    vector<int64_t> strides({1, 1, 1, 1, 1});
+    vector<int64_t> pads({0, 0, 0, 0, 0, 0});
+    vector<int64_t> dilations({1, 1, 1, 1, 1});
+    int64_t groups = 1;
+    string data_format("NCDHW");
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
+
+    gert::StorageShape input_size_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape x_shape = {{8, 8, 24, 32}, {8, 8, 24, 32}};
+    gert::StorageShape filter_shape = {{32, 8, 1, 1, 1}, {32, 8, 1, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+
+    size_t total_size = 0;
+    auto tensor_holder = gert::Tensor::CreateFollowing(0, ge::DT_INT64, total_size);
+    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
+    tensor->MutableStorageShape().AppendDim(input_size_shape.MutableStorageShape().GetDimNum());
+    tensor->MutableOriginShape().AppendDim(input_size_shape.MutableOriginShape().GetDimNum());
+    tensor->SetOriginFormat(ge::FORMAT_NCDHW);
+    tensor->SetStorageFormat(ge::FORMAT_NCDHW);
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({tensor, &x_shape, &filter_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)}})
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ExtendConvTranspose")->infer_shape;
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[-1, -1, -1, -1, -1]");
+}
