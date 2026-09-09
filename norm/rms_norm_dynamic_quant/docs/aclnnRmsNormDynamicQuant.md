@@ -179,7 +179,7 @@ aclnnStatus aclnnRmsNormDynamicQuant(
       <td>INT8</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scaleOut（aclTensor*）</td>
@@ -189,7 +189,7 @@ aclnnStatus aclnnRmsNormDynamicQuant(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -236,7 +236,7 @@ aclnnStatus aclnnRmsNormDynamicQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x, gamma, yOut, scaleOut存在空指针。</td>
+      <td>x、gamma、yOut、scaleOut存在空指针。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>

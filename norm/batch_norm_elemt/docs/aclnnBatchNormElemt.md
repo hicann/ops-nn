@@ -109,7 +109,7 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>weight（aclTensor*）</td>
       <td>输入</td>
-      <td>>可选输入，表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
+      <td>可选输入，表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>bias（aclTensor*）</td>
       <td>输入</td>
-      <td>>可选输入，表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
+      <td>可选输入，表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
