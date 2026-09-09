@@ -252,7 +252,7 @@ GlobalTensor<float> sumGm_;
 GlobalTensor<float> squareSumGm_;
 GlobalTensor<float> wsGm_;
 TPipe pipe_;
-TQue<QuePosition::VECIN, 2> preInQue_;
+TQue<QuePosition::VECIN, kDoubleBufferDepth> preInQue_;
 TBuf<QuePosition::VECCALC> tmpBuf_;
 TBuf<QuePosition::VECCALC> cacheBuf_;
 TQue<QuePosition::VECOUT, 1> outQue_;

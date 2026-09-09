@@ -379,7 +379,7 @@ ge::graphStatus Tiling4RenormFunc(gert::TilingContext* context)
 
     OP_LOGD(context->GetNodeName(), "Tiling4RenormFunc running begin");
 
-    auto compileInfo = reinterpret_cast<const ReduceOpCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const ReduceOpCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     OP_LOGD(context->GetNodeName(), "Tiling4RenormFunc enter Renorm tiling.");

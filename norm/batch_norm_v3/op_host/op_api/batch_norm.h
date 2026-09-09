@@ -28,11 +28,11 @@ const std::array<aclTensor*, 3> BN3DTrainingUpdate(const aclTensor* x, const acl
                                                    const aclTensor* scale, const aclTensor* offset, aclTensor* mean,
                                                    aclTensor* var, float factor, float eps, aclOpExecutor* executor);
 const std::array<aclTensor*, 3> BatchNormV3(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                            aclTensor* running_mean, aclTensor* running_var, float momentum, float eps,
-                                            aclOpExecutor* executor);
+                                            const aclTensor* running_mean, const aclTensor* running_var, float momentum,
+                                            float eps, aclOpExecutor* executor);
 const std::array<aclTensor*, 3> BatchNormV3(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
-                                            aclTensor* running_mean, aclTensor* running_var, float momentum, float eps,
-                                            bool training, aclOpExecutor* executor);
+                                            const aclTensor* running_mean, const aclTensor* running_var, float momentum,
+                                            float eps, bool training, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BATCH_NORM_OP_H_

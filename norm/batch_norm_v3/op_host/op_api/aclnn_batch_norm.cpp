@@ -459,23 +459,21 @@ aclnnStatus BatchNormV3Proc(const aclTensor* input, const aclTensor* weight, con
     auto runningVarCast = l0op::Cast(runningVarContiguous, DataType::DT_FLOAT, executor);
     CHECK_RET(runningVarCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto runningMeanOut = const_cast<aclTensor*>(runningMeanCast);
-    auto runningVarOut = const_cast<aclTensor*>(runningVarCast);
-    std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor = l0op::BatchNormV3(input, weightCast, biasCast, runningMeanOut,
-                                                                            runningVarOut, momentum, eps, executor);
+    std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor = l0op::BatchNormV3(
+        input, weightCast, biasCast, runningMeanCast, runningVarCast, momentum, eps, executor);
     *output = outTensor[0];
     CHECK_RET(outTensor[MEAN_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(outTensor[VAR_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (!runningMean->IsFromWorkspace()) {
-        auto runningMeanResCast = l0op::Cast(runningMeanOut, runningMean->GetDataType(), executor);
+        auto runningMeanResCast = l0op::Cast(runningMeanCast, runningMean->GetDataType(), executor);
         CHECK_RET(runningMeanResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto runningMeanResViewCopy = l0op::ViewCopy(runningMeanResCast, runningMean, executor);
         CHECK_RET(runningMeanResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     if (!runningVar->IsFromWorkspace()) {
-        auto runningVarResCast = l0op::Cast(runningVarOut, runningVar->GetDataType(), executor);
+        auto runningVarResCast = l0op::Cast(runningVarCast, runningVar->GetDataType(), executor);
         CHECK_RET(runningVarResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto runningVarResViewCopy = l0op::ViewCopy(runningVarResCast, runningVar, executor);
         CHECK_RET(runningVarResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -532,10 +530,8 @@ aclnnStatus BatchNormProcRegbase(const aclTensor* input, const aclTensor* weight
     auto runningVarCast = l0op::Cast(runningVarContiguous, runningDtype, executor);
     CHECK_RET(runningVarCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto runningMeanOut = const_cast<aclTensor*>(runningMeanCast);
-    auto runningVarOut = const_cast<aclTensor*>(runningVarCast);
     std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor = l0op::BatchNormV3(
-        inputContiguous, weightCast, biasCast, runningMeanOut, runningVarOut, momentum, eps, training, executor);
+        inputContiguous, weightCast, biasCast, runningMeanCast, runningVarCast, momentum, eps, training, executor);
 
     CHECK_RET(outTensor[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(outTensor[MEAN_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -543,18 +539,20 @@ aclnnStatus BatchNormProcRegbase(const aclTensor* input, const aclTensor* weight
 
     auto outputCast = l0op::Cast(outTensor[0], input->GetDataType(), executor);
     CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    *output = const_cast<aclTensor*>(outputCast);
+    auto outputView = executor->CreateView(outputCast, outputCast->GetViewShape(), outputCast->GetViewOffset());
+    CHECK_RET(outputView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    *output = outputView;
 
     if (training) {
         if (!runningMean->IsFromWorkspace()) {
-            auto bnRunningMeanCast = l0op::Cast(runningMeanOut, runningMean->GetDataType(), executor);
+            auto bnRunningMeanCast = l0op::Cast(runningMeanCast, runningMean->GetDataType(), executor);
             CHECK_RET(bnRunningMeanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto bnRunningMeanViewCopy = l0op::ViewCopy(bnRunningMeanCast, runningMean, executor);
             CHECK_RET(bnRunningMeanViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if (!runningVar->IsFromWorkspace()) {
-            auto bnRunningVarCast = l0op::Cast(runningVarOut, runningVar->GetDataType(), executor);
+            auto bnRunningVarCast = l0op::Cast(runningVarCast, runningVar->GetDataType(), executor);
             CHECK_RET(bnRunningVarCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto bnRunningVarViewCopy = l0op::ViewCopy(bnRunningVarCast, runningVar, executor);
             CHECK_RET(bnRunningVarViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);

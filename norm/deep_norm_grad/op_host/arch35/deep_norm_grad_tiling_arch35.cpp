@@ -52,6 +52,7 @@ constexpr uint32_t MAX_TILE_LENGTH = 4096;
 constexpr uint64_t UB_RESERVED_BYTES = 2048;
 constexpr uint64_t DTYPE_QUEUE_COUNT = 6;
 constexpr uint64_t FP32_BUFFER_COUNT = 4;
+constexpr uint64_t SUM_SQUARE_SUM_COUNT = 2; // two fp32 statistics per element (sum/squareSum)
 constexpr uint64_t MAX_ELEMENT_BYTES = sizeof(float);
 constexpr uint64_t SMALL_D_THRESHOLD = 500;
 constexpr uint64_t SMALL_D_MIN_ROWS = 1024;
@@ -283,14 +284,15 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, ui
     OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
     size_t userWorkspaceSize = 0;
     if (gammaBetaRowSplit) {
-        OP_CHECK_IF(smallColsAlign > std::numeric_limits<size_t>::max() / (2 * sizeof(float)) ||
-                        backwardBlockDim > std::numeric_limits<size_t>::max() /
-                                               (2 * sizeof(float) * static_cast<size_t>(smallColsAlign)),
+        OP_CHECK_IF(smallColsAlign == 0 ||
+                        smallColsAlign > std::numeric_limits<size_t>::max() / (SUM_SQUARE_SUM_COUNT * sizeof(float)) ||
+                        backwardBlockDim > std::numeric_limits<size_t>::max() / (SUM_SQUARE_SUM_COUNT * sizeof(float) *
+                                                                                 static_cast<size_t>(smallColsAlign)),
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "workspace", "overflow",
                                                           "small-D workspace size overflows size_t"),
                     return ge::GRAPH_FAILED);
-        userWorkspaceSize = static_cast<size_t>(backwardBlockDim) * 2 * static_cast<size_t>(smallColsAlign) *
-                            sizeof(float);
+        userWorkspaceSize = static_cast<size_t>(backwardBlockDim) * SUM_SQUARE_SUM_COUNT *
+                            static_cast<size_t>(smallColsAlign) * sizeof(float);
         OP_CHECK_IF(sysWorkspaceSize > std::numeric_limits<size_t>::max() - userWorkspaceSize,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "workspace", "overflow",
                                                           "total workspace size overflows size_t"),
