@@ -44,7 +44,7 @@ TEST_F(sigmoid_test, test_case_fp32)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(0);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
@@ -81,7 +81,7 @@ TEST_F(sigmoid_test, test_case_fp16)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(0);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
@@ -118,7 +118,7 @@ TEST_F(sigmoid_test, test_case_bf16)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(0);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
@@ -155,7 +155,7 @@ TEST_F(sigmoid_test, test_case_fp32_large)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(0);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
@@ -192,7 +192,7 @@ TEST_F(sigmoid_test, test_case_fp16_large)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(0);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
