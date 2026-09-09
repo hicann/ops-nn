@@ -235,7 +235,7 @@ static ge::graphStatus CELossGradCoreSplitInfo(gert::TilingContext* context, uin
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetTilingInput(gert::TilingContext* context, uint64_t& weightKey)
+static ge::graphStatus GetTilingInput(const gert::TilingContext* context, uint64_t& weightKey)
 {
     const gert::StorageShape* gradLossShape = context->GetInputShape(INPUT_GRAD_LOSS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradLossShape);
