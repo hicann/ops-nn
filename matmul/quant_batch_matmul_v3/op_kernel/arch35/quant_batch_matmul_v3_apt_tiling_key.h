@@ -30,7 +30,7 @@
 #endif
 #endif
 
-#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+#if defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #define IS_BLAZE false
 #elif defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
 #define IS_BLAZE true
@@ -38,8 +38,8 @@
 #define IS_BLAZE false
 #endif
 
-#if !__CUBE_S8S4_S4S4__ && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
-    ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
+#if (!defined(__CUBE_S8S4_S4S4__) || !__CUBE_S8S4_S4S4__) && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && \
+    defined(DT_INT4) && ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
 #define IS_A4W4I
 #undef DTYPE_X1
 #undef DTYPE_X2
@@ -140,9 +140,10 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY false
 #endif
 
-#if defined(__CCE_AICORE__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__ && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && \
-    defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(DT_INT8) && defined(DT_UINT64) && defined(DT_INT64) &&  \
-    defined(DT_FLOAT) && defined(DT_BF16) && defined(FORMAT_ND)
+#if defined(__CCE_AICORE__) && (defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && \
+    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) &&        \
+    defined(DT_INT8) && defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16) &&       \
+    defined(FORMAT_ND)
 #define QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL                                                         \
     ((ORIG_DTYPE_X1 == DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8) &&                                       \
      (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
@@ -244,7 +245,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNELTYPE, ASCENDC_TPL_UI_LIST, TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
-#if (!defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__)
+#if (!defined(__CCE_AICORE__) || (defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__))
     ASCENDC_TPL_ARGS_SEL( // kernel type {6, 7} * batch mode {0} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
@@ -253,7 +254,8 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
-#if (!defined(__CCE_AICORE__) || (__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
+#if (!defined(__CCE_AICORE__) || ((defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && \
+                                  !QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1, 5, 8} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
@@ -264,7 +266,8 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
-#if (!defined(__CCE_AICORE__) || (__FIXED_POINT_ONLY_CUBE_TO_L0C__ && QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
+#if (!defined(__CCE_AICORE__) || ((defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && \
+                                  QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
     ASCENDC_TPL_ARGS_SEL( // kernel type {0, 1, 8} * api level {1} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
