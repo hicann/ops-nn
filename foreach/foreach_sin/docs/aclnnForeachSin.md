@@ -39,7 +39,7 @@
 
 - 示例
 
-  输入`x`为: [-1, -2]，dtype为`FLOAT32`；
+  输入`x`为：[-1, -2]，dtype为`FLOAT32`；
   调用`aclnnForeachSin`算子后；
   输出`out`为[-0.8415, -0.9093]，dtype为`FLOAT32`。
 

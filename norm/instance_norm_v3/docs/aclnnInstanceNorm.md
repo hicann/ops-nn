@@ -157,7 +157,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>输出</td>
       <td>表示InstanceNorm的方差，对应公式中的`Var(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前2维的shape和输入x前2维的shape相同，前2维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>4</td>
       <td>√</td>

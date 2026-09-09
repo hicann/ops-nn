@@ -47,7 +47,7 @@
     res = y / scale + zeroPointsOptional
     $$
 
-  - quantMode为1时，量化模式为动态量化：
+  - quantMode为1时，量化模式为动态量化（当前版本暂未支持）：
 
     $$
     tmp = y * scale

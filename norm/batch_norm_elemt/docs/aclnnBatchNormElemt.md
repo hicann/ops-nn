@@ -109,7 +109,7 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>weight（aclTensor*）</td>
       <td>输入</td>
-      <td>表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
+      <td>>可选输入，表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>bias（aclTensor*）</td>
       <td>输入</td>
-      <td>表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
+      <td>>可选输入，表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -215,11 +215,11 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的指针类型入参是空指针。</td>
+      <td>传入的必选指针类型入参是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="9">161002</td>
       <td>input，output数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -229,13 +229,19 @@ aclnnStatus aclnnBatchNormElemt(
       <td>不支持input C轴为0的空Tensor。</td>
     </tr>
     <tr>
-      <td>weight/bias/mean/invstd维度不为一维，或者shape不等于input C轴的长度。</td>
+      <td>mean/invstd维度不为一维，或者shape不等于input C轴的长度。</td>
+    </tr>
+    <tr>
+      <td>当weight不为空时，weight维度不为一维，或者shape不等于input C轴的长度。</td>
+    </tr>
+    <tr>
+      <td>当bias不为空时，bias维度不为一维，或者shape不等于input C轴的长度。</td>
     </tr>
     <tr>
       <td>input和output的数据格式不一致。</td>
     </tr>
     <tr>
-      <td>input、weight、bias、mean、invstd、output的数据类型不一致。</td>
+      <td>当weight、bias不为空时，input、bias、weight、mean、invstd、output的数据类型不一致。</td>
     </tr>
     <tr>
       <td>input和output的shape不一致。</td>
