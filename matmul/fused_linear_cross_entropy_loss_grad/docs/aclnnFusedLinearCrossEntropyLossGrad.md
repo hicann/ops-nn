@@ -545,10 +545,10 @@ int main()
     ret = CreateAclTensor<int32_t>(gradData, gradShape, &gradDeviceAddr, aclDataType::ACL_FLOAT, &grad);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto inputData = GenZeroVector<int16_t>(inputShape);
-    ret = CreateAclTensor<int16_t>(inputData, inputShape, &inputDeviceAddr, aclDataType::ACL_BF16, &input);
+    ret = CreateAclTensor<int16_t>(inputData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT16, &input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto weightData = GenZeroVector<int16_t>(weightShape);
-    ret = CreateAclTensor<int16_t>(weightData, weightShape, &weightDeviceAddr, aclDataType::ACL_BF16, &weight);
+    ret = CreateAclTensor<int16_t>(weightData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT16, &weight);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto targetMaskData = GenZeroVector<int8_t>(targetMaskShape);
     ret = CreateAclTensor<int8_t>(targetMaskData, targetMaskShape, &targetMaskDeviceAddr, aclDataType::ACL_UINT8, &targetMask);
@@ -560,10 +560,10 @@ int main()
     ret = CreateAclTensor<int32_t>(softmaxOptionalData, softmaxOptionalShape, &softmaxOptionalDeviceAddr, aclDataType::ACL_FLOAT, &softmaxOptional);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto inputGradOutData = GenZeroVector<int16_t>(inputGradOutShape);
-    ret = CreateAclTensor<int16_t>(inputGradOutData, inputGradOutShape, &inputGradOutDeviceAddr, aclDataType::ACL_BF16, &inputGradOut);
+    ret = CreateAclTensor<int16_t>(inputGradOutData, inputGradOutShape, &inputGradOutDeviceAddr, aclDataType::ACL_FLOAT16, &inputGradOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto weightGradOutData = GenZeroVector<int16_t>(weightGradOutShape);
-    ret = CreateAclTensor<int16_t>(weightGradOutData, weightGradOutShape, &weightGradOutDeviceAddr, aclDataType::ACL_BF16, &weightGradOut);
+    ret = CreateAclTensor<int16_t>(weightGradOutData, weightGradOutShape, &weightGradOutDeviceAddr, aclDataType::ACL_FLOAT16, &weightGradOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
@@ -589,11 +589,11 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     // inputGradOut
     auto size = GetShapeSize(inputGradOutShape);
-    std::vector<float> resultData(size, 0);
+    std::vector<aclFloat16> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), inputGradOutDeviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < 16; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+        LOG_PRINT("result[%ld] is: %f\n", i, aclFloat16ToFloat(resultData[i]));
     }
 
     // 6. 释放aclTensor，需要根据具体API的接口定义修改
