@@ -17,6 +17,9 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+constexpr float DEFAULT_BETA = 4.0;
+constexpr float DEFAULT_LINEAR_BETA = 25.0;
+
 class DequantSituQuant : public OpDef {
 public:
     explicit DequantSituQuant(const char* name) : OpDef(name)
@@ -67,8 +70,8 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        this->Attr("beta").AttrType(OPTIONAL).Float(4.0);
-        this->Attr("linear_beta").AttrType(OPTIONAL).Float(25.0);
+        this->Attr("beta").AttrType(OPTIONAL).Float(DEFAULT_BETA);
+        this->Attr("linear_beta").AttrType(OPTIONAL).Float(DEFAULT_LINEAR_BETA);
         this->Attr("activate_left").AttrType(OPTIONAL).Bool(true);
         this->Attr("quant_type").AttrType(OPTIONAL).String("dynamic");
 
