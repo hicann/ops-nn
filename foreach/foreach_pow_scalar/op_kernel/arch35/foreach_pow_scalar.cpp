@@ -30,9 +30,7 @@ __global__ __aicore__ void foreach_pow_scalar(GM_ADDR x, GM_ADDR scalar, GM_ADDR
     REGISTER_TILING_DEFAULT(ForeachPowScalarTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachPowScalarTilingData, tilingData, tiling);
 
-    // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachPowScalarTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachPowScalarTilingData*>(
-        tiling);
+    const ForeachPowScalarTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachPowScalarTilingKey::TILING_KEY_FLOAT)) {
         NsForeachPowScalar::Process<float, float>(x, scalar, y, tilingGm);

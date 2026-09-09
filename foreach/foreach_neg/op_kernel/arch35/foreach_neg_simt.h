@@ -49,26 +49,16 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
  * \brief SIMT VF kernel: negate all elements across all tensors
  */
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachNegSimt(int32_t tensorCount,
-                                                                             __gm__ int64_t* tensorElements,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachNegSimt(int32_t tensorId, int64_t count,
                                                                              GM_ADDR xList, GM_ADDR yList)
 {
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                             AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            yData[idx] = -xData[idx];
-        }
+    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        yData[idx] = -xData[idx];
     }
 }
 
@@ -76,20 +66,19 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachNegSimt(int
  * \brief Process entry: launch SIMT VF for foreach_neg
  */
 template <typename T>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachNegTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachNegTilingData* tilingGm)
 {
-    // Extract tensorElements array pointer from GM tiling data
-    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachNegTilingData*>(tilingGm)) +
-        offsetof(ForeachNegTilingData, tensorElements));
-
     int32_t tensorCount = tilingGm->tensorCount;
-    // Defense-in-depth: tensorElements capacity is 256, clamp tensorCount to avoid OOB read on GM
     if (tensorCount > MAX_TENSOR_NUM_FOREACH_NEG_SIMT) {
         tensorCount = MAX_TENSOR_NUM_FOREACH_NEG_SIMT;
     }
-
-    AscendC::Simt::VF_CALL<OpForeachNegSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
+    for (int32_t tensorId = 0; tensorId < tensorCount; tensorId++) {
+        int64_t count = tilingGm->tensorElements[tensorId];
+        if (count <= 0) {
+            continue;
+        }
+        AscendC::Simt::VF_CALL<OpForeachNegSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y);
+    }
 }
 
 } // namespace NsForeachNeg

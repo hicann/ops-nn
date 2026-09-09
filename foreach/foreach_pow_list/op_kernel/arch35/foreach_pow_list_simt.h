@@ -320,51 +320,46 @@ __simt_callee__ inline void PowElementRange(__gm__ T* x1, __gm__ T* x2, __gm__ T
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachPowListSimtKernel(
-    int64_t coreStart, int64_t coreEnd, int32_t tensorCount, __gm__ const int64_t* cumulativeOffsets, GM_ADDR x1List,
-    GM_ADDR x2List, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachPowListSimtKernel(int64_t localStart,
+                                                                                     int64_t localEnd, int32_t tensorId,
+                                                                                     GM_ADDR x1List, GM_ADDR x2List,
+                                                                                     GM_ADDR yList)
 {
     uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
     uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum());
 
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t tStart = (t > 0) ? cumulativeOffsets[t - 1] : 0;
-        int64_t tEnd = cumulativeOffsets[t];
-
-        int64_t myStart = (tStart > coreStart) ? tStart : coreStart;
-        int64_t myEnd = (tEnd < coreEnd) ? tEnd : coreEnd;
-        if (myStart >= myEnd) {
-            continue;
-        }
-
-        int64_t localStart = myStart - tStart;
-        int64_t localEnd = myEnd - tStart;
-
-        __gm__ T* x1 = SimtGetTensorAddr<T>(x1List, t);
-        __gm__ T* x2 = SimtGetTensorAddr<T>(x2List, t);
-        __gm__ T* y = SimtGetTensorAddr<T>(yList, t);
-
-        PowElementRange<T>(x1, x2, y, localStart, localEnd, tid, stride);
-    }
+    __gm__ T* x1 = SimtGetTensorAddr<T>(x1List, tensorId);
+    __gm__ T* x2 = SimtGetTensorAddr<T>(x2List, tensorId);
+    __gm__ T* y = SimtGetTensorAddr<T>(yList, tensorId);
+    PowElementRange<T>(x1, x2, y, localStart, localEnd, tid, stride);
 }
 
 template <typename T>
-__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace,
+                               const ForeachPowListTilingData* tilingData)
 {
-    __gm__ const ForeachPowListTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachPowListTilingData*>(tiling);
-
     int32_t coreId = static_cast<int32_t>(GetBlockIdx());
-    int64_t coreStart = static_cast<int64_t>(coreId) * tilingGM->perCoreElements;
-    int64_t coreEnd = coreStart + tilingGM->perCoreElements;
-    if (coreEnd > tilingGM->totalElements) {
-        coreEnd = tilingGM->totalElements;
+    int64_t coreStart = static_cast<int64_t>(coreId) * tilingData->perCoreElements;
+    int64_t coreEnd = coreStart + tilingData->perCoreElements;
+    if (coreEnd > tilingData->totalElements) {
+        coreEnd = tilingData->totalElements;
     }
     if (coreStart >= coreEnd) {
         return;
     }
 
-    AscendC::Simt::VF_CALL<ForeachPowListSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM), coreStart, coreEnd,
-                                                        tilingGM->tensorCount, tilingGM->cumulativeOffsets, x1, x2, y);
+    int64_t tensorStart = 0;
+    for (int32_t tensorId = 0; tensorId < tilingData->tensorCount; tensorId++) {
+        int64_t tensorEnd = tilingData->cumulativeOffsets[tensorId];
+        int64_t overlapStart = (tensorStart > coreStart) ? tensorStart : coreStart;
+        int64_t overlapEnd = (tensorEnd < coreEnd) ? tensorEnd : coreEnd;
+        if (overlapStart < overlapEnd) {
+            AscendC::Simt::VF_CALL<ForeachPowListSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM),
+                                                                overlapStart - tensorStart, overlapEnd - tensorStart,
+                                                                tensorId, x1, x2, y);
+        }
+        tensorStart = tensorEnd;
+    }
 }
 
 } // namespace NsForeachPowList

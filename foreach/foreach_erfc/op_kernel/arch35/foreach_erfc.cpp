@@ -33,10 +33,10 @@ __global__ __aicore__ void foreach_erfc(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     GET_TILING_DATA_WITH_STRUCT(ForeachErfcTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachErfcTilingKey::TILING_KEY_FP16)) {
-        NsForeachErfc::Process<half>(x, y, workspace, tiling);
+        NsForeachErfc::Process<half>(x, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachErfcTilingKey::TILING_KEY_FP32)) {
-        NsForeachErfc::Process<float>(x, y, workspace, tiling);
+        NsForeachErfc::Process<float>(x, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachErfcTilingKey::TILING_KEY_BF16)) {
-        NsForeachErfc::Process<bfloat16_t>(x, y, workspace, tiling);
+        NsForeachErfc::Process<bfloat16_t>(x, y, workspace, &tilingData);
     }
 }

@@ -60,51 +60,38 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachErfcSimtKernel(
-    IDX_T totalElements, int32_t tensorCount, __gm__ const int64_t* cumOffsets, GM_ADDR xList, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachErfcSimtKernel(IDX_T elementCount,
+                                                                                              int32_t tensorId,
+                                                                                              GM_ADDR xList,
+                                                                                              GM_ADDR yList)
 {
-    for (IDX_T flatIdx = static_cast<IDX_T>(blockIdx.x * blockDim.x + threadIdx.x); flatIdx < totalElements;
-         flatIdx += static_cast<IDX_T>(blockDim.x * gridDim.x)) {
-        int32_t tensorId = tensorCount - 1;
-        IDX_T prevCumSum = 0;
-        for (int32_t t = 0; t < tensorCount; t++) {
-            if (flatIdx < static_cast<IDX_T>(cumOffsets[t])) {
-                tensorId = t;
-                prevCumSum = (t > 0) ? static_cast<IDX_T>(cumOffsets[t - 1]) : static_cast<IDX_T>(0);
-                break;
-            }
-        }
-        IDX_T localIdx = flatIdx - prevCumSum;
-
-        __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorId);
-        __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorId);
-
+    __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorId);
+    for (IDX_T localIdx = static_cast<IDX_T>(blockIdx.x * blockDim.x + threadIdx.x); localIdx < elementCount;
+         localIdx += static_cast<IDX_T>(blockDim.x * gridDim.x)) {
         T val = inputPtr[localIdx];
         outputPtr[localIdx] = ErfcCompute::Calc(val);
     }
 }
 
 template <typename T>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const ForeachErfcTilingData* tilingData)
 {
-    __gm__ const ForeachErfcTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachErfcTilingData*>(tiling);
-
-    int64_t totalElements = tilingGM->totalElements;
-    int32_t tensorCount = tilingGM->tensorCount;
-    __gm__ const int64_t* cumOffsets = tilingGM->cumulativeOffsets;
-
-    if (totalElements == 0) {
-        return;
-    }
-
-    if (totalElements <= static_cast<int64_t>(INT32_MAX)) {
-        using IDX_T = int32_t;
-        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(dim3(THREAD_NUM_VF<IDX_T>), static_cast<IDX_T>(totalElements),
-                                                       tensorCount, cumOffsets, x, y);
-    } else {
-        using IDX_T = int64_t;
-        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(dim3(THREAD_NUM_VF<IDX_T>), totalElements, tensorCount,
-                                                       cumOffsets, x, y);
+    int64_t previousOffset = 0;
+    for (int32_t tensorId = 0; tensorId < tilingData->tensorCount; tensorId++) {
+        int64_t currentOffset = tilingData->cumulativeOffsets[tensorId];
+        int64_t elementCount = currentOffset - previousOffset;
+        previousOffset = currentOffset;
+        if (elementCount <= 0) {
+            continue;
+        }
+        if (elementCount <= static_cast<int64_t>(INT32_MAX)) {
+            asc_vf_call<OpForeachErfcSimtKernel<T, int32_t>>(dim3(THREAD_NUM_VF<int32_t>),
+                                                             static_cast<int32_t>(elementCount), tensorId, x, y);
+        } else {
+            asc_vf_call<OpForeachErfcSimtKernel<T, int64_t>>(dim3(THREAD_NUM_VF<int64_t>), elementCount, tensorId, x,
+                                                             y);
+        }
     }
 }
 

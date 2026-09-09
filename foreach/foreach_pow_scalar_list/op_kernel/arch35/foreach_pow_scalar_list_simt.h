@@ -290,72 +290,50 @@ __simt_callee__ inline void PowComputeBody(__gm__ T* xData, __gm__ T* yData, S s
 }
 
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarListSimt32(int32_t tensorCount,
-                                                                                         __gm__ int64_t* tensorElements,
-                                                                                         GM_ADDR xList, GM_ADDR scalars,
-                                                                                         GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarListSimt32(int32_t tensorId,
+                                                                                         int64_t count, GM_ADDR xList,
+                                                                                         GM_ADDR scalars, GM_ADDR yList)
 {
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
-        S scalarVal = scalarsGm[t];
-
-        uint32_t tid = static_cast<uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-        uint32_t stride = static_cast<uint32_t>(blockDim.x * gridDim.x);
-
-        for (uint32_t idx = tid; idx < static_cast<uint32_t>(count); idx += stride) {
-            PowComputeBody<T, S>(xData, yData, scalarVal, static_cast<uint64_t>(idx));
-        }
+    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
+    S scalarVal = scalarsGm[tensorId];
+    uint32_t tid = static_cast<uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+    uint32_t stride = static_cast<uint32_t>(blockDim.x * gridDim.x);
+    for (uint32_t idx = tid; idx < static_cast<uint32_t>(count); idx += stride) {
+        PowComputeBody<T, S>(xData, yData, scalarVal, static_cast<uint64_t>(idx));
     }
 }
 
 template <typename T, typename S>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_64) inline void OpForeachPowScalarListSimt64(
-    int32_t tensorCount, __gm__ int64_t* tensorElements, GM_ADDR xList, GM_ADDR scalars, GM_ADDR yList)
+    int32_t tensorId, int64_t count, GM_ADDR xList, GM_ADDR scalars, GM_ADDR yList)
 {
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
-        S scalarVal = scalarsGm[t];
-
-        uint64_t tid = static_cast<uint64_t>(blockIdx.x * blockDim.x + threadIdx.x);
-        uint64_t stride = static_cast<uint64_t>(blockDim.x * gridDim.x);
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            PowComputeBody<T, S>(xData, yData, scalarVal, idx);
-        }
+    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
+    S scalarVal = scalarsGm[tensorId];
+    uint64_t tid = static_cast<uint64_t>(blockIdx.x * blockDim.x + threadIdx.x);
+    uint64_t stride = static_cast<uint64_t>(blockDim.x * gridDim.x);
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        PowComputeBody<T, S>(xData, yData, scalarVal, idx);
     }
 }
 
 template <typename T, typename S>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
-                               const __gm__ ForeachPowScalarListTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalars, GM_ADDR y, const ForeachPowScalarListTilingData* tilingGm)
 {
-    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachPowScalarListTilingData*>(tilingGm)) +
-        offsetof(ForeachPowScalarListTilingData, tensorElements));
-
-    int32_t tensorCount = tilingGm->tensorCount;
-
     constexpr int64_t kUint32Max = 0xFFFFFFFFLL;
-    if (tilingGm->totalElements <= kUint32Max) {
-        asc_vf_call<OpForeachPowScalarListSimt32<T, S>>(dim3(THREAD_NUM), tensorCount, elemCounts, x, scalars, y);
-    } else {
-        asc_vf_call<OpForeachPowScalarListSimt64<T, S>>(dim3(THREAD_NUM_64), tensorCount, elemCounts, x, scalars, y);
+    for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
+        int64_t count = tilingGm->tensorElements[tensorId];
+        if (count <= 0) {
+            continue;
+        }
+        if (count <= kUint32Max) {
+            asc_vf_call<OpForeachPowScalarListSimt32<T, S>>(dim3(THREAD_NUM), tensorId, count, x, scalars, y);
+        } else {
+            asc_vf_call<OpForeachPowScalarListSimt64<T, S>>(dim3(THREAD_NUM_64), tensorId, count, x, scalars, y);
+        }
     }
 }
 

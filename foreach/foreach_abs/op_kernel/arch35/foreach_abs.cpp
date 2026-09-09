@@ -28,10 +28,10 @@ __global__ __aicore__ void foreach_abs(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     GET_TILING_DATA_WITH_STRUCT(ForeachAbsTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachAbsTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachAbs::Process<half>(x, y, workspace, tiling);
+        NsForeachAbs::Process<half>(x, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAbsTilingKey::TILING_KEY_FLOAT32)) {
-        NsForeachAbs::Process<float>(x, y, workspace, tiling);
+        NsForeachAbs::Process<float>(x, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAbsTilingKey::TILING_KEY_BFLOAT16)) {
-        NsForeachAbs::Process<bfloat16_t>(x, y, workspace, tiling);
+        NsForeachAbs::Process<bfloat16_t>(x, y, workspace, &tilingData);
     }
 }

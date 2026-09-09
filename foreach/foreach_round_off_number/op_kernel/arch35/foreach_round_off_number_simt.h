@@ -47,33 +47,23 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 // ========== SIMT VF kernel: grid-stride round on tensor list ==========
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachRoundOffNumberSimt(int32_t tensorCount,
-                                                                                        __gm__ int64_t* tensorElements,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachRoundOffNumberSimt(int32_t tensorId, int64_t count,
                                                                                         GM_ADDR xList, GM_ADDR yList,
                                                                                         __gm__ int8_t* roundMode)
 {
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                             AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            T xVal = xData[idx];
-            if constexpr (std::is_same_v<T, float>) {
-                yData[idx] = rintf(xVal);
-            } else if constexpr (std::is_same_v<T, half>) {
-                yData[idx] = hrint(xVal);
-            } else {
-                yData[idx] = static_cast<bfloat16_t>(rintf(static_cast<float>(xVal)));
-            }
+    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        T xVal = xData[idx];
+        if constexpr (std::is_same_v<T, float>) {
+            yData[idx] = rintf(xVal);
+        } else if constexpr (std::is_same_v<T, half>) {
+            yData[idx] = hrint(xVal);
+        } else {
+            yData[idx] = static_cast<bfloat16_t>(rintf(static_cast<float>(xVal)));
         }
     }
 }
@@ -81,16 +71,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachRoundOffNum
 // ========== Process entry function ==========
 
 template <typename T>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR roundMode, GM_ADDR y,
+                               const ForeachRoundOffNumberTilingData* tilingData)
 {
-    __gm__ const ForeachRoundOffNumberTilingData*
-        tilingGm = reinterpret_cast<__gm__ const ForeachRoundOffNumberTilingData*>(tiling);
-
-    __gm__ int64_t* elemCounts = const_cast<__gm__ int64_t*>(tilingGm->tensorElements);
-    int32_t tensorCount = tilingGm->tensorCount;
-
-    AscendC::Simt::VF_CALL<OpForeachRoundOffNumberSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x,
-                                                           y, reinterpret_cast<__gm__ int8_t*>(roundMode));
+    for (int32_t tensorId = 0; tensorId < tilingData->tensorCount; tensorId++) {
+        int64_t count = tilingData->tensorElements[tensorId];
+        if (count <= 0) {
+            continue;
+        }
+        AscendC::Simt::VF_CALL<OpForeachRoundOffNumberSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y,
+                                                               reinterpret_cast<__gm__ int8_t*>(roundMode));
+    }
 }
 
 } // namespace NsForeachRoundOffNumber

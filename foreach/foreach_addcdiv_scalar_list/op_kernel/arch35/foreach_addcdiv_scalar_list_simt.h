@@ -121,10 +121,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScal
 
 template <typename T, typename MidT = T>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
-                               GM_ADDR tiling)
+                               const ForeachAddcdivScalarListTilingData* tilingData)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData*
-        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ MidT* scalars_gm = reinterpret_cast<__gm__ MidT*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {
@@ -146,10 +144,8 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scala
 // ========== float16 Process function (float32 intermediate compute) ==========
 
 __aicore__ inline void ProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
-                                   GM_ADDR tiling)
+                                   const ForeachAddcdivScalarListTilingData* tilingData)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData*
-        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ half* scalars_gm = reinterpret_cast<__gm__ half*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {
@@ -171,10 +167,8 @@ __aicore__ inline void ProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR s
 // ========== bfloat16 Process function ==========
 
 __aicore__ inline void ProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
-                                   GM_ADDR tiling)
+                                   const ForeachAddcdivScalarListTilingData* tilingData)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData*
-        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ bfloat16_t* scalars_gm = reinterpret_cast<__gm__ bfloat16_t*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {

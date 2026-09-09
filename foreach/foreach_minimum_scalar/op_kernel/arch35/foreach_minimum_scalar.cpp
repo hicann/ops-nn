@@ -31,9 +31,7 @@ __global__ __aicore__ void foreach_minimum_scalar(GM_ADDR x, GM_ADDR scalar, GM_
     REGISTER_TILING_DEFAULT(ForeachMinimumScalarTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachMinimumScalarTilingData, tilingData, tiling);
 
-    // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachMinimumScalarTilingData*
-        tilingGm = reinterpret_cast<const __gm__ ForeachMinimumScalarTilingData*>(tiling);
+    const ForeachMinimumScalarTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachMinimumScalarTilingKey::TILING_KEY_FLOAT)) {
         NsForeachMinimumScalar::Process<float, float>(x, scalar, y, tilingGm);

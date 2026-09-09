@@ -34,10 +34,10 @@ __global__ __aicore__ void foreach_acos(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     GET_TILING_DATA_WITH_STRUCT(ForeachAcosTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachAcosTilingKey::KEY_FP16)) {
-        NsForeachAcos::Process<half>(workspace, tiling, x, y);
+        NsForeachAcos::Process<half>(workspace, &tilingData, x, y);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAcosTilingKey::KEY_FP32)) {
-        NsForeachAcos::Process<float>(workspace, tiling, x, y);
+        NsForeachAcos::Process<float>(workspace, &tilingData, x, y);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAcosTilingKey::KEY_BF16)) {
-        NsForeachAcos::Process<bfloat16_t>(workspace, tiling, x, y);
+        NsForeachAcos::Process<bfloat16_t>(workspace, &tilingData, x, y);
     }
 }
