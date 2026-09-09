@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
 #include "max_pool3d_grad_struct.h"
+#include "../pool_3d_common/arch35/pool_3d_grad_kernel_base.h"
 
 namespace MaxPool3DSmallKernelNameSpace {
 using namespace AscendC;
@@ -29,7 +30,7 @@ constexpr uint32_t BUFFER_NUM = 2;
 constexpr int64_t RATIO = 2;
 
 template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-class Pool3DGradSmallKernel {
+class Pool3DGradSmallKernel : public Pool3DGradCommon::Pool3DGradNcdhwKernelBase {
 public:
     __aicore__ inline Pool3DGradSmallKernel(TPipe& pipeIn, const Pool3DGradNCDHWTilingData& tilingData)
         : pipe_(pipeIn), tilingData_(tilingData)
@@ -103,86 +104,6 @@ public:
     GlobalTensor<TYPE_ORIG_X> yGm_;
     GlobalTensor<TYPE_ARGMAX> argmaxGm_;
     GlobalTensor<TYPE_ORIG_X> xGm_;
-
-    uint32_t blockIdx_ = 0;
-
-    int64_t dArgmax_ = 1;
-    int64_t hArgmax_ = 1;
-    int64_t wArgmax_ = 1;
-
-    int64_t dOutput_ = 1;
-    int64_t hOutput_ = 1;
-    int64_t wOutput_ = 1;
-
-    int64_t kernelD_ = 1;
-    int64_t kernelH_ = 1;
-    int64_t kernelW_ = 1;
-
-    int64_t strideD_ = 1;
-    int64_t strideH_ = 1;
-    int64_t strideW_ = 1;
-
-    int64_t padD_ = 0;
-    int64_t padH_ = 0;
-    int64_t padW_ = 0;
-
-    int64_t dilationD_ = 1;
-    int64_t dilationH_ = 1;
-    int64_t dilationW_ = 1;
-
-    int64_t highAxisInner_ = 1;
-    int64_t highAxisTail_ = 1;
-    int64_t highAxisOuter_ = 1;
-    int64_t highAxisActual_ = 1;
-
-    int64_t dOutputInner_ = 1;
-    int64_t dOutputTail_ = 1;
-    int64_t dOutputOuter_ = 1;
-    int64_t dOutputActual_ = 1;
-
-    int64_t hOutputInner_ = 1;
-    int64_t hOutputTail_ = 1;
-    int64_t hOutputOuter_ = 1;
-    int64_t hOutputActual_ = 1;
-
-    int64_t wOutputInner_ = 1;
-    int64_t wOutputTail_ = 1;
-    int64_t wOutputOuter_ = 1;
-    int64_t wOutputActual_ = 1;
-    int64_t wOutputAligned_ = 1;
-
-    int64_t normalCoreProcessNum_ = 1;
-    int64_t tailCoreProcessNum_ = 1;
-    int64_t curCoreProcessNum_ = 1;
-    int64_t usedCoreNum_ = 1;
-
-    int64_t outputBufferSize_ = 1;
-    int64_t gradBufferSize_ = 1;
-    int64_t argmaxBufferSize_ = 1;
-
-    int64_t highAxisIndex_ = 0;
-    int64_t hAxisIndex_ = 0;
-    int64_t wAxisIndex_ = 0;
-    int64_t dAxisIndex_ = 0;
-
-    int64_t hArgmaxActual_ = 0;
-    int64_t dArgmaxActual_ = 0;
-    int64_t wArgmaxActual_ = 0;
-    int64_t wArgmaxAligned_ = 0;
-
-    int64_t highAxisArgmaxOffset_ = 0;
-    int64_t hAxisArgmaxOffset_ = 0;
-    int64_t dAxisArgmaxOffset_ = 0;
-    int64_t wAxisArgmaxOffset_ = 0;
-
-    int64_t argmaxPlaneSize_ = 1;
-
-    int64_t dProBatchSize_ = 1;
-    int64_t hProBatchSize_ = 1;
-    int64_t wProBatchSize_ = 1;
-    int64_t curDProBatchSize_ = 1;
-    int64_t curHProBatchSize_ = 1;
-    int64_t curWProBatchSize_ = 1;
 
     int64_t dInputActualPad_ = 0;
     int64_t hInputActualPad_ = 0;
@@ -322,57 +243,7 @@ template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_
 __aicore__ inline void Pool3DGradSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ParseTilingData(
     const Pool3DGradNCDHWTilingData& tilingData)
 {
-    dArgmax_ = tilingData.dArgmax;
-    hArgmax_ = tilingData.hArgmax;
-    wArgmax_ = tilingData.wArgmax;
-
-    dOutput_ = tilingData.dOutput;
-    hOutput_ = tilingData.hOutput;
-    wOutput_ = tilingData.wOutput;
-
-    kernelD_ = tilingData.dKernel;
-    kernelH_ = tilingData.hKernel;
-    kernelW_ = tilingData.wKernel;
-
-    strideD_ = tilingData.dStride;
-    strideH_ = tilingData.hStride;
-    strideW_ = tilingData.wStride;
-
-    padD_ = tilingData.padD;
-    padH_ = tilingData.padH;
-    padW_ = tilingData.padW;
-
-    dilationD_ = tilingData.dilationD;
-    dilationH_ = tilingData.dilationH;
-    dilationW_ = tilingData.dilationW;
-
-    highAxisInner_ = tilingData.highAxisInner;
-    highAxisTail_ = tilingData.highAxisTail;
-    highAxisOuter_ = tilingData.highAxisOuter;
-
-    dOutputInner_ = tilingData.dOutputInner;
-    dOutputTail_ = tilingData.dOutputTail;
-    dOutputOuter_ = tilingData.dOutputOuter;
-
-    hOutputInner_ = tilingData.hOutputInner;
-    hOutputTail_ = tilingData.hOutputTail;
-    hOutputOuter_ = tilingData.hOutputOuter;
-
-    wOutputInner_ = tilingData.wOutputInner;
-    wOutputTail_ = tilingData.wOutputTail;
-    wOutputOuter_ = tilingData.wOutputOuter;
-
-    normalCoreProcessNum_ = tilingData.normalCoreProcessNum;
-    tailCoreProcessNum_ = tilingData.tailCoreProcessNum;
-    usedCoreNum_ = tilingData.usedCoreNum;
-
-    outputBufferSize_ = tilingData.outputBufferSize;
-    gradBufferSize_ = tilingData.gradBufferSize;
-    argmaxBufferSize_ = tilingData.argmaxBufferSize;
-
-    dProBatchSize_ = tilingData.dProBatchSize;
-    hProBatchSize_ = tilingData.hProBatchSize;
-    wProBatchSize_ = tilingData.wProBatchSize;
+    Pool3DGradCommon::Pool3DGradNcdhwKernelBase::ParseTilingData(tilingData);
     IS_PAD = tilingData_.padD != 0 || tilingData_.padH != 0 || tilingData_.padW != 0 || tilingData_.padDBack != 0 ||
              tilingData_.padHBack != 0 || tilingData_.padWBack != 0;
 }

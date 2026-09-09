@@ -51,7 +51,7 @@ constexpr int64_t KERNEL_SIZE_THRESHOLD = 64;
 
 constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
 
-struct InputSIMTInfo {
+struct MaxPool3DWithArgmaxV2InputSIMTInfo {
     array<uint64_t, NCDHW_DIMS> inputShape;
     array<uint64_t, NCDHW_DIMS> outShape;
     array<uint64_t, DHW_DIMS> kernelSize;
@@ -88,7 +88,7 @@ private:
     uint64_t GenerateTilingKey(uint64_t innerKey);
     MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData*
         tilingData_ = context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData>();
-    InputSIMTInfo inputData;
+    MaxPool3DWithArgmaxV2InputSIMTInfo inputData;
     int nDimPos = 0;
     int cDimPos = 1;
     int dDimPos = 2;

@@ -22,6 +22,7 @@
 #include "pool_utils/arch35/data_move/pool_2d_nchw_small_kernel_data_move.h"
 #include "pool_utils/arch35/index/pool_2d_nchw_small_kernel_index.h"
 #include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
+#include "pool_utils/arch35/kernel/pool_2d_small_kernel_base.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -40,10 +41,10 @@ struct ComputeParam {
 constexpr int32_t SPARSE_THRESHOLD = 64;
 
 template <typename T>
-class AvgPoolSmallKernel {
+class AvgPoolSmallKernel : public PoolUtils::Kernel::Pool2DSmallKernelIoBase {
 public:
     __aicore__ inline AvgPoolSmallKernel(TPipe* pipe, const AvgPoolNCHWSmallKernelTilingData* __restrict tiling)
-        : pipe_(pipe), tilingData_(tiling){};
+        : PoolUtils::Kernel::Pool2DSmallKernelIoBase(pipe), tilingData_(tiling){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
 
@@ -60,12 +61,6 @@ private:
     __aicore__ inline void ComputeSingleKernel(const ComputeParam& param);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
-    TPipe* pipe_;
-    // 输入队列
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
-    // 输出ub
-    TQue<QuePosition::VECOUT, BUFFER_NUM> maxUBOutput_;
-    TBuf<QuePosition::VECCALC> indexBuf_;
     GlobalTensor<T> xGm_;
     GlobalTensor<T> maxGm_;
     const AvgPoolNCHWSmallKernelTilingData* tilingData_;
@@ -80,13 +75,7 @@ private:
 template <typename T>
 __aicore__ inline void AvgPoolSmallKernel<T>::Init(GM_ADDR x, GM_ADDR y)
 {
-    // GM
-    xGm_.SetGlobalBuffer((__gm__ T*)x);
-    maxGm_.SetGlobalBuffer((__gm__ T*)y);
-
-    pipe_->InitBuffer(inputQue_, BUFFER_NUM, tilingData_->inUbSize * sizeof(T));
-    pipe_->InitBuffer(maxUBOutput_, BUFFER_NUM, tilingData_->outUbSize * sizeof(T));
-    pipe_->InitBuffer(indexBuf_, tilingData_->indiceUbSize);
+    InitIo<T>(x, y, xGm_, maxGm_, tilingData_, tilingData_->indiceUbSize);
 }
 
 template <typename T>

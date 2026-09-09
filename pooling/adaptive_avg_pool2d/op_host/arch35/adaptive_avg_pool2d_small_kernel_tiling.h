@@ -29,7 +29,7 @@ using Ops::NN::Optiling::TilingBaseClass;
 using namespace std;
 using namespace AdaptiveAvgPool2dOp;
 
-struct ComputeInfo {
+struct AdaptiveAvgPool2dSmallKernelComputeInfo {
     uint64_t xDtypeSize{0};
     uint64_t useCoreNum{0};
     uint64_t totalOuter{0};
@@ -75,7 +75,7 @@ private:
     ge::graphStatus SearchOuter();
     ge::graphStatus SetTilingData();
     void PrintTilingData() const;
-    ComputeInfo computeInfo_;
+    AdaptiveAvgPool2dSmallKernelComputeInfo computeInfo_;
 };
 
 } // namespace optiling

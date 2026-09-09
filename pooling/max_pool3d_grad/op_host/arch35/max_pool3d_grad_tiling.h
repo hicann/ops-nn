@@ -105,7 +105,7 @@ constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT64 = 600012;
 constexpr int64_t MAX_THREAD_NUM = 256;
 constexpr size_t WS_SYS_SIZE = 16 * 1024 * 1024;
 
-struct InputSIMTInfo {
+struct MaxPool3DGradInputSIMTInfo {
     std::array<uint64_t, NCDHW_DIMS> inputShape;
     std::array<uint64_t, NCDHW_DIMS> gradShape;
     std::array<uint64_t, NCDHW_DIMS> outShape;
@@ -136,7 +136,7 @@ protected:
 
 private:
     MaxPool3DGradSimtTilingData* tilingData_ = context_->GetTilingData<MaxPool3DGradSimtTilingData>();
-    InputSIMTInfo inputData;
+    MaxPool3DGradInputSIMTInfo inputData;
     int nDimPos = 0;
     int cDimPos = 1;
     int dDimPos = 2;

@@ -64,7 +64,7 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(MaxPoolWithArgmaxV3_500001, MaxPoolWithArgmaxV3SimtTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPoolWithArgmaxV3_500002, MaxPoolWithArgmaxV3SimtTilingData);
 
-struct InputSIMTInfo {
+struct MaxPoolWithArgmaxV3InputSIMTInfo {
     array<uint64_t, NCHW_DIMS> inputShape;
     array<uint64_t, NCHW_DIMS> outShape;
     array<uint64_t, HW_DIMS> kernelSize;
@@ -96,7 +96,7 @@ protected:
 private:
     uint64_t GenerateTilingKey(uint64_t innerKey);
     MaxPoolWithArgmaxV3SimtTilingData tiling;
-    InputSIMTInfo inputData;
+    MaxPoolWithArgmaxV3InputSIMTInfo inputData;
     int nDimPos = 0;
     int cDimPos = 1;
     int hDimPos = 2;

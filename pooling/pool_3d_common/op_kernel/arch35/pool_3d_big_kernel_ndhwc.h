@@ -20,6 +20,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "pool_utils/pool_type_traits.h"
+#include "pool_utils/arch35/compute/pool_sum_compute.h"
 
 namespace Pool3D {
 using namespace AscendC;
@@ -73,7 +74,6 @@ private:
     __aicore__ inline void ComputeSingleWithGatherForAvgNotFp32(int32_t localCurIdx, int64_t loop, int64_t dataCount);
     template <bool CLEAR>
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
-    __aicore__ inline void ComputeSum(LocalTensor<T>& xLocal, int64_t dataCount);
     __aicore__ inline void ComputeAvg(int64_t length);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
@@ -477,36 +477,6 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelWProcess(int
 }
 
 template <typename T, int32_t OP_TYPE>
-__aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSum(LocalTensor<T>& xLocal, int64_t dataCount)
-{
-    LocalTensor<float> sumLocal = sumBuf_.Get<float>();
-    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
-    __ubuf__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
-    constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(float);
-    uint16_t repeatTimes = static_cast<uint16_t>(ops::Ceil(dataCount, static_cast<int64_t>(repeatElm)));
-    uint32_t len = dataCount;
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<T> in;
-        Reg::RegTensor<float> inFp32;
-        Reg::RegTensor<float> sum;
-        Reg::MaskReg mask;
-        uint32_t num = len;
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            mask = Reg::UpdateMask<float>(num);
-            auto sumReg = Reg::CreateAddrReg<float>(i, static_cast<uint16_t>(repeatElm));
-            auto srcReg = Reg::CreateAddrReg<T>(i, static_cast<uint16_t>(repeatElm));
-            Reg::LoadAlign(in, xLocalAddr, srcReg);
-            Reg::LoadAlign(sum, sumLocalAddr, sumReg);
-            Reg::UnPack((Reg::RegTensor<uint32_t>&)in, (Reg::RegTensor<uint16_t>&)in);
-            Reg::Cast<float, T, castTraitT2Fp32>(inFp32, in, mask);
-            Reg::Add(sum, inFp32, sum, mask);
-            Reg::StoreAlign(sumLocalAddr, sum, sumReg, mask);
-        }
-    }
-}
-
-template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitChannelProcess(int32_t curIdx, int64_t curkD,
                                                                              int64_t curkH, int64_t curkW,
                                                                              int64_t curInOffset)
@@ -550,7 +520,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitChannelProcess(int
                         LocalTensor<T> sumLocal = outputBuf_.Get<T>();
                         Add(sumLocal, xLocal, sumLocal, curFactor);
                     } else {
-                        ComputeSum(xLocal, curFactor);
+                        PoolUtils::Compute::AccumulateSumFp32(xLocal, sumBuf_.Get<float>(), curFactor);
                     }
                     inputQue_.FreeTensor<T>(xLocal);
                 }

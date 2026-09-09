@@ -56,7 +56,7 @@ struct AdaptiveAvgPool3dGradNCDHWBaseInfo {
     int64_t isOverlap{0};
 };
 
-struct AdaptiveAvgPool3dGradNCDHWSplitInfo {
+struct AdaptiveAvgPool3dGradNCDHWBigKernelSplitInfo {
     // DoUBTiling
     int64_t isCheckRange{0};
 
@@ -137,7 +137,7 @@ public:
     int64_t kernelW;
 
     AdaptiveAvgPool3dGradNCDHWBaseInfo baseData;
-    AdaptiveAvgPool3dGradNCDHWSplitInfo splitData;
+    AdaptiveAvgPool3dGradNCDHWBigKernelSplitInfo splitData;
 };
 
 } // namespace optiling

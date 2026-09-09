@@ -32,7 +32,7 @@ const int64_t SECPOS = 1;
 constexpr int64_t MAX_INT32 = 2147483647;
 constexpr int64_t MAX_THREAD_NUM = 256;
 
-struct InputSIMTInfo {
+struct AdaptiveMaxPool2dInputSIMTInfo {
     array<uint64_t, NCHW_DIMS> inputShape;
     array<uint64_t, NCHW_DIMS> outShape;
     int64_t kernelHMax;
@@ -66,7 +66,7 @@ private:
     ge::graphStatus CheckPlatformAndGetShapes();
     ge::graphStatus CheckDataTypeAndAttrs();
     AdaptiveMaxPool2dTilingData tiling;
-    InputSIMTInfo inputData;
+    AdaptiveMaxPool2dInputSIMTInfo inputData;
     uint64_t coreNum_ = 1;
     uint64_t ubSize_ = 0;
 };

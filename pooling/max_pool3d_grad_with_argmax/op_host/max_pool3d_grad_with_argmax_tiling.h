@@ -85,7 +85,7 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax, MaxPool3DGradWithArgmaxTilingData);
 
-struct InputInfo {
+struct MaxPool3DGradWithArgmaxDhwInputInfo {
     uint64_t batches;
     std::array<uint64_t, DHW_DIMS> inputShape;
     std::array<uint64_t, DHW_DIMS> outShape;

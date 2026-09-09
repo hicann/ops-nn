@@ -16,6 +16,7 @@
 #include "max_pool_grad_struct.h"
 #include "../inc/platform.h"
 #include "max_pool_grad_with_argmax_base_common.h"
+#include "max_pool_grad_nchw_fields_common.h"
 #include "max_pool_grad_nchw_scatter_common.h"
 
 namespace MaxPoolGradNCHWBackwardBaseNameSpace {
@@ -37,7 +38,7 @@ constexpr int32_t HELP_BUFFER = 4096;
 constexpr uint32_t DOUBLE = 2;
 
 template <typename T1, const uint32_t IS_CHECK_RANGE>
-class MaxPoolGradNCHWBackwardBase {
+class MaxPoolGradNCHWBackwardBase : protected MaxPoolGradNCHWCommonNameSpace::MaxPoolGradNchwCommonFields {
 public:
     __aicore__ inline MaxPoolGradNCHWBackwardBase() {}
 
@@ -67,57 +68,9 @@ protected:
     GlobalTensor<T1> gradGm_;
     GlobalTensor<T1> yGm_;
 
-    uint32_t blockIdx_ = 0;
-
-    int64_t hArgmax_ = 1;
-    int64_t wArgmax_ = 1;
-    int64_t hOutput_ = 1;
-    int64_t wOutput_ = 1;
-    int64_t kernelH_ = 1;
-    int64_t kernelW_ = 1;
-    int64_t strideH_ = 1;
-    int64_t strideW_ = 1;
-    int64_t padH_ = 0;
-    int64_t padW_ = 0;
-    int64_t dilationH_ = 1;
-    int64_t dilationW_ = 1;
-    int64_t highAxisInner_ = 1;
-    int64_t highAxisTail_ = 1;
-    int64_t highAxisOuter_ = 1;
-    int64_t highAxisActual_ = 1;
-    int64_t hOutputInner_ = 1;
-    int64_t hOutputTail_ = 1;
-    int64_t hOutputOuter_ = 1;
-    int64_t hOutputActual_ = 1;
-    int64_t wOutputInner_ = 1;
-    int64_t wOutputTail_ = 1;
-    int64_t wOutputOuter_ = 1;
-    int64_t wOutputActual_ = 1;
-    int64_t wOutputAligned_ = 1;
-    int64_t normalCoreProcessNum_ = 1;
-    int64_t tailCoreProcessNum_ = 1;
-    int64_t curCoreProcessNum_ = 1;
-    int64_t usedCoreNum_ = 1;
     int64_t inputBufferSize_ = 1;
-    int64_t outputBufferSize_ = 1;
-    int64_t gradBufferSize_ = 1;
-    int64_t argmaxBufferSize_ = 1;
-    int64_t highAxisIndex_ = 0;
-    int64_t hAxisIndex_ = 0;
-    int64_t wAxisIndex_ = 0;
-    int64_t hArgmaxActual_ = 0;
-    int64_t wArgmaxActual_ = 0;
-    int64_t wArgmaxAligned_ = 0;
     int64_t hArgmaxActualStart_ = 0;
     int64_t wArgmaxActualStart_ = 0;
-    int64_t highAxisArgmaxOffset_ = 0;
-    int64_t hAxisArgmaxOffset_ = 0;
-    int64_t wAxisArgmaxOffset_ = 0;
-    int64_t argmaxPlaneSize_ = 1;
-    int64_t hProBatchSize_ = 1;
-    int64_t wProBatchSize_ = 1;
-    int64_t curHProBatchSize_ = 1;
-    int64_t curWProBatchSize_ = 1;
     bool isOverlap_ = false;
 
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();

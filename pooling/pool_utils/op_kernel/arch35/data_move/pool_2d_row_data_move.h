@@ -48,6 +48,8 @@ __aicore__ inline void CopyInSingleRow(AscendC::TQue<AscendC::QuePosition::VECIN
 
 namespace BigKernel {
 
+constexpr int64_t GATHER_COPY_THRES = 32;
+
 template <typename T>
 __aicore__ inline void CopyInMultiRows(AscendC::TQue<AscendC::QuePosition::VECIN, 2>& inputQue,
                                        const AscendC::GlobalTensor<T>& xGm, int64_t offset, int64_t blockLen,
@@ -67,6 +69,45 @@ __aicore__ inline void CopyInMultiRows(AscendC::TQue<AscendC::QuePosition::VECIN
     extParams.srcStride = (wInDim - blockLen) * sizeof(T);
     extParams.dstStride = 0;
     AscendC::DataCopyPad<T, AscendC::PaddingMode::Compact>(xLocal, xGm[offset], extParams, padExtParams);
+    inputQue.EnQue(xLocal);
+}
+
+/*
+ * 功能：NHWC big kernel 按行搬入多行输入。
+ * 说明：channel 较小时按整块紧凑搬入（复用 CopyInMultiRows）；否则按行设置 LoopMode 搬入并对齐到 channelAlign。
+ */
+template <typename T>
+__aicore__ inline void CopyInMultiRowsNhwc(AscendC::TQue<AscendC::QuePosition::VECIN, 2>& inputQue,
+                                           const AscendC::GlobalTensor<T>& xGm, int64_t offset, int64_t rows,
+                                           int64_t cols, int64_t blockLen, int64_t channel, int64_t wInDim,
+                                           int64_t channelAlign)
+{
+    if (channel * sizeof(T) <= GATHER_COPY_THRES) {
+        CopyInMultiRows(inputQue, xGm, offset, cols * channel, rows, wInDim * channel);
+        return;
+    }
+    AscendC::LocalTensor<T> xLocal = inputQue.template AllocTensor<T>();
+    AscendC::LoopModeParams loopParams;
+    loopParams.loop2Size = 1;
+    loopParams.loop1Size = rows;
+    loopParams.loop2SrcStride = 0;
+    loopParams.loop2DstStride = 0;
+    loopParams.loop1SrcStride = wInDim * channel * sizeof(T);
+    loopParams.loop1DstStride = cols * channelAlign * sizeof(T);
+    AscendC::SetLoopModePara(loopParams, AscendC::DataCopyMVType::OUT_TO_UB);
+    AscendC::DataCopyPadExtParams<T> padExtParams;
+    padExtParams.isPad = false;
+    padExtParams.leftPadding = 0;
+    padExtParams.rightPadding = 0;
+    padExtParams.paddingValue = 0;
+
+    AscendC::DataCopyExtParams extParams;
+    extParams.blockCount = cols;
+    extParams.blockLen = blockLen * sizeof(T);
+    extParams.srcStride = 0;
+    extParams.dstStride = 0;
+    AscendC::DataCopyPad<T>(xLocal, xGm[offset], extParams, padExtParams);
+    AscendC::ResetLoopModePara(AscendC::DataCopyMVType::OUT_TO_UB);
     inputQue.EnQue(xLocal);
 }
 

@@ -53,7 +53,7 @@ constexpr int64_t NONE_DIM = 0;
 constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
 constexpr uint64_t KERNEL_CALC_COUNT_THERSHOLD = 10000;
 
-struct BaseInput {
+struct AdaptivePool3dBaseInput {
     uint64_t coreNum{0};
     uint64_t ubSize{0};
     ge::DataType xDtype{ge::DT_FLOAT};
@@ -74,12 +74,38 @@ struct AdaptivePool3dCompileInfo {
     uint64_t ubSizePlatForm;
 };
 
+struct AdaptivePool3dComputeInfo {
+    uint64_t useCoreNum{0};
+    uint64_t totalOuter{0};
+    uint64_t blockFactor{0};
+    uint64_t blockTail{0};
+    uint64_t ncFactor{0};
+    uint64_t doFactor{0};
+    uint64_t hoFactor{0};
+    uint64_t woFactor{0};
+    uint64_t ncOuter{0};
+    uint64_t doOuter{0};
+    uint64_t hoOuter{0};
+    uint64_t woOuter{0};
+    uint64_t ncTail{0};
+    uint64_t doTail{0};
+    uint64_t hoTail{0};
+    uint64_t woTail{0};
+    uint64_t kernelDMax{0};
+    uint64_t kernelHMax{0};
+    uint64_t kernelWMax{0};
+    uint64_t vfLen{0};
+    uint64_t alignNum{0};
+    uint64_t availableUbSize{0};
+    uint64_t maxInputSize{0};
+};
+
 class AdaptivePool3dBaseTiling : public TilingBaseClass {
 public:
     explicit AdaptivePool3dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
     ~AdaptivePool3dBaseTiling() override {}
 
-    BaseInput input_;
+    AdaptivePool3dBaseInput input_;
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

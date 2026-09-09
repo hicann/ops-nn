@@ -52,7 +52,7 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPoolWithArgmax, MaxPoolWithArgmaxTilingData);
 
-struct InputInfo {
+struct MaxPoolWithArgmaxInputInfo {
     array<uint64_t, HW_DIMS> inputShape;
     array<uint64_t, HW_DIMS> outShape;
     array<uint64_t, HW_DIMS> kernelSize;
@@ -89,7 +89,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
 public:
-    InputInfo inputData;
+    MaxPoolWithArgmaxInputInfo inputData;
     ge::DataType dtype = ge::DataType::DT_FLOAT;
     uint32_t coreNum = 1;
     uint32_t ubSize = 0;

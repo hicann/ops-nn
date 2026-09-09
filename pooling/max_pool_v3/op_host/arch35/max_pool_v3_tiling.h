@@ -64,7 +64,7 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(MaxPoolV3, MaxPoolV3TilingData);
 REGISTER_TILING_DATA_CLASS(MaxPoolV2, MaxPoolV3TilingData);
 
-struct InputInfo {
+struct MaxPoolV3InputInfo {
     int64_t batches;
     int64_t channels;
     std::array<int64_t, HW_DIMS> inputShape;
@@ -115,7 +115,7 @@ protected:
                                    const bool ceilMode, int64_t dimSize);
 
 public:
-    InputInfo inputData;
+    MaxPoolV3InputInfo inputData;
     ge::DataType dtype = ge::DataType::DT_FLOAT;
     int64_t dtypeSize = 0;
     int64_t coreNum = 1;
