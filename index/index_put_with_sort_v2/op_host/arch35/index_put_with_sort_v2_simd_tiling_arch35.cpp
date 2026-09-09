@@ -52,7 +52,7 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
     constexpr int64_t MAX_SAFE_MULTIPLY = std::numeric_limits<int64_t>::max();
     int64_t dtypeSize = ge::GetSizeByDataType(xDataType_);
 
-    if(indexedDimSize_ == 1) {
+    if (indexedDimSize_ == 1) {
         return false;
     }
 
@@ -67,7 +67,9 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
         size_t newDimNum = selfDimNum_ - firstOneIdx;
         for (size_t i = 0; i < newDimNum; ++i) {
             if (firstOneIdx + i >= MAX_DIM_NUM || i >= MAX_DIM_NUM) {
-                OP_LOGI(context_->GetNodeName(), "IsCapable: array index out of bounds");
+                OP_LOGI(context_->GetNodeName(),
+                        "IsCapable: array index out of bounds, firstOneIdx=%zu, i=%zu, maxDimNum=%zu", firstOneIdx, i,
+                        static_cast<size_t>(MAX_DIM_NUM));
                 return false;
             }
             indexedSizes_[i] = indexedSizes_[firstOneIdx + i];
@@ -87,7 +89,9 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
                     nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / selfDims_[i]) {
                     nonIndexedDimSize_ *= selfDims_[i];
                 } else {
-                    OP_LOGI(context_->GetNodeName(), "IsCapable: nonIndexedDimSize_ multiplication overflow detected");
+                    OP_LOGI(context_->GetNodeName(),
+                            "IsCapable: nonIndexedDimSize_ multiplication overflow detected, nonIndexedDimSize_=%ld",
+                            static_cast<int64_t>(nonIndexedDimSize_));
                     return false;
                 }
             } else {
@@ -96,21 +100,22 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
         }
 
         indexed0_ = indexedSizes_[0];
-        isContinous_ = true;
+        isContinuous_ = true;
 
         OP_LOGI(context_->GetNodeName(),
                 "SIMD adapted: firstOneIdx=%zu, newDimNum=%u, indexedDimNum=%u, nonIndexedDimNum=%u, "
-                "indexed0_=%ld, isContinous_=%d",
-                firstOneIdx, selfDimNum_, indexedDimNum_, nonIndexedDimNum_, indexed0_, static_cast<int>(isContinous_));
+                "indexed0_=%ld, isContinuous_=%d",
+                firstOneIdx, selfDimNum_, indexedDimNum_, nonIndexedDimNum_, indexed0_,
+                static_cast<int>(isContinuous_));
 
         return true;
     }
 
     OP_LOGI(context_->GetNodeName(),
-            "IndexPutWithSortV2SIMDTiling IsCapable isContinous_: %ld, nonIndexedDimSize_: %ld",
-            static_cast<int64_t>(isContinous_), nonIndexedDimSize_);
-    isContinous_ = (isContinous_ && (indexed0_ == 1));
-    return isContinous_ && requiresNonIndexed;
+            "IndexPutWithSortV2SIMDTiling IsCapable isContinuous_: %ld, nonIndexedDimSize_: %ld",
+            static_cast<int64_t>(isContinuous_), nonIndexedDimSize_);
+    isContinuous_ = (isContinuous_ && (indexed0_ == 1));
+    return isContinuous_ && requiresNonIndexed;
 }
 
 // [001100]

@@ -388,7 +388,7 @@ inline static bool CheckSizeLoop(size_t dimNum, Shape gradOutShape, FVector<int6
     return true;
 }
 
-static inline bool CheckInpuNullTensorMaxUnPool3D(const aclTensor* self)
+static inline bool CheckInputNullTensorMaxUnPool3D(const aclTensor* self)
 {
     auto inputShape = self->GetViewShape();
     size_t dimNum = inputShape.GetDimNum();

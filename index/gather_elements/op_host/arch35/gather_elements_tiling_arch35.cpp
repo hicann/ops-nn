@@ -127,7 +127,7 @@ ge::graphStatus GatherElementsSimtTiling::GetInAndOutInfo()
     dimSize_ = static_cast<int64_t>(indexShape_.GetDimNum());
     OP_CHECK_IF(dimSize_ > MAX_DIM_LEN_EIGHT,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index", std::to_string(dimSize_).c_str(),
-                                                         "dimSize should not larger than 8"),
+                                                         "dimSize should not be larger than 8"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -161,7 +161,7 @@ inline ge::graphStatus GatherElementsSimtTiling::GetAttrInfo()
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                         opName_, "x, index",
                         (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
-                        "x should larger than or equal to index of each dim value, except axis"),
+                        "x should be larger than or equal to index of each dim value, except axis"),
                     return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -300,10 +300,10 @@ void GatherElementsSimtTiling::ComputeStride()
     indexShapeArr_ = ToVector(indexShape8d_);
     xStrideArr_ = ToVector(xStride_);
     indexStrideArr_ = ToVector(indexStride_);
-    OP_LOGD(opName_, "after xShape convert to vector = %s", Ops::Base::VectorToString(xShapeArr_).c_str());
-    OP_LOGD(opName_, "after indexShape convert to vector = %s", Ops::Base::VectorToString(indexShapeArr_).c_str());
-    OP_LOGD(opName_, "after xStride convert to vector = %s", Ops::Base::VectorToString(xStrideArr_).c_str());
-    OP_LOGD(opName_, "after indexStride convert to vector = %s", Ops::Base::VectorToString(indexStrideArr_).c_str());
+    OP_LOGD(opName_, "xShape after converting to vector: %s", Ops::Base::VectorToString(xShapeArr_).c_str());
+    OP_LOGD(opName_, "indexShape after converting to vector: %s", Ops::Base::VectorToString(indexShapeArr_).c_str());
+    OP_LOGD(opName_, "xStride after converting to vector: %s", Ops::Base::VectorToString(xStrideArr_).c_str());
+    OP_LOGD(opName_, "indexStride after converting to vector: %s", Ops::Base::VectorToString(indexStrideArr_).c_str());
 
     int64_t lengthIsEightArray[MAX_DIM_LEN_EIGHT] = {0, 0, 0, 0, 0, 0, 0, 0};
     std::copy(xStrideArr_.begin(), xStrideArr_.end(), lengthIsEightArray);
@@ -360,8 +360,8 @@ void GatherElementsSimtTiling::MergeAxis()
 
     axis_ -= static_cast<int64_t>(count);
     dimSize_ = static_cast<int64_t>(indexShapeMerge_.GetDimNum());
-    OP_LOGD(opName_, "after xShapeMerge is = %s", Ops::Base::ToString(xShapeMerge_).c_str());
-    OP_LOGD(opName_, "after indexShapeMerge is = %s", Ops::Base::ToString(indexShapeMerge_).c_str());
+    OP_LOGD(opName_, "xShapeMerge after merge: %s", Ops::Base::ToString(xShapeMerge_).c_str());
+    OP_LOGD(opName_, "indexShapeMerge after merge: %s", Ops::Base::ToString(indexShapeMerge_).c_str());
 
     m_tilingData_.set_axis(axis_);
 }
@@ -405,10 +405,10 @@ void GatherElementsSimtTiling::ReductionDim()
     xStrideArr_ = ToVector(xStride_);
     indexShapeArr_ = ToVector(indexShape8d_);
     indexStrideArr_ = ToVector(indexStride_);
-    OP_LOGD(opName_, "after xShape convert to vector = %s", Ops::Base::VectorToString(xShapeArr_).c_str());
-    OP_LOGD(opName_, "after xStride convert to vector = %s", Ops::Base::VectorToString(xStrideArr_).c_str());
-    OP_LOGD(opName_, "after indexShape convert to vector = %s", Ops::Base::VectorToString(indexShapeArr_).c_str());
-    OP_LOGD(opName_, "after indexStride convert to vector = %s", Ops::Base::VectorToString(indexStrideArr_).c_str());
+    OP_LOGD(opName_, "xShape after converting to vector: %s", Ops::Base::VectorToString(xShapeArr_).c_str());
+    OP_LOGD(opName_, "xStride after converting to vector: %s", Ops::Base::VectorToString(xStrideArr_).c_str());
+    OP_LOGD(opName_, "indexShape after converting to vector: %s", Ops::Base::VectorToString(indexShapeArr_).c_str());
+    OP_LOGD(opName_, "indexStride after converting to vector: %s", Ops::Base::VectorToString(indexStrideArr_).c_str());
 
     int64_t tempEightArray[MAX_DIM_LEN_EIGHT] = {0, 0, 0, 0, 0, 0, 0, 0};
     std::copy(xStrideArr_.begin(), xStrideArr_.end(), tempEightArray);

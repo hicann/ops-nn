@@ -139,18 +139,18 @@ static bool CheckFormat(const aclTensor* self, const aclTensorList* indices, con
 {
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(self->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self don't support private format.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self doesn't support private format.");
         return false;
     }
 
     if (op::IsPrivateFormat(out->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out don't support private format.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out doesn't support private format.");
         return false;
     }
 
     for (size_t i = 0; i < indices->Size(); i++) {
         if (op::IsPrivateFormat((*indices)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "indices don't support private format.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "indices doesn't support private format.");
             return false;
         }
     }
@@ -169,7 +169,7 @@ static void CheckShape(const aclTensor* self, const aclTensorList* indices)
     }
     bool indicesSizeInvalid = (selfDimNum > 0 && indicesSize > selfDimNum);
     if (indicesSizeInvalid) {
-        OP_LOGW("indices size must not greater than self dim nums, bug got indices size %zu and self dim nums %zu",
+        OP_LOGW("indices size must not be greater than self dim nums, but got indices size %zu and self dim nums %zu",
                 indicesSize, selfDimNum);
     }
 }
@@ -366,7 +366,7 @@ IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* 
 
     indicesInfo.indicesDim = indicesInfo.indicesNum > 0 ? indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum() :
                                                           0UL;
-    OP_LOGI("masksNum is %zu, indicesNum is %zu", indicesInfo.masksNum, indicesInfo.indicesNum);
+    OP_LOGI("masksNum is %ld, indicesNum is %ld", indicesInfo.masksNum, indicesInfo.indicesNum);
     return indicesInfo;
 }
 
@@ -386,11 +386,11 @@ ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesIn
     for (size_t i = indicesInfo.masks.size(); i < self->GetViewShape().GetDimNum(); i++) {
         int64_t dim = self->GetViewShape().GetDim(i);
         if (dim < 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetDim returns negative value");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetDim returns negative value %ld at dim %zu", dim, i);
             return chooseInfo;
         }
         if (tailSize > SIZE_MAX / static_cast<size_t>(dim)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tailSize overflow detected");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tailSize overflow detected, tailSize is %zu, dim is %ld", tailSize, dim);
             return chooseInfo;
         }
         tailSize = tailSize * static_cast<size_t>(dim);
@@ -534,7 +534,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorLis
     ChooseInfo chooseInfo = CalculateOutputShapeAndTransposeFlag(self, indicesInfo);
     chooseInfo.isNonContiguous = isNonContiguous;
     if (chooseInfo.outputDim > MAX_DIM_LEN) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Output shape Dim should be less than or equal to 8, but got [%zu]",
                 chooseInfo.outputDim);
         return ACLNN_ERR_PARAM_INVALID;
     }

@@ -201,7 +201,7 @@ static string VectorToString(const vector<int64_t>& vec)
 // 计算广播后的目标形状
 static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "index infershape is begin");
+    OP_LOGD(context->GetNodeName(), "index infershape begins");
     auto xTensor = context->GetInputTensor(IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xTensor);
     auto xStorageShape = xTensor->GetStorageShape();
@@ -255,7 +255,7 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
 
 static ge::graphStatus InferDataType4Index(gert::InferDataTypeContext* context)
 {
-    OP_LOGI(context->GetNodeName(), "index inferdataType is begin");
+    OP_LOGI(context->GetNodeName(), "index inferdataType begins");
     auto input_value_dtype = context->GetInputDataType(0);
     context->SetOutputDataType(0, input_value_dtype);
     return GRAPH_SUCCESS;

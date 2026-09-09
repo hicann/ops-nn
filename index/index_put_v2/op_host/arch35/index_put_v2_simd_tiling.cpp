@@ -118,14 +118,14 @@ ge::graphStatus IndexPutV2SimdTiling::GetShapeAttrsInfo()
     for (size_t i = 0; i < inputRank; ++i) {
         inputShapes_[i] = inShapeVal.GetDim(i);
     }
-    OP_LOGD("IndexPutV2Simd", "input dim Num: %u", inputDimNum_);
+    OP_LOGD("IndexPutV2Simd", "input dim Num: %ld", inputDimNum_);
 
     // 获取输入value的shape
     auto const valueSize = context_->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valueSize);
     auto const valueShapeVal = valueSize->GetStorageShape();
     valueLength_ = valueShapeVal.GetShapeSize();
-    OP_LOGD("IndexPutV2Simd", "valueLength_: %lu", valueLength_);
+    OP_LOGD("IndexPutV2Simd", "valueLength_: %ld", valueLength_);
 
     // 获取输入indexedSizes的shape
     auto const indexedSizes = context_->GetInputShape(INDEXED_SIZES_IDX);

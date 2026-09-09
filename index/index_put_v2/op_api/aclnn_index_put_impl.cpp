@@ -181,7 +181,7 @@ static bool IsAiCPUSupportCheckIndicesArch3510(const aclTensor* selfRef, const F
     }
     // self为double/int16类型时走aicpu分支
     if (selfRef->GetDataType() == op::DataType::DT_DOUBLE || selfRef->GetDataType() == op::DataType::DT_INT16) {
-        OP_LOGD("IndexPutV2 not support int16 or float64");
+        OP_LOGD("IndexPutV2 does not support int16 or float64");
         return true;
     }
     // tiling失败走aicpu逻辑
@@ -189,7 +189,7 @@ static bool IsAiCPUSupportCheckIndicesArch3510(const aclTensor* selfRef, const F
         if (indices[i]->GetViewShape().GetDimNum() != 0 &&
             indices[i]->GetViewShape().GetShapeSize() != 0) { // Find first unscalar/unEmpty tensor
             if (indices[i]->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM) {
-                OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
+                OP_LOGD("IndexPutV2 does not support indices num greater than 60000000.");
                 return true;
             }
             break;
@@ -241,24 +241,24 @@ static bool IndexPutV2IndicesNumsLimit(const FVector<const aclTensor*, 8>& indic
     OP_LOGD("indices size is %ld, indices nums is %ld", dims, indicesNums);
     // aclnn中原本的拦截量
     if (indicesNums > MAX_SUPPORTTYPE_INDICES_NUM) {
-        OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
+        OP_LOGD("IndexPutV2 does not support indices num greater than 60000000.");
         return false;
     }
     // 高维需要进一步细化拦截量
     if (dims == 5 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM5) { // 5 is dims, 54247424 is indices limits
-        OP_LOGD("IndexPutV2 not support indices num greater than 54247424 when indices size is 5.");
+        OP_LOGD("IndexPutV2 does not support indices num greater than 54247424 when indices size is 5.");
         return false;
     }
     if (dims == 6 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM6) { // 6 is dims, 48611328 is indices limits
-        OP_LOGD("IndexPutV2 not support indices num greater than 48611328 when indices size is 6.");
+        OP_LOGD("IndexPutV2 does not support indices num greater than 48611328 when indices size is 6.");
         return false;
     }
     if (dims == 7 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM7) { // 7 is dims, 44384256 is indices limits
-        OP_LOGD("IndexPutV2 not support indices num greater than 44384256 when indices size is 7.");
+        OP_LOGD("IndexPutV2 does not support indices num greater than 44384256 when indices size is 7.");
         return false;
     }
     if (dims == 8 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM8) { // 8 is dims, 40861696 is indices limits
-        OP_LOGD("IndexPutV2 not support indices num greater than 40861696 when indices size is 8.");
+        OP_LOGD("IndexPutV2 does not support indices num greater than 40861696 when indices size is 8.");
         return false;
     }
     return true;
@@ -299,7 +299,7 @@ static bool IsAiCPUSupport(const aclTensor* selfRef, const FVector<const aclTens
     }
 
     if (selfRef->GetDataType() == op::DataType::DT_DOUBLE || selfRef->GetDataType() == op::DataType::DT_INT16) {
-        OP_LOGD("IndexPutV2 not support int16 or float64");
+        OP_LOGD("IndexPutV2 does not support int16 or float64");
         return true;
     }
 
@@ -370,7 +370,9 @@ static inline bool CheckShape(const aclTensor* selfRef, const aclTensorList* ind
     // indices的size必须小于self DimSize
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     if (indicesSize > static_cast<int64_t>(selfRef->GetViewShape().GetDimNum())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "indicesSize must <= self DimSize.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "indicesSize must be <= self DimSize, but got indicesSize: %ld, self DimSize: %ld.",
+                static_cast<int64_t>(indicesSize), static_cast<int64_t>(selfRef->GetViewShape().GetDimNum()));
         return false;
     }
     return true;
@@ -652,7 +654,7 @@ static const aclTensor* valuesToBroadcast(int64_t indicesSize, const aclTensor* 
 static void ViewDataType(const aclTensor* input, const op::DataType dtype)
 {
     if (input == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "view data type error!!");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "view failed: input tensor is null.");
         return;
     }
     auto tmpTensor = const_cast<aclTensor*>(input);
@@ -681,7 +683,7 @@ static std::pair<const aclTensor*, const aclTensor*> ProcessIndices(const aclTen
     // 修改读取的数据类型
     if (row < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
-        OP_LOGD("aclnnIndexPutImpl: indice sort by aicore");
+        OP_LOGD("aclnnIndexPutImpl: index sort by aicore");
     }
     // 对index进行sort操作
     indiceViewFloat = l0op::Reshape(indiceViewFloat, {row}, executor);
@@ -938,7 +940,7 @@ static bool IndicesBroadcastUndeter(FVector<const aclTensor*, DIMLIMIT>& allIndi
             allIndices[i] = l0op::Cast(allIndices[i], op::DataType::DT_INT32, executor);
         }
         if (!allIndices[i]->IsEmpty()) { // scalar tensor need broadcast, empty tensor not
-            OP_LOGD("IndicesBroadcast start, index is %d", i);
+            OP_LOGD("IndicesBroadcast starts, index is %d", i);
             allIndices[i] = l0op::Contiguous(allIndices[i], executor);
             allIndices[i] = l0op::BroadcastTo(allIndices[i], valueShapeBroad, executor);
         }
@@ -1497,7 +1499,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor* selfRef, const aclTenso
             CHECK_RET(valuesCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
         if (accumulate && (selfRef->GetDataType() == op::DataType::DT_BOOL)) {
-            OP_LOGD("Begin IndexPutV2 cast bool to int8");
+            OP_LOGD("Begin IndexPutV2 cast bool to int32");
             selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
             valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
             CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);

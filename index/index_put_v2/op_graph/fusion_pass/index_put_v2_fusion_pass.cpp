@@ -154,7 +154,7 @@ bool IndexPutV2FusionPass::CheckPlatform() const
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
     if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "Get platform_info failed.");
+        OP_LOGE(kPassName.c_str(), "Get platform_info failed.");
         return false;
     }
     const std::string soc = platformInfo.str_info.short_soc_version;
@@ -190,45 +190,45 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     std::vector<DataType> deterministicDtypes = {DT_FLOAT16, DT_BF16, DT_FLOAT};
     TensorDesc xDesc;
     if (node.GetInputDesc(kIdxX, xDesc) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "GetInputDesc for x failed");
+        OP_LOGE(kPassName.c_str(), "GetInputDesc for x failed");
         return false;
     }
     DataType xDtype = xDesc.GetDataType();
     if (!CheckDtype(xDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "x dtype not support, actual: %d", static_cast<int>(xDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype does not support, actual: %d", static_cast<int>(xDtype));
         return false;
     }
 
     TensorDesc valueDesc;
     if (node.GetInputDesc(kIdxValue, valueDesc) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "GetInputDesc for value failed");
+        OP_LOGE(kPassName.c_str(), "GetInputDesc for value failed");
         return false;
     }
     DataType valueDtype = valueDesc.GetDataType();
     if (!CheckDtype(valueDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "value dtype not support, actual: %d", static_cast<int>(valueDtype));
+        OP_LOGI(kPassName.c_str(), "value dtype does not support, actual: %d", static_cast<int>(valueDtype));
         return false;
     }
 
     if (xDtype != valueDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with value dtype, x: %d, value: %d", static_cast<int>(xDtype),
-                static_cast<int>(valueDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype should be the same as value dtype, x: %d, value: %d",
+                static_cast<int>(xDtype), static_cast<int>(valueDtype));
         return false;
     }
 
     TensorDesc yDesc;
     if (node.GetOutputDesc(0, yDesc) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "GetOutputDesc for y failed");
+        OP_LOGE(kPassName.c_str(), "GetOutputDesc for y failed");
         return false;
     }
     DataType yDtype = yDesc.GetDataType();
     if (!CheckDtype(yDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "y dtype not support, actual: %d", static_cast<int>(yDtype));
+        OP_LOGI(kPassName.c_str(), "y dtype does not support, actual: %d", static_cast<int>(yDtype));
         return false;
     }
 
     if (xDtype != yDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with y dtype, x: %d, y: %d", static_cast<int>(xDtype),
+        OP_LOGI(kPassName.c_str(), "x dtype should be the same as y dtype, x: %d, y: %d", static_cast<int>(xDtype),
                 static_cast<int>(yDtype));
         return false;
     }
@@ -236,12 +236,12 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     for (int64_t i = 0; i < indicesNum; ++i) {
         TensorDesc indicesDesc;
         if (node.GetInputDesc(kFixedInputNum + i, indicesDesc) != SUCCESS) {
-            OP_LOGI(kPassName.c_str(), "GetInputDesc for indices[%ld] failed", i);
+            OP_LOGE(kPassName.c_str(), "GetInputDesc for indices[%ld] failed", i);
             return false;
         }
         DataType indicesDtype = indicesDesc.GetDataType();
         if (!CheckDtype(indicesDtype, {DT_INT32, DT_INT64})) {
-            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only support int32/int64, actual: %d", i,
+            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only supports int32/int64, actual: %d", i,
                     static_cast<int>(indicesDtype));
             return false;
         }
@@ -251,7 +251,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     node.GetAttr("accumulate", accumulate);
     if (accumulate) {
         if (!CheckDtype(xDtype, deterministicDtypes)) {
-            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype do not support Deterministic , actual: %d",
+            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype does not support Deterministic, actual: %d",
                     static_cast<int>(xDtype));
             return false;
         }
@@ -264,7 +264,7 @@ bool IndexPutV2FusionPass::CheckDynamic(const GNode& node, int64_t indicesNum) c
 {
     TensorDesc xDesc;
     if (node.GetInputDesc(kIdxX, xDesc) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "GetInputDesc for x failed");
+        OP_LOGE(kPassName.c_str(), "GetInputDesc for x failed");
         return true;
     }
     if (ShapeIsDynamic(xDesc)) {
@@ -274,7 +274,7 @@ bool IndexPutV2FusionPass::CheckDynamic(const GNode& node, int64_t indicesNum) c
 
     TensorDesc valueDesc;
     if (node.GetInputDesc(kIdxValue, valueDesc) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "GetInputDesc for value failed");
+        OP_LOGE(kPassName.c_str(), "GetInputDesc for value failed");
         return true;
     }
     if (ShapeIsDynamic(valueDesc)) {
@@ -285,7 +285,7 @@ bool IndexPutV2FusionPass::CheckDynamic(const GNode& node, int64_t indicesNum) c
     for (int64_t i = 0; i < indicesNum; ++i) {
         TensorDesc indicesDesc;
         if (node.GetInputDesc(kFixedInputNum + i, indicesDesc) != SUCCESS) {
-            OP_LOGI(kPassName.c_str(), "GetInputDesc for indices[%ld] failed", i);
+            OP_LOGE(kPassName.c_str(), "GetInputDesc for indices[%ld] failed", i);
             return true;
         }
         if (ShapeIsDynamic(indicesDesc)) {
@@ -397,7 +397,7 @@ GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode& node)
         std::string name = "indices" + std::to_string(i);
         rIndices.emplace_back(
             builder.CreateInput(newIdx++, name.c_str(), info.indicesDtypes[i], info.indicesFmt, info.indicesDims[i]));
-        if (info.indicesShape[i].GetShapeSize() != 0) { //索引不为空，则置1
+        if (info.indicesShape[i].GetShapeSize() != 0) { // 索引不为空，则置1
             indexedSizes[i] = 1;
         }
     }
@@ -435,14 +435,14 @@ std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const 
         SubgraphInput subgraphInput;
         subgraphInput.AddInput({node, static_cast<int64_t>(i)});
         if (boundary->AddInput(i, std::move(subgraphInput)) != SUCCESS) {
-            OP_LOGI(kPassName.c_str(), "AddInput failed for idx %zu", i);
+            OP_LOGE(kPassName.c_str(), "AddInput failed for idx %zu", i);
             return nullptr;
         }
     }
 
     SubgraphOutput output({node, 0});
     if (boundary->AddOutput(0, std::move(output)) != SUCCESS) {
-        OP_LOGI(kPassName.c_str(), "AddOutput failed");
+        OP_LOGE(kPassName.c_str(), "AddOutput failed");
         return nullptr;
     }
 
@@ -458,7 +458,7 @@ Status IndexPutV2FusionPass::Run(GraphPtr& graph, CustomPassContext& passContext
     }
 
     if (!CheckDeterministic(passContext)) {
-        OP_LOGI(kPassName.c_str(), "Deterministic check failed, skip fusion");
+        OP_LOGE(kPassName.c_str(), "Deterministic check failed, skip fusion");
         return GRAPH_NOT_CHANGED;
     }
 
@@ -481,7 +481,7 @@ Status IndexPutV2FusionPass::Run(GraphPtr& graph, CustomPassContext& passContext
         if (!replacement) {
             AscendString nodeName;
             node.GetName(nodeName);
-            OP_LOGI(kPassName.c_str(), "CreateReplacement failed for %s", nodeName.GetString());
+            OP_LOGE(kPassName.c_str(), "CreateReplacement failed for %s", nodeName.GetString());
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;
         }
@@ -490,7 +490,7 @@ Status IndexPutV2FusionPass::Run(GraphPtr& graph, CustomPassContext& passContext
         if (!boundary) {
             AscendString nodeName;
             node.GetName(nodeName);
-            OP_LOGI(kPassName.c_str(), "ConstructBoundary failed for %s", nodeName.GetString());
+            OP_LOGE(kPassName.c_str(), "ConstructBoundary failed for %s", nodeName.GetString());
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;
         }
@@ -499,7 +499,7 @@ Status IndexPutV2FusionPass::Run(GraphPtr& graph, CustomPassContext& passContext
         if (replaceStatus != SUCCESS) {
             AscendString nodeName;
             node.GetName(nodeName);
-            OP_LOGI(kPassName.c_str(), "Replace failed for %s, status=%d", nodeName.GetString(),
+            OP_LOGE(kPassName.c_str(), "Replace failed for %s, status=%d", nodeName.GetString(),
                     static_cast<int>(replaceStatus));
             *graph = originGraph;
             return GRAPH_NOT_CHANGED;

@@ -100,7 +100,7 @@ ge::graphStatus IndexTilingSimd::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool IndexTilingSimd::MargeInputAxis()
+bool IndexTilingSimd::MergeInputAxis()
 {
     int64_t mergeSize = NUM_ONE;
     uint32_t mergeIdx = NUM_ZERO;
@@ -128,7 +128,7 @@ bool IndexTilingSimd::MargeInputAxis()
 
 bool IndexTilingSimd::IsCapable()
 {
-    if (!MargeInputAxis()) {
+    if (!MergeInputAxis()) {
         OP_LOGE(context_->GetNodeName(), "merge input shape error!");
         return false;
     }
@@ -210,7 +210,7 @@ bool IndexTilingSimd::IsIndexContinue()
  * out:     [other_size, gather_size, inner_size]
  * 不连续，则：out:     [gather_size, ..., other_size, ..., inner_size]
  */
-ge::graphStatus IndexTilingSimd::MargeOutputAxis()
+ge::graphStatus IndexTilingSimd::MergeOutputAxis()
 {
     bool isIndexContinue = IsIndexContinue();
     uint32_t indicesToInputDim = 0;
@@ -251,7 +251,7 @@ ge::graphStatus IndexTilingSimd::MargeOutputAxis()
 
 ge::graphStatus IndexTilingSimd::DoOpTiling()
 {
-    OP_CHECK_IF(MargeOutputAxis() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Marge axis error!"),
+    OP_CHECK_IF(MergeOutputAxis() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Merge axis error!"),
                 return ge::GRAPH_FAILED);
     CalcSimdTiling();
     return ge::GRAPH_SUCCESS;

@@ -42,8 +42,8 @@ private:
     ge::graphStatus GetShapeDtypeSize();
     void CalcSimdTiling();
     bool IsIndexContinue();
-    bool MargeInputAxis();
-    ge::graphStatus MargeOutputAxis();
+    bool MergeInputAxis();
+    ge::graphStatus MergeOutputAxis();
 
 private:
     gert::Shape inputShapes_;

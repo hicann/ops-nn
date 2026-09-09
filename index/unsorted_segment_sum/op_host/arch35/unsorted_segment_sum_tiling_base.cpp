@@ -27,6 +27,18 @@ using namespace AscendC;
 using namespace ge;
 
 namespace optiling {
+static std::string ShapeToStdString(const gert::Shape& shape)
+{
+    std::string str = "[";
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
+        if (i > 0) {
+            str += ", ";
+        }
+        str += std::to_string(shape.GetDim(i));
+    }
+    return str + "]";
+}
+
 static constexpr uint32_t INPUT_DATA_INDEX = 0;
 static constexpr uint32_t INPUT_SEGMENT_IDS_INDEX = 1;
 static constexpr uint32_t INPUT_NUM_SEGMENTS_INDEX = 2;
@@ -173,11 +185,14 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::CheckInputDtype()
 
 ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "data, segment_ids",
-                                               "data_dtype, segment_ids_dtype", "dtype combination not supported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "data, segment_ids",
+                    (Ops::Base::ToString(context_->GetInputDesc(INPUT_DATA_INDEX)->GetDataType()) + ", " +
+                     Ops::Base::ToString(context_->GetInputDesc(INPUT_SEGMENT_IDS_INDEX)->GetDataType()))
+                        .c_str(),
+                    "dtype combination not supported"),
+                return ge::GRAPH_FAILED);
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataShapePtr);
@@ -201,9 +216,10 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(!ShapeStartsWith(dataShape, segmentIdsShape),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "data, segment_ids",
-                                                       "data_shape, segment_ids_shape",
-                                                       "data.shape must start with segment_ids.shape"),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "data, segment_ids",
+                    (ShapeToStdString(dataShape) + ", " + ShapeToStdString(segmentIdsShape)).c_str(),
+                    "data.shape must start with segment_ids.shape"),
                 return ge::GRAPH_FAILED);
 
     std::tie(inputOuterDim_, innerDim_) = FlatInput(dataShape, segmentIdsShape);

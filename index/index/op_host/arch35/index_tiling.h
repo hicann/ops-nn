@@ -90,7 +90,10 @@ protected:
         } else if (paramsDtype == ge::DT_INT8 || paramsDtype == ge::DT_BOOL || paramsDtype == ge::DT_UINT8) {
             xDType = DTYPE_SIZE_B8;
         } else {
-            OP_LOGE("IndexTilingCommon", "input x dtype error!");
+            OP_LOGE("IndexTilingCommon",
+                    "input x dtype %d is not supported, must be in [DT_INT64, DT_COMPLEX64, DT_INT32, "
+                    "DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, DT_BOOL, DT_UINT8]",
+                    static_cast<int>(paramsDtype));
             return 0;
         }
         return xDType * factor;
