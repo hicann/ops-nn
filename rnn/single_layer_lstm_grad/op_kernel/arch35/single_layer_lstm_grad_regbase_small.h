@@ -41,6 +41,12 @@ namespace Micro = AscendC::MicroAPI;
 
 constexpr uint32_t VL_F32 = 64; // 256B vector register / 4B
 constexpr uint32_t LSTM_GATE_NUM = 4;
+constexpr uint32_t UB_BLOCK_BYTES = 32; // DataCopyPad 的 UB 侧 stride 以 32B 数据块为计数单位
+constexpr int32_t GATE_ORDER_IJFO = 0;  // host tiling 下发的 gateOrder 取值(0: ijfo, 1: ifjo)
+constexpr int32_t OFFSET_I = 0;         // dgate 物理槽位: i 恒在槽 0, o 恒在槽 3
+constexpr int32_t OFFSET_J = 1;         // ijfo 下为 j, ifjo 下为 f
+constexpr int32_t OFFSET_F = 2;         // ijfo 下为 f, ifjo 下为 j
+constexpr int32_t OFFSET_O = 3;
 
 constexpr Micro::CastTrait LSTM_CAST_UP_TRAIT = {
     Micro::RegLayout::ZERO,
@@ -118,8 +124,8 @@ public:
         cols_ = inputSize_ + hidden_;
         blockIdx_ = static_cast<int32_t>(AscendC::GetBlockIdx());
         // physical slot order of j/f follows the w row layout selected by gate_order
-        slotJ_ = (gateOrder_ == 0) ? 1 : 2;
-        slotF_ = (gateOrder_ == 0) ? 2 : 1;
+        slotJ_ = (gateOrder_ == GATE_ORDER_IJFO) ? OFFSET_J : OFFSET_F;
+        slotF_ = (gateOrder_ == GATE_ORDER_IJFO) ? OFFSET_F : OFFSET_J;
 
         layout_.Fill(timeStep_, batch_, hidden_, chunkCols_, mBlock_, sizeof(T));
         haT_ = static_cast<uint32_t>(layout_.hAlignT);
@@ -259,9 +265,10 @@ private:
         const uint32_t bhF = static_cast<uint32_t>(batch_) * haF;
         const uint16_t B = static_cast<uint16_t>(batch_);
         const uint16_t HLoop = static_cast<uint16_t>(hidden_);
+        const uint32_t sI = static_cast<uint32_t>(OFFSET_I) * haF;
         const uint32_t sJ = static_cast<uint32_t>(slotJ_) * haF;
         const uint32_t sF = static_cast<uint32_t>(slotF_) * haF;
-        const uint32_t sO = 3 * haF;
+        const uint32_t sO = static_cast<uint32_t>(OFFSET_O) * haF;
 
         int32_t parity = 0;
         for (int32_t lt = timeStep_ - 1; lt >= 0; --lt) {
@@ -326,7 +333,7 @@ private:
                     // dc_prev
                     Micro::Mul(dcOut, dcT, fR, mH);
                     // store dgate slots + recurrent dc
-                    Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go, dI, mH);
+                    Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sI, dI, mH);
                     Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sJ, dJ, mH);
                     Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sF, dF, mH);
                     Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sO, dO, mH);
@@ -432,7 +439,7 @@ private:
             AscendC::DataCopyExtParams p;
             p.blockCount = static_cast<uint16_t>(mbCur);
             p.blockLen = static_cast<uint32_t>(w * sizeof(T));
-            p.srcStride = static_cast<uint32_t>((wAlign - w) * sizeof(T) / 32);
+            p.srcStride = static_cast<uint32_t>((wAlign - w) * sizeof(T) / UB_BLOCK_BYTES);
             p.dstStride = static_cast<uint32_t>((inputSize_ - w) * sizeof(T));
             AscendC::DataCopyPad(dxGm_[static_cast<int64_t>(m0) * inputSize_ + col0], UbTensor<T>(layout_.outStageOff),
                                  p);
@@ -524,7 +531,7 @@ private:
         AscendC::DataCopyExtParams p;
         p.blockCount = static_cast<uint16_t>(gates_);
         p.blockLen = static_cast<uint32_t>(w * sizeof(T));
-        p.srcStride = static_cast<uint32_t>((wAlign - w) * sizeof(T) / 32);
+        p.srcStride = static_cast<uint32_t>((wAlign - w) * sizeof(T) / UB_BLOCK_BYTES);
         p.dstStride = static_cast<uint32_t>((cols_ - w) * sizeof(T));
         AscendC::DataCopyPad(dwGm_[col0], UbTensor<T>(layout_.outStageOff), p);
     }
@@ -666,7 +673,7 @@ private:
         AscendC::DataCopyExtParams p;
         p.blockCount = static_cast<uint16_t>(gates_);
         p.blockLen = static_cast<uint32_t>(hidden_ * sizeof(T));
-        p.srcStride = static_cast<uint32_t>((wAlign - hidden_) * sizeof(T) / 32);
+        p.srcStride = static_cast<uint32_t>((wAlign - hidden_) * sizeof(T) / UB_BLOCK_BYTES);
         p.dstStride = static_cast<uint32_t>(inputSize_ * sizeof(T));
         AscendC::DataCopyPad(dwGm_[inputSize_], UbTensor<T>(layout_.outStageOff), p);
     }
@@ -682,8 +689,8 @@ private:
     bool isBias_{false};
     bool backward_{false};
     int32_t gateOrder_{0};
-    int32_t slotJ_{1};
-    int32_t slotF_{2};
+    int32_t slotJ_{OFFSET_J};
+    int32_t slotF_{OFFSET_F};
     int32_t usedCores_{1};
     int32_t chunkCols_{64};
     int32_t mBlock_{64};
