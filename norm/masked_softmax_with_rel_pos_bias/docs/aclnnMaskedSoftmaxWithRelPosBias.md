@@ -243,14 +243,14 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
     ```tex
     对于FLOAT类型，公式如下：
-    dtypeSize = 4；
+    dtypeSize = 4;
     xSize = s2AlignedSize * dtypeSize;
-    softMaskMinTmpSize = 288；
+    softMaskMinTmpSize = 288;
     minComputeSize = xSize * 8 + softMaskMinTmpSize;
     对于FLOAT16类型，公式如下：
-    dtypeSize = 2；
+    dtypeSize = 2;
     xSize = s2AlignedSize * dtypeSize;
-    softMaskMinTmpSize = 288；
+    softMaskMinTmpSize = 288;
     minComputeSize = xSize * 16 + softMaskMinTmpSize;
     ```
 
@@ -258,14 +258,14 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
     ```tex
     对于FLOAT类型，公式如下：
-    dtypeSize = 4；
+    dtypeSize = 4;
     xSize = s2AlignedSize * dtypeSize;
-    softMaskMinTmpSize = 288；
-    minComputeSize = xSize * 6 + softMaskMinTmpSize；
+    softMaskMinTmpSize = 288;
+    minComputeSize = xSize * 6 + softMaskMinTmpSize;
     对于FLOAT16类型，公式如下：
-    dtypeSize = 2；
+    dtypeSize = 2;
     xSize = s2AlignedSize * dtypeSize;
-    softMaskMinTmpSize = 288；
+    softMaskMinTmpSize = 288;
     minComputeSize = xSize* 12 + softMaskMinTmpSize;
     ```
 

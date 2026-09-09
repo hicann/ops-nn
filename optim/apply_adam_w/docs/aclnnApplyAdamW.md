@@ -182,7 +182,7 @@ aclnnStatus aclnnApplyAdamW(
     <tr>
       <td class="tg-0pky">lr（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">学习率，公式中的η，通常情况下为1e-3、1e-6、1-e9。</td>
+      <td class="tg-0pky">学习率，公式中的η，通常情况下为1e-3、1e-6、1e-9。</td>
       <td class="tg-0pky">shape要求为[1]。</td>
       <td class="tg-0pky">与varRef保持一致</td>
       <td class="tg-0pky">ND</td>

@@ -185,7 +185,7 @@ aclnnStatus aclnnInplaceQuantScatter(
   <!-- end id7 -->
   <!-- npu="A3,910b,310p" id8 -->
   - <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - selfRef、updates最后一维的大小必须32B对齐。
+    - selfRef、updates最后一维的大小必须32 Byte对齐。
 
   <!-- end id8 -->
 

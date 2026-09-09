@@ -220,7 +220,7 @@ aclnnStatus aclnnIndexAddV2(
       <td>out的shape和self的shape不相等。</td>
       </tr>
       <tr>
-      <td>index取值范围不在[0，self.shape[dim])范围内。</td>
+      <td>index取值范围不在[0,self.shape[dim])范围内。</td>
       </tr>
       <tr>
       <td>当mode=0时，不满足约束说明中的高性能模式限制。</td>

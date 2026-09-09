@@ -93,7 +93,7 @@ aclnnStatus aclnnIndex(
         <td>indices</td>
         <td>输入</td>
         <td>索引。</td>
-        <td>index中的索引数据不支持越界。</td>
+        <td>indices中的索引数据不支持越界。</td>
         <td>INT32、INT64、BOOL</td>
         <td>ND</td>
         <td>1-8</td>

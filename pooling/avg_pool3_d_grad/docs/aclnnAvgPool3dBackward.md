@@ -409,7 +409,7 @@ int main() {
   ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建inputshape aclTensor
+  // 创建selfshape aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfAddr, aclDataType::ACL_FLOAT,
   &selfInput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
