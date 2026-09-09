@@ -151,7 +151,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>输出</td>
       <td>表示最终量化输出Tensor，对应公式中的`y`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x`一致。</li></ul></td>
-      <td>INT32、INT8、INT4、FLOAT8、HIF8</td>
+      <td>INT32、INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
