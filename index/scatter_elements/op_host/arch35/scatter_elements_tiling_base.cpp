@@ -72,7 +72,7 @@ ge::graphStatus ScatterElementsTiling::GetPlatformInfo()
             context_->GetNodeName(), "ubSize_, DCACHE_SIZE",
             (std::to_string(static_cast<int32_t>(ubSize_)) + ", " + std::to_string(static_cast<int32_t>(DCACHE_SIZE)))
                 .c_str(),
-            "ScatterElements ubSize must be less than Dcache Size");
+            "ScatterElements ubSize must be greater than Dcache Size");
         return ge::GRAPH_FAILED;
     }
     ubSize_ = ubSize_ - DCACHE_SIZE;

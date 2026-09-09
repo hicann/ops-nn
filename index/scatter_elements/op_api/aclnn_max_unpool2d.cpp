@@ -108,8 +108,8 @@ static bool CheckOutputSize(const aclTensor* self, const aclIntArray* outputSize
     }
     for (size_t i = 0; i < size; ++i) {
         if ((*outputSize)[i] <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should greater than 0, but the sizes of %zu is %ld.", i,
-                    (*outputSize)[i]);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should be greater than 0, but the sizes of %zu is %ld.",
+                    i, (*outputSize)[i]);
             return false;
         }
     }
@@ -121,7 +121,7 @@ static bool CheckOutputSize(const aclTensor* self, const aclIntArray* outputSize
     }
     OP_CHECK(((*outputSize)[0] * (*outputSize)[1]) >= (dimH * dimW),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "The output volumes are of size %ld x %ld, should greater than or equal to "
+                     "The output volumes are of size %ld x %ld, should be greater than or equal to "
                      "self of size %ld x %ld.",
                      (*outputSize)[0], (*outputSize)[1], dimH, dimW),
              return false);
