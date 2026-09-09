@@ -133,7 +133,7 @@ uint32_t BuildScatterElementsInfo(ScatterElementsComputeInfo& info)
     int64_t sub_src_fix = 1;
     for (int64_t i = info.value_dim_num_x2 - 1; i >= 0; --i) {
         if (i != info.axis_value && info.value_dim_x1[i] < info.value_dim_x2[i]) {
-            KERNEL_LOG_ERROR("The %ld dimension verfication failed:input0[%ld],input1[%ld]", i, info.value_dim_x1[i],
+            KERNEL_LOG_ERROR("The %ld dimension verification failed:input0[%ld],input1[%ld]", i, info.value_dim_x1[i],
                              info.value_dim_x2[i]);
             return KERNEL_STATUS_PARAM_INVALID;
         }
@@ -262,7 +262,7 @@ uint32_t ScatterElementsCpuKernel::UpdateOutput(const CpuKernelContext& ctx, int
             auto mem_ret = memcpy_s(output_data + ptr_offset, core_size, input_data + ptr_offset, core_size);
             if (mem_ret != EOK) {
                 work_ret = KERNEL_STATUS_INNER_ERROR;
-                KERNEL_LOG_ERROR("Initial memory copy failed[%d].Offerst is %ld, copy size is %lu", mem_ret, ptr_offset,
+                KERNEL_LOG_ERROR("Initial memory copy failed[%d]. Offset is %ld, copy size is %lu", mem_ret, ptr_offset,
                                  core_size);
                 return;
             }

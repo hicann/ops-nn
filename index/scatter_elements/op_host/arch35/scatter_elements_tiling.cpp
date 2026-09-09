@@ -185,13 +185,13 @@ ge::graphStatus CheckList(gert::TilingContext* context, ScatterElementsTilingPar
     if (*axis >= param->dims_data) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis, dims_data",
                                               (std::to_string(*axis) + ", " + std::to_string(param->dims_data)).c_str(),
-                                              "axis must be larger than or equal to dims_data");
+                                              "axis must be smaller than dims_data");
         return ge::GRAPH_FAILED;
     }
     if (*axis < -1 * param->dims_data) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis, dims_data",
                                               (std::to_string(*axis) + ", " + std::to_string(param->dims_data)).c_str(),
-                                              "axis must be smaller than or equal to dims_data");
+                                              "axis must be greater than or equal to -dims_data");
         return ge::GRAPH_FAILED;
     }
     if (*axis < 0) {

@@ -118,14 +118,14 @@ static inline bool CheckOutShape(const aclTensor* self, const aclIntArray* outpu
     }
     OP_CHECK(dimN == outN && dimC == outC,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Out should be same in N、C dimensions with self, but self N: [%ld]、C:[%ld], "
-                     "outRef N: [%ld]、C: [%ld]",
+                     "Out should be same in N, C dimensions with self, but self N: [%ld], C:[%ld], "
+                     "outRef N: [%ld], C: [%ld]",
                      dimN, dimC, outN, outC),
              return false);
     OP_CHECK(outD == (*outputSize)[DIM_ZERO] && outH == (*outputSize)[DIM_ONE] && outW == (*outputSize)[DIM_TWO],
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Out should be same in D、H、W dimensions with outputSize, "
-                     "but outputSize D: [%ld]、H:[%ld]、W:[%ld], outRef D: [%ld]、H: [%ld]、W:[%ld]",
+                     "Out should be same in D, H, W dimensions with outputSize, "
+                     "but outputSize D: [%ld], H:[%ld], W:[%ld], outRef D: [%ld], H: [%ld], W:[%ld]",
                      (*outputSize)[DIM_ZERO], (*outputSize)[DIM_ONE], (*outputSize)[DIM_TWO], outD, outH, outW),
              return false);
     return true;

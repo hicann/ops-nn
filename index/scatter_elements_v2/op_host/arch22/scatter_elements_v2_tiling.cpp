@@ -348,7 +348,7 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     uint32_t coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
-        OP_LOGE(tilingContext, "coreNum must greater than 0.");
+        OP_LOGE(tilingContext, "coreNum must be greater than 0.");
         return ge::GRAPH_FAILED;
     }
     workspaceSize = compileInfo->workspaceSize;
@@ -454,7 +454,7 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         auto dimIndices = indicesShape.GetDim(i);
         auto dimUpdates = updatesShape.GetDim(i);
         if (dimUpdates < dimIndices) {
-            OP_LOGE(tilingContext, "the dim of updates must greater than or equal the dim of indices.");
+            OP_LOGE(tilingContext, "the dim of updates must be greater than or equal to the dim of indices.");
             return ge::GRAPH_FAILED;
         }
         if (realDim == i) {

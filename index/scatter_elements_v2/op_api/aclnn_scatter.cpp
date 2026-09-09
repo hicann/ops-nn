@@ -151,7 +151,7 @@ static const std::string& GetReduceStr(int64_t reduce)
         OP_LOGW("Mean mode is experimental!");
         return REDUCTION_MEAN;
     }
-    OP_LOGW("reduce not in {0,1,2,3,4,5}, will use reduce=0.");
+    OP_LOGW("reduce must be one of {none, add, mul, max, min, mean}; will use reduce=none.");
     return REDUCTION_NONE;
 }
 
@@ -305,7 +305,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* index, co
     // 3. 检查参数的数据格式
     if (self->GetStorageFormat() != Format::FORMAT_ND || index->GetStorageFormat() != Format::FORMAT_ND ||
         src->GetStorageFormat() != Format::FORMAT_ND || out->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGW("Format only support ND.");
+        OP_LOGW("Format only supports ND.");
     }
 
     return ACLNN_SUCCESS;
@@ -735,7 +735,7 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     const aclTensor* indexContiguous = InitializeTensor(index, executor);
     CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor index failed!");
 
-    CHECK_COND(selfDimNum - 1 >= 0, ACLNN_ERR_PARAM_INVALID, "self dim num must greater than 0");
+    CHECK_COND(selfDimNum - 1 >= 0, ACLNN_ERR_PARAM_INVALID, "self dim num must be greater than 0");
     std::vector<int64_t> perm(selfDimNum);
     for (size_t i = 0; i < static_cast<size_t>(selfDimNum); ++i) {
         perm[i] = i;
