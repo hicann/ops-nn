@@ -9,11 +9,11 @@
  */
 
 /* !
- * \file deformable_offsets_grad.h
+ * \file deformable_offsets_grad_arch35.h
  * \brief deformable_offsets_grad kernel info
  */
-#ifndef DEFORMABLE_OFFSET_H
-#define DEFORMABLE_OFFSET_H
+#ifndef DEFORMABLE_OFFSET_ARCH35_H
+#define DEFORMABLE_OFFSET_ARCH35_H
 #include "kernel_operator.h"
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_atomic_functions.h"

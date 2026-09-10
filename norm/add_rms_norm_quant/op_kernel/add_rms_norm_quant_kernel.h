@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file add_rms_norm_quant.h
+ * \file add_rms_norm_quant_kernel.h
  * \brief add rms norm quant file
  */
-#ifndef _ADD_RMS_NORM_QUANT_H_
-#define _ADD_RMS_NORM_QUANT_H_
+#ifndef ADD_RMS_NORM_QUANT_KERNEL_H_
+#define ADD_RMS_NORM_QUANT_KERNEL_H_
 #include "add_rms_norm_quant_base.h"
 
 using namespace AscendC;
@@ -393,4 +393,4 @@ private:
     int32_t blockIdx_;
     uint32_t rowWork = 1;
 };
-#endif // ADD_RMS_NORM_QUANT_H_
+#endif // ADD_RMS_NORM_QUANT_KERNEL_H_

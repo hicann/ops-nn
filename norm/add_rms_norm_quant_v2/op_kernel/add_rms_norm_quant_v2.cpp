@@ -12,7 +12,7 @@
  * \file add_rms_norm_quant_v2.cpp
  * \brief
  */
-#include "../add_rms_norm_quant/add_rms_norm_quant.h"
+#include "../add_rms_norm_quant/add_rms_norm_quant_kernel.h"
 #include "../add_rms_norm_quant/add_rms_norm_quant_split_d.h"
 #include "../add_rms_norm_quant/add_rms_norm_quant_single_n.h"
 using namespace AscendC;

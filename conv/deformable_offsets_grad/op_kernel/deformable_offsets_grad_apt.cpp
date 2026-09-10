@@ -12,7 +12,7 @@
  * \file deformable_offsets_grad.cpp
  * \brief deformable_offsets_grad kernel main
  */
-#include "arch35/deformable_offsets_grad.h"
+#include "arch35/deformable_offsets_grad_arch35.h"
 
 #define TILING_KEY_SIMIT_MODE_INT32 1000
 #define TILING_KEY_SIMIT_MODE_INT64 1001

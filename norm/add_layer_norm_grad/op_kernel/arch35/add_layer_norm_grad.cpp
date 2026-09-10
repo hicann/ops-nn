@@ -13,8 +13,8 @@
  * \brief A5 (ascend910_95) specific kernel entry for AddLayerNormGrad
  */
 
-#include "add_layer_norm_grad_cut_n.h"
-#include "add_layer_norm_grad_cut_d.h"
+#include "add_layer_norm_grad_cut_n_arch35.h"
+#include "add_layer_norm_grad_cut_d_arch35.h"
 
 using namespace AscendC;
 using namespace AddLayerNormGrad;

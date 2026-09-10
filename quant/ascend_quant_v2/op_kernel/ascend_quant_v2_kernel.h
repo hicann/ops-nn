@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file ascend_quant_v2.h
+ * \file ascend_quant_v2_kernel.h
  * \brief
  */
 
-#ifndef ASCEND_QUANT_V2_H
-#define ASCEND_QUANT_V2_H
+#ifndef ASCEND_QUANT_V2_KERNEL_H
+#define ASCEND_QUANT_V2_KERNEL_H
 
 #include "kernel_operator.h"
 #include "kernel_operator_intf.h"

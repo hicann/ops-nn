@@ -16,7 +16,7 @@
 #ifndef ASCEND_QUANT_V2_FP16_H
 #define ASCEND_QUANT_V2_FP16_H
 
-#include "ascend_quant_v2.h"
+#include "ascend_quant_v2_kernel.h"
 
 namespace AscendQuantV2 {
 using namespace AscendC;

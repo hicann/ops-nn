@@ -1376,7 +1376,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.cpp
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant.cpp
-        - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant.h
+        - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant_kernel.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant_base.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant_single_n.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant_split_d.h
@@ -1446,7 +1446,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/group_norm_grad/op_host/op_api/group_norm_grad.cpp
         - ops/ops-nn/norm/group_norm_grad/op_host/op_api/group_norm_grad.h
         - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad.cpp
-        - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad.h
+        - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad_kernel.h
         - ops/ops-nn/norm/inplace_add_layer_norm/
         - ops/ops-nn/norm/inplace_add_rms_norm/op_graph/inplace_add_rms_norm_proto.h
         - ops/ops-nn/norm/inplace_add_rms_norm/op_host/inplace_add_rms_norm_def.cpp

@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef ADD_LAYER_NORM_GRAD_CUT_D_A35
-#define ADD_LAYER_NORM_GRAD_CUT_D_A35
+#ifndef ADD_LAYER_NORM_GRAD_CUT_D_ARCH35_H
+#define ADD_LAYER_NORM_GRAD_CUT_D_ARCH35_H
 
 #include "add_layer_norm_grad_common.h"
 #include "../add_layer_norm_determinstic_compute.h"
@@ -610,4 +610,4 @@ private:
 };
 } // namespace AddLayerNormGrad
 
-#endif // ADD_LAYER_NORM_GRAD_CUT_D_A35
+#endif // ADD_LAYER_NORM_GRAD_CUT_D_ARCH35_H

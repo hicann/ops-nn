@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file group_norm_grad.h
+ * \file group_norm_grad_kernel.h
  * \brief
  */
-#ifndef GROUP_NORM_GRAD_H
-#define GROUP_NORM_GRAD_H
+#ifndef GROUP_NORM_GRAD_KERNEL_H
+#define GROUP_NORM_GRAD_KERNEL_H
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
@@ -1494,4 +1494,4 @@ private:
         cal_queue_dbeta_reduce.FreeTensor(dbeta_sum_Local);
     }
 };
-#endif // GROUP_NORM_GRAD
+#endif // GROUP_NORM_GRAD_KERNEL_H

@@ -21,7 +21,7 @@
  * 核函数签名契约：参数顺序须与 op_def I/O 一致（输入→输出→workspace→tiling）
  */
 
-#include "arch35/lp_norm_update_v2.h"
+#include "arch35/lp_norm_update_v2_arch35.h"
 
 template <int P_BRANCH>
 __global__ __aicore__ void lp_norm_update_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
