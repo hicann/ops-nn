@@ -53,7 +53,7 @@ ARCH_INFO=$(grep -e "arch" "$RUN_PKG_INFO_FILE" | cut --only-delimited -d"=" -f2
 # 包内路径
 GRAPH_SO_PATH="${CURR_PATH}/../../../../opp/built-in/op_graph/lib/linux/${ARCH_INFO}/libopgraph_nn.so"
 HOST_SO_PATH="${CURR_PATH}/../../../../opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${ARCH_INFO}/libophost_nn.so"
-# defaluts info determinated by user's inputs
+# defaluts info determined by user's inputs
 ASCEND_INSTALL_INFO="ascend_install.info"
 TARGET_INSTALL_PATH="${DEFAULT_INSTALL_PATH}" #--input-path
 TARGET_USERNAME="${CURR_OPERATE_USER}"
@@ -106,7 +106,6 @@ get_installed_info() {
   local key="$1"
   local res=""
   if [ -f "${INSTALL_INFO_FILE}" ]; then
-    chmod 644 "${INSTALL_INFO_FILE}" >/dev/null 2>&1
     res=$(cat ${INSTALL_INFO_FILE} | grep "${key}" | awk -F = '{print $2}')
   fi
   echo "${res}"
@@ -223,7 +222,7 @@ check_install_path() {
   if [ x"${temp_path}" = "x" ]; then
     temp_path="/"
   fi
-  # covert relative path to absolute path
+  # convert relative path to absolute path
   local prefix=$(echo "${temp_path}" | cut -d"/" -f1 | cut -d"~" -f1)
   if [ "x${prefix}" = "x" ]; then
     TARGET_INSTALL_PATH="${temp_path}"
@@ -237,7 +236,7 @@ check_install_path() {
       exit 1
     fi
   fi
-  # covert '~' to home path
+  # convert '~' to home path
   local home=$(echo "${TARGET_INSTALL_PATH}" | cut -d"~" -f1)
   if [ "x${home}" = "x" ]; then
     local temp_path_value=$(echo "${TARGET_INSTALL_PATH}" | cut -d"~" -f2)
@@ -558,11 +557,6 @@ install_package() {
   if [ $(id -u) -eq 0 ]; then
     chown -R "root":"root" "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script" 2>/dev/null
     chown "root":"root" "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}" 2>/dev/null
-    chmod -R 555 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script" 2>/dev/null
-    chmod 444 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script/filelist.csv" 2>/dev/null
-  else
-    chmod -R 550 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script" 2>/dev/null
-    chmod 440 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script/filelist.csv" 2>/dev/null
   fi
   comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
 }
