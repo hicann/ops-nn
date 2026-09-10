@@ -30,9 +30,10 @@ constexpr uint32_t INVALID_GROUP_ITER = ~0u;
 // EVT_MTE2_DONE and EVT_BATCH_BUF0 deliberately reuse event id 2. The weight/bias
 // completion event is always consumed before batch-buffer events are issued, so
 // their lifetimes do not overlap.
-static constexpr event_t EVT_MTE2_DONE = static_cast<event_t>(2);
-static constexpr event_t EVT_BATCH_BUF0 = static_cast<event_t>(3);
-static constexpr event_t EVT_BATCH_BUF1 = static_cast<event_t>(4);
+constexpr event_t EVT_MTE2_DONE = static_cast<event_t>(2);
+constexpr event_t EVT_BATCH_BUF0 = static_cast<event_t>(3);
+constexpr event_t EVT_BATCH_BUF1 = static_cast<event_t>(4);
+constexpr event_t EVT_BIAS_DONE = static_cast<event_t>(5);
 
 template <typename ChannelWiseT>
 __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT>& tensorL1,
@@ -88,7 +89,7 @@ protected:
     __aicore__ inline void ComputeHiPadRange(uint32_t hiStart, uint32_t hiEnd);
     __aicore__ inline void MmadAccumulateTile(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
                                               LocalTensor<L0cT>& cl0, uint32_t curMAlign, uint32_t mmadN,
-                                              uint32_t kL0MaxIter);
+                                              uint32_t kL0MaxIter, bool& needLoadBias);
     __aicore__ inline void InitMmadParams(MmadParams& mp, uint32_t m, uint32_t n);
     __aicore__ inline void CopyOutResult(LocalTensor<L0cT>& cl0, GM_ADDR y, const ExtendParams* extendParams,
                                          uint32_t outOff, uint32_t fpMSize, uint32_t curMAlign, uint32_t fpDnNum,
@@ -97,10 +98,11 @@ protected:
     __aicore__ inline uint32_t CalcActualCoForGroupIter(uint32_t groupIter);
     __aicore__ inline void ProcessHwMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                          uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
-                                         const ExtendParams* extendParams);
+                                         const ExtendParams* extendParams, GM_ADDR bias, bool& needLoadBias);
     __aicore__ inline void ProcessMModeBatch(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t curMmadN,
                                              uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
-                                             const ExtendParams* extendParams);
+                                             const ExtendParams* extendParams, GM_ADDR bias, uint32_t groupIter,
+                                             bool& needLoadBias);
     __aicore__ inline void ProcessMMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                         uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
                                         const ExtendParams* extendParams, GM_ADDR x, GM_ADDR filter, GM_ADDR bias);
@@ -399,7 +401,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                                   LocalTensor<WeightT>& bl1,
                                                                                   LocalTensor<L0cT>& cl0,
                                                                                   uint32_t curMAlign, uint32_t mmadN,
-                                                                                  uint32_t kL0MaxIter)
+                                                                                  uint32_t kL0MaxIter,
+                                                                                  bool& needLoadBias)
 {
     MmadParams mp;
     InitMmadParams(mp, curMAlign, mmadN);
@@ -423,6 +426,13 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
         DoLoadAL0(al1, al0, kOff, curKAL0);
         DoLoadBL0(bl0, bl1, kOff, curK);
+        if (needLoadBias) {
+            if (tiling_->hasBias) {
+                WaitFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
+                LoadBiasToBT();
+            }
+            needLoadBias = false;
+        }
         SetFlag<HardEvent::MTE1_M>(ev);
         WaitFlag<HardEvent::MTE1_M>(ev);
 
@@ -902,6 +912,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     if (tiling_->hasBias && actualCo_ > 0) {
         LocalTensor<BiasT> biasL1(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
         LoadChannelWiseL1FullLoad<BiasT>(biasL1, biasGm[0], actualCo_);
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
     }
     {
         if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
@@ -958,6 +969,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     if (tiling_->hasBias && actualCo_ > 0) {
         LocalTensor<BiasT> biasL1(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
         LoadChannelWiseL1FullLoad<BiasT>(biasL1, biasGm[0], actualCo_);
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
     }
     if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0) + bsOff);
@@ -1269,7 +1281,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                              LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                                                              uint32_t kL0MaxIter, uint64_t hwOut,
                                                                              GM_ADDR y,
-                                                                             const ExtendParams* extendParams)
+                                                                             const ExtendParams* extendParams,
+                                                                             GM_ADDR bias, bool& needLoadBias)
 {
     // Stage 3 (HW-mode): Ho/Wo-chunk loop -> K-loop -> Fixpipe.
     bool needRowSplit = (actualWo_ < static_cast<uint32_t>(tiling_->wout));
@@ -1296,7 +1309,12 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 #endif
 
             LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
-            MmadAccumulateTile(al1, bl1, cl0, curMAlign, mmadN, kL0MaxIter);
+            if (needLoadBias) {
+                LoadBiasScaleL1(bias, extendParams);
+                SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+                WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            }
+            MmadAccumulateTile(al1, bl1, cl0, curMAlign, mmadN, kL0MaxIter, needLoadBias);
 
             uint32_t outOff = (hoIdxStart_ + hoOff) * static_cast<uint32_t>(tiling_->wout) + woIdxStart_ + woOff;
             uint32_t fpMSize = needRowSplit ? curWo : curM;
@@ -1314,7 +1332,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                                  LocalTensor<WeightT>& bl1,
                                                                                  uint32_t curMmadN, uint32_t kL0MaxIter,
                                                                                  uint64_t hwOut, GM_ADDR y,
-                                                                                 const ExtendParams* extendParams)
+                                                                                 const ExtendParams* extendParams,
+                                                                                 GM_ADDR bias, uint32_t groupIter,
+                                                                                 bool& needLoadBias)
 {
     for (uint32_t mOff = 0; mOff < actualM_; mOff += hoL0_) {
         uint32_t curM = hoL0_;
@@ -1332,8 +1352,13 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
 #endif
 
+        if (needLoadBias) {
+            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        }
         LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
-        MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter);
+        MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter, needLoadBias);
 
         CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
     }
@@ -1351,6 +1376,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     // Stage 3 (M-mode): group-axis loop -> M-loop -> K-loop -> Fixpipe.
     // Each group iteration reloads fmap/weight/bias for one group (ORI) or one
     // packed fweight (OPT) and runs a full M->K->Fixpipe pass.
+    bool needLoadBias = true;
     for (uint32_t groupIter = 0; groupIter < singleGroupIter_; groupIter++) {
         uint32_t curActualCo = CalcActualCoForGroupIter(groupIter);
         if (curActualCo == INVALID_GROUP_ITER) {
@@ -1361,34 +1387,22 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                            static_cast<uint64_t>(groupCoutStep_);
 
         if (singleCoreBatch_ <= 1) {
-            // Stage 1: Load fmap/weight/bias for this group iteration.
+            // Stage 1: Load fmap/weight for this group iteration.
             LoadFmapL1MModeForGroup(al1, x, groupIter);
             LoadWeightL1ForGroup(filter, groupIter);
-            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
-            // Stage 2: Setup Load3D invariant + bias->BT once per group iteration.
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
+            // Stage 2: Setup Load3D invariant once per group iteration.
             SetupLoad3DBase();
 
             uint32_t curMmadN = AlignB(curActualCo, GN0);
-            ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+            ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams, bias, groupIter, needLoadBias);
         } else if (!enableBatchDoubleBuffer_) {
             LoadWeightL1ForGroup(filter, groupIter);
-            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
             SetupLoad3DBase();
 
             uint32_t curMmadN = AlignB(curActualCo, GN0);
@@ -1398,7 +1412,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
 
-                ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+                ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams, bias, groupIter,
+                                  needLoadBias);
                 if (innerBatchIter_ + 1 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
@@ -1406,15 +1421,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             }
         } else {
             LoadWeightL1ForGroup(filter, groupIter);
-            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
             SetupLoad3DBase();
 
             uint32_t curMmadN = AlignB(curActualCo, GN0);
@@ -1443,7 +1452,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
 
                 LocalTensor<FmapT> al1Cur(TPosition::A1, curBuf * al1BufBytes_, al1ElemPerBuf_);
-                ProcessMModeBatch(al1Cur, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+                ProcessMModeBatch(al1Cur, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams, bias, groupIter,
+                                  needLoadBias);
                 if (innerBatchIter_ + 2 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
@@ -1452,6 +1462,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
         SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+        needLoadBias = true;
     }
 }
 
@@ -1476,28 +1487,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     if constexpr (IsHwMode) {
         if (singleCoreBatch_ <= 1) {
             // HW-mode: groups==1, load once outside the loop.
+            bool needLoadBias = true;
             LoadFmapL1(x);
             LoadWeightL1(filter);
-            LoadBiasScaleL1(bias, extendParams);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
             SetupLoad3DBase();
-            ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
+            ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, bias, needLoadBias);
         } else if (!enableBatchDoubleBuffer_) {
+            bool needLoadBias = true;
             LoadWeightL1(filter);
-            LoadBiasScaleL1(bias, extendParams);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
             SetupLoad3DBase();
 
             for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
@@ -1506,22 +1507,17 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
 
-                ProcessHwMode(al1, bl1, AlignB(actualCo_, GN0), kL0MaxIter, hwOut, y, extendParams);
+                ProcessHwMode(al1, bl1, AlignB(actualCo_, GN0), kL0MaxIter, hwOut, y, extendParams, bias, needLoadBias);
                 if (innerBatchIter_ + 1 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                 }
             }
         } else {
+            bool needLoadBias = true;
             LoadWeightL1(filter);
-            LoadBiasScaleL1(bias, extendParams);
-            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
             SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
             WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-            if (tiling_->hasBias) {
-                LoadBiasToBT();
-            }
             SetupLoad3DBase();
 
             innerBatchIter_ = 0;
@@ -1544,7 +1540,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 curBatchIdx_ = batchStart_ + innerBatchIter_;
 
                 LocalTensor<FmapT> al1Cur(TPosition::A1, curBuf * al1BufBytes_, al1ElemPerBuf_);
-                ProcessHwMode(al1Cur, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
+                ProcessHwMode(al1Cur, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, bias, needLoadBias);
                 if (innerBatchIter_ + 2 < singleCoreBatch_) {
                     SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                 }
