@@ -53,7 +53,7 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPoolWithArgmaxV3, MaxPoolWithArgmaxV3TilingData);
 
-struct InputInfo {
+struct MaxPoolWithArgmaxV3InputInfo {
     uint64_t batches;
     array<uint64_t, HW_DIMS> inputShape;
     array<uint64_t, HW_DIMS> outShape;
@@ -90,7 +90,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
 public:
-    InputInfo inputData;
+    MaxPoolWithArgmaxV3InputInfo inputData;
     ge::DataType dtype = ge::DataType::DT_FLOAT;
     uint32_t coreNum = 1;
     uint32_t ubSize = 0;

@@ -20,15 +20,16 @@
 #include "pool_utils/arch35/data_move/pool_2d_nhwc_small_kernel_data_move.h"
 #include "pool_utils/arch35/index/pool_2d_nhwc_small_kernel_index.h"
 #include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
+#include "pool_utils/arch35/kernel/pool_2d_small_kernel_base.h"
 
 namespace MaxPoolV3 {
 using namespace AscendC;
 
 template <typename T>
-class MaxPoolV3NHWCSmallKernel {
+class MaxPoolV3NHWCSmallKernel : public PoolUtils::Kernel::Pool2DSmallKernelIoBase {
 public:
     __aicore__ inline MaxPoolV3NHWCSmallKernel(TPipe* pipe, const MaxPoolV3NHWCSmallKernelTilingData* __restrict tiling)
-        : pipe_(pipe), tilingData_(tiling){};
+        : PoolUtils::Kernel::Pool2DSmallKernelIoBase(pipe), tilingData_(tiling){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
 
@@ -49,12 +50,6 @@ private:
                                                  int64_t alignChannels);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
-    TPipe* pipe_;
-    // 输入队列
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
-    // 输出ub
-    TQue<QuePosition::VECOUT, BUFFER_NUM> maxUBOutput_;
-    TBuf<QuePosition::VECCALC> indexBuf_;
     GlobalTensor<T> xGm_;
     GlobalTensor<T> maxGm_;
     const MaxPoolV3NHWCSmallKernelTilingData* tilingData_;
@@ -69,13 +64,7 @@ private:
 template <typename T>
 __aicore__ inline void MaxPoolV3NHWCSmallKernel<T>::Init(GM_ADDR x, GM_ADDR y)
 {
-    // GM
-    xGm_.SetGlobalBuffer((__gm__ T*)x);
-    maxGm_.SetGlobalBuffer((__gm__ T*)y);
-
-    pipe_->InitBuffer(inputQue_, BUFFER_NUM, tilingData_->inUbSize * sizeof(T));
-    pipe_->InitBuffer(maxUBOutput_, BUFFER_NUM, tilingData_->outUbSize * sizeof(T));
-    pipe_->InitBuffer(indexBuf_, INDEX_SIZE);
+    InitIo<T>(x, y, xGm_, maxGm_, tilingData_, INDEX_SIZE);
 }
 
 template <typename T>

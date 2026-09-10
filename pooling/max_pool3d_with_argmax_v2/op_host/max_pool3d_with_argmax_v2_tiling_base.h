@@ -347,7 +347,7 @@ REGISTER_TILING_DATA_CLASS(MaxPool3DWithArgmaxV2_311112, MaxPool3DWithArgmaxV2Bi
 REGISTER_TILING_DATA_CLASS(MaxPool3DWithArgmaxV2_300001, MaxPool3DWithArgmaxV2NoExpandIndicesTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3DWithArgmaxV2_300002, MaxPool3DWithArgmaxV2NoExpandIndicesTilingData);
 
-struct InputInfo {
+struct MaxPool3DWithArgmaxV2InputInfo {
     uint64_t batches;
     array<uint64_t, DHW_DIMS> inputShape;
     array<uint64_t, DHW_DIMS> outShape;
@@ -526,7 +526,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
 public:
-    InputInfo inputData;
+    MaxPool3DWithArgmaxV2InputInfo inputData;
     ge::DataType dtype = ge::DataType::DT_FLOAT;
     uint64_t coreNum = 1;
     uint64_t ubSize = 0;

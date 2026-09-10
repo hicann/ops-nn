@@ -84,7 +84,7 @@ struct CommonComputeInfo {
     uint64_t resQue2Size{0};
 };
 
-struct BaseInput {
+struct AdaptivePool2dBaseInput {
     uint64_t coreNum{0};
     uint64_t ubSize{0};
     ge::DataType xDtype{ge::DT_FLOAT};
@@ -108,7 +108,7 @@ public:
     explicit AdaptivePool2dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
     ~AdaptivePool2dBaseTiling() override {}
 
-    BaseInput input_;
+    AdaptivePool2dBaseInput input_;
     std::string nodeName = "";
 
 protected:
@@ -327,7 +327,7 @@ protected:
 };
 
 template <typename TilingDataT>
-ge::graphStatus FillCommonTilingData(gert::TilingContext* context, const BaseInput& input,
+ge::graphStatus FillCommonTilingData(gert::TilingContext* context, const AdaptivePool2dBaseInput& input,
                                      const CommonComputeInfo& computeInfo)
 {
     TilingDataT* tilingData = context->GetTilingData<TilingDataT>();
@@ -352,7 +352,7 @@ ge::graphStatus FillCommonTilingData(gert::TilingContext* context, const BaseInp
     return ge::GRAPH_SUCCESS;
 }
 
-inline void PrintCommonTilingData(gert::TilingContext* context, const BaseInput& input,
+inline void PrintCommonTilingData(gert::TilingContext* context, const AdaptivePool2dBaseInput& input,
                                   const CommonComputeInfo& computeInfo)
 {
     std::ostringstream info;

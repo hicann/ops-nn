@@ -19,18 +19,11 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
+#include "../../../op_host/arch35/max_pool_grad_tiling.h"
 
 using namespace ut_util;
 using namespace std;
 using namespace ge;
-
-namespace optiling {
-struct MaxPoolGradWithArgmaxCompileInfo {
-    platform_ascendc::SocVersion socVersion;
-    uint64_t coreNum;
-    uint64_t ubSize;
-};
-} // namespace optiling
 
 class MaxPoolGradTiling : public testing::Test {
 protected:

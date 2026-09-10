@@ -45,7 +45,7 @@ struct AdaptiveMaxPool2dCompileInfo {
     size_t sysWorkspaceSize = 0;
 };
 
-struct InputInfo {
+struct AdaptiveMaxPool2dInputInfo {
     uint64_t coreNum{0};
     uint64_t ubSizePlatForm{0};
     ge::DataType xDtype{ge::DT_FLOAT};
@@ -58,7 +58,7 @@ struct InputInfo {
     uint64_t Wo{0};
 };
 
-struct CalculateInfo {
+struct AdaptiveMaxPool2dCalculateInfo {
     uint64_t useCoreNum{0};
     uint64_t totalIdx{0};
     uint64_t blockFactor{0};
@@ -125,8 +125,8 @@ protected:
 public:
     ge::DataType dtype = ge::DataType::DT_FLOAT;
     size_t sysWorkspaceSize_ = 0;
-    InputInfo input_;
-    CalculateInfo calInfo_;
+    AdaptiveMaxPool2dInputInfo input_;
+    AdaptiveMaxPool2dCalculateInfo calInfo_;
 };
 } // namespace optiling
 

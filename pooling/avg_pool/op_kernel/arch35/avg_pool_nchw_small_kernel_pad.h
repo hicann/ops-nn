@@ -22,6 +22,7 @@
 #include "pool_utils/arch35/data_move/pool_2d_nchw_small_kernel_data_move.h"
 #include "pool_utils/arch35/index/pool_2d_nchw_small_kernel_index.h"
 #include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
+#include "pool_utils/arch35/data_move/pool_ub_strided_copy.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -166,8 +167,9 @@ __aicore__ inline void AvgPoolNCHWSmallPadKernel<T, OUT_DIV>::CopyAndPad(LocalTe
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
-            CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, srcColStride, oneChannelElements, dstColStride,
-                       rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+            PoolUtils::DataMove::CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, srcColStride, oneChannelElements,
+                                            dstColStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
+                                            tailPreCols, repeatElm);
         }
     } else if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
         uint32_t srcBatchStride = Ops::Base::CeilAlign(static_cast<uint32_t>(realRows * realCols), elemNum);

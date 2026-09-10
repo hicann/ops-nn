@@ -54,8 +54,6 @@ private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <int32_t SPLIT_MODE>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t rows, int64_t cols, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRowsContiguous(int64_t offset, int64_t rows, int64_t cols);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
     __aicore__ inline void CopyOutSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset);
@@ -195,60 +193,6 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::BaseCompute(int64_t beginIdx, 
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInMultiRows(int64_t offset, int64_t rows, int64_t cols,
-                                                                  int64_t blockLen)
-{
-    if (tilingData_->channel * sizeof(T) <= GATHER_THRES) {
-        CopyInMultiRowsContiguous(offset, rows, cols * tilingData_->channel);
-    } else {
-        LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-        LoopModeParams loopParams;
-        loopParams.loop2Size = 1;
-        loopParams.loop1Size = rows;
-        loopParams.loop2SrcStride = 0;
-        loopParams.loop2DstStride = 0;
-        loopParams.loop1SrcStride = tilingData_->wInDim * tilingData_->channel * sizeof(T);
-        loopParams.loop1DstStride = cols * channelAlign_ * sizeof(T);
-        SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
-        DataCopyPadExtParams<T> padExtParams;
-        padExtParams.isPad = false;
-        padExtParams.leftPadding = 0;
-        padExtParams.rightPadding = 0;
-        padExtParams.paddingValue = 0;
-
-        DataCopyExtParams extParams;
-        extParams.blockCount = cols;
-        extParams.blockLen = blockLen * sizeof(T);
-        extParams.srcStride = 0;
-        extParams.dstStride = 0;
-        DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-        inputQue_.EnQue(xLocal);
-    }
-}
-
-template <typename T>
-__aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyInMultiRowsContiguous(int64_t offset, int64_t rows, int64_t cols)
-{
-    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-
-    DataCopyPadExtParams<T> padExtParams;
-    padExtParams.isPad = false;
-    padExtParams.leftPadding = 0;
-    padExtParams.rightPadding = 0;
-    padExtParams.paddingValue = 0;
-
-    DataCopyExtParams extParams;
-    extParams.blockCount = rows;
-    extParams.blockLen = cols * sizeof(T);
-    extParams.srcStride = (tilingData_->wInDim * tilingData_->channel - cols) * sizeof(T);
-    extParams.dstStride = 0;
-    DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-
-    inputQue_.EnQue(xLocal);
-}
-
-template <typename T>
 __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::CopyOutSingleRow(int64_t offset, int64_t blockLen)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
@@ -277,7 +221,9 @@ template <typename T>
 __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH,
                                                                        int64_t curkW, int64_t curInOffset)
 {
-    CopyInMultiRows(curInOffset, curkH, curkW, tilingData_->channel);
+    PoolUtils::DataMove::BigKernel::CopyInMultiRowsNhwc(inputQue_, xGm_, curInOffset, curkH, curkW,
+                                                        tilingData_->channel, tilingData_->channel, tilingData_->wInDim,
+                                                        channelAlign_);
     ComputeSingle<false>(localCurIdx, curkW * curkH, tilingData_->channel);
 }
 
@@ -296,7 +242,9 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelHProcess(int32_t lo
 
     for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
         int32_t curhFactor = hLoop == hLoops - 1 ? hTail : hFactor;
-        CopyInMultiRows(inputOffset, curhFactor, curkW, tilingData_->channel);
+        PoolUtils::DataMove::BigKernel::CopyInMultiRowsNhwc(inputQue_, xGm_, inputOffset, curhFactor, curkW,
+                                                            tilingData_->channel, tilingData_->channel,
+                                                            tilingData_->wInDim, channelAlign_);
         ComputeSingle<true>(localCurIdx, curkW * curhFactor, tilingData_->channel);
         inputOffset += curhFactor * tilingData_->wInDim * tilingData_->channel;
     }
@@ -316,7 +264,9 @@ __aicore__ inline void MaxPoolV3NHWCBigKernel<T>::SplitKernelWProcess(int32_t lo
         int64_t inputOffset = curInOffset + hLoop * tilingData_->wInDim * tilingData_->channel;
         for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
             int32_t curFactor = wLoop == wLoops - 1 ? wTail : wFactor;
-            CopyInMultiRows(inputOffset, 1, curFactor, tilingData_->channel);
+            PoolUtils::DataMove::BigKernel::CopyInMultiRowsNhwc(inputQue_, xGm_, inputOffset, 1, curFactor,
+                                                                tilingData_->channel, tilingData_->channel,
+                                                                tilingData_->wInDim, channelAlign_);
             ComputeSingle<true>(localCurIdx, curFactor, tilingData_->channel);
             inputOffset += curFactor * tilingData_->channel;
         }

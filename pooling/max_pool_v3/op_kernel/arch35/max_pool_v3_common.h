@@ -195,33 +195,6 @@ __aicore__ inline void CustomDuplicate(__ubuf__ T* dstAddr, uint32_t calNum, uin
     }
 }
 
-template <typename T>
-__aicore__ inline void CustomCopy(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr, uint32_t srcBatchStride,
-                                  uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride,
-                                  uint32_t dstRowOffset, uint32_t dstColOffset, uint16_t batch, uint16_t rows,
-                                  uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm)
-{
-    using RegDstT = typename std::conditional<sizeof(T) == B64, Reg::RegTensor<T, Reg::RegTraitNumTwo>,
-                                              Reg::RegTensor<T>>::type;
-    RegDstT v0;
-    Reg::UnalignRegForStore u0;
-
-    for (uint16_t i = 0; i < batch; i++) {
-        for (uint16_t j = 0; j < rows; j++) {
-            __ubuf__ T* curSrcAddr = (__ubuf__ T*)srcAddr + i * srcBatchStride + j * srcRowStride;
-            __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride +
-                                     dstColOffset;
-            for (uint16_t k = 0; k < loopCols; k++) {
-                Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                Reg::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
-            }
-            Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            Reg::StoreUnAlign(curDstAddr, v0, u0, tailCols);
-            Reg::StoreUnAlignPost(curDstAddr, u0, 0);
-        }
-    }
-}
-
 template <typename T, typename U>
 __aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
                                                     uint16_t srcBatchStride, uint16_t srcRowStride,

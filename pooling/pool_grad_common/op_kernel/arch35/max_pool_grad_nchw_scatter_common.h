@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "max_pool_grad_with_argmax_base_common.h"
+#include "max_pool_grad_nchw_fields_common.h"
 #include "../pool_3d_common/arch35/pool_3d_common.h"
 #include "pool_utils/arch35/compute/pool_fast_div.h"
 #include "pool_utils/arch35/index/pool_grad_nchw_scatter_index.h"
@@ -39,7 +40,7 @@ using PoolUtils::Index::IndexConvNchw;
 using PoolUtils::Index::IndexConvNchwFastDiv;
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0>
-class MaxPoolGradKernelNCHWBase {
+class MaxPoolGradKernelNCHWBase : protected MaxPoolGradNCHWCommonNameSpace::MaxPoolGradNchwCommonFields {
 public:
     __aicore__ inline MaxPoolGradKernelNCHWBase(void){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
@@ -71,69 +72,6 @@ public:
     GlobalTensor<T1> yGm_;
     GlobalTensor<T2> argmaxGm_;
 
-    uint32_t blockIdx_ = 0;
-
-    int64_t hArgmax_ = 1;
-    int64_t wArgmax_ = 1;
-
-    int64_t hOutput_ = 1;
-    int64_t wOutput_ = 1;
-
-    int64_t kernelH_ = 1;
-    int64_t kernelW_ = 1;
-
-    int64_t strideH_ = 1;
-    int64_t strideW_ = 1;
-
-    int64_t padH_ = 0;
-    int64_t padW_ = 0;
-
-    int64_t dilationH_ = 1;
-    int64_t dilationW_ = 1;
-
-    int64_t highAxisInner_ = 1;
-    int64_t highAxisTail_ = 1;
-    int64_t highAxisOuter_ = 1;
-    int64_t highAxisActual_ = 1;
-
-    int64_t hOutputInner_ = 1;
-    int64_t hOutputTail_ = 1;
-    int64_t hOutputOuter_ = 1;
-    int64_t hOutputActual_ = 1;
-
-    int64_t wOutputInner_ = 1;
-    int64_t wOutputTail_ = 1;
-    int64_t wOutputOuter_ = 1;
-    int64_t wOutputActual_ = 1;
-    int64_t wOutputAligned_ = 1;
-
-    int64_t normalCoreProcessNum_ = 1;
-    int64_t tailCoreProcessNum_ = 1;
-    int64_t curCoreProcessNum_ = 1;
-    int64_t usedCoreNum_ = 1;
-
-    int64_t outputBufferSize_ = 1;
-    int64_t gradBufferSize_ = 1;
-    int64_t argmaxBufferSize_ = 1;
-
-    int64_t highAxisIndex_ = 0;
-    int64_t hAxisIndex_ = 0;
-    int64_t wAxisIndex_ = 0;
-
-    int64_t hArgmaxActual_ = 0;
-    int64_t wArgmaxActual_ = 0;
-    int64_t wArgmaxAligned_ = 0;
-
-    int64_t highAxisArgmaxOffset_ = 0;
-    int64_t hAxisArgmaxOffset_ = 0;
-    int64_t wAxisArgmaxOffset_ = 0;
-
-    int64_t argmaxPlaneSize_ = 1;
-
-    int64_t hProBatchSize_ = 1;
-    int64_t wProBatchSize_ = 1;
-    int64_t curHProBatchSize_ = 1;
-    int64_t curWProBatchSize_ = 1;
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
 

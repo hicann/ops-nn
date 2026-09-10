@@ -23,6 +23,7 @@
 #include "pool_utils/arch35/data_move/pool_2d_nhwc_small_kernel_data_move.h"
 #include "pool_utils/arch35/index/pool_2d_nhwc_small_kernel_index.h"
 #include "pool_utils/arch35/data_move/pool_2d_row_data_move.h"
+#include "pool_utils/arch35/data_move/pool_ub_strided_copy.h"
 
 namespace AvgPool {
 using namespace AscendC;
@@ -270,8 +271,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
-            CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
-                       colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+            PoolUtils::DataMove::CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements,
+                                            colStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
+                                            tailPreCols, repeatElm);
         }
     } else if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
         uint32_t srcBatchStride = realRows * realCols * channels;
@@ -627,8 +629,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::MultiChannelCopyAn
     {
         CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_STORE>();
-        CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb,
-                   colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+        PoolUtils::DataMove::CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements,
+                                        dstColStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
+                                        tailPreCols, repeatElm);
     }
 }
 

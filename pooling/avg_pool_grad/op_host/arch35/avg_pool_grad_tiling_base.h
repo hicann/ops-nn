@@ -31,14 +31,6 @@ struct AvgPoolGradCompileInfo {
     uint64_t ubSize;
 };
 
-struct AvgPoolGradCommon {
-    int64_t nDim;
-    int64_t cDim;
-    int64_t hDim;
-    int64_t wDim;
-    std::string padModeStr;
-};
-
 ge::graphStatus Tiling4AvgPoolGrad(gert::TilingContext* context);
 
 ge::graphStatus TilingPrepare4AvgPoolGrad(gert::TilingParseContext* context);

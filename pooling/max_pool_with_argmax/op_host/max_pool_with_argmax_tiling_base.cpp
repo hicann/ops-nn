@@ -48,7 +48,8 @@ static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
     return inShape;
 }
 
-static ge::graphStatus CheckOutPutShapeForValid(gert::TilingContext* context, const InputInfo& inputData)
+static ge::graphStatus CheckOutPutShapeForValid(gert::TilingContext* context,
+                                                const MaxPoolWithArgmaxInputInfo& inputData)
 {
     int64_t expectedH = (inputData.inputShape[H_DIM] - inputData.kernelSize[H_DIM] + inputData.stride[H_DIM]) /
                         inputData.stride[H_DIM];
@@ -69,7 +70,8 @@ static ge::graphStatus CheckOutPutShapeForValid(gert::TilingContext* context, co
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckOutPutShapeForSame(gert::TilingContext* context, const InputInfo& inputData)
+static ge::graphStatus CheckOutPutShapeForSame(gert::TilingContext* context,
+                                               const MaxPoolWithArgmaxInputInfo& inputData)
 {
     int64_t expectedH = (inputData.inputShape[H_DIM] + inputData.stride[H_DIM] - 1) / inputData.stride[H_DIM];
     int64_t expectedW = (inputData.inputShape[W_DIM] + inputData.stride[W_DIM] - 1) / inputData.stride[W_DIM];
@@ -88,7 +90,7 @@ static ge::graphStatus CheckOutPutShapeForSame(gert::TilingContext* context, con
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckOutPutShape(gert::TilingContext* context, const InputInfo& inputData,
+static ge::graphStatus CheckOutPutShape(gert::TilingContext* context, const MaxPoolWithArgmaxInputInfo& inputData,
                                         const string& padModeStr)
 {
     if (padModeStr == "VALID") {

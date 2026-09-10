@@ -90,7 +90,7 @@ REGISTER_TILING_DATA_CLASS(AdaptiveMaxPool3d_310000, AdaptiveMaxPool3dBigPoolTil
 REGISTER_TILING_DATA_CLASS(AdaptiveMaxPool3d_311000, AdaptiveMaxPool3dBigPoolTilingData);
 REGISTER_TILING_DATA_CLASS(AdaptiveMaxPool3d_312000, AdaptiveMaxPool3dBigPoolTilingData);
 
-struct InputInfo {
+struct AdaptiveMaxPool3dInputInfo {
     uint64_t coreNum{0};
     uint64_t ubSizePlatForm{0};
     ge::DataType xDtype{ge::DT_FLOAT};
@@ -104,7 +104,7 @@ struct InputInfo {
     uint64_t Wo{0};
 };
 
-struct CalculateInfo {
+struct AdaptiveMaxPool3dCalculateInfo {
     uint64_t useCoreNum{0};
     uint64_t totalIdx{0};
     uint64_t blockFactor{0};
@@ -135,8 +135,8 @@ class AdaptiveMaxPool3dTilingBase : public TilingBaseClass {
 public:
     explicit AdaptiveMaxPool3dTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
     ~AdaptiveMaxPool3dTilingBase() override {}
-    InputInfo input_;
-    CalculateInfo calInfo_;
+    AdaptiveMaxPool3dInputInfo input_;
+    AdaptiveMaxPool3dCalculateInfo calInfo_;
 
 protected:
     bool IsCapable() override;

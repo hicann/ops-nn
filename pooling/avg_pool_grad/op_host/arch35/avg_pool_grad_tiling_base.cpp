@@ -29,14 +29,9 @@ static const int32_t STRIDE_POS = 1;
 static const int32_t PADDING_POS = 2;
 static const int32_t FORMAT_POS = 3;
 
-static const int32_t AVG_POOL_GRAD_DIM_ZERO = 0;
-static const int32_t AVG_POOL_GRAD_DIM_ONE = 1;
-static const int32_t AVG_POOL_GRAD_DIM_TWO = 2;
-static const int32_t AVG_POOL_GRAD_DIM_THREE = 3;
 static const int32_t INDEX_GRAD = 1;
 
 static const int32_t ONE = 1;
-static const int32_t TWO = 2;
 constexpr size_t ORIG_INPUT_SHAPE_INDEX = 0;
 
 static bool IsInvalidType(const DataType dtype)
@@ -61,22 +56,12 @@ static inline bool IsGreaterThanInt32Max(const AvgPoolV2GradInputInfo& inputData
 }
 
 static ge::graphStatus GetPadInfo(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData,
-                                  const AvgPoolGradCommon& commInfo)
+                                  const AvgPoolV2GradCommon& commInfo)
 {
     if (commInfo.padModeStr == "VALID") {
         inputData.pad = {0, 0, 0, 0}; // top, bottom, left, right
     } else if (commInfo.padModeStr == "SAME") {
-        int64_t hPadNeed = std::max(int64_t{0}, (inputData.gradShape[H_DIM] - 1) * inputData.stride[H_DIM] +
-                                                    inputData.kernelSize[H_DIM] - inputData.inputShape[H_DIM]);
-        int64_t topPad = hPadNeed / TWO;
-        int64_t bottomPad = hPadNeed - topPad;
-
-        int64_t wPadNeed = std::max(int64_t{0}, (inputData.gradShape[W_DIM] - 1) * inputData.stride[W_DIM] +
-                                                    inputData.kernelSize[W_DIM] - inputData.inputShape[W_DIM]);
-        int64_t leftPad = wPadNeed / TWO;
-        int64_t rightPad = wPadNeed - leftPad;
-
-        inputData.pad = {topPad, bottomPad, leftPad, rightPad};
+        CalcAvgPoolGradSamePad(inputData);
     } else {
         OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding", commInfo.padModeStr.c_str(), "SAME or VALID");
         return ge::GRAPH_FAILED;
@@ -85,7 +70,7 @@ static ge::graphStatus GetPadInfo(gert::TilingContext* context, AvgPoolV2GradInp
 }
 
 static ge::graphStatus GetStrideInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
-                                     AvgPoolV2GradInputInfo& inputData, const AvgPoolGradCommon& commInfo)
+                                     AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
     auto stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, stride);
@@ -118,7 +103,7 @@ static ge::graphStatus GetStrideInfo(gert::TilingContext* context, const gert::R
 }
 
 static ge::graphStatus GetKernelKsizeInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
-                                          AvgPoolV2GradInputInfo& inputData, const AvgPoolGradCommon& commInfo)
+                                          AvgPoolV2GradInputInfo& inputData, const AvgPoolV2GradCommon& commInfo)
 {
     auto kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, kernelSize);
@@ -194,50 +179,8 @@ ge::graphStatus GetFormat(gert::TilingContext* context, const gert::RuntimeAttrs
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CalculateShapeInfo(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData,
-                                   AvgPoolGradCommon& commInfo, const int32_t* shapeValue)
-{
-    auto inputShape0 = context->GetInputShape(0);
-    auto shapeDim = inputShape0->GetStorageShape().GetDim(0);
-    if (inputData.inputFormat == ge::Format::FORMAT_NCHW) {
-        if (shapeDim == CHW_DIMS) {
-            commInfo.cDim = AVG_POOL_GRAD_DIM_ZERO;
-            commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
-            commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
-            inputData.batches = shapeValue[commInfo.cDim];
-        } else {
-            commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
-            commInfo.cDim = AVG_POOL_GRAD_DIM_ONE;
-            commInfo.hDim = AVG_POOL_GRAD_DIM_TWO;
-            commInfo.wDim = AVG_POOL_GRAD_DIM_THREE;
-            inputData.batches = shapeValue[commInfo.nDim] * shapeValue[commInfo.cDim];
-        }
-        inputData.channels = ONE;
-    } else if (inputData.inputFormat == ge::Format::FORMAT_NHWC) {
-        if (shapeDim == CHW_DIMS) {
-            commInfo.cDim = AVG_POOL_GRAD_DIM_TWO;
-            commInfo.hDim = AVG_POOL_GRAD_DIM_ZERO;
-            commInfo.wDim = AVG_POOL_GRAD_DIM_ONE;
-            inputData.batches = ONE;
-        } else {
-            commInfo.nDim = AVG_POOL_GRAD_DIM_ZERO;
-            commInfo.cDim = AVG_POOL_GRAD_DIM_THREE;
-            commInfo.hDim = AVG_POOL_GRAD_DIM_ONE;
-            commInfo.wDim = AVG_POOL_GRAD_DIM_TWO;
-            inputData.batches = shapeValue[commInfo.nDim];
-        }
-        inputData.channels = shapeValue[commInfo.cDim];
-    } else {
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "data_format",
-                                  Ops::Base::ToString(inputData.inputFormat).c_str(), "NCHW or NHWC");
-        return ge::GRAPH_FAILED;
-    }
-    inputData.inputShape = {shapeValue[commInfo.hDim], shapeValue[commInfo.wDim]};
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus CheckDimConsistency(gert::TilingContext* context, const int32_t* shapeValue,
-                                    const AvgPoolGradCommon& commInfo)
+                                    const AvgPoolV2GradCommon& commInfo)
 {
     auto inputShape0 = context->GetInputShape(0);
     auto shapeDim = inputShape0->GetStorageShape().GetDim(0);
@@ -277,7 +220,7 @@ ge::graphStatus CheckDimConsistency(gert::TilingContext* context, const int32_t*
 }
 
 static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
-                                        AvgPoolV2GradInputInfo& inputData, AvgPoolGradCommon& commInfo)
+                                        AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {
     // 输入值依赖input
     auto inputShape0 = context->GetInputShape(0);
@@ -328,7 +271,7 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert
         return ret;
     }
 
-    ret = CalculateShapeInfo(context, inputData, commInfo, shapeValue);
+    ret = CalcAvgPoolGradShapeInfo(context, inputData, commInfo, shapeValue);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
@@ -344,7 +287,7 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, const gert
 }
 
 static ge::graphStatus GetAttrsInfo(gert::TilingContext* context, const gert::RuntimeAttrs* runtimeAttrs,
-                                    AvgPoolV2GradInputInfo& inputData, AvgPoolGradCommon& commInfo)
+                                    AvgPoolV2GradInputInfo& inputData, AvgPoolV2GradCommon& commInfo)
 {
     const char* padMode = runtimeAttrs->GetAttrPointer<char>(PADDING_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, padMode);
@@ -402,7 +345,7 @@ static ge::graphStatus CheckGradShapeForSame(gert::TilingContext* context, AvgPo
 }
 
 static ge::graphStatus CheckGradShape(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData,
-                                      const AvgPoolGradCommon& commInfo)
+                                      const AvgPoolV2GradCommon& commInfo)
 {
     if (commInfo.padModeStr == "VALID") {
         return CheckGradShapeForValid(context, inputData);
@@ -438,7 +381,7 @@ ge::graphStatus GetAvgPoolGradPlatformInfo(gert::TilingContext* context, uint64_
 ge::graphStatus GetAvgPoolGradShapeAttrsInfo(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData)
 {
     auto runtimeAttrs = context->GetAttrs();
-    AvgPoolGradCommon commInfo;
+    AvgPoolV2GradCommon commInfo;
     OPS_CHECK_NULL_WITH_CONTEXT(context, runtimeAttrs);
 
     ge::graphStatus res = GetAttrsInfo(context, runtimeAttrs, inputData, commInfo);
