@@ -150,8 +150,8 @@ int main()
     aclTensor* self = nullptr;
     aclTensor* mat2 = nullptr;
     aclTensor* out = nullptr;
-    std::vector<uint16_t> selfHostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
-    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
+    std::vector<uint16_t> selfHostData(512, 0x3C00); // float16 的 1.0 用 0x3C00 表示
+    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16 的 1.0 用 0x3C00 表示
     std::vector<uint16_t> outHostData(256, 0);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT16, &self);

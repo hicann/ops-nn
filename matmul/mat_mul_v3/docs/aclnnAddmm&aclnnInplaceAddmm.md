@@ -170,7 +170,7 @@ aclnnStatus aclnnInplaceAddmm(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示矩阵乘的输出矩阵，公式中的out。</td>
+      <td>表示Addmm计算的输出矩阵，公式中的out，即β·self+α·(mat1@mat2)的结果。</td>
       <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -356,7 +356,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>mat1</td>
       <td>输入</td>
       <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul></td>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与mat2的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -366,7 +366,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>

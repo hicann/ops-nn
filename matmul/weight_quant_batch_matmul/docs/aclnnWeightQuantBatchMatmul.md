@@ -461,11 +461,10 @@ int main() {
   std::vector<int32_t> deqOffsetHostData(deqOffsetData, deqOffsetData + deqOffsetSize);
 
   // Get deqScale
-  uint64_t deqScaleSize = mulScaleSize;
-  uint64_t *deqScaleData = (uint64_t *)calloc(deqScaleSize, sizeof(uint64_t));
-  for (int64_t i = 0; i < deqScaleSize; i++) {
-    mulScaleData[i] = mulScaleData[i] * antiquantScale;
-  }
+  uint64_t deqScaleSize = 0;
+  uint64_t *deqScaleData = nullptr;
+  ret = aclnnTransQuantParam(mulScaleData, mulScaleSize, addOffsetData, addOffsetSize, &deqScaleData, &deqScaleSize);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParam failed. ERROR: %d\n", ret); return ret);
   std::vector<uint64_t> deqScaleHostData(deqScaleData, deqScaleData + deqScaleSize);
 
   // create aclTensor

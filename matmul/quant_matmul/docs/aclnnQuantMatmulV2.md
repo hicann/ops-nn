@@ -273,7 +273,7 @@ aclnnStatus aclnnQuantMatmulV2(
 该接口迁移到aclnnQuantMatmulV4接口的方法：
 
 - 输入x1，x2，bias，adjX1和adjX2可以直接转为aclnnQuantMatmulV4接口中的x1，x2，bias，transposeX1和transposeX2。
-- 输入deqScale为UINT64的aclTensor，数据类型与aclnnQuantMatmulV4接口中的scale一致。aclnnQuantMatmulV2接口的deqScale shape是1维（t，），t = align(n, 16)。aclnnQuantMatmulV4接口中的scale shape是1维（t，），t = 1或n。直接将原始FLOAT型量化参数调用aclnnTransQuantParamV2输出数据类型为UINT64且shape为（n，）的aclTensor（参考[aclnnQuantMatmulV4调用示例](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md#调用示例)），记为**scale**，对标aclnnQuantMatmulV4接口中的scale。
+- 输入deqScale为UINT64的aclTensor，数据类型与aclnnQuantMatmulV4接口中的scale一致。aclnnQuantMatmulV2接口的deqScale shape是1维（t，），t = align(n, 16)。aclnnQuantMatmulV4接口中的scale shape是1维（t，），t = 1或n。直接将原始FLOAT型量化参数调用aclnnTransQuantParam输出数据类型为UINT64且shape为（n，）的aclTensor（参考[aclnnQuantMatmulV4调用示例](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md#调用示例)），记为**scale**，对标aclnnQuantMatmulV4接口中的scale。
 - aclnnQuantMatmulV4接口中的可选输入offset/pertokenScaleOptional设置为nullptr。
 - 接口参数设置为`aclnnQuantMatmulV4GetWorkspaceSize(x1, x2, scale, nullptr, nullptr, bias, adjX1, adjX2, out, workspaceSize, executor)`。
 

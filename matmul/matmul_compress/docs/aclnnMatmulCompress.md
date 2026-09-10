@@ -304,6 +304,7 @@ aclnnStatus aclnnMatmulCompress(
     from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
 
     compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1)
+    weight_path = "./data/weight.npy"  # gen_data.py生成的权重文件路径
     compressor = Compressor(compress_config, weight_path=weight_path)
 
     compress_weight, compress_index, compress_info = compressor.run()

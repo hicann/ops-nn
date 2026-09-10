@@ -424,8 +424,8 @@ aclnnStatus aclnnMatmulWeightNz(
     aclTensor* self = nullptr;
     aclTensor* mat2 = nullptr;
     aclTensor* out = nullptr;
-    std::vector<uint16_t> selfHostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
-    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
+    std::vector<uint16_t> selfHostData(512, 0x3C00); // float16 的 1.0 用 0x3C00 表示
+    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16 的 1.0 用 0x3C00 表示
     std::vector<uint16_t> outHostData(256, 0);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT16, &self);
@@ -889,7 +889,7 @@ aclnnStatus aclnnMatmulWeightNz(
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
       // 3. 调用CANN算子库API，需要修改为具体的API名称
-      int8_t cubeMathType = 1;
+      int8_t cubeMathType = 0; // 0：KEEP_DTYPE，保持输入的数据类型进行计算
       aclOpExecutor* executor = nullptr;
 
       // weight tensor ND转NZ，调用npu_format_cast接口
@@ -902,8 +902,8 @@ aclnnStatus aclnnMatmulWeightNz(
       uint64_t workspaceSizeMm = 0;
       void* workspaceAddrMm = nullptr;
 
-      // 计算目标tensor的shape和format
-      ret = aclnnNpuFormatCastCalculateSizeAndFormat(mat2, 29, additionalDtype, &dstShape, &dstShapeSize, &actualFormat);
+      // 计算目标tensor的shape和format，目标format为NZ
+      ret = aclnnNpuFormatCastCalculateSizeAndFormat(mat2, ACL_FORMAT_FRACTAL_NZ, additionalDtype, &dstShape, &dstShapeSize, &actualFormat);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastCalculateSizeAndFormat failed. ERROR: %d\n", ret); return ret);
 
       ret = CreateAclTensorWithFormat(dstTensorHostData, mat2Shape, &dstShape, &dstShapeSize, &dstDeviceAddr, srcDtype, &mat2NZ, static_cast<aclFormat>(actualFormat));

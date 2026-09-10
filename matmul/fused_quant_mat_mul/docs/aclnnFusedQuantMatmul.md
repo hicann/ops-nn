@@ -501,8 +501,8 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> x1Shape = {2, 8192};   // (m,k)
       std::vector<int64_t> x2Shape = {8192, 128}; // (k,n)
-      std::vector<int64_t> x1ScaleShape = {2}; // x1ScaleShape = [M]
-      std::vector<int64_t> x2ScaleShape = {128}; // x2ScaleShape = [N]
+      std::vector<int64_t> x1ScaleShape = {2}; // x1ScaleShape = [m]
+      std::vector<int64_t> x2ScaleShape = {128}; // x2ScaleShape = [n]
       std::vector<int64_t> outShape = {2, 128};
 
       void* x1DeviceAddr = nullptr;
