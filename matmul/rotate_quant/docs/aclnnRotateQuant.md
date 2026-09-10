@@ -212,7 +212,7 @@ aclnnStatus aclnnRotateQuant(
       <td>x(aclTensor*)</td>
       <td>输入</td>
       <td>待旋转量化的输入张量</td>
-      <td>不支持空Tensor。</td>
+      <td>支持空Tensor。</td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -222,7 +222,7 @@ aclnnStatus aclnnRotateQuant(
       <td>rotation(aclTensor*)</td>
       <td>输入</td>
       <td>旋转矩阵</td>
-      <td>不支持空Tensor。</td>
+      <td>支持空Tensor。</td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2或3</td>
@@ -232,7 +232,7 @@ aclnnStatus aclnnRotateQuant(
       <td>alpha(aclTensor*)</td>
       <td>输入</td>
       <td>clamp需要限制的范围的缩放系数</td>
-      <td>可选参数。shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)，不在有效取值范围内不做clamp处理。</td>
+      <td>可选参数。shape为(1,)，数据类型为BFLOAT16，有效取值范围[0.0, 1.0]，不在有效取值范围内不做clamp处理。</td>
       <td>BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -262,7 +262,7 @@ aclnnStatus aclnnRotateQuant(
       <td>scaleAlg(int64_t)</td>
       <td>输入</td>
       <td>表示scale的计算算法</td>
-      <td>支持取值0、1、2。</td>
+      <td>支持取值0、1、2,默认值0。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -416,7 +416,7 @@ aclnnStatus aclnnRotateQuant(
   - rotation最后两维的长度必须一致。
   - scaleOut的shape必须是(*, CeilDiv(N,64), 2)，shape的维度支持2-8，数据类型为FLOAT8_E8M0。
   - yOut的数据类型必须在[FLOAT4_E2M1,FLOAT8_E4M3FN,FLOAT8_E5M2],yOut的shape必须和x的shape保持一致。
-  - alpha为可选输入，不为空指针时，shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)。传入空指针或者不在有效取值范围内不做clamp处理。
+  - alpha为可选输入，不为空指针时，shape为(1,)，数据类型为BFLOAT16，有效取值范围[0.0, 1.0]。传入空指针或者不在有效取值范围内不做clamp处理。
   - axis目前只支持-1或者D-1，D为x的shape的维数。
   - roundMode支持"rint"、"round"、"floor"，传入空指针时，采用"rint"模式。当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时，roundMode仅支持"rint"。
   - scaleAlg支持取值0、1、2，当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时只支持0和1，当yOut的数据类型为FLOAT4_E2M1时只支持0和2。

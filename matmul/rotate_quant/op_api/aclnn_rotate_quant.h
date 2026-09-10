@@ -38,7 +38,6 @@ extern "C" {
  * @param [in] dstTypeMax: 表示量化目标类型的最大值。
  * 在MX场景（mxfp4/float8_xx）中，当scaleAlg=0时dstTypeMax必须为0.0；
  * 当scaleAlg=2时dstTypeMax必须在[6.0, 12.0]范围内。
- * 在INT场景中不校验此参数。
  * @param [in] trans: 表示输出y是否转置。
  * 目前只支持false。
  * @param [out] yOut: 量化后的输出张量。
@@ -52,10 +51,10 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-__attribute__((visibility("default"))) aclnnStatus aclnnRotateQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* rotation, const aclTensor* alpha, int64_t axis, char* roundMode,
-    int64_t scaleAlg, double dstTypeMax, bool trans, aclTensor* yOut, aclTensor* scaleOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+__attribute__((visibility("default"))) aclnnStatus
+aclnnRotateQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* rotation, const aclTensor* alpha, int64_t axis,
+                                 char* roundMode, int64_t scaleAlg, double dstTypeMax, bool trans, aclTensor* yOut,
+                                 aclTensor* scaleOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnRotateQuant的第二段接口，用于执行计算。
