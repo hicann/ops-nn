@@ -150,17 +150,17 @@ TEST_F(foreach_exp_test, test_case_int16_4)
     tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
 
     uint8_t* x1 = CreateTensorListForeachExp<int16_t>(shapeInfos, "int16"); // input tensor
-    uint8_t* x2 = CreateTensorListForeachExp<int16_t>(shapeInfos, "int16"); // output tensor
+    uint8_t* x2 = CreateTensorListForeachExp<float>(shapeInfos, "float32"); // output tensor(整进浮出: float32)
 
     ICPU_SET_TILING_KEY(5); // int16_t
     ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
 
-    FreeTensorListForeachExp<int16_t>(x2, shapeInfos, "int16");
-
+    FreeTensorListForeachExp<float>(x2, shapeInfos, "float32");
+    AscendC::GmFree((void*)x1);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./exp_data/ && python3 compare_data.py 'int16'");
+    system("cd ./exp_data/ && python3 compare_data.py 'float32'");
 }
 
 TEST_F(foreach_exp_test, test_case_int8_5)
@@ -182,18 +182,18 @@ TEST_F(foreach_exp_test, test_case_int8_5)
     tilingFuncObj.RunBigKernelTiling(blockDim);
     tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
 
-    uint8_t* x1 = CreateTensorListForeachExp<int8_t>(shapeInfos, "int8"); // input tensor
-    uint8_t* x2 = CreateTensorListForeachExp<int8_t>(shapeInfos, "int8"); // output tensor
+    uint8_t* x1 = CreateTensorListForeachExp<int8_t>(shapeInfos, "int8");   // input tensor
+    uint8_t* x2 = CreateTensorListForeachExp<float>(shapeInfos, "float32"); // output tensor(整进浮出: float32)
 
     ICPU_SET_TILING_KEY(7); // int8_t
     ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
 
-    FreeTensorListForeachExp<int8_t>(x2, shapeInfos, "int8");
-
+    FreeTensorListForeachExp<float>(x2, shapeInfos, "float32");
+    AscendC::GmFree((void*)x1);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./exp_data/ && python3 compare_data.py 'int8'");
+    system("cd ./exp_data/ && python3 compare_data.py 'float32'");
 }
 
 TEST_F(foreach_exp_test, test_case_uint8_6)
@@ -216,15 +216,15 @@ TEST_F(foreach_exp_test, test_case_uint8_6)
     tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
 
     uint8_t* x1 = CreateTensorListForeachExp<uint8_t>(shapeInfos, "uint8"); // input tensor
-    uint8_t* x2 = CreateTensorListForeachExp<uint8_t>(shapeInfos, "uint8"); // output tensor
+    uint8_t* x2 = CreateTensorListForeachExp<float>(shapeInfos, "float32"); // output tensor(整进浮出: float32)
 
     ICPU_SET_TILING_KEY(8); // uint8_t
     ICPU_RUN_KF(foreach_exp, blockDim, x1, x2, workspace, tiling);
 
-    FreeTensorListForeachExp<uint8_t>(x2, shapeInfos, "uint8");
-
+    FreeTensorListForeachExp<float>(x2, shapeInfos, "float32");
+    AscendC::GmFree((void*)x1);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./exp_data/ && python3 compare_data.py 'uint8'");
+    system("cd ./exp_data/ && python3 compare_data.py 'float32'");
 }

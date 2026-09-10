@@ -38,8 +38,15 @@ def gen_data_and_golden(shape_str, d_type="float32"):
     np_type = d_type_dict[d_type]
     shape_list = parse_str_to_shape_list(shape_str)
     for index, shape in enumerate(shape_list):
-        tmp_input = (np.ones(shape) * 10).astype(np_type)
-        tmp_golden = tmp_input + 3
+        # int dtype 全量程随机, 触发溢出回绕路径; golden 用 int64 精算后 astype 折叠(numpy 溢出行为与 kernel 二进制补码回绕一致)
+        int_ranges = {"int16": (-32768, 32768), "int8": (-128, 128), "uint8": (0, 256)}
+        if d_type in int_ranges:
+            lo, hi = int_ranges[d_type]
+            tmp_input = np.random.randint(lo, hi, size=shape).astype(np_type)
+            tmp_golden = (tmp_input.astype(np.int64) + 3).astype(np_type)
+        else:
+            tmp_input = (np.ones(shape) * 10).astype(np_type)
+            tmp_golden = tmp_input + 3
 
         tmp_input.astype(np_type).tofile(f"{d_type}_input_t_foreach_add{index}.bin")
         tmp_golden.astype(np_type).tofile(f"{d_type}_golden_t_foreach_add{index}.bin")
