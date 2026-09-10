@@ -8,6 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# Register the operator at root level. Sources under op_host are collected automatically.
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
-                    OPTYPE bucketize ACLNNTYPE aclnn_exclude)
+if(UT_TEST_ALL OR OP_HOST_UT)
+    add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
