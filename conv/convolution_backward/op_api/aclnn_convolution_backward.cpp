@@ -3094,31 +3094,6 @@ static aclnnStatus CalcConv3DBackTransposeInputGrad(ConvolutionBackwardInputTens
         OP_CHECK(gradInputTmp != nullptr,
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "l0function result of Conv3d6Hd return nullptr."),
                  return ACLNN_ERR_INNER_NULLPTR);
-        if (params.transposed && params.outputPadding != nullptr) {
-            bool hasNonZeroOutputPadding = false;
-            for (uint64_t i = 0; i < params.outputPadding->Size(); ++i) {
-                if ((*params.outputPadding)[i] != 0) {
-                    hasNonZeroOutputPadding = true;
-                    break;
-                }
-            }
-            if (hasNonZeroOutputPadding) {
-                auto tmpShape = gradInputTmp->GetViewShape();
-                auto outputShape = outputTensor.gradInput->GetViewShape();
-                FVector<int64_t> offsets(tmpShape.GetDimNum(), 0);
-                FVector<int64_t> sizes(tmpShape.GetDimNum(), 0);
-                for (size_t i = 0; i < tmpShape.GetDimNum(); i++) {
-                    sizes[i] = outputShape.GetDim(i);
-                }
-                auto offsetsArr = executor->AllocIntArray(offsets.data(), offsets.size());
-                auto sizesArr = executor->AllocIntArray(sizes.data(), sizes.size());
-                gradInputTmp = l0op::Slice(gradInputTmp, offsetsArr, sizesArr, executor);
-                OP_CHECK(
-                    gradInputTmp != nullptr,
-                    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Slice gradInputTmp for output_padding failed, return nullptr."),
-                    return ACLNN_ERR_INNER_NULLPTR);
-            }
-        }
         outputPostProcessRet = OutputPostProcess(outputTensor.gradInput, gradInputTmp, "gradInput", params.groups,
                                                  executor);
     }
