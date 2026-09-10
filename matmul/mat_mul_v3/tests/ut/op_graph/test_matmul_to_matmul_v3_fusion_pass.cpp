@@ -406,6 +406,75 @@ TEST_F(MatMulToMatmulV3FusionPassTest, matMulV2Fp16FusionSuccess)
     CheckFusedV3Node({false, false, 0, kOpImplModeHf32}, graph);
 }
 
+TEST_F(MatMulToMatmulV3FusionPassTest, matMulV2NonStandardIrFusionSuccess)
+{
+    auto graphBuilder = EsGraphBuilder("matMulV2NonStandardIr");
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+
+    auto x1Desc = MakeTensorDesc({16, 32}, DT_FLOAT16);
+    auto x2Desc = MakeTensorDesc({32, 16}, DT_FLOAT16);
+    auto outDesc = MakeTensorDesc({16, 16}, DT_FLOAT16);
+
+    auto dataX1 = graphBuilder.CreateInput(0, "dataX1", DT_FLOAT16, FORMAT_ND, {16, 32});
+    auto dataX2 = graphBuilder.CreateInput(1, "dataX2", DT_FLOAT16, FORMAT_ND, {32, 16});
+    dataX1.GetProducer()->UpdateOutputDesc(0, x1Desc);
+    dataX2.GetProducer()->UpdateOutputDesc(0, x2Desc);
+
+    auto matMulV2Node = CompliantNodeBuilder(graph)
+                            .OpType("MatMulV2")
+                            .Name("matmulv2_non_standard_ir")
+                            .IrDefInputs({
+                                {"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                            })
+                            .IrDefOutputs({
+                                {"y", CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                            })
+                            .IrDefAttrs({
+                                {"transpose_x1", CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
+                                {"transpose_x2", CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
+                            })
+                            .Build();
+    AddEdgeAndUpdatePeerDesc(*graph, *dataX1.GetProducer(), dataX1.GetProducerOutIndex(), matMulV2Node, 0);
+    AddEdgeAndUpdatePeerDesc(*graph, *dataX2.GetProducer(), dataX2.GetProducerOutIndex(), matMulV2Node, 1);
+    matMulV2Node.UpdateInputDesc(0, x1Desc);
+    matMulV2Node.UpdateInputDesc(1, x2Desc);
+    matMulV2Node.UpdateOutputDesc(0, outDesc);
+    bool transX1 = false;
+    bool transX2 = false;
+    matMulV2Node.SetAttr("transpose_x1", transX1);
+    matMulV2Node.SetAttr("transpose_x2", transX2);
+
+    auto output = EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(matMulV2Node, 0));
+    std::shared_ptr<Graph> graphPtr = graphBuilder.BuildAndReset({output});
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    MatMulToMatmulV3FusionPass pass;
+    Status status = pass.Run(graphPtr, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graphPtr, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graphPtr, "MatMulV3"), 1);
+    EXPECT_EQ(CountNodes(graphPtr, "Cast"), 0);
+
+    GNode v3Node;
+    ASSERT_TRUE(FindFirstNodeByOpType(graphPtr, "MatMulV3", v3Node));
+    EXPECT_EQ(v3Node.GetInputsSize(), 2U);
+    TensorDesc inDesc0;
+    ASSERT_EQ(v3Node.GetInputDesc(0, inDesc0), GRAPH_SUCCESS);
+    EXPECT_EQ(inDesc0.GetDataType(), DT_FLOAT16);
+    EXPECT_EQ(inDesc0.GetShape().GetDims(), (std::vector<int64_t>{16, 32}));
+    TensorDesc inDesc1;
+    ASSERT_EQ(v3Node.GetInputDesc(1, inDesc1), GRAPH_SUCCESS);
+    EXPECT_EQ(inDesc1.GetDataType(), DT_FLOAT16);
+    EXPECT_EQ(inDesc1.GetShape().GetDims(), (std::vector<int64_t>{32, 16}));
+    TensorDesc v3OutDesc;
+    ASSERT_EQ(v3Node.GetOutputDesc(0, v3OutDesc), GRAPH_SUCCESS);
+    EXPECT_EQ(v3OutDesc.GetDataType(), DT_FLOAT16);
+    EXPECT_EQ(v3OutDesc.GetShape().GetDims(), (std::vector<int64_t>{16, 16}));
+    CheckFusedV3Node({false, false, 0, 0}, graphPtr);
+}
+
 TEST_F(MatMulToMatmulV3FusionPassTest, matMulInt8CastFp16FusionSuccess)
 {
     auto graphBuilder = EsGraphBuilder("matMulInt8CastFp16");

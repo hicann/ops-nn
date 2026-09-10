@@ -51,6 +51,9 @@ int64_t GetIrInputNum(const GNode& node)
     if (node.GetType(opType) != GRAPH_SUCCESS) {
         return kV3InputNum;
     }
+    if (node.GetInputsSize() == kBatchMatMulIrInputNum) {
+        return static_cast<int64_t>(kBatchMatMulIrInputNum);
+    }
     if (opType == kOpTypeMatMul) {
         return std::max(static_cast<int64_t>(node.GetInputsSize()), static_cast<int64_t>(kMatMulIrInputNum));
     }
