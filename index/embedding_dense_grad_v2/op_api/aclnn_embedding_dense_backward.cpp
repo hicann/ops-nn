@@ -115,7 +115,7 @@ static bool CheckDimension(const aclTensor* grad, const aclTensor* indices)
         indicesShapeSum *= indicesShape.GetDim(i);
     }
     if (indicesShapeSum != gradShapeSum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad shape [%s] is not match with indices shape [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad shape %s does not match indices shape %s.",
                 op::ToString(grad->GetViewShape()).GetString(), op::ToString(indices->GetViewShape()).GetString());
         return false;
     }
@@ -133,7 +133,7 @@ static bool CheckOutShape(const aclTensor* out, const aclTensor* grad, const uin
     }
     if (static_cast<uint64_t>(outShape.GetDim(0)) != numWeights ||
         outShape.GetDim(1) != gradShape.GetDim(gradShape.GetDimNum() - 1)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out shape [%s] does not match infershape {%lu, %ld}.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out shape %s does not match infershape {%lu, %ld}.",
                 op::ToString(out->GetViewShape()).GetString(), numWeights, gradShape.GetDim(gradShape.GetDimNum() - 1));
         return false;
     }
