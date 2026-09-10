@@ -114,7 +114,7 @@
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size];</li>
        <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
-       <li>输入不支持空tensor;</li></ul></td>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
@@ -125,7 +125,7 @@
        <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
-       <td>weight_ih: [3*hidden_size, cur_input_size]<br>weight_hh: [3*hidden_size, hidden_size]<br>bias_ih: [3*hidden_size]<br>bias_hh: [3*hidden_size]<br>输入不支持空tensor</td>
+       <td>weight_ih: [3*hidden_size, cur_input_size]<br>weight_hh: [3*hidden_size, hidden_size]<br>bias_ih: [3*hidden_size]<br>bias_hh: [3*hidden_size]<br>不支持空tensor</td>
        <td>√</td>
      </tr>
      <tr>
@@ -135,7 +135,7 @@
        <td><ul><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
-       <td>每个tensor shape为[numLayers * D, batch_size, hidden_size]<br>输入不支持空tensor</td>
+       <td>每个tensor shape为[numLayers * D, batch_size, hidden_size]<br>不支持空tensor</td>
        <td>√</td>
      </tr>
      <tr>
@@ -147,7 +147,8 @@
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size * D];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size * D] 或 [batch_size, time_step, hidden_size * D]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size * D] 或 [batch_size, time_step, hidden_size * D]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
@@ -157,67 +158,72 @@
        <td><ul><li>多层双向时数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
-       <td>[numLayers * D, batch_size, hidden_size]</td>
+       <td>[numLayers * D, batch_size, hidden_size]<br>不支持空tensor</td>
        <td>√</td>
      </tr>
      <tr>
        <td>r</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻重置门的激活值。对应公式中的r。</td>
-       <td><ul><li>列表长度为 D * num_layers * 2。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
        <td>z</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻更新门的激活值。对应公式中的z。</td>
-       <td><ul><li>列表长度为 D * num_layers * 2。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
        <td>n</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻候选隐藏状态的激活值。对应公式中的n。</td>
-       <td><ul><li>列表长度为 D * num_layers * 2。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
        <td>h_n</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻候选隐藏状态的中间值。对应公式中的$W_{hn}h_{t-1} + b_{hn}$。</td>
-       <td><ul><li>列表长度为 D * num_layers * 2。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
        <td>h</td>
        <td>输入</td>
        <td>GRU正向中每层每个时刻的隐藏状态。对应公式中的h。</td>
-       <td><ul><li>列表长度为 D * num_layers * 2。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
        <td><ul>
        <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size];</li>
-       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li></ul></td>
+       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size]</li>
+       <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
@@ -279,7 +285,8 @@
        <td>ND</td>
        <td><ul>
         <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size];</li>
-        <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li></ul></td>
+        <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li>
+        <li>不支持空tensor</li></ul></td>
        <td>√</td>
      </tr>
      <tr>
@@ -289,17 +296,17 @@
        <td><ul><li>多层双向时数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
-       <td>[D * num_layers, batch_size, hidden_size]</td>
+       <td>[D * num_layers, batch_size, hidden_size]<br>不支持空tensor</td>
        <td>√</td>
      </tr>
      <tr>
        <td>dparamsOut(total_grad_w_ih, total_grad_w_hh)</td>
        <td>输出</td>
        <td>权重和偏置的梯度张量列表。对应公式中的δw和δb。</td>
-       <td><ul><li>列表长度为 D * B * num_layers。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
+       <td><ul><li>列表长度为 D * B * num_layers * 2。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
-       <td>dweight_ih: [3*hidden_size, cur_input_size]<br>dweight_hh: [3*hidden_size, hidden_size]<br>dbias: [3*hidden_size]</td>
+       <td>dweight_ih: [3*hidden_size, cur_input_size]<br>dweight_hh: [3*hidden_size, hidden_size]<br>dbias: [3*hidden_size]<br>不支持空tensor</td>
        <td>√</td>
      </tr>
      <tr>
