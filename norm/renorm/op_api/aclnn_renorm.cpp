@@ -177,36 +177,29 @@ aclnnStatus aclnnRenormGetWorkspaceSize(const aclTensor* self, const aclScalar* 
         dim += dimNum;
     }
 
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    // 进行Renorm计算
-    auto renormOpOut = l0op::Renorm(selfContiguous, p->ToFloat(), dim, maxNorm->ToFloat(), uniqueExecutor.get());
+    // Regbase Renorm kernels write the complete input shape. Older platforms
+    // return the reduced norm factor, which must be expanded and multiplied
+    // with the contiguous input before it can be copied to the output.
+    const bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    auto renormOpOut = l0op::Renorm(selfContiguous, p->ToFloat(), dim, maxNorm->ToFloat(), 1, uniqueExecutor.get());
     CHECK_RET(renormOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 进行broadcast_to扩维，将renorm计算的结果的shape恢复成和self一致
-    int64_t sizes[dimNum];
-    for (size_t i = 0U; i < dimNum; ++i) {
-        sizes[i] = self->GetViewShape().GetDim(i);
-    }
-    aclIntArray* shapes = uniqueExecutor.get()->AllocIntArray(sizes, dimNum);
+    const aclTensor* result = renormOpOut;
+    if (!isRegbase) {
+        int64_t sizes[dimNum];
+        for (size_t i = 0U; i < dimNum; ++i) {
+            sizes[i] = self->GetViewShape().GetDim(i);
+        }
+        aclIntArray* shapes = uniqueExecutor.get()->AllocIntArray(sizes, dimNum);
+        auto broadcastOut = l0op::BroadcastTo(renormOpOut, shapes, uniqueExecutor.get());
+        CHECK_RET(broadcastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto broadcastOut = l0op::BroadcastTo(renormOpOut, shapes, uniqueExecutor.get());
-    CHECK_RET(broadcastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 用self和broadcastto的结果做点乘，得到输出
-    auto mulOut = l0op::Mul(selfContiguous, broadcastOut, uniqueExecutor.get());
-    CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        mulOut = l0op::Cast(mulOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        result = l0op::Mul(selfContiguous, broadcastOut, uniqueExecutor.get());
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto viewCopyResult = l0op::ViewCopy(mulOut, out, uniqueExecutor.get());
+    auto viewCopyResult = l0op::ViewCopy(result, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小

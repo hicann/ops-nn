@@ -10,4 +10,10 @@
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(renorm "ascend950pr_9599" "-DDTYPE_Y_BACKPROP=float -DDTYPE_SCALE=float")
+    # A5 ops-info names the generated entry renorm_apt.cpp, while this UT is
+    # intentionally kept at the stable test_renorm.cpp path.  Add the test
+    # source explicitly so it is compiled as an object in the kernel target.
+    if(TARGET opkernel_renorm)
+        target_sources(opkernel_renorm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_renorm.cpp)
+    endif()
 endif()

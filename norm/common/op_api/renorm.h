@@ -19,7 +19,7 @@
 
 namespace l0op {
 const aclTensor* Renorm(const aclTensor* self, const float normType, const int64_t dim, const float maxNorm,
-                        aclOpExecutor* executor);
+                        const int inferType, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_RENORM_OP_H_
