@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -183,33 +183,35 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputShapeDim()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(gammaDimNum != 1,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "gamma", "1", "gamma must be 1D"),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "gamma",
+                                                         std::to_string(gammaDimNum).c_str(), "gamma must be 1D"),
                 return false);
     OP_CHECK_IF(!CheckDimBiggerZero(gammaShape, 1, nodeName_, "gamma"), , return false);
 
     if (hasSmoothScale1_) {
         const gert::StorageShape* s1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
         size_t s1DimNum = s1Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(
-            s1DimNum != 1,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "smoothScale1", "1", "smoothScale1 must be 1D"),
-            return false);
+        OP_CHECK_IF(s1DimNum != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        nodeName_.c_str(), "smoothScale1", std::to_string(s1DimNum).c_str(), "smoothScale1 must be 1D"),
+                    return false);
         OP_CHECK_IF(!CheckDimBiggerZero(s1Shape, 1, nodeName_, "smoothScale1"), , return false);
     }
     if (hasSmoothScale2_) {
         const gert::StorageShape* s2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
         size_t s2DimNum = s2Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(
-            s2DimNum != 1,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "smoothScale2", "1", "smoothScale2 must be 1D"),
-            return false);
+        OP_CHECK_IF(s2DimNum != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        nodeName_.c_str(), "smoothScale2", std::to_string(s2DimNum).c_str(), "smoothScale2 must be 1D"),
+                    return false);
         OP_CHECK_IF(!CheckDimBiggerZero(s2Shape, 1, nodeName_, "smoothScale2"), , return false);
     }
     if (hasBeta_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
         size_t betaDimNum = betaShape->GetStorageShape().GetDimNum();
         OP_CHECK_IF(betaDimNum != 1,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "beta", "1", "beta must be 1D"),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "beta",
+                                                             std::to_string(betaDimNum).c_str(), "beta must be 1D"),
                     return false);
         OP_CHECK_IF(!CheckDimBiggerZero(betaShape, 1, nodeName_, "beta"), , return false);
     }

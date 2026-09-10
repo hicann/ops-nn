@@ -157,7 +157,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致，与`zeroPoints2Optional`的组合约束参见<a href="#约束说明">约束说明</a>。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zero_points2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致，与`scales2Optional`的组合约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -313,7 +313,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内，或可选参数组合不受当前产品支持。</td>
     </tr>
     </tbody></table>
 
@@ -363,6 +363,14 @@ aclnnStatus aclnnAddRmsNormQuant(
 ## 约束说明
 
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
+
+<!-- npu="950" id13 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持`scales2Optional`传入空指针且`zeroPoints2Optional`非空。此时第二路量化的`scales2`按1处理，即无论`divMode`取值为True还是False，均有$y2Out=round(y+zero\_points2)$，且`y2Out`的shape与`x1`保持一致。
+<!-- end id13 -->
+
+<!-- npu="A3,910b,310p" id14 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>：不支持仅传入`zeroPoints2Optional`而不传入`scales2Optional`；当`zeroPoints2Optional`非空时，`scales2Optional`必须同时非空。
+<!-- end id14 -->
 
 <!-- npu="310p" id9 -->
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32 Bytes。

@@ -17,6 +17,7 @@
 
 static constexpr int INPUT_X1_IDX = 0;
 static constexpr int INPUT_SCALE2_IDX = 4;
+static constexpr int INPUT_ZERO_POINTS2_IDX = 6;
 static constexpr int OUTPUT_Y1_IDX = 0;
 static constexpr int OUTPUT_Y2_IDX = 1;
 static constexpr int OUTPUT_X_IDX = 2;
@@ -28,6 +29,15 @@ using namespace ge;
 namespace ops {
 static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2,
                                                                   DT_FLOAT8_E4M3FN};
+
+static bool HasSecondQuantParam(gert::InferShapeContext* context)
+{
+    const gert::Shape* scale2Shape = context->GetOptionalInputShape(INPUT_SCALE2_IDX);
+    const gert::Shape* zeroPoints2Shape = context->GetOptionalInputShape(INPUT_ZERO_POINTS2_IDX);
+    return (scale2Shape != nullptr && scale2Shape->GetDimNum() != 0) ||
+           (zeroPoints2Shape != nullptr && zeroPoints2Shape->GetDimNum() != 0);
+}
+
 static ge::graphStatus InferShape4AddRmsNormQuant(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShape4AddRmsNormQuant");
@@ -46,8 +56,7 @@ static ge::graphStatus InferShape4AddRmsNormQuant(gert::InferShapeContext* conte
     *y1Shape = *x1Shape;
     *xShape = *x1Shape;
 
-    const gert::Shape* scale2Shape = context->GetOptionalInputShape(INPUT_SCALE2_IDX);
-    if (nullptr != scale2Shape && (scale2Shape->GetDimNum() != 0)) {
+    if (HasSecondQuantParam(context)) {
         *y2Shape = *x1Shape;
     } else {
         *y2Shape = gert::Shape({1});
@@ -103,8 +112,7 @@ static ge::graphStatus InferShape4AddRmsNormQuantV2(gert::InferShapeContext* con
         *resOutShape = *x1Shape;
     }
 
-    const gert::Shape* scale2Shape = context->GetOptionalInputShape(INPUT_SCALE2_IDX);
-    if (nullptr != scale2Shape && (scale2Shape->GetDimNum() != 0)) {
+    if (HasSecondQuantParam(context)) {
         *y2Shape = *x1Shape;
     } else {
         *y2Shape = gert::Shape({1});

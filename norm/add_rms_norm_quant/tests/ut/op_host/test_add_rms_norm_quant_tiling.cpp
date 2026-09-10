@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -450,10 +450,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
     // dlog_setlevel(0, 3, 0);
 }
 
-// scales2 缺省 + zero_points2 存在时 kernel 按 hasY2 写满 y2，而 InferShape 只看 scales2、
-// 把 y2 推成 {1}，tiling 必须拦下这个矛盾组合，否则 kernel 全量写 y2 造成 GM 越界。
-// AddRmsNormQuantV2 与本算子共用 AddRmsNormQuantRegbaseTiling，同一条校验覆盖。
-TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_zp2_without_scales2_y2_shape_mismatch)
+// Ascend 950 支持 zero_points2-only：scales2 缺省时按 scale=1 计算，并生成完整 y2。
+// 同时验证 zero_points2-only 仍需满足与 x/scales1 对应的 dtype 组合约束。
+TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_zp2_without_scales2)
 {
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
@@ -464,12 +463,6 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_zp2_without_scales2_y2
                                           256,
                                       }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape out_shape_y2 = {{
-                                           1,
-                                       },
-                                       {
-                                           1,
-                                       }};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
@@ -522,9 +515,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_zp2_without_scales2_y2
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, nullptr, &gamma_shape,
-                                    &gamma_shape, &gamma_shape})
-                      .OutputShapes({&out_shape_y, &out_shape_y2, &out_shape_x})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, nullptr, nullptr,
+                                    &gamma_shape, nullptr})
+                      .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -553,7 +546,49 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_zp2_without_scales2_y2
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_context->GetTilingKey(), 1012);
+
+    auto invalidParam = gert::TilingData::CreateCap(4096);
+    auto invalidWorkspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto invalidWorkspaceSize = reinterpret_cast<gert::ContinuousVector*>(invalidWorkspaceSizeHolder.get());
+    ASSERT_NE(invalidParam, nullptr);
+    auto invalidHolder = gert::TilingContextFaker()
+                             .SetOpType(op_type)
+                             .NodeIoNum(8, 3)
+                             .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
+                             .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, nullptr,
+                                           nullptr, &gamma_shape, nullptr})
+                             .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
+                             .CompileInfo(&compile_info)
+                             .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                             .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                         {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                         {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                             .TilingData(invalidParam.get())
+                             .Workspace(invalidWorkspaceSize)
+                             .Build();
+
+    gert::TilingContext* invalidContext = invalidHolder.GetContext<gert::TilingContext>();
+    ASSERT_NE(invalidContext->GetPlatformInfo(), nullptr);
+    invalidContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    invalidContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    invalidContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    invalidContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    invalidContext->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+
+    EXPECT_EQ(tiling_func(invalidContext), ge::GRAPH_FAILED);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)

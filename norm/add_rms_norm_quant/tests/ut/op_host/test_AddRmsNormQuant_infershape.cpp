@@ -1,15 +1,14 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
  * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
  * the software repository for the full text of the License.
  *
  *
- * @file test_AddRmsNormQuant_proto.cpp
+ * @file test_AddRmsNormQuant_infershape.cpp
  *
  * @brief
  *
@@ -30,6 +29,57 @@ protected:
 
     static void TearDownTestCase() { std::cout << "AddRmsNormQuant Proto Test TearDown" << std::endl; }
 };
+
+static void CheckSecondQuantInferShape(const std::string& opType, size_t outputNum, bool hasZeroPoints2)
+{
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType);
+    ASSERT_NE(opImpl, nullptr);
+    ASSERT_NE(opImpl->infer_shape, nullptr);
+
+    gert::StorageShape xShape = {{2, 128}, {2, 128}};
+    gert::StorageShape quantParamShape = {{128}, {128}};
+    std::vector<gert::StorageShape*> inputShapes = {&xShape, &xShape, &quantParamShape, &quantParamShape};
+    std::vector<uint32_t> inputInstanceNum = {1, 1, 1, 1, 0, 0, 0, 0};
+    if (hasZeroPoints2) {
+        inputShapes.emplace_back(&quantParamShape);
+        inputInstanceNum[6] = 1;
+    }
+
+    auto faker = gert::InferShapeContextFaker();
+    faker.SetOpType(opType)
+        .NodeIoNum(8, outputNum)
+        .IrInstanceNum(inputInstanceNum, std::vector<uint32_t>(outputNum, 1))
+        .InputShapes(inputShapes);
+    auto holder = faker.Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(opImpl->infer_shape(context), ge::GRAPH_SUCCESS);
+
+    const gert::Shape* y1Shape = context->GetOutputShape(0);
+    const gert::Shape* y2Shape = context->GetOutputShape(1);
+    const gert::Shape* xOutShape = context->GetOutputShape(2);
+    ASSERT_NE(y1Shape, nullptr);
+    ASSERT_NE(y2Shape, nullptr);
+    ASSERT_NE(xOutShape, nullptr);
+    ASSERT_EQ(y1Shape->GetDimNum(), 2);
+    EXPECT_EQ(y1Shape->GetDim(0), 2);
+    EXPECT_EQ(y1Shape->GetDim(1), 128);
+    ASSERT_EQ(y2Shape->GetDimNum(), hasZeroPoints2 ? 2 : 1);
+    EXPECT_EQ(y2Shape->GetDim(0), hasZeroPoints2 ? 2 : 1);
+    if (hasZeroPoints2) {
+        EXPECT_EQ(y2Shape->GetDim(1), 128);
+    }
+    ASSERT_EQ(xOutShape->GetDimNum(), 2);
+    EXPECT_EQ(xOutShape->GetDim(0), 2);
+    EXPECT_EQ(xOutShape->GetDim(1), 128);
+    if (outputNum == 4) {
+        const gert::Shape* resOutShape = context->GetOutputShape(3);
+        ASSERT_NE(resOutShape, nullptr);
+        ASSERT_EQ(resOutShape->GetDimNum(), 2);
+        EXPECT_EQ(resOutShape->GetDim(0), 2);
+        EXPECT_EQ(resOutShape->GetDim(1), 128);
+    }
+}
 
 TEST_F(AddRmsNormQuant, AddRmsNormQuant_infershape_case_0)
 {
@@ -352,4 +402,24 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_4)
         EXPECT_EQ(context->GetOutputDataType(1), output_ref);
         EXPECT_EQ(context->GetOutputDataType(2), input_ref);
     }
+}
+
+TEST_F(AddRmsNormQuant, AddRmsNormQuant_infershape_zero_points2_without_scales2)
+{
+    CheckSecondQuantInferShape("AddRmsNormQuant", 3, true);
+}
+
+TEST_F(AddRmsNormQuant, AddRmsNormQuant_infershape_without_second_quant_params)
+{
+    CheckSecondQuantInferShape("AddRmsNormQuant", 3, false);
+}
+
+TEST_F(AddRmsNormQuant, AddRmsNormQuantV2_infershape_zero_points2_without_scales2)
+{
+    CheckSecondQuantInferShape("AddRmsNormQuantV2", 4, true);
+}
+
+TEST_F(AddRmsNormQuant, AddRmsNormQuantV2_infershape_without_second_quant_params)
+{
+    CheckSecondQuantInferShape("AddRmsNormQuantV2", 4, false);
 }

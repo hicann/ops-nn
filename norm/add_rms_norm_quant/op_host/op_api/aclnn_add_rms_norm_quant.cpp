@@ -67,30 +67,91 @@ static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTens
     return true;
 }
 
+static bool CheckCommonDtypeRelation(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                     const aclTensor* scales1, const aclTensor* scales2Optional,
+                                     const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
+                                     const aclTensor* y1Out, const aclTensor* y2Out, const aclTensor* xOut)
+{
+    OP_CHECK_DTYPE_NOT_SAME(x1, x2, return false);
+    OP_CHECK_DTYPE_NOT_SAME(x1, gamma, return false);
+    OP_CHECK_DTYPE_NOT_SAME(x1, xOut, return false);
+    OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
+    if (scales2Optional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(scales1, scales2Optional, return false);
+    }
+    if (zeroPoints1Optional != nullptr && zeroPoints2Optional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(zeroPoints1Optional, zeroPoints2Optional, return false);
+    }
+    return true;
+}
+
+static bool CheckRegbaseDtypeCombination(const aclTensor* x1, const aclTensor* scales1,
+                                         const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional)
+{
+    const op::DataType xDtype = x1->GetDataType();
+    const op::DataType scalesDtype = scales1->GetDataType();
+    const aclTensor* zeroPoints = zeroPoints1Optional != nullptr ? zeroPoints1Optional : zeroPoints2Optional;
+
+    if (xDtype == op::DataType::DT_FLOAT) {
+        OP_CHECK_DTYPE_NOT_MATCH(scales1, op::DataType::DT_FLOAT, return false);
+        if (zeroPoints != nullptr) {
+            OP_CHECK_DTYPE_NOT_MATCH(zeroPoints, op::DataType::DT_FLOAT, return false);
+        }
+        return true;
+    }
+
+    OP_CHECK(scalesDtype == xDtype || scalesDtype == op::DataType::DT_FLOAT,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "When x1 is FLOAT16 or BFLOAT16, scales1 must have the same dtype as x1 or be FLOAT32."),
+             return false);
+    if (zeroPoints == nullptr) {
+        return true;
+    }
+    if (scalesDtype == op::DataType::DT_FLOAT) {
+        const op::DataType zeroPointsDtype = zeroPoints->GetDataType();
+        OP_CHECK(zeroPointsDtype == op::DataType::DT_FLOAT || zeroPointsDtype == op::DataType::DT_INT32,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "When scales1 is FLOAT32, zeroPoints must be FLOAT32 or INT32 on Ascend 950."),
+                 return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_MATCH(zeroPoints, xDtype, return false);
+    }
+    return true;
+}
+
 static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
                             const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
                             const aclTensor* zeroPoints2Optional, const aclTensor* y1Out, const aclTensor* y2Out,
                             const aclTensor* xOut)
 {
+    // 保留 master 的逐 Tensor dtype 范围检查，确保非 Ascend 950 产品行为不变。
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(gamma, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(scales1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    if (nullptr != scales2Optional) {
+    if (scales2Optional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scales2Optional, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     }
-    if (nullptr != zeroPoints1Optional) {
+    if (zeroPoints1Optional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints1Optional, REGBASE_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
     }
-    if (nullptr != zeroPoints2Optional) {
+    if (zeroPoints2Optional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints2Optional, REGBASE_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
     }
-
     OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
+    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false);
     OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    return true;
+
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
+
+    // RegBase（当前为 Ascend 950）继续匹配跨参数关系和完整 dtype 组合。
+    CHECK_RET(CheckCommonDtypeRelation(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional,
+                                       zeroPoints2Optional, y1Out, y2Out, xOut),
+              false);
+    return CheckRegbaseDtypeCombination(x1, scales1, zeroPoints1Optional, zeroPoints2Optional);
 }
 
 static bool CheckShapeDim(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
@@ -172,7 +233,8 @@ aclnnStatus ComputeAddRmsNormQuant(const aclTensor* x1, const aclTensor* x2, con
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* y2ComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
-    bool isDual = (nullptr != scales2Optional);
+    const bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    const bool isDual = (nullptr != scales2Optional) || (isRegbase && nullptr != zeroPoints2Optional);
 
     int dstType = dstTypeMapQuant[y1Out->GetDataType()];
 

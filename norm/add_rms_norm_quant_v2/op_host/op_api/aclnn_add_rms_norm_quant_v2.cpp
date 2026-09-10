@@ -103,13 +103,7 @@ static bool IsSocVersion910BC_310P()
     return false;
 }
 
-static bool IsSocVersion950()
-{
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND950) {
-        return true;
-    }
-    return false;
-}
+static bool IsRegbase() { return Ops::NN::AclnnUtil::IsRegbase(); }
 
 static bool CheckInputNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
                               const aclTensor* scales1)
@@ -198,7 +192,7 @@ static bool CheckOptionalParamDtypeValid(const aclTensor* scales2Optional, const
 static bool CheckOutputDtypeValid(const aclTensor* y1Out, const aclTensor* y2Out, const aclTensor* xOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    if (IsSocVersion950()) {
+    if (IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
     } else {
@@ -418,6 +412,64 @@ static bool SimpleCheckNotNull(AddRmsNormQuantV2InputTensor& inputTensor, AddRms
     return true;
 }
 
+static bool CheckCommonDtypeRelationV2(const AddRmsNormQuantV2InputTensor& inputTensor,
+                                       const AddRmsNormQuantV2OutputTensor& outputTensor)
+{
+    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
+    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
+    OP_CHECK_DTYPE_NOT_SAME(outputTensor.y1Out, outputTensor.y2Out, return false);
+    if (inputTensor.betaOptional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.betaOptional, return false);
+    }
+    if (inputTensor.scales2Optional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.scales1, inputTensor.scales2Optional, return false);
+    }
+    if (inputTensor.zeroPoints1Optional != nullptr && inputTensor.zeroPoints2Optional != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.zeroPoints1Optional, inputTensor.zeroPoints2Optional, return false);
+    }
+    if (outputTensor.xOut != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, outputTensor.xOut, return false);
+    }
+    if (outputTensor.resOut != nullptr) {
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, outputTensor.resOut, return false);
+    }
+    return true;
+}
+
+static bool CheckRegbaseDtypeCombinationV2(const aclTensor* x1, const aclTensor* scales1,
+                                           const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional)
+{
+    const op::DataType xDtype = x1->GetDataType();
+    const op::DataType scalesDtype = scales1->GetDataType();
+    const aclTensor* zeroPoints = zeroPoints1Optional != nullptr ? zeroPoints1Optional : zeroPoints2Optional;
+
+    if (xDtype == op::DataType::DT_FLOAT) {
+        OP_CHECK_DTYPE_NOT_MATCH(scales1, op::DataType::DT_FLOAT, return false);
+        if (zeroPoints != nullptr) {
+            OP_CHECK_DTYPE_NOT_MATCH(zeroPoints, op::DataType::DT_FLOAT, return false);
+        }
+        return true;
+    }
+
+    OP_CHECK(scalesDtype == xDtype || scalesDtype == op::DataType::DT_FLOAT,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "When x1 is FLOAT16 or BFLOAT16, scales1 must have the same dtype as x1 or be FLOAT32."),
+             return false);
+    if (zeroPoints == nullptr) {
+        return true;
+    }
+    if (scalesDtype == op::DataType::DT_FLOAT) {
+        const op::DataType zeroPointsDtype = zeroPoints->GetDataType();
+        OP_CHECK(zeroPointsDtype == op::DataType::DT_FLOAT || zeroPointsDtype == op::DataType::DT_INT32,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "When scales1 is FLOAT32, zeroPoints must be FLOAT32 or INT32 on Ascend 950."),
+                 return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_MATCH(zeroPoints, xDtype, return false);
+    }
+    return true;
+}
+
 aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor,
                                      AddRmsNormQuantV2OutputTensor& outputTensor, ParamStruct& paramStruct,
                                      aclOpExecutor* executor)
@@ -430,8 +482,8 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor,
     aclTensor* y1KernelOut = nullptr;
     bool hasY2 = (nullptr != inputTensor.scales2Optional);
 
-    int dstType = IsSocVersion950() ? static_cast<int>(outputTensor.y1Out->GetDataType()) :
-                                      static_cast<int>(op::DataType::DT_INT8);
+    int dstType = IsRegbase() ? static_cast<int>(outputTensor.y1Out->GetDataType()) :
+                                static_cast<int>(op::DataType::DT_INT8);
 
     auto addRmsNormQuantRes = l0op::AddRmsNormQuant(
         inputTensor.x1, inputTensor.x2, inputTensor.gamma, inputTensor.scales1, inputTensor.scales2Optional,
@@ -464,7 +516,7 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor,
 
 static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
 {
-    if (IsSocVersion950()) {
+    if (IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
@@ -483,8 +535,6 @@ static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsN
             OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints2Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT,
                                        return false);
         }
-        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
-        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
         if (nullptr != outputTensor.resOut) {
@@ -493,6 +543,10 @@ static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsN
         if (nullptr != outputTensor.xOut) {
             OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
         }
+        CHECK_RET(CheckCommonDtypeRelationV2(inputTensor, outputTensor), false);
+        CHECK_RET(CheckRegbaseDtypeCombinationV2(inputTensor.x1, inputTensor.scales1, inputTensor.zeroPoints1Optional,
+                                                 inputTensor.zeroPoints2Optional),
+                  false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
@@ -553,7 +607,7 @@ static bool CheckShapeDimV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNor
 static aclnnStatus CheckParamsV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor,
                                  int64_t& mode)
 {
-    if (IsSocVersion950()) {
+    if (IsRegbase()) {
         // 950: beta and resOut are independent, mode only depends on beta
         if (inputTensor.betaOptional != nullptr) {
             mode = 1;
@@ -627,8 +681,8 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor,
     aclTensor* resComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
 
-    int dstType = IsSocVersion950() ? static_cast<int>(outputTensor.y1Out->GetDataType()) :
-                                      static_cast<int>(op::DataType::DT_INT8);
+    int dstType = IsRegbase() ? static_cast<int>(outputTensor.y1Out->GetDataType()) :
+                                static_cast<int>(op::DataType::DT_INT8);
 
     auto AddRmsNormQuantV2Outs = l0op::AddRmsNormQuantV2(
         inputTensor.x1, inputTensor.x2, inputTensor.gamma, inputTensor.betaOptional, inputTensor.scales1,
@@ -675,15 +729,12 @@ const aclTensor* GetTensorContiguousV2(const aclTensor* opt, aclOpExecutor* exec
 bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRmsNormQuantV2OutputTensor& outputTensor,
                     const ParamStruct& paramStruct)
 {
-    if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) &&
-        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) &&
-        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P) &&
-        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950)) {
+    if (!IsSocVersion910BC_310P() && !IsRegbase()) {
         return false;
     }
 
     // 950: V2 kernel与V1共用regbase kernel，完整支持所有输入组合，无需回退V1
-    if (IsSocVersion950()) {
+    if (IsRegbase()) {
         return true;
     }
 
@@ -723,7 +774,7 @@ bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRm
 
 void SpecialTransform(AddRmsNormQuantV2InputTensor& inputTensor, aclOpExecutor* executor)
 {
-    if (IsSocVersion950()) {
+    if (IsRegbase()) {
         return;
     }
     if (inputTensor.scales1 != nullptr && inputTensor.scales1->GetDataType() == op::DataType::DT_FLOAT16) {
