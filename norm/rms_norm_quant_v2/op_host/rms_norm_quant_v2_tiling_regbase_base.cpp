@@ -662,9 +662,12 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
                                (static_cast<uint64_t>(tilingParams.q == 1 ? 1 : 0) << 4));
     const bool* divModePtr = attrs->GetBool(DIV_MODE_ATTR_INDEX); // 添加类型判断
     tilingParams.divMode = (divModePtr == nullptr) ? DEFAULT_DIVMODE : *divModePtr;
-    // 读取 output_rstd 属性（V2 无此属性返回 nullptr，rstdFlag=0；V3 有此属性）
-    const bool* outputRstdPtr = attrs->GetBool(OUTPUT_RSTD_ATTR_INDEX);
-    tilingParams.rstdFlag = (outputRstdPtr != nullptr && *outputRstdPtr) ? 1 : 0;
+    // V2 registers three attributes; V3 adds output_rstd as the fourth attribute.
+    tilingParams.rstdFlag = 0;
+    if (attrs->GetAttrNum() > static_cast<size_t>(OUTPUT_RSTD_ATTR_INDEX)) {
+        const bool* outputRstdPtr = attrs->GetBool(OUTPUT_RSTD_ATTR_INDEX);
+        tilingParams.rstdFlag = (outputRstdPtr != nullptr && *outputRstdPtr) ? 1 : 0;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
