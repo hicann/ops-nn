@@ -40,9 +40,9 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
     std::vector<float> resultData(size, 0);
     auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
                            size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);
+        LOG_PRINT("aclnnLogit result[%ld] is: %f\n", i, resultData[i]);
     }
 }
 
@@ -112,7 +112,7 @@ int main()
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用 aclnnLogit 算子库 API
     uint64_t workspaceSize = 16 * 1024 * 1024;
     aclOpExecutor* executor;
 
@@ -135,14 +135,14 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
+    // 5. 获取输出的值，将device侧内存上的结果复制至host侧
     PrintOutResult(outShape, &outDeviceAddr);
 
-    // 6. 释放aclTensor，需要根据具体API的接口定义修改
+    // 6. 释放aclTensor
     aclDestroyTensor(input);
     aclDestroyTensor(out);
 
-    // 7.释放device资源，需要根据具体API的接口定义修改
+    // 7. 释放device资源
     aclrtFree(inputDeviceAddr);
     aclrtFree(outDeviceAddr);
     if (workspaceSize > 0) {
