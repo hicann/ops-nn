@@ -62,7 +62,7 @@
     <tr>
       <td>threshold</td>
       <td>属性</td>
-      <td>阈值标量，OPTIONAL，默认1.0。threshold==0时等价ReluGrad。</td>
+      <td>阈值标量，必填。threshold==0时等价ReluGrad。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
