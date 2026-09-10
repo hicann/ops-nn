@@ -333,4 +333,9 @@ class ScatterListTorchSpec:
             input, indices, updates, mask, reduce, axis, **kwargs
         )
 
+    class _Compose:
+        def __call__(self, input, indices, updates, **kwargs):
+            return _ScatterListCompose()(input, indices, updates, **kwargs)
+
+    third_party = {"torch": _Compose}
     tolerance = _TOL_KERNEL
