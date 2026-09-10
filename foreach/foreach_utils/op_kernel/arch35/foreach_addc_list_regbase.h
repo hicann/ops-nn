@@ -30,6 +30,11 @@ using AscendC::Reg::UpdateMask;
 
 enum class AddcOp { MUL, DIV };
 
+// Div 缺省 DivAlgo::INTRINSIC 在 dav-3510 上只保真到 1 ULP(实测 fp32 用例 4.52% 的元素
+// 偏 1 ULP), 显式选 0 ULP 档与竞品的正确舍入除法对齐。仓内其余显式 Div 配置同样取 0ULP 档。
+constexpr AscendC::Reg::DivSpecificMode kAddcDivPrecise{AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                        AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+
 constexpr int32_t VL_SIZE = platform::GetVRegSize();
 
 template <typename T, typename ScalarT, typename Tiling, AddcOp OP>
@@ -66,7 +71,8 @@ public:
                 if constexpr (OP == AddcOp::MUL) {
                     Mul(tensorOneRegToFloat, tensorOneRegToFloat, tensorTwoRegToFloat, maskReg);
                 } else {
-                    Div(tensorOneRegToFloat, tensorOneRegToFloat, tensorTwoRegToFloat, maskReg);
+                    AscendC::Reg::Div<float, &kAddcDivPrecise>(tensorOneRegToFloat, tensorOneRegToFloat,
+                                                               tensorTwoRegToFloat, maskReg);
                 }
                 Axpy(inRegToFloat, tensorOneRegToFloat, scalarVal, maskReg);
                 ops::StoreOneTensorForDtypeT<T>(outUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);

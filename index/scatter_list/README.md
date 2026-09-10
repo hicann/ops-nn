@@ -45,7 +45,7 @@
     <tr>
       <td>indice</td>
       <td>输入</td>
-      <td>不支持空Tensor。表示待更新的索引张量，Device侧的aclTensor。shape支持1~2维，第一维大小等于var列表中的张量个数，第二维大小为2，数据类型为INT32或INT64。</td>
+      <td>不支持空Tensor。表示写入位置张量，Device侧的aclTensor。shape支持1维或2维：1维时shape为(B,)，只给出写入起始位置；2维时shape为(B, 2)，给出写入起始位置与长度。B为var列表中的张量个数。数据类型为INT32或INT64。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
     </tr>
@@ -59,7 +59,7 @@
     <tr>
       <td>mask</td>
       <td>输入</td>
-      <td>不支持空Tensor。表示需要更新数据的掩码，Device侧的aclTensor，可选输入。shape支持1维，第一维大小等于var列表中的张量个数，数据类型为UINT8。</td>
+      <td>不支持空Tensor。表示需要更新数据的掩码，Device侧的aclTensor，可选输入。shape支持1维，第一维大小等于var列表中的张量个数，数据类型为UINT8。取值仅支持0和1，其余取值行为未定义。</td>
       <td>DT_UINT8</td>
       <td>ND</td>
     </tr>
@@ -90,13 +90,11 @@
 
 ## 约束说明
 
-- indice语义：indice给出的是**写入起始位置**，不是散射目标下标。1维时`indice[i]`为第i个张量在axis轴上的写入起点，写入长度为updates在axis轴上的大小；2维时`indice[i][0]`为起点、`indice[i][1]`为写入长度。
+- indice语义与取值范围（取值由调用方保证，算子不做校验）：indice给出的是**写入起始位置**，不是散射目标下标。写入是从该位置开始的一段连续区间，需保证整段不越出axis轴。
+  - 1维：`indice[i]`为第i个张量的写入起始位置，写入长度为updates在axis轴上的大小。
+  - 2维：`indice[i][0]`为起始位置，`indice[i][1]`为写入长度，长度不应超过updates在axis轴上的大小。
 
-- indice值域（调用方保证，算子不做校验）：indice的值位于Device侧，host侧无法校验，越界不会返回错误码，而是产生越界写。记var中单个张量在axis对应轴上的大小为`D`，updates在axis轴上的大小为`S`，则对每个列表下标`i`需满足：
-  - 1维：`0 <= indice[i]` 且 `indice[i] + S <= D`。
-  - 2维：`0 <= indice[i][0]`、`0 <= indice[i][1] <= S` 且 `indice[i][0] + indice[i][1] <= D`。
-
-  仅保证`indice[i] < D`并不充分——写入是从起点开始的一段连续区间，需保证整段不越过`D`。
+- mask取值范围（调用方保证，算子不做校验）：取值仅支持0和1，0表示该列表元素不执行写入，1表示执行写入，其余取值行为未定义。
 
 ## 调用说明
 

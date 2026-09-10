@@ -45,25 +45,32 @@ static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeConte
     auto outputm_shape = context->GetOutputShape(OUTPUTM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputm_shape);
 
-    // inputv、inputm 承载动量的更新结果，内核按广播出的完整网格计算并写回它们，
-    // 故输出形状由 inputv/inputm 决定，grad 与 input3 只能向上广播进来。
+    // grad、inputv、inputm 三者形状必须完全相同：inputv/inputm 是原地更新的动量输出，
+    // 输出形状由它们决定；grad 绑定在广播 DAG 的 In0 位，底层 Ops::Base 广播模板
+    // (DoDimensionCollapse) 不支持对 In0 做广播——实测 grad 为标量、或任一维为 1 时
+    // 均在 tiling 阶段被拒(“dim num is not same”/“dim index is not same with out”)。
+    // 故此处直接按等形拒绝，避免放行后到 tiling 才抛 E90003。
+    // 仅 input3 参与广播(右对齐，维度数可少于 inputv)。
     // 此处的判定与 tiling 的 CheckInplaceShapeConstraint 保持一致，避免两个 host
     // 阶段对同一组合给出不同结论。
     OP_CHECK_IF(!(*inputv_shape == *inputm_shape),
-                OP_LOGE(context->GetNodeName(),
-                        "inputv %s and inputm %s must have the same shape, they carry the moment update outputs!",
-                        ToString(*inputv_shape).c_str(), ToString(*inputm_shape).c_str()),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "inputv and inputm",
+                    (ToString(*inputv_shape) + " and " + ToString(*inputm_shape)).c_str(),
+                    "inputv and inputm are in-place updated moments and must have the same shape"),
                 return ge::GRAPH_FAILED);
 
     gert::Shape broadcast_shape;
-    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, &broadcast_shape) || !(broadcast_shape == *inputv_shape),
-                OP_LOGE(context->GetNodeName(), "grad %s must be broadcastable into the moment shape %s!",
-                        ToString(*grad_shape).c_str(), ToString(*inputv_shape).c_str()),
+    OP_CHECK_IF(!(*grad_shape == *inputv_shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "grad", ToString(*grad_shape).c_str(),
+                    "grad does not support broadcast and must have exactly the same shape as inputv/inputm"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(!BroadcastShape(input3_shape, inputv_shape, &broadcast_shape) || !(broadcast_shape == *inputv_shape),
-                OP_LOGE(context->GetNodeName(), "input3 %s must be broadcastable into the moment shape %s!",
-                        ToString(*input3_shape).c_str(), ToString(*inputv_shape).c_str()),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "input3", ToString(*input3_shape).c_str(),
+                    "input3 must be broadcastable into the in-place moment shape inputv/inputm"),
                 return ge::GRAPH_FAILED);
 
     *output0_shape = *inputv_shape;

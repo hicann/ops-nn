@@ -65,8 +65,12 @@ ge::graphStatus LambApplyOptimizerAssignTiling::GetShapeAttrsInfo()
 }
 
 // inputv、inputm 是 in-place 更新的动量输出(next_v/next_m 原地写回它们的输入 buffer,见 proto "(in-place)"),
-// 内核按 grad/inputv/inputm/input3 广播出的最大网格计算并写回,故 inputv、inputm 形状必须 == 该广播网格。
-// 等价充要条件:inputv 与 inputm 同形状,且 grad、input3 均能广播进 inputv(非 in-place 与标量可向上广播)。
+// 输出形状由它们决定,故 inputv、inputm 必须同形状。
+// grad 绑定在广播 DAG 的 In0 位,底层 Ops::Base 广播模板(DoDimensionCollapse)不支持对 In0 做广播:
+// grad 为标量时 EnsureNotScalar 只抬到 {1}、不会左补 1 对齐输出 rank,直接撞 "dim num is not same";
+// grad 与输出同 rank 但某维为 1 时同样被拒("dim index is not same with out")。故 grad 必须与 inputv 等形。
+// 仅 input3 参与广播(右对齐,维度数可少于 inputv,含标量),这是实测支持的形态。
+// 若后续 ops-base 放开 In0 广播,此处与 infershape 需同步放宽。
 ge::graphStatus LambApplyOptimizerAssignTiling::CheckInplaceShapeConstraint()
 {
     auto gradShape = context_->GetInputShape(0);
@@ -90,13 +94,14 @@ ge::graphStatus LambApplyOptimizerAssignTiling::CheckInplaceShapeConstraint()
             "output shape");
         return ge::GRAPH_FAILED;
     }
-    // grad/input3 能广播进 inputv <=> broadcast(x, inputv) == inputv
-    if (!Ops::Base::BroadcastShape(&gs, &vs, &bcShape) || !(bcShape == vs)) {
+    // grad 不参与广播,必须与 inputv/inputm 等形
+    if (!(gs == vs)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "grad", Ops::Base::ToString(gs).c_str(),
-            "grad must be broadcastable into the in-place moment shape inputv/inputm");
+            "grad does not support broadcast and must have exactly the same shape as inputv/inputm");
         return ge::GRAPH_FAILED;
     }
+    // input3 能广播进 inputv <=> broadcast(input3, inputv) == inputv
     if (!Ops::Base::BroadcastShape(&ps, &vs, &bcShape) || !(bcShape == vs)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "input3", Ops::Base::ToString(ps).c_str(),

@@ -263,17 +263,15 @@ aclnnStatus aclnnScatterList(
 - <term>Ascend 950PR/Ascend 950DT</term>：各输入的shape需满足以下关系，不满足时第一段接口返回561002。记varRef列表中的张量个数为B。
   - varRef：列表中每个张量的shape需相同，每个张量的维度数需大于等于1。
   - updates：维度数等于varRef中单个张量的维度数加1；第一维大小等于B；axis轴的大小不大于varRef对应轴；其余维度与varRef一致。
-  - indice：shape支持1~2维；第一维大小等于B；为2维时，第二维大小必须为2。
+  - indice：shape支持1维或2维。1维时shape为(B,)，只给出写入起始位置；2维时shape为(B, 2)，给出写入起始位置与长度。
   - maskOptional：shape支持1维，第一维大小等于B。
   - axis：归一化（负数按updates的维度数折算）后的取值必须落在开区间(0, updates的维度数)内，即不能指向第0维，也不能越界。默认值-2要求updates的维度数大于等于3。
 
-- indice取值范围（调用方保证，算子不做校验）：indice的值位于Device侧，第一段接口无法校验，越界不会返回错误码，而是产生越界写。记varRef中单个张量在axis对应轴上的大小为`D`，updates在axis轴上的大小为`S`，则对每个列表下标`i`需满足：
-  - indice为1维时：`0 <= indice[i]` 且 `indice[i] + S <= D`。
-  - indice为2维时：`0 <= indice[i][0]`、`0 <= indice[i][1] <= S` 且 `indice[i][0] + indice[i][1] <= D`。
+- indice语义与取值范围（取值由调用方保证，算子不做校验）：indice给出的是**写入起始位置**，不是散射目标下标。写入是从该位置开始的一段连续区间，需保证整段不越出axis轴。
+  - 1维：`indice[i]`为第i个张量的写入起始位置，写入长度为updates在axis轴上的大小。
+  - 2维：`indice[i][0]`为起始位置，`indice[i][1]`为写入长度，长度不应超过updates在axis轴上的大小。
 
-  注意：仅保证`indice[i] < D`并不充分——写入是从起始位置开始的一段连续区间，需保证整段区间不越过`D`。
-
-- maskOptional取值范围（调用方保证，算子不做校验）：mask的值位于Device侧，第一段接口无法校验。取值仅支持`0`和`1`：`0`表示该列表元素不执行写入，`1`表示执行写入。其余取值行为未定义。
+- maskOptional取值范围（调用方保证，算子不做校验）：取值仅支持0和1，0表示该列表元素不执行写入，1表示执行写入，其余取值行为未定义。
 
 ## 调用示例
 
