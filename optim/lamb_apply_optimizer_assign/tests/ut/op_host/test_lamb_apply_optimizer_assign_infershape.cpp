@@ -148,15 +148,31 @@ ge::graphStatus RunInferShape(const gert::Shape& grad, const gert::Shape& inputv
 }
 } // namespace
 
-// inputv/inputm 承载动量更新结果，输出形状由它们决定；grad 更小时向上广播进来。
+// grad/inputv/inputm 三者同形，输出形状由它们决定。
 TEST_F(LambApplyOptimizerAssignProtoTest, moment_shape_decides_output_shape)
 {
     gert::Shape o0 = {}, o1 = {}, o2 = {};
     gert::Shape expect = {512, 1024};
-    ASSERT_EQ(RunInferShape({1, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunInferShape({512, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_SUCCESS);
     ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
     ASSERT_EQ(Ops::Base::ToString(o1), Ops::Base::ToString(expect));
     ASSERT_EQ(Ops::Base::ToString(o2), Ops::Base::ToString(expect));
+}
+
+// grad 不参与广播：小于动量形状同样拒收（底层广播模板不支持对 In0 广播）。
+TEST_F(LambApplyOptimizerAssignProtoTest, grad_smaller_than_moment_is_rejected)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    ASSERT_EQ(RunInferShape({1, 1024}, {512, 1024}, {512, 1024}, {512, 1024}, &o0, &o1, &o2), ge::GRAPH_FAILED);
+}
+
+// input3 是唯一参与广播的输入：小于动量形状时按右对齐广播，须放行。
+TEST_F(LambApplyOptimizerAssignProtoTest, input3_broadcast_into_moment_is_accepted)
+{
+    gert::Shape o0 = {}, o1 = {}, o2 = {};
+    gert::Shape expect = {512, 1024};
+    ASSERT_EQ(RunInferShape({512, 1024}, {512, 1024}, {512, 1024}, {1, 1024}, &o0, &o1, &o2), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(Ops::Base::ToString(o0), Ops::Base::ToString(expect));
 }
 
 // grad 大于动量形状：结果无处容纳，infershape 须与 tiling 一样拒收。

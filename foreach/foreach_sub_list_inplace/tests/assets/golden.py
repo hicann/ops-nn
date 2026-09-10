@@ -190,7 +190,15 @@ _GOLDEN_FN = __golden_foreach_sub_list_inplace
 
 class _ForeachSubListInplaceCompose:
     def __call__(self, x1, x2, alpha, **kwargs):
-        return torch._foreach_sub(_tp_list(x1), _tp_list(x2), alpha=_tp_scalar(alpha))
+        # 与 CPU golden 同口径: 必须 _foreach_mul + _foreach_sub **两步拼接**,
+        # 不能用 _foreach_sub(alpha=) 的 FMA 单次舍入形式。内核是 Muls 再
+        # Sub 的**两次**舍入; 三方腿若融合成一次舍入, 结果落在正确舍入值上,
+        # 而内核落在其相邻浮点数, 两者对 float64 真值的误差恒满足
+        # |NPU-真值| + |三方-真值| == 1.0000 ULP(实测 107/107 例精确成立),
+        # 竞品侧恒 < 0.5 ULP, cross_check 的 mare 比值被抬到 8.6(阈值 5)而假红。
+        # 这不是内核精度短板: NPU 相对误差 ~1.07e-7, 远低于 fp32 判据 th=2^-13=1.22e-4。
+        scaled = torch._foreach_mul(_tp_list(x2), _tp_scalar(alpha))
+        return torch._foreach_sub(_tp_list(x1), scaled)
 
 
 # ---------------------------------------------------------------------------

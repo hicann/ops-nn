@@ -168,11 +168,11 @@
 | [aclnnForeachAbs](../../foreach/foreach_abs/docs/aclnnForeachAbs.md) | 对输入张量列表中的每个张量执行逐元素绝对值运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAcos](../../foreach/foreach_acos/docs/aclnnForeachAcos.md) | 对输入张量列表中的每个张量执行逐元素反余弦运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachACosInplace](../../foreach/foreach_a_cos_inplace/docs/aclnnForeachACosInplace.md) | 对输入张量列表中的每个张量逐元素求反余弦，结果原地更新。 | - | 默认确定性实现 |
-| [aclnnForeachAddcdivList](../../foreach/foreach_addcdiv_list/docs/aclnnForeachAddcdivList.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalars，再与$x1_{i}$相加。 | 默认确定性实现 | - |
+| [aclnnForeachAddcdivList](../../foreach/foreach_addcdiv_list/docs/aclnnForeachAddcdivList.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalars，再与$x1_{i}$相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcdivScalar](../../foreach/foreach_addcdiv_scalar/docs/aclnnForeachAddcdivScalar.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcdivScalarList](../../foreach/foreach_addcdiv_scalar_list/docs/aclnnForeachAddcdivScalarList.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以$scalars_{i}$，再与$x1_{i}$相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcdivScalarV2](../../foreach/foreach_addcdiv_scalar/docs/aclnnForeachAddcdivScalarV2.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachAddcmulList](../../foreach/foreach_addcmul_list/docs/aclnnForeachAddcmulList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，并将结果乘以张量scalars，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | - |
+| [aclnnForeachAddcmulList](../../foreach/foreach_addcmul_list/docs/aclnnForeachAddcmulList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，并将结果乘以张量scalars，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcmulScalar](../../foreach/foreach_addcmul_scalar/docs/aclnnForeachAddcmulScalar.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcmulScalarList](../../foreach/foreach_addcmul_scalar_list/docs/aclnnForeachAddcmulScalarList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再与张量scalars进行逐元素乘法，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcmulScalarV2](../../foreach/foreach_addcmul_scalar/docs/aclnnForeachAddcmulScalarV2.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再乘以标量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |

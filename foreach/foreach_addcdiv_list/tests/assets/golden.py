@@ -214,7 +214,15 @@ class _ForeachAddcdivListCompose:
         )
         a, b, c = _tp_list(x1), _tp_list(x2), _tp_list(x3)
         sc = _tp_scalars_t(st, a[0])
-        return torch._foreach_addcdiv(a, b, c, sc)
+        # 与 CPU golden 同口径: div -> mul -> add **三步拼接**, 不用 addcdiv 的
+        # 融合形式。融合按 (s*x2)/x3 结合且只舍入一次, 与 golden 的 x1 + s*(x2/x3)
+        # 逐步舍入不是同一个算法, 两条腿会恒差 1 ULP, cross_check 的 mare 假红。
+        # sc 是一维 packed scalars(addcdiv 的 scalars 形参要求如此), 但 _foreach_mul
+        # 只收 0 维 Tensor 或 Python 数值列表, 直接传会抛
+        # "scalar tensor expected to be 0 dim"。tolist() 按 dtype 还原为 int/float,
+        # 整型不过 float 故不抹低位; Python 数值是 weak-typed, 不会抬高结果 dtype。
+        sl = sc.tolist()
+        return torch._foreach_add(a, torch._foreach_mul(torch._foreach_div(b, c), sl))
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +300,7 @@ class ForeachAddcdivListKernelSpec:
 __spec__ = {
     "foreach_addcdiv_list": "ForeachAddcdivListKernelSpec",
     "aclnnForeachAddcdivList": "ForeachAddcdivListAclnnSpec",
-    "torch._foreach_addcdiv": "ForeachAddcdivListTorchSpec",
+    "torch.ops.aten._foreach_addcdiv.Tensor": "ForeachAddcdivListTorchSpec",  # e2e：算子无原生支持，需 torch_npu meta 补丁，详见下方说明
 }
 
 
@@ -304,8 +312,7 @@ def _tp_one(t):
     会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
     §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
 
-    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
-    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
+    kernel / GEIR / aclnn / e2e 四条通路的三方腿共用此口径。
     """
     return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
@@ -357,6 +364,62 @@ class ForeachAddcdivListAclnnSpec:
     tolerance = _TOL_KERNEL
 
 
+class _TpE2e:
+    """e2e 通路三方腿适配: 池的 key 取自 torch 重载的形参名
+    (self / tensor1 / tensor2 / scalars), 与 def 注册名 (x1 / x2 / x3 / scalars) 不同;
+    直接复用 kernel 腿的竞品类会因形参 x1 不在 pool 中而抛 UnknownParamError,
+    三方腿整条起不来。故按 torch 形参名另立适配类, 内部转调同一个竞品类, 不改变竞品语义。
+    """
+
+    def __call__(self, *args, **kwargs):
+        # TTK 按名下发(self/tensor1/tensor2/scalars), 内层竞品类的形参是 def 注册名
+        # (x1/x2/x3/scalars), 此处做一次名字映射后按位置转调。
+        # 位置/关键字混合下发都要兜住; 同时兼容 def 注册名(x1/x2/x3)。
+        aliases = (
+            ("self", "x1"),
+            ("tensor1", "x2"),
+            ("tensor2", "x3"),
+            ("scalars",),
+        )
+        vals = list(args)
+        for group in aliases[len(vals) :]:
+            for n in group:
+                if n in kwargs:
+                    vals.append(kwargs[n])
+                    break
+        return _TpKernelFaithful()(*vals)
+
+
+# 绑定方法的签名会丢掉首个形参, 故首位用占位名, 其后才是 torch 的形参名。
+try:
+    _TpE2e.__call__.__signature__ = _kf_inspect.Signature(
+        [
+            _kf_inspect.Parameter(n, _kf_inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            for n in ("_inst", "self", "tensor1", "tensor2", "scalars")
+        ]
+    )
+except (ValueError, TypeError):
+    pass
+
+
+# ===========================================================================
+# ⚠️ e2e 通路：算子**实际不具备 e2e 支持**，下方 ForeachAddcdivListTorchSpec 仅在
+# 打过本地补丁的环境里才跑得起来，不代表产品能力。
+#
+# 原因：aten::_foreach_addcdiv.Tensor 这个重载把 scalars 当**输入张量**传，torch 的
+# CompositeExplicitAutograd 实现第一步就调 convert_tensor_to_scalar_list() 解引用
+# scalars 的数据。追踪期 meta 张量没有数据，直接抛
+#     "Expected scalars to be on CPU, got meta instead."
+# → torch.compile 建不了图 → torchair 的 ge.ForeachAddcdivList converter 永远走不到。
+#
+# 2026-09-09 之所以能跑出 e2e 结果，是因为**手工给已安装的 torch_npu 打了补丁**：
+#     site-packages/torch_npu/op_plugin/meta/_meta_registrations.py
+#     追加 @impl(m_aten, "_foreach_addcdiv.Tensor") 的 meta 实现
+# 那是装好的包内改动，不在本仓、不是交付件，torch_npu 一重装就失效。
+#
+# 因此：**不要把 e2e 当作本算子的已交付通路**。若要正式交付 e2e，前置条件是上述
+# meta 注册进入 torch_npu 正式版本，届时再把这里的说明去掉。
+# ===========================================================================
 class ForeachAddcdivListTorchSpec:
     """E2E Tensor/ScalarList overload: 无 ACLNN out 参数，返回 TensorList。"""
 
@@ -365,3 +428,12 @@ class ForeachAddcdivListTorchSpec:
         return ForeachAddcdivListAclnnSpec.golden(
             self, tensor1, tensor2, scalars, **kwargs
         )
+
+    # e2e 通路与 kernel / aclnn 同口径: 两条腿都要声明, 否则 cross_check 缺三方腿,
+    # 判据会退化成 GOLDEN_FAILURE。
+    #   * CPU golden(_golden_one): 低精度浮点用 fp32 中间量, 整型与 fp64 保持原精度,
+    #     不做强制降档 —— 与 TTK 的 golden_mode=Promote 口径一致。
+    #   * GPU 三方腿(_tp_one): 不替 torch 决定精度, 原样交给它, 是否内部抬到 fp32
+    #     由 torch 的算子实现按需决定 —— 保证三方与 golden 是两套独立实现。
+    third_party = {"torch": _TpE2e}
+    tolerance = _TOL_KERNEL

@@ -46,28 +46,28 @@
     <tr>
       <td>grad</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的grad（梯度）。允许小于inputv/inputm并向上广播，但其shape必须能broadcast进inputv、inputm的shape。</td>
+      <td>支持空Tensor。公式中的grad（梯度）。<b>不参与广播</b>：shape必须与inputv、inputm完全相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputv</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的inputv（二阶矩）。inputv为**原地(in-place)更新**输出，其shape必须等于所有输入广播后的完整输出shape：即须与inputm同shape，且grad、input3能broadcast进inputv。</td>
+      <td>支持空Tensor。公式中的inputv（二阶矩）。<b>原地(in-place)更新，其shape即为输出shape，不参与广播</b>；须与grad、inputm完全相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputm</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的inputm（一阶矩）。inputm为**原地(in-place)更新**输出，其shape必须等于所有输入广播后的完整输出shape：即须与inputv同shape，且grad、input3能broadcast进inputm。</td>
+      <td>支持空Tensor。公式中的inputm（一阶矩）。<b>原地(in-place)更新，其shape即为输出shape，不参与广播</b>；须与grad、inputv完全相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input3</td>
       <td>输入</td>
-      <td>支持空Tensor。公式中的input3（参与权重衰减的参数），主张量。</td>
+      <td>支持空Tensor。公式中的input3（参与权重衰减的参数）。<b>唯一参与广播的输入</b>：按右对齐broadcast规则向inputv对齐，维度数可少于inputv（不可多于），对应维需相等或为1。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -130,27 +130,31 @@
     <tr>
       <td>output0</td>
       <td>输出</td>
-      <td>支持空Tensor。公式中的output0（update），shape取grad与inputv的broadcast结果。</td>
+      <td>支持空Tensor。公式中的output0（update），shape与inputv、inputm相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputv</td>
       <td>输出</td>
-      <td>支持空Tensor。更新后的inputv（二阶矩，原地更新），shape取grad与inputv的broadcast结果。</td>
+      <td>支持空Tensor。更新后的inputv（二阶矩，原地更新），shape与输入inputv相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputm</td>
       <td>输出</td>
-      <td>支持空Tensor。更新后的inputm（一阶矩，原地更新），shape取grad与inputm的broadcast结果。</td>
+      <td>支持空Tensor。更新后的inputm（一阶矩，原地更新），shape与输入inputm相同。</td>
       <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
+
+- shape约束：`grad`、`inputv`、`inputm`三者shape必须**完全相同**，并直接决定三个输出的shape。`inputv`与`inputm`是原地更新的动量输出，不会被广播放大；`grad`同样不参与广播。**广播只发生在`input3`上**：`input3`按右对齐broadcast规则向`inputv`对齐，维度数可少于`inputv`（含标量），对应维需与`inputv`相等或为1；`input3`的维度数大于`inputv`、或某一维大于`inputv`对应维，均不被支持。
+
+- `mul0_x`、`mul1_x`、`mul2_x`、`mul3_x`、`add2_y`、`steps`、`do_use_weight`、`weight_decay_rate`这8个标量输入不支持空Tensor；`grad`、`inputv`、`inputm`、`input3`支持空Tensor。
 
 - 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
