@@ -22,6 +22,7 @@
 #include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
+#include "op_api/level2_base.h"
 
 #include "pooling/common/op_api/pooling.h"
 #include "pooling/common/op_api/avgpool_update.h"
@@ -263,10 +264,16 @@ static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernel, co
     return true;
 }
 
+static const std::initializer_list<op::DataType> ASCEND910BC_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_FLOAT16};
+
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
-    // 根据API定义，需要列出所能支持的所有dtype
-    auto dtypeSupportList = GetDtypeSupportListBySocVersion();
+    // 根据API定义，需要列出所能支持的所有dtype，AvgPool2d不支持HIFLOAT8，不能复用cube的dtype支持列表
+    auto dtypeSupportList = GetDtypeSupportListV2(ASCEND910BC_DTYPE_SUPPORT_LIST, ASCEND310P_DTYPE_SUPPORT_LIST);
     // 检查self的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
 

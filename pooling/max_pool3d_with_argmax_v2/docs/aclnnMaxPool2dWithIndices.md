@@ -171,7 +171,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     <td>输出</td>
     <td>最大值的索引位置组成的Tensor。</td>
     <td>shape与out一致。</td>
-    <td>INT32, INT64。</td>
+    <td>INT32、INT64</td>
     <td>NCHW，NHWC、ND</td>
     <td>3-4</td>
     <td>√</td>

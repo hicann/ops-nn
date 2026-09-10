@@ -162,7 +162,7 @@ aclnnStatus aclnnEmbeddingBag(
         <td>输入</td>
         <td>包含索引的张量，指定要从weight中提取哪些词的嵌入向量。</td>
         <td>-</td>
-        <td>INT32、INT64</td>
+        <td>INT32、INT64、INT16、INT8、UINT8</td>
         <td>ND</td>
         <td>0-2</td>
         <td>√</td>
@@ -171,8 +171,8 @@ aclnnStatus aclnnEmbeddingBag(
         <td>offsets</td>
         <td>输入</td>
         <td>用于将indices分割成多个bag的偏移量张量。</td>
-        <td>-</td>
-        <td>INT32、INT64</td>
+        <td>元素需按升序排列。</td>
+        <td>INT32、INT64、INT16、INT8、UINT8</td>
         <td>-</td>
         <td>0-1</td>
         <td>-</td>
@@ -301,6 +301,7 @@ aclnnStatus aclnnEmbeddingBag(
 
   <!-- npu="A3,910b,910,310p" id9 -->
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>： indices仅支持0-1维，perSampleWeights仅支持1维且在除sum模式外的其他模式必须为nullptr 。
+  - indices和offsets的数据类型至少一个为INT32或INT64；当数据类型为INT16、INT8、UINT8时，接口内部会转换为INT32进行计算。
 
   <!-- end id9 -->
 
