@@ -114,8 +114,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
       <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li>
-      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li>
-     <li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> </ul>
+      <li>当mat2矩阵不转置时，NZ格式各个维度表示：[n1, k1, k0, n0]，其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil(k, k0) = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n, n0) = n1。</li>
+     <li>当mat2矩阵转置时，NZ格式各个维度表示：[k1, n1, n0, k0]，其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil(k, k0) = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n, n0) = n1。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16</td>
       <td>NZ</td>

@@ -152,7 +152,7 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     // aclnnBaddbmm接口调用示例
     // 3. 调用CANN算子库API
     // 调用aclnnBaddbmm第一段接口
-    ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, out, cubeMathType, &workspaceSize, &executor);
+    ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, out, cubeMathType, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -184,7 +184,7 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     LOG_PRINT("\ntest aclnnInplaceBaddbmm\n");
     uint64_t workspaceSizeForInplace = 0;
     // 调用aclnnInplaceBaddbmm第一段接口
-    ret = aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSizeForInplace,
+    ret = aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, cubeMathType, &workspaceSizeForInplace,
                                               &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);

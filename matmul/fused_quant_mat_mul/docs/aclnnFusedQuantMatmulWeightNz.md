@@ -238,7 +238,7 @@ aclnnStatus aclnnFusedQuantMatmulWeightNz(
         <td>groupSizeOptional</td>
         <td>输入</td>
         <td>用于输入m、n、k方向上的量化分组大小。</td>
-        <td>预留参数，当前版本不支持，需要传入nullptr。</td>
+        <td>预留参数，当前版本不支持，建议传入0。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
