@@ -9,6 +9,7 @@
  */
 #include "aclnn_addmv.h"
 #include "level0/add.h"
+#include "level0/fill.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/mul.h"
@@ -41,6 +42,30 @@ static const std::initializer_list<DataType> addmvDtypeSupportList = {
     DataType::DT_INT16, DataType::DT_INT8,  DataType::DT_UINT8, DataType::DT_DOUBLE,  DataType::DT_BOOL};
 static const std::initializer_list<DataType> matmulDtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                        DataType::DT_BF16};
+
+static aclnnStatus FillZeroOutput(aclTensor* out, aclOpExecutor* executor)
+{
+    if (out->IsEmpty()) {
+        return ACLNN_SUCCESS;
+    }
+    FVector<int64_t> fillShape;
+    for (size_t i = 0; i < out->GetViewShape().GetDimNum(); ++i) {
+        fillShape.push_back(out->GetViewShape().GetDim(i));
+    }
+    auto dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+    CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto valueScalar = executor->AllocScalar(0);
+    CHECK_RET(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto valueTensor = executor->ConvertToTensor(valueScalar, out->GetDataType());
+    CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+    CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyResult = l0op::ViewCopy(fillTensor, out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha,
                          const aclScalar* beta, const aclTensor* out)
@@ -350,6 +375,16 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(const aclTensor* self, const aclTensor* m
     if (self->IsEmpty()) {
         // 根据实际支持情况补充
         *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // Both terms are disabled: fill zeros without propagating NaN/Inf from the inputs.
+    if (std::abs(alpha->ToFloat()) <= std::numeric_limits<float>::epsilon() &&
+        std::abs(beta->ToFloat()) <= std::numeric_limits<float>::epsilon()) {
+        auto zeroRet = FillZeroOutput(out, uniqueExecutor.get());
+        CHECK_RET(zeroRet == ACLNN_SUCCESS, zeroRet);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }

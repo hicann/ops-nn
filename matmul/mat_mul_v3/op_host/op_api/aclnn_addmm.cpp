@@ -10,6 +10,7 @@
 
 #include "aclnn_addmm.h"
 #include "level0/add.h"
+#include "level0/fill.h"
 #include "level0/axpy.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"
@@ -583,6 +584,95 @@ public:
     ~AddmmEmptyTensorGraph() override = default;
 };
 
+class AddmmAlpha0Beta0Graph : public Ops::NN::MatmulGraphImpl {
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
+
+    aclnnStatus Impl() override
+    {
+        FVector<int64_t> fillShape = {output->GetViewShape().GetDim(0), output->GetViewShape().GetDim(1)};
+        const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclScalar* valueScalar = executor->AllocScalar(0);
+        CHECK_RET(valueScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        CHECK_RET(fillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = fillTensor;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override
+    {
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddmmAlpha0Beta0Graph() override = default;
+};
+
+class AddmmWeightNzGraph : public Ops::NN::MatmulGraphImpl {
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override
+    {
+        const aclTensor* self = bias;
+        const aclTensor* mat1 = matA;
+        const aclTensor* mat2 = matB;
+        aclTensor* out = output;
+        AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
+        uint64_t emptyWorkspaceSize = 0;
+        if (ProcessEmptyTensor(addmmTensor, &emptyWorkspaceSize, executor)) {
+            return ACLNN_SUCCESS;
+        }
+
+        bool enableFp32Output = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
+                                                     cubeMathType, nullptr, true);
+        bool enableGemm16In32Out = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
+                                                        cubeMathType);
+        bool isSupportNpuArch = op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
+        op::DataType biasDtype = self->GetDataType();
+        bool biasDtypeValid = biasDtype == mat1->GetDataType() || biasDtype == op::DataType::DT_FLOAT;
+        bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
+        bool useGemm16In32Out = enableGemm16In32Out && !needBroadcast && biasDtypeValid && isSupportNpuArch;
+        bool useGemmFp32Add = CheckGemmV3WithAlphaBeta(self, mat1, mat2, cubeMathType) ||
+                              (enableGemm16In32Out && cubeMathType == USE_FP32_ADD && biasDtypeValid &&
+                               isSupportNpuArch);
+
+        const aclTensor* castOut = nullptr;
+        if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
+            castOut = MatmulMulProcess(addmmTensor, cubeMathType, executor);
+        } else if (useGemmFp32Add || useGemm16In32Out) {
+            OP_LOGD("aclnnAddmmWeightNz run in ExecGemmV3WithAlphaBetaOp branch");
+            castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, executor, enableGemm16In32Out);
+        } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
+            OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
+            auto biasMmOut = ExecMmOpWithBias(mat1, mat2, self, out, cubeMathType, executor, false, false);
+            CHECK_RET(biasMmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            castOut = l0op::Cast(biasMmOut, out->GetDataType(), executor);
+        } else {
+            castOut = AddMatmulProcess(addmmTensor, cubeMathType, enableFp32Output, executor);
+        }
+        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto viewCopyResult = l0op::ViewCopy(castOut, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override { return ACLNN_SUCCESS; };
+
+    ~AddmmWeightNzGraph() override = default;
+};
+
 class AddmmAlpha0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
@@ -697,6 +787,16 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(const aclTensor* self, con
         matmulGraph = std::make_shared<AddmmEmptyTensorGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType,
                                                               executor);
         return matmulGraph;
+    }
+
+    // alpha == 0 && beta == 0: neither input term participates in the result.
+    if (fabs(alpha->ToFloat()) <= numeric_limits<float>::epsilon() &&
+        fabs(beta->ToFloat()) <= numeric_limits<float>::epsilon()) {
+        return std::make_shared<AddmmAlpha0Beta0Graph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
+    }
+
+    if (isAclnnWeightNz) {
+        return std::make_shared<AddmmWeightNzGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
     }
 
     // 空tensor处理与判断: 如果mat1 a*b 和mat2 b*c是空tensor，但是a*c不是空tensor, 返回Beta self
@@ -830,41 +930,11 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(const aclTensor* self, 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if (ProcessEmptyTensor(addmmTensor, workspaceSize, uniqueExecutor.get())) {
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
-    bool enableFp32Output = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
-                                                 cubeMathType, nullptr, true);
-    bool enableGemm16In32Out = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
-                                                    cubeMathType);
-    bool isSupportNpuArch = op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
-    op::DataType biasDtype = self->GetDataType();
-    bool biasDtypeValid = biasDtype == mat1->GetDataType() || biasDtype == op::DataType::DT_FLOAT;
-    bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
-    bool useGemm16In32Out = enableGemm16In32Out && !needBroadcast && biasDtypeValid && isSupportNpuArch;
-    bool useGemmFp32Add = CheckGemmV3WithAlphaBeta(self, mat1, mat2, cubeMathType) ||
-                          (enableGemm16In32Out && cubeMathType == USE_FP32_ADD && biasDtypeValid && isSupportNpuArch);
-
-    const aclTensor* castOut = nullptr;
-    if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
-        castOut = MatmulMulProcess(addmmTensor, cubeMathType, uniqueExecutor.get());
-    } else if (useGemmFp32Add || useGemm16In32Out) {
-        OP_LOGD("aclnnAddmmWeightNz run in ExecGemmV3WithAlphaBetaOp branch");
-        castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, uniqueExecutor.get(), enableGemm16In32Out);
-    } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
-        OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
-        auto biasMmOut = ExecMmOpWithBias(mat1, mat2, self, out, cubeMathType, uniqueExecutor.get(), false, false);
-        CHECK_RET(biasMmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        castOut = l0op::Cast(biasMmOut, out->GetDataType(), uniqueExecutor.get());
-    } else {
-        castOut = AddMatmulProcess(addmmTensor, cubeMathType, enableFp32Output, uniqueExecutor.get());
-    }
-    CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto matmulGraph = CreateAddmmGraphImpl(self, mat1, mat2, beta, alpha, out, cubeMathType, uniqueExecutor.get(),
+                                            true);
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto executeStatus = matmulGraph->Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
