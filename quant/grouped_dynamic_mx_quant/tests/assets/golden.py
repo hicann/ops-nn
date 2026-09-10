@@ -14,7 +14,20 @@ import re
 
 import numpy as np
 
-__golden__ = {"kernel": {"grouped_dynamic_mx_quant": "grouped_dynamic_mx_quant_golden"}}
+__golden__ = {
+    "kernel": {"grouped_dynamic_mx_quant": "grouped_dynamic_mx_quant_golden"},
+    "aclnn": {"aclnnGroupedDynamicMxQuantV2": "grouped_dynamic_mx_quant_v2_golden"},
+    "e2e": {
+        "torch_npu.npu_grouped_dynamic_mx_quant": "npu_grouped_dynamic_mx_quant_golden"
+    },
+}
+
+__input__ = {
+    "aclnn": {"aclnnGroupedDynamicMxQuantV2": "grouped_dynamic_mx_quant_v2_input"},
+    "e2e": {
+        "torch_npu.npu_grouped_dynamic_mx_quant": "npu_grouped_dynamic_mx_quant_input"
+    },
+}
 
 
 DATA_TYPE_INT_TO_STR = {
@@ -53,6 +66,35 @@ DATA_TYPE_INT_TO_STR = {
     40: "float4_e2m1",
     41: "float4_e1m2",
     42: "hifloat4",
+}
+
+# torch_scalarType 枚举值 -> CANN dtype 字符串（E2E 走 torch_npu，CSV 里 dst_type 是 torch 枚举）。
+# 值对齐 DATA_TYPE_INT_TO_STR；16(quint4x2)/21(bits8) 在 CANN 表无对应项，省略。
+TORCH_DTYPE_ENUM_TO_CANN_STR = {
+    0: "uint8",
+    1: "int8",
+    2: "int16",
+    3: "int32",
+    4: "int64",
+    5: "float16",
+    6: "float32",
+    7: "double",
+    8: "complex32",
+    9: "complex64",
+    10: "complex128",
+    11: "bool",
+    12: "qint8",
+    13: "quint8",
+    14: "qint32",
+    15: "bfloat16",
+    23: "float8_e5m2",
+    24: "float8_e4m3fn",
+    285: "int4",
+    290: "hifloat8",
+    291: "float8_e5m2",
+    292: "float8_e4m3fn",
+    296: "float4_e2m1",
+    297: "float4_e1m2",
 }
 
 
@@ -127,6 +169,63 @@ def _mx_calculate_share_exp(fp_array, scale_axis, mx_ele_dtype):
     return res
 
 
+def _mx_calculate_share_exp_nv(
+    fp_array, scale_axis, mx_ele_dtype, max_norm, subnormal, max_low_bound=0
+):
+    fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdims=True).astype(
+        np.float32
+    )
+    fp_abs_max_orig = fp_abs_max.copy()
+    if max_low_bound != 0:
+        fp_abs_max = np.maximum(fp_abs_max, max_low_bound)
+    s_fp32 = fp_abs_max / max_norm
+    binary_ints = np.array(s_fp32.view(np.uint32))
+    exponent_mask = np.uint32(0x7F800000)
+    mantissa_mask = np.uint32(0x007FFFFF)
+    exponents = (binary_ints & exponent_mask) >> 23
+    exponents_int16 = exponents.astype(np.int16)
+    mantissas = binary_ints & mantissa_mask
+    condition_1 = (exponents_int16 > 0) & (exponents_int16 < 254) & (mantissas > 0)
+    if subnormal:
+        condition_2 = (exponents_int16 == 0) & (mantissas > 2**22)
+    else:
+        condition_2 = False
+    exponents_int16 = np.where(
+        (condition_1 | condition_2), exponents_int16 + 1, exponents_int16
+    )
+    res = (exponents_int16 - 127).astype(np.float32)
+    res[fp_abs_max_orig == 0] = -float("inf")
+    return res
+
+
+def _mx_calculate_share_exp_dynamic_dtype_range(
+    fp_array, scale_axis, mx_ele_dtype, max_norm, subnormal
+):
+    from ml_dtypes import bfloat16
+
+    fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdims=True).astype(
+        bfloat16
+    )
+    binary_ints = np.array(fp_abs_max.view(np.uint16))
+    exponent_mask = np.uint16(0x7F80)
+    mantissa_mask = np.uint16(0x007F)
+    exponents = (binary_ints & exponent_mask) >> 7
+    exponents_int16 = exponents.astype(np.int16)
+    mantissas = binary_ints & mantissa_mask
+    mantissas = mantissas.astype(np.uint16)
+    threshold = np.uint16(
+        np.array([max_norm], dtype=bfloat16).view(np.uint16)[0] & 0x007F
+    )
+    condition = mantissas > threshold
+    exponents_int16_1 = np.where(condition, exponents_int16 + 1, exponents_int16)
+    ele_emax = int(np.floor(np.log2(max_norm)))
+    exponents_int16_1 -= ele_emax
+    res = (exponents_int16_1 - 127).astype(np.float32)
+    res[exponents_int16 == 255] = float("inf")
+    res[fp_abs_max == 0] = -float("inf")
+    return res
+
+
 def _mx_round_mantissa(fp_array, round_mode):
     if round_mode in ("rint", "even"):
         fp_array = np.rint(fp_array)
@@ -145,7 +244,9 @@ def _mx_round_mantissa(fp_array, round_mode):
     return fp_array
 
 
-def _mx_quantize_to_element_format(fp_array, share_exp, mx_ele_dtype, round_mode):
+def _mx_quantize_to_element_format(
+    fp_array, share_exp, mx_ele_dtype, round_mode, scale_alg=0, dst_type_max=0.0
+):
     mx_dtype = str(mx_ele_dtype)
     match = re.search(r"e(\d+)m(\d+)", mx_dtype)
     if match:
@@ -154,7 +255,11 @@ def _mx_quantize_to_element_format(fp_array, share_exp, mx_ele_dtype, round_mode
     else:
         raise ValueError(f"mx element dtype [{mx_ele_dtype}] is not recognized.")
 
-    ret = fp_array / (2**share_exp)
+    ret = np.where(
+        share_exp == -127,
+        np.where(np.signbit(fp_array), -0.0, 0.0),
+        fp_array / (2**share_exp),
+    )
     private_exp = np.floor(np.log2(np.abs(ret.astype(np.float32)) + (ret == 0))).astype(
         fp_array.dtype, copy=False
     )
@@ -281,6 +386,8 @@ def _grouped_mx_quantize(
     axis=-2,
     block_size=32,
     round_mode="rint",
+    scale_alg=0,
+    dst_type_max=0.0,
 ):
     if not isinstance(fp_array, np.ndarray):
         raise RuntimeError(
@@ -290,8 +397,37 @@ def _grouped_mx_quantize(
         raise RuntimeError(
             f"Dtype of input tensor to be quantized is not supported: {fp_array.dtype.name}"
         )
-    if mx_ele_dtype not in ("float8_e4m3fn", "float8_e5m2"):
+    if mx_ele_dtype not in (
+        "float4_e2m1",
+        "float4_e1m2",
+        "float8_e4m3fn",
+        "float8_e5m2",
+    ):
         raise NotImplementedError(f"Not support {mx_ele_dtype} yet!")
+    if (
+        scale_alg == 2
+        and mx_ele_dtype == "float4_e2m1"
+        and (
+            dst_type_max < 0
+            or (dst_type_max > 0 and dst_type_max < 6)
+            or dst_type_max > 12
+        )
+    ):
+        raise RuntimeError(
+            f"For float4_e2m1, dst_type_max[{dst_type_max}] should be in [6,12] or equal 0"
+        )
+    if (
+        scale_alg == 2
+        and mx_ele_dtype == "float4_e1m2"
+        and (
+            dst_type_max < 0
+            or (dst_type_max > 0 and dst_type_max < 1.75)
+            or dst_type_max >= 3.5
+        )
+    ):
+        raise RuntimeError(
+            f"For float4_e1m2, dst_type_max[{dst_type_max}] should be in [1.75,3.5) or equal 0"
+        )
 
     def is_non_reverse_order(arr):
         if len(arr) <= 1:
@@ -316,16 +452,54 @@ def _grouped_mx_quantize(
         fp_array, group_index, axis, block_size
     )
     # get mx scale exponents
-    share_exp = _mx_calculate_share_exp(
-        fp_array, scale_axis=axis + 1, mx_ele_dtype=mx_ele_dtype
-    )
+    if scale_alg == 0:
+        share_exp = _mx_calculate_share_exp(
+            fp_array, scale_axis=axis + 1, mx_ele_dtype=mx_ele_dtype
+        )
+    elif scale_alg == 1:
+        share_exp = _mx_calculate_share_exp_nv(
+            fp_array,
+            scale_axis=axis + 1,
+            mx_ele_dtype=mx_ele_dtype,
+            max_norm=_get_dtype_range(mx_ele_dtype)[1],
+            subnormal=True,
+        )
+    elif scale_alg == 2:
+        if mx_ele_dtype not in ("float4_e2m1", "float4_e1m2"):
+            raise RuntimeError(
+                "scale_alg = 2 is only supported by float4_e2m1 and float4_e1m2"
+            )
+        if dst_type_max == 0:
+            dst_type_max = 6 if mx_ele_dtype == "float4_e2m1" else 1.75
+        is_optimized = (mx_ele_dtype == "float4_e2m1" and dst_type_max in (6, 7)) or (
+            mx_ele_dtype == "float4_e1m2" and dst_type_max == 1.875
+        )
+        if is_optimized:
+            share_exp = _mx_calculate_share_exp_dynamic_dtype_range(
+                fp_array,
+                scale_axis=axis + 1,
+                mx_ele_dtype=mx_ele_dtype,
+                max_norm=dst_type_max,
+                subnormal=False,
+            )
+        else:
+            share_exp = _mx_calculate_share_exp_nv(
+                fp_array,
+                scale_axis=axis + 1,
+                mx_ele_dtype=mx_ele_dtype,
+                max_norm=dst_type_max,
+                subnormal=False,
+            )
+    else:
+        raise RuntimeError(f"scale_alg is not supported: {scale_alg}")
+
     scale_emax = 2 ** (8 - 1) - 1  # 8 for E8M0
     share_exp[share_exp > scale_emax] = float("NaN")
     share_exp[share_exp < -scale_emax] = -scale_emax
 
     # quantize mx element
     ele_array = _mx_quantize_to_element_format(
-        fp_array, share_exp, mx_ele_dtype, round_mode
+        fp_array, share_exp, mx_ele_dtype, round_mode, scale_alg, dst_type_max
     )
     # undo reshape
     ele_array = _grouped_mx_undo_reshape_to_blocks(
@@ -373,7 +547,9 @@ def grouped_dynamic_mx_quant_golden(
     """
     group_idx = group_index
     block_size = blocksize
-    dst_type_str = DATA_TYPE_INT_TO_STR[dst_type]
+    dst_type_str = (
+        dst_type if isinstance(dst_type, str) else DATA_TYPE_INT_TO_STR[dst_type]
+    )
 
     ret = _grouped_mx_quantize(
         x,
@@ -382,6 +558,179 @@ def grouped_dynamic_mx_quant_golden(
         axis=0,
         block_size=block_size,
         round_mode=round_mode,
+        scale_alg=scale_alg,
+        dst_type_max=dst_type_max,
     )
 
     return ret[1], ret[0]
+
+
+def _pick_attr(kwargs, *names, default=None):
+    for n in names:
+        if n in kwargs and kwargs[n] is not None:
+            return kwargs[n]
+    return default
+
+
+def npu_grouped_dynamic_mx_quant_input(x, group_index, *extra, **kwargs):
+    """E2E input normalize for torch_npu.npu_grouped_dynamic_mx_quant."""
+    dim_s = int(x.shape[0])
+    if hasattr(group_index, "copy_"):
+        import torch
+
+        group_index.copy_(torch.sort(group_index).values)
+        group_index.clamp_(0, dim_s)
+        group_index[-1] = dim_s
+    else:
+        import numpy as np
+
+        gi = np.sort(group_index)
+        gi = np.minimum(np.maximum(gi, 0), dim_s)
+        gi[-1] = dim_s
+        group_index[...] = gi
+
+
+def npu_grouped_dynamic_mx_quant_golden(x, group_index, *extra, **kwargs):
+    """E2E golden for torch_npu.npu_grouped_dynamic_mx_quant.
+
+    Computed on CPU numpy. Inputs may be torch.Tensor or numpy.ndarray.
+    Returns [y, mxscale]. mxscale is returned as uint8 (bit-view of the
+    float8_e8m0 scale) because torch_npu's device-side mxscale output is uint8
+    (torch has no native float8_e8m0), so the comparator sees the same bit
+    representation. The quantization math is identical to the ACLNN golden.
+    FP4 (dst_type 40/41) element output is returned packed to uint8 (last dim
+    halved) to match the torch_npu device-side representation, since E2E does
+    not run the framework's unpack_4bit_outputs.
+    """
+    import numpy as np
+
+    round_mode = _pick_attr(kwargs, "roundMode", "round_mode", default="rint")
+    dst_type = _pick_attr(kwargs, "dstType", "dst_type", default=35)
+    dst_type = TORCH_DTYPE_ENUM_TO_CANN_STR.get(dst_type, dst_type)
+    blocksize = _pick_attr(kwargs, "blocksize", "block_size", default=32)
+    scale_alg = _pick_attr(kwargs, "scaleAlg", "scale_alg", default=0)
+    dst_type_max = _pick_attr(kwargs, "dstTypeMax", "dst_type_max", default=0.0)
+
+    x_np = _to_numpy(x)
+    gi_np = _to_numpy(group_index)
+
+    ele, scale = grouped_dynamic_mx_quant_golden(
+        x_np,
+        gi_np,
+        round_mode=round_mode,
+        dst_type=dst_type,
+        blocksize=blocksize,
+        scale_alg=scale_alg,
+        dst_type_max=dst_type_max,
+    )
+    ele = _pack_fp4_to_uint8(ele)
+    return [np.ascontiguousarray(ele), np.ascontiguousarray(scale).view(np.uint8)]
+
+
+def grouped_dynamic_mx_quant_v2_input(x, group_index, *args, **kwargs):
+    """Normalize group_index in place for aclnnGroupedDynamicMxQuantV2.
+
+    Works for both torch.Tensor (torch-native dtypes) and numpy.ndarray (when
+    any output dtype is non-torch-native, e.g. float8). Mirrors the kernel-side
+    input.py: sort, clamp to [0, x.shape[0]], and force the last element to equal
+    the group axis dim so that group_index[-1] == x.shape[group_axis].
+    """
+    dim_s = int(x.shape[0])
+    if hasattr(group_index, "copy_"):
+        import torch
+
+        group_index.copy_(torch.sort(group_index).values)
+        group_index.clamp_(0, dim_s)
+        group_index[-1] = dim_s
+    else:
+        import numpy as np
+
+        gi = np.sort(group_index)
+        gi = np.minimum(np.maximum(gi, 0), dim_s)
+        gi[-1] = dim_s
+        group_index[...] = gi
+
+
+def _pack_fp4_to_uint8(ele):
+    """Pack a native FP4 (float4_e2m1 / float4_e1m2) element tensor into the
+    E2E host-side (op-plugin) representation of the y output.
+
+    torch_npu.npu_grouped_dynamic_mx_quant stores y as a uint8 tensor with the
+    last dim halved, packing 2 consecutive FP4 elements per byte: the first
+    (even) element goes to the low nibble, the second (odd) element to the high
+    nibble. (TTK's unpack_4bit_outputs only runs for kernel/aclnn which expose
+    flat_output_dtypes; E2E has none, so the golden must pack explicitly.)
+    """
+    import numpy as np
+
+    if not isinstance(ele, np.ndarray) or "float4" not in str(ele.dtype):
+        return ele
+    if ele.shape[-1] % 2:
+        raise ValueError(
+            "FP4 output requires the last dim of x to be divisible by 2 for packing"
+        )
+    raw = ele.view(np.uint8) & 0x0F
+    pairs = raw.reshape(raw.shape[:-1] + (-1, 2))
+    packed = (
+        pairs[..., 0].astype(np.uint16) | (pairs[..., 1].astype(np.uint16) << 4)
+    ).astype(np.uint8)
+    return packed
+
+
+def _to_numpy(tensor):
+    """ACLNN golden receives torch.Tensor; convert back to numpy for the math.
+
+    torch bfloat16 cannot be converted via .numpy() on this (CPU) build, so it is
+    routed through float32 and back to ml_dtypes.bfloat16 (lossless round trip).
+    """
+    if hasattr(tensor, "detach"):
+        import torch
+
+        t = tensor.detach().cpu()
+        if t.dtype == torch.bfloat16:
+            import ml_dtypes
+
+            return t.to(torch.float32).numpy().astype(ml_dtypes.bfloat16)
+        return t.numpy()
+    return tensor
+
+
+def grouped_dynamic_mx_quant_v2_golden(
+    x,
+    group_index,
+    round_mode,
+    dst_type,
+    blocksize,
+    scale_alg,
+    dst_type_max,
+    y=None,
+    mxscale=None,
+    **kwargs,
+):
+    """Golden for aclnnGroupedDynamicMxQuantV2.
+
+    Positional args follow aclnnGroupedDynamicMxQuantV2GetWorkspaceSize, without
+    workspaceSize/executor. x, groupIndex, y, mxscale are torch.Tensor; the
+    scalar/attr params (roundMode, dstType, blocksize, scaleAlg, dstTypeMax) are
+    passed positionally from the testcase attributes.
+
+    **kwargs: tensor_dtypes, tensor_formats, scalar_dtypes,
+             short_soc_version, testcase_name, ...
+
+    Returns:
+        [y, mxscale] -> quantized element tensor, then the mx scale tensor.
+    """
+    x_np = _to_numpy(x)
+    gi_np = _to_numpy(group_index)
+
+    ele, scale = grouped_dynamic_mx_quant_golden(
+        x_np,
+        gi_np,
+        round_mode=round_mode,
+        dst_type=dst_type,
+        blocksize=blocksize,
+        scale_alg=scale_alg,
+        dst_type_max=dst_type_max,
+    )
+
+    return [ele, scale]
