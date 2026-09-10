@@ -47,6 +47,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "ge_glu_v2_apt");
         this->AICore().AddConfig("ascend950", config91095);
+        this->AICore().AddConfig("ascend350", config91095);
 
         OpAICoreConfig config310p;
         config310p.DynamicCompileStaticFlag(true)

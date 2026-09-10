@@ -1,0 +1,1685 @@
+{
+    "op_type": "GeluQuant",
+    "op_list": [
+        {
+            "bin_filename": "GeluQuant_11_float16_float16_int8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_12_float16_float16_e5m2",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e5m2",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_13_float16_float16_e4m3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e4m3fn",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_14_float16_float16_hifloat8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "hifloat8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_21_float16_float32_int8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_22_float16_float32_e5m2",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e5m2",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_23_float16_float32_e4m3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e4m3fn",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_24_float16_float32_hifloat8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "hifloat8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_31_bfloat16_bfloat16_int8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_32_bfloat16_bfloat16_e5m2",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e5m2",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_33_bfloat16_bfloat16_e4m3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e4m3fn",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_34_bfloat16_bfloat16_hifloat8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "hifloat8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_41_bfloat16_float32_int8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_42_bfloat16_float32_e5m2",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e5m2",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_43_bfloat16_float32_e4m3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e4m3fn",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_44_bfloat16_float32_hifloat8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "hifloat8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_51_float32_float32_int8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "int8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_52_float32_float32_e5m2",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e5m2",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_53_float32_float32_e4m3",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "float8_e4m3fn",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          },
+          {
+            "bin_filename": "GeluQuant_54_float32_float32_hifloat8",
+            "inputs": [
+              {
+                "name": "x",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "input_offset",
+                "index": 2,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "y",
+                "index": 0,
+                "dtype": "hifloat8",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "out_scale",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "attrs": [
+                {
+                  "name": "approximate",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "quant_mode",
+                  "dtype": "string",
+                  "value": null
+                },
+                {
+                  "name": "dst_type",
+                  "dtype": "int",
+                  "value": null
+                },
+                {
+                  "name": "round_mode",
+                  "dtype": "string",
+                  "value": null
+                }
+              ]
+          }
+    ]
+  }

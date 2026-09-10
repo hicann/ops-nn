@@ -1,0 +1,565 @@
+{
+    "op_type": "AscendQuant",
+    "op_list": [
+      {
+        "bin_filename": "AscendQuant_d77982d670c9f3ab429781a1307c33ba",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_fb60e294d6521ff0f1a6ec8c4dfda080",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_9e9738edfa6c79d63052e0581f0586fb",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int4",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_db51bf30bd6fd944bb71602ce9ecbb22",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int4",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_b9ac581d3c8003d0720263ec3342b5d3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_e4cec5b5bd3147d87b0048145fad9560",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_7bafb404c09a8a2774a86767e91419f3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_c873b153ab4270cbcc0ae0623ccae061",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_9a06534d2a366e92335ee50637694533",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AscendQuant_c1e083d573a40162e52ff2c67dccf277",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "offset",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "sqrt_mode",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

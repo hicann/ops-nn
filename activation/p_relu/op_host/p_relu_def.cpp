@@ -43,6 +43,7 @@ public:
             .ExtendCfgInfo("opInterface.value", "prelu")
             .ExtendCfgInfo("opFile.value", "p_relu_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

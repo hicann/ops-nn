@@ -60,6 +60,7 @@ public:
             .ExtendCfgInfo("opInterface.value", "prelu_grad_reduce")
             .ExtendCfgInfo("opFile.value", "p_relu_grad_reduce_apt"); // 这里制定的值会对应到kernel入口文件名.cpp
         this->AICore().AddConfig("ascend950", aicoreConfig);          // 其他的soc版本补充部分配置项
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(PReluGradReduce); // 添加算子信息库
