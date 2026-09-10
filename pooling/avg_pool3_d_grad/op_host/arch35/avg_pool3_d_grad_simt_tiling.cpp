@@ -30,8 +30,8 @@ bool AvgPool3DGradSimtTiling::IsCapable() { return true; }
 
 uint64_t AvgPool3DGradSimtTiling::GetTilingKey() const
 {
-    int64_t outCount = inputData.batches * inputData.channels * inputData.gradShape[D_DIM] *
-                       inputData.gradShape[H_DIM] * inputData.gradShape[W_DIM];
+    int64_t outCount = inputData.batches * inputData.channels * inputData.inputShape[D_DIM] *
+                       inputData.inputShape[H_DIM] * inputData.inputShape[W_DIM];
     uint32_t isInt32Meet = outCount <= static_cast<int64_t>(INT32_MAX) ? TPL_INT32 : TPL_INT64;
     uint32_t format = (inputData.inputFormat == ge::Format::FORMAT_NCDHW) ? TPL_NCDHW_FORMAT : TPL_NDHWC_FORMAT;
     uint32_t countIncludePad = inputData.countIncludePad ? TPL_COUNT_PAD : TPL_NO_COUNT_PAD;
