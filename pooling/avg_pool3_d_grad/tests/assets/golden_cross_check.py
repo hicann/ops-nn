@@ -503,26 +503,24 @@ class AclnnAvgPool3dBackwardTestSpec:
         ]
 
     class ThirdPartyImpl:
-        def __init__(self, grad_output, **kwargs):
-            self.out_dtype = grad_output.dtype
-
         def __call__(
             self,
-            grad_output,
-            self_t,
-            kernel_size,
-            stride,
-            padding,
-            ceil_mode,
-            count_include_pad,
-            divisor_override,
+            gradOutput,
+            *args,
+            kernelSize=None,
+            stride=None,
+            padding=None,
+            ceilMode=None,
+            countIncludePad=None,
+            divisorOverride=None,
             **kwargs,
         ):
-            k = _norm3(kernel_size, "NCDHW")
-            s = _norm3(_default_stride(stride, kernel_size), "NCDHW")
+            self_t = args[0]
+            k = _norm3(kernelSize, "NCDHW")
+            s = _norm3(_default_stride(stride, kernelSize), "NCDHW")
             p = _norm6(padding)
-            divisor = None if (divisor_override or 0) == 0 else int(divisor_override)
-            go = grad_output
+            divisor = None if (divisorOverride or 0) == 0 else int(divisorOverride)
+            go = gradOutput
             st = self_t
             ndim = go.ndim
             if ndim == 4:
@@ -534,13 +532,13 @@ class AclnnAvgPool3dBackwardTestSpec:
                 list(k),
                 list(s),
                 [p[0], p[2], p[4]],
-                bool(ceil_mode),
-                bool(count_include_pad),
+                bool(ceilMode),
+                bool(countIncludePad),
                 divisor,
             )
             if ndim == 4:
                 res = res[0]
-            return [res.to(self.out_dtype)]
+            return [res.to(gradOutput.dtype)]
 
     third_party = {"torch": ThirdPartyImpl}
     tolerance = {

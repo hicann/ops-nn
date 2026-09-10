@@ -314,15 +314,17 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
     uint32_t coreNum = GetCurrentPlatformInfo().GetVectorCoreNum();
     int64_t usedCoreNum = 1;
     int64_t deterministicValue = 0;
-    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
-    if (aclRet != ACL_SUCCESS) {
-        deterministicValue = 0;
-    }
-    if (deterministicValue != 0) {
-        for (size_t i = coreNum; i >= 1; i--) {
-            if (mergeNC % i == 0) {
-                usedCoreNum = i;
-                break;
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+        if (aclRet != ACL_SUCCESS) {
+            deterministicValue = 0;
+        }
+        if (deterministicValue != 0) {
+            for (size_t i = coreNum; i >= 1; i--) {
+                if (mergeNC % i == 0) {
+                    usedCoreNum = i;
+                    break;
+                }
             }
         }
     }
