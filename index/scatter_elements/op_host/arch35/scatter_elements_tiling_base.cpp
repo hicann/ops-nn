@@ -29,6 +29,8 @@ constexpr int64_t GM_ALIGN = 512;
 constexpr int64_t USE_UB_MAX_SIZE = 65536; // 64K
 constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t MAX_INT32_NUM = 2147483647;
+constexpr int64_t MAX_UINT32_COUNT = 1LL << 32;
+constexpr int64_t MAX_INT16_NUM = 32767;
 constexpr int64_t DCACHE_SIZE = 131072;               // 128K
 constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
 constexpr int64_t DETERM_DB_BUFFER = 2;
@@ -36,6 +38,12 @@ constexpr int64_t DOUBLE_COUNT = 2;
 constexpr int64_t BASE_S_MAX = 256;
 constexpr int64_t UB_MIN_FACTOR = 1024;
 constexpr int64_t SIMT_UB_RES_SIZE = 640;
+constexpr int64_t PHASE_THREAD_NUM = 1024;
+constexpr int64_t STATIC_UB_ESTIMATE = 512;
+constexpr int64_t SORT_ADMIT_MID_OUTER_RATIO = 50;
+constexpr int64_t SORT_ADMIT_HALF_CORE_RATIO = 2;
+constexpr uint64_t SCAC_ELE_DETERM_KEY_BASE = 1000000;
+constexpr uint64_t SCAC_ELE_SORT_KEY_PREFIX = 1000000;
 
 constexpr int64_t DATA_IDX = 0;
 constexpr int64_t INDICES_IDX = 1;
@@ -54,10 +62,18 @@ static const std::set<ge::DataType> SCAT_ELE_ADD_DTYPE = {ge::DT_FLOAT, ge::DT_F
                                                           ge::DT_INT64, ge::DT_INT32,   ge::DT_INT16,
                                                           ge::DT_INT8,  ge::DT_UINT8,   ge::DT_BOOL};
 static const std::set<ge::DataType> SCAT_ELE_ADD_DETERM_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+static const std::set<ge::DataType> SCAT_ELE_SORT_DETERM_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                                                                  ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32};
 static const std::set<ge::DataType> SCAT_ELE_MUL_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT64,
                                                           ge::DT_INT32, ge::DT_INT16,   ge::DT_INT8, ge::DT_UINT8};
 
 static const std::map<std::string, uint64_t> SCAT_ELE_REDUCTION = {{"none", 0}, {"add", 1}, {"mul", 2}};
+
+static int64_t WithSortedAlignUp128(int64_t value)
+{
+    constexpr int64_t align = 128;
+    return (value + align - 1) / align * align;
+}
 
 bool ScatterElementsTiling::IsCapable() { return true; }
 
@@ -127,6 +143,22 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
     if (context_->GetDeterministic() && isDeterminType) {
         isDeterministic_ = 1;
     }
+
+    bool isSortDetermDtype = (reduction_ == REDUCTION_ADD &&
+                              SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end()) ||
+                             (reduction_ == REDUCTION_NONE &&
+                              (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                               dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
+    if (context_->GetDeterministic() && isSortDetermDtype) {
+        isSortDeterministic_ = 1;
+    }
+
+    indicesTotalNum_ = allAxis_;
+    int64_t maxElem = std::max(dataAxis_, updatesAxis_);
+    keySize_ = (maxElem <= MAX_INT16_NUM) ? 2 : (maxElem <= MAX_UINT32_COUNT) ? 4 : 8;
+    keyDtype_ = (keySize_ == 2) ? ge::DT_INT16 : (keySize_ == 4) ? ge::DT_UINT32 : ge::DT_INT64;
+    countMode_ = SortLib::IsInt32Safe(indicesTotalNum_) ? 0 : 1;
+    permSize_ = (countMode_ == 0) ? 4 : 8;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -331,6 +363,14 @@ ge::graphStatus ScatterElementsTiling::CheckInputShape()
 
     ComputeShape(dataShape, indicesShape, updatesShape);
     ComputeStride();
+
+    shapeMode_ = 0;
+    for (int16_t i = 0; i < rank_; ++i) {
+        if (dataShape.GetDim(i) != indicesShape.GetDim(i)) {
+            shapeMode_ = 1;
+            break;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -383,6 +423,61 @@ int64_t ScatterElementsTiling::CalBestBaseSize(int64_t baseXoStart, int64_t base
     return baseXoStart;
 }
 
+bool ScatterElementsTiling::IsScatterAxisDominant() const
+{
+    int64_t outerAxisNum = preAxis_ * afterAxis_;
+    return midAxis_ / SORT_ADMIT_MID_OUTER_RATIO >= outerAxisNum;
+}
+
+bool ScatterElementsTiling::IsSortAdmittedInt() const
+{
+    if (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8) {
+        return rank_ <= 8;
+    }
+    return rank_ == 1;
+}
+
+bool ScatterElementsTiling::IsSortAdmittedFloat(int64_t aAxisCoreNum) const
+{
+    return aAxisCoreNum * SORT_ADMIT_HALF_CORE_RATIO < totalCoreNum_;
+}
+
+bool ScatterElementsTiling::HasIndexParallelismBenefit(int64_t aAxisCoreNum) const
+{
+    int64_t normBlockData = std::max(Ops::Base::CeilDiv(indicesTotalNum_, totalCoreNum_),
+                                     static_cast<int64_t>(UB_MIN_FACTOR));
+    int64_t indexCoreNum = Ops::Base::CeilDiv(indicesTotalNum_, normBlockData);
+    return indexCoreNum > aAxisCoreNum;
+}
+
+bool ScatterElementsTiling::IsSortTemplateAdmitted(int64_t aAxisCoreNum) const
+{
+    bool sortDtypeOk = SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end() ||
+                       (reduction_ == REDUCTION_NONE &&
+                        (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
+                         dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
+    if (!sortDtypeOk || !IsScatterAxisDominant()) {
+        return false;
+    }
+
+    bool isIntDtype = dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT16 ||
+                      dtype_ == ge::DT_INT32 || dtype_ == ge::DT_INT64;
+    bool isFloatDtype = dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16;
+    if (isIntDtype) {
+        if (!IsSortAdmittedInt()) {
+            return false;
+        }
+    } else if (isFloatDtype) {
+        if (!IsSortAdmittedFloat(aAxisCoreNum)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    return HasIndexParallelismBenefit(aAxisCoreNum);
+}
+
 ge::graphStatus ScatterElementsTiling::DoOpTiling()
 {
     int64_t usedCoreNumAlignTotal = Ops::Base::CeilDiv(allAxis_, MAX_THREAD_NUM);
@@ -405,7 +500,7 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
     }
     int64_t oneBlockNum = Ops::Base::GetUbBlockSize(context_) / typeSize_;
     loopLength_ = Ops::Base::FloorAlign(ubLen, oneBlockNum);
-    if (isDeterministic_) {
+    if (isDeterministic_ || isSortDeterministic_) {
         CombineIndicesAxis();
         indicesTypeSize_ = ge::GetSizeByDataType(indicesDtype_);
         if (indicesTypeSize_ <= 0) {
@@ -447,6 +542,33 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
         sortSharedBufSize_ = GetMaxSortTmpBuf(sortDim);
     }
 
+    if (isSortDeterministic_ && IsSortTemplateAdmitted(indicesUsedCoreNum_)) {
+        isSortDeterm_ = true;
+        sortR_ = SortLib::SortTilingCompute(
+            indicesTotalNum_, totalCoreNum_, static_cast<uint64_t>(ubSize_ - STATIC_UB_ESTIMATE),
+            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_), countMode_ == 0, keyDtype_);
+        if (sortR_.errCode != SortLib::SORT_TILING_OK) {
+            isSortDeterm_ = false;
+            sortR_ = SortLib::SortTilingResult{};
+        }
+    }
+    if (isSortDeterm_) {
+        multiSortWsBytes_ = sortR_.workspaceBytes;
+        sortUsedCoreNum_ = (sortR_.coreNumNeed > 0) ? static_cast<int64_t>(sortR_.coreNumNeed) : 1;
+
+        int64_t n = indicesTotalNum_;
+        wsLinearIdxOff_ = WithSortedAlignUp128(multiSortWsBytes_);
+        wsSortedOff_ = WithSortedAlignUp128(wsLinearIdxOff_ + n * keySize_);
+        wsPermOff_ = WithSortedAlignUp128(wsSortedOff_ + n * keySize_);
+        wsUserSize_ = wsPermOff_ + n * permSize_;
+        if (shapeMode_ == 1) {
+            wsSrcPosOff_ = WithSortedAlignUp128(wsUserSize_);
+            wsUserSize_ = wsSrcPosOff_ + n * keySize_;
+        } else {
+            wsSrcPosOff_ = 0;
+        }
+    }
+
     tilingData_.set_dim(dim_);
     tilingData_.set_rank(rank_);
     tilingData_.set_loopLength(loopLength_);
@@ -474,7 +596,7 @@ ge::graphStatus ScatterElementsTiling::DoLibApiTiling() { return ge::GRAPH_SUCCE
 
 uint64_t ScatterElementsTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = 1000000;
+    uint64_t tilingKey = SCAC_ELE_DETERM_KEY_BASE;
     uint64_t factorStart = 100;
     uint64_t factor = 10;
 
@@ -494,17 +616,20 @@ uint64_t ScatterElementsTiling::GetTilingKey() const
         wanDigit = 1;
     }
     tilingKey += factorStart * factor * factor * wanDigit;
+    if (isSortDeterm_) {
+        tilingKey += SCAC_ELE_SORT_KEY_PREFIX;
+    }
     return tilingKey;
 }
 
 ge::graphStatus ScatterElementsTiling::GetWorkspaceSize()
 {
     workspaceSize_ = ASCENDC_TOOLS_WORKSPACE;
-    int64_t dataWsSize = 0;
-    int64_t updatesWsSize = 0;
-    if (castTypeSize_ != 0) {
-        dataWsSize = Ops::Base::CeilAlign(dataAxis_ * castTypeSize_, GM_ALIGN);
-        updatesWsSize = Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
+    if (isSortDeterm_) {
+        workspaceSize_ += wsUserSize_;
+    } else if (castTypeSize_ != 0) {
+        int64_t dataWsSize = Ops::Base::CeilAlign(dataAxis_ * castTypeSize_, GM_ALIGN);
+        int64_t updatesWsSize = Ops::Base::CeilAlign(updatesAxis_ * castTypeSize_, GM_ALIGN);
         workspaceSize_ += dataWsSize + updatesWsSize;
     }
     return ge::GRAPH_SUCCESS;
@@ -517,7 +642,15 @@ ge::graphStatus ScatterElementsTiling::PostTiling()
     workspaces[0] = workspaceSize_;
     tilingKey_ = GetTilingKey();
     context_->SetTilingKey(tilingKey_);
-    context_->SetBlockDim(usedCoreNum_);
+    if (isSortDeterm_) {
+        int64_t phaseCores = Ops::Base::CeilDiv(indicesTotalNum_, PHASE_THREAD_NUM);
+        phaseCores = std::min(phaseCores, totalCoreNum_);
+        phaseCores = std::max(phaseCores, static_cast<int64_t>(1));
+        int64_t blockDim = std::max(phaseCores, sortUsedCoreNum_);
+        context_->SetBlockDim(std::max(blockDim, static_cast<int64_t>(1)));
+    } else {
+        context_->SetBlockDim(usedCoreNum_);
+    }
     auto res = context_->SetLocalMemorySize(ubSize_ + SIMT_UB_RES_SIZE);
     if (res != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_", std::to_string(ubSize_).c_str(),
@@ -525,6 +658,24 @@ ge::graphStatus ScatterElementsTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->SetScheduleMode(1);
+    if (isSortDeterm_) {
+        tilingData_.sortTiling.set_indicesTotalNum(indicesTotalNum_);
+        tilingData_.sortTiling.set_keySize(keySize_);
+        tilingData_.sortTiling.set_permSize(permSize_);
+        tilingData_.sortTiling.set_countMode(countMode_);
+        tilingData_.sortTiling.set_shapeMode(shapeMode_);
+        tilingData_.sortTiling.set_dimNormalized(dim_);
+        tilingData_.sortTiling.set_sortUsedCoreNum(static_cast<uint32_t>(sortUsedCoreNum_));
+        tilingData_.sortTiling.set_numTileData(sortR_.numTileData);
+        tilingData_.sortTiling.set_tileCount(sortR_.tileCount);
+        tilingData_.sortTiling.set_activeCores(sortR_.activeCores);
+        tilingData_.sortTiling.set_tmpUbSize(sortR_.tmpUbSize);
+        tilingData_.sortTiling.set_isSingleCore(sortR_.isSingleCore);
+        tilingData_.sortTiling.set_wsLinearIdxOff(wsLinearIdxOff_);
+        tilingData_.sortTiling.set_wsSortedOff(wsSortedOff_);
+        tilingData_.sortTiling.set_wsPermOff(wsPermOff_);
+        tilingData_.sortTiling.set_wsSrcPosOff(wsSrcPosOff_);
+    }
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -564,6 +715,14 @@ void ScatterElementsTiling::DumpTilingInfo()
     info << ", baseA: " << tilingData_.get_baseA();
     info << ", sortSharedBufSize: " << tilingData_.get_sortSharedBufSize();
     info << ", isDeterministic: " << tilingData_.get_isDeterministic();
+    info << ", isSortDeterministic: " << isSortDeterministic_;
+    info << ", isSortDeterm: " << isSortDeterm_;
+    info << ", sortUsedCoreNum: " << sortUsedCoreNum_;
+    info << ", shapeMode: " << shapeMode_;
+    info << ", keySize: " << keySize_;
+    info << ", permSize: " << permSize_;
+    info << ", indicesTotalNum: " << indicesTotalNum_;
+    info << ", wsUserSize: " << wsUserSize_;
     info << ", tilingKey_: " << tilingKey_;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }

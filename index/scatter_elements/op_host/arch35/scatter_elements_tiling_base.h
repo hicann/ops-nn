@@ -22,6 +22,7 @@
 #include "log/log.h"
 #include "op_common/log/log.h"
 #include "op_host/tiling_templates_registry.h"
+#include "../../../sort_lib/op_host/arch35/sort_lib_tiling.h"
 
 namespace optiling {
 constexpr int16_t TILING_ARRAY_LEN = 7;
@@ -29,6 +30,27 @@ constexpr int16_t TILING_ARRAY_LEN = 7;
 // ///////////////////////////////////
 // tilingdata define
 // ///////////////////////////////////
+BEGIN_TILING_DATA_DEF(ScatterElementsSortTilingData)
+TILING_DATA_FIELD_DEF(int64_t, indicesTotalNum);
+TILING_DATA_FIELD_DEF(int64_t, keySize);
+TILING_DATA_FIELD_DEF(int64_t, permSize);
+TILING_DATA_FIELD_DEF(int32_t, countMode);
+TILING_DATA_FIELD_DEF(int32_t, shapeMode);
+TILING_DATA_FIELD_DEF(int32_t, dimNormalized);
+TILING_DATA_FIELD_DEF(uint32_t, sortUsedCoreNum);
+TILING_DATA_FIELD_DEF(uint32_t, numTileData);
+TILING_DATA_FIELD_DEF(uint32_t, tileCount);
+TILING_DATA_FIELD_DEF(uint32_t, activeCores);
+TILING_DATA_FIELD_DEF(uint32_t, tmpUbSize);
+TILING_DATA_FIELD_DEF(uint32_t, isSingleCore);
+TILING_DATA_FIELD_DEF(uint64_t, wsLinearIdxOff);
+TILING_DATA_FIELD_DEF(uint64_t, wsSortedOff);
+TILING_DATA_FIELD_DEF(uint64_t, wsPermOff);
+TILING_DATA_FIELD_DEF(uint64_t, wsSrcPosOff);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(ScatterElementsSortTilingDataOp, ScatterElementsSortTilingData)
+
 BEGIN_TILING_DATA_DEF(ScatterElementsTilingData)
 TILING_DATA_FIELD_DEF_ARR(uint64_t, TILING_ARRAY_LEN, dataStride);
 TILING_DATA_FIELD_DEF_ARR(uint64_t, TILING_ARRAY_LEN, indicesStride);
@@ -49,6 +71,7 @@ TILING_DATA_FIELD_DEF(int64_t, isDeterministic);
 TILING_DATA_FIELD_DEF(int16_t, rank);
 TILING_DATA_FIELD_DEF(int16_t, dim);
 TILING_DATA_FIELD_DEF(uint32_t, sortSharedBufSize);
+TILING_DATA_FIELD_DEF_STRUCT(ScatterElementsSortTilingData, sortTiling);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElements, ScatterElementsTilingData)
@@ -80,6 +103,11 @@ protected:
     void CombineIndicesAxis();
     uint32_t GetMaxSortTmpBuf(int64_t sortDim);
     int64_t CalBestBaseSize(int64_t baseXoStart, int64_t baseXoEnd);
+    bool IsScatterAxisDominant() const;
+    bool IsSortAdmittedInt() const;
+    bool IsSortAdmittedFloat(int64_t aAxisCoreNum) const;
+    bool HasIndexParallelismBenefit(int64_t aAxisCoreNum) const;
+    bool IsSortTemplateAdmitted(int64_t aAxisCoreNum) const;
 
 private:
     int16_t dim_ = 0;
@@ -93,6 +121,7 @@ private:
     int64_t updatesAxis_ = 1;
     int64_t castTypeSize_ = 0;
     int64_t isDeterministic_ = 0;
+    int64_t isSortDeterministic_ = 0;
     int64_t preAxis_ = 1;
     int64_t midAxis_ = 1;
     int64_t afterAxis_ = 1;
@@ -107,6 +136,21 @@ private:
     uint64_t typeSize_ = 0;
     uint64_t tilingKey_ = 0;
     uint32_t sortSharedBufSize_ = 0;
+    bool isSortDeterm_ = false;
+    int32_t shapeMode_ = 0;
+    ge::DataType keyDtype_ = ge::DT_UNDEFINED;
+    int32_t countMode_ = 0;
+    int64_t indicesTotalNum_ = 0;
+    int64_t keySize_ = 0;
+    int64_t permSize_ = 4;
+    int64_t sortUsedCoreNum_ = 0;
+    int64_t multiSortWsBytes_ = 0;
+    uint64_t wsLinearIdxOff_ = 0;
+    uint64_t wsSortedOff_ = 0;
+    uint64_t wsPermOff_ = 0;
+    uint64_t wsSrcPosOff_ = 0;
+    uint64_t wsUserSize_ = 0;
+    SortLib::SortTilingResult sortR_;
     std::vector<uint64_t> dataCurSize_;
     std::vector<uint64_t> indicesCurSize_;
     std::vector<uint64_t> updatesCurSize_;
