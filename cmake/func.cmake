@@ -133,12 +133,20 @@ function(add_tiling_modules)
       add_dependencies(${OPHOST_NAME}_tiling_obj json)
     endif()
     target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${OP_TILING_INCLUDE})
+    # 始终编译 QueryBank 知识库查询实现相关源文件（file GLOB 不存在的文件会被静默跳过）
+    file(GLOB RUNTIME_KB_SRC ${OPS_NN_DIR}/common/src/op_host/bank_mgr/*.cpp)
+    if(RUNTIME_KB_SRC)
+      target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${RUNTIME_KB_SRC})
+    endif()
+
+    # 子包模式：额外编译需要 LegacyCommonMgr 的源文件
     set(ENABLE_DLOPEN_LEGACY OFF)
     if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND NOT ENABLE_STATIC)
       file(GLOB COMMON_SRC ${OPS_NN_DIR}/common/src/*.cpp ${OPS_NN_DIR}/common/src/op_host/*.cpp)
       if(UT_TEST_ALL OR OP_HOST_UT)  # ut场景下LegacyCommonMgr要打桩，通过环境变量查找legacy so
         file(GLOB COMMON_SRC ${OPS_NN_DIR}/common/src/op_host/*.cpp)
       endif()
+      list(REMOVE_ITEM COMMON_SRC ${RUNTIME_KB_SRC})
       target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${COMMON_SRC})
       set(ENABLE_DLOPEN_LEGACY ON)
     endif()

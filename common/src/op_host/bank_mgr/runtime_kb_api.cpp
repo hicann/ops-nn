@@ -8,29 +8,22 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "op_host/runtime_kb_api.h"
-#include "legacy_common_manager.h"
-#include "log/log.h"
+#include "runtime_kb_api.h"
+#include "runtime_bank_manager.h"
+#include "kb_log.h"
 
-// 兼容opp整包场景：整包不编译本文件，仅子包编译
 namespace Ops {
 namespace NN {
 uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
                    uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling)
 {
-    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
-        return 0xFFU; // 0: succ, 1: kye not exists, 0xFFU: fail
+    if (core_num == 0U || soc_version.empty()) {
+        CANNKB_LOGE("Platform Info is invalid: socVersion = %s, coreNum = %u", soc_version.c_str(), core_num);
+        return RuntimeKb::FAILED;
     }
-    using FuncType = uint32_t (*)(const void*, size_t, const std::string&, const std::string&, uint32_t,
-                                  tuningtiling::TuningTilingDefPtr&);
-    const char* symbolName = "LegacyQueryBank";
-    static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
-    if (func == nullptr) {
-        OP_LOGW("LegacyCommonMgr", "dest func %s pointer is null.", symbolName);
-        return 0xFFU; // 0: succ, 1: kye not exists, 0xFFU: fail
-    } else {
-        return func(src, src_len, op_type, soc_version, core_num, tiling);
-    }
+    RuntimeKb::PlatformInfo platform(core_num, soc_version);
+    auto status = RuntimeKb::RuntimeBankManager::Instance().Query(src, src_len, op_type, platform, tiling);
+    return static_cast<uint32_t>(status);
 }
 } // namespace NN
 } // namespace Ops

@@ -15,26 +15,10 @@
 #include "exe_graph/runtime/tiling_context.h"
 #include "register/tuning_tiling_registry.h"
 
-// 兼容opp整包、静态库和子包场景，向算子业务侧代码屏蔽差异：
-// 子包场景：通过适配层dlopen方式找到libophost_comm_legacy.so里的C接口实现，向本仓算子侧提供Ops::NN namepsace的接口调用
-// 整包和静态库场景：只做optiling namespace下的接口声明，向本仓算子侧提供Ops::NN namepsace的接口调用
-#ifdef NN_ENABLE_DLOPEN_LEGACY
 namespace Ops {
 namespace NN {
 uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
                    uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling);
 } // namespace NN
 } // namespace Ops
-#else
-namespace RuntimeKb {
-uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
-                   uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling);
-} // namespace RuntimeKb
-
-namespace Ops {
-namespace NN {
-using RuntimeKb::QueryBank;
-} // namespace NN
-} // namespace Ops
-#endif
 #endif
