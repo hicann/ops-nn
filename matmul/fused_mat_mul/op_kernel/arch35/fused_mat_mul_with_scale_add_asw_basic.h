@@ -32,8 +32,8 @@ __aicore__ inline void FusedMatMulWithScaleAddAswBasicKernel(GM_ADDR x1Gm, GM_AD
     static constexpr bool enable2UB = AscendC::IsSameType<AccType, float>::value;
     // x3/output reuse the UB space after the FP32 accumulator, so accumulator UB ping-pong stays disabled.
     static constexpr uint8_t singleUbBuffer = 1U;
-    using Layout = AscendC::Te::NDExtLayoutPtn;
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using Layout = asc::te::nd_ext_layout_ptn;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
     using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockFixpipeOpti<Blaze::Gemm::ND_ALIG_1V2_FIXPIPE, 0,
                                                                     Blaze::Gemm::KernelMmadFmmWithScaleAdd>;
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, Blaze::Gemm::NONE_FULL_LOAD_MODE,

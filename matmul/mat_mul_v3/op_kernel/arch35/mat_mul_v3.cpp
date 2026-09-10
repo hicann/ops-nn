@@ -108,15 +108,13 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
     using bLayout = std::conditional_t<(format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
                                        std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && IS_BLAZE
-    using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutA = AscendC::Std::conditional_t<aTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     using layoutB = AscendC::Std::conditional_t<
         bTran,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn,
-                                    AscendC::Te::DNExtLayoutPtn>,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn,
-                                    AscendC::Te::NDExtLayoutPtn>>;
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>,
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::nz_layout_ptn, asc::te::nd_ext_layout_ptn>>;
     // C GM layout
-    using layoutC = AscendC::Te::NDExtLayoutPtn;
+    using layoutC = asc::te::nd_ext_layout_ptn;
 #endif
 
     REGISTER_TILING_DEFAULT(MatMulV3TilingDataCopy);

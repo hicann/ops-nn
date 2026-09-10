@@ -33,7 +33,7 @@ extern "C" __global__ __aicore__ void flat_quant(GM_ADDR x, GM_ADDR kronecker_p1
     const TCubeTiling* __restrict mmTilingL = &(tiling_data->matmulTilingL);
     if constexpr (std::is_same<DTYPE_OUT, fp4x2_e2m1_t>::value) {
         if (TILING_KEY_IS(6)) {
-            FlatQuantBlazeKernel<DTYPE_X, DTYPE_OUT, DTYPE_QUANT_SCALE, AscendC::Te::NDExtLayoutPtn>(
+            FlatQuantBlazeKernel<DTYPE_X, DTYPE_OUT, DTYPE_QUANT_SCALE, asc::te::nd_ext_layout_ptn>(
                 x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, tilingData);
         }
     } else {

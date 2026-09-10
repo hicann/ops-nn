@@ -44,14 +44,14 @@ __aicore__ inline void FlatQuantBlazeKernel(GM_ADDR aGM, GM_ADDR p1GM, GM_ADDR p
     using BiasMatmulType = AscendC::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, BiasType>;
 
     using BlockScheduler = Blaze::Attention::Block::BlockSchedulerFlatQuant<
-        AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>>;
+        asc::te::shape<int64_t, int64_t, int64_t, int64_t>>;
     using DispatchPolicy = Blaze::Attention::BlockFlatQuant<Blaze::Attention::KernelFlatQuant>;
     using BlockMmad = Blaze::Attention::Block::BlockMmad<DispatchPolicy, AMatmulType, LayoutA, BMatmulType, LayoutB,
                                                          BiasMatmulType, LayoutC, CMatmulType, LayoutC>;
     using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueFlatQuant<AType, OutType, BiasType>;
     using FusionOp = Blaze::Epilogue::Fusion::DefaultFusion<OutType, AType>;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
     using MatmulKernel = Blaze::Attention::Kernel::AttentionUniversal<ProblemShape, BlockMmad, BlockEpilogue,
                                                                       BlockScheduler>;
     using Params = typename MatmulKernel::Params;

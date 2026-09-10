@@ -40,7 +40,7 @@ __aicore__ inline void MatMulBasicSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
     using LayoutBias = LayoutC;
 
     // 定义shape的形状，tuple保存 m n k batch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, NONE_FULL_LOAD_MODE>;

@@ -85,15 +85,13 @@ __global__ __aicore__ void transpose_quant_batch_mat_mul(GM_ADDR aGM, GM_ADDR bG
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     GET_TILING_DATA(tilingData, tilingGM);
 
-    using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutA = AscendC::Std::conditional_t<aTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     using layoutB = AscendC::Std::conditional_t<
         bTran,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn,
-                                    AscendC::Te::DNExtLayoutPtn>,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn,
-                                    AscendC::Te::NDExtLayoutPtn>>;
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>,
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::nz_layout_ptn, asc::te::nd_ext_layout_ptn>>;
     // C GM layout
-    using layoutC = AscendC::Te::NDExtLayoutPtn;
+    using layoutC = asc::te::nd_ext_layout_ptn;
 
     if constexpr (API_LEVEL == static_cast<int8_t>(TQBMMApiLevel::TENSOR_LEVEL) && (isMxfp8 || isMxfp4)) {
         TQBMM_MX_BLAZE_IMPL_CLASS(layoutA, layoutB, layoutC);

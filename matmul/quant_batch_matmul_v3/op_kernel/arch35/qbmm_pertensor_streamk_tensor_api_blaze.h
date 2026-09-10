@@ -31,7 +31,7 @@ __aicore__ inline void QbmmPertensorStreamKTensorApiKernel(GM_ADDR aGM, GM_ADDR 
     using BiasType = BIAS_TYPE;
     using OutType = C_TYPE;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     using DispatchPolicy = Blaze::Gemm::MatmulWithScaleFixpipeQuant<FULL_LOAD_MODE, false,
                                                                     Blaze::Gemm::KernelQbmmPertensorMultiBlockStreamK>;
