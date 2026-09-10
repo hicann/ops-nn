@@ -143,7 +143,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">FLOAT16、BFLOAT16、FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">varRef（aclTensor*）</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">与grad保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">mRef（aclTensor*）</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">与grad保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">vRef（aclTensor*）</td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">与grad保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">sRef（aclTensor*）</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">与grad保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">step（aclTensor*）</td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnApplyFusedEmaAdam(
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">lr（double）</td>
