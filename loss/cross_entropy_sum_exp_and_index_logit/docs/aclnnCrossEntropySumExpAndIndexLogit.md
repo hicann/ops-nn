@@ -111,7 +111,7 @@ aclnnStatus aclnnCrossEntropySumExpAndIndexLogit(
       <td>vocabParallelLogits (aclTensor*)</td>
       <td>输入</td>
       <td>当前TP rank的本地vocab shard logits，公式中的vocabParallelLogits。</td>
-      <td>不支持空Tensor。</td>
+      <td>不支持空Tensor。取值不支持±inf和nan。</td>
       <td>FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td><ul><li>仅支持2维 [N, V_local] 或3维 [S, B, V_local]。</li><li>shape[:-1] 需与target.shape完全一致。</li><li>最后一维V_local范围：[16, 200K]；BFLOAT16时需为16的倍数，FLOAT时需为8的倍数。</li></ul></td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnCrossEntropySumExpAndIndexLogit(
       <td>globalLogitsMax (aclTensor*)</td>
       <td>输入</td>
       <td>all_reduce(MAX) 后得到的全局最大logit，公式中的globalLogitsMax。</td>
-      <td>不支持空Tensor。数据类型需与vocabParallelLogits一致。</td>
+      <td>不支持空Tensor。数据类型需与vocabParallelLogits一致。数值上需满足 globalLogitsMax[i] >= max_j(vocabParallelLogits[i, j])（即大于等于同token在本rank内所有logits）。</td>
       <td>同vocabParallelLogits</td>
       <td>ND</td>
       <td>shape与target完全一致。</td>
