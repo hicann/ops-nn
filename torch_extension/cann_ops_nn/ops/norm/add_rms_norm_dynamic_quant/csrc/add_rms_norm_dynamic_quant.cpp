@@ -127,7 +127,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> add_rms_norm_dynamic_
     at::Tensor mxscale = at::empty(mxscale_shape, x1.options().dtype(at::ScalarType::Float8_e8m0fnu));
     at::Tensor rstd = at::empty(rstd_shape, x1.options().dtype(at::kFloat));
 
-    TensorWrapper y_wrapper = {y, y_acltype};
+    // FP4 y is packed along the last dim; pass packedDim explicitly so shape
+    // restoration skips the stride heuristic, which mis-detects the packed dim
+    // when y's trailing two dims are both 1 (e.g. x1 trailing (1,2) -> y (...,1,1)).
+    TensorWrapper y_wrapper = {y, y_acltype, y.dim() - 1};
 
     ACLNN_CMD(aclnnAddRmsNormDynamicMxQuantV2, x1, x2, gamma, beta, x3, epsilon, scale_alg, round_mode_ptr, dst_type,
               output_rstd, y_wrapper, x_out, mxscale, rstd);
