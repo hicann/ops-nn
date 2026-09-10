@@ -142,7 +142,7 @@ void ClippedSwigluGradTiling::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-ge::graphStatus ClippedSwigluGradTiling::CheckAndGetXAndAttrs()
+ge::graphStatus ClippedSwigluGradTiling::ParseAndCheckAttrs()
 {
     auto* attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -159,6 +159,11 @@ ge::graphStatus ClippedSwigluGradTiling::CheckAndGetXAndAttrs()
     isInterleaved_ = interleaved ? 1 : 0;
     OP_CHECK_IF((limit_ <= 0.0f), OP_LOGE(context_->GetNodeName(), "limit must be > 0, but got %f.", limit_),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ClippedSwigluGradTiling::ParseXShapeInfo()
+{
     auto shapeX = context_->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeX);
     const gert::Shape& inputShapeX = shapeX->GetStorageShape();
@@ -190,6 +195,14 @@ ge::graphStatus ClippedSwigluGradTiling::CheckAndGetXAndAttrs()
     OP_CHECK_IF((SUPPORT_DTYPE.find(xDtype_) == SUPPORT_DTYPE.end()),
                 OP_LOGE(context_->GetNodeName(), "x dtype only support float, half or bfloat16, please check."),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ClippedSwigluGradTiling::CheckGradYInfo()
+{
+    auto shapeX = context_->GetInputShape(X_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, shapeX);
+    const gert::Shape& inputShapeX = shapeX->GetStorageShape();
     auto shapeGradY = context_->GetInputShape(Y_GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeGradY);
     const gert::Shape& inputShapeGradY = shapeGradY->GetStorageShape();
@@ -214,6 +227,17 @@ ge::graphStatus ClippedSwigluGradTiling::CheckAndGetXAndAttrs()
     OP_CHECK_NULL_WITH_CONTEXT(context_, descGradY);
     OP_CHECK_IF((descGradY->GetDataType() != xDtype_),
                 OP_LOGE(context_->GetNodeName(), "grad_y dtype should be the same as x, please check."),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ClippedSwigluGradTiling::CheckAndGetXAndAttrs()
+{
+    OP_CHECK_IF(ParseAndCheckAttrs() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "parse and check attrs failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ParseXShapeInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "parse x shape info failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckGradYInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "check grad_y info failed."),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

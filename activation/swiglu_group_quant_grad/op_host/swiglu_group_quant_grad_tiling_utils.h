@@ -556,7 +556,7 @@ inline ge::graphStatus GetCompileInfo(const gert::TilingContext* context, Swiglu
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus SetBasicTilingData(gert::TilingContext* context,
+inline ge::graphStatus SetBasicTilingData(const gert::TilingContext* context,
                                           const SwigluGroupQuantGradCompileInfo& compileInfo,
                                           SwigluGroupQuantGradTilingData& tilingData)
 {

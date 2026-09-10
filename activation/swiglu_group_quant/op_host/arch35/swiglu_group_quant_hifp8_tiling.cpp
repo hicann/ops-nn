@@ -293,7 +293,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYOriginShape(size_t xDimNum, c
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputInfo()
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputInfo() const
 {
     auto xShape = context_->GetInputShape(INPUT_INDEX_X);
     auto xStorageShape = xShape->GetStorageShape();
