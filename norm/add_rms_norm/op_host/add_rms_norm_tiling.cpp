@@ -164,10 +164,11 @@ static bool CheckInputOutputDim(const gert::TilingContext* context)
                         "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
                     return false);
     } else if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
-        OP_CHECK_IF(
-            gammaDimNum != 2,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "2"),
-            return false);
+        OP_CHECK_IF(gammaDimNum != 2,
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+                        "rstdOut is nullptr, PreRmsNorm/PostRmsNorm mode is used, gamma should be 2 dims"),
+                    return false);
     }
     OP_CHECK_IF(
         x1DimNum != yDimNum,

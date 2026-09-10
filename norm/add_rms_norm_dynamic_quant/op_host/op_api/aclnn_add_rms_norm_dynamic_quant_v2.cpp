@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -48,6 +48,8 @@ static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_Y_
     op::DataType::DT_INT8,          op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2,
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_INT4,     op::DataType::DT_INT32};
 
+static bool IsRegbase() { return Ops::NN::AclnnUtil::IsRegbase(); }
+
 static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
                             const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
                             const aclTensor* betaOptional, const aclTensor* y1Out, const aclTensor* y2Out,
@@ -56,16 +58,30 @@ static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     OP_CHECK_DTYPE_NOT_SUPPORT(gamma, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    const bool isRegbase = IsRegbase();
+    if (isRegbase) {
+        OP_CHECK_DTYPE_NOT_SAME(x1, x2, return false);
+        OP_CHECK_DTYPE_NOT_SAME(x1, gamma, return false);
+    }
     if (nullptr != betaOptional) {
         OP_CHECK_DTYPE_NOT_SUPPORT(betaOptional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false); // 校验可选beta
+        if (isRegbase) {
+            OP_CHECK_DTYPE_NOT_SAME(x1, betaOptional, return false);
+        }
     }
 
     if (nullptr != smoothScale1Optional) {
         OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale1Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        if (isRegbase) {
+            OP_CHECK_DTYPE_NOT_SAME(x1, smoothScale1Optional, return false);
+        }
     }
 
     if (nullptr != smoothScale2Optional) {
         OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale2Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        if (isRegbase) {
+            OP_CHECK_DTYPE_NOT_SAME(x1, smoothScale2Optional, return false);
+        }
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE, return false); // Mandatory output
@@ -77,6 +93,9 @@ static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
 
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    if (isRegbase) {
+        OP_CHECK_DTYPE_NOT_SAME(x1, xOut, return false);
+    }
 
     OP_CHECK_DTYPE_NOT_MATCH(scale1Out, op::DataType::DT_FLOAT, return false);
     OP_CHECK_DTYPE_NOT_MATCH(scale2Out, op::DataType::DT_FLOAT, return false);
@@ -120,20 +139,16 @@ static bool CheckFlag(const aclTensor* smoothScale1Optional, const aclTensor* sm
 
 static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* y1Out,
                          aclTensor* y2Out, const aclTensor* xOut, const aclTensor* scale1Out,
-                         const aclTensor* scale2Out, bool processOut1, bool processOut2)
+                         const aclTensor* scale2Out)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
     OP_CHECK_NULL(gamma, return false);
+    OP_CHECK_NULL(y1Out, return false);
+    OP_CHECK_NULL(y2Out, return false);
     OP_CHECK_NULL(xOut, return false);
-    if (processOut1) {
-        OP_CHECK_NULL(y1Out, return false);
-        OP_CHECK_NULL(scale1Out, return false);
-    }
-    if (processOut2) {
-        OP_CHECK_NULL(y2Out, return false);
-        OP_CHECK_NULL(scale2Out, return false);
-    }
+    OP_CHECK_NULL(scale1Out, return false);
+    OP_CHECK_NULL(scale2Out, return false);
     return true;
 }
 
@@ -291,6 +306,11 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 必选 Tensor 指针必须在 dtype 和 shape 解引用前校验。outputMask 只标记输出是否有效，
+    // 不会将输出 Tensor 变为可选指针。
+    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckNotNull(x1, x2, gamma, y1Out, y2Out, xOut, scale1Out, scale2Out),
+              ACLNN_ERR_PARAM_NULLPTR);
+
     // CheckDtype: validate dtype
     CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckDtypeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
                                                              betaOptional, y1Out, y2Out, xOut, scale1Out, scale2Out),
@@ -301,14 +321,10 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
               ACLNN_ERR_PARAM_INVALID);
 
     // Compute output flags
-    bool processOut1 = (outputMask == nullptr) ? true : (*outputMask)[0];
-    bool processOut2 = (outputMask == nullptr) ? (smoothScale1Optional != nullptr && smoothScale2Optional != nullptr) :
-                                                 (*outputMask)[1];
-
-    // CheckNotNull: validate non-null inputs/outputs
-    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckNotNull(x1, x2, gamma, y1Out, y2Out, xOut, scale1Out, scale2Out,
-                                                          processOut1, processOut2),
-              ACLNN_ERR_PARAM_NULLPTR);
+    const bool processOut1 = (outputMask == nullptr) ? true : (*outputMask)[0];
+    const bool processOut2 = (outputMask == nullptr) ?
+                                 (smoothScale1Optional != nullptr && smoothScale2Optional != nullptr) :
+                                 (*outputMask)[1];
 
     bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
     if (isRegbase && gamma->IsEmpty()) {

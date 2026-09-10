@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -43,13 +43,14 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] scales2Optional:
  * 公式中的输入`scales2`，数据类型支持BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
- * 支持非连续的Tensor，数据格式支持ND。
+ * 支持非连续的Tensor，数据格式支持ND。在Ascend 950上，当本参数为空且zeroPoints2Optional非空时，
+ * scales2按1处理；其他产品不支持该参数组合。
  * @param [in] zeroPoints1Optional:
  * 公式中的输入`zero_points1`，可选参数，数据类型支持INT32、BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] zeroPoints2Optional:
  * 公式中的输入`zero_points2`，可选参数，数据类型支持INT32、BFLOAT16、FLOAT、FLOAT16，shape维度需要小于或等于8维。
- * 支持非连续的Tensor，数据格式支持ND。
+ * 支持非连续的Tensor，数据格式支持ND。在Ascend 950以外的产品上，本参数非空时scales2Optional必须非空。
  * @param [in] axis: int64 类型，指定要应用的量化轴，当前仅支持-1。
  * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
  * @param [in] divMode: bool 类型，用于指定静态量化计算的算法。当为False时，静态量化计算计算使用乘法，反之亦然。

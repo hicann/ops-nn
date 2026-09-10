@@ -135,7 +135,7 @@ aclnnStatus aclnnNorm(
       <td>dim（aclIntArray*）</td>
       <td>输入</td>
       <td>计算self范数的维度。</td>
-      <td>支持[-N, N-1]，且dim中的元素不能重复，N为self的维度，支持负数。</td>
+      <td>dim不能为空指针。dim中的元素支持[-N, N-1]，且不能重复，N为self的维度，支持负数。当dim为空数组（数组长度为0）时，表示对self的所有维度计算范数。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnNorm(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的输出。</td>
-      <td><ul><li>若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致。</li><li>若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致。</li></ul></td>
+      <td><ul><li>若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；当dim为空数组时，out的每个维度大小均为1。</li><li>若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致；当dim为空数组时，out为0维Tensor。</li></ul></td>
       <td>
         FLOAT32、FLOAT16、BFLOAT16
       </td>

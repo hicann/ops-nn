@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -51,6 +51,44 @@ static aclnnStatus RunGammaShapeCase(op::SocVersion socVersion, const vector<int
     return ut.TestGetWorkspaceSize(&workspaceSize);
 }
 
+struct Ascend950DtypeCase {
+    aclDataType x2Dtype{ACL_FLOAT16};
+    aclDataType gammaDtype{ACL_FLOAT16};
+    aclDataType scales1Dtype{ACL_FLOAT};
+    aclDataType scales2Dtype{ACL_FLOAT};
+    aclDataType zeroPoints1Dtype{ACL_INT32};
+    aclDataType zeroPoints2Dtype{ACL_INT32};
+    aclDataType betaDtype{ACL_FLOAT16};
+    aclDataType y1Dtype{ACL_INT8};
+    aclDataType y2Dtype{ACL_INT8};
+    aclDataType xOutDtype{ACL_FLOAT16};
+    aclDataType resOutDtype{ACL_FLOAT16};
+};
+
+static aclnnStatus RunAscend950DtypeCase(const Ascend950DtypeCase& testCase)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({8, 64}, testCase.x2Dtype, ACL_FORMAT_ND);
+    auto gamma = TensorDesc({64}, testCase.gammaDtype, ACL_FORMAT_ND);
+    auto scales1 = TensorDesc({64}, testCase.scales1Dtype, ACL_FORMAT_ND);
+    auto scales2 = TensorDesc({64}, testCase.scales2Dtype, ACL_FORMAT_ND);
+    auto zeroPoints1 = TensorDesc({64}, testCase.zeroPoints1Dtype, ACL_FORMAT_ND);
+    auto zeroPoints2 = TensorDesc({64}, testCase.zeroPoints2Dtype, ACL_FORMAT_ND);
+    auto beta = TensorDesc({64}, testCase.betaDtype, ACL_FORMAT_ND);
+    auto y1 = TensorDesc({8, 64}, testCase.y1Dtype, ACL_FORMAT_ND);
+    auto y2 = TensorDesc({8, 64}, testCase.y2Dtype, ACL_FORMAT_ND);
+    auto xOut = TensorDesc({8, 64}, testCase.xOutDtype, ACL_FORMAT_ND);
+    auto resOut = TensorDesc({8, 64}, testCase.resOutDtype, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnAddRmsNormQuantV2,
+                        INPUT(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, -1L, 1e-5, true),
+                        OUTPUT(y1, y2, xOut, resOut));
+
+    uint64_t workspaceSize = 0;
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
 TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_910b_compatibility)
 {
     EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND910B, {1, 64}, {1}), ACLNN_SUCCESS);
@@ -79,6 +117,97 @@ TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_matching_x_is_not_squeezed_on_asc
 TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_not_matching_x_is_rejected_on_ascend950)
 {
     EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND950, {2, 64}, {2, 64}), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_accepts_v1_aligned_dtype_relations)
+{
+    EXPECT_EQ(RunAscend950DtypeCase(Ascend950DtypeCase()), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_x2_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.x2Dtype = ACL_BF16;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_gamma_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.gammaDtype = ACL_BF16;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_beta_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.betaDtype = ACL_FLOAT;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_scales_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.scales2Dtype = ACL_FLOAT16;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_zero_points_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.zeroPoints2Dtype = ACL_FLOAT;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_y_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.y2Dtype = ACL_HIFLOAT8;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_x_out_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.xOutDtype = ACL_FLOAT;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_res_out_dtype_mismatch)
+{
+    Ascend950DtypeCase testCase;
+    testCase.resOutDtype = ACL_FLOAT;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_rejects_unsupported_dtype_combination)
+{
+    Ascend950DtypeCase testCase;
+    testCase.scales1Dtype = ACL_BF16;
+    testCase.scales2Dtype = ACL_BF16;
+    EXPECT_EQ(RunAscend950DtypeCase(testCase), ACLNN_ERR_PARAM_INVALID);
+}
+
+// Ascend 950 supports zeroPoints2 without scales2; the second-path scale defaults to 1.
+TEST_F(l2_add_rms_norm_quant_v2_test, ascend950_zero_points2_only_no_scales2)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scales1 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto zeroPoints2 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto xOut = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnAddRmsNormQuantV2,
+                        INPUT(x1, x2, gamma, scales1, (aclTensor*)nullptr, (aclTensor*)nullptr, zeroPoints2,
+                              (aclTensor*)nullptr, -1L, 1e-5, true),
+                        OUTPUT(y1, y2, xOut, (aclTensor*)nullptr));
+
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
 }
 
 TEST_F(l2_add_rms_norm_quant_v2_test, ascend950PR_9589_case_dyn_001)
