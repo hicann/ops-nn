@@ -367,7 +367,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);
+  CHECK_RET(alpha != nullptr, LOG_PRINT("create alpha failed.\n"); return -1);
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
