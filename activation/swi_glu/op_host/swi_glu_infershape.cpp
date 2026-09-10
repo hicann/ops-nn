@@ -63,7 +63,7 @@ static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context)
         return ge::GRAPH_SUCCESS;
     }
     if (x_shape->GetDim(split_dim) < 0 || x_shape->GetDim(split_dim) % SPLIT_NUM != 0) {
-        OP_LOGE("SwiGlu", "The shape [%s] is not divisible by 2.", Ops::Base::ToString(*x_shape).c_str());
+        OP_LOGE("SwiGlu", "The shape %s is not divisible by 2.", Ops::Base::ToString(*x_shape).c_str());
         return ge::GRAPH_FAILED;
     }
 
