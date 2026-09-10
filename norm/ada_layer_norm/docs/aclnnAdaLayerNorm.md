@@ -145,8 +145,8 @@ aclnnStatus aclnnAdaLayerNorm(
     <tr>
       <td>epsilon（double）</td>
       <td>输入</td>
-      <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
-      <td>-</td>
+      <td>表示添加到分母中的值，以确保数值稳定，用于防止除0错误。对应公式中的`epsilon`。</td>
+      <td>建议传较小的正数，如1e-5。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
