@@ -87,8 +87,8 @@ int main()
     void* valuesOutDeviceAddr = nullptr;
     void* indicesOutDeviceAddr = nullptr;
     aclTensor* self = nullptr;
-    uint64_t dim = 1;
-    uint64_t k = 2;
+    int64_t dim = -1;
+    int64_t k = 2;
     bool keepdim = true;
     aclTensor* valuesOut = nullptr;
     aclTensor* indicesOut = nullptr;

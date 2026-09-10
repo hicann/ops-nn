@@ -98,7 +98,7 @@ static inline bool CheckReduceOutShape(const aclTensor* inferOut, const aclTenso
     auto const& yShape = out->GetViewShape();
     if (xShape != yShape) {
         if (!(xShape.GetShapeSize() == 1 && yShape.GetShapeSize() == 1)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The out tensor's shape[%s] is not equal with inferOut shape[%s].",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The out tensor's shape%s is not equal with inferOut shape%s.",
                     op::ToString(out->GetViewShape()).GetString(), op::ToString(inferOut->GetViewShape()).GetString());
             return false;
         }
