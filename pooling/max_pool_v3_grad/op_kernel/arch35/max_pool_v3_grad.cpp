@@ -14,9 +14,8 @@
  *
  * MaxPoolV3Grad only adds attributes on top of MaxPoolGrad.  The host tiling
  * path normalizes those attributes to the common SIMT tiling data, so the
- * MaxPoolGrad SIMT implementation is reused.  The compile-time selection
- * policy keeps MaxPoolV3Grad aligned with the design-defined NaN-ignore and
- * normal infinity-comparison semantics.
+ * MaxPoolGrad SIMT implementation is reused as-is, including its NaN-propagate
+ * max-selection semantics.
  */
 
 #include "kernel_operator.h"
@@ -44,13 +43,11 @@ __global__ __aicore__ void max_pool_v3_grad(GM_ADDR orig_input, GM_ADDR orig_out
     GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxSimtTilingCommonData, tilingData, tiling);
 
     if constexpr (INDICES_DTYPE == TPL_INT32) {
-        MaxPoolGrad::MaxPoolGradSIMT<DTYPE_ORIG_INPUT, int32_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_IGNORE> op(
-            &pipe, &tilingData);
+        MaxPoolGrad::MaxPoolGradSIMT<DTYPE_ORIG_INPUT, int32_t, FORMAT> op(&pipe, &tilingData);
         op.Init(orig_input, orig_output, grad, out_grad, workspace);
         op.Process();
     } else {
-        MaxPoolGrad::MaxPoolGradSIMT<DTYPE_ORIG_INPUT, int64_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_IGNORE> op(
-            &pipe, &tilingData);
+        MaxPoolGrad::MaxPoolGradSIMT<DTYPE_ORIG_INPUT, int64_t, FORMAT> op(&pipe, &tilingData);
         op.Init(orig_input, orig_output, grad, out_grad, workspace);
         op.Process();
     }

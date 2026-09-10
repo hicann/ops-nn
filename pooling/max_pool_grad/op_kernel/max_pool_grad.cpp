@@ -38,13 +38,11 @@ __global__ __aicore__ void max_pool_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR
     if constexpr (KERNEL_MODE == TPL_SIMT_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxSimtTilingCommonData, tilingData, tiling);
         if constexpr (INDICES_DTYPE == TPL_INT32) {
-            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int32_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_PROPAGATE> op(
-                &pipe, &tilingData);
+            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int32_t, FORMAT> op(&pipe, &tilingData);
             op.Init(orig_x, orig_y, grads, y, workspace);
             op.Process();
         } else {
-            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int64_t, FORMAT, MaxPoolGrad::MAX_SELECT_NAN_PROPAGATE> op(
-                &pipe, &tilingData);
+            MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int64_t, FORMAT> op(&pipe, &tilingData);
             op.Init(orig_x, orig_y, grads, y, workspace);
             op.Process();
         }
