@@ -216,6 +216,7 @@ __aicore__ inline void LogitND<T>::ComputeStepTwo(int64_t dataCount)
     __VEC_SCOPE__
     {
         AscendC::Reg::RegTensor<float> regX;
+        AscendC::Reg::RegTensor<float> regX2;
         AscendC::Reg::RegTensor<float> regTmp;
         AscendC::Reg::MaskReg preg0;
         constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
@@ -226,12 +227,20 @@ __aicore__ inline void LogitND<T>::ComputeStepTwo(int64_t dataCount)
             uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
             preg0 = AscendC::Reg::UpdateMask<float>(rem);
             AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(regX, x1Addr + i * vfLen);
+            // ln(x) - ln(1-x) = ln(2x) - ln(2-2x)：整体乘 2 精确无舍入，补偿在相减中相消。
+            // 次正规 x 经乘 2 后必不触及库 FTZ_FALSE 缩放判定的上界（最大次正规数的
+            // 一半不可表示），从而完全绕开 FTZ 冲刷；对可表示的 x < 1，2-2x 恒为正规数
+            AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regX2, regX, static_cast<float>(2.0),
+                                                                                   preg0);
             AscendC::Reg::Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regX,
-                                                                                   static_cast<float>(-1.0), preg0);
+                                                                                   static_cast<float>(-2.0), preg0);
             AscendC::Reg::Adds<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(regTmp, regTmp,
-                                                                                   static_cast<float>(1.0), preg0);
-            AscendC::Reg::Div<float, AscendC::Reg::MaskMergeMode::ZEROING>(regX, regX, regTmp, preg0);
-            AscendC::Reg::Log(regX, regX, preg0);
+                                                                                   static_cast<float>(2.0), preg0);
+            static constexpr AscendC::Reg::LogSpecificMode logNoFtz = {AscendC::Reg::MaskMergeMode::ZEROING,
+                                                                       AscendC::LogAlgo::PRECISION_1ULP_FTZ_FALSE};
+            AscendC::Reg::Log<float, &logNoFtz>(regTmp, regTmp, preg0);
+            AscendC::Reg::Log<float, &logNoFtz>(regX, regX2, preg0);
+            AscendC::Reg::Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(regX, regX, regTmp, preg0);
             AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(x1Addr + i * vfLen, regX, preg0);
         }
     }
