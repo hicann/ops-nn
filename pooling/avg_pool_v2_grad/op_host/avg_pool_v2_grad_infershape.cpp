@@ -58,6 +58,22 @@ inline bool IsConstTensor(const gert::Tensor* inputTensor)
     return false;
 }
 
+// 校验 ksize/strides 列表中 batch 维与 channel 维必须为 1 (NCHW 检查 [0][1], NHWC 检查 [0][3])
+static ge::graphStatus CheckNonSpatialDimIsOne(gert::InferShapeContext* context, const int64_t* attrData,
+                                               const char* attrName, size_t batchDimIdx, size_t channelDimIdx)
+{
+    const size_t dimIdxs[2] = {batchDimIdx, channelDimIdx};
+    for (size_t dimIdx : dimIdxs) {
+        if (attrData[dimIdx] != ONE) {
+            std::string attrDimName = std::string(attrName) + "[" + std::to_string(dimIdx) + "]";
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), attrDimName.c_str(),
+                                      std::to_string(attrData[dimIdx]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
     OP_CHECK_IF(output_shape == nullptr,
@@ -111,27 +127,11 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
-    if (dataFormatStr == "NCHW") {
-        if (ksize_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(),
-                                      "1");
-            return GRAPH_FAILED;
-        }
-        if (ksize_data[IDX_ONE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[1]", std::to_string(ksize_data[IDX_ONE]).c_str(),
-                                      "1");
-            return GRAPH_FAILED;
-        }
-    } else if (dataFormatStr == "NHWC") {
-        if (ksize_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(),
-                                      "1");
-            return GRAPH_FAILED;
-        }
-        if (ksize_data[IDX_THREE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[3]", std::to_string(ksize_data[IDX_THREE]).c_str(),
-                                      "1");
-            return GRAPH_FAILED;
+    if (dataFormatStr == "NCHW" || dataFormatStr == "NHWC") {
+        size_t channelDimIdx = dataFormatStr == "NHWC" ? IDX_THREE : IDX_ONE;
+        ge::graphStatus ret = CheckNonSpatialDimIsOne(context, ksize_data, "ksize", IDX_ZERO, channelDimIdx);
+        if (ret != ge::GRAPH_SUCCESS) {
+            return ret;
         }
     }
 
@@ -144,27 +144,11 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
-    if (dataFormatStr == "NCHW") {
-        if (strides_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[0]",
-                                      std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
-            return GRAPH_FAILED;
-        }
-        if (strides_data[IDX_ONE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[1]",
-                                      std::to_string(strides_data[IDX_ONE]).c_str(), "1");
-            return GRAPH_FAILED;
-        }
-    } else if (dataFormatStr == "NHWC") {
-        if (strides_data[IDX_ZERO] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[0]",
-                                      std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
-            return GRAPH_FAILED;
-        }
-        if (strides_data[IDX_THREE] != ONE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[3]",
-                                      std::to_string(strides_data[IDX_THREE]).c_str(), "1");
-            return GRAPH_FAILED;
+    if (dataFormatStr == "NCHW" || dataFormatStr == "NHWC") {
+        size_t channelDimIdx = dataFormatStr == "NHWC" ? IDX_THREE : IDX_ONE;
+        ge::graphStatus ret = CheckNonSpatialDimIsOne(context, strides_data, "strides", IDX_ZERO, channelDimIdx);
+        if (ret != ge::GRAPH_SUCCESS) {
+            return ret;
         }
     }
 

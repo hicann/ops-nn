@@ -49,14 +49,36 @@ struct PoolGradNhwcDims {
 };
 
 /*!
+ * \brief 按内层块大小计算某轴的 outer 与 tail: outer = CeilDiv(total, inner),
+ *        tail 为最后一个不满块大小, 整除时为 inner。
+ */
+inline void CalcAxisOuterTail(int64_t totalSize, int64_t innerSize, int64_t& outerSize, int64_t& tailSize)
+{
+    outerSize = Ops::Base::CeilDiv(totalSize, innerSize);
+    int64_t tempTail = totalSize % innerSize;
+    tailSize = tempTail == 0 ? innerSize : tempTail;
+}
+
+/*!
+ * \brief 计算池化窗口重叠时的批处理大小: kernel > stride 时为 CeilDiv(kernel, stride), 否则为 1。
+ */
+inline int64_t CalcProBatchSize(int64_t kernelSize, int64_t strideSize)
+{
+    if (kernelSize > strideSize) {
+        return Ops::Base::CeilDiv(kernelSize, strideSize);
+    }
+    return 1;
+}
+
+/*!
  * \brief 在 [1, right] 内二分查找最大的 mid 使 splitData.*field = mid * multiplier 后判定通过。
  *        约定 mid = 1 已由调用方验证可行 (bestSplit 初值 1)。
  *        判定为 IsMeetUBSize() && IsMeetTargetCoreNum(), 与 TrySplit* 系列一致;
  *        checkCoreNum = false 时仅判定 IsMeetUBSize() (NHWC C 轴兜底阶段使用)。
  */
-template <typename SplitInfo, typename TilingClass>
-int64_t SearchMaxSplit(TilingClass& tiling, SplitInfo& splitData, int64_t SplitInfo::*field, int64_t multiplier,
-                       int64_t right, bool checkCoreNum = true)
+template <typename SplitInfo, typename TilingClass, typename MemberPtrT>
+int64_t SearchMaxSplit(TilingClass& tiling, SplitInfo& splitData, MemberPtrT field, int64_t multiplier, int64_t right,
+                       bool checkCoreNum = true)
 {
     int64_t left = 1;
     int64_t bestSplit = 1;

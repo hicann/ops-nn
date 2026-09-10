@@ -18,6 +18,7 @@
 
 #include "../../op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 #include "max_pool_grad_with_argmax_tiling_common.h"
+#include "pool_grad_tiling_common_base.h"
 
 namespace optiling {
 static constexpr int64_t T3_INT64_NCHW = 10;
@@ -69,35 +70,33 @@ struct MaxPoolGradNCHWSplitInfo {
     int64_t totalBufferSize{0};
 };
 
-class MaxPoolGradNCHWTilingCommon {
+class MaxPoolGradNCHWTilingCommon : public PoolGradTilingCommonBase<MaxPoolGradNCHWBaseInfo, MaxPoolGradNCHWSplitInfo,
+                                                                    MaxPoolGradWithArgmaxInputInfoCommon> {
 public:
     bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
-    void DynamicAdjustmentWH();
-    MaxPoolGradNCHWTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input) {}
+    MaxPoolGradNCHWTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input)
+        : PoolGradTilingCommonBase<MaxPoolGradNCHWBaseInfo, MaxPoolGradNCHWSplitInfo,
+                                   MaxPoolGradWithArgmaxInputInfoCommon>(input)
+    {}
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
-    ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);
     ge::graphStatus PostTiling(gert::TilingContext* context_);
     MaxPoolGradNCHWSplitInfo GetSplitData() const;
     MaxPoolGradNCHWBaseInfo GetBaseData();
     bool CheckUBSize();
 
 protected:
-    virtual void DoBufferCalculate();
-    virtual void SetTilingData(gert::TilingContext* context, uint64_t key);
-    void DoUBTiling();
+    void DoBufferCalculate() override;
+    void SetTilingData(gert::TilingContext* context, uint64_t key) override;
+    void DoUBTiling() override;
+    void DoBlockTiling() override;
+    void PrintBaseData() const override;
+    void PrintSplitData() const override;
     bool TrySplitNC();
     bool TrySplitAlignH();
     bool TrySplitAlignW();
     void SplitUnalignHW();
     void SearchBestTiling();
-    void PrintBaseData() const;
-    void PrintSplitData() const;
-    void DoBlockTiling();
-
-    MaxPoolGradNCHWBaseInfo baseData;
-    MaxPoolGradNCHWSplitInfo splitData;
-    MaxPoolGradWithArgmaxInputInfoCommon* inputData;
+    PoolGradTiling::PoolGradNchwDims GetNchwDims() const;
 };
 
 } // namespace optiling

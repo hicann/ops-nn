@@ -21,10 +21,11 @@
 namespace MaxPoolGradWithArgmaxNHWCNameSpace {
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0, const uint32_t VER = VER_NORMAL>
 class MaxPoolGradWithArgmaxKernelNHWCBigcBase
-    : public MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER> {
+    : public MaxPoolGradWithArgmaxKernelNHWCBase<
+          T1, T2, T3, IS_CHECK_RANGE, VER, MaxPoolGradWithArgmaxKernelNHWCBigcBase<T1, T2, T3, IS_CHECK_RANGE, VER>> {
 public:
     __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                      __local_mem__ T2* argmaxAddr)
+                                      __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t*)
     {
         int64_t wOutput = this->wOutput_;
         int64_t cOutput = this->cOutput_;
@@ -110,54 +111,6 @@ public:
                     }
                 }
             }
-        }
-    }
-
-    __aicore__ inline void Compute()
-    {
-        uint32_t calCount = this->outputBufferSize_ / sizeof(computeType);
-        LocalTensor<computeType> yLocal = (this->outputQue_).template AllocTensor<computeType>();
-        Duplicate(yLocal, computeType(0), calCount);
-
-        LocalTensor<T1> gradLocal = (this->gradQue_).template DeQue<T1>();
-        LocalTensor<T2> argmaxLocal = (this->argmaxQue_).template DeQue<T2>();
-
-        __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
-        __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
-
-        ConCProcVF(yAddr, gradAddr, argmaxAddr);
-
-        if constexpr (std::negation<std::is_same<T1, float>>::value) {
-            Cast(yLocal.ReinterpretCast<T1>(), yLocal, RoundMode::CAST_RINT, calCount);
-        }
-
-        (this->outputQue_).template EnQue(yLocal);
-        (this->gradQue_).template FreeTensor(gradLocal);
-        (this->argmaxQue_).template FreeTensor(argmaxLocal);
-    }
-
-    __aicore__ inline void ProcessPerLoop()
-    {
-        if (this->hArgmaxActual_ <= 0 || this->wArgmaxActual_ <= 0) {
-            this->ProcessNoArgmaxBlock();
-            return;
-        }
-
-        this->CopyIn();
-        Compute();
-        this->CopyOut();
-    }
-
-    __aicore__ inline void Process()
-    {
-        if (this->blockIdx_ >= this->usedCoreNum_) {
-            return;
-        }
-
-        for (int64_t loopNum = 0; loopNum < this->curCoreProcessNum_; loopNum++) {
-            this->ScalarCompute(loopNum);
-            ProcessPerLoop();
         }
     }
 };

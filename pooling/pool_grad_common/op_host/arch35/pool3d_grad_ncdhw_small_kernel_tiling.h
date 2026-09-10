@@ -125,6 +125,10 @@ class Pool3DGradNCDHWSmallKernelCommonTiling {
 public:
     Pool3DGradNCDHWSmallKernelCommonTiling(Pool3DGradNCDHWInputInfo* input) : inputData(input) {}
 
+    // 约定: IsMeetUBSize / IsMeetTargetCoreNum 需公开, 供 pool_grad_tiling_split_helper 模板调用
+    bool IsMeetTargetCoreNum() const;
+    bool IsMeetUBSize();
+
     void InitializationVars(gert::TilingContext* context_, int64_t ubSize_, int64_t coreNum_);
     ge::graphStatus DoOpTiling(gert::TilingContext* context);
     ge::graphStatus PostTiling(gert::TilingContext* context_, uint64_t key);
@@ -139,10 +143,13 @@ private:
     bool TrySplitAlignH();
     bool TrySplitAlignW();
     void SplitUnalignDHW();
-    bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
     void SearchBestTiling();
     void DynamicAdjustmentDWH();
+    // D/H/W 三轴对齐二分切分公共实现: 对 axisInner 轴在 [1, CeilDiv(axisX/2, axisStride)] 内
+    // 按 axisStride 对齐二分, 其余两轴与 highAxis 预置为 otherInnerA/B 与 1。
+    bool TrySplitAlignedAxis(int64_t Pool3DGradNCDHWSplitInfo::*axisInner, int64_t axisX, int64_t axisStride,
+                             int64_t Pool3DGradNCDHWSplitInfo::*otherInnerA, int64_t otherValA,
+                             int64_t Pool3DGradNCDHWSplitInfo::*otherInnerB, int64_t otherValB);
     void SetTilingData(gert::TilingContext* context);
     void PrintBaseData() const;
     void PrintSplitData() const;

@@ -21,10 +21,12 @@
 namespace MaxPoolGradWithArgmaxNHWCNameSpace {
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE = 0, const uint32_t VER = VER_NORMAL>
 class MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase
-    : public MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, int32_t, IS_CHECK_RANGE, VER> {
+    : public MaxPoolGradWithArgmaxKernelNHWCBase<
+          T1, T2, int32_t, IS_CHECK_RANGE, VER,
+          MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<T1, T2, IS_CHECK_RANGE, VER>> {
 public:
-    __aicore__ inline void ConCMergeHWProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                             __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
+    __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                      __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
     {
         uint16_t nOutputActual = static_cast<uint16_t>(this->nOutputActual_);
         int64_t hOutputActual = this->hOutputActual_;
@@ -202,57 +204,6 @@ public:
                     }
                 }
             }
-        }
-    }
-
-    __aicore__ inline void Compute()
-    {
-        uint32_t calCount = this->outputBufferSize_ / sizeof(computeType);
-        LocalTensor<computeType> yLocal = (this->outputQue_).template AllocTensor<computeType>();
-        Duplicate(yLocal, computeType(0), calCount);
-
-        LocalTensor<T1> gradLocal = (this->gradQue_).template DeQue<T1>();
-        LocalTensor<T2> argmaxLocal = (this->argmaxQue_).template DeQue<T2>();
-
-        __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
-        __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
-
-        LocalTensor<uint32_t> helpTensor = (this->helpBuf_).template Get<uint32_t>();
-        __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
-
-        ConCMergeHWProcVF(yAddr, gradAddr, argmaxAddr, helpAddr);
-
-        if constexpr (std::negation<std::is_same<T1, float>>::value) {
-            Cast(yLocal.ReinterpretCast<T1>(), yLocal, RoundMode::CAST_RINT, calCount);
-        }
-
-        (this->outputQue_).template EnQue(yLocal);
-        (this->gradQue_).template FreeTensor(gradLocal);
-        (this->argmaxQue_).template FreeTensor(argmaxLocal);
-    }
-
-    __aicore__ inline void ProcessPerLoop()
-    {
-        if (this->hArgmaxActual_ <= 0 || this->wArgmaxActual_ <= 0) {
-            this->ProcessNoArgmaxBlock(); // ceilMode为false时，最后的尾块可能是这种情况
-            return;
-        }
-
-        this->CopyIn();
-        Compute();
-        this->CopyOut();
-    }
-
-    __aicore__ inline void Process()
-    {
-        if (this->blockIdx_ >= this->usedCoreNum_) {
-            return;
-        }
-
-        for (int64_t loopNum = 0; loopNum < this->curCoreProcessNum_; loopNum++) {
-            this->ScalarCompute(loopNum);
-            ProcessPerLoop();
         }
     }
 };
