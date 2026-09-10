@@ -70,7 +70,7 @@ uint64_t FusedMatMulBatchAswBasicApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-ge::graphStatus FusedMatMulBatchAswBasicApiTiling::GetTilingDataProcess(FusedMatMulTilingData& tilingData) const
+ge::graphStatus FusedMatMulBatchAswBasicApiTiling::ProcessFusedTilingData(FusedMatMulTilingData& tilingData) const
 {
     const ge::graphStatus ret = BatchMatMulV3AswBasicTiling::GetTilingDataProcess(tilingData.matMulTilingData);
     if (ret != ge::GRAPH_SUCCESS) {
@@ -100,7 +100,7 @@ ge::graphStatus FusedMatMulBatchAswBasicApiTiling::GetTilingData(TilingResult& t
         OP_LOGE(context_->GetNodeName(), "Failed to allocate memory for tilingData");
         return ge::GRAPH_FAILED;
     }
-    const ge::graphStatus ret = GetTilingDataProcess(*tilingData);
+    const ge::graphStatus ret = ProcessFusedTilingData(*tilingData);
     tiling.tilingData = tilingData;
     tiling.tilingDataSize = sizeof(FusedMatMulTilingData);
     return ret;

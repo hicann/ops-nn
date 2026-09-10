@@ -239,7 +239,8 @@ static bool CheckAscendCScenario(const aclTensor* x1, const aclTensor* x2, const
 
     size_t x1DimNum = x1->GetViewShape().GetDimNum();
     size_t x2DimNum = x2->GetViewShape().GetDimNum();
-    if (x1DimNum > 6 || x2DimNum > 6) {
+    constexpr size_t MAX_BATCH_DIM_NUM = 6; // rank>6（即 7/8 维）走 batch_mat_mul_v3 路径
+    if (x1DimNum > MAX_BATCH_DIM_NUM || x2DimNum > MAX_BATCH_DIM_NUM) {
         OP_LOGI("Hit batch_mat_mul_v3 for rank 7/8.");
         return true;
     }

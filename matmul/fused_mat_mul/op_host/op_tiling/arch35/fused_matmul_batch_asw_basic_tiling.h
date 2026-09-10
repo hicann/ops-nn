@@ -36,7 +36,7 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
 private:
-    ge::graphStatus GetTilingDataProcess(FusedMatMulTilingData& tilingData) const;
+    ge::graphStatus ProcessFusedTilingData(FusedMatMulTilingData& tilingData) const;
 };
 } // namespace fused_matmul
 } // namespace optiling

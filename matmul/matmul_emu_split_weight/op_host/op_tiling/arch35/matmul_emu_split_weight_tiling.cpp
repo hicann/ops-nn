@@ -32,6 +32,7 @@ static constexpr uint64_t HARDCODED_BASE_M = 256UL;
 static constexpr uint64_t HARDCODED_BASE_N = 112;
 static constexpr uint64_t NUM_TWO = 2UL;
 static constexpr uint64_t NUM_FOUR = 4UL;
+static constexpr uint64_t AIV_PER_AIC = 2UL; // 要求 AIC:AIV = 1:2
 static constexpr float EXPECTED_SCALE = 0.00390625f;
 } // namespace
 
@@ -40,7 +41,7 @@ namespace matmul_emu_split_weight {
 
 bool MatmulEmuSplitWeightTiling::IsCapable()
 {
-    if (aicNum_ == 0 || aivNum_ != aicNum_ * 2) {
+    if (aicNum_ == 0 || aivNum_ != aicNum_ * AIV_PER_AIC) {
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
                               "MatmulEmuSplitWeight is only supported for aicNum:aivNum=1:2, aicNum=%lu, aivNum=%lu",
                               aicNum_, aivNum_);
