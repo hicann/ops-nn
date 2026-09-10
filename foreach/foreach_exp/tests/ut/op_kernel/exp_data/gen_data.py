@@ -46,12 +46,19 @@ def gen_data_and_golden(shape_str, d_type="float32"):
             tmp_input = np.random.rand(*shape) * 2 - 1
 
         if d_type in ["int16", "int8", "uint8"]:
-            tmp_golden = np.round(np.exp(tmp_input)).astype(np_type)
+            # 整进浮出: 整数输入提升float32计算, 输出与golden均为float32
+            np.exp(tmp_input).astype(np.float32).tofile(
+                f"float32_golden_t_foreach_exp_{index}.bin"
+            )
+            # 输出buffer复用float32输入模板分配, 占位输入文件内容无关(kernel全量覆写)
+            np.zeros(shape, np.float32).tofile(
+                f"float32_input_t_foreach_exp_{index}.bin"
+            )
         else:
             tmp_golden = np.exp(tmp_input).astype(np_type)
+            tmp_golden.tofile(f"{d_type}_golden_t_foreach_exp_{index}.bin")
 
         tmp_input.astype(np_type).tofile(f"{d_type}_input_t_foreach_exp_{index}.bin")
-        tmp_golden.astype(np_type).tofile(f"{d_type}_golden_t_foreach_exp_{index}.bin")
 
 
 if __name__ == "__main__":

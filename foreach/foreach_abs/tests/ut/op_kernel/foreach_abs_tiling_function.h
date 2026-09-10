@@ -409,12 +409,14 @@ inline void ForeachCommonTiling::DivideUbMemory1(uint64_t ubSizePlatForm)
         // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
         // foreach_div_list/minimum_list/mul_list/sub_list
         uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));
-        if (dataType == 4) {
+        if (dataType == 4 || dataType == 5 || dataType == 7 || dataType == 8) {
+            // wrap kernel(bf16 cast/int16/int8/uint8) 需要额外中间缓冲, 对齐生产端 NeedCastCompute 划分
             totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
         }
         uint32_t canUseUbSize = totalSize / BINARY_LIST_UB_DIVIDER;
-        inputsTensorUbSize = (dataType == 4) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                               canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        inputsTensorUbSize = (dataType == 4 || dataType == 5 || dataType == 7 || dataType == 8) ?
+                                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
     } else if (opCode == FOREACH_POINTWISE_OP_CODE) {
         // foreach_addcdiv_scalar/addcdiv_scalar_list/addcmul_scalar/addcmul_scalar_list
         uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));

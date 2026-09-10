@@ -107,3 +107,41 @@ TEST_F(ForeachExpTest, infer_dtype_test_1)
     auto output_dtype_2 = context->GetOutputDataType(2);
     EXPECT_EQ(output_dtype_2, expected_datatype);
 }
+
+TEST_F(ForeachExpTest, infer_dtype_int_to_float)
+{
+    auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachExp")->infer_datatype;
+    ASSERT_NE(infer_datatype_func, nullptr);
+
+    // x: int16/int8/uint8 整进浮出, 输出均为 DT_FLOAT
+    ge::DataType x_dtype_0 = ge::DT_INT16;
+    ge::DataType x_dtype_1 = ge::DT_INT8;
+    ge::DataType x_dtype_2 = ge::DT_UINT8;
+
+    std::vector<void*> input_dtype_ref(3);
+    input_dtype_ref[0] = &x_dtype_0;
+    input_dtype_ref[1] = &x_dtype_1;
+    input_dtype_ref[2] = &x_dtype_2;
+
+    std::vector<void*> output_dtype_ref(3);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInstanceNum({3}, {3})
+                      .InputDataTypes(input_dtype_ref)
+                      .OutputDataTypes(output_dtype_ref)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
+
+    ge::DataType expected_datatype = ge::DT_FLOAT;
+    auto output_dtype_0 = context->GetOutputDataType(0);
+    EXPECT_EQ(output_dtype_0, expected_datatype);
+
+    auto output_dtype_1 = context->GetOutputDataType(1);
+    EXPECT_EQ(output_dtype_1, expected_datatype);
+
+    auto output_dtype_2 = context->GetOutputDataType(2);
+    EXPECT_EQ(output_dtype_2, expected_datatype);
+}
