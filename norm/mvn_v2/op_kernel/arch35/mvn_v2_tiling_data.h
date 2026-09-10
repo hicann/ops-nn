@@ -56,6 +56,7 @@ struct MVNV2TilingData {
     int64_t rGroupCnt = 0;
     float invRTotal = 0.0f;
     float eps = 0.0f;
+    int32_t kernelMode = 0;
 };
 
 #endif // OPS_NORM_MVN_V2_TILING_DATA_H_

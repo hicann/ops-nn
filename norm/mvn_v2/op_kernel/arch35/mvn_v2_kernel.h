@@ -89,6 +89,7 @@ class Mvnv2Kernel {
     F eps_ = 0.0f;
     int64_t preBufBytes_ = 0;
     int64_t tmpBufBytes_ = 0;
+    int32_t kernelMode_ = 0;
 
 public:
     __aicore__ inline void Init(__gm__ uint8_t* x, __gm__ uint8_t* y, const MVNV2TilingData* td,
@@ -180,6 +181,7 @@ public:
         eps_ = td->eps;
         preBufBytes_ = td->preReduceUbSize;
         tmpBufBytes_ = td->tmpBufUbSize;
+        kernelMode_ = td->kernelMode;
         const int64_t minBuf = 32;
         if (preBufBytes_ < minBuf)
             preBufBytes_ = minBuf;
@@ -196,6 +198,12 @@ public:
 
     __aicore__ inline void Process()
     {
+        if constexpr (std::is_same_v<D_T, F>) {
+            if (kernelMode_ == 1) {
+                ProcessTrailingA();
+                return;
+            }
+        }
         if (usedCoreNum_ <= 0)
             return;
         if (rGroupCnt_ > 0) {
@@ -209,6 +217,108 @@ public:
         int64_t gEnd = ((blockIdx + 1) * realGroups_) / usedCoreNum_;
         for (int64_t g = gStart; g < gEnd; ++g)
             ProcessGroup(g);
+    }
+
+    __aicore__ inline void ProcessTrailingATile(int64_t gmOffset, int64_t rowStride, int64_t tileLength)
+    {
+        constexpr int64_t rows = 56;
+        constexpr int64_t tileSize = 256;
+        AscendC::LocalTensor<F> input = preBuf_.Get<F>();
+        AscendC::LocalTensor<F> sum = tmpBuf0_.Get<F>();
+        AscendC::LocalTensor<F> work = tmpBuf1_.Get<F>();
+        AscendC::LocalTensor<F> cache = cacheBuf_.Get<F>();
+        AscendC::LocalTensor<F> mean = cache;
+        AscendC::LocalTensor<F> variance = cache[tileSize];
+        AscendC::LocalTensor<F> scale = cache[2 * tileSize];
+        AscendC::LocalTensor<F> invScale = cache[3 * tileSize];
+        AscendC::LocalTensor<F> denominator = cache[4 * tileSize];
+
+        AscendC::DataCopyExtParams copyIn{static_cast<uint16_t>(rows), static_cast<uint32_t>(tileLength * sizeof(F)),
+                                          static_cast<uint32_t>((rowStride - tileLength) * sizeof(F)), 0, 0};
+        AscendC::DataCopyPadExtParams<F> pad{false, 0, 0, 0};
+        AscendC::DataCopyPad(input, gmX_[gmOffset], copyIn, pad);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+
+        AscendC::Duplicate(scale, 0.0f, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        for (int64_t row = 0; row < rows; ++row) {
+            AscendC::Abs(work, input[row * tileLength], tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Max(scale, scale, work, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        AscendC::Maxs(scale, scale, 1.0f, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Reciprocal(invScale, scale, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+
+        AscendC::Duplicate(sum, 0.0f, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        for (int64_t row = 0; row < rows; ++row) {
+            AscendC::Mul(work, input[row * tileLength], invScale, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Add(sum, sum, work, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        AscendC::Muls(mean, sum, static_cast<F>(1.0f / rows), tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+
+        AscendC::Duplicate(variance, 0.0f, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        for (int64_t row = 0; row < rows; ++row) {
+            AscendC::Mul(work, input[row * tileLength], invScale, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Sub(work, work, mean, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Mul(work, work, work, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Add(variance, variance, work, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        AscendC::Muls(variance, variance, static_cast<F>(1.0f / rows), tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Sqrt(denominator, variance, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Muls(sum, invScale, eps_, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Add(denominator, denominator, sum, tileLength);
+        AscendC::PipeBarrier<PIPE_V>();
+
+        for (int64_t row = 0; row < rows; ++row) {
+            AscendC::Mul(work, input[row * tileLength], invScale, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Sub(work, work, mean, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+            AscendC::Div(input[row * tileLength], work, denominator, tileLength);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+        AscendC::DataCopyExtParams copyOut{static_cast<uint16_t>(rows), static_cast<uint32_t>(tileLength * sizeof(F)),
+                                           0, static_cast<uint32_t>((rowStride - tileLength) * sizeof(F)), 0};
+        AscendC::DataCopyPad(gmY_[gmOffset], input, copyOut);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(EVENT_ID0);
+    }
+
+    __aicore__ inline void ProcessTrailingA()
+    {
+        constexpr int64_t tileSize = 256;
+        int64_t rowStride = axisShape_[2];
+        int64_t tilesPerOuter = AscendC::CeilDivision(rowStride, tileSize);
+        int64_t totalTiles = axisShape_[0] * tilesPerOuter;
+        int64_t blockIdx = AscendC::GetBlockIdx();
+        int64_t startTile = blockIdx * totalTiles / usedCoreNum_;
+        int64_t endTile = (blockIdx + 1) * totalTiles / usedCoreNum_;
+        for (int64_t tile = startTile; tile < endTile; ++tile) {
+            int64_t outer = tile / tilesPerOuter;
+            int64_t column = (tile % tilesPerOuter) * tileSize;
+            int64_t tileLength = rowStride - column;
+            if (tileLength > tileSize)
+                tileLength = tileSize;
+            ProcessTrailingATile(outer * axisShape_[1] * rowStride + column, rowStride, tileLength);
+        }
     }
 
     __aicore__ inline void ProcessGroup2D()

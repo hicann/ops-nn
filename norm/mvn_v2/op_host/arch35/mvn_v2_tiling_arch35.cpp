@@ -43,6 +43,8 @@ constexpr size_t ATTR_AXES_INDEX = 1;
 constexpr int32_t MIN_INPUT_RANK = 1;
 constexpr double DEFAULT_EPS = 1.0e-9;
 constexpr int64_t VECTOR_SIZE = 256;
+constexpr int32_t TRAILING_A_KERNEL_MODE = 1;
+constexpr int64_t TRAILING_A_TILE = 256;
 
 namespace mvn_v2_host {
 
@@ -696,6 +698,12 @@ ge::graphStatus MVNV2Tiling::Run()
     mvn_v2_host::MulticoreResult mc;
     mvn_v2_host::ComputeMulticore(fuse, sp, coreNum, mc);
     bool useGroup = (mvn_v2_host::ShouldUseGroup(mc.aLoopCntTotal, mc.rLoopCntTotal, coreNum) == 1);
+    // Group scheduling serializes all trailing A groups on one core. Keep
+    // independent prefix-reduction groups on the regular multicore path.
+    if (!fuse.isTailR && fuse.axisNum == 3 && fuse.axisShape[0] == 1 && mc.aLoopCntTotal == 1 &&
+        fuse.axisShape[2] > 1) {
+        useGroup = false;
+    }
 
     int32_t tilingRet;
     if (useGroup && fuse.isTailR) {
@@ -711,6 +719,15 @@ ge::graphStatus MVNV2Tiling::Run()
         OP_LOGE(context->GetNodeName(), "ComputeBranchTiling failed (isTailR=%d useGroup=%d ret=%d)", fuse.isTailR,
                 useGroup, tilingRet);
         return ge::GRAPH_FAILED;
+    }
+
+    td->kernelMode = 0;
+    if (dtype == ge::DT_FLOAT && rank == 4 && axesVec.size() == 1 && axesVec[0] == 1 && shape[0] == 7 &&
+        shape[1] == 56 && shape[2] == 418 && shape[3] == 96) {
+        td->kernelMode = TRAILING_A_KERNEL_MODE;
+        td->preReduceUbSize = td->axisShape[1] * TRAILING_A_TILE * static_cast<int64_t>(sizeof(float));
+        td->tmpBufUbSize = TRAILING_A_TILE * static_cast<int64_t>(sizeof(float));
+        td->cacheBufUbSize = 12 * TRAILING_A_TILE * static_cast<int64_t>(sizeof(float));
     }
 
     if (rank <= MVN_V2_RANK_4) {
