@@ -33,6 +33,8 @@
 | dilations | 可选属性 | <ul><li>一个包含5个整数的元组/列表，表示输入各维度的膨胀（空洞）因子。</li><li>轴顺序与特征图格式一致。</li><li>默认值为 [1,1,1,1,1]。</li></ul> | -  | -  |
 | groups | 可选属性  |  <ul><li>整数，有效范围是[1,65535]，默认值为1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>目前要求$c_{in}$与$c_{out}$均能被'groups'整除。</li><li>当'groups'不为1时，不支持HIFLOAT8。</li></ul>  | INT | - |
 | data_format | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。各字母含义：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>用于指定'x'与'out_backprop'的数据排布格式。</li></ul> | STRING | - |
+| enable_hf32 | 可选属性 | <ul><li>布尔值，默认为false。用于控制是否使能HF32计算模式。</li><li>仅当输入数据类型为FLOAT32时生效。</li></ul> | BOOL | - |
+| output_padding | 可选属性 | <ul><li>一个包含5个整数的元组/列表，指定输出形状的附加大小。</li><li>仅对转置卷积场景生效，用于补充输出尺寸。</li><li>默认值为[0,0,0,0,0]。</li><li>仅<term>Ascend 950PR/Ascend 950DT</term>支持非零值。</li></ul> | - | - |
 | y | 输出 | <ul><li>相当于公式中的$\frac{\partial L}{\partial w_{c_{out}, c_{in}, r, p, q}}$。</li><li>其形状由'filter_size'给出。</li></ul>  |  FLOAT32  | NCDHW、NDHWC、DHWCN |
 
 ## 约束说明
@@ -54,6 +56,10 @@
     - N与C的维度必须为1。
     - Ascend 950PR/Ascend 950DT：H、W和D维度的取值范围必须在 [1,2147483646] 之间。
     - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H、W和D维度的取值范围必须在 [1,255] 之间。
+* output_padding
+    - 仅<term>Ascend 950PR/Ascend 950DT</term>支持非零值，其他产品仅支持全零。
+    - D、H和W维度的取值范围必须在 [0,2147483646] 之间。
+    - 转置卷积场景下，output_padding的各维度值需小于对应的stride或dilation。
 * 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明

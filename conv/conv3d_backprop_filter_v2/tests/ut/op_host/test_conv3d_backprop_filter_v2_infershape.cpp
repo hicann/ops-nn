@@ -161,6 +161,7 @@ TEST_F(Conv3DBackpropFilterV2ProtoTest, depthwise_2d_extend_3d_dynamic)
     int64_t groups = 1;
     string data_format("NCDHW");
     bool enable_hf32 = false;
+    vector<int64_t> output_padding({0, 0, 0, 0, 0});
     string padding("");
     int64_t _op_impl_mode_enum = 0L;
     bool from_depthwise = true;
@@ -187,15 +188,17 @@ TEST_F(Conv3DBackpropFilterV2ProtoTest, depthwise_2d_extend_3d_dynamic)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&fmap_shape, tensor, &out_backprop_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
-                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
-                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
-                                  {"_op_impl_mode_enum", Ops::NN::AnyValue::CreateFrom<bool>(_op_impl_mode_enum)},
-                                  {"from_depthwise", Ops::NN::AnyValue::CreateFrom<bool>(from_depthwise)}})
+                      .NodeAttrs(
+                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
+                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(output_padding)},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
+                           {"_op_impl_mode_enum", Ops::NN::AnyValue::CreateFrom<bool>(_op_impl_mode_enum)},
+                           {"from_depthwise", Ops::NN::AnyValue::CreateFrom<bool>(from_depthwise)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)

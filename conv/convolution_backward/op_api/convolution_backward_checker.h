@@ -213,6 +213,18 @@ public:
 
     inline bool CheckNotNull();
 
+    bool CheckConv3DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                    const op::Shape& gradOutShape);
+
+    bool CheckConv3DNonTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                       const op::Shape& gradOutShape);
+
+    bool CheckConv1DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                    const op::Shape& gradOutShape);
+
+    bool CheckConv2DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                    const op::Shape& gradOutShape);
+
     aclnnStatus CheckParamsFor8Bit();
 
     aclnnStatus CheckParams();

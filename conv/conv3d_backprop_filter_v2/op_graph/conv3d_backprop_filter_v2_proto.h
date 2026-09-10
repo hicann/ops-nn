@@ -69,6 +69,8 @@ namespace ge {
  * Specify the data format of the x and out_backprop. \n
  * @li enable_hf32: Optional. An optional bool parameter. Used to enable hf32 computation.
  * If true, enable hf32 computation, otherwise, disable hf32 computation. Defaults to false. \n
+ * @li output_padding: Optional. A tuple/list of 5 integers. Specifies the additional size added to the output shape.
+ * Defaults to [0, 0, 0, 0, 0]. \n
 
 *@par Outputs:
  * y: A Tensor that has the type float32. The format is NCDHW or NDHWC or DHWCN.
@@ -89,6 +91,7 @@ REG_OP(Conv3DBackpropFilterV2)
     .ATTR(groups, Int, 1)
     .ATTR(data_format, String, "NDHWC")
     .ATTR(enable_hf32, Bool, false)
+    .ATTR(output_padding, ListInt, {0, 0, 0, 0, 0})
     .OP_END_FACTORY_REG(Conv3DBackpropFilterV2)
 } // namespace ge
 

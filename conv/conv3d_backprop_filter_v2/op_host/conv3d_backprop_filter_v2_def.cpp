@@ -53,6 +53,7 @@ public:
         this->Attr("groups").AttrType(OPTIONAL).Int(1);
         this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
         this->Attr("enable_hf32").AttrType(OPTIONAL).Bool(false);
+        this->Attr("output_padding").AttrType(OPTIONAL).ListInt({0, 0, 0, 0, 0});
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)

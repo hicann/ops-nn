@@ -24,7 +24,7 @@ constexpr int32_t NCDHW_N_INDEX = 0;
 constexpr int32_t NCDHW_C_INDEX = 1;
 constexpr int32_t DHWCN_N_INDEX = 4;
 constexpr int32_t DHWCN_C_INDEX = 3;
-constexpr int32_t FROM_DEPTHWISE_INDEX = 8;
+constexpr int32_t FROM_DEPTHWISE_INDEX = 9;
 
 static ge::graphStatus InferShapeForDepthwiseConv2DBackpropFilter(gert::InferShapeContext* context, ge::graphStatus ret)
 {

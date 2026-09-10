@@ -116,7 +116,8 @@ bool CheckResolutionGEKernelShape(const op::Shape& inputShape, const op::Shape& 
 {
     int64_t dimOrder = dimIdx - 2; // 2: the dim N and D
     int64_t filterDimDilation = (weightShape[dimIdx] - 1) * (*params.dilation)[dimOrder] + 1;
-    int64_t dimInput = inputShape.GetDim(dimIdx) + (*params.padding)[dimOrder] * 2 -
+    int64_t outputPad = params.transposed ? (*params.outputPadding)[dimOrder] : 0;
+    int64_t dimInput = inputShape.GetDim(dimIdx) - outputPad + (*params.padding)[dimOrder] * 2 -
                        filterDimDilation; // 2 : pad two dim
     bool dimInputExpect = dimInput >= 0;
     OP_CHECK(dimInputExpect,
@@ -137,7 +138,8 @@ int64_t GetExpectNum(const op::Shape& inputShape, const op::Shape& weightShape, 
 {
     int64_t dimOrder = dimIdx - 2; // 2: the dim N and D
     int64_t filterDimDilation = (weightShape[dimIdx] - 1) * (*params.dilation)[dimOrder] + 1;
-    int64_t dimInput = inputShape.GetDim(dimIdx) + (*params.padding)[dimOrder] * 2 -
+    int64_t outputPad = params.transposed ? (*params.outputPadding)[dimOrder] : 0;
+    int64_t dimInput = inputShape.GetDim(dimIdx) - outputPad + (*params.padding)[dimOrder] * 2 -
                        filterDimDilation; // 2 : pad two dim
     int64_t dimExpect = dimInput / (*params.stride)[dimOrder] + 1;
     return dimExpect;
@@ -517,11 +519,12 @@ bool ConvolutionBackwardChecker::CheckConvParams(size_t inputDim)
                  return false);
         if (inputDim == CONV3DINPUTDIM) {
             for (uint64_t i = 0; i < params_.outputPadding->Size(); ++i) {
-                OP_CHECK((*params_.outputPadding)[i] < (*params_.stride)[i],
+                OP_CHECK((*params_.outputPadding)[i] < (*params_.stride)[i] ||
+                             (*params_.outputPadding)[i] < (*params_.dilation)[i],
                          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                              ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding",
                              AclarrayToString(params_.outputPadding).c_str(),
-                             "when transposed=true, the value of outputPadding must be less than or equal to stride"),
+                             "when transposed=true, the value of outputPadding must be less than stride or dilation"),
                          return false);
             }
         }
@@ -668,6 +671,43 @@ bool ConvolutionBackwardChecker::CheckConvShape()
     return true;
 }
 
+static bool CheckShapeDimsMatch(int64_t dim1, int64_t dim2, int64_t val1, int64_t val2, const char* name1,
+                                const char* name2, const char* reason)
+{
+    OP_CHECK(val1 == val2,
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME,
+                                                       FormatString("%s[%ld], %s[%ld]", name1, dim1, name2, dim2),
+                                                       FormatString("%ld, %ld", val1, val2), reason),
+             return false);
+    return true;
+}
+
+static bool CheckGroupsValidation(const op::Shape& gradOutShape, const op::Shape& inputShape, int64_t inputChannelIdx,
+                                  int64_t groups)
+{
+    auto outChannel = gradOutShape.GetDim(inputChannelIdx);
+    OP_CHECK(outChannel >= groups,
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME,
+                 FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
+                 FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
+                 FormatString("the shape dim of gradOutShape[%ld] must be greater than or equal to the value of groups,"
+                              "when the shape dim of inputShape[%ld] == the value of groups",
+                              inputChannelIdx, inputChannelIdx)),
+             return false);
+
+    OP_CHECK(gradOutShape.GetDim(inputChannelIdx) % groups == 0,
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME,
+                 FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
+                 FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
+                 FormatString("the shape dim of gradOutShape[%ld] must be divisible by the value of groups,"
+                              "when the shape dim of inputShape[%ld] equals to the value of groups",
+                              inputChannelIdx, inputChannelIdx)),
+             return false);
+    return true;
+}
+
 bool ConvolutionBackwardChecker::CheckConvChannelAndGroup()
 {
     op::Shape inputShape = params_.transposed ? inputTensor_.gradOutput->GetViewShape() :
@@ -687,14 +727,11 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup()
         op::Format weightFormat = inputTensor_.weight->GetStorageFormat();
         GetChannleIndex(weightShape, weightFormat, weightCinIdx);
     }
-    OP_CHECK(gradOutShape.GetDim(gradOutputChannelIdx) ==
-                 weightShape.GetDim(weightCoutIdx), // 0: NCHW, the order of N(out_channel)
-             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                 ACLNN_CONVOLUTION_BACKWARD_NAME,
-                 FormatString("gradOutShape[%ld], weight[%ld]", gradOutputChannelIdx, weightCoutIdx),
-                 FormatString("%ld, %ld", gradOutShape.GetDim(gradOutputChannelIdx), weightShape.GetDim(weightCoutIdx)),
-                 "the shape dim of [gradOutShape[1], weight[0]] must be the same."),
-             return false);
+    if (!CheckShapeDimsMatch(gradOutputChannelIdx, weightCoutIdx, gradOutShape.GetDim(gradOutputChannelIdx),
+                             weightShape.GetDim(weightCoutIdx), "gradOutShape", "weight",
+                             "the shape dim of [gradOutShape[1], weight[0]] must be the same.")) {
+        return false;
+    }
 
     bool channelCheck = weightShape.GetDim(weightCinIdx) == 0 ||
                         inputShape.GetDim(inputChannelIdx) % weightShape.GetDim(weightCinIdx) != 0;
@@ -721,29 +758,126 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup()
              return false);
 
     if (inputShape.GetDim(inputChannelIdx) == params_.groups && (!Ops::NN::AclnnUtil::IsRegbase())) {
-        auto outChannel = gradOutShape.GetDim(inputChannelIdx);
-        OP_CHECK(
-            outChannel >= params_.groups,
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                ACLNN_CONVOLUTION_BACKWARD_NAME,
-                FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
-                FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
-                FormatString("the shape dim of gradOutShape[%ld] must be greater than or equal to the value of groups,"
-                             "when the shape dim of inputShape[%ld] == the value of groups",
-                             inputChannelIdx, inputChannelIdx)),
-            return false);
-
-        OP_CHECK(gradOutShape.GetDim(inputChannelIdx) % params_.groups == 0,
-                 OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                     ACLNN_CONVOLUTION_BACKWARD_NAME,
-                     FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
-                     FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
-                     FormatString("the shape dim of gradOutShape[%ld] must be divisible by the value of groups,"
-                                  "when the shape dim of inputShape[%ld] equals to the value of groups",
-                                  inputChannelIdx, inputChannelIdx)),
-                 return false);
+        if (!CheckGroupsValidation(gradOutShape, inputShape, inputChannelIdx, params_.groups)) {
+            return false;
+        }
     }
 
+    return true;
+}
+
+bool ConvolutionBackwardChecker::CheckConv3DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                                            const op::Shape& gradOutShape)
+{
+    int64_t depthIdx = 2;  // NCDHW
+    int64_t heightIdx = 3; // NCDHW
+    int64_t widthIdx = 4;  // NCDHW
+    if (!CheckResolutionGEKernelShape(inputShape, weightShape, params_, depthIdx) ||
+        !CheckResolutionGEKernelShape(inputShape, weightShape, params_, heightIdx) ||
+        !CheckResolutionGEKernelShape(inputShape, weightShape, params_, widthIdx)) {
+        return false;
+    }
+    struct ExpectValue expectValue = {};
+    expectValue.doExpect = GetExpectNum(inputShape, weightShape, params_, depthIdx);
+    expectValue.hoExpect = GetExpectNum(inputShape, weightShape, params_, heightIdx);
+    expectValue.woExpect = GetExpectNum(inputShape, weightShape, params_, widthIdx);
+    bool expectCheck = expectValue.doExpect == gradOutShape.GetDim(depthIdx) &&
+                       expectValue.hoExpect == gradOutShape.GetDim(heightIdx) &&
+                       expectValue.woExpect == gradOutShape.GetDim(widthIdx);
+    OP_CHECK(expectCheck,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME, "input", op::ToString(inputShape).GetString(),
+                 FormatString("shape of input should equal to [%ld, %ld,%ld,%ld,%ld]", inputShape.GetDim(0),
+                              inputShape.GetDim(1), expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect)),
+             return false);
+    return true;
+}
+
+bool ConvolutionBackwardChecker::CheckConv3DNonTransposedShape(const op::Shape& inputShape,
+                                                               const op::Shape& weightShape,
+                                                               const op::Shape& gradOutShape)
+{
+    bool expectCheck = false;
+    struct ExpectValue expectValue = {};
+    int64_t gradOutputCout = 0;
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        int64_t depthIdx = 2;  // NCDHW
+        int64_t heightIdx = 3; // NCDHW
+        int64_t widthIdx = 4;  // NCDHW
+        gradOutputCout = gradOutShape.GetDim(1);
+        if (!CheckResolutionGEKernelShape(inputShape, weightShape, params_, depthIdx) ||
+            !CheckResolutionGEKernelShape(inputShape, weightShape, params_, heightIdx) ||
+            !CheckResolutionGEKernelShape(inputShape, weightShape, params_, widthIdx)) {
+            return false;
+        }
+        expectValue.doExpect = GetExpectNum(inputShape, weightShape, params_, depthIdx);
+        expectValue.hoExpect = GetExpectNum(inputShape, weightShape, params_, heightIdx);
+        expectValue.woExpect = GetExpectNum(inputShape, weightShape, params_, widthIdx);
+        expectCheck = expectValue.doExpect == gradOutShape.GetDim(depthIdx) &&
+                      expectValue.hoExpect == gradOutShape.GetDim(heightIdx) &&
+                      expectValue.woExpect == gradOutShape.GetDim(widthIdx);
+    } else {
+        OP_CHECK(GetExpectValueDHW_95(inputTensor_, params_, expectValue, inputShape, weightShape),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetExpectValueDHW_95 failed."), return false);
+        int64_t gradOutputDVal = 0;
+        int64_t gradOutputHVal = 0;
+        int64_t gradOutputWVal = 0;
+        op::Format gradOutputFormat = inputTensor_.gradOutput->GetStorageFormat();
+        GetInputShapeSize(gradOutputFormat, gradOutShape, gradOutputDVal, gradOutputHVal, gradOutputWVal);
+        int64_t coutChannelIdx = 0; // NCDHW
+        GetChannleIndex(gradOutShape, gradOutputFormat, coutChannelIdx);
+        gradOutputCout = gradOutShape.GetDim(coutChannelIdx);
+        expectCheck = (expectValue.doExpect == gradOutputDVal) && (expectValue.hoExpect == gradOutputHVal) &&
+                      (expectValue.woExpect == gradOutputWVal);
+    }
+    OP_CHECK(expectCheck,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput", op::ToString(gradOutShape).GetString(),
+                 FormatString("shape of gradOutput should equal to [%ld, %ld,%ld,%ld,%ld]", gradOutShape.GetDim(0),
+                              gradOutputCout, expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect)),
+             return false);
+    return true;
+}
+
+bool ConvolutionBackwardChecker::CheckConv1DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                                            const op::Shape& gradOutShape)
+{
+    int64_t widthIdx = 2; // NCL
+    if (!CheckResolutionGEKernelShape(inputShape, weightShape, params_, widthIdx)) {
+        return false;
+    }
+    struct ExpectValue expectValue = {};
+    expectValue.woExpect = GetExpectNum(inputShape, weightShape, params_, widthIdx);
+    bool expectCheck = expectValue.woExpect == gradOutShape.GetDim(widthIdx);
+    OP_CHECK(expectCheck,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME, "input", op::ToString(inputShape).GetString(),
+                 FormatString("shape of input should equal to [%ld, %ld, %ld]", inputShape.GetDim(0),
+                              inputShape.GetDim(1), expectValue.woExpect)),
+             return false);
+    return true;
+}
+
+bool ConvolutionBackwardChecker::CheckConv2DTransposedShape(const op::Shape& inputShape, const op::Shape& weightShape,
+                                                            const op::Shape& gradOutShape)
+{
+    int64_t heightIdx = 2; // NCHW
+    int64_t widthIdx = 3;  // NCHW
+    if (!CheckResolutionGEKernelShape(inputShape, weightShape, params_, heightIdx) ||
+        !CheckResolutionGEKernelShape(inputShape, weightShape, params_, widthIdx)) {
+        return false;
+    }
+    struct ExpectValue expectValue = {};
+    expectValue.hoExpect = GetExpectNum(inputShape, weightShape, params_, heightIdx);
+    expectValue.woExpect = GetExpectNum(inputShape, weightShape, params_, widthIdx);
+    bool expectCheck = expectValue.hoExpect == gradOutShape.GetDim(heightIdx) &&
+                       expectValue.woExpect == gradOutShape.GetDim(widthIdx);
+    OP_CHECK(expectCheck,
+             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                 ACLNN_CONVOLUTION_BACKWARD_NAME, "input", op::ToString(inputShape).GetString(),
+                 FormatString("shape of input should equal to [%ld, %ld, %ld, %ld]", inputShape.GetDim(0),
+                              inputShape.GetDim(1), expectValue.hoExpect, expectValue.woExpect)),
+             return false);
     return true;
 }
 
@@ -755,48 +889,17 @@ bool ConvolutionBackwardChecker::CheckConvShapePlus()
     op::Shape gradOutShape = params_.transposed ? inputTensor_.input->GetViewShape() :
                                                   inputTensor_.gradOutput->GetViewShape();
     auto inputDim = inputShape.GetDimNum();
-    bool expectCheck = false;
-    struct ExpectValue expectValue = {};
-    int64_t gradOutputCout = 0;
     if (inputDim == CONV3DINPUTDIM) {
-        if (!Ops::NN::AclnnUtil::IsRegbase()) {
-            int64_t depthIdx = 2;  // NCDHW
-            int64_t heightIdx = 3; // NCDHW
-            int64_t widthIdx = 4;  // NCDHW
-            gradOutputCout = gradOutShape.GetDim(1);
-            if (!CheckResolutionGEKernelShape(inputShape, weightShape, params_, depthIdx) ||
-                !CheckResolutionGEKernelShape(inputShape, weightShape, params_, heightIdx) ||
-                !CheckResolutionGEKernelShape(inputShape, weightShape, params_, widthIdx)) {
-                return false;
-            }
-            expectValue.doExpect = GetExpectNum(inputShape, weightShape, params_, depthIdx);
-            expectValue.hoExpect = GetExpectNum(inputShape, weightShape, params_, heightIdx);
-            expectValue.woExpect = GetExpectNum(inputShape, weightShape, params_, widthIdx);
-            expectCheck = expectValue.doExpect == gradOutShape.GetDim(depthIdx) &&
-                          expectValue.hoExpect == gradOutShape.GetDim(heightIdx) &&
-                          expectValue.woExpect == gradOutShape.GetDim(widthIdx);
-        } else {
-            OP_CHECK(GetExpectValueDHW_95(inputTensor_, params_, expectValue, inputShape, weightShape),
-                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetExpectValueDHW_95 failed."), return false);
-            int64_t gradOutputDVal = 0;
-            int64_t gradOutputHVal = 0;
-            int64_t gradOutputWVal = 0;
-            op::Format gradOutputFormat = inputTensor_.gradOutput->GetStorageFormat();
-            GetInputShapeSize(gradOutputFormat, gradOutShape, gradOutputDVal, gradOutputHVal, gradOutputWVal);
-            int64_t coutChannelIdx = 0; // NCDHW
-            GetChannleIndex(gradOutShape, gradOutputFormat, coutChannelIdx);
-            gradOutputCout = gradOutShape.GetDim(coutChannelIdx);
-            ;
-            expectCheck = (expectValue.doExpect == gradOutputDVal) && (expectValue.hoExpect == gradOutputHVal) &&
-                          (expectValue.woExpect == gradOutputWVal);
+        if (params_.transposed) {
+            return CheckConv3DTransposedShape(inputShape, weightShape, gradOutShape);
         }
-
-        OP_CHECK(expectCheck,
-                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                     ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput", op::ToString(gradOutShape).GetString(),
-                     FormatString("shape of gradOutput should equal to [%ld, %ld,%ld,%ld,%ld]", gradOutShape.GetDim(0),
-                                  gradOutputCout, expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect)),
-                 return false);
+        return CheckConv3DNonTransposedShape(inputShape, weightShape, gradOutShape);
+    }
+    if (inputDim == CONV1DINPUTDIM && params_.transposed) {
+        return CheckConv1DTransposedShape(inputShape, weightShape, gradOutShape);
+    }
+    if (inputDim == CONV2DINPUTDIM && params_.transposed) {
+        return CheckConv2DTransposedShape(inputShape, weightShape, gradOutShape);
     }
     return true;
 }

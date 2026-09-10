@@ -42,7 +42,8 @@ constexpr size_t PADS_INDEX = 1;
 constexpr size_t DIALTIONS_INDEX = 2;
 constexpr size_t GROUPS_INDEX = 3;
 constexpr size_t ENABLE_HF32_INDEX = 5;
-constexpr size_t PADDING_INDEX = 6;
+constexpr size_t OUTPUT_PADDING_INDEX = 6;
+constexpr size_t PADDING_INDEX = 7;
 
 constexpr size_t DEFAULT_C0 = 16;
 constexpr size_t DEFAULT_FP32_C0 = 8;
@@ -250,6 +251,56 @@ bool SetDilationsAttr(const gert::TilingContext* context, Conv3dBpFilterV2RunInf
     runInfoV2.dilation_h = normalized_dilations[NCDHW_H_INDEX];
     runInfoV2.dilation_w = normalized_dilations[NCDHW_W_INDEX];
     AdjustDilationByKernel(runInfoV2);
+    return true;
+}
+
+bool SetOutputPaddingAttr(const gert::TilingContext* context, Conv3dBpFilterV2RunInfo& runInfoV2)
+{
+    const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
+
+    // output_padding only supported on arch35 (Ascend950), skip on other architectures
+    OP_CHECK_IF(!IsArchAfter35(context), OP_LOGD(op_name, "output_padding is not supported on current architecture."),
+                return true);
+
+    const auto attrs = context->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE(op_name, "failed to get attrs from context."), return false);
+
+    // output_padding is OpDef attr at fixed index 6, after enable_hf32(5) and before padding(7)
+    const auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(OUTPUT_PADDING_INDEX);
+    if (outputPadding == nullptr || outputPadding->GetSize() != CONV_BACKPROP_SHAPE_DIM) {
+        OP_LOGD(op_name, "output_padding not found or invalid, use default value 0");
+        runInfoV2.output_padding.output_padding_d = 0;
+        runInfoV2.output_padding.output_padding_h = 0;
+        runInfoV2.output_padding.output_padding_w = 0;
+        return true;
+    }
+
+    const int64_t* outputPaddingData = static_cast<const int64_t*>(outputPadding->GetData());
+    for (size_t i = 0; i < outputPadding->GetSize(); i++) {
+        if (outputPaddingData[i] < 0 || outputPaddingData[i] > 255) {
+            OP_LOGD(op_name, "output_padding[%zu]=%ld out of valid range [0,255], use default value 0", i,
+                    outputPaddingData[i]);
+            runInfoV2.output_padding.output_padding_d = 0;
+            runInfoV2.output_padding.output_padding_h = 0;
+            runInfoV2.output_padding.output_padding_w = 0;
+            return true;
+        }
+    }
+
+    std::vector<int64_t> normalized_output_padding(outputPadding->GetSize(), 0);
+    const ge::Format inputFormat = context->GetInputDesc(INPUT_DESC)->GetOriginFormat();
+    OP_CHECK_IF(!GetNCDHWShape(outputPaddingData, normalized_output_padding.data(), inputFormat),
+                OP_LOGE(op_name, "GetNCDHWShape failed for output_padding."), return false);
+
+    runInfoV2.output_padding.output_padding_d = normalized_output_padding[NCDHW_D_INDEX];
+    runInfoV2.output_padding.output_padding_h = normalized_output_padding[NCDHW_H_INDEX];
+    runInfoV2.output_padding.output_padding_w = normalized_output_padding[NCDHW_W_INDEX];
+
+    OP_LOGD(op_name,
+            "ConvTranspose backward weight grad: output_padding_d=%d, output_padding_h=%d, output_padding_w=%d",
+            runInfoV2.output_padding.output_padding_d, runInfoV2.output_padding.output_padding_h,
+            runInfoV2.output_padding.output_padding_w);
+
     return true;
 }
 
@@ -699,16 +750,21 @@ void ReCalPaddings(Conv3dBpFilterV2RunInfo& runInfoV2, const char* padding)
 bool CheckGradOutputShape(const gert::TilingContext* context, Conv3dBpFilterV2RunInfo& runInfoV2)
 {
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
-    int64_t do_expect = (static_cast<int64_t>(runInfoV2.di) + runInfoV2.pad_f + runInfoV2.pad_b -
-                         runInfoV2.dilation_d * (runInfoV2.kd - 1) - 1) /
+    // 对于转置卷积 dw 计算，input 和 outBackprop 角色互换
+    // 转置卷积正向输出公式：wi = stride*(wo-1) + output_padding + dilation*(kw-1) + 1 - 2*padding
+    // 等价于：wi - output_padding = stride*(wo-1) + dilation*(kw-1) + 1 - 2*padding
+    // 即普通卷积公式，输入尺寸为 wi - output_padding
+    // 非转置场景 output_padding=0，公式退化为原始公式
+    int64_t do_expect = (static_cast<int64_t>(runInfoV2.di) - runInfoV2.output_padding.output_padding_d +
+                         runInfoV2.pad_f + runInfoV2.pad_b - runInfoV2.dilation_d * (runInfoV2.kd - 1) - 1) /
                             runInfoV2.stride_d +
                         1;
-    int64_t ho_expect = (static_cast<int64_t>(runInfoV2.hi) + runInfoV2.pad_u + runInfoV2.pad_d -
-                         runInfoV2.dilation_h * (runInfoV2.kh - 1) - 1) /
+    int64_t ho_expect = (static_cast<int64_t>(runInfoV2.hi) - runInfoV2.output_padding.output_padding_h +
+                         runInfoV2.pad_u + runInfoV2.pad_d - runInfoV2.dilation_h * (runInfoV2.kh - 1) - 1) /
                             runInfoV2.stride_h +
                         1;
-    int64_t wo_expect = (static_cast<int64_t>(runInfoV2.wi) + runInfoV2.pad_l + runInfoV2.pad_r -
-                         runInfoV2.dilation_w * (runInfoV2.kw - 1) - 1) /
+    int64_t wo_expect = (static_cast<int64_t>(runInfoV2.wi) - runInfoV2.output_padding.output_padding_w +
+                         runInfoV2.pad_l + runInfoV2.pad_r - runInfoV2.dilation_w * (runInfoV2.kw - 1) - 1) /
                             runInfoV2.stride_w +
                         1;
     OP_CHECK_IF(do_expect != runInfoV2.dout,
@@ -792,6 +848,8 @@ bool SetConvBackpropFilterAttrs(const gert::TilingContext* context, Conv3dBpFilt
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
     OP_CHECK_IF(!SetStridesAttr(context, runInfoV2), OP_LOGW(op_name, "failed to set strides attrs."), return false);
     OP_CHECK_IF(!SetDilationsAttr(context, runInfoV2), OP_LOGW(op_name, "failed to set dilation attrs."), return false);
+    OP_CHECK_IF(!SetOutputPaddingAttr(context, runInfoV2), OP_LOGW(op_name, "failed to set output_padding attrs."),
+                return false);
 
     const gert::ContinuousVector* pads = nullptr;
     if (!ValidatePadsAttr(op_name, context->GetAttrs(), pads)) {

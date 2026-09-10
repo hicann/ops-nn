@@ -17,6 +17,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
+#include "aclnn_kernels/slice.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/transdata.h"
 #include "op_api/op_api_def_nn.h"
@@ -547,20 +548,21 @@ static const aclTensor* CallConv2DBackpropFilter(const aclTensor* input, const a
 static const aclTensor* CallConv3DBackpropFilter(const aclTensor* input, const aclTensor* weight,
                                                  const aclTensor* gradOutput, const aclIntArray* stride,
                                                  const aclIntArray* padding, const aclIntArray* dilation,
-                                                 int64_t groups, bool useHf32, DataType inputDtype,
-                                                 aclOpExecutor* executor)
+                                                 int64_t groups, const aclIntArray* outputPadding, bool useHf32,
+                                                 DataType inputDtype, aclOpExecutor* executor)
 {
     if (useHf32) {
-        return l0op::Conv3DBackpropFilterHf32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+        return l0op::Conv3DBackpropFilterHf32(input, weight, gradOutput, stride, padding, dilation, groups,
+                                              outputPadding, executor);
     } else if (inputDtype == DataType::DT_FLOAT) {
         return l0op::Conv3DBackpropFilterFp322Fp32(input, weight, gradOutput, stride, padding, dilation, groups,
-                                                   executor);
+                                                   outputPadding, executor);
     } else if (inputDtype == DataType::DT_BF16) {
         return l0op::Conv3DBackpropFilterBf162Fp32(input, weight, gradOutput, stride, padding, dilation, groups,
-                                                   executor);
+                                                   outputPadding, executor);
     } else {
         return l0op::Conv3DBackpropFilterFp162Fp32(input, weight, gradOutput, stride, padding, dilation, groups,
-                                                   executor);
+                                                   outputPadding, executor);
     }
 }
 
@@ -1638,7 +1640,8 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor& input
 
             const aclTensor* gradWeightFZ3D = nullptr;
             gradWeightFZ3D = CallConv3DBackpropFilter(newInput, newWeight, newGradOutput, stride3d, padding3d,
-                                                      dilation3d, params.groups, useHf32, inputDtype, executor);
+                                                      dilation3d, params.groups, params.outputPadding, useHf32,
+                                                      inputDtype, executor);
             gradWeightFZ = ViewFZ3DasFZ(gradWeightFZ3D, executor);
         } else {
             gradWeightFZ = CallConv2DBackpropFilter(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
@@ -1684,6 +1687,31 @@ static aclnnStatus CalcConv2DBackTransposeInputGrad(ConvolutionBackwardInputTens
     OP_CHECK(gradInputTmp != nullptr,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The calculation with empty tensor failed, Conv2d5Hd return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
+
+    if (params.transposed && params.outputPadding != nullptr && Ops::NN::AclnnUtil::IsRegbase()) {
+        bool hasNonZeroOutputPadding = false;
+        for (uint64_t i = 0; i < params.outputPadding->Size(); ++i) {
+            if ((*params.outputPadding)[i] != 0) {
+                hasNonZeroOutputPadding = true;
+                break;
+            }
+        }
+        if (hasNonZeroOutputPadding) {
+            auto tmpShape = gradInputTmp->GetViewShape();
+            auto outputShape = outputTensor.gradInput->GetViewShape();
+            FVector<int64_t> offsets(tmpShape.GetDimNum(), 0);
+            FVector<int64_t> sizes(tmpShape.GetDimNum(), 0);
+            for (size_t i = 0; i < tmpShape.GetDimNum(); i++) {
+                sizes[i] = outputShape.GetDim(i);
+            }
+            auto offsetsArr = executor->AllocIntArray(offsets.data(), offsets.size());
+            auto sizesArr = executor->AllocIntArray(sizes.data(), sizes.size());
+            gradInputTmp = l0op::Slice(gradInputTmp, offsetsArr, sizesArr, executor);
+            OP_CHECK(gradInputTmp != nullptr,
+                     OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Slice gradInputTmp for output_padding failed, return nullptr."),
+                     return ACLNN_ERR_INNER_NULLPTR);
+        }
+    }
 
     outputPostProcessRet = OutputPostProcess(outputTensor.gradInput, gradInputTmp, "gradInput", params.groups,
                                              executor);
@@ -1763,7 +1791,7 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
 
             const aclTensor* gradWeightFZ3D = nullptr;
             gradWeightFZ3D = CallConv3DBackpropFilter(newGradOutput, newWeight, newInput, stride3d, padding3d,
-                                                      dilation3d, params.groups, useHf32,
+                                                      dilation3d, params.groups, params.outputPadding, useHf32,
                                                       inputTensor.input->GetDataType(), executor);
             gradWeightFZ = ViewFZ3DasFZ(gradWeightFZ3D, executor);
         }
@@ -1894,6 +1922,9 @@ static aclnnStatus PreConv1DBackwardTo2D(ConvolutionBackwardInputTensor& inputTe
     params.dilation = View1dAs2dWithGroups(exchangeDim, params.dilation, 1, executor, "dilation");
     CHECK_RET(params.dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    params.outputPadding = View1dAs2dWithGroups(exchangeDim, params.outputPadding, 0, executor, "outputPadding");
+    CHECK_RET(params.outputPadding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     inputTensor.input = View4dWithGroups(exchangeDim, inputTensor.input, executor, "input");
     CHECK_RET(inputTensor.input != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -1966,6 +1997,9 @@ static aclnnStatus CalculateConv1DTransposeBackward(ConvolutionBackwardInputTens
 
     params.dilation = View1dAs2d(params.dilation, 1, executor, "dilation");
     CHECK_RET(params.dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    params.outputPadding = View1dAs2d(params.outputPadding, 0, executor, "outputPadding");
+    CHECK_RET(params.outputPadding != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     inputTensor.input = View4d(inputTensor.input, executor, "input");
     CHECK_RET(inputTensor.input != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -2656,19 +2690,19 @@ static const aclTensor* GetGradWeightFZ3D(const ConvolutionBackwardInputTensor& 
     if (useHf32) {
         gradWeightFZ3D = l0op::Conv3DBackpropFilterHf32(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
                                                         params.stride, params.padding, params.dilation, params.groups,
-                                                        executor);
+                                                        params.outputPadding, executor);
     } else if (inputTensor.input->GetDataType() == DataType::DT_FLOAT) {
-        gradWeightFZ3D = l0op::Conv3DBackpropFilterFp322Fp32(inputTensor.input, inputTensor.weight,
-                                                             inputTensor.gradOutput, params.stride, params.padding,
-                                                             params.dilation, params.groups, executor);
+        gradWeightFZ3D = l0op::Conv3DBackpropFilterFp322Fp32(
+            inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride, params.padding,
+            params.dilation, params.groups, params.outputPadding, executor);
     } else if (inputTensor.input->GetDataType() == DataType::DT_BF16) {
-        gradWeightFZ3D = l0op::Conv3DBackpropFilterBf162Fp32(inputTensor.input, inputTensor.weight,
-                                                             inputTensor.gradOutput, params.stride, params.padding,
-                                                             params.dilation, params.groups, executor);
+        gradWeightFZ3D = l0op::Conv3DBackpropFilterBf162Fp32(
+            inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride, params.padding,
+            params.dilation, params.groups, params.outputPadding, executor);
     } else {
-        gradWeightFZ3D = l0op::Conv3DBackpropFilterFp162Fp32(inputTensor.input, inputTensor.weight,
-                                                             inputTensor.gradOutput, params.stride, params.padding,
-                                                             params.dilation, params.groups, executor);
+        gradWeightFZ3D = l0op::Conv3DBackpropFilterFp162Fp32(
+            inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride, params.padding,
+            params.dilation, params.groups, params.outputPadding, executor);
     }
     return gradWeightFZ3D;
 }
@@ -3017,6 +3051,31 @@ static aclnnStatus CalcConv3DBackTransposeInputGrad(ConvolutionBackwardInputTens
         OP_CHECK(gradInputTmp != nullptr,
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "l0function result of Conv3dv2NCDHW return nullptr."),
                  return ACLNN_ERR_INNER_NULLPTR);
+        if (params.transposed && params.outputPadding != nullptr) {
+            bool hasNonZeroOutputPadding = false;
+            for (uint64_t i = 0; i < params.outputPadding->Size(); ++i) {
+                if ((*params.outputPadding)[i] != 0) {
+                    hasNonZeroOutputPadding = true;
+                    break;
+                }
+            }
+            if (hasNonZeroOutputPadding) {
+                auto tmpShape = gradInputTmp->GetViewShape();
+                auto outputShape = outputTensor.gradInput->GetViewShape();
+                FVector<int64_t> offsets(tmpShape.GetDimNum(), 0);
+                FVector<int64_t> sizes(tmpShape.GetDimNum(), 0);
+                for (size_t i = 0; i < tmpShape.GetDimNum(); i++) {
+                    sizes[i] = outputShape.GetDim(i);
+                }
+                auto offsetsArr = executor->AllocIntArray(offsets.data(), offsets.size());
+                auto sizesArr = executor->AllocIntArray(sizes.data(), sizes.size());
+                gradInputTmp = l0op::Slice(gradInputTmp, offsetsArr, sizesArr, executor);
+                OP_CHECK(
+                    gradInputTmp != nullptr,
+                    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Slice gradInputTmp for output_padding failed, return nullptr."),
+                    return ACLNN_ERR_INNER_NULLPTR);
+            }
+        }
         outputPostProcessRet = OutputPostProcessTransposed(outputTensor.gradInput, gradInputTmp, "gradInput", executor);
     } else {
         if (useHf32) {
@@ -3035,6 +3094,31 @@ static aclnnStatus CalcConv3DBackTransposeInputGrad(ConvolutionBackwardInputTens
         OP_CHECK(gradInputTmp != nullptr,
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "l0function result of Conv3d6Hd return nullptr."),
                  return ACLNN_ERR_INNER_NULLPTR);
+        if (params.transposed && params.outputPadding != nullptr) {
+            bool hasNonZeroOutputPadding = false;
+            for (uint64_t i = 0; i < params.outputPadding->Size(); ++i) {
+                if ((*params.outputPadding)[i] != 0) {
+                    hasNonZeroOutputPadding = true;
+                    break;
+                }
+            }
+            if (hasNonZeroOutputPadding) {
+                auto tmpShape = gradInputTmp->GetViewShape();
+                auto outputShape = outputTensor.gradInput->GetViewShape();
+                FVector<int64_t> offsets(tmpShape.GetDimNum(), 0);
+                FVector<int64_t> sizes(tmpShape.GetDimNum(), 0);
+                for (size_t i = 0; i < tmpShape.GetDimNum(); i++) {
+                    sizes[i] = outputShape.GetDim(i);
+                }
+                auto offsetsArr = executor->AllocIntArray(offsets.data(), offsets.size());
+                auto sizesArr = executor->AllocIntArray(sizes.data(), sizes.size());
+                gradInputTmp = l0op::Slice(gradInputTmp, offsetsArr, sizesArr, executor);
+                OP_CHECK(
+                    gradInputTmp != nullptr,
+                    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Slice gradInputTmp for output_padding failed, return nullptr."),
+                    return ACLNN_ERR_INNER_NULLPTR);
+            }
+        }
         outputPostProcessRet = OutputPostProcess(outputTensor.gradInput, gradInputTmp, "gradInput", params.groups,
                                                  executor);
     }
@@ -3091,21 +3175,21 @@ static aclnnStatus CalculateConv3DTransposeBackward(ConvolutionBackwardInputTens
         OP_LOGD("Enter dw Calculate");
         const aclTensor* gradWeightFZ3D = nullptr;
         if (useHf32) {
-            gradWeightFZ3D = l0op::Conv3DBackpropFilterHf32(inputTensor.gradOutput, inputTensor.weight,
-                                                            inputTensor.input, params.stride, params.padding,
-                                                            params.dilation, params.groups, executor);
+            gradWeightFZ3D = l0op::Conv3DBackpropFilterHf32(
+                inputTensor.gradOutput, inputTensor.weight, inputTensor.input, params.stride, params.padding,
+                params.dilation, params.groups, params.outputPadding, executor);
         } else if (inputTensor.input->GetDataType() == DataType::DT_FLOAT) {
-            gradWeightFZ3D = l0op::Conv3DBackpropFilterFp322Fp32(inputTensor.gradOutput, inputTensor.weight,
-                                                                 inputTensor.input, params.stride, params.padding,
-                                                                 params.dilation, params.groups, executor);
+            gradWeightFZ3D = l0op::Conv3DBackpropFilterFp322Fp32(
+                inputTensor.gradOutput, inputTensor.weight, inputTensor.input, params.stride, params.padding,
+                params.dilation, params.groups, params.outputPadding, executor);
         } else if (inputTensor.input->GetDataType() == DataType::DT_BF16) {
-            gradWeightFZ3D = l0op::Conv3DBackpropFilterBf162Fp32(inputTensor.gradOutput, inputTensor.weight,
-                                                                 inputTensor.input, params.stride, params.padding,
-                                                                 params.dilation, params.groups, executor);
+            gradWeightFZ3D = l0op::Conv3DBackpropFilterBf162Fp32(
+                inputTensor.gradOutput, inputTensor.weight, inputTensor.input, params.stride, params.padding,
+                params.dilation, params.groups, params.outputPadding, executor);
         } else {
-            gradWeightFZ3D = l0op::Conv3DBackpropFilterFp162Fp32(inputTensor.gradOutput, inputTensor.weight,
-                                                                 inputTensor.input, params.stride, params.padding,
-                                                                 params.dilation, params.groups, executor);
+            gradWeightFZ3D = l0op::Conv3DBackpropFilterFp162Fp32(
+                inputTensor.gradOutput, inputTensor.weight, inputTensor.input, params.stride, params.padding,
+                params.dilation, params.groups, params.outputPadding, executor);
         }
 
         OP_CHECK(gradWeightFZ3D != nullptr,
@@ -3414,6 +3498,11 @@ static aclnnStatus CalculateConv2DBp(ConvolutionBackwardInputTensor& inputTensor
         params.padding = executor->AllocIntArray(newPad.data(), newPad.size()); // conv3D Pad dim = 6;
         OP_CHECK(params.padding != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
 
+        if (params.transposed && params.outputPadding != nullptr && params.outputPadding->Size() == CONV2D_ATTR_DIM) {
+            params.outputPadding = View2dAs3d(params.outputPadding, 0, executor);
+            OP_CHECK(params.outputPadding != nullptr, OP_LOGD("newOutputPadding alloc failed."),
+                     return ACLNN_ERR_INNER_NULLPTR);
+        }
         auto ret = CalculateConv3DBp(inputTensor, outputTensor, params, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
 
@@ -3984,7 +4073,7 @@ static aclnnStatus CalculateDeformableConv2dBackward(Ops::NN::Conv::DeformableCo
     FVector<int64_t> newOutputPadding = {0, 0};
     auto* bp_outputPadding = executor->AllocIntArray(newOutputPadding.data(), 2);
     OP_CHECK_NULL(bp_outputPadding, return ACLNN_ERR_INNER_NULLPTR);
-    const int bp_groups = params.groups;
+    const int bp_groups = static_cast<int>(params.groups);
     FVector<bool> newOutputMask = {1, 1, 1};
     auto* bp_outputMask = executor->AllocBoolArray(newOutputMask.data(), 3);
     OP_CHECK_NULL(bp_outputMask, return ACLNN_ERR_INNER_NULLPTR);

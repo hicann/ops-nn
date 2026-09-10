@@ -24,6 +24,12 @@ namespace NN {
 namespace Conv {
 using namespace optiling;
 
+struct OutputPadding {
+    int32_t output_padding_d = 0;
+    int32_t output_padding_h = 0;
+    int32_t output_padding_w = 0;
+};
+
 struct Conv3dBpFilterV2RunInfo {
     int32_t batch;
     int32_t co;      // output channels
@@ -72,6 +78,7 @@ struct Conv3dBpFilterV2RunInfo {
     int32_t b_dtype_bytes = 2;
     int32_t c_dtype_bytes = 2;
     uint32_t core_num;
+    OutputPadding output_padding;
 };
 
 bool SetConv3dBpFilterV2RunInfo(const gert::TilingContext* context, Conv3dBpFilterV2RunInfo& runInfoV2);

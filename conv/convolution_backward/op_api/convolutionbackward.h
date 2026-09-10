@@ -106,24 +106,25 @@ const aclTensor* Conv2DBackpropFilterBf162Fp32(const aclTensor* input, const acl
 const aclTensor* Conv3DBackpropFilterFp162Fp32(const aclTensor* input, const aclTensor* weight,
                                                const aclTensor* outBackprop, const aclIntArray* stride,
                                                const aclIntArray* padding, const aclIntArray* dilation, int groups,
-                                               aclOpExecutor* executor);
+                                               const aclIntArray* outputPadding, aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Fp32
 const aclTensor* Conv3DBackpropFilterFp322Fp32(const aclTensor* input, const aclTensor* weight,
                                                const aclTensor* outBackprop, const aclIntArray* stride,
                                                const aclIntArray* padding, const aclIntArray* dilation, int groups,
-                                               aclOpExecutor* executor);
+                                               const aclIntArray* outputPadding, aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Bf16
 const aclTensor* Conv3DBackpropFilterBf162Fp32(const aclTensor* input, const aclTensor* weight,
                                                const aclTensor* outBackprop, const aclIntArray* stride,
                                                const aclIntArray* padding, const aclIntArray* dilation, int groups,
-                                               aclOpExecutor* executor);
+                                               const aclIntArray* outputPadding, aclOpExecutor* executor);
 
 // 1971 6HD->FZ_3D with Hf32
 const aclTensor* Conv3DBackpropFilterHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
                                           const aclIntArray* stride, const aclIntArray* padding,
-                                          const aclIntArray* dilation, int groups, aclOpExecutor* executor);
+                                          const aclIntArray* dilation, int groups, const aclIntArray* outputPadding,
+                                          aclOpExecutor* executor);
 
 // Conv3dBackpropInput
 // 6HD->FZ with Fp16
