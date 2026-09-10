@@ -18,6 +18,8 @@
 #include "conv3d_api_tiling_utils.h"
 #include "tiling/platform/platform_ascendc.h"
 #include <algorithm>
+#include <cinttypes>
+#include <sstream>
 #include <set>
 #include <unordered_set>
 
@@ -1546,29 +1548,33 @@ bool Conv3dTilingEngine::InitOutputOrder()
 {
     OP_LOGD(logTag_.c_str(), "Initializing output order");
 
-    uint64_t minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::M_Mode));
+    std::string diagnostic;
+    uint64_t minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::M_Mode), &diagnostic);
+    const uint64_t mModeRequired = minL1LoadSize;
     if (minL1LoadSize <= platformInfo_.l1Size) {
         outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
         return true;
     } else if (isPointWise) {
-        OP_LOGE(logTag_.c_str(), "Conv3D AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-                minL1LoadSize, platformInfo_.l1Size);
+        OP_LOGE(logTag_.c_str(),
+                "%s\n"
+                "  HW_Mode: not attempted (pointwise)\n"
+                "  Suggest: reduce input H/W if model semantics allow.",
+                diagnostic.c_str());
         return false;
     } else {
-        OP_LOGD(logTag_.c_str(), "Conv3D AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-                minL1LoadSize, platformInfo_.l1Size);
+        OP_LOGD(logTag_.c_str(), "%s\n  Next   : checking HW_Mode eligibility.", diagnostic.c_str());
     }
 
     if (!CheckInputLimitsHwMode()) {
         return false;
     }
 
-    minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::HW_Mode));
+    minL1LoadSize = CalcMinL1LoadSize(static_cast<uint8_t>(Conv3dApiTiling::HW_Mode), &diagnostic);
     if (minL1LoadSize > platformInfo_.l1Size) {
         OP_LOGE(logTag_.c_str(),
-                "Conv3D AscendC: MinL1LoadSize > L1size in HW_Mode, current L1size: %lu, "
-                "maxL1Size: %lu",
-                minL1LoadSize, platformInfo_.l1Size);
+                "%s\n  M_Mode : also exceeded L1; required=%" PRIu64 " B\n"
+                "  Suggest: reduce dilationH/W or Kh/Kw if model semantics allow.",
+                diagnostic.c_str(), mModeRequired);
         return false;
     }
 
@@ -1577,7 +1583,7 @@ bool Conv3dTilingEngine::InitOutputOrder()
     return true;
 }
 
-uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(uint8_t outputOrder)
+uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(uint8_t outputOrder, std::string* diagnostic)
 {
     OP_LOGD(logTag_.c_str(), "Calculating minimum L1 load size for order %d", static_cast<int32_t>(outputOrder));
 
@@ -1589,17 +1595,47 @@ uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(uint8_t outputOrder)
 
     uint32_t minBiasSize = flagInfo_.hasBias ? AlignUp(n0 * biasDtypeSize, C0_SIZE) : 0;
     uint64_t minAL1Size = 0;
+    uint64_t hoAL1min = 0;
+    uint64_t tmpHiAL1 = 0;
+    uint64_t tmpWiAL1 = shapeInfo_.wi;
     if (outputOrder == Conv3dApiTiling::M_Mode) {
-        uint64_t hoAL1min = m0 / shapeInfo_.wo + 2;
-        uint64_t tmpHiAL1 = InferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
+        hoAL1min = m0 / shapeInfo_.wo + 2;
+        tmpHiAL1 = InferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
         minAL1Size = tmpHiAL1 * shapeInfo_.wi * k0 * fMapDtypeSize;
     } else {
-        uint64_t tmpHiAL1 = InferHiL1(Conv3dApiTiling::CONST_HO_1, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH,
-                                      attrInfo_.strideH);
-        uint64_t tmpWiAL1 = InferWiL1(m0, shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
+        tmpHiAL1 = InferHiL1(Conv3dApiTiling::CONST_HO_1, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH,
+                             attrInfo_.strideH);
+        tmpWiAL1 = InferWiL1(m0, shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
         minAL1Size = tmpHiAL1 * tmpWiAL1 * k0 * fMapDtypeSize;
     }
-    return minBiasSize + minAL1Size;
+    const uint64_t required = minBiasSize + minAL1Size;
+    const bool isMMode = outputOrder == Conv3dApiTiling::M_Mode;
+    // Only format an exceeded check that will actually be logged.
+    if (diagnostic != nullptr && required > platformInfo_.l1Size &&
+        (!isMMode || isPointWise || CheckLogLevel(OP_MODULE_ID, DLOG_DEBUG) == 1)) {
+        std::stringstream ss;
+        ss << "Conv3DV2: L1 capacity check " << (isMMode && !isPointWise ? "exceeded" : "failed") << " in "
+           << (isMMode ? "M_Mode" : "HW_Mode") << ".\n"
+           << "  Input  : dtype=" << g_convDtypeToStr.at(descInfo_.fMapDtype) << ", Hi=" << shapeInfo_.hi
+           << ", Wi=" << shapeInfo_.wi << ", Ho=" << shapeInfo_.ho << ", Wo=" << shapeInfo_.wo << "\n"
+           << "  Kernel : Kh=" << shapeInfo_.kh << ", Kw=" << shapeInfo_.kw << ", dilationH=" << attrInfo_.dilationH
+           << ", dilationW=" << attrInfo_.dilationW << ", strideH=" << attrInfo_.strideH
+           << ", strideW=" << attrInfo_.strideW << ", groups=" << attrInfo_.groups << "\n"
+           << "  EffK   : KeffH=" << (static_cast<uint64_t>(shapeInfo_.kh) - 1) * attrInfo_.dilationH + 1
+           << ", KeffW=" << (static_cast<uint64_t>(shapeInfo_.kw) - 1) * attrInfo_.dilationW + 1 << "\n"
+           << "  Cube   : M0=" << m0 << ", K0=" << k0 << ", N0=" << n0 << ", fmapBytes=" << fMapDtypeSize
+           << ", biasBytes=" << (flagInfo_.hasBias ? biasDtypeSize : 0)
+           << ", hasBias=" << (flagInfo_.hasBias ? "true" : "false") << "\n"
+           << "  MinTile: " << (isMMode ? "hoAL1Min=" : "HoTile=1, WoTile=") << (isMMode ? hoAL1min : m0)
+           << ", HiL1=" << tmpHiAL1 << ", WiL1=" << tmpWiAL1 << (isMMode ? " (full width)" : "") << "\n"
+           << "  AL1    : HiL1*WiL1*K0*fmapBytes = " << tmpHiAL1 << "*" << tmpWiAL1 << "*" << k0 << "*" << fMapDtypeSize
+           << " = " << minAL1Size << " B\n"
+           << "  Bias   : minBias=" << minBiasSize << " B\n"
+           << "  L1     : required=" << minAL1Size << "+" << minBiasSize << "=" << required
+           << " B, available=" << platformInfo_.l1Size << " B, excess=" << required - platformInfo_.l1Size << " B";
+        *diagnostic = ss.str();
+    }
+    return required;
 }
 
 bool Conv3dTilingEngine::CheckInputLimitsHwMode()

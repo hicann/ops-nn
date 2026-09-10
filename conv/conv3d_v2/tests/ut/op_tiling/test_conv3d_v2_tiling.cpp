@@ -548,6 +548,64 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleM, static_cast<uint64_t>(expectedSingleM));
 }
 
+TEST_F(Conv3DV2TilingRuntime, TestConv3DV2L1CapacityDiagnostics)
+{
+    Conv3dTilingEngine engine;
+    engine.descInfo_.fMapDtype = Conv3dApiTiling::ConvDtype::FLOAT32;
+    engine.shapeInfo_.hi = 255;
+    engine.shapeInfo_.wi = 512;
+    engine.shapeInfo_.ho = 157;
+    engine.shapeInfo_.wo = 358;
+    engine.shapeInfo_.kh = 8;
+    engine.shapeInfo_.kw = 13;
+    engine.attrInfo_.dilationH = 14;
+    engine.attrInfo_.dilationW = 13;
+    engine.attrInfo_.strideH = engine.attrInfo_.strideW = 1;
+    engine.attrInfo_.groups = 1;
+    engine.platformInfo_.l1Size = 524032;
+    for (bool hasBias : {false, true}) {
+        engine.flagInfo_.hasBias = hasBias;
+        const uint64_t mRequired = 1638400 + (hasBias ? 64 : 0);
+        const uint64_t hwRequired = 544896 + (hasBias ? 64 : 0);
+        EXPECT_EQ(engine.CalcMinL1LoadSize(Conv3dApiTiling::M_Mode), mRequired);
+        EXPECT_EQ(engine.CalcMinL1LoadSize(Conv3dApiTiling::HW_Mode), hwRequired);
+        EXPECT_FALSE(engine.InitOutputOrder()); // case 30246, including the no-bias variant.
+        for (uint64_t capacity : {mRequired, mRequired - 1, hwRequired, hwRequired - 1}) {
+            engine.platformInfo_.l1Size = capacity;
+            engine.outputOrder_ = 99;
+            const bool success = engine.InitOutputOrder();
+            EXPECT_EQ(success, capacity >= hwRequired);
+            EXPECT_EQ(engine.outputOrder_,
+                      capacity >= mRequired ? Conv3dApiTiling::M_Mode : (success ? Conv3dApiTiling::HW_Mode : 99));
+        }
+        engine.platformInfo_.l1Size = 524032;
+    }
+    std::string diagnostic;
+    EXPECT_EQ(engine.CalcMinL1LoadSize(Conv3dApiTiling::HW_Mode, &diagnostic), 544960U);
+    for (const char* field : {"failed in HW_Mode.", "\n  Input  : dtype=float32", "KeffH=99, KeffW=157",
+                              "HoTile=1, WoTile=16, HiL1=99, WiL1=172", "99*172*8*4 = 544896 B", "minBias=64 B",
+                              "required=544896+64=544960 B, available=524032 B, excess=20928 B"}) {
+        EXPECT_NE(diagnostic.find(field), std::string::npos) << field;
+    }
+    engine.platformInfo_.l1Size = 544960;
+    engine.attrInfo_.groups = 2;
+    EXPECT_FALSE(engine.InitOutputOrder()); // HW is ineligible even though its L1 requirement fits.
+    engine.attrInfo_.groups = 1;
+    engine.descInfo_.fMapDtype = Conv3dApiTiling::ConvDtype::INT32;
+    EXPECT_FALSE(engine.InitOutputOrder());
+    engine.descInfo_.fMapDtype = Conv3dApiTiling::ConvDtype::FLOAT32;
+    engine.isPointWise = true;
+    engine.shapeInfo_.kh = engine.shapeInfo_.kw = 1;
+    engine.shapeInfo_.ho = engine.shapeInfo_.hi;
+    engine.shapeInfo_.wo = engine.shapeInfo_.wi;
+    engine.attrInfo_.dilationH = engine.attrInfo_.dilationW = 1;
+    engine.platformInfo_.l1Size = 32831;
+    EXPECT_FALSE(engine.InitOutputOrder());
+    ++engine.platformInfo_.l1Size;
+    EXPECT_TRUE(engine.InitOutputOrder());
+    EXPECT_EQ(engine.outputOrder_, Conv3dApiTiling::M_Mode);
+}
+
 TEST_F(Conv3DV2TilingRuntime, TestConv3DV2CheckPointWiseSuccess)
 {
     uint32_t aicoreNum = 20;

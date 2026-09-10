@@ -147,7 +147,7 @@ public:
     void GetConv3dApiTilingPartSetAttrAndShape();
     void GetConv3dApiTilingSetGroupsInfo();
     bool InitOutputOrder();
-    uint64_t CalcMinL1LoadSize(uint8_t outputOrder);
+    uint64_t CalcMinL1LoadSize(uint8_t outputOrder, std::string* diagnostic = nullptr);
     bool CheckInputLimitsHwMode();
     bool CheckDims(const std::vector<int64_t>& shape) const;
     bool CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap, Conv3dApiTiling::ConvFormat expectWeight,
