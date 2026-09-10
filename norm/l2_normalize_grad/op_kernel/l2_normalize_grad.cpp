@@ -18,13 +18,14 @@
  * variant (fp16 / fp32); the templates are specialized on that macro. The runtime TilingKey only
  * distinguishes load form / reduction shape / empty:
  *   8000 empty | 7000 full-load (inner==1, D fits UB) | 7010 split-D (inner==1, D large)
- *   7020 strided (inner>1)
+ *   7020 strided (inner>1, 整段 D 常驻 UB) | 7030 strided-split (inner>1, D 需沿归约轴分块)
  */
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "arch35/l2_normalize_grad_regbase_dx_full_load.h"
 #include "arch35/l2_normalize_grad_regbase_dx_split_d.h"
 #include "arch35/l2_normalize_grad_regbase_dx_strided.h"
+#include "arch35/l2_normalize_grad_regbase_dx_strided_split.h"
 #include "arch35/l2_normalize_grad_empty.h"
 
 extern "C" __global__ __aicore__ void l2_normalize_grad(GM_ADDR x, GM_ADDR y, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace,
@@ -50,6 +51,10 @@ extern "C" __global__ __aicore__ void l2_normalize_grad(GM_ADDR x, GM_ADDR y, GM
         op.Process();
     } else if (TILING_KEY_IS(7020)) {
         L2NormalizeGrad::RegbaseDxStrided<DTYPE_X> op(&pipe, tilingData);
+        op.Init(x, y, dy, dx);
+        op.Process();
+    } else if (TILING_KEY_IS(7030)) {
+        L2NormalizeGrad::RegbaseDxStridedSplit<DTYPE_X> op(&pipe, tilingData);
         op.Init(x, y, dy, dx);
         op.Process();
     }

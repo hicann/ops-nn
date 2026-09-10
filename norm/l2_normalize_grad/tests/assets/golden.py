@@ -26,14 +26,20 @@ TTK TestSpec for l2_normalize_grad (kernel / GEIR 通路, arch35/Ascend950).
 当 y == F.normalize(x, p=2, dim, eps)（一致输入、||x|| > eps 的正常量级）时，等价于
 torch autograd 经 F.normalize 的反向（见 00_spec 2 / 6.1）。
 
-为什么 golden 必须 fp64（特事特办，非一般规则）：dx = dy - y*s 是对消差，
-fp32 golden 自带规约/对消误差、可能误flag内核；golden 取 fp64 真值（torch 拼接，
-非 numpy 纯公式，红线 R3），与 instance/in_training 的 fp64 golden 约定一致。
+为什么 golden 返回 fp64（特事特办，非一般规则）：
+  - 内部用 fp64 算是通用做法：dx = dy - y*s 是对消差，fp32 golden 自带规约/对消误差、
+    会误flag内核（torch 拼接、非 numpy 纯公式，红线 R3）。
+  - 返回值也保留 fp64,是本算子声明 cross_check 的要求:三条腿在比较前统一 promote
+    (core_modules/comparison/cross_check.py:18),golden 必须严格高于 NPU 与三方两条腿,
+    误差比值才有意义(三方腿刻意留 fp32,见 third_party 注释)。
+  ⚠️ 因此本 golden **不可**改用 binary_equal 判据:该判据对 dtype 不一致直接判"不可比"
+    (GOLD 0%),数值完全正确也会全红。若将来要换 binary_equal,须同步把返回值 cast 回
+    算子输出 dtype(参照 instance_norm_grad 的写法)。
 
 Canonical IO order (l2_normalize_grad_def.cpp):
     inputs : x, y, dy（同 dtype）
     outputs: dx（同 x dtype/shape）
-    attrs  : dim(OPTIONAL ListInt={1}), eps(OPTIONAL float=1e-4)
+    attrs  : dim(OPTIONAL ListInt={}), eps(OPTIONAL float=1e-4)
 """
 
 import numpy as np
@@ -49,16 +55,31 @@ _TOL = {
 
 
 def _resolve_axis(dim, rank):
+    """折负 + 去重 + 排序，返回轴元组；空元组表示不归约（对齐 ascend910b 的 GE 通路语义）。
+
+    重复/乱序/正负混写必须在这里收敛：numpy 与 torch 对重复轴是直接报错的
+    （`duplicate value in 'axis'` / `dim N appears multiple times`），不规范化会变成假红。
+    """
     if dim is None:
-        return 1
-    if isinstance(dim, (list, tuple, np.ndarray)):
-        vals = list(dim)
-        axis = int(vals[0]) if len(vals) > 0 else 1
-    else:
-        axis = int(dim)
-    if axis < 0:
-        axis += rank
-    return axis
+        return ()
+    vals = list(dim) if isinstance(dim, (list, tuple, np.ndarray)) else [dim]
+    axes = set()
+    for v in vals:
+        a = int(v)
+        if a < 0:
+            a += rank
+        axes.add(a)
+    return tuple(sorted(axes))
+
+
+def _reduce_pair(a, b, axes):
+    """按 axes 求和（keepdim）；axes 为空表示不归约，逐元素返回。
+
+    ⚠️ 不能把空元组交给 torch.sum(dim=())——它会被当成“对所有维求和”，真值全错。
+    """
+    if axes:
+        return a.sum(dim=axes, keepdim=True), b.sum(dim=axes, keepdim=True)
+    return a, b
 
 
 def _attr(kwargs, name, default):
@@ -72,7 +93,7 @@ def _attr(kwargs, name, default):
 
 def _compute(x, y, dy, **kwargs):
     """torch.Tensor 进 / 出（fp64 真值），返回 [dx]，顺序照 def.cpp。"""
-    axis = _resolve_axis(_attr(kwargs, "dim", (1,)), x.dim())
+    axes = _resolve_axis(_attr(kwargs, "dim", ()), x.dim())
     eps = float(_attr(kwargs, "eps", 1e-4))
 
     xf = x.to(torch.float64)
@@ -80,9 +101,8 @@ def _compute(x, y, dy, **kwargs):
     dyf = dy.to(torch.float64)
 
     # ── 以下全部为 torch 库算子拼接，不手写 numpy 数值公式（红线 R3）──
-    sq = (xf * xf).sum(dim=axis, keepdim=True)
+    sq, s = _reduce_pair(xf * xf, yf * dyf, axes)
     n = torch.clamp(torch.sqrt(sq), min=eps)
-    s = (yf * dyf).sum(dim=axis, keepdim=True)
     dx = (dyf - yf * s) / n
     return [dx]
 
@@ -93,15 +113,14 @@ class _L2NormalizeGradCompose:
     参数名与 def.cpp 逐字一致（x/y/dy/dim/eps）。输出与 NPU 同 dtype，无需额外 cast。
     """
 
-    def __init__(self, *, dim=(1,), eps=1e-4, **_):
+    def __init__(self, *, dim=(), eps=1e-4, **_):
         self.dim = dim
         self.eps = float(eps)
 
     def __call__(self, x, y, dy, **_):
-        axis = _resolve_axis(self.dim, x.dim())
-        sq = (x * x).sum(dim=axis, keepdim=True)
+        axes = _resolve_axis(self.dim, x.dim())
+        sq, s = _reduce_pair(x * x, y * dy, axes)
         n = torch.clamp(torch.sqrt(sq), min=self.eps)
-        s = (y * dy).sum(dim=axis, keepdim=True)
         return [(dy - y * s) / n]
 
 

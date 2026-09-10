@@ -31,7 +31,7 @@ public:
         this->Input("y").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
         this->Input("dy").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
         this->Output("dx").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
-        this->Attr("dim").AttrType(OPTIONAL).ListInt({1});
+        this->Attr("dim").AttrType(OPTIONAL).ListInt({});
         this->Attr("eps").AttrType(OPTIONAL).Float(1e-4f);
 
         OpAICoreConfig aicoreConfig;

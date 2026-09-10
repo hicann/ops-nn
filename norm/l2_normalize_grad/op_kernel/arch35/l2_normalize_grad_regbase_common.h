@@ -50,13 +50,11 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 constexpr uint32_t V_LENGTH = L2NormalizeGradRegbase::GetVRegSize() / sizeof(float); // fp32 lanes per VL (=64)
 constexpr uint32_t FLOAT_NUM_BLOCK = 8;                                              // fp32 elements per 32B block
 constexpr uint32_t HALF_NUM_BLOCK = 16;                                              // fp16 elements per 32B block
-constexpr uint32_t FLOAT_NUM_2VL = 128; // 2 * V_LENGTH; ReduceSum AR row alignment
 constexpr uint32_t DB_NUM = 2;
 constexpr uint32_t DEPTH_TWO = 2;
-// Full-row load is chosen when D (reduced-axis length) fits this many fp32 elements.
-constexpr uint32_t UB_FACTOR_DX_FULL_LOAD = 6144;
-// Split-D processes the reduced axis in chunks of this many fp32 elements (2VL aligned).
-constexpr uint32_t UB_FACTOR_DX_SPLIT_D = 4096;
+// ⚠️ 单次处理元素数(full_load 的 ubFactor / split_d 的 ubFactorD)**不在内核写死**:
+// 由 host 从平台实际 ubSize 反推后经 tilingData.ubFactorElems 下发(见 host DeriveUbFactor)。
+// 写死常量再拿 ubSize 去校验是本末倒置——平台 UB 变了就要么浪费要么越界。
 
 // b16 (fp16) -> fp32 widening cast, zeroing masked-off lanes.
 constexpr AscendC::Reg::CastTrait castTraitB162B32 = {
