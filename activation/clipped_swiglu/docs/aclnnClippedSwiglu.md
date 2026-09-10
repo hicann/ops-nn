@@ -441,9 +441,9 @@ int main()
                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     int dim = -1;
-    float alpha = 1.0;
+    float alpha = 1.702;
     float limit = 7.0;
-    float bias = 1.702;
+    float bias = 1.0;
     bool interleaved = true;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
