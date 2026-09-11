@@ -26,6 +26,8 @@ namespace {
 const std::string OP_NAME = "MultiScaleDeformableAttn";
 const uint64_t INPUT_VALUE = 0;
 const uint64_t INPUT_SPATIAL_SHAPE = 1;
+const uint64_t INPUT_LEVEL_START_INDEX = 2;
+const uint64_t INPUT_SAMPLING_LOCATION = 3;
 const uint64_t INPUT_ATTN_WEIGHT = 4;
 
 const uint64_t BATCH_SIZE_DIM = 0;
@@ -109,14 +111,19 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
     MultiScaleDeformableAttnFunctionTilingData tiling;
     auto valueTensorPtr = context->GetInputTensor(INPUT_VALUE);
     auto spatialTensorPtr = context->GetInputTensor(INPUT_SPATIAL_SHAPE);
+    auto levelStartTensorPtr = context->GetInputTensor(INPUT_LEVEL_START_INDEX);
+    auto locationTensorPtr = context->GetInputTensor(INPUT_SAMPLING_LOCATION);
     auto attnWeightTensorPtr = context->GetInputTensor(INPUT_ATTN_WEIGHT);
-    bool nullptrCheck = valueTensorPtr == nullptr || spatialTensorPtr == nullptr || attnWeightTensorPtr == nullptr;
+    bool nullptrCheck = valueTensorPtr == nullptr || spatialTensorPtr == nullptr || levelStartTensorPtr == nullptr ||
+                        locationTensorPtr == nullptr || attnWeightTensorPtr == nullptr;
     if (nullptrCheck) {
-        OP_LOGD(OP_NAME, "valueTensorPtr or spatialTensorPtr or attnWeightTensorPtr is nullptr");
+        OP_LOGD(OP_NAME, "input tensor ptr is nullptr");
         return ge::GRAPH_FAILED;
     }
     auto valueShape = valueTensorPtr->GetStorageShape();
     auto spatialShape = spatialTensorPtr->GetStorageShape();
+    auto levelStartShape = levelStartTensorPtr->GetStorageShape();
+    auto locationShape = locationTensorPtr->GetStorageShape();
     auto attnWeightShape = attnWeightTensorPtr->GetStorageShape();
 
     uint64_t coreNum = compileInfo->totalCoreNum;
@@ -135,19 +142,21 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
     uint64_t numLevels = spatialShape.GetDim(NUM_LEVEL_DIM);
     uint64_t embedDims = valueShape.GetDim(EMBED_DIMS_DIM);
     uint64_t batchSize = valueShape.GetDim(BATCH_SIZE_DIM);
-    uint64_t numPoints, numHeads, numKeys, numQueries, realLevels;
+    uint64_t numPoints, numHeads, numKeys, numQueries, realLevels, locationLevels;
     if (isTranspose == 0) {
         numPoints = attnWeightShape.GetDim(NUM_POINTS_DIM);
         numHeads = attnWeightShape.GetDim(NUM_HEADS_DIM);
         numKeys = valueShape.GetDim(NUM_KEYS_DIM);
         numQueries = attnWeightShape.GetDim(NUM_QUERIES_DIM);
         realLevels = attnWeightShape.GetDim(REAL_LEVEL_DIM);
+        locationLevels = locationShape.GetDim(REAL_LEVEL_DIM);
     } else {
         numPoints = attnWeightShape.GetDim(NUM_POINTS_DIM_TRANSPOSE);
         numHeads = attnWeightShape.GetDim(NUM_HEADS_DIM_TRANSPOSE);
         numKeys = valueShape.GetDim(NUM_KEYS_DIM_TRANSPOSE);
         numQueries = attnWeightShape.GetDim(NUM_QUERIES_DIM_TRANSPOSE);
         realLevels = attnWeightShape.GetDim(REAL_LEVEL_DIM_TRANSPOSE);
+        locationLevels = locationShape.GetDim(REAL_LEVEL_DIM_TRANSPOSE);
     }
     uint64_t optPoint = numLevels <= 8 && numHeads <= 8 && (embedDims == 16 || embedDims == 32) &&
                         (numPoints % 2 == 0); // aclnn -> noTranspose
@@ -158,6 +167,19 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
         numKeys = valueShape.GetDim(NUM_KEYS_DIM_TRANSPOSE);
         numQueries = attnWeightShape.GetDim(NUM_QUERIES_DIM_310P);
         realLevels = attnWeightShape.GetDim(NUM_LEVEL_DIM);
+        locationLevels = locationShape.GetDim(NUM_LEVEL_DIM);
+    }
+
+    // numLevels 一致性校验：spatialShape[0]、attnWeight/location 的 level 维、levelStartIndex[0] 必须相等。
+    // aclnn 路径已在 op_api CheckShape 校验前两者，此处补全 location/levelStartIndex 并覆盖 GE 图直连 tiling
+    // 的路径，防止不一致 shape 绕过 host 校验进入 kernel（ GetValue/DataCopy 会越界读对应张量）
+    uint64_t levelStartIndexNumLevels = levelStartShape.GetDim(NUM_LEVEL_DIM);
+    if (realLevels != numLevels || locationLevels != numLevels || levelStartIndexNumLevels != numLevels) {
+        OP_LOGE(context->GetNodeName(),
+                "numLevels dimensions must be equal: spatialShape[0]=%lu, attnWeightLevels=%lu, locationLevels=%lu, "
+                "levelStartIndex[0]=%lu",
+                numLevels, realLevels, locationLevels, levelStartIndexNumLevels);
+        return ge::GRAPH_FAILED;
     }
 
     uint64_t pointLoops = 0;
