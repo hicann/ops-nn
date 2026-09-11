@@ -45,6 +45,8 @@ struct HWPad {
     uint16_t hBottom = 0;
     uint16_t wLeft = 0;
     uint16_t wRight = 0;
+
+    __aicore__ inline bool hasPad() const { return hTop > 0 || hBottom > 0 || wLeft > 0 || wRight > 0; }
 };
 
 template <uint32_t STRIDE, uint32_t WINDOW_SIZE>
@@ -263,6 +265,39 @@ static constexpr __aicore__ inline uint16_t SingleShapeInvTransformCout()
 {
     return TilingT::SingleShapeInvTransformCout;
 }
+
+struct RtTiling {
+    uint16_t singleShapeCout;
+    uint16_t singleShapeCin;
+};
+
+template <typename TilingT>
+static __aicore__ inline void CalRtSingleShapeBlock(RtTiling& tiling, uint32_t cout, uint32_t cin)
+{
+    constexpr uint16_t CoutSegments = 16; // cout大小调节分段
+
+    tiling.singleShapeCin = TilingT::SingleShapeCin;
+    uint32_t coutCnt = Ops::Base::CeilDiv(cout, static_cast<uint32_t>(TilingT::SingleShapeCout));
+    uint32_t cinCnt = Ops::Base::CeilDiv(cin, static_cast<uint32_t>(TilingT::SingleShapeCin));
+    uint32_t blockNum = GetBlockNum();
+    uint32_t totalCnt = coutCnt * cinCnt;
+    // 使用默认SingleShapeCout（64）用于后续基本块切分
+    if (totalCnt <= (blockNum >> 1) || totalCnt > blockNum) {
+        tiling.singleShapeCout = TilingT::SingleShapeCout;
+        return;
+    }
+
+    for (uint16_t fixedCout = CoutSegments; fixedCout < TilingT::SingleShapeCout; fixedCout += CoutSegments) {
+        coutCnt = Ops::Base::CeilDiv(cout, static_cast<uint32_t>(fixedCout));
+        if (coutCnt * cinCnt > blockNum) {
+            continue;
+        }
+        tiling.singleShapeCout = fixedCout;
+        return;
+    }
+    tiling.singleShapeCout = TilingT::SingleShapeCout; // 调整完后没有匹配合适的，返回默认值兜底
+}
+
 } // namespace BlockConfig
 
 struct CoutCinRange {

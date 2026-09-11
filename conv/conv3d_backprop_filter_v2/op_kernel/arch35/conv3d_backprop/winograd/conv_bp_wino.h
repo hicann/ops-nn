@@ -72,9 +72,11 @@ public:
 
         constexpr uint32_t singleShapeTileH = BlockConfig::SingleShapeTileH<TilingT>();
         uint32_t cuttableK = batch_ * Ops::Base::CeilDiv(tilesH_, singleShapeTileH);
+        BlockConfig::RtTiling tiling;
+        BlockConfig::CalRtSingleShapeBlock<TilingT>(tiling, cout_, cin_);
 
         // 可切k的话进行尾轮循环
-        auto blockIter = BlockIterator<BasicBlockIterDir, TilingT>::Create(cuttableK > 1, cout_, cin_);
+        auto blockIter = BlockIterator<BasicBlockIterDir, TilingT>::Create(cuttableK > 1, cout_, cin_, tiling);
 
         uint32_t watermarkResidentC = 0;
 
@@ -99,7 +101,8 @@ public:
         }
 
         auto tailIter = TailBlockSplitKIterator<BasicBlockIterDir, TilingT>(
-            blockIter.GetTailBlockCnt(), blockIter.GetSwizzleTopology(), cuttableK, cout_, cin_);
+            blockIter.GetTailBlockCnt(), blockIter.GetSwizzleTopology(), cuttableK, cout_, cin_, tiling.singleShapeCin,
+            tiling.singleShapeCout);
 
         CoutCinRange localBlock;
         SplitKState splitKState;

@@ -32,13 +32,10 @@ public:
           tilesW_(tilesW),
           hSteps_(Ops::Base::CeilDiv(tilesH, SingleShapeTileH)),
           wSteps_(Ops::Base::CeilDiv(tilesW, SingleShapeTileW)),
-          fullWSteps_(tilesW / SingleShapeTileW),
           kBegin_(kBegin),
-          kLength_(kLength),
-          hasTailW_(tilesW != fullWSteps_ * SingleShapeTileW),
-          wStage_(fullWSteps_ > 0 ? FULL_W_STAGE : TAIL_W_STAGE)
+          kLength_(kLength)
     {
-        Update();
+        Update(0, 0);
     }
 
     // 在一单位k里会实际有几次循环
@@ -60,13 +57,17 @@ public:
         if (unlikely(end_)) {
             return;
         }
-        // 优先循环完整的shape在循环尾块,这样子测出来VF性能会好一些好点
-        // 但是优先循环的HW方向都完整的代码有点复杂
-        // 所以当前先循环W方向完整的块
-        if (wStage_ == FULL_W_STAGE) {
-            NextFullWStage();
+        // 单位k内W方向按自然顺序递增,完整的块在前,尾块在最后
+        tileWIdx_ += SingleShapeTileW;
+        if (tileWIdx_ >= tilesW_) {
+            processedKStep_++;
+            if (processedKStep_ >= kLength_) {
+                end_ = true;
+            } else {
+                Update(processedKStep_, 0);
+            }
         } else {
-            NextTailWStage();
+            Update(processedKStep_, tileWIdx_);
         }
     }
 
@@ -77,65 +78,24 @@ public:
     __aicore__ inline uint32_t BatchIdx() const { return batchIdx_; }
 
 private:
-    __aicore__ inline void NextFullWStage()
+    __aicore__ inline void Update(uint32_t processedSteps, uint32_t tileWIdx)
     {
-        fullWStepIdx_++;
-        if (fullWStepIdx_ < fullWSteps_) {
-            Update();
-            return;
-        }
-        fullWStepIdx_ = 0;
-        processedKStep_++;
-        if (processedKStep_ < kLength_) {
-            Update();
-            return;
-        }
-        // 所有 K 的 full-W 都处理完了，切到 tail-W。
-        if (hasTailW_) {
-            wStage_ = TAIL_W_STAGE;
-            processedKStep_ = 0;
-            fullWStepIdx_ = 0;
-            Update();
-        } else {
-            end_ = true;
-        }
-    }
-
-    __aicore__ inline void NextTailWStage()
-    {
-        processedKStep_++;
-        if (processedKStep_ >= kLength_) {
-            end_ = true;
-            return;
-        }
-        Update();
-    }
-
-    __aicore__ inline void Update()
-    {
-        uint32_t kStep = processedKStep_ + kBegin_;
+        uint32_t kStep = processedSteps + kBegin_;
         batchIdx_ = kStep / hSteps_;
         uint32_t singleShapeTileHIdx = kStep - batchIdx_ * hSteps_;
         tileHIdx_ = singleShapeTileHIdx * SingleShapeTileH;
-        if (wStage_ == FULL_W_STAGE) {
-            tileWIdx_ = fullWStepIdx_ * SingleShapeTileW;
-        } else {
-            tileWIdx_ = fullWSteps_ * SingleShapeTileW;
-        }
+        tileWIdx_ = tileWIdx;
         uint32_t singleShapeTileWIdx = tileWIdx_ / SingleShapeTileW;
         tileKIdx_ = singleShapeTileHIdx * wSteps_ + singleShapeTileWIdx;
     }
 
     constexpr static uint32_t SingleShapeTileH = BlockConfig::SingleShapeTileH<TilingT>();
     constexpr static uint32_t SingleShapeTileW = BlockConfig::SingleShapeTileW<TilingT>();
-    constexpr static uint8_t FULL_W_STAGE = 0;
-    constexpr static uint8_t TAIL_W_STAGE = 1;
     const uint32_t tilesH_;
     const uint32_t tilesW_;
     const uint32_t batch_;
     const uint32_t hSteps_;
     const uint32_t wSteps_;
-    const uint32_t fullWSteps_;
     const uint32_t kBegin_;
     const uint32_t kLength_;
     uint32_t tileHIdx_ = 0;
@@ -143,9 +103,6 @@ private:
     uint32_t batchIdx_ = 0;
     uint32_t tileKIdx_ = 0;
     uint32_t processedKStep_ = 0;
-    uint32_t fullWStepIdx_ = 0;
-    const bool hasTailW_;
-    uint8_t wStage_;
     bool end_ = false;
 };
 
@@ -361,9 +318,6 @@ static __aicore__ inline bool GetBlockFromSwizzle2D(const SwizzleTopology2D& top
 template <BlockIterDirection IterDir, typename TilingT>
 class BlockIterator {
 public:
-    static constexpr uint32_t SingleShapeCout = BlockConfig::SingleShapeCout<TilingT>();
-    static constexpr uint32_t SingleShapeCin = BlockConfig::SingleShapeCin<TilingT>();
-
     inline __aicore__ bool More() const { return loopIdx_ < blocksIterCnt_; }
 
     // 获取当前aic计算的基本块范围,若当前核无基本块计算则返回false并且将length设置为0
@@ -371,8 +325,8 @@ public:
 
     inline __aicore__ bool GetBlock(uint16_t coreId, CoutCinRange& cRange) const
     {
-        return GetBlockFromSwizzle2D<IterDir>(topology_, loopIdx_, coreId, SingleShapeCout, SingleShapeCin, cout_, cin_,
-                                              cRange);
+        return GetBlockFromSwizzle2D<IterDir>(topology_, loopIdx_, coreId, singleShapeCout_, singleShapeCin_, cout_,
+                                              cin_, cRange);
     }
 
     // 获取本轮全核计算涉及基本块的cout/cin范围最大值
@@ -386,8 +340,8 @@ public:
         uint32_t boundCinBlockIdx = (IterDir == CIN) ? boundW : boundH;
 
         // 转化为实际的空间维度绝对边界
-        outCoutBound = Std::min((boundCoutBlockIdx + 1) * SingleShapeCout, cout_);
-        outCinBound = Std::min((boundCinBlockIdx + 1) * SingleShapeCin, cin_);
+        outCoutBound = Std::min((boundCoutBlockIdx + 1) * singleShapeCout_, cout_);
+        outCinBound = Std::min((boundCinBlockIdx + 1) * singleShapeCin_, cin_);
     }
 
     inline __aicore__ void Next() { loopIdx_++; }
@@ -400,24 +354,29 @@ public:
         return topology_.TotalCnt() > mainBlockNum ? topology_.TotalCnt() - mainBlockNum : 0;
     }
 
-    static inline __aicore__ BlockIterator Create(bool onlyIterMainBlocks, uint32_t cout, uint32_t cin)
+    static inline __aicore__ BlockIterator Create(bool onlyIterMainBlocks, uint32_t cout, uint32_t cin,
+                                                  const BlockConfig::RtTiling& tiling)
     {
-        uint32_t coutCnt = Ops::Base::CeilDiv(cout, SingleShapeCout);
-        uint32_t cinCnt = Ops::Base::CeilDiv(cin, SingleShapeCin);
+        uint32_t coutCnt = Ops::Base::CeilDiv(cout, static_cast<uint32_t>(tiling.singleShapeCout));
+        uint32_t cinCnt = Ops::Base::CeilDiv(cin, static_cast<uint32_t>(tiling.singleShapeCin));
         uint32_t topologyH = (IterDir == CIN) ? coutCnt : cinCnt;
         uint32_t topologyW = (IterDir == CIN) ? cinCnt : coutCnt;
         uint16_t blockH, blockW;
         SwizzleTopology2D::CalBlockGrid(topologyH, topologyW, blockH, blockW);
-        return BlockIterator(cout, cin, topologyH, topologyW, blockH, blockW, onlyIterMainBlocks);
+        return BlockIterator(cout, cin, topologyH, topologyW, blockH, blockW, onlyIterMainBlocks, tiling.singleShapeCin,
+                             tiling.singleShapeCout);
     }
 
 private:
     inline __aicore__ explicit BlockIterator(uint32_t cout, uint32_t cin, uint32_t topologyH, uint32_t topologyW,
-                                             uint16_t topologyBlockH, uint16_t topologyBlockW, bool onlyIterMainBlocks)
+                                             uint16_t topologyBlockH, uint16_t topologyBlockW, bool onlyIterMainBlocks,
+                                             uint16_t singleShapeCin, uint16_t singleShapeCout)
         : cout_(cout),
           cin_(cin),
           topology_(topologyH, topologyW, topologyBlockH, topologyBlockW),
-          blocksIterCnt_(GetBlockIterCnt(onlyIterMainBlocks, topology_.TotalCnt()))
+          blocksIterCnt_(GetBlockIterCnt(onlyIterMainBlocks, topology_.TotalCnt())),
+          singleShapeCout_(singleShapeCout),
+          singleShapeCin_(singleShapeCin)
     {}
 
     inline __aicore__ static uint32_t GetBlockIterCnt(bool onlyIterMainBlocks, uint32_t totalBlocks)
@@ -439,6 +398,8 @@ private:
     const SwizzleTopology2D topology_;
     const uint32_t blocksIterCnt_;
     uint32_t loopIdx_ = 0;
+    const uint32_t singleShapeCout_;
+    const uint32_t singleShapeCin_;
 };
 
 struct SplitKState {
@@ -463,13 +424,16 @@ public:
     // 由于主轮的走位不是按照固定的矩形方式走的，TailBlocks在整个基本块里的形状不一定能用一个矩形表示，所以构造函数里需要
     // 传入主轮使用的SwizzleTopology2D解算实际坐标
     inline __aicore__ TailBlockSplitKIterator(uint32_t tailBlockCnt, const SwizzleTopology2D& topology, uint32_t totalK,
-                                              uint32_t cout, uint32_t cin)
+                                              uint32_t cout, uint32_t cin, uint16_t singleShapeCin,
+                                              uint16_t singleShapeCout)
         : topology_(topology),
           tailBlockCnt_(tailBlockCnt),
           topologyTailIter_((topology.TotalCnt() - tailBlockCnt) / GetBlockNum()),
           totalK_(totalK),
           cout_(cout),
-          cin_(cin)
+          cin_(cin),
+          singleShapeCout_(singleShapeCout),
+          singleShapeCin_(singleShapeCin)
     {}
 
     // 将尾块按k轴平分到核上，要求尾轮基本块不超过核数一半
@@ -521,13 +485,13 @@ public:
 
         uint16_t tailBlockIdx = coreId - k.kGroupStartCoreId;
         k.tailBlockId = tailBlockIdx;
-        GetBlockFromSwizzle2D<MainBlockIterDir>(topology_, topologyTailIter_, tailBlockIdx, SingleShapeCout,
-                                                SingleShapeCin, cout_, cin_, cRange);
+        GetBlockFromSwizzle2D<MainBlockIterDir>(topology_, topologyTailIter_, tailBlockIdx, singleShapeCout_,
+                                                singleShapeCin_, cout_, cin_, cRange);
     }
 
 private:
-    static constexpr uint32_t SingleShapeCout = BlockConfig::SingleShapeCout<TilingT>();
-    static constexpr uint32_t SingleShapeCin = BlockConfig::SingleShapeCin<TilingT>();
+    const uint32_t singleShapeCout_;
+    const uint32_t singleShapeCin_;
     const SwizzleTopology2D topology_;
     const uint16_t tailBlockCnt_;
     const uint32_t topologyTailIter_;

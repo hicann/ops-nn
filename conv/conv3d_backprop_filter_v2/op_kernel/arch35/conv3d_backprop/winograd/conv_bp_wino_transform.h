@@ -94,7 +94,7 @@ constexpr __aicore__ static inline uint32_t GetInputBufSize()
 }
 
 template <typename TransformConfig>
-constexpr __aicore__ static inline uint32_t GetTmpBufLength()
+constexpr __aicore__ static inline uint32_t GetTmpBufLengthC0()
 {
     constexpr uint32_t STRIDE = TransformConfig::STRIDE;
     constexpr uint32_t WINDOW_SIZE = TransformConfig::WINDOW_SIZE;
@@ -105,6 +105,13 @@ constexpr __aicore__ static inline uint32_t GetTmpBufLength()
     constexpr uint32_t tileW = BlockConfig::SingleShapeTileW<TilingConfigT>();
     constexpr uint32_t srcW = SlideWindows<STRIDE, WINDOW_SIZE>::Tiles2SrcLength(tileW);
     return srcW * CalColUnfoldBufWidth(tileH) * C0<T>();
+}
+
+template <typename TransformConfig>
+constexpr __aicore__ static inline uint32_t GetTmpBufLength()
+{
+    using TilingConfigT = typename TransformConfig::TilingT;
+    return GetTmpBufLengthC0<TransformConfig>() * BlockConfig::SingleTransformC1<TilingConfigT>();
 }
 } // namespace WinoTransformDetail
 
@@ -120,13 +127,13 @@ struct UnfoldIntf {
     }
 
     template <bool isTailTile>
-    static __simd_callee__ inline void UnfoldColsVf(__ubuf__ T* unfoldColBuf, __ubuf__ T* srcBuf,
+    static __simd_callee__ inline void UnfoldColsVf(__ubuf__ T*& unfoldColBuf, __ubuf__ T*& srcBuf,
                                                     const UnfoldColParamsT& params)
     {
         Impl::template UnfoldColsVf<isTailTile>(unfoldColBuf, srcBuf, params);
     }
 
-    static __simd_callee__ inline void UnfoldRowsVf(__ubuf__ T* outBuf, __ubuf__ T* srcBuf,
+    static __simd_callee__ inline void UnfoldRowsVf(__ubuf__ T*& outBuf, __ubuf__ T*& srcBuf,
                                                     const UnfoldRowParamsT& params)
     {
         Impl::UnfoldRowsVf(outBuf, srcBuf, params);
@@ -226,7 +233,6 @@ public:
     __aicore__ inline void Compute(AscendC::LocalTensor<T>& srcBuf, AscendC::LocalTensor<T>& outBuf,
                                    AscendC::LocalTensor<T>& tmpBuf, const TileBox& box) const
     {
-        constexpr uint32_t srcBufSizeC0 = WinoTransformDetail::GetInputBufSizeC0<Config>();
         uint32_t outBufSizeC0 = WinoTransformDetail::GetTransformBufSizeC0<T>(box.tile.elements);
         const HWBox& src = box.src;
 
@@ -252,14 +258,16 @@ public:
         if constexpr (BlockConfig::SingleTransformC1<TilingConfigT>() == 1) {
             c1Len = 1;
         }
-        for (uint16_t c1Idx = 0; c1Idx < c1Len; c1Idx++) {
-            if (isTail) {
-                UnfoldVf<true>(outBufAddr, tmpBufAddr, srcBufAddr, ucp, urp, box.pad, src.hLength, src.wLength);
-            } else {
-                UnfoldVf<false>(outBufAddr, tmpBufAddr, srcBufAddr, ucp, urp, box.pad, src.hLength, src.wLength);
-            }
-            outBufAddr += outBufSizeC0;
-            srcBufAddr += srcBufSizeC0;
+
+        if (box.pad.hasPad()) {
+            PaddingParams padParams = InitPaddingParams(srcBufAddr, box);
+            Padding(padParams, box.pad, c1Len);
+        }
+
+        if (isTail) {
+            UnfoldVf<true>(outBufAddr, tmpBufAddr, srcBufAddr, ucp, urp, c1Len, outBufSizeC0);
+        } else {
+            UnfoldVf<false>(outBufAddr, tmpBufAddr, srcBufAddr, ucp, urp, c1Len, outBufSizeC0);
         }
     }
 
@@ -275,78 +283,124 @@ private:
     template <bool IsTailTile>
     __simd_vf__ static inline void UnfoldVf(__ubuf__ T* outBuf, __ubuf__ T* colUnfoldBuf, __ubuf__ T* srcBuf,
                                             const typename UnfoldPolicy::UnfoldColParamsT ucp,
-                                            const typename UnfoldPolicy::UnfoldRowParamsT urp, HWPad pad, uint16_t srcH,
-                                            uint16_t srcW)
+                                            const typename UnfoldPolicy::UnfoldRowParamsT urp, uint16_t c1Len,
+                                            uint32_t outBufSizeC0)
     {
-        Padding(srcBuf, pad, srcH, srcW);
+        constexpr uint32_t tmpBufSizeC0 = WinoTransformDetail::GetTmpBufLengthC0<Config>();
+        constexpr uint32_t srcBufSizeC0 = WinoTransformDetail::GetInputBufSizeC0<Config>();
+
+        __ubuf__ T* tmpBuf;
+
+        tmpBuf = colUnfoldBuf;
+        for (uint16_t c1Idx = 0; c1Idx < c1Len; c1Idx++) {
+            UnfoldPolicy::template UnfoldColsVf<IsTailTile>(tmpBuf, srcBuf, ucp);
+            srcBuf += srcBufSizeC0;
+            tmpBuf += tmpBufSizeC0;
+        }
 
         AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
 
-        UnfoldPolicy::template UnfoldColsVf<IsTailTile>(colUnfoldBuf, srcBuf, ucp);
-
-        AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
-
-        UnfoldPolicy::UnfoldRowsVf(outBuf, colUnfoldBuf, urp);
+        tmpBuf = colUnfoldBuf;
+        for (uint16_t c1Idx = 0; c1Idx < c1Len; c1Idx++) {
+            UnfoldPolicy::UnfoldRowsVf(outBuf, tmpBuf, urp);
+            outBuf += outBufSizeC0;
+            tmpBuf += tmpBufSizeC0;
+        }
     }
 
-    __simd_callee__ static inline void Padding(__ubuf__ T* srcBuf, const HWPad& pad, uint16_t srcH, uint16_t srcW)
+    struct PaddingParams {
+        // 各pad区域的起始地址与循环次数/步进, 均由InitPaddingParams预先算好
+        __ubuf__ T* hTopSrc;      // 顶部pad区起始地址
+        __ubuf__ T* hBtnSrc;      // 底部pad区起始地址
+        __ubuf__ T* wLeftSrc;     // 左侧pad列起始地址
+        __ubuf__ T* wRightSrc;    // 右侧pad列起始地址
+        uint16_t wBlocks;         // srcW+左右pad的总帧宽
+        uint16_t hTopRepeatTimes; // 顶部整行补0的store拍数
+        uint16_t hBtnRepeatTimes; // 底部整行补0的store拍数
+        uint16_t hRepeatTimes;    // 列方向每列补0的store拍数
+        uint32_t hTopMaskValue;   // 顶部补0的mask计数(UpdateMask按引用扣减)
+        uint32_t hBtnMaskValue;   // 底部补0的mask计数
+        uint32_t hMaskValue;      // 列方向补0的mask计数(每列重新装填)
+        uint16_t wPadStride;      // 列补0相邻行的块步进
+    };
+
+    __aicore__ inline static PaddingParams InitPaddingParams(__ubuf__ T* srcBuf, const TileBox& box)
+    {
+        const HWBox& src = box.src;
+        const HWPad& pad = box.pad;
+
+        const uint16_t wBlocks = src.wLength + pad.wLeft + pad.wRight;
+        const uint32_t wElements = wBlocks * C0<T>();
+        const uint32_t hTopElements = wElements * pad.hTop;
+        const uint32_t hBtnElements = wElements * pad.hBottom;
+        const uint32_t hElements = src.hLength * C0<T>();
+        const uint32_t wPadOffset = pad.hTop * wElements;
+
+        PaddingParams params = {};
+        params.hTopSrc = srcBuf;
+        params.hBtnSrc = srcBuf + (pad.hTop + src.hLength) * wElements;
+        params.wLeftSrc = srcBuf + wPadOffset;
+        params.wRightSrc = srcBuf + wPadOffset + (src.wLength + pad.wLeft) * C0<T>();
+        params.wBlocks = wBlocks;
+        params.hTopRepeatTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(hTopElements, VL<T>()));
+        params.hTopMaskValue = hTopElements;
+        params.hBtnRepeatTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(hBtnElements, VL<T>()));
+        params.hBtnMaskValue = hBtnElements;
+        params.hRepeatTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(hElements, VL<T>()));
+        params.hMaskValue = hElements;
+        params.wPadStride = (VL<T>() / C0<T>()) * wBlocks;
+        return params;
+    }
+
+    __simd_vf__ static inline void Padding(PaddingParams params, const HWPad pad, uint16_t c1Len)
     {
         using namespace Reg;
         RegTensor<T> paddingValue;
         Duplicate(paddingValue, 0);
 
-        const uint16_t padHTop = pad.hTop;
-        const uint16_t padHButton = pad.hBottom;
-        const uint16_t padWLeft = pad.wLeft;
-        const uint16_t padWRight = pad.wRight;
+        constexpr uint32_t srcBufSizeC0 = WinoTransformDetail::GetInputBufSizeC0<Config>();
 
-        const uint16_t wBlocks = srcW + padWLeft + padWRight;
-        const uint32_t wElements = wBlocks * C0<T>();
-
-        const uint32_t hTopElements = wElements * padHTop;
-        const uint16_t hTopRepeatTimes = CeilDivision(hTopElements, VL<T>());
-
-        __ubuf__ T* src = srcBuf;
-        uint32_t hTopMaskValue = hTopElements;
-        for (uint16_t i = 0; i < hTopRepeatTimes; i++) {
-            MaskReg mask = Reg::UpdateMask<T>(hTopMaskValue);
-            StoreAlign<T, PostLiteral::POST_MODE_UPDATE>(src, paddingValue, VL<T>(), mask);
-        }
-
-        const uint32_t hBtnElements = wElements * padHButton;
-        const uint16_t hBtnRepeatTimes = CeilDivision(hBtnElements, VL<T>());
-
-        src = srcBuf + (padHTop + srcH) * wElements;
-        uint32_t hBtnMaskValue = hBtnElements;
-        for (uint16_t i = 0; i < hBtnRepeatTimes; i++) {
-            MaskReg mask = Reg::UpdateMask<T>(hBtnMaskValue);
-            StoreAlign<T, PostLiteral::POST_MODE_UPDATE>(src, paddingValue, VL<T>(), mask);
-        }
-
-        const uint32_t hElements = srcH * C0<T>();
-        const uint16_t hRepeatTimes = CeilDivision(hElements, VL<T>());
-        const uint16_t wPadStride = (VL<T>() / C0<T>()) * wBlocks;
-
-        src = srcBuf + padHTop * wElements;
-        for (uint16_t i = 0; i < padWLeft; i++) {
-            uint32_t maskValue = hElements;
-            __ubuf__ T* src0 = src + C0<T>() * i;
-            for (uint16_t h = 0; h < hRepeatTimes; h++) {
-                MaskReg mask = Reg::UpdateMask<T>(maskValue);
-                StoreAlign<T, DataCopyMode::DATA_BLOCK_COPY, PostLiteral::POST_MODE_UPDATE>(src0, paddingValue, wBlocks,
-                                                                                            wPadStride, mask);
+        for (uint16_t c1 = 0; c1 < c1Len; c1++) {
+            __ubuf__ T* src = params.hTopSrc;
+            // UpdateMask按引用扣减计数, 拷贝出局部计数, 保证params可跨c1片复用不被污染
+            uint32_t hTopMaskValue = params.hTopMaskValue;
+            for (uint16_t i = 0; i < params.hTopRepeatTimes; i++) {
+                MaskReg mask = Reg::UpdateMask<T>(hTopMaskValue);
+                StoreAlign<T, PostLiteral::POST_MODE_UPDATE>(src, paddingValue, VL<T>(), mask);
             }
-        }
+            params.hTopSrc += srcBufSizeC0;
 
-        src = srcBuf + padHTop * wElements + (srcW + padWLeft) * C0<T>();
-        for (uint16_t i = 0; i < padWRight; i++) {
-            uint32_t maskValue = hElements;
-            __ubuf__ T* src0 = src + C0<T>() * i;
-            for (uint16_t h = 0; h < hRepeatTimes; h++) {
-                MaskReg mask = Reg::UpdateMask<T>(maskValue);
-                StoreAlign<T, DataCopyMode::DATA_BLOCK_COPY, PostLiteral::POST_MODE_UPDATE>(src0, paddingValue, wBlocks,
-                                                                                            wPadStride, mask);
+            src = params.hBtnSrc;
+            uint32_t hBtnMaskValue = params.hBtnMaskValue;
+            for (uint16_t i = 0; i < params.hBtnRepeatTimes; i++) {
+                MaskReg mask = Reg::UpdateMask<T>(hBtnMaskValue);
+                StoreAlign<T, PostLiteral::POST_MODE_UPDATE>(src, paddingValue, VL<T>(), mask);
             }
+            params.hBtnSrc += srcBufSizeC0;
+
+            for (uint16_t i = 0; i < pad.wLeft; i++) {
+                // POST_MODE_UPDATE会推进src0, 每列从基址重新派生
+                __ubuf__ T* src0 = params.wLeftSrc + C0<T>() * i;
+                // 列方向的mask计数每列重置
+                uint32_t hMaskValue = params.hMaskValue;
+                for (uint16_t h = 0; h < params.hRepeatTimes; h++) {
+                    MaskReg mask = Reg::UpdateMask<T>(hMaskValue);
+                    StoreAlign<T, DataCopyMode::DATA_BLOCK_COPY, PostLiteral::POST_MODE_UPDATE>(
+                        src0, paddingValue, params.wBlocks, params.wPadStride, mask);
+                }
+            }
+            params.wLeftSrc += srcBufSizeC0;
+
+            for (uint16_t i = 0; i < pad.wRight; i++) {
+                __ubuf__ T* src0 = params.wRightSrc + C0<T>() * i;
+                uint32_t hMaskValue = params.hMaskValue;
+                for (uint16_t h = 0; h < params.hRepeatTimes; h++) {
+                    MaskReg mask = Reg::UpdateMask<T>(hMaskValue);
+                    StoreAlign<T, DataCopyMode::DATA_BLOCK_COPY, PostLiteral::POST_MODE_UPDATE>(
+                        src0, paddingValue, params.wBlocks, params.wPadStride, mask);
+                }
+            }
+            params.wRightSrc += srcBufSizeC0;
         }
     }
 
