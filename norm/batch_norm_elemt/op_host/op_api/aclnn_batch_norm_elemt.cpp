@@ -26,6 +26,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_batch_norm_elemt.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -50,7 +51,7 @@ static bool CheckDtypeValid(const T& t, const Ts&... args)
     if constexpr (std::is_same_v<T, aclTensor*> || std::is_same_v<T, const aclTensor*>) {
         bool isBf16SupportedSocVersion = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
                                           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
-                                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+                                         Ops::NN::AclnnUtil::IsRegbase();
         const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = isBf16SupportedSocVersion ?
                                                                            ASCEND910B_DTYPE_SUPPORT_LIST :
                                                                            ASCEND910_DTYPE_SUPPORT_LIST;

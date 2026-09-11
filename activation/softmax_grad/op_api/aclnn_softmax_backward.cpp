@@ -45,8 +45,9 @@ static const int64_t AXIS_LIMIT = 8; // 底层算子不支持超过8维
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    return (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+           Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* output)

@@ -120,7 +120,7 @@ static bool CheckMeanRstdOutputShape(const aclTensor* input, const aclIntArray* 
     return true;
 }
 
-static bool IsArch3510() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
+static bool IsArch3510() { return Ops::NN::AclnnUtil::IsRegbase(); }
 
 static bool CheckInputDtype(const aclTensor* input, const aclTensor* weightOptional, const aclTensor* biasOptional)
 {
