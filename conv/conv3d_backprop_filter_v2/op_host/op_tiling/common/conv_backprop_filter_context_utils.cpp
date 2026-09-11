@@ -14,6 +14,7 @@
  */
 
 #include <log/log.h>
+#include <cstdint>
 #include <util/math_util.h>
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
@@ -49,11 +50,11 @@ constexpr size_t DEFAULT_C0 = 16;
 constexpr size_t DEFAULT_FP32_C0 = 8;
 constexpr size_t BLOCK_CUBE = 16;
 constexpr int32_t DILATION_LOWWER = 1;
-constexpr int32_t DILATION_UPPER = 255;
+constexpr int32_t DILATION_UPPER = static_cast<int32_t>(UINT8_MAX);
 constexpr int32_t STRIDE_LOWER = 1;
 constexpr int32_t STRIDE_UPPER = INT32_MAX - 1;
 constexpr int32_t PAD_LOWWER = 0;
-int32_t PAD_UPPER = 255;
+int32_t PAD_UPPER = static_cast<int32_t>(UINT8_MAX);
 constexpr int32_t SHAPE_LOWER = 1;
 constexpr int32_t SHAPE_UPPER = INT32_MAX - 1;
 } // namespace
