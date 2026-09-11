@@ -5,7 +5,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -108,7 +108,7 @@ aclnnStatus aclnnGather(
         <td>输入</td>
         <td>公式中的self。</td>
         <td>数据类型需要与out一致，维度数需要与index一致。</td>
-        <td>DOUBLE、FLOAT16、BFLOAT16、FLOAT32、INT32、UINT32、INT64、UINT64、INT16、UINT16、INT8、UINT8、BOOL</td>
+        <td>DOUBLE、FLOAT16、BFLOAT16、FLOAT32、INT32、UINT32、INT64、UINT64、INT16、UINT16、INT8、UINT8、BOOL、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT8_E8M0</td>
         <td>-</td>
         <td>0-8</td>
         <td>√</td>
@@ -164,6 +164,10 @@ aclnnStatus aclnnGather(
         <td>-</td>
       </tr>
     </tbody></table>
+
+  <!-- npu="910b" id7 -->
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：self的数据类型不支持FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT8_E8M0。
+  <!-- end id7 -->
 
   - **返回值**
 
