@@ -2969,8 +2969,8 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS},
-    // DAV_3510 scale_add reuses the fused-batch ASWT basic strategy and carries alpha/beta in FusedMatMulTilingData.
-    {"FusedMatMul_950_bmm_scale_add_basic_aswt",
+    // DAV_3510 scale_add selects the Blaze Tensor API and carries alpha/beta in FusedMatMulTilingData.
+    {"FusedMatMul_950_bmm_scale_add_tensor_aswt",
      "FusedMatMul",
      "scale_add",
      R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -2999,7 +2999,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      0,
      32,
-     421528577UL,
+     421528578UL,
      "",
      ge::DT_BF16,
      ge::DT_BF16,

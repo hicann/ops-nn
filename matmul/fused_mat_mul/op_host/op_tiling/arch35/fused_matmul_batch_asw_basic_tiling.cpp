@@ -55,7 +55,7 @@ uint64_t FusedMatMulBatchAswBasicApiTiling::GetTilingKey() const
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType == "scale_add") {
-        return GET_TPL_TILING_KEY(MAT_MUL_BASIC_LEVEL, F_NO_TRANS, MAT_MUL_FOR_FUSED_BATCH, MAT_MUL_BASIC,
+        return GET_TPL_TILING_KEY(MAT_MUL_TENSOR_LEVEL, F_NO_TRANS, MAT_MUL_FOR_FUSED_BATCH, MAT_MUL_BASIC,
                                   MAT_MUL_NO_FULL_LOAD, MAT_MUL_1V2_ND_ALIG_FIXPIPE, F_OPTYPE_SCALE_ADD,
                                   F_INNER_PRECISE_HIGH_PERFORMANCE);
     }
