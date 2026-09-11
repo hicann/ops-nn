@@ -224,6 +224,25 @@ TEST_F(l2_addmv_test, alpha_0_beta_0)
     ut.TestPrecision();
 }
 
+TEST_F(l2_addmv_test, alpha_0_beta_0_empty_output)
+{
+    auto input_tensor_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat_tensor_desc = TensorDesc({0, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto vec_tensor_desc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto alpha_scalar_desc = ScalarDesc(0.0f);
+    auto beta_scalar_desc = ScalarDesc(0.0f);
+    auto out_tensor_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnAddmv,
+                        INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+                        OUTPUT(out_tensor_desc), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addmv_test, input_empty)
 {
     auto input_tensor_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);

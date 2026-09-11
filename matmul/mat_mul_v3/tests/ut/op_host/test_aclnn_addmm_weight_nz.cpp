@@ -370,6 +370,24 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_fp16_fp16_fp32_keep_dtype)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_addmmWeightNz_test, addmm_weight_nz_alpha_zero_beta_zero_success)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
+    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(0.0f);
+    auto alpha = ScalarDesc(0.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnAddmmWeightNz, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_bf16_bf16_fp32_keep_dtype)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
