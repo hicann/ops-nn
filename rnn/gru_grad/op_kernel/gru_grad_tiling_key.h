@@ -18,5 +18,6 @@
 #include <cstdint>
 
 constexpr uint64_t GRU_GRAD_TILING_KEY = 0;
+constexpr uint64_t GRU_GRAD_TILING_KEY_HUGE = 1;
 
 #endif // __GRU_GRAD_TILING_KEY_H__

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * This program is free software; you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 #include "gru_grad_tiling_data.h"
+#include "matmul_config.h"
 using namespace AscendC;
 
 constexpr int64_t GRU_GATE_SIZE = 3;
@@ -50,7 +51,7 @@ struct GRnnTail {
     int64_t nCoreIndx{0};
 };
 
-template <typename DTYPE>
+template <typename DTYPE, const MatmulConfig& MM_GATE_CFG, const MatmulConfig& MM_I_CFG>
 class GruGradKernel {
 public:
     __aicore__ inline GruGradKernel() = default;
@@ -108,30 +109,33 @@ public:
 
     TPipe pipe;
 
-    matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>
-        dgateMM;
+    // MM1: grad_h_prev = d_gh × w_hh  [curBatch,3H]×[3H,H]=[curBatch,H]
+    using DgateMMType = matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                       matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                       matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                       matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>, MM_GATE_CFG>;
+    DgateMMType dgateMM;
 
-    matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE, true>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>
-        dwIhMM;
+    // MM2a: dw_ih = d_gi^T @  x [3H,TB]×[TB, I]=[3H, I]
+    using DwIhMMType = matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE, true>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>, MM_I_CFG>;
+    DwIhMMType dwIhMM;
 
-    matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE, true>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>
-        dwHhMM;
+    // MM2b: dw_hh = d_gh^T @ h_prev  [3H,TB]×[TB,H]=[3H,H]
+    using DwHhMMType = matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE, true>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                      matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>, MM_GATE_CFG>;
+    DwHhMMType dwHhMM;
 
     // MM3: dx = d_gi × w_input^T  [T*B,3H]×[3H,I]=[T*B,I]
-    matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>
-        dxMM;
+    using DxMMType = matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
+                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>, MM_I_CFG>;
+    DxMMType dxMM;
 
 private:
     struct InputGm {
@@ -251,11 +255,8 @@ private:
         off.COffset = t.mCoreIndx * param.N * param.singleCoreM + t.nCoreIndx * param.singleCoreN;
     }
 
-    __aicore__ inline void ApplyTail(matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                                                    matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>& mm,
-                                     TCubeTiling& param, GRnnTail& t)
+    template <typename MM>
+    __aicore__ inline void ApplyTail(MM& mm, TCubeTiling& param, GRnnTail& t)
     {
         if (t.nCoreIndx == t.notTailNCoreCount && t.mCoreIndx == t.notTailMCoreCount) {
             mm.SetTail(t.tailSingleCoreM, t.tailSingleCoreN);
@@ -266,11 +267,8 @@ private:
         }
     }
 
-    __aicore__ inline void ApplyTailTrans(matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE, true>,
-                                                         matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                                                         matmul::MatmulType<TPosition::GM, CubeFormat::ND, DTYPE>,
-                                                         matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>>& mm,
-                                          TCubeTiling& param, GRnnTail& t)
+    template <typename MM>
+    __aicore__ inline void ApplyTailTrans(MM& mm, TCubeTiling& param, GRnnTail& t)
     {
         if (t.nCoreIndx == t.notTailNCoreCount && t.mCoreIndx == t.notTailMCoreCount) {
             mm.SetTail(t.tailSingleCoreM, t.tailSingleCoreN);
@@ -285,16 +283,19 @@ private:
     {
         int64_t off = 0;
         int64_t TS = totalSteps_;
-        this->workGm.dGhGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE);
-        off += TS * H * GRU_GATE_SIZE;
-        this->workGm.dGiGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE);
-        off += TS * H * GRU_GATE_SIZE;
+        const int64_t MM_TILE_PAD_M = 16;
+        const int64_t dgatePad = MM_TILE_PAD_M * H * GRU_GATE_SIZE;
+        const int64_t dhPrevPad = MM_TILE_PAD_M * H;
+        this->workGm.dGhGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE + dgatePad);
+        off += TS * H * GRU_GATE_SIZE + dgatePad;
+        this->workGm.dGiGm.SetGlobalBuffer(ws + off, TS * H * GRU_GATE_SIZE + dgatePad);
+        off += TS * H * GRU_GATE_SIZE + dgatePad;
         this->workGm.hPrevWsGm.SetGlobalBuffer(ws + off, TS * H);
         off += TS * H;
         this->workGm.xRevWsGm.SetGlobalBuffer(ws + off, TS * I);
         off += TS * I;
-        this->workGm.dhPrevWsGm.SetGlobalBuffer(ws + off, B * H);
-        off += B * H;
+        this->workGm.dhPrevWsGm.SetGlobalBuffer(ws + off, B * H + dhPrevPad);
+        off += B * H + dhPrevPad;
         this->workGm.dhFromHGm.SetGlobalBuffer(ws + off, B * H);
     }
 
@@ -381,7 +382,6 @@ private:
                                 this->dgateMMTiling.singleCoreN;
             this->dgateMM.SetTail(actualM, tailN);
         }
-
         this->dgateMM.IterateAll(this->workGm.dhPrevWsGm[this->dgateOffsets.COffset], false);
     }
 

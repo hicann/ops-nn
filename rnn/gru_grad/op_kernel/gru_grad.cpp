@@ -17,6 +17,7 @@
 #include "gru_grad_tiling_data.h"
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
+#include "matmul_config.h"
 
 extern "C" __global__ __aicore__ void gru_grad(GM_ADDR x, GM_ADDR w_input, GM_ADDR w_hidden, GM_ADDR init_h,
                                                GM_ADDR output_h, GM_ADDR reset_gate, GM_ADDR update_gate,
@@ -33,13 +34,20 @@ extern "C" __global__ __aicore__ void gru_grad(GM_ADDR x, GM_ADDR w_input, GM_AD
     const TCubeTiling* dwHhMMTiling = &(tilingData.dwHhMMParam);
     const TCubeTiling* dxMMTiling = &(tilingData.dxMMParam);
 
-    GruGradKernel<DTYPE_X> gruGradOp;
+#define GRU_GRAD_OP_IMPL(MM_GATE_CFG_VAL, MM_I_CFG_VAL)                                                              \
+    do {                                                                                                             \
+        GruGradKernel<DTYPE_X, MM_GATE_CFG_VAL, MM_I_CFG_VAL> gruGradOp;                                             \
+        REGIST_MATMUL_OBJ(&gruGradOp.pipe, GetSysWorkSpacePtr(), gruGradOp.dgateMM, dgateMMTiling, gruGradOp.dwIhMM, \
+                          dwIhMMTiling, gruGradOp.dwHhMM, dwHhMMTiling, gruGradOp.dxMM, dxMMTiling);                 \
+        gruGradOp.Init(x, w_input, w_hidden, init_h, output_h, reset_gate, update_gate, new_gate, h_n, dy, dh,       \
+                       batch_sizes, dx, dh_prev, dw_input, dw_hidden, db_input, db_hidden, &tilingData, workspace);  \
+        gruGradOp.Process();                                                                                         \
+    } while (0)
 
-    REGIST_MATMUL_OBJ(&gruGradOp.pipe, GetSysWorkSpacePtr(), gruGradOp.dgateMM, dgateMMTiling, gruGradOp.dwIhMM,
-                      dwIhMMTiling, gruGradOp.dwHhMM, dwHhMMTiling, gruGradOp.dxMM, dxMMTiling);
-
-    gruGradOp.Init(x, w_input, w_hidden, init_h, output_h, reset_gate, update_gate, new_gate, h_n, dy, dh, batch_sizes,
-                   dx, dh_prev, dw_input, dw_hidden, db_input, db_hidden, &tilingData, workspace);
-
-    gruGradOp.Process();
+    if (TILING_KEY_IS(0)) {
+        GRU_GRAD_OP_IMPL(MM_CFG, MM_CFG);
+    } else if (TILING_KEY_IS(1)) {
+        // 大内轴: dxMM N 维 = inputSize >= 65535 时,使能 GM→L1 循环搬入保证精度
+        GRU_GRAD_OP_IMPL(MM_CFG, MM_HUGE_CFG);
+    }
 }

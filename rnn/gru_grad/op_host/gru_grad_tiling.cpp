@@ -180,12 +180,15 @@ ge::graphStatus GruGradTiling::GetWorkspaceSize()
     int64_t TS = tilingData_.totalSteps; // 不定长 = sum(batch_sizes), 定长 = T*B
     int64_t H = tilingData_.hiddenSize;
     int64_t B = tilingData_.batch;
-    int64_t r1 = TS * GATES_NUM * H;         // dGhGm
-    int64_t r2 = TS * GATES_NUM * H;         // dGiGm
-    int64_t r3 = TS * H;                     // hPrevWsGm
-    int64_t r4 = TS * tilingData_.inputSize; // xRevWsGm
-    int64_t r5 = B * H;                      // dhPrevWsGm (per-batch, independent of time)
-    int64_t r6 = B * H;                      // dhFromHGm
+    const int64_t MM_TILE_PAD_M = 16;
+    int64_t dgatePad = MM_TILE_PAD_M * H * GATES_NUM;
+    int64_t dhPrevPad = MM_TILE_PAD_M * H;
+    int64_t r1 = TS * H * GATES_NUM + dgatePad; // dGhGm
+    int64_t r2 = TS * H * GATES_NUM + dgatePad; // dGiGm
+    int64_t r3 = TS * H;                        // hPrevWsGm
+    int64_t r4 = TS * tilingData_.inputSize;    // xRevWsGm
+    int64_t r5 = B * H + dhPrevPad;             // dhPrevWsGm
+    int64_t r6 = B * H;                         // dhFromHGm
     int64_t ws1 = (r1 + r2 + r3 + r4 + r5 + r6) * inputDSize_;
 
     size_t* ws = context_->GetWorkspaceSizes(1);
