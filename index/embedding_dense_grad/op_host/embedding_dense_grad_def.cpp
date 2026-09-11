@@ -52,6 +52,7 @@ public:
             .ExtendCfgInfo("opFile.value", "embedding_dense_grad_apt")
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

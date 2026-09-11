@@ -359,7 +359,8 @@ static ge::graphStatus InferShapeForEmbeddingBag(gert::InferShapeContext* contex
                  ge::GRAPH_SUCCESS),
                 OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
-    if (platform_info.str_info.short_soc_version == "Ascend950") {
+    if (platform_info.str_info.short_soc_version == "Ascend950" ||
+        platform_info.str_info.short_soc_version == "Ascend350") {
         return InferShapeForEmbeddingBagSupport(context);
     }
 
@@ -429,7 +430,8 @@ graphStatus InferDtypeForEmbeddingBag(gert::InferDataTypeContext* context)
                  ge::GRAPH_SUCCESS),
                 OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
-    if (platform_info.str_info.short_soc_version == "Ascend950") {
+    if (platform_info.str_info.short_soc_version == "Ascend950" ||
+        platform_info.str_info.short_soc_version == "Ascend350") {
         OP_LOGD(context, "Begin to do InferDtypeForEmbeddingBag offset");
         auto offsets_dtype = context->GetInputDataType(OFFSETS_IDX);
         if (offsets_dtype == ge::DT_INT64) {

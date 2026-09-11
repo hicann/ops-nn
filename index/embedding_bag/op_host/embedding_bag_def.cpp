@@ -152,6 +152,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "embedding_bag_apt");
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("ascend350", config_950);
 
         OpAICoreConfig config_n;
         config_n.Input("weight")
