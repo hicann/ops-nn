@@ -19,6 +19,13 @@ using namespace AscendC;
 template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessInputMM()
 {
+#if DYNAMIC_RNN_HIACC_GEMM_INPUT
+    if constexpr (std::is_same<T, float>::value) {
+        // A5 fp32 输入 GEMM 用向量补偿累加：K 链由向量单元完成。
+        this->ProcessInputMMHighAcc();
+        return;
+    }
+#endif
     if (GetBlockIdx() < this->inputMMTiling.usedCoreNum) {
         this->inputMM.SetTensorA(this->inputGm.xGm[this->inputOffsets.AOffset]);
         this->inputMM.SetTensorB(this->inputGm.weightInputGm[this->inputOffsets.BOffset]);
@@ -37,6 +44,190 @@ __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessInputMM()
         this->inputMM.IterateAll(this->outputGm.workspace[this->inputOffsets.COffset], false);
     }
 }
+
+#if DYNAMIC_RNN_HIACC_GEMM_INPUT
+template <typename T>
+__aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessInputMMHighAcc()
+{
+    const int64_t coreIdx = GetBlockIdx();
+    const int64_t batch = this->tiling->batch;
+    const int64_t timeStep = this->tiling->timeStep;
+    const int64_t inputSize = this->tiling->inputSize;
+    const int64_t hidden4 = this->tiling->hiddenSize * LSTM_GATE_SIZE;
+    const int64_t cch = this->hiaccCch;
+    const int64_t calAlign = this->calBlockSize;
+    const int64_t kEnd = inputSize;
+    const int64_t kAl = this->hiaccKAl;
+    const int64_t kBlk = this->hiaccKB;
+    const int64_t rowBatch = this->hiaccRows;
+    // 输入 GEMM 覆盖全部 (s,b) 行并按全部核(GetBlockNum())切分；写 workspace 后各阶段由 SyncAll 隔离。
+    const int64_t totalRows = timeStep * batch;
+    const int64_t coresHi = (GetBlockNum() > 0) ? GetBlockNum() : 1;
+    const int64_t rowsPer = this->Ceil(totalRows, coresHi);
+    const int64_t rowBeg = coreIdx * rowsPer;
+    const int64_t rowCntAll = ((totalRows - rowBeg) < rowsPer) ? (totalRows - rowBeg) : rowsPer;
+    if (rowCntAll <= 0 || kBlk < 1 || rowBatch < 1 || totalRows <= 0) {
+        return;
+    }
+    const int64_t nKBlk = (kEnd + kBlk - 1) / kBlk;
+
+    LocalTensor<float> hiaccLocal = this->hiaccBuf.template Get<float>(0);
+    LocalTensor<float> accA = hiaccLocal;
+    LocalTensor<float> accB = hiaccLocal[rowBatch * cch];
+    LocalTensor<float> corrBuf = hiaccLocal[2 * rowBatch * cch];
+    LocalTensor<float> xBuf = hiaccLocal[3 * rowBatch * cch];
+    LocalTensor<float> pBuf = xBuf[rowBatch * kAl];
+    LocalTensor<float> blkBuf = pBuf[rowBatch * cch];
+    LocalTensor<float> biasBuf = blkBuf[rowBatch * cch];
+
+    DataCopyParams cpCol;
+    cpCol.blockCount = 1;
+    cpCol.blockLen = 0; // 每列分块按实际 cnt 设置
+    cpCol.srcStride = 0;
+    cpCol.dstStride = 0;
+    DataCopyPadParams ppCol;
+    ppCol.isPad = false;
+    ppCol.leftPadding = 0;
+    ppCol.rightPadding = 0;
+    ppCol.paddingValue = 0.0f;
+
+    DataCopyParams cpX;
+    cpX.blockCount = 1;
+    cpX.blockLen = inputSize * sizeof(float);
+    cpX.srcStride = 0;
+    cpX.dstStride = 0;
+    DataCopyPadParams ppX;
+    ppX.isPad = false;
+    ppX.leftPadding = 0;
+    ppX.rightPadding = kAl - inputSize;
+    ppX.paddingValue = 0.0f;
+
+    constexpr int32_t revK = DYNAMIC_RNN_HIACC_REVK_INPUT;
+    for (int64_t c0 = 0; c0 < hidden4; c0 += cch) {
+        const int64_t cnt = (hidden4 - c0 < cch) ? (hidden4 - c0) : cch;
+        const int64_t cntAl = this->Ceil(cnt, calAlign) * calAlign;
+        const int64_t padRight = cntAl - cnt;
+        cpCol.blockLen = cnt * sizeof(float);
+        ppCol.rightPadding = padRight;
+
+        for (int64_t g0 = 0; g0 < rowCntAll; g0 += rowBatch) {
+            const int64_t gRows = (rowCntAll - g0 < rowBatch) ? (rowCntAll - g0) : rowBatch;
+            // 1) x 行（及偏置）载入；xBuf 覆写前已由上一批的收尾 barrier 保证向量读结束
+            if (inputSize > 0) {
+                for (int64_t i = 0; i < gRows; ++i) {
+                    const int64_t gi = rowBeg + g0 + i;
+                    const int64_t s = gi / batch;
+                    const int64_t b = gi % batch;
+                    DataCopyPad(xBuf[i * kAl], this->inputGm.xGm[gi * inputSize], cpX, ppX);
+                }
+            }
+            if (this->tiling->isBias == 1) {
+                DataCopyPad(biasBuf, this->inputGm.biasGm[c0], cpCol, ppCol);
+            }
+            PipeBarrier<PIPE_ALL>(); // x/偏置数据就绪
+
+            // 2) A/B/corr 清零（行步长 cntAl）
+            for (int64_t i = 0; i < gRows; ++i) {
+                Duplicate(accA[i * cntAl], (float)0.0f, cntAl);
+                Duplicate(accB[i * cntAl], (float)0.0f, cntAl);
+                Duplicate(corrBuf[i * cntAl], (float)0.0f, cntAl);
+            }
+
+            // 3) K 方向分块流式累加：双缓冲预取 W 行块
+            if (kEnd > 0) {
+                // W 双缓冲同步靠 hiaccWQue(深度=2) 的 EnQue/DeQue 事件与 PIPE_V/PIPE_ALL barrier。
+                {
+                    LocalTensor<float> w0 = this->hiaccWQue.template AllocTensor<float>();
+                    const int64_t kb0 = (kBlk < kEnd) ? kBlk : kEnd;
+                    for (int64_t jj = 0; jj < kb0; ++jj) {
+                        const int64_t k = revK ? (kEnd - 1 - jj) : jj;
+                        DataCopyPad(w0[jj * cntAl], this->inputGm.weightInputGm[k * hidden4 + c0], cpCol, ppCol);
+                    }
+                    this->hiaccWQue.EnQue(w0);
+                }
+                bool useB = false;
+                for (int64_t bi = 0; bi < nKBlk; ++bi) {
+                    if (bi + 1 < nKBlk) {
+                        // 覆写 (bi-1)%2 槽位前，先确保上一块向量计算已结束
+                        PipeBarrier<PIPE_V>();
+                        LocalTensor<float> wn = this->hiaccWQue.template AllocTensor<float>();
+                        const int64_t kbN = (kEnd - (bi + 1) * kBlk < kBlk) ? (kEnd - (bi + 1) * kBlk) : kBlk;
+                        for (int64_t jj = 0; jj < kbN; ++jj) {
+                            const int64_t kk = (bi + 1) * kBlk + jj;
+                            const int64_t k = revK ? (kEnd - 1 - kk) : kk;
+                            DataCopyPad(wn[jj * cntAl], this->inputGm.weightInputGm[k * hidden4 + c0], cpCol, ppCol);
+                        }
+                        this->hiaccWQue.EnQue(wn);
+                    }
+                    LocalTensor<float> wRow = this->hiaccWQue.template DeQue<float>();
+                    const int64_t kb = (kEnd - bi * kBlk < kBlk) ? (kEnd - bi * kBlk) : kBlk;
+                    // 块内：p=x*w 后普通累加进 blkBuf
+                    for (int64_t jj = 0; jj < kb; ++jj) {
+                        const int64_t kk = bi * kBlk + jj;
+                        const int64_t k = revK ? (kEnd - 1 - kk) : kk;
+                        LocalTensor<float> wCur = wRow[jj * cntAl];
+                        for (int64_t i = 0; i < gRows; ++i) {
+                            const float xVal = xBuf.GetValue(i * kAl + k);
+                            LocalTensor<float> kRow = blkBuf[i * cntAl];
+                            if (jj == 0) {
+                                Muls(kRow, wCur, xVal, cntAl);
+                            } else {
+                                LocalTensor<float> pRow = pBuf[i * cntAl];
+                                Muls(pRow, wCur, xVal, cntAl);
+                                Add(kRow, kRow, pRow, cntAl);
+                            }
+                        }
+                    }
+                    // 块间：对 blkBuf 做一次 Kahan 补偿合并；s1/s2 ping-pong，块内值整体只舍入一次
+                    for (int64_t i = 0; i < gRows; ++i) {
+                        LocalTensor<float> aRow = accA[i * cntAl];
+                        LocalTensor<float> bRow = accB[i * cntAl];
+                        LocalTensor<float> cRow = corrBuf[i * cntAl];
+                        LocalTensor<float> kRow = blkBuf[i * cntAl];
+#if DYNAMIC_RNN_HIACC_PLAIN
+                        if (!useB) {
+                            Add(bRow, aRow, kRow, cntAl);
+                        } else {
+                            Add(aRow, bRow, kRow, cntAl);
+                        }
+#else
+                        // Kahan 补偿：y=blk-corr; s2=s1+y; corr=(s2-s1)-y
+                        Sub(kRow, kRow, cRow, cntAl);
+                        if (!useB) {
+                            Add(bRow, aRow, kRow, cntAl);
+                            Sub(cRow, bRow, aRow, cntAl);
+                        } else {
+                            Add(aRow, bRow, kRow, cntAl);
+                            Sub(cRow, aRow, bRow, cntAl);
+                        }
+                        Sub(cRow, cRow, kRow, cntAl);
+#endif
+                    }
+                    useB = !useB;
+                    this->hiaccWQue.FreeTensor(wRow);
+                }
+            }
+
+            // 4) 加偏置并写回 workspace 行（与 cube C 输出布局一致），收尾 barrier 供下批覆写 xBuf
+            // 每完成一个 K 块翻转一次 useB，故最终落点由 K 块数的奇偶决定。
+            const bool useBFinal = ((nKBlk & 1) != 0);
+            if (this->tiling->isBias == 1) {
+                for (int64_t i = 0; i < gRows; ++i) {
+                    LocalTensor<float> fRow = useBFinal ? accB[i * cntAl] : accA[i * cntAl];
+                    Add(fRow, fRow, biasBuf, cntAl);
+                }
+            }
+            PipeBarrier<PIPE_ALL>();
+            for (int64_t i = 0; i < gRows; ++i) {
+                const int64_t gi = rowBeg + g0 + i;
+                LocalTensor<float> fRow = useBFinal ? accB[i * cntAl] : accA[i * cntAl];
+                DataCopyPad(this->outputGm.workspace[gi * hidden4 + c0], fRow, cpCol);
+            }
+            PipeBarrier<PIPE_ALL>();
+        }
+    }
+}
+#endif
 
 template <typename T>
 __aicore__ inline void LstmMmSplitNDNDFP32<T>::ProcessHiddenMM(int64_t tIdx)
