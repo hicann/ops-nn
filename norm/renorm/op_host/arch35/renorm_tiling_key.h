@@ -11,7 +11,6 @@
 #ifndef __RENORM_TILING_KEY_H__
 #define __RENORM_TILING_KEY_H__
 
-#include "graph/c_types.h"
 #include "ascendc/host_api/tiling/template_argument.h"
 
 // 模板编号

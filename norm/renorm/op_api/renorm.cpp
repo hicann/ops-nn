@@ -12,10 +12,21 @@
  * \file renorm.cpp
  * \brief
  */
-#include "opdev/make_op_executor.h"
-#include "opdev/aicpu/aicpu_task.h"
-#include "opdev/op_dfx.h"
 #include "norm/common/op_api/renorm.h"
+#include "opdev/aicpu/aicpu_task.h"
+#include "opdev/op_def.h"
+#include "opdev/op_dfx.h"
+#include "opdev/op_log.h"
+#include "opdev/shape_utils.h"
+#include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
+#include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/common_types.h"
+#include "opdev/data_type_utils.h"
+#include "opdev/make_op_executor.h"
+#include "opdev/format_utils.h"
+#include "opdev/op_executor.h"
+#include "op_api/op_api_def_nn.h"
 
 using namespace op;
 namespace l0op {
@@ -27,18 +38,24 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 对Renorm的输入输出进行infershape
-static bool RenormInferShape(const op::Shape& selfShape, op::Shape& outShape, const int64_t dim)
+static bool RenormInferShape(const op::Shape& selfShape, op::Shape& outShape, const int64_t dim, const int inferType)
 {
     size_t real_dim_num = selfShape.GetDimNum();
     if (dim < 0 || static_cast<size_t>(dim) >= real_dim_num) {
         return false;
     }
-    outShape.SetDimNum(real_dim_num);
-    for (size_t i = 0; i < real_dim_num; ++i) {
-        outShape.SetDim(i, 1);
+    const bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    if (!isRegbase || inferType == 2) {
+        outShape.SetDimNum(real_dim_num);
+        for (size_t i = 0; i < real_dim_num; ++i) {
+            outShape.SetDim(i, 1);
+        }
+        // 仅dim指定的维度大小与self的保持一致，其余维度的大小为1。
+        outShape.SetDim(dim, selfShape.GetDim(dim));
+
+    } else {
+        outShape = selfShape;
     }
-    // 仅dim指定的维度大小与self的保持一致，其余维度的大小为1。
-    outShape.SetDim(dim, selfShape.GetDim(dim));
     return true;
 }
 
@@ -67,14 +84,14 @@ static aclTensor* RenormAiCore(const aclTensor* self, const float normType, cons
 
 // Renorm的实现
 const aclTensor* Renorm(const aclTensor* self, const float normType, const int64_t dim, const float maxNorm,
-                        aclOpExecutor* executor)
+                        const int inferType, aclOpExecutor* executor)
 {
     // 目前Renorm无AiCPU,仅支持AiCore
     if (!IsAiCoreSupport(self)) {
         return nullptr;
     }
     op::Shape outShape;
-    if (!RenormInferShape(self->GetViewShape(), outShape, dim)) {
+    if (!RenormInferShape(self->GetViewShape(), outShape, dim, inferType)) {
         OP_LOGE(ACL_ERROR_INVALID_PARAM, "infer shape failed. input shorage shape: [%s], view shape: [%s]",
                 op::ToString(self->GetStorageShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return nullptr;

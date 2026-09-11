@@ -16,7 +16,6 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_common.h"
 #include "tests/ut/common/ut_op_util.h"
-#include "norm/renorm/op_host/arch35/renorm_tiling_arch35.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -27,6 +26,10 @@
 using namespace std;
 using namespace ge;
 using namespace ut_util;
+
+namespace {
+struct RenormCompileInfo {};
+} // namespace
 
 class RenormDavidTiling : public testing::Test {
 protected:
@@ -49,7 +52,6 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 
 TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2}, {2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2}, {2, 2, 2}};
 
@@ -74,12 +76,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    Ops::Base::ReduceOpCompileInfo compile_info;
+    RenormCompileInfo compile_info;
 
     std::string op_type("Renorm");
     auto tiling_instance = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
     if (tiling_instance == nullptr) {
-        std::cout << "test>> tilingFunc is invalid" << std::endl;
+        FAIL() << "Renorm tiling implementation is not registered";
     } else {
         std::cout << "test>> tilingFunc is valid" << std::endl;
         ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -110,7 +112,6 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
         auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(16 * 4096);
         auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
         ASSERT_NE(param, nullptr);
-        compile_info.vectorCoreNum = 64;
         auto holder = gert::TilingContextFaker()
                           .SetOpType(op_type)
                           .NodeIoNum(1, 1)
@@ -140,12 +141,10 @@ TEST_F(RenormDavidTiling, renorm_david_tiling1_p1)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -170,12 +169,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    Ops::Base::ReduceOpCompileInfo compile_info;
+    RenormCompileInfo compile_info;
 
     std::string op_type("Renorm");
     auto tiling_instance = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
     if (tiling_instance == nullptr) {
-        std::cout << "test>> tilingFunc is invalid" << std::endl;
+        FAIL() << "Renorm tiling implementation is not registered";
     } else {
         std::cout << "test>> tilingFunc is valid" << std::endl;
         ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -235,12 +234,10 @@ TEST_F(RenormDavidTiling, renorm_david_tiling2_p2)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -265,12 +262,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    Ops::Base::ReduceOpCompileInfo compile_info;
+    RenormCompileInfo compile_info;
 
     std::string op_type("Renorm");
     auto tiling_instance = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
     if (tiling_instance == nullptr) {
-        std::cout << "test>> tilingFunc is invalid" << std::endl;
+        FAIL() << "Renorm tiling implementation is not registered";
     } else {
         std::cout << "test>> tilingFunc is valid" << std::endl;
         ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -330,12 +327,10 @@ TEST_F(RenormDavidTiling, renorm_david_tiling3_p3)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    // dlog_setlevel((0, 3, 0));
 }
 
 TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2, 2}, {2, 2, 2, 2}};
 
@@ -360,12 +355,12 @@ TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    Ops::Base::ReduceOpCompileInfo compile_info;
+    RenormCompileInfo compile_info;
 
     std::string op_type("Renorm");
     auto tiling_instance = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
     if (tiling_instance == nullptr) {
-        std::cout << "test>> tilingFunc is invalid" << std::endl;
+        FAIL() << "Renorm tiling implementation is not registered";
     } else {
         std::cout << "test>> tilingFunc is valid" << std::endl;
         ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -425,5 +420,4 @@ TEST_F(RenormDavidTiling, renorm_david_tiling6_p4)
         // workspaces nullptr return failed
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     }
-    // dlog_setlevel((0, 3, 0));
 }

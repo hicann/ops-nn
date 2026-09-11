@@ -221,7 +221,7 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor* selfRef, const aclTe
 
     // 调用l0算子Renorm进行计算，mid_output-> embeddingRenormRenorm
     auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,
-                               static_cast<float>(maxNorm), uniqueExecutor.get());
+                               static_cast<float>(maxNorm), 2, uniqueExecutor.get());
     CHECK_RET(renorm != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
     // 对第二次GatherV2的indices的数据进行处理
