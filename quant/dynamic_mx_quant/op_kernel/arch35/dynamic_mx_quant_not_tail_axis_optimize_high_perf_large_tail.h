@@ -580,8 +580,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
             Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
         static constexpr Reg::CastTrait castTraitFp32toBF16One = {
             Reg::RegLayout::ONE, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
-        static constexpr Reg::CastTrait castTraitCublsHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
-                                                                   Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitCeilAlgHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                                     Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
         Reg::Duplicate(maxEleU16, BF16_MAX_EXP);
         Reg::Duplicate(maxEleU32, FP32_MX_MAX_EXP);
@@ -614,9 +614,9 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                 Reg::And(x0AbsU16, x0U16, absForXU16, pregAll16);
                 Reg::And(x1AbsU16, x1U16, absForXU16, pregAll16);
                 if constexpr (IsSame<xDtype, half>::value) {
-                    Reg::Cast<bfloat16_t, xDtype, castTraitCublsHalf2Bf16>(
+                    Reg::Cast<bfloat16_t, xDtype, castTraitCeilAlgHalf2Bf16>(
                         (Reg::RegTensor<bfloat16_t>&)x0AbsU16, (Reg::RegTensor<float16_t>&)x0AbsU16, pregAll16);
-                    Reg::Cast<bfloat16_t, xDtype, castTraitCublsHalf2Bf16>(
+                    Reg::Cast<bfloat16_t, xDtype, castTraitCeilAlgHalf2Bf16>(
                         (Reg::RegTensor<bfloat16_t>&)x1AbsU16, (Reg::RegTensor<float16_t>&)x1AbsU16, pregAll16);
                 }
                 Reg::Max(x1AbsU16, x1AbsU16, x0AbsU16, pregAll16);
