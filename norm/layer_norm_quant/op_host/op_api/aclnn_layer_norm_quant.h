@@ -53,7 +53,7 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gammma,
+ACLNN_API aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma,
                                                           const aclTensor* beta, const aclTensor* scale,
                                                           const aclTensor* zeroPointsOptional, int quantMode,
                                                           double epsilon, aclTensor* res, aclTensor* scaleOut,

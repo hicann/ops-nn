@@ -147,35 +147,35 @@ static bool CheckShape(const aclTensor* x, const aclTensor* gamma, const aclTens
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gammma, const aclTensor* beta,
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                const aclTensor* scale, const aclTensor* zeroPointsOptional, int quantMode,
                                aclTensor* res)
 {
     // 1. 检查数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckDtype(x, gammma, beta, scale, zeroPointsOptional, res), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtype(x, gamma, beta, scale, zeroPointsOptional, res), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查入参间的shape关系
-    CHECK_RET(CheckShape(x, gammma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(x, gamma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gammma, const aclTensor* beta,
+aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                                 const aclTensor* scale, const aclTensor* zeroPointsOptional,
                                                 int quantMode, double epsilon, aclTensor* res, aclTensor* scaleOut,
                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGI("aclnnLayerNormQuantGetWorkspaceSize start.");
-    L2_DFX_PHASE_1(aclnnLayerNormQuant, DFX_IN(x, gammma, beta, scale, zeroPointsOptional, quantMode, epsilon),
+    L2_DFX_PHASE_1(aclnnLayerNormQuant, DFX_IN(x, gamma, beta, scale, zeroPointsOptional, quantMode, epsilon),
                    DFX_OUT(res, scaleOut));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 提前检查参数是否为空指针
-    CHECK_RET(CheckNotNull(x, gammma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x, gamma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_NULLPTR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(x, gammma, beta, scale, zeroPointsOptional, quantMode, res);
+    auto ret = CheckParams(x, gamma, beta, scale, zeroPointsOptional, quantMode, res);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空tensor场景处理
@@ -189,8 +189,8 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTen
     // 固定写法，将输入转换成连续的tensor
     auto xCont = l0op::Contiguous(x, uniqueExecutor.get());
     CHECK_RET(xCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gammmaCont = l0op::Contiguous(gammma, uniqueExecutor.get());
-    CHECK_RET(gammmaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
+    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto betaCont = l0op::Contiguous(beta, uniqueExecutor.get());
     CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto scaleCont = l0op::Contiguous(scale, uniqueExecutor.get());
@@ -201,7 +201,7 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTen
     // LayerNormQuant returns two tensors: y and the optional scaleOut
     constexpr size_t kLayerNormQuantResultNum = 2U;
     std::array<aclTensor*, kLayerNormQuantResultNum> result = l0op::LayerNormQuant(
-        xCont, gammmaCont, betaCont, scaleCont, zeroPointsOptionalCont, quantMode, epsilon, uniqueExecutor.get());
+        xCont, gammaCont, betaCont, scaleCont, zeroPointsOptionalCont, quantMode, epsilon, uniqueExecutor.get());
     CHECK_RET(result[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResResult = l0op::ViewCopy(result[0], res, uniqueExecutor.get());
