@@ -212,6 +212,165 @@
                     }
                 ]
             ]
+        },
+        {
+            "bin_filename": "ForeachAddList_1d8572db7e804f974bcdb0d4d3cce08c",
+            "inputs": [
+                [
+                    {
+                        "name": "x1",
+                        "index": 0,
+                        "dtype": "int16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "x2",
+                        "index": 1,
+                        "dtype": "int16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "alpha",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "int16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachAddList_15c55c7191bd411363e8c7c0d24b2391",
+            "inputs": [
+                [
+                    {
+                        "name": "x1",
+                        "index": 0,
+                        "dtype": "int8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "x2",
+                        "index": 1,
+                        "dtype": "int8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "alpha",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "int8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachAddList_ff6f48a9c30f3d0c149e51b2db67415b",
+            "inputs": [
+                [
+                    {
+                        "name": "x1",
+                        "index": 0,
+                        "dtype": "uint8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "x2",
+                        "index": 1,
+                        "dtype": "uint8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "alpha",
+                    "index": 2,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "uint8",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         }
     ]
 }
