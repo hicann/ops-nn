@@ -18,6 +18,28 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
+#if defined(__NPU_ARCH__) && \
+    (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102 || __NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
+#define DYNAMIC_RNN_HIACC_GEMM_INPUT 1
+#else
+#define DYNAMIC_RNN_HIACC_GEMM_INPUT 0
+#endif
+
+// 累加策略：0=Kahan 补偿累加；1=普通顺序 fp32 累加
+#ifndef DYNAMIC_RNN_HIACC_PLAIN
+#define DYNAMIC_RNN_HIACC_PLAIN 0
+#endif
+
+// 累加次序：0=沿 K 正序累加；1=沿 K 逆序累加。
+#ifndef DYNAMIC_RNN_HIACC_REVK_INPUT
+#define DYNAMIC_RNN_HIACC_REVK_INPUT 0
+#endif
+
+constexpr int64_t HIACC_MM_CHUNK = 1024; // 高精度GEMM 单次列分块大小(fp32元素)
+constexpr int64_t HIACC_UB_BUDGET = 192 * 1024;
+constexpr int64_t HIACC_ROWS_MAX = 16; // 同一核驻留的输入行数上限((s,b) 行)
+constexpr int64_t HIACC_WBLK_MAX = 8;  // 单次预取 W 行数上限(K 方向分块)
+
 constexpr int64_t LSTM_GATE_SIZE = 4;
 constexpr int64_t DEFAULT_QUEUE_BUFFE_SIZE = 2;
 constexpr int64_t SIZE_256 = 256;
@@ -195,7 +217,10 @@ public:
     AscendC::TQue<AscendC::QuePosition::VECIN, 1> qidVecIn;
     AscendC::TQue<AscendC::QuePosition::VECIN, 1> qidVecIn2;
     AscendC::TQue<AscendC::QuePosition::VECOUT, 1> qidVecOut;
+    // 高精度输入GEMM: W 行分块双缓冲；同步靠 TQue 深度=2 的 EnQue/DeQue 事件与 PIPE_V/PIPE_ALL barrier。
+    AscendC::TQue<AscendC::QuePosition::VECIN, 2> hiaccWQue;
     AscendC::TBuf<AscendC::TPosition::VECCALC> calcBuf;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> hiaccBuf;
 
     // LocalTensor
     AscendC::LocalTensor<float> ubLocal1, ubLocal2, ubLocal3, ubLocal4;
@@ -251,6 +276,10 @@ public:
     int64_t calcM;
     int64_t calcN;
     int64_t coreCalcM;
+    int64_t hiaccCch;  // 高精度输入GEMM 单次列分块宽度(对齐后 fp32 元素数)
+    int64_t hiaccKAl;  // 输入 K(inputSize) 对齐后的长度(fp32 元素数)
+    int64_t hiaccRows; // 输入 GEMM 行批处理行数(同一核驻留的 (s,b) 行数)
+    int64_t hiaccKB;   // 每次预取的 W 行数(K 方向分块)
 };
 
 template <typename T>
@@ -428,6 +457,58 @@ __aicore__ inline void LstmMmSplitNDNDBase<T>::InitQue()
     this->pipe.InitBuffer(this->qidVecIn, 1, this->baseVector * sizeof(float));
     this->pipe.InitBuffer(this->qidVecOut, 1, this->baseVector * sizeof(T));
     this->pipe.InitBuffer(this->calcBuf, 4 * this->baseVector * sizeof(float));
+    if constexpr (std::is_same<T, float>::value) {
+#if DYNAMIC_RNN_HIACC_GEMM_INPUT
+        int64_t hiaccCchTmp = this->Ceil(this->tiling->hiddenSize * LSTM_GATE_SIZE, this->calBlockSize) *
+                              this->calBlockSize;
+        if (hiaccCchTmp > HIACC_MM_CHUNK) {
+            hiaccCchTmp = HIACC_MM_CHUNK;
+        }
+        if (hiaccCchTmp < this->calBlockSize) {
+            hiaccCchTmp = this->calBlockSize;
+        }
+        this->hiaccCch = hiaccCchTmp;
+        int64_t hiaccKAlTmp = this->Ceil(this->tiling->inputSize, this->calBlockSize) * this->calBlockSize;
+        if (hiaccKAlTmp < this->calBlockSize) {
+            hiaccKAlTmp = this->calBlockSize;
+        }
+        this->hiaccKAl = hiaccKAlTmp;
+        // 新路径预算(fp32 元素数)= HIACC_UB_BUDGET 扣除既有队列 24*baseVector 字节。
+        const int64_t hiaccBudgetF = (HIACC_UB_BUDGET - 24 * this->baseVector) / sizeof(float);
+        int64_t hiaccKBTmp = HIACC_WBLK_MAX;
+        const int64_t hiaccKEnd = this->tiling->inputSize;
+        if (hiaccKBTmp > hiaccKEnd) {
+            hiaccKBTmp = hiaccKEnd;
+        }
+        if (hiaccKBTmp < 1) {
+            hiaccKBTmp = 1;
+        }
+        // W 双缓冲与 scratch 若超出预算，先收缩 K 分块
+        while (hiaccKBTmp > 1 && 2 * hiaccKBTmp * hiaccCchTmp + 2 * hiaccCchTmp > hiaccBudgetF) {
+            hiaccKBTmp = hiaccKBTmp / 2;
+        }
+        // 每行 UB 需求 = accA/accB/corr(3*cch) + x(kAl) + pBuf(cch) + blkBuf(cch)，另加 bias scratch(cch)。
+        const int64_t hiaccPerRowF = 5 * hiaccCchTmp + hiaccKAlTmp;
+        int64_t hiaccRowsTmp = (hiaccBudgetF - 2 * hiaccKBTmp * hiaccCchTmp - hiaccCchTmp) / hiaccPerRowF;
+        if (hiaccRowsTmp < 1) {
+            hiaccRowsTmp = 1;
+        }
+        if (hiaccRowsTmp > HIACC_ROWS_MAX) {
+            hiaccRowsTmp = HIACC_ROWS_MAX;
+        }
+        // 输入 GEMM 行空间覆盖全部 (s,b) 行，按启动核数切分。
+        const int64_t hiaccCores = (GetBlockNum() > 0) ? GetBlockNum() : 1;
+        const int64_t hiaccMaxRowsCore = this->Ceil(this->tiling->timeStep * this->tiling->batch, hiaccCores);
+        if (hiaccRowsTmp > hiaccMaxRowsCore) {
+            hiaccRowsTmp = hiaccMaxRowsCore;
+        }
+        this->hiaccKB = hiaccKBTmp;
+        this->hiaccRows = hiaccRowsTmp;
+        const int64_t hiaccBufFloats = hiaccRowsTmp * hiaccPerRowF + hiaccCchTmp;
+        this->pipe.InitBuffer(this->hiaccWQue, 2, hiaccKBTmp * hiaccCchTmp * sizeof(float));
+        this->pipe.InitBuffer(this->hiaccBuf, hiaccBufFloats * sizeof(float));
+#endif
+    }
     if constexpr (!std::is_same<T, float>::value) {
         this->pipe.InitBuffer(this->qidCIn, 1, this->baseVector * sizeof(T));
         this->pipe.InitBuffer(this->qidVecIn2, 1, this->baseVector * sizeof(float));

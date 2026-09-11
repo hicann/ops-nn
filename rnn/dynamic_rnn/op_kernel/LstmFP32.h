@@ -25,6 +25,7 @@ public:
 
 protected:
     __aicore__ inline void ProcessInputMM();
+    __aicore__ inline void ProcessInputMMHighAcc();
     __aicore__ inline void ProcessHiddenMM(int64_t tIdx);
     __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T>& mixGm);
     __aicore__ inline void ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T>& mixGm);
