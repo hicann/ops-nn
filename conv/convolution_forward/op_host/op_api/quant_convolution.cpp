@@ -177,8 +177,12 @@ const aclTensor* ExtendConv2dNCHW(const aclTensor* input, const aclTensor* weigh
     L0_DFX(ExtendConv2dNCHW, input, weight, scale, bias, outputDtype, stride, padding, dilation, groups, offsetx,
            roundMode);
     auto extendConvOut = executor->AllocTensor(outputDtype, input->GetStorageFormat(), input->GetOriginalFormat());
-    ExtendConv2dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode,
-                        extendConvOut, executor);
+    auto ret = ExtendConv2dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode,
+                                   extendConvOut, executor);
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER, "ExtendConv2dL0Inner failed.");
+        return nullptr;
+    }
     return extendConvOut;
 }
 const aclTensor* QuantConv3dNCDHW(const aclTensor* input, const aclTensor* weight, const aclTensor* scale,
@@ -189,8 +193,12 @@ const aclTensor* QuantConv3dNCDHW(const aclTensor* input, const aclTensor* weigh
     L0_DFX(QuantConv3dNCDHW, input, weight, scale, bias, outputDtype, stride, padding, dilation, groups, offsetx,
            roundMode);
     auto quantConvOut = executor->AllocTensor(outputDtype, input->GetStorageFormat(), input->GetOriginalFormat());
-    QuantConv3dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode, quantConvOut,
-                       executor);
+    auto ret = QuantConv3dL0Inner(input, weight, scale, bias, stride, padding, dilation, groups, offsetx, roundMode,
+                                  quantConvOut, executor);
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER, "QuantConv3dL0Inner failed.");
+        return nullptr;
+    }
     return quantConvOut;
 }
 

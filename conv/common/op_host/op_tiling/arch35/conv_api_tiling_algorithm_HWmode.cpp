@@ -99,7 +99,7 @@ void ConvTilingAlgorithmHWmode::GetKL0Tiling()
                            (CalcBL0Size(this->l1TilingCalc.kBL1MaxSize, l0Params.nL0) / this->dbValue.pbBL0 <=
                             tilingIns_->platformInfo.l0BSize);
     if (bMNFullLoadRet && bKFullLoadRet && bCheckL0SizeRet) {
-        l0Params.kL0 = this->l1TilingCalc.kBL1MaxSize;
+        l0Params.kL0 = this->l1TilingCalc.kBL1MaxSize / tilingIns_->shapeInfo.singlekD;
     }
 }
 

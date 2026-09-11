@@ -140,14 +140,6 @@ bool Conv2DSqueezeBiasaddFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNod
                                                            CustomPassContext& passContext)
 {
     std::vector<GNode> nodesBeforeFuse = {*convNode, matchNode, *biasaddNode};
-
-    AscendString failedReason;
-#if GE_COMPILER_VERSION_NUM >= 90100000U
-    FUSION_PASS_CHECK(!ge::fusion::GraphFuseInspectorUtils::CanFuse(nodesBeforeFuse, failedReason),
-                      OP_LOGD(convDescInfo.nodeNameStr, "CanFuse failed, reason: %s.", failedReason.GetString()),
-                      return false);
-#endif
-
     FUSION_PASS_CHECK(!UpdateBiasAddDesc(), OP_LOGE(convDescInfo.nodeNameStr, "Update biasadd desc failed."),
                       return false);
     FUSION_PASS_CHECK(RelinkEdges(*graph, matchNode) != SUCCESS,
