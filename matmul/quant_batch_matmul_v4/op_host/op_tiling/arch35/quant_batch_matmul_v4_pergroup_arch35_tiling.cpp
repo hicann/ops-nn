@@ -372,6 +372,14 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupShape()
 
 bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupBasicShapeConstraints() const
 {
+    const auto* yScaleShape = context_->GetOptionalInputShape(Y_SCALE_IDX);
+    const auto* yOffsetShape = context_->GetOptionalInputShape(Y_OFFSET_IDX);
+    OP_TILING_CHECK(
+        (yScaleShape == nullptr || yScaleShape->GetStorageShape().GetShapeSize() == 0) && yOffsetShape != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "yOffset", "non-null",
+                                              "yOffset must be null when yScale is null"),
+        return false);
+
     if (inputParams_.hasBias) {
         OP_LOGD(inputParams_.opName, "In %s, expected bias=null, but got non-null bias.", INT4_KG_QUANT_MODE);
         return false;
