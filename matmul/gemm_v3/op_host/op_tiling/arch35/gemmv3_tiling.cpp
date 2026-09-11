@@ -85,6 +85,14 @@ ge::graphStatus GemmV3Tiling::ExtractMKN()
 {
     const gert::Shape& aShape = context_->GetInputShape(A_IDX)->GetOriginShape();
     const gert::Shape& bShape = context_->GetInputShape(B_IDX)->GetOriginShape();
+    const size_t aDimNum = aShape.GetDimNum();
+    const size_t bDimNum = bShape.GetDimNum();
+    if (aDimNum < ALLOW_DIM || bDimNum < ALLOW_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            args_.opName, "A, B", Ops::NN::FormatString("[%zu, %zu]", aDimNum, bDimNum).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be at least %zu", "A, B", ALLOW_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
     int64_t kA = aShape[args_.isATrans ? 0 : 1];
     int64_t kB = bShape[args_.isBTrans ? 1 : 0];
     args_.mValue = static_cast<uint64_t>(aShape[args_.isATrans ? 1 : 0]);
