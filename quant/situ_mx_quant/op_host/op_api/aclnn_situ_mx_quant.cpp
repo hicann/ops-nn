@@ -188,10 +188,8 @@ aclnnStatus aclnnSituMxQuantGetWorkspaceSize(const aclTensor* x, double beta, do
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto ret = CheckParams(x, beta, axis, dstType, roundModeOptional, yOut, yScaleOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    auto yOutX = const_cast<aclTensor*>(yOut);
-    auto yScaleOutX = const_cast<aclTensor*>(yScaleOut);
     return aclnnInnerSituMxQuantGetWorkspaceSize(x, beta, linearBeta, activateLeft, axis, dstType, roundModeOptional,
-                                                 yOutX, yScaleOutX, workspaceSize, executor);
+                                                 yOut, yScaleOut, workspaceSize, executor);
 }
 
 aclnnStatus aclnnSituMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
