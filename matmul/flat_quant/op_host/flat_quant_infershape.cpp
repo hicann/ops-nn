@@ -35,6 +35,7 @@ static const size_t ATTR_INDEX_OF_DST_TYPE_MAX = 2;
 constexpr float ZERO_FLOAT = 0.0f;
 constexpr float SIX_FLOAT = 6.0f;
 constexpr float TWELVE_FLOAT = 12.0f;
+constexpr int64_t UNKNOWN_DIM = -1;
 
 static bool IsFloatEqual(float a, float b) { return std::abs(a - b) <= std::numeric_limits<float>::epsilon(); }
 
@@ -80,22 +81,31 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_TWO) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);
         }
-        OP_CHECK_IF(xShape->GetDim(FLATQUANT_N_IDX) % FLATQUANT_N_IS_EVEN == 1,
-                    OP_LOGE(context, "dim N must be even number"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xShape->GetDim(FLATQUANT_N_IDX) % FLATQUANT_N_IS_EVEN != 0 &&
+                        xShape->GetDim(FLATQUANT_N_IDX) != UNKNOWN_DIM, // 动态shape未知维度，放行
+                    OP_LOGE(context, "dim N must be even number, got %ld.", xShape->GetDim(FLATQUANT_N_IDX)),
+                    return ge::GRAPH_FAILED);
 
         if (outxDtype != nullptr) {
             int32_t dstDtype = *outxDtype;
             if (dstDtype == DTYPE_FLOAT4_E2M1) { // dst_dtype 为40
-                size_t ceilMN = (xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX) +
-                                 FLATQUANT_DOUBLE_CEIL_SIZE - 1) /
-                                FLATQUANT_DOUBLE_CEIL_SIZE;
+                const int64_t mDim = xShape->GetDim(FLATQUANT_M_IDX);
+                const int64_t nDim = xShape->GetDim(FLATQUANT_N_IDX);
+                // M/N任一为动态未知维度(-1)时派生维保持-1，仅两维均确定时才计算，
+                // 避免负值参与运算及无符号回绕产生负维/超大维度
+                const bool hasUnknownDim = (mDim == UNKNOWN_DIM) || (nDim == UNKNOWN_DIM);
+                const int64_t mnDim = hasUnknownDim ? UNKNOWN_DIM : mDim * nDim;
+                const int64_t ceilMNDim = hasUnknownDim ?
+                                              UNKNOWN_DIM :
+                                              (mnDim + static_cast<int64_t>(FLATQUANT_DOUBLE_CEIL_SIZE) - 1) /
+                                                  static_cast<int64_t>(FLATQUANT_DOUBLE_CEIL_SIZE);
                 outShape->SetDimNum(0);
                 outShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
-                outShape->AppendDim(xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX));
+                outShape->AppendDim(mnDim);
 
                 qScaleShape->SetDimNum(0);
                 qScaleShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
-                qScaleShape->AppendDim(ceilMN);
+                qScaleShape->AppendDim(ceilMNDim);
                 qScaleShape->AppendDim(FLATQUANT_MX_N_OUT_DIM);
             } else { // 默认值
                 outShape->SetDimNum(0);

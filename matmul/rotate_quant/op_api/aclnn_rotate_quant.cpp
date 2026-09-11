@@ -154,6 +154,28 @@ static bool CheckMxRotationShape(const aclTensor* x, const aclTensor* rotation)
     auto xShape = x->GetViewShape();
     auto rotShape = rotation->GetViewShape();
 
+    auto xDimNum = xShape.GetDimNum();
+    OP_CHECK(xDimNum >= 1 && xDimNum <= MAX_X_DIM_NUM,
+             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                 kOpName, "x", FormatString("%zu", xDimNum).c_str(),
+                 FormatString("The shape dim of %s must be in range [%d, %d]", "x", 1, MAX_X_DIM_NUM).c_str()),
+             return false);
+    for (size_t i = 0; i < xDimNum; i++) {
+        OP_CHECK(
+            xShape.GetDim(i) >= 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                kOpName, "x", op::ToString(xShape).GetString(),
+                FormatString("The dim[%zu] of %s must be non-negative, got %ld", i, "x", xShape.GetDim(i)).c_str()),
+            return false);
+    }
+    auto rotDimNum = rotShape.GetDimNum();
+    OP_CHECK(rotDimNum >= MIN_ROT_DIM_NUM && rotDimNum <= MAX_ROT_DIM_NUM,
+             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "rotation", FormatString("%zu", rotDimNum).c_str(),
+                                                      FormatString("The shape dim of %s must be in range [%d, %d]",
+                                                                   "rotation", MIN_ROT_DIM_NUM, MAX_ROT_DIM_NUM)
+                                                          .c_str()),
+             return false);
+
     int64_t N = xShape.GetDim(xShape.GetDimNum() - 1);
     int64_t K = rotShape.GetDim(rotShape.GetDimNum() - 1);
     OP_CHECK(K == 32 || K == 64 || K == 128,
@@ -167,19 +189,6 @@ static bool CheckMxRotationShape(const aclTensor* x, const aclTensor* rotation)
                  FormatString("The value of %s must be divisible by %s", "N", "K").c_str()),
              return false);
 
-    auto xDimNum = xShape.GetDimNum();
-    OP_CHECK(xDimNum >= 1 && xDimNum <= MAX_X_DIM_NUM,
-             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                 kOpName, "x", FormatString("%zu", xDimNum).c_str(),
-                 FormatString("The shape dim of %s must be in range [%d, %d]", "x", 1, MAX_X_DIM_NUM).c_str()),
-             return false);
-    auto rotDimNum = rotShape.GetDimNum();
-    OP_CHECK(rotDimNum >= MIN_ROT_DIM_NUM && rotDimNum <= MAX_ROT_DIM_NUM,
-             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "rotation", FormatString("%zu", rotDimNum).c_str(),
-                                                      FormatString("The shape dim of %s must be in range [%d, %d]",
-                                                                   "rotation", MIN_ROT_DIM_NUM, MAX_ROT_DIM_NUM)
-                                                          .c_str()),
-             return false);
     if (rotDimNum == MIN_ROT_DIM_NUM) {
         OP_CHECK(rotShape.GetDim(0) == K,
                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
@@ -243,6 +252,11 @@ static bool CheckIntRotationShape(const aclTensor* x, const aclTensor* rotation)
     int64_t M = xShape.GetDim(0);
     int64_t N = xShape.GetDim(1);
     int64_t K = rotShape.GetDim(1);
+    OP_CHECK(
+        M >= 0 && N >= 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "M, N", FormatString("%ld, %ld", M, N).c_str(),
+                                              FormatString("The value of %s must be non-negative", "M and N").c_str()),
+        return false);
     OP_CHECK(N % N_DIM_ALIGNMENT == 0,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                  kOpName, "N", FormatString("%ld", N).c_str(),
@@ -497,10 +511,12 @@ aclnnStatus aclnnRotateQuantGetWorkspaceSize(const aclTensor* x, const aclTensor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    CHECK_RET(x != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckAxisValid(axis, x), ACLNN_ERR_PARAM_INVALID);
+
     auto ret = CheckParams(x, rotation, alpha, yOut, scaleOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    CHECK_RET(CheckAxisValid(axis, x), ACLNN_ERR_PARAM_INVALID);
     const char* roundModeValue = (roundMode != nullptr) ? roundMode : "rint";
     CHECK_RET(CheckRoundModeValid(roundModeValue, yOut), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckScaleAlgValid(scaleAlg, yOut), ACLNN_ERR_PARAM_INVALID);

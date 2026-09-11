@@ -80,9 +80,9 @@ private:
     bool CheckDstDtype(ge::DataType outDtype) const;
     bool CheckDstTypeMax(ge::DataType outDtype) const;
     bool CheckNAlignment(ge::DataType outDtype) const;
-    void GetKernelMode(int64_t aivNum);
+    ge::graphStatus GetKernelMode(int64_t aivNum);
     uint8_t DetermineMmMode(ge::DataType outDtype) const;
-    void CalculateWorkspace(int64_t aivNum, ge::DataType outDtype);
+    ge::graphStatus CalculateWorkspace(int64_t aivNum, ge::DataType outDtype);
     ge::graphStatus GetTCubeTiling();
     ge::graphStatus InitializeInputsAndAttributes();
     ge::graphStatus SetBasicTilingData();
@@ -174,7 +174,7 @@ ge::graphStatus FlatQuantTiling::SetBasicTilingData()
     // 设置基本的tiling数据
     tilingData_.set_hasP2(hasP2_ ? 1 : 0);
     tilingData_.set_groupNum(groupNum_);
-    tilingData_.set_groupListType(*groupListType_);
+    tilingData_.set_groupListType(groupListType_ != nullptr ? *groupListType_ : 0);
     tilingData_.set_K(xShape_.GetDim(INDEX_ZERO));
     tilingData_.set_M(xShape_.GetDim(INDEX_ONE));
     tilingData_.set_N(xShape_.GetDim(INDEX_TWO));
@@ -193,9 +193,12 @@ ge::graphStatus FlatQuantTiling::SetBasicTilingData()
 ge::graphStatus FlatQuantTiling::CalculateIterBatch()
 {
     auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
     int64_t aicNum = compileInfo->aicNum;
     int64_t aivNum = compileInfo->aivNum;
-    GetKernelMode(aivNum);
+    if (GetKernelMode(aivNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (mmMode_ == MM_HIGH_MODE && GetTCubeTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -222,6 +225,7 @@ ge::graphStatus FlatQuantTiling::CalculateIterBatch()
 ge::graphStatus FlatQuantTiling::SetTilingContextAndSaveData()
 {
     auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
     tilingContext_->SetBlockDim(compileInfo->aicNum);
     tilingContext_->SetTilingKey(mmMode_);
     // 保存tiling数据
@@ -282,13 +286,14 @@ uint8_t FlatQuantTiling::DetermineMmMode(ge::DataType outDtype) const
     return MM_BASE_MODE;
 }
 
-void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
+ge::graphStatus FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
 {
     int64_t n = xShape_.GetDim(INDEX_TWO);
     int64_t m = xShape_.GetDim(INDEX_ONE);
     int64_t k = xShape_.GetDim(INDEX_ZERO);
 
     size_t* workspaces = tilingContext_->GetWorkspaceSizes(WORKSPACE_NUM);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, workspaces);
 
     if (outDtype == ge::DT_FLOAT4_E2M1) {
         auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
@@ -297,8 +302,10 @@ void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
             workspaces[0] = useAivNum *
                                 (K_PER_VEC * m * n * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * n * BYTE_LEN_4) +
                             WORK_SPACE_SIZE_APT;
+        } else {
+            workspaces[0] = 0;
         }
-        return;
+        return ge::GRAPH_SUCCESS;
     }
 
     int64_t alignedK = k;
@@ -315,15 +322,17 @@ void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
     } else {
         workspaces[0] = (alignedK * mAlign_ * n) * BYTE_LEN_2 + WORK_SPACE_SIZE;
     }
+    return ge::GRAPH_SUCCESS;
 }
 
-void FlatQuantTiling::GetKernelMode(int64_t aivNum)
+ge::graphStatus FlatQuantTiling::GetKernelMode(int64_t aivNum)
 {
     auto outDesc = tilingContext_->GetOutputDesc(INDEX_ZERO);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outDesc);
     auto outDtype = outDesc->GetDataType();
 
     mmMode_ = DetermineMmMode(outDtype);
-    CalculateWorkspace(aivNum, outDtype);
+    return CalculateWorkspace(aivNum, outDtype);
 }
 
 ge::graphStatus FlatQuantTiling::GetTCubeTiling()
@@ -370,6 +379,9 @@ bool FlatQuantTiling::CheckShapes() const
     int64_t K = xShape_.GetDim(INDEX_ZERO);
     int64_t M = xShape_.GetDim(INDEX_ONE);
     int64_t N = xShape_.GetDim(INDEX_TWO);
+    OP_CHECK_IF(K <= 0 || M <= 0 || N <= 0,
+                OP_LOGE(tilingContext_->GetNodeName(), "K[%ld]/M[%ld]/N[%ld] must be positive.", K, M, N),
+                return false);
     OP_CHECK_IF(K > MAX_K_SIZE || M > MAX_MN_SIZE || N > MAX_MN_SIZE,
                 OP_LOGE(tilingContext_->GetNodeName(), "K[%ld]/M[%ld]/N[%ld] exceeds limit %d/%d/%d.", K, M, N,
                         MAX_K_SIZE, MAX_MN_SIZE, MAX_MN_SIZE),
@@ -408,6 +420,8 @@ bool FlatQuantTiling::CheckGroupList()
                     return false);
     }
     if (compileInfo != nullptr && compileInfo->npuArch == NpuArch::DAV_2201 && hasGroupList_) {
+        OP_CHECK_IF(groupListType_ == nullptr,
+                    OP_LOGE(tilingContext_->GetNodeName(), "group_list_type attribute is null."), return false);
         OP_CHECK_IF(*groupListType_ < 0 || *groupListType_ > GROUP_LIST_SPARSE_TYPE,
                     OP_LOGE(tilingContext_->GetNodeName(), "group_list_type must be one of [0, 1, 2], got %ld.",
                             *groupListType_),
@@ -483,6 +497,10 @@ bool FlatQuantTiling::ValidateAll()
     auto outDesc = tilingContext_->GetOutputDesc(INDEX_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outDesc);
     auto outDtype = outDesc->GetDataType();
+    if (outDtype != ge::DT_FLOAT4_E2M1 && !hasP2_) {
+        OP_LOGE(tilingContext_->GetNodeName(), "p2 shape must be [N,N] when out dtype is not FLOAT4_E2M1, got [0,0].");
+        return false;
+    }
     if (!CheckDstDtype(outDtype)) {
         return false;
     }

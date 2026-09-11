@@ -533,6 +533,21 @@ TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_success)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
 }
 
+// MX路径空Tensor（M=0）: 维度非负即可，走IsEmpty早退返回成功，不应被dim>0校验拦截
+TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_empty_tensor_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({0, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({0, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({0, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
 TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_rot_k)
 {
     SocVersionManager versionManager(SocVersion::ASCEND950);
