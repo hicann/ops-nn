@@ -240,16 +240,14 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
     using aLayout = std::conditional_t<aTran, layout::ColumnMajor, layout::RowMajor>;
     using bLayout = std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    constexpr bool isScaleAdd = OPTYPE == F_OPTYPE_SCALE_ADD;
-    if constexpr (isScaleAdd) {
+    REGISTER_TILING_DEFAULT(FusedMatMulTilingData);
+    if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL) {
+        static_assert(OPTYPE == F_OPTYPE_SCALE_ADD, "Tensor API only supports scale_add");
         GET_TILING_DATA_WITH_STRUCT(FusedMatMulTilingData, tilingData, tilingGM);
         FusedMatMulAdvanced::FusedMatMulWithScaleAddAswBasicKernel<DTYPE_X1>(x1GM, x2GM, x3GM, yGM, workspaceGM,
                                                                              tilingData);
-        return;
-    }
-    REGISTER_TILING_DEFAULT(FusedMatMulTilingData);
-    if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL) { // 基础API
-        if constexpr (OPTYPE == F_OPTYPE_NONE) {      // opType=empty
+    } else if constexpr (API_LEVEL == MAT_MUL_BASIC_LEVEL) { // 基础API
+        if constexpr (OPTYPE == F_OPTYPE_NONE) {             // opType=empty
             if constexpr (BATCH_ITER_MODEL == MAT_MUL_MERGE_BATCH) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3MergeBatchBasicTilingData, tilingData, tilingGM);

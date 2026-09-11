@@ -40,7 +40,7 @@
 // 模板参数
 ASCENDC_TPL_ARGS_DECL(FusedMatMul, // 算子OpType
                       ASCENDC_TPL_UINT_DECL(API_LEVEL, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, MAT_MUL_HIGH_LEVEL,
-                                            MAT_MUL_BASIC_LEVEL),
+                                            MAT_MUL_BASIC_LEVEL, MAT_MUL_TENSOR_LEVEL),
                       ASCENDC_TPL_UINT_DECL(TRANS_MODEL, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, F_NO_TRANS, F_A_TRANS,
                                             F_B_TRANS, F_AB_TRANS),
                       ASCENDC_TPL_UINT_DECL(BATCH_ITER_MODEL, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, MAT_MUL_FOR_BATCH,
@@ -210,9 +210,9 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(INNER_PRECISE, ASCENDC_TPL_UI_LIST, F_INNER_PRECISE_HIGH_PRECISION,
                                               F_INNER_PRECISE_HIGH_PERFORMANCE),
                          ASCENDC_TPL_TILING_STRUCT_SEL(FusedMatMulTilingData)),
-    // FusedMatmulV2 scale/add: scalar values are stored in the FusedMatMul tiling data.
+    // FusedMatmulV2 scale/add uses the Blaze Tensor API: scalar values are stored in the FusedMatMul tiling data.
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
-                         ASCENDC_TPL_UINT_SEL(API_LEVEL, ASCENDC_TPL_UI_LIST, MAT_MUL_BASIC_LEVEL),
+                         ASCENDC_TPL_UINT_SEL(API_LEVEL, ASCENDC_TPL_UI_LIST, MAT_MUL_TENSOR_LEVEL),
                          ASCENDC_TPL_UINT_SEL(TRANS_MODEL, ASCENDC_TPL_UI_LIST, F_NO_TRANS),
                          ASCENDC_TPL_UINT_SEL(BATCH_ITER_MODEL, ASCENDC_TPL_UI_LIST, MAT_MUL_FOR_FUSED_BATCH),
                          ASCENDC_TPL_UINT_SEL(MODEL, ASCENDC_TPL_UI_LIST, MAT_MUL_BASIC),
