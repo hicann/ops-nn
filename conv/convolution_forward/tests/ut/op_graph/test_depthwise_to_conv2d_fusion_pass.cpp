@@ -339,6 +339,15 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_replacement_attr_and
              ASSERT_EQ(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
              EXPECT_STREQ(paddingVal.GetString(), "SAME");
          }},
+        {"attr_padding_absent_not_set",
+         []() {
+             return BuildDepthwiseGraph("depthwise_to_conv2d_attr_padding_absent",
+                                        DepthwiseConv2DConfig::Basic("depthwise_conv2d"));
+         },
+         [](GNode& fused) {
+             AscendString paddingVal;
+             EXPECT_NE(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
+         }},
         {"offset_x_on_nd_soc",
          []() {
              DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");

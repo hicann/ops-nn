@@ -272,6 +272,7 @@ struct SetOptGroupParams {
         self->ctx.singleCoreCi = singleGroups * self->ctx.ciPerGroup;
 
         if ASCEND_IS_AIC_CONV {
+            Init<Intf, ImplType>::InitL1LoadParams(self);
             InitKDirectionValue<Intf>(self);
             if constexpr (Intf::groupOptFlag) {
                 OptGroupCalcBL1LoadTimes<Intf>(self);
