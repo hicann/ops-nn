@@ -10,6 +10,7 @@
 #ifndef QUANTIZE_ADD_LAYER_NORM_NORM_TILING_H_
 #define QUANTIZE_ADD_LAYER_NORM_NORM_TILING_H_
 
+#include <cstring>
 #include "kernel_tiling/kernel_tiling.h"
 
 #define DT_BF16 bfloat16_t
@@ -29,7 +30,34 @@ struct QuantizeAddLayerNormTilingData {
     float eps = 0.00001;
 };
 
+// ascend950 (arch35 / regbase) tiling data, keep in sync with
+// BEGIN_TILING_DATA_DEF(QuantizeAddLayerNormRegbaseTilingData) in op_host/quantize_add_layer_norm_tiling.h
+struct QuantizeAddLayerNormRegbaseTilingData {
+    int64_t rowsPerCore;
+    int64_t rowsPerTailCore;
+    int64_t rowsPerLoop;
+    int64_t cols;
+    int64_t colsPerLoop;
+    int64_t colsLoopCount;
+    int64_t colsTail;
+    int64_t binaryAddNum;
+    int64_t binaryAddK;
+    int64_t binaryAddLastNum;
+    float eps;
+    uint32_t outputX;
+};
+
 #pragma pack()
+
+template <typename T>
+inline void InitTilingData(uint8_t* tiling, T* constData)
+{
+    memcpy(constData, tiling, sizeof(T));
+}
+
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \
+    tilingStruct tilingData;                                             \
+    InitTilingData<tilingStruct>(tilingArg, &tilingData)
 
 #define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
     __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \

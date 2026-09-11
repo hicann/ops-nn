@@ -94,6 +94,9 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/add_layer_norm_quant/op_host/add_layer_norm_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_layer_norm_quant/op_host/config/ascend950/
                 - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/arch35/
+                - ops/ops-nn/norm/quantize_add_layer_norm/op_host/quantize_add_layer_norm_tiling_arch35.cpp
+                - ops/ops-nn/norm/quantize_add_layer_norm/op_host/config/ascend950/
+                - ops/ops-nn/norm/quantize_add_layer_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/add_rms_norm/op_host/add_rms_norm_tiling_arch35.h
                 - ops/ops-nn/norm/add_rms_norm/op_kernel/arch35/
                 - ops/ops-nn/common/src/framework/unique_onnx_plugin.cpp

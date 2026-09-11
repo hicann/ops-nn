@@ -13,8 +13,10 @@
  * \brief
  */
 #include "quantize_add_layer_norm_tiling.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 static constexpr int64_t UB_RESERVED_BYTE = 256;
 static constexpr int64_t BLOCK_SIZE = 32;
@@ -122,9 +124,43 @@ static bool GetAndSetAttrs(gert::TilingContext* context, int64_t& qdtype, int64_
     return true;
 }
 
+static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegbase)
+{
+    auto platformInfo = context->GetPlatformInfo();
+    if (platformInfo != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+        auto npuArchType = ascendcPlatform.GetCurNpuArch();
+        useRegbase = (IsRegbaseSocVersion(context) || npuArchType == NpuArch::DAV_5102);
+    } else {
+        auto compileInfo = reinterpret_cast<const QuantizeAddLayerNormCompileInfo*>(context->GetCompileInfo());
+        OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+        useRegbase = compileInfo->isRegbase;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus Tiling4QuantizeAddLayerNormMembase(gert::TilingContext* context);
+
 static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
 {
-    OP_LOGD("QuantizeAddLayerNorm", "Enter QuantizeAddLayerNorm tiling");
+    OP_CHECK_IF(nullptr == context, OP_LOGE("QuantizeAddLayerNorm", "TilingContext is NULL, failed"),
+                return ge::GRAPH_FAILED);
+    bool useRegbase = false;
+    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
+                return ge::GRAPH_FAILED);
+    if (useRegbase) {
+        OP_LOGW(context, "QuantizeAddLayerNorm Regbase tiling start");
+        QuantizeAddLayerNormRegbaseTiling regTiling(context);
+        OP_CHECK_IF(!(regTiling.DoTiling()), OP_LOGE(context, "Regbase tiling failed."), return ge::GRAPH_FAILED);
+        OP_LOGW(context, "QuantizeAddLayerNorm Regbase tiling success");
+        return ge::GRAPH_SUCCESS;
+    }
+    return Tiling4QuantizeAddLayerNormMembase(context);
+}
+
+static ge::graphStatus Tiling4QuantizeAddLayerNormMembase(gert::TilingContext* context)
+{
+    OP_LOGD("QuantizeAddLayerNorm", "Enter QuantizeAddLayerNorm Membase tiling");
 
     QuantizeAddLayerNormTilingData tiling;
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -195,11 +231,26 @@ static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4QuantizeAddLayerNorm(gert::TilingParseContext* context)
 {
-    OP_LOGD(context, "Enter TilingPrepare4QuantizeAddLayerNorm ");
+    OP_LOGW(context, "TilingPrepare4QuantizeAddLayerNorm start");
+    auto compileInfo = context->GetCompiledInfo<QuantizeAddLayerNormCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
+    compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfo->isRegbase = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
+    uint64_t ubSizePlatform;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
+    compileInfo->ubSize_ = ubSizePlatform;
+    compileInfo->vecRegSize_ = Ops::Base::GetVRegSize(context);
+    compileInfo->blockSize_ = Ops::Base::GetUbBlockSize(context);
+    OP_LOGW(context, "aivCoreNum %u, ubSize %lu, blockSize %u, vecRegSize %u, sysWorkspaceSize %u, isRegbase %d",
+            compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
+            compileInfo->sysWorkspaceSize_, compileInfo->isRegbase);
     return ge::GRAPH_SUCCESS;
 }
-
-struct QuantizeAddLayerNormCompileInfo {};
 
 IMPL_OP_OPTILING(QuantizeAddLayerNorm)
     .Tiling(Tiling4QuantizeAddLayerNorm)
