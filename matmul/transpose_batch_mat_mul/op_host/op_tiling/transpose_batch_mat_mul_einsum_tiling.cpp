@@ -142,9 +142,15 @@ ge::graphStatus TransposeBatchMatMulEinsumTiling::DoTiling()
     matMulInfo_.isInt8 = isQuantBatchMatmulV3_;
     matMulInfo_.isQuantBatchMatmulV3 = isQuantBatchMatmulV3_;
     GetHardwareInfo();
-    (void)GetMatMulInfo();
+    OP_TILING_CHECK(!GetMatMulInfo(), CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "GetMatMulInfo failed."),
+                    return ge::GRAPH_FAILED);
     (void)GetTilingKey();
     (void)GetMatMulTilingData();
+    // QuantBatchMatmulV3 only reuses the split; its own PostTiling writes tiling key 13.
+    if (isQuantBatchMatmulV3_) {
+        PrintTiling();
+        return ge::GRAPH_SUCCESS;
+    }
     ge::graphStatus ret = PostTiling();
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
@@ -190,17 +196,32 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
         matMulInfo_.k = static_cast<uint32_t>(inputAStorageShape[idx]);
         matMulInfo_.n = static_cast<uint32_t>(outputCStorageShape[idx]);
     }
-    OP_TILING_CHECK((matMulInfo_.formatA != ge::Format::FORMAT_ND || matMulInfo_.formatB != ge::Format::FORMAT_ND ||
-                     matMulInfo_.formatC != ge::Format::FORMAT_ND),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unsupported format, only support ND"),
-                    return false);
-
     matMulInfo_.dtypeA = context_->GetInputDesc(indexA)->GetDataType();
     matMulInfo_.dtypeB = context_->GetInputDesc(indexB)->GetDataType();
     matMulInfo_.dtypeC = context_->GetOutputDesc(idxC)->GetDataType();
 
     auto attrs = context_->GetAttrs();
+    OP_TILING_CHECK(attrs == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "attrs is null."), return false);
+
+    if (isQuantBatchMatmulV3_) {
+        // QBmm attrs: [0] dtype, [1] transpose_x1, [2] transpose_x2. Not TBMM perm lists.
+        constexpr size_t INDEX_ATTR_TRANS_A = 1;
+        constexpr size_t INDEX_ATTR_TRANS_B = 2;
+        auto transposeX1Ptr = attrs->GetAttrPointer<bool>(INDEX_ATTR_TRANS_A);
+        auto transposeX2Ptr = attrs->GetAttrPointer<bool>(INDEX_ATTR_TRANS_B);
+        matMulInfo_.transA = (transposeX1Ptr != nullptr && *transposeX1Ptr) ? 1UL : 0UL;
+        matMulInfo_.transB = (transposeX2Ptr != nullptr && *transposeX2Ptr) ? 1UL : 0UL;
+        return true;
+    }
+
+    OP_TILING_CHECK((matMulInfo_.formatA != ge::Format::FORMAT_ND || matMulInfo_.formatB != ge::Format::FORMAT_ND ||
+                     matMulInfo_.formatC != ge::Format::FORMAT_ND),
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unsupported format, only support ND"),
+                    return false);
+
     bPermList_ = attrs->GetAttrPointer<gert::ContinuousVector>(1);
+    OP_TILING_CHECK((bPermList_ == nullptr || bPermList_->GetData() == nullptr),
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "perm_x2 is null."), return false);
 
     const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(bPermList_->GetData());
     // 2 是 permList 的字典序, 2 -> [1,0,2]
@@ -211,6 +232,9 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
 
 bool TransposeBatchMatMulEinsumTiling::GetTilingKey()
 {
+    if (isQuantBatchMatmulV3_) {
+        return true;
+    }
     uint64_t batchSplitMode = 0;
     uint64_t ppMatmulMode = 1;
     uint64_t tilingKey = GET_TPL_TILING_KEY(batchSplitMode, ppMatmulMode, matMulInfo_.transA, matMulInfo_.transB);

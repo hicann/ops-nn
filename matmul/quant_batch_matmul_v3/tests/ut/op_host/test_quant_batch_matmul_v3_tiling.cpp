@@ -87,6 +87,10 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                              int64_t aicNum = -1, int64_t aivNum = -1)
 {
     map<string, string> soc_version_infos = {{"SoC_version", socVersion}, {"Short_SoC_version", socVersion}};
+    // PlatformAscendC::GetSocVersion matches Short_SoC_version "Ascend310P", not "Ascend310P3".
+    if (socVersion == "Ascend310P3") {
+        soc_version_infos["Short_SoC_version"] = "Ascend310P";
+    }
     map<string, string> soc2Arch = {
         {"Ascend910B2", "2201"}, {"Ascend910B4", "2201"}, {"Ascend310P3", "2002"},
         {"Ascend950", "3510"},   {"MC62CM12AA", "5102"},
@@ -840,6 +844,96 @@ TEST(QuantBatchMatmulV3TilingCsv, ShouldLoadValidCases)
         }
         EXPECT_FALSE(loadResult.params.empty()) << "socVersion is: " << socVersion;
     }
+}
+
+static void RunQbmmV3Tiling310P(bool x1Nz, bool x2Nz, bool yNz, ge::graphStatus* tilingRet, uint64_t* tilingKey)
+{
+    constexpr int64_t kM = 1024;
+    constexpr int64_t kK = 4096;
+    constexpr int64_t kN = 1024;
+    gert::StorageShape x1Shape;
+    gert::StorageShape x2Shape;
+    gert::StorageShape scaleShape;
+    gert::StorageShape biasShape;
+    gert::StorageShape outputShape;
+    x1Shape.MutableOriginShape() = gert::Shape({kM, kK});
+    x2Shape.MutableOriginShape() = gert::Shape({kN, kK}); // transB=true
+    outputShape.MutableOriginShape() = gert::Shape({kM, kN});
+    scaleShape.MutableStorageShape() = gert::Shape({kN});
+    biasShape.MutableStorageShape() = gert::Shape({kN});
+    scaleShape.MutableOriginShape() = scaleShape.MutableStorageShape();
+    biasShape.MutableOriginShape() = biasShape.MutableStorageShape();
+    x1Shape.MutableStorageShape() = x1Nz ? TransNd2Nz(x1Shape.MutableOriginShape()) : x1Shape.MutableOriginShape();
+    x2Shape.MutableStorageShape() = x2Nz ? TransNd2Nz(x2Shape.MutableOriginShape()) : x2Shape.MutableOriginShape();
+    outputShape.MutableStorageShape() = yNz ? TransNd2Nz(outputShape.MutableOriginShape()) :
+                                              outputShape.MutableOriginShape();
+
+    QuantBatchMatmulV3CompileInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    std::string opType("QuantBatchMatmulV3");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(rawTilingData, nullptr);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, &scaleShape, nullptr, &biasShape, nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_ND, x1Nz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, x2Nz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, yNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(ge::DT_FLOAT16)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
+
+    string compileInfoStr;
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    InitPlatformInfo("Ascend310P3", tilingContext, compileInfoStr);
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_NE(tilingParseFunc, nullptr);
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+    *tilingRet = tilingFunc(tilingContext);
+    *tilingKey = tilingContext->GetTilingKey();
+}
+
+TEST(QuantBatchMatmulV3Tiling310P, GraphNdX1FallsBackToTbeWithoutCrash)
+{
+    ge::graphStatus tilingRet = ge::GRAPH_FAILED;
+    uint64_t tilingKey = 0;
+    RunQbmmV3Tiling310P(false, true, false, &tilingRet, &tilingKey);
+    EXPECT_EQ(tilingRet, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingKey, 1UL); // TBE BmmDequant
+}
+
+TEST(QuantBatchMatmulV3Tiling310P, NzInputsUsePpMatmulWithoutCrash)
+{
+    ge::graphStatus tilingRet = ge::GRAPH_FAILED;
+    uint64_t tilingKey = 0;
+    RunQbmmV3Tiling310P(true, true, true, &tilingRet, &tilingKey);
+    EXPECT_EQ(tilingRet, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingKey, 13UL); // PpMatmulInt8
 }
 
 static BaseBlockRes ComputeStreamKBaseBlock(bool isMxPerGroup, bool transA, bool transB, ge::DataType aDtype,

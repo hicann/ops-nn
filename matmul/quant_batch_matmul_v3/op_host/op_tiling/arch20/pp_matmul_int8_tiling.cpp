@@ -14,6 +14,7 @@
  */
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "op_cache_tiling.h"
+#include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "error_util.h"
 #include "pp_matmul_int8_tiling.h"
@@ -26,6 +27,17 @@ constexpr uint64_t KERNEL_TEMPLATE_TYPE_PPMATMUL = 3;
 constexpr uint64_t PPMATMUL_PRIORITY_M = 1024;
 constexpr uint64_t PPMATMUL_WORKSPACE_SIZE = 24 * 1024 * 1024;
 constexpr uint64_t NO_BATCH_DIM_SUM = 2;
+constexpr size_t INDEX_ATTR_DTYPE = 0;
+constexpr size_t INDEX_ATTR_TRANS_A = 1;
+constexpr size_t INDEX_ATTR_TRANS_B = 2;
+
+ge::Format GetPrimaryStorageFormat(const gert::CompileTimeTensorDesc* desc)
+{
+    if (desc == nullptr) {
+        return ge::FORMAT_RESERVED;
+    }
+    return static_cast<ge::Format>(ge::GetPrimaryFormat(desc->GetStorageFormat()));
+}
 } // namespace
 
 namespace optiling {
@@ -56,31 +68,59 @@ ge::graphStatus PpMatmulInt8Tiling::GetShapeAttrsInfo()
 
 bool PpMatmulInt8Tiling::IsCapable()
 {
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    auto inputAShape = context_->GetInputShape(0)->GetOriginShape();
+    const char* opName = context_->GetNodeName();
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_TILING_CHECK(platformInfo == nullptr, OP_LOGI(opName, "platformInfo is null."), return false);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    if (ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::ASCEND310P) {
+        return false;
+    }
+
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    auto yDesc = context_->GetOutputDesc(0);
+    auto x1ShapePtr = context_->GetInputShape(GetX1Idx());
+    auto x2ShapePtr = context_->GetInputShape(GetX2Idx());
+    OP_TILING_CHECK(
+        (x1Desc == nullptr || x2Desc == nullptr || yDesc == nullptr || x1ShapePtr == nullptr || x2ShapePtr == nullptr),
+        OP_LOGI(opName, "Input/output desc or shape is null."), return false);
+
+    // Kernel always loads/stores NZ. ACLNN inserts TransData on x1/y; graph mode usually does not.
+    OP_TILING_CHECK((GetPrimaryStorageFormat(x1Desc) != ge::FORMAT_FRACTAL_NZ ||
+                     GetPrimaryStorageFormat(x2Desc) != ge::FORMAT_FRACTAL_NZ ||
+                     GetPrimaryStorageFormat(yDesc) != ge::FORMAT_FRACTAL_NZ),
+                    OP_LOGI(opName, "PpMatmul only supports NZ x1/x2/y, fallback to TBE."), return false);
+    OP_TILING_CHECK((x1Desc->GetDataType() != ge::DT_INT8 || x2Desc->GetDataType() != ge::DT_INT8 ||
+                     yDesc->GetDataType() != ge::DT_FLOAT16),
+                    OP_LOGI(opName, "PpMatmul only supports int8 x int8 -> float16, fallback to TBE."), return false);
+    OP_TILING_CHECK(context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
+                    OP_LOGI(opName, "PpMatmul does not support offset, fallback to TBE."), return false);
+
+    const auto& inputAShape = x1ShapePtr->GetOriginShape();
+    const auto& inputBShape = x2ShapePtr->GetOriginShape();
+    OP_TILING_CHECK((inputAShape.GetDimNum() < NO_BATCH_DIM_SUM || inputBShape.GetDimNum() < NO_BATCH_DIM_SUM),
+                    OP_LOGI(opName, "x1/x2 origin shape rank is invalid."), return false);
     uint32_t M = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
     uint32_t K = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[1] : inputAShape[2];
-    auto inputBShape = context_->GetInputShape(1)->GetOriginShape();
-    uint32_t N = inputBShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
-    OP_TILING_CHECK((K == 1 || N == 1),
-                    OP_LOGI(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."), return false);
+    // IsCapable requires transB=true, so x2 origin is [N, K] or [B, N, K].
+    uint32_t N = inputBShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputBShape[0] : inputBShape[1];
+    OP_TILING_CHECK((K == 1 || N == 1), OP_LOGI(opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."),
+                    return false);
+
     auto biasShape = GetBiasShape(GetBiasIdx());
     auto attrs = context_->GetAttrs();
-    if (attrs) {
-        size_t idx = 0;
-        auto dtypePtr = attrs->GetAttrPointer<int64_t>(idx++);
-        OP_TILING_CHECK(!dtypePtr,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "There should be at least the required dtype attr."),
-                        return false);
-        auto transposeX1Ptr = attrs->GetAttrPointer<bool>(idx++);
-        auto transposeX2Ptr = attrs->GetAttrPointer<bool>(idx++);
-        bool transA = transposeX1Ptr ? *transposeX1Ptr : false;
-        bool transB = transposeX2Ptr ? *transposeX2Ptr : false;
-        if (socVersion == platform_ascendc::SocVersion::ASCEND310P && M >= PPMATMUL_PRIORITY_M &&
-            biasShape != nullptr && *dtypePtr != ge::DT_BF16 && !transA && transB) {
-            return true;
-        }
+    if (attrs == nullptr || biasShape == nullptr || M < PPMATMUL_PRIORITY_M) {
+        return false;
+    }
+    auto dtypePtr = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DTYPE);
+    OP_TILING_CHECK(!dtypePtr, CUBE_INNER_ERR_REPORT(opName, "There should be at least the required dtype attr."),
+                    return false);
+    auto transposeX1Ptr = attrs->GetAttrPointer<bool>(INDEX_ATTR_TRANS_A);
+    auto transposeX2Ptr = attrs->GetAttrPointer<bool>(INDEX_ATTR_TRANS_B);
+    bool transA = transposeX1Ptr ? *transposeX1Ptr : false;
+    bool transB = transposeX2Ptr ? *transposeX2Ptr : false;
+    if (*dtypePtr != ge::DT_BF16 && !transA && transB) {
+        return true;
     }
     return false;
 }
@@ -88,7 +128,9 @@ bool PpMatmulInt8Tiling::IsCapable()
 ge::graphStatus PpMatmulInt8Tiling::DoOpTiling()
 {
     optiling::transpose_batch_mat_mul::TransposeBatchMatMulEinsumTiling tbmmEinsumTiling(context_, true);
-    tbmmEinsumTiling.DoTiling();
+    ge::graphStatus ret = tbmmEinsumTiling.DoTiling();
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "PpMatmulInt8 DoTiling failed."), return ret);
     ppMatmulDefaultTilingData_ = tbmmEinsumTiling.ppMatmulDefaultTilingData_;
     return ge::GRAPH_SUCCESS;
 }
