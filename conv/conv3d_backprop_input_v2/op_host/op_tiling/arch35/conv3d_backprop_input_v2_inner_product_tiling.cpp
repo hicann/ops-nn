@@ -1484,19 +1484,35 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseKForSplitK(L0TilingParams& l0Params
     uint32_t baseM = l0Params.baseM;
     uint32_t baseN = l0Params.baseN;
     uint32_t baseK = l0Params.baseK;
+    uint32_t l0aMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
+    uint32_t l0bMaxNum = platformInfo_.l0_ab_size / l0Params.bl0Pbuffer / dtypeByteL0b_;
+    uint32_t maxBaseKForMinBlock = std::min(l0aMaxNum / tilingRunInfo_.m0, l0bMaxNum / tilingRunInfo_.n0);
 
     if (baseK > tilingRunInfo_.kValueSegment) {
         // kValueSegment是k0对齐的
         baseK = tilingRunInfo_.kValueSegment;
     } else if (l0Params.baseK > tilingRunInfo_.lenHkWkC0 && l0Params.baseK % tilingRunInfo_.lenHkWkC0 != 0) {
-        // 对于只切Cout需要baseK是hkWkK0的倍数，直接对齐到最近的大小
-        baseK = Ops::Base::CeilAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+        // 对于只切Cout需要baseK是hkWkK0的倍数。优先向上对齐；若越界则下调。
+        uint32_t alignedUpBaseK = Ops::Base::CeilAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+        if (alignedUpBaseK <= maxBaseKForMinBlock) {
+            baseK = alignedUpBaseK;
+        } else {
+            baseK = Ops::Base::FloorAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+        }
     }
     // 确保baseK不小于k0
     baseK = std::max(baseK, tilingRunInfo_.k0);
 
     // 重新调整baseM/baseN大小
     AdjustBaseMNCommon(l0Params, tilingRunInfo, baseM, baseN, baseK);
+
+    // 重新校验M,N大小
+    uint32_t maxBaseMByL0a = std::max(l0aMaxNum / std::max(baseK, ONE_U32) / tilingRunInfo_.m0, ONE_U32) *
+                             tilingRunInfo_.m0;
+    uint32_t maxBaseNByL0b = std::max(l0bMaxNum / std::max(baseK, ONE_U32) / tilingRunInfo_.n0, ONE_U32) *
+                             tilingRunInfo_.n0;
+    baseM = std::min(baseM, maxBaseMByL0a);
+    baseN = std::min(baseN, maxBaseNByL0b);
 
     l0Params.baseM = baseM;
     l0Params.baseN = baseN;
