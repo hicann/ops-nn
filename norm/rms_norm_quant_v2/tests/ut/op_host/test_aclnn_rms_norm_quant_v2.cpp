@@ -25,6 +25,32 @@ protected:
     static void SetUpTestCase() { cout << "l2RmsNormQuantV2Test SetUp" << endl; }
 
     static void TearDownTestCase() { cout << "l2RmsNormQuantV2Test TearDown" << endl; }
+
+    aclnnStatus RunEmptyTensorCase(size_t emptyTensorIndex, op::SocVersion socVersion,
+                                   bool keepYShapeAlignedWithX = false)
+    {
+        op::SocVersionManager versionManager(socVersion);
+        const vector<int64_t> xShape = emptyTensorIndex == 0 ? vector<int64_t>{0, 64} : vector<int64_t>{8, 64};
+        const vector<int64_t> gammaShape = emptyTensorIndex == 1 ? vector<int64_t>{0} : vector<int64_t>{64};
+        const vector<int64_t> betaShape = emptyTensorIndex == 2 ? vector<int64_t>{0} : vector<int64_t>{64};
+        const vector<int64_t> scaleShape = emptyTensorIndex == 3 ? vector<int64_t>{0} : vector<int64_t>{1};
+        const vector<int64_t> offsetShape = emptyTensorIndex == 4 ? vector<int64_t>{0} : vector<int64_t>{1};
+        const vector<int64_t> yShape = emptyTensorIndex == 5 ?
+                                           vector<int64_t>{0, 64} :
+                                           (keepYShapeAlignedWithX ? xShape : vector<int64_t>{8, 64});
+
+        auto xDesc = TensorDesc(xShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto gammaDesc = TensorDesc(gammaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto betaDesc = TensorDesc(betaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto scaleDesc = TensorDesc(scaleShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto offsetDesc = TensorDesc(offsetShape, ACL_INT8, ACL_FORMAT_ND);
+        auto yDesc = TensorDesc(yShape, ACL_INT8, ACL_FORMAT_ND);
+
+        auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offsetDesc, 1e-5),
+                            OUTPUT(yDesc));
+        uint64_t workspaceSize = 0;
+        return ut.TestGetWorkspaceSize(&workspaceSize);
+    }
 };
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_001)
@@ -165,4 +191,19 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_004)
     uint64_t workSpace = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workSpace);
     EXPECT_NE(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2RmsNormQuantV2Test, ascend950_empty_tensor_returns_param_invalid)
+{
+    constexpr size_t tensorCount = 6;
+    for (size_t emptyTensorIndex = 0; emptyTensorIndex < tensorCount; ++emptyTensorIndex) {
+        SCOPED_TRACE("empty tensor index: " + std::to_string(emptyTensorIndex));
+        EXPECT_EQ(RunEmptyTensorCase(emptyTensorIndex, op::SocVersion::ASCEND950), ACLNN_ERR_PARAM_INVALID);
+    }
+}
+
+TEST_F(l2RmsNormQuantV2Test, non_regbase_empty_tensor_keeps_legacy_behavior)
+{
+    EXPECT_EQ(RunEmptyTensorCase(0, op::SocVersion::ASCEND910B, true), ACLNN_SUCCESS);
+    EXPECT_EQ(RunEmptyTensorCase(0, op::SocVersion::ASCEND910_93, true), ACLNN_SUCCESS);
 }

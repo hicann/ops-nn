@@ -56,6 +56,25 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTe
     return true;
 }
 
+static bool CheckTensorNotEmpty(const aclTensor* tensor, const char* tensorName)
+{
+    if (tensor != nullptr && tensor->IsEmpty()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s tensor must not be empty on Ascend 950.", tensorName);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckNotEmpty(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* offset,
+                          const aclTensor* beta, const aclTensor* y, bool outputRstd, const aclTensor* rstd)
+{
+    if (!CheckTensorNotEmpty(x, "x") || !CheckTensorNotEmpty(gamma, "gamma") || !CheckTensorNotEmpty(scale, "scale") ||
+        !CheckTensorNotEmpty(offset, "offset") || !CheckTensorNotEmpty(beta, "beta") || !CheckTensorNotEmpty(y, "y")) {
+        return false;
+    }
+    return !outputRstd || CheckTensorNotEmpty(rstd, "rstd");
+}
+
 static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* y)
 {
     // gamma 维度校验：1~2维
@@ -91,10 +110,14 @@ static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const ac
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, aclTensor* y,
-                               bool outputRstd, aclTensor* rstd)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
+                               const aclTensor* offset, const aclTensor* beta, aclTensor* y, bool outputRstd,
+                               aclTensor* rstd)
 {
     CHECK_RET(CheckNotNull(x, gamma, scale, y, outputRstd, rstd), ACLNN_ERR_PARAM_NULLPTR);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(CheckNotEmpty(x, gamma, scale, offset, beta, y, outputRstd, rstd), ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(CheckShapeValid(x, gamma, scale, y), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
@@ -183,7 +206,7 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(const aclTensor* x, const aclTen
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 参数校验
-    auto paramRet = CheckParams(x, gamma, scale, y, outputRstd, rstd);
+    auto paramRet = CheckParams(x, gamma, scale, offset, beta, y, outputRstd, rstd);
     CHECK_RET(paramRet == ACLNN_SUCCESS, paramRet);
 
     // 从输出y的dtype推导yType，INT32表示实际输出为INT4

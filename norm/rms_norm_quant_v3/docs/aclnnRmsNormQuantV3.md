@@ -191,7 +191,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>rstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参x的shape前几维保持一致，前几维指x的维度减去1，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
+      <td><ul><li>当outputRstd为True时，不支持空Tensor，shape与入参x的shape前几维保持一致，前几维指x的维度减去1，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效，支持传入空指针或空Tensor占位。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>

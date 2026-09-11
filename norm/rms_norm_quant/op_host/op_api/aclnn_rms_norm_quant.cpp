@@ -76,6 +76,22 @@ static bool CheckNotNull(RmsNormQuantInputTensor& inputTensor, aclTensor* y)
     return true;
 }
 
+static bool CheckTensorNotEmpty(const aclTensor* tensor, const char* tensorName)
+{
+    if (tensor != nullptr && tensor->IsEmpty()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s tensor must not be empty on Ascend 950.", tensorName);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckNotEmpty(const RmsNormQuantInputTensor& inputTensor, const aclTensor* y)
+{
+    return CheckTensorNotEmpty(inputTensor.x, "x") && CheckTensorNotEmpty(inputTensor.gamma, "gamma") &&
+           CheckTensorNotEmpty(inputTensor.beta, "beta") && CheckTensorNotEmpty(inputTensor.scale, "scale") &&
+           CheckTensorNotEmpty(inputTensor.offset, "offset") && CheckTensorNotEmpty(y, "y");
+}
+
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -310,6 +326,11 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 参数检查
     RmsNormQuantInputTensor inputTensorOri = {x, gamma, beta, scale, offset};
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        // Empty tensors must be rejected before the 2D gamma/beta preprocessing so invalid user input is not
+        // reported as an internal reshape/contiguous failure.
+        CHECK_RET(CheckNotEmpty(inputTensorOri, y), ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(PreDealData(inputTensorOri, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     auto ret = CheckParams(inputTensorOri, y);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
