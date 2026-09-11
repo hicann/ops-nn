@@ -35,15 +35,6 @@ NCHW_FORMAT = "NCHW"
 FP32_STR = "float32"
 
 
-def due_fp16_overflow(data):
-    """Overflow interception for float16
-    Clips values to the finite range of float16: [-65504, 65504]
-    """
-    data = np.maximum(data, -65504)
-    data = np.minimum(data, 65504)
-    return data
-
-
 def simulate_hf32_precision(data, short_soc_version=None):
     """
     Simulate HF32 (Half Float 32) precision.
@@ -219,22 +210,18 @@ def _process_conv2d_padding(
 
 def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
     dtype_map = {
-        "float16": (np.float16, True),
-        "float32": (np.float32, False),
-        "bfloat16": ("ml_dtypes.bfloat16", True),
-        "hifloat8": ("en_dtypes.hifloat8", False),
-        "float8_e4m3fn": ("ml_dtypes.float8_e4m3fn", False),
-        "int8": (np.int8, False),
-        "int32": (np.int32, False),
+        "float16": np.float16,
+        "float32": np.float32,
+        "bfloat16": "ml_dtypes.bfloat16",
+        "hifloat8": "en_dtypes.hifloat8",
+        "float8_e4m3fn": "ml_dtypes.float8_e4m3fn",
+        "int8": np.int8,
+        "int32": np.int32,
     }
 
-    dtype_info = dtype_map.get(output_dtype)
-    if dtype_info is None:
+    dtype_ref = dtype_map.get(output_dtype)
+    if dtype_ref is None:
         return out.astype(np.float32)
-
-    dtype_ref, need_overflow = dtype_info
-    if need_overflow:
-        out = due_fp16_overflow(out)
 
     if isinstance(dtype_ref, str):
         module_name, dtype_name = dtype_ref.split(".")

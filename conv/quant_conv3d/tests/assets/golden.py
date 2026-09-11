@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
@@ -29,26 +29,11 @@ Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int
 
 import numpy as np
 
-__golden__ = {
-    "kernel": {
-        "quant_conv3d": "quant_conv3d_golden"
-    }
-}
+__golden__ = {"kernel": {"quant_conv3d": "quant_conv3d_golden"}}
 
 NCDHW_FORMAT = "NCDHW"
 NDHWC_FORMAT = "NDHWC"
 FP32_STR = "float32"
-
-
-def due_fp16_overflow(data):
-    """Overflow interception for float16
-    Clips values to the finite range of float16: [-65504, 65504]
-    """
-    # 65504 is the maximum finite value for float16 (FP16)
-    # -65504 is the minimum finite value for float16 (FP16)
-    data = np.maximum(data, -65504)
-    data = np.minimum(data, 65504)
-    return data
 
 
 def simulate_hf32_precision(data, short_soc_version=None):
@@ -71,7 +56,7 @@ def simulate_hf32_precision(data, short_soc_version=None):
 
 def is_ascend950(short_soc_version):
     """Check if the target is Ascend 950PR/950DT"""
-    return (short_soc_version == "Ascend950")
+    return short_soc_version == "Ascend950"
 
 
 def process_formats(x, filter, input_formats):
@@ -85,13 +70,13 @@ def process_formats(x, filter, input_formats):
     - when x is NDHWC, filter is DHWCN
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
-    
+
     if input_data_format == NDHWC_FORMAT:
         x = x.transpose(0, 4, 1, 2, 3)
-    
+
     if input_filter_format == "DHWCN":
         filter = filter.transpose(4, 3, 0, 1, 2)
-    
+
     return x, filter
 
 
@@ -108,36 +93,36 @@ def process_output_format(out, output_format, input_format):
         out = out.transpose((0, 2, 3, 4, 1))
     elif output_format == NCDHW_FORMAT and input_format == NDHWC_FORMAT:
         out = out.transpose((0, 4, 1, 2, 3))
-    
+
     return out
 
 
 def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
     dtype_map = {
-        "float16": (np.float16, True),
-        "float32": (np.float32, False),
-        "bfloat16": ("ml_dtypes.bfloat16", True),
-        "hifloat8": ("en_dtypes.hifloat8", False),
-        "float8_e4m3fn": ("ml_dtypes.float8_e4m3fn", False),
-        "int8": (np.int8, False),
-        "int32": (np.int32, False),
+        "float16": np.float16,
+        "float32": np.float32,
+        "bfloat16": "ml_dtypes.bfloat16",
+        "hifloat8": "en_dtypes.hifloat8",
+        "float8_e4m3fn": "ml_dtypes.float8_e4m3fn",
+        "int8": np.int8,
+        "int32": np.int32,
     }
 
-    dtype_info = dtype_map.get(output_dtype)
-    if dtype_info is None:
+    dtype_ref = dtype_map.get(output_dtype)
+    if dtype_ref is None:
         return out.astype(np.float32)
-
-    dtype_ref, need_overflow = dtype_info
-    if need_overflow:
-        out = due_fp16_overflow(out)
 
     if isinstance(dtype_ref, str):
         module_name, dtype_name = dtype_ref.split(".")
         try:
-            dtype_cls = getattr(__import__(module_name, fromlist=[dtype_name]), dtype_name)
+            dtype_cls = getattr(
+                __import__(module_name, fromlist=[dtype_name]), dtype_name
+            )
         except (ImportError, AttributeError):
-            raise RuntimeError(f"{module_name} is required for {output_dtype}. "
-                               f"Install: pip install {module_name}")
+            raise RuntimeError(
+                f"{module_name} is required for {output_dtype}. "
+                f"Install: pip install {module_name}"
+            )
         out = out.astype(dtype_cls)
     else:
         out = out.astype(dtype_ref)
@@ -180,8 +165,17 @@ def _parse_padding(pads):
         return val, val, val, val, val, val
 
 
-def _apply_pad_mode(pad_mode, input_shape, filter_shape, stride_d, stride_h, stride_w,
-                    dilation_d, dilation_h, dilation_w):
+def _apply_pad_mode(
+    pad_mode,
+    input_shape,
+    filter_shape,
+    stride_d,
+    stride_h,
+    stride_w,
+    dilation_d,
+    dilation_h,
+    dilation_w,
+):
     """
     Calculate padding based on pad_mode, aligned with C++ GetOriPadFromPadMode and ApplySamesPad logic.
 
@@ -255,8 +249,18 @@ def _apply_pad_mode(pad_mode, input_shape, filter_shape, stride_d, stride_h, str
     return pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right
 
 
-def _process_conv3d_padding(x_np, pads, pad_mode, filter_shape, stride_d, stride_h, stride_w,
-                            dilation_d, dilation_h, dilation_w):
+def _process_conv3d_padding(
+    x_np,
+    pads,
+    pad_mode,
+    filter_shape,
+    stride_d,
+    stride_h,
+    stride_w,
+    dilation_d,
+    dilation_h,
+    dilation_w,
+):
     """
     Process padding for conv3d operation.
 
@@ -278,13 +282,24 @@ def _process_conv3d_padding(x_np, pads, pad_mode, filter_shape, stride_d, stride
             - torch_pad_list: symmetric padding [d, h, w] for torch.conv3d
     """
     # Parse explicit padding into 6-element format
-    pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right = _parse_padding(pads)
+    pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right = _parse_padding(
+        pads
+    )
 
     # Apply pad_mode if not SPECIFIC
     if pad_mode.upper() != "SPECIFIC":
-        pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right = _apply_pad_mode(
-            pad_mode, x_np.shape, filter_shape, stride_d, stride_h, stride_w,
-            dilation_d, dilation_h, dilation_w
+        pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right = (
+            _apply_pad_mode(
+                pad_mode,
+                x_np.shape,
+                filter_shape,
+                stride_d,
+                stride_h,
+                stride_w,
+                dilation_d,
+                dilation_h,
+                dilation_w,
+            )
         )
 
     # Calculate symmetric padding (minimum of front/back, top/bottom, left/right)
@@ -320,45 +335,50 @@ def _process_conv3d_padding(x_np, pads, pad_mode, filter_shape, stride_d, stride
     return input_pad, torch_pad
 
 
-def quant_conv3d_golden(x, filter, scale, bias=None, offset=None,
-                        *,
-                        dtype: int,
-                        strides: list,
-                        pads: list = [0, 0, 0, 0, 0, 0],
-                        dilations: list = [1, 1, 1, 1, 1],
-                        groups: int = 1,
-                        data_format: str = NCDHW_FORMAT,
-                        offset_x: int = 0,
-                        round_mode: str = "rint",
-                        pad_mode: str = "SPECIFIC",
-                        **kwargs):
-    '''
+def quant_conv3d_golden(
+    x,
+    filter,
+    scale,
+    bias=None,
+    offset=None,
+    *,
+    dtype: int,
+    strides: list,
+    pads: list = [0, 0, 0, 0, 0, 0],
+    dilations: list = [1, 1, 1, 1, 1],
+    groups: int = 1,
+    data_format: str = NCDHW_FORMAT,
+    offset_x: int = 0,
+    round_mode: str = "rint",
+    pad_mode: str = "SPECIFIC",
+    **kwargs,
+):
+    """
     Kernel golden for quant_conv3d.
     All parameters follow @quant_conv3d_def.cpp without outputs.
     All input Tensors are numpy.ndarray.
     kwargs may contain: short_soc_version, input_ori_shapes, output_ori_shapes,
         input_formats, output_formats, input_ori_formats, output_ori_formats,
         output_dtypes.
-    '''
+    """
     import torch
-    import torch.nn.functional as F
 
     short_soc_version = kwargs.get("short_soc_version", "")
     input_formats = kwargs.get("input_formats", [NCDHW_FORMAT, NCDHW_FORMAT])
     input_format = input_formats[0]
     x_dtype_str = x.dtype.name
-    
+
     x_np, filter_np = process_formats(x, filter, input_formats)
-    
-    calc_dtype = np.float64 if x_dtype_str == 'float32' else np.float32
+
+    calc_dtype = np.float64 if x_dtype_str == "float32" else np.float32
     x_np = x_np.astype(calc_dtype)
     filter_np = filter_np.astype(calc_dtype)
-    
+
     if bias is not None:
         bias_np = bias.astype(calc_dtype)
     else:
         bias_np = None
-    
+
     if isinstance(strides, (list, tuple)):
         if len(strides) == 5:
             if input_format == NCDHW_FORMAT:
@@ -371,26 +391,42 @@ def quant_conv3d_golden(x, filter, scale, bias=None, offset=None,
             stride_d = stride_h = stride_w = strides[0]
     else:
         stride_d = stride_h = stride_w = int(strides)
-    
+
     if isinstance(dilations, (list, tuple)):
         if len(dilations) == 5:
-            dilation_d, dilation_h, dilation_w = dilations[2], dilations[3], dilations[4]
+            dilation_d, dilation_h, dilation_w = (
+                dilations[2],
+                dilations[3],
+                dilations[4],
+            )
         elif len(dilations) == 3:
-            dilation_d, dilation_h, dilation_w = dilations[0], dilations[1], dilations[2]
+            dilation_d, dilation_h, dilation_w = (
+                dilations[0],
+                dilations[1],
+                dilations[2],
+            )
         else:
             dilation_d = dilation_h = dilation_w = dilations[0]
     else:
         dilation_d = dilation_h = dilation_w = int(dilations)
-    
+
     output_dtypes = kwargs.get("output_dtypes", [FP32_STR])
     output_dtype = output_dtypes[0]
     output_formats = kwargs.get("output_formats", [NCDHW_FORMAT])
     output_format = output_formats[0]
-    
+
     # Process padding and prepare tensors for conv3d
     input_pad, pad_torch = _process_conv3d_padding(
-        x_np, pads, pad_mode, filter_np.shape, stride_d, stride_h, stride_w,
-        dilation_d, dilation_h, dilation_w
+        x_np,
+        pads,
+        pad_mode,
+        filter_np.shape,
+        stride_d,
+        stride_h,
+        stride_w,
+        dilation_d,
+        dilation_h,
+        dilation_w,
     )
     input_torch = torch.from_numpy(input_pad)
     weight_torch = torch.from_numpy(filter_np)
@@ -398,22 +434,28 @@ def quant_conv3d_golden(x, filter, scale, bias=None, offset=None,
 
     stridedhw = [stride_d, stride_h, stride_w]
     dilationdhw = [dilation_d, dilation_h, dilation_w]
-    
-    out = torch.nn.functional.conv3d(input_torch, 
-                                    weight_torch, 
-                                    bias_torch, 
-                                    stride=stridedhw, 
-                                    padding=pad_torch,
-                                    dilation=dilationdhw, 
-                                    groups=groups)
+
+    out = torch.nn.functional.conv3d(
+        input_torch,
+        weight_torch,
+        bias_torch,
+        stride=stridedhw,
+        padding=pad_torch,
+        dilation=dilationdhw,
+        groups=groups,
+    )
 
     scale_np = scale if isinstance(scale, np.ndarray) else np.array(scale)
-    scale_tensor = torch.from_numpy(scale_np.astype(np.uint32).view(np.float32).reshape(1, scale_np.shape[0], 1, 1, 1))
+    scale_tensor = torch.from_numpy(
+        scale_np.astype(np.uint32)
+        .view(np.float32)
+        .reshape(1, scale_np.shape[0], 1, 1, 1)
+    )
     out = torch.multiply(out, scale_tensor)
     out = out.numpy()
-    
+
     out = convert_output_dtype(out, output_dtype, short_soc_version=short_soc_version)
-    
+
     out = process_output_format(out, output_format, input_format)
-    
+
     return out

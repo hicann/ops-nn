@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
@@ -12,34 +12,39 @@
 
 import numpy as np
 
-__input__ = {
-    "kernel": {
-        "extend_conv2d": "extend_conv2d_input"
-    }
-}
+__input__ = {"kernel": {"extend_conv2d": "extend_conv2d_input"}}
 
 NCHW_FORMAT = "NCHW"
 
 
-def extend_conv2d_input(x, filter, bias=None, offset_w=None,
-                        scale0=None, relu_weight0=None, clip_value0=None,
-                        scale1=None, relu_weight1=None, clip_value1=None,
-                        *,
-                        strides, 
-                        pads :list=[0, 0, 0, 0], 
-                        dilations: list=[1, 1, 1, 1], 
-                        groups: int=1, 
-                        data_format: str=NCHW_FORMAT,  # attributes
-                        offset_x: int = 0, 
-                        round_mode: str = "rint", 
-                        pad_mode: str = "SPECIFIC",   
-                        enable_hf32: bool = False,  
-                        enable_relu0: bool = False, 
-                        enable_relu1: bool = False,  
-                        dual_output: bool = False, 
-                        dtype0: int = -1, 
-                        dtype1: int = -1, 
-                        **kwargs):
+def extend_conv2d_input(
+    x,
+    filter,
+    bias=None,
+    offset_w=None,
+    scale0=None,
+    relu_weight0=None,
+    clip_value0=None,
+    scale1=None,
+    relu_weight1=None,
+    clip_value1=None,
+    *,
+    strides,
+    pads: list = [0, 0, 0, 0],
+    dilations: list = [1, 1, 1, 1],
+    groups: int = 1,
+    data_format: str = NCHW_FORMAT,  # attributes
+    offset_x: int = 0,
+    round_mode: str = "rint",
+    pad_mode: str = "SPECIFIC",
+    enable_hf32: bool = False,
+    enable_relu0: bool = False,
+    enable_relu1: bool = False,
+    dual_output: bool = False,
+    dtype0: int = -1,
+    dtype1: int = -1,
+    **kwargs,
+):
     """
     Input function for extend_conv2d.
     All the parameters (names and order) follow @extend_conv2d_def.cpp without outputs.
@@ -76,9 +81,27 @@ def extend_conv2d_input(x, filter, bias=None, offset_w=None,
 
     if scale0 is not None:
         scale0_np = scale0 if isinstance(scale0, np.ndarray) else np.array(scale0)
-        scale0_input = np.bitwise_and(scale0_np.astype(np.float32).view(np.uint32), 0xffffe000).view(np.float32)
+        scale0_input = np.bitwise_and(
+            scale0_np.astype(np.float32).view(np.uint32), 0xFFFFE000
+        ).view(np.float32)
         scale0_input = scale0_input.view(np.uint32).astype(np.uint64)
 
-    return [x_input, filter_input, bias_input, offset_w_input, scale0_input,
-            relu_weight0_input, clip_value0_input, scale1_input,
-            relu_weight1_input, clip_value1_input]
+    if scale1 is not None:
+        scale1_np = scale1 if isinstance(scale1, np.ndarray) else np.array(scale1)
+        scale1_input = np.bitwise_and(
+            scale1_np.astype(np.float32).view(np.uint32), 0xFFFFE000
+        ).view(np.float32)
+        scale1_input = scale1_input.view(np.uint32).astype(np.uint64)
+
+    return [
+        x_input,
+        filter_input,
+        bias_input,
+        offset_w_input,
+        scale0_input,
+        relu_weight0_input,
+        clip_value0_input,
+        scale1_input,
+        relu_weight1_input,
+        clip_value1_input,
+    ]

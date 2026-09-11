@@ -1290,7 +1290,7 @@ public:
           offsetx(offsetxParam),
           roundMode(roundModeParam),
           output(outputParam),
-          executor(executorParam){};
+          executor(executorParam) {};
 
 protected:
     const aclTensor* input = nullptr;
@@ -1426,7 +1426,15 @@ public:
                 auto permPre = executor->AllocIntArray(inputDims.data(), inputDims.size());
                 CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
                 resConvOut = l0op::Transpose(quantConvOut, permPre, executor);
+                if (resConvOut == nullptr) {
+                    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "l0 func failed, op Transpose returned nullptr");
+                    return ACLNN_ERR_RUNTIME_ERROR;
+                }
                 resConvOut = l0op::ReFormat(resConvOut, op::Format::FORMAT_NCDHW);
+                if (resConvOut == nullptr) {
+                    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "l0 func failed, op ReFormat returned nullptr");
+                    return ACLNN_ERR_RUNTIME_ERROR;
+                }
             }
         }
         auto quantConv3dViewCopyRet = l0op::ViewCopy(resConvOut, output, executor);

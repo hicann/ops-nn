@@ -4,7 +4,7 @@
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
@@ -26,15 +26,10 @@ Format and DataType support (Ascend950 only):
 Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int32
 """
 
-from typing import Optional
 import numpy as np
 import torch
 
-__golden__ = {
-    "kernel": {
-        "extend_conv2d": "extend_conv2d_golden"
-    }
-}
+__golden__ = {"kernel": {"extend_conv2d": "extend_conv2d_golden"}}
 
 FP32_STR = "float32"
 NCHW_FORMAT = "NCHW"
@@ -69,13 +64,13 @@ def simulate_hf32_precision(data, short_soc_version=None):
 def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
     """
     Convert output array to target dtype with overflow handling.
-    
+
     Args:
         out: Output numpy array
         output_dtype: Target dtype - can be str, torch.dtype, int (torch_npu dtype code)
         enable_hf32: Apply HF32 precision simulation for float32
         short_soc_version: SOC version for HF32 precision
-    
+
     Returns:
         numpy array with target dtype
     """
@@ -94,13 +89,13 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
         258: "int8",
         283: "bfloat16",
         290: "hifloat8",
-        292: "float8_e4m3fn"
+        292: "float8_e4m3fn",
     }
 
     if isinstance(output_dtype, int):
         dtype_name = dtype_torch_npu_map.get(output_dtype, "float32")
     elif isinstance(output_dtype, torch.dtype):
-        dtype_name = str(output_dtype).split('.')[-1]
+        dtype_name = str(output_dtype).split(".")[-1]
     else:
         dtype_name = output_dtype
 
@@ -115,19 +110,20 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
     if isinstance(dtype_ref, str):
         module_name, dtype_cls_name = dtype_ref.split(".")
         try:
-            dtype_cls = getattr(__import__(module_name, fromlist=[dtype_cls_name]), dtype_cls_name)
+            dtype_cls = getattr(
+                __import__(module_name, fromlist=[dtype_cls_name]), dtype_cls_name
+            )
         except (ImportError, AttributeError):
-            raise RuntimeError(f"{module_name} is required for {output_dtype}. "
-                               f"Install: pip install {module_name}")
+            raise RuntimeError(
+                f"{module_name} is required for {output_dtype}. "
+                f"Install: pip install {module_name}"
+            )
         out = out.astype(dtype_cls)
     else:
         out = out.astype(dtype_ref)
 
     if dtype_name == FP32_STR and enable_hf32:
         out = simulate_hf32_precision(out, short_soc_version)
-
-    if is_npu_dtype:
-        out = out.view(np.uint8)
 
     return out
 
@@ -140,35 +136,35 @@ def is_ascend950(short_soc_version):
 def process_input_format(x, filter, input_formats):
     """
     Convert input tensors to NCHW format for computation.
-    
+
     Args:
         x: Input tensor (N, C, H, W) or (N, H, W, C)
         filter: Weight tensor (OutC, InC, kH, kW) or (kH, kW, InC, OutC)
         input_formats: [data_format, filter_format] e.g. ["NCHW", "NCHW"] or ["NHWC", "HWCN"]
-    
+
     Returns:
         (x_nchw, filter_nchw) tuple
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
-    
+
     if input_data_format == NHWC_FORMAT:
         x = x.transpose(0, 3, 1, 2)
-    
+
     if input_filter_format == "HWCN":
         filter = filter.transpose(3, 2, 0, 1)
-    
+
     return x, filter
 
 
 def process_output_format(out, output_format, input_format):
     """
     Convert output tensor to target format.
-    
+
     Args:
         out: Output tensor in computation format (NCHW)
         output_format: Target output format ("NCHW" or "NHWC")
         input_format: Original input format for reference
-    
+
     Returns:
         Output tensor in target format
     """
@@ -176,14 +172,16 @@ def process_output_format(out, output_format, input_format):
         out = out.transpose((0, 2, 3, 1))
     elif output_format == NCHW_FORMAT and input_format == NHWC_FORMAT:
         out = out.transpose((0, 3, 1, 2))
-    
+
     return out
 
 
-def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w):
+def get_ori_pad_from_pad_mode(
+    x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w
+):
     """
     Calculate padding values based on pad_mode.
-    
+
     Args:
         x_np: Input feature map (N, C, H, W)
         filter_np: Weight tensor (OutC, InC, kH, kW)
@@ -191,7 +189,7 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
         pad_mode: "SPECIFIC", "VALID", "SAME", "SAME_UPPER", "SAME_LOWER"
         stride_h, stride_w: Stride values
         dilation_h, dilation_w: Dilation values
-    
+
     Returns:
         (pad_top, pad_bottom, pad_left, pad_right)
     """
@@ -205,9 +203,19 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     if pad_mode_upper == "SPECIFIC":
         if isinstance(pads, (list, tuple)):
             if len(pads) == 4:
-                pad_top, pad_bottom, pad_left, pad_right = int(pads[0]), int(pads[1]), int(pads[2]), int(pads[3])
+                pad_top, pad_bottom, pad_left, pad_right = (
+                    int(pads[0]),
+                    int(pads[1]),
+                    int(pads[2]),
+                    int(pads[3]),
+                )
             elif len(pads) == 2:
-                pad_top, pad_bottom, pad_left, pad_right = int(pads[0]), int(pads[0]), int(pads[1]), int(pads[1])
+                pad_top, pad_bottom, pad_left, pad_right = (
+                    int(pads[0]),
+                    int(pads[0]),
+                    int(pads[1]),
+                    int(pads[1]),
+                )
             else:
                 pad_val = int(pads[0])
                 pad_top = pad_bottom = pad_left = pad_right = pad_val
@@ -217,8 +225,18 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     elif pad_mode_upper == "VALID":
         pad_top = pad_bottom = pad_left = pad_right = 0
     else:
-        pad_h = (conv_ceil_div(in_h, stride_h) - 1) * stride_h + dilation_h * (k_h - 1) - in_h + 1
-        pad_w = (conv_ceil_div(in_w, stride_w) - 1) * stride_w + dilation_w * (k_w - 1) - in_w + 1
+        pad_h = (
+            (conv_ceil_div(in_h, stride_h) - 1) * stride_h
+            + dilation_h * (k_h - 1)
+            - in_h
+            + 1
+        )
+        pad_w = (
+            (conv_ceil_div(in_w, stride_w) - 1) * stride_w
+            + dilation_w * (k_w - 1)
+            - in_w
+            + 1
+        )
         if pad_mode_upper == "SAME" or pad_mode_upper == "SAME_UPPER":
             if pad_mode_upper == "SAME":
                 pad_h = max(0, pad_h)
@@ -236,30 +254,39 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     return pad_top, pad_bottom, pad_left, pad_right
 
 
-def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
-                        scale0=None, relu_weight0=None, clip_value0=None,
-                        scale1=None, relu_weight1=None, clip_value1=None,
-                        *,
-                        strides, 
-                        pads: list = [0, 0, 0, 0], 
-                        dilations: list = [1, 1, 1, 1], 
-                        groups: int = 1, 
-                        data_format: str = "NCHW",
-                        offset_x: int = 0, 
-                        round_mode: str = "rint", 
-                        pad_mode: str = "SPECIFIC",   
-                        enable_hf32: bool = False,  
-                        enable_relu0: bool = False, 
-                        enable_relu1: bool = False,  
-                        dual_output: bool = False, 
-                        dtype0: int = -1, 
-                        dtype1: int = -1, 
-                        **kwargs):
+def extend_conv2d_golden(
+    x,
+    filter,
+    bias=None,
+    offset_w=None,
+    scale0=None,
+    relu_weight0=None,
+    clip_value0=None,
+    scale1=None,
+    relu_weight1=None,
+    clip_value1=None,
+    *,
+    strides,
+    pads: list = [0, 0, 0, 0],
+    dilations: list = [1, 1, 1, 1],
+    groups: int = 1,
+    data_format: str = "NCHW",
+    offset_x: int = 0,
+    round_mode: str = "rint",
+    pad_mode: str = "SPECIFIC",
+    enable_hf32: bool = False,
+    enable_relu0: bool = False,
+    enable_relu1: bool = False,
+    dual_output: bool = False,
+    dtype0: int = -1,
+    dtype1: int = -1,
+    **kwargs,
+):
     """
     Kernel golden for extend_conv2d.
-    
+
     Supports dual output mode with optional scale, relu, and clip operations.
-    
+
     Args:
         x: Input tensor (N, C, H, W)
         filter: Weight tensor (OutC, InC/groups, kH, kW)
@@ -281,7 +308,7 @@ def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
         dual_output: Return two outputs
         dtype0, dtype1: Output dtype codes
         **kwargs: Contains short_soc_version, input_formats, output_formats, etc.
-    
+
     Returns:
         (out0, out1) if dual_output=True, else (out, None)
     """
@@ -290,28 +317,28 @@ def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
     short_soc_version = kwargs.get("short_soc_version", "")
     if not is_ascend950(short_soc_version):
         raise ValueError("extend_conv2d only supports Ascend 950PR/950DT")
-    
+
     input_formats = kwargs.get("input_formats", [NCHW_FORMAT, NCHW_FORMAT])
-    x_dtype_str = x.dtype.name 
-    
+    x_dtype_str = x.dtype.name
+
     x_np, filter_np = process_input_format(x, filter, input_formats)
-    
+
     calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
     x_np = x_np.astype(calc_dtype)
     filter_np = filter_np.astype(calc_dtype)
-    
+
     bias_np = bias.astype(calc_dtype) if bias is not None else None
-    
+
     scale0_np = None
     if scale0 is not None:
         scale0_arr = scale0 if isinstance(scale0, np.ndarray) else np.array(scale0)
         scale0_np = scale0_arr.astype(np.uint32).view(np.float32)
-    
+
     scale1_np = None
     if scale1 is not None:
         scale1_arr = scale1 if isinstance(scale1, np.ndarray) else np.array(scale1)
         scale1_np = scale1_arr.astype(np.uint32).view(np.float32)
-    
+
     if isinstance(strides, (list, tuple)):
         if len(strides) == 4:
             stride_h, stride_w = strides[2], strides[3]
@@ -321,7 +348,7 @@ def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
             stride_h = stride_w = strides[0]
     else:
         stride_h = stride_w = int(strides)
-    
+
     if isinstance(dilations, (list, tuple)):
         if len(dilations) == 4:
             dilation_h, dilation_w = dilations[2], dilations[3]
@@ -331,19 +358,24 @@ def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
             dilation_h = dilation_w = dilations[0]
     else:
         dilation_h = dilation_w = int(dilations)
-    
+
     pad_top, pad_bottom, pad_left, pad_right = get_ori_pad_from_pad_mode(
         x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w
     )
-    
+
     input_torch = torch.from_numpy(x_np)
     weight_torch = torch.from_numpy(filter_np)
     bias_torch = torch.from_numpy(bias_np) if bias_np is not None else None
 
     if any(pad > 0 for pad in (pad_top, pad_bottom, pad_left, pad_right)):
         pad_value = float(offset_x) if offset_x != 0 else 0.0
-        input_torch = F.pad(input_torch, (pad_left, pad_right, pad_top, pad_bottom), "constant", pad_value)
-    
+        input_torch = F.pad(
+            input_torch,
+            (pad_left, pad_right, pad_top, pad_bottom),
+            "constant",
+            pad_value,
+        )
+
     out = torch.nn.functional.conv2d(
         input_torch,
         weight_torch,
@@ -353,55 +385,67 @@ def extend_conv2d_golden(x, filter, bias=None, offset_w=None,
         dilation=(dilation_h, dilation_w),
         groups=groups,
     )
-    
+
     if dual_output:
         out0 = out.clone()
         out1 = out.clone()
-        
+
         if scale0_np is not None:
-            scale0_tensor = torch.from_numpy(scale0_np.reshape(1, scale0_np.shape[0], 1, 1))
+            scale0_tensor = torch.from_numpy(
+                scale0_np.reshape(1, scale0_np.shape[0], 1, 1)
+            )
             out0 = torch.multiply(out, scale0_tensor).numpy()
         else:
             out0 = out0.numpy()
-        
+
         if scale1_np is not None:
-            scale1_tensor = torch.from_numpy(scale1_np.reshape(1, scale1_np.shape[0], 1, 1))
+            scale1_tensor = torch.from_numpy(
+                scale1_np.reshape(1, scale1_np.shape[0], 1, 1)
+            )
             out1 = torch.multiply(out, scale1_tensor).numpy()
         else:
             out1 = out1.numpy()
-        
+
         if enable_relu0:
             out0 = np.maximum(out0, 0)
-        
+
         if enable_relu1:
             out1 = np.maximum(out1, 0)
-        
+
         output_dtypes = kwargs.get("output_dtypes", [FP32_STR, FP32_STR])
         output_formats = kwargs.get("output_formats", [NCHW_FORMAT, NCHW_FORMAT])
         input_format = input_formats[0]
-        
-        out0 = convert_output_dtype(out0, output_dtypes[0], short_soc_version=short_soc_version)
-        out1 = convert_output_dtype(out1, output_dtypes[1], short_soc_version=short_soc_version)
-        
+
+        out0 = convert_output_dtype(
+            out0, output_dtypes[0], short_soc_version=short_soc_version
+        )
+        out1 = convert_output_dtype(
+            out1, output_dtypes[1], short_soc_version=short_soc_version
+        )
+
         out0 = process_output_format(out0, output_formats[0], input_format)
         out1 = process_output_format(out1, output_formats[1], input_format)
-        
+
         return out0, out1
     else:
         if scale0_np is not None:
-            scale0_tensor = torch.from_numpy(scale0_np.reshape(1, scale0_np.shape[0], 1, 1))
+            scale0_tensor = torch.from_numpy(
+                scale0_np.reshape(1, scale0_np.shape[0], 1, 1)
+            )
             out = torch.multiply(out, scale0_tensor).numpy()
         else:
             out = out.numpy()
 
         if enable_relu0:
             out = np.maximum(out, 0)
-        
+
         output_dtypes = kwargs.get("output_dtypes", [FP32_STR])
         output_formats = kwargs.get("output_formats", [NCHW_FORMAT])
         input_format = input_formats[0]
-        
-        out = convert_output_dtype(out, output_dtypes[0], short_soc_version=short_soc_version)
+
+        out = convert_output_dtype(
+            out, output_dtypes[0], short_soc_version=short_soc_version
+        )
         out = process_output_format(out, output_formats[0], input_format)
-        
+
         return out, None

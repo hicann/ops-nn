@@ -619,19 +619,33 @@ def aclnn_conv_depthwise2d_golden(
     """
     short_soc_version = kwargs.get("short_soc_version", None)
 
+    def _np_to_torch(t):
+        # hifloat8/bfloat16等扩展numpy dtype无法直接from_numpy, 先astype为float32
+        if isinstance(t, np.ndarray):
+            if t.dtype in (np.float32, np.float16):
+                return torch.from_numpy(t)
+            return torch.from_numpy(t.astype(np.float32))
+        return t
+
+    # 记录原始输入dtype(转torch/float32之前), 供cubeMathType精度模拟分支判断
     if isinstance(self, np.ndarray):
-        self = torch.from_numpy(self)
-    if isinstance(weight, np.ndarray):
-        weight = torch.from_numpy(weight)
-    if bias is not None and isinstance(bias, np.ndarray):
-        bias = torch.from_numpy(bias)
+        input_dtype_str = str(self.dtype)
+    elif isinstance(self, torch.Tensor):
+        input_dtype_str = str(self.dtype)
+    else:
+        input_dtype_str = ""
+    input_dtype_str = input_dtype_str.split(".")[-1]
+
+    self = _np_to_torch(self)
+    weight = _np_to_torch(weight)
+    if bias is not None:
+        bias = _np_to_torch(bias)
 
     self = to_float32(self)
     weight = to_float32(weight)
     if bias is not None:
         bias = to_float32(bias)
 
-    input_dtype_str = str(self.dtype).split(".")[-1]
     if input_dtype_str == "float32":
         if cubeMathType in [1, 3]:
             self_np = simulate_hf32_precision(
