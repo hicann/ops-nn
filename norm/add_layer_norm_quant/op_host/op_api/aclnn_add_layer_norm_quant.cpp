@@ -396,12 +396,13 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
                            zeroPoints2Optional, y1Out, y2Out, xOut, outScales1Out, outScales2Out, quantMode);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 支持空tensor
+    bool isDynQuant = IsDynamicQuant(quantMode);
+    bool regbaseEmptySkip = (isDynQuant && outScales1Out->IsEmpty()) || ((!isDynQuant) && x1->IsEmpty());
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty() || outScales1Out->IsEmpty() ||
                           outScales2Out->IsEmpty();
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((hasEmptyTensor && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) ||
-        (outScales1Out->IsEmpty() && Ops::NN::AclnnUtil::IsRegbase(curArch))) {
+        (regbaseEmptySkip && Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         OP_LOGW("Got empty tensor in aclnnAddLayerNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
