@@ -89,7 +89,19 @@ def __golden_scatter_min(*input_arrays, **kwargs):
     return [out]
 
 
-__golden__ = {"kernel": {"scatter_min": "__golden_scatter_min"}}
+def __golden_scatter_min_e2e(var, indices, updates, use_locking=None, **kwargs):
+    """e2e(TF 前端)通路 golden: 入参为框架张量, 还原为 numpy 后复用 kernel 档实现。"""
+
+    def _np(x):
+        return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+    return __golden_scatter_min(_np(var), _np(indices), _np(updates))
+
+
+__golden__ = {
+    "kernel": {"scatter_min": "__golden_scatter_min"},
+    "e2e": {"tf.compat.v1.scatter_min": "__golden_scatter_min_e2e"},
+}
 
 # ----------------------------------------------------------------------------
 # TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
@@ -313,8 +325,43 @@ class ScatterMinKernelSpec:
     tolerance = _TOL_KERNEL
 
 
+# e2e(TF 前端)通路判据: 与 kernel 腿同口径。不声明则回落默认的绝对容差判据,
+# 输出量级接近 dtype 上限时 1 ULP 即超限。
+_TOL_E2E = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "int32": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
+}
+
+
+class _TpE2eMin:
+    """e2e 三方腿适配: 该通路按框架 API 形参名下发, 与 def 注册名不同, 故另立适配类
+    按位置转调同一竞品类, 不改变竞品语义。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterMinCompose()(ref, indices, updates)
+
+
+class _TpE2eMinTf:
+    """同上, tf provider 腿。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterMinTfCompose()(ref, indices, updates)
+
+
+class ScatterMinE2eSpec:
+    """e2e 通路 spec: 三方腿与判据。"""
+
+    third_party = {"torch": _TpE2eMin, "tf": _TpE2eMinTf}
+    tolerance = _TOL_E2E
+
+
 __spec__ = {
     "scatter_min": "ScatterMinKernelSpec",
+    "tf.compat.v1.scatter_min": "ScatterMinE2eSpec",
     "aclnnScatterMin": "ScatterMinAclnnSpec",
 }
 

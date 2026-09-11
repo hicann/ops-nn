@@ -132,8 +132,18 @@ def __golden_foreach_addcmul_list(x1_list, x2_list, x3_list, scalars, **kwargs):
             # 标量落成 0 维张量: torch 类型提升里 0 维张量不抬 dim>0 张量的档,
             # 故数据 fp32 时结果仍 fp32,数据 fp64 时标量自动跟到 fp64。
             ts = torch.as_tensor(np.asarray(s, dtype=np.float64))
-            prod = torch._foreach_mul(torch._foreach_mul([tb], [tc]), ts)
-            out = torch._foreach_add([ta], prod)[0].numpy()
+            # 内核 op_kernel/arch35 的算法是: Mul 求积 -> Axpy(融合乘加, **单次舍入**)。
+            # golden 按同一算法实现: 积在计算精度下求出, 其后的 x1 + s*prod 用更宽精度
+            # 算出再一次性舍回计算精度, 与 Axpy 的单次舍入等价。
+            prod = torch._foreach_mul([tb], [tc])[0]
+            if ta.dtype == torch.float32:
+                out = (
+                    (ta.double() + ts.double() * prod.double())
+                    .to(torch.float32)
+                    .numpy()
+                )
+            else:
+                out = (ta + ts * prod).numpy()
             if target == "bfloat16":
                 y = out.astype(_bf16) if _bf16 is not None else out.astype(np.float32)
             else:
@@ -212,15 +222,12 @@ class _ForeachAddcmulListCompose:
         )
         a, b, c = _tp_list(x1), _tp_list(x2), _tp_list(x3)
         sc = _tp_scalars_t(st, a[0])
-        # 与 CPU golden 同口径: mul -> mul -> add **三步拼接**, 不用 addcmul 的
-        # 融合形式。融合是一次 FMA 舍入, 与 golden 的逐步舍入序列不是同一个算法,
-        # 两条腿会恒差 1 ULP, cross_check 的 mare 比值随之假红。
-        # sc 是一维 packed scalars(addcmul 的 scalars 形参要求如此), 但 _foreach_mul
-        # 只收 0 维 Tensor 或 Python 数值列表, 直接传会抛
-        # "scalar tensor expected to be 0 dim"。tolist() 按 dtype 还原为 int/float,
-        # 整型不过 float 故不抹低位; Python 数值是 weak-typed, 不会抬高结果 dtype。
-        sl = sc.tolist()
-        return torch._foreach_add(a, torch._foreach_mul(torch._foreach_mul(b, c), sl))
+        # 三方腿是与内核**同精度的对等实现**, 其算法结构须对齐**内核**而非 CPU golden:
+        # golden 在 fp64 上(cross_check 走 Promote), 舍入误差比 fp32 小九个数量级,
+        # 它的运算顺序不影响判定; 真正被比较的是两个 fp32 实现。
+        # 内核 op_kernel/arch35 用 Mul + Axpy(融合乘加, 一次舍入), 故三方腿保持
+        # torch._foreach_addcmul 的融合形式与之对齐。
+        return torch._foreach_addcmul(a, b, c, sc)
 
 
 # ---------------------------------------------------------------------------

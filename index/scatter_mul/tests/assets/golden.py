@@ -75,7 +75,19 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
     return [result_t.numpy().astype(out_dtype)]
 
 
-__golden__ = {"kernel": {"scatter_mul": "__golden_scatter_mul"}}
+def __golden_scatter_mul_e2e(var, indices, updates, use_locking=None, **kwargs):
+    """e2e(TF 前端)通路 golden: 入参为框架张量, 还原为 numpy 后复用 kernel 档实现。"""
+
+    def _np(x):
+        return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+    return __golden_scatter_mul(_np(var), _np(indices), _np(updates))
+
+
+__golden__ = {
+    "kernel": {"scatter_mul": "__golden_scatter_mul"},
+    "e2e": {"tf.compat.v1.scatter_mul": "__golden_scatter_mul_e2e"},
+}
 
 # ----------------------------------------------------------------------------
 # TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
@@ -253,8 +265,46 @@ class ScatterMulKernelSpec:
     tolerance = _TOL_KERNEL
 
 
+# e2e(TF 前端)通路。不声明则判据回落 TTK 默认 mix_tolerance —— 其 max_abs_error
+# 绝对硬上限(fp16 为 1e-1)对大值域不适配: 数据量级达 65504 时 1 ULP 即 32, 末位
+# 差异必然超限假红。与 kernel 腿同口径走 cross_check L1。
+_TOL_E2E = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "int32": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
+}
+
+
+class _TpE2eMul:
+    """e2e 通路三方腿适配: 池的 key 取自 TF API 形参名(ref/indices/updates), 与 def
+    注册名(var/...)不同 —— 直接复用 kernel 腿竞品类会报 "parameter 'var' is not a
+    known input or attribute name", 三方腿整条起不来。按 TF 形参名另立适配类, 内部
+    按位置转调同一竞品类, 不改变竞品语义。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterMulCompose()(ref, indices, updates)
+
+
+class _TpE2eMulTf:
+    """同上, tf provider 腿。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterMulTfCompose()(ref, indices, updates)
+
+
+class ScatterMulE2eSpec:
+    """e2e 通路 spec: 三方腿与判据。"""
+
+    third_party = {"torch": _TpE2eMul, "tf": _TpE2eMulTf}
+    tolerance = _TOL_E2E
+
+
 __spec__ = {
     "scatter_mul": "ScatterMulKernelSpec",
+    "tf.compat.v1.scatter_mul": "ScatterMulE2eSpec",
     "aclnnScatterMul": "ScatterMulAclnnSpec",
 }
 

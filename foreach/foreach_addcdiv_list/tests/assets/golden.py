@@ -128,8 +128,15 @@ def __golden_foreach_addcdiv_list(x1_list, x2_list, x3_list, scalars, **kwargs):
         ts = torch.as_tensor(s).to(ta.dtype)
 
         # y_i = x1_i + scalars[i] * (x2_i / x3_i)
-        quot = [_ftz(q) for q in torch._foreach_div([tb], [tc])]
-        out = torch._foreach_add([ta], torch._foreach_mul(quot, ts))[0].numpy()
+        # 内核 op_kernel/arch35 的算法是: Div 求商 -> Axpy(融合乘加, **单次舍入**)。
+        # golden 按同一算法实现: 商在计算精度下求出并 FTZ, 其后的 x1 + s*quot 用更宽
+        # 精度算出再一次性舍回计算精度, 与 Axpy 的单次舍入等价。
+        # (计算精度为 fp64 时本就无须加宽, 直接算。)
+        quot = _ftz(torch._foreach_div([tb], [tc])[0])
+        if ta.dtype == torch.float32:
+            out = (ta.double() + ts.double() * quot.double()).to(torch.float32).numpy()
+        else:
+            out = (ta + ts * quot).numpy()
 
         if output_dtypes is not None and i < len(output_dtypes):
             od = output_dtypes[i]
@@ -214,15 +221,15 @@ class _ForeachAddcdivListCompose:
         )
         a, b, c = _tp_list(x1), _tp_list(x2), _tp_list(x3)
         sc = _tp_scalars_t(st, a[0])
-        # 与 CPU golden 同口径: div -> mul -> add **三步拼接**, 不用 addcdiv 的
-        # 融合形式。融合按 (s*x2)/x3 结合且只舍入一次, 与 golden 的 x1 + s*(x2/x3)
-        # 逐步舍入不是同一个算法, 两条腿会恒差 1 ULP, cross_check 的 mare 假红。
-        # sc 是一维 packed scalars(addcdiv 的 scalars 形参要求如此), 但 _foreach_mul
-        # 只收 0 维 Tensor 或 Python 数值列表, 直接传会抛
-        # "scalar tensor expected to be 0 dim"。tolist() 按 dtype 还原为 int/float,
-        # 整型不过 float 故不抹低位; Python 数值是 weak-typed, 不会抬高结果 dtype。
-        sl = sc.tolist()
-        return torch._foreach_add(a, torch._foreach_mul(torch._foreach_div(b, c), sl))
+        # 三方腿是与内核**同精度的对等实现**, 其算法结构须对齐**内核**而非 CPU golden:
+        # golden 在 fp64 上(cross_check 走 Promote), 舍入误差比 fp32 小九个数量级,
+        # 它的运算顺序不影响判定; 真正被比较的是两个 fp32 实现。
+        # 内核 op_kernel/arch35 用 Div + Axpy(融合乘加, 一次舍入), 故三方腿保持
+        # torch._foreach_addcdiv 的融合形式与之对齐。
+        # 实测(12288 元素)拆成三步后三方腿反而更差: 平均 ULP 误差 0.747 vs 内核 0.556,
+        # ≤0.5ULP 占比 86.96% vs 91.78%; 且三步在个别元素上偶然撞对舍入, 使 cross_check
+        # 的分母塌到 err 地板, 把更准的内核判成不通过。
+        return torch._foreach_addcdiv(a, b, c, sc)
 
 
 # ---------------------------------------------------------------------------
