@@ -91,10 +91,14 @@ __golden__ = {
 # third_party 用 torch 竞品算子在设备侧跑，供 cross_check 比对；
 # customize_inputs 即原 input.py 的合法索引重采样（原文件保留，不影响旧机制）。
 # ----------------------------------------------------------------------------
+# 浮点走 cross_check: 本算子挂了 third_party, 而 TTK 仅在 standard == cross_check 时
+# 才取用三方腿 —— 写成 binary_equal 会让三方腿永不被调用, golden 成为唯一裁判。
+# min/max 遇 ±0 是 IEEE 未指定的 tie, 逐位判据下会把数值相同的结果判为不等。
+# 整型是精确选择语义, 保持逐位相等。
 _TOL_KERNEL = {
-    "float32": {"standard": "binary_equal"},
-    "float16": {"standard": "binary_equal"},
-    "bfloat16": {"standard": "binary_equal"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
     "int32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
     "int8": {"standard": "binary_equal"},
