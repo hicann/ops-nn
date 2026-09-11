@@ -37,7 +37,13 @@ public:
 
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
-    [[nodiscard]] uint64_t GetTilingKey() const override { return GRU_GRAD_TILING_KEY; }
+    [[nodiscard]] uint64_t GetTilingKey() const override
+    {
+        // dxMM 的 N 维(内轴)= inputSize,当 inputSize >= 65535 时单核内轴超过
+        // 搬入上限,需使能 GM→L1 循环搬入(intrinsicsLimit=true)以保证精度。
+        constexpr int64_t HUGE_I_THRESHOLD = 65535;
+        return (tilingData_.inputSize >= HUGE_I_THRESHOLD) ? GRU_GRAD_TILING_KEY_HUGE : GRU_GRAD_TILING_KEY;
+    }
     ge::graphStatus PostTiling() override;
 
 protected:

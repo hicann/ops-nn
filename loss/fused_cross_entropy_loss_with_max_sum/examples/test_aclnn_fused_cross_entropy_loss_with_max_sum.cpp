@@ -86,8 +86,6 @@ int main()
     std::vector<int64_t> logitsMaxShape = {2};
     std::vector<int64_t> sumExpLogitsShape = {2};
     std::vector<int64_t> predictedLogitsShape = {2};
-    std::vector<int64_t> inputShape = {2};
-    std::vector<int64_t> weightShape = {2};
     std::vector<int64_t> vocabParallelLogitsOptionalShape = {2, 2};
     std::vector<int64_t> lossOutShape = {2};
     std::vector<int64_t> softMaxOutOptionalShape = {2, 2};
@@ -97,8 +95,6 @@ int main()
     void* logitsMaxDeviceAddr = nullptr;
     void* sumExpLogitsDeviceAddr = nullptr;
     void* predictedLogitsDeviceAddr = nullptr;
-    void* inputDeviceAddr = nullptr;
-    void* weightDeviceAddr = nullptr;
     void* vocabParallelLogitsOptionalDeviceAddr = nullptr;
     void* lossOutDeviceAddr = nullptr;
     void* softMaxOutOptionalDeviceAddr = nullptr;
@@ -106,6 +102,7 @@ int main()
     aclTensor* logitsMax = nullptr;
     aclTensor* sumExpLogits = nullptr;
     aclTensor* predictedLogits = nullptr;
+    // input和weight当前仅支持空指针（nullptr），与参数说明保持一致
     aclTensor* input = nullptr;
     aclTensor* weight = nullptr;
     aclTensor* vocabParallelLogitsOptional = nullptr;
@@ -115,8 +112,6 @@ int main()
     std::vector<float> logitsMaxHostData = {0.5, 1};
     std::vector<float> sumExpLogitsHostData = {0.5, 1};
     std::vector<float> predictedLogitsHostData = {0.5, 1};
-    std::vector<float> inputHostData = {0, 1};
-    std::vector<float> weightHostData = {0, 1};
     std::vector<float> vocabParallelLogitsOptionalHostData = {1, 0.5, 0.5, 1};
     std::vector<float> lossOutHostData = {0, 0};
     std::vector<float> softMaxOutOptionalHostData = {0, 0, 0, 0};
@@ -130,12 +125,6 @@ int main()
 
     ret = CreateAclTensor(predictedLogitsHostData, predictedLogitsShape, &predictedLogitsDeviceAddr,
                           aclDataType::ACL_FLOAT, &predictedLogits);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-
-    ret = CreateAclTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-
-    ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     ret = CreateAclTensor(vocabParallelLogitsOptionalHostData, vocabParallelLogitsOptionalShape,
@@ -207,8 +196,6 @@ int main()
     aclrtFree(logitsMaxDeviceAddr);
     aclrtFree(sumExpLogitsDeviceAddr);
     aclrtFree(predictedLogitsDeviceAddr);
-    aclrtFree(inputDeviceAddr);
-    aclrtFree(weightDeviceAddr);
     aclrtFree(vocabParallelLogitsOptionalDeviceAddr);
     aclrtFree(lossOutDeviceAddr);
     aclrtFree(softMaxOutOptionalDeviceAddr);
