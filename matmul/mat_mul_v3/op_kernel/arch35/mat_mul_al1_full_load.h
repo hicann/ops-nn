@@ -40,7 +40,7 @@ __aicore__ inline void MatMulAL1FullLoadKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
     using LayoutBias = LayoutC;
 
     // 定义shape的形状，tuple保存 m n k batch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     static constexpr bool IS_FP32 = (AscendC::Std::is_same_v<BType, float>);
     static constexpr bool IS_ND_FORMAT = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);

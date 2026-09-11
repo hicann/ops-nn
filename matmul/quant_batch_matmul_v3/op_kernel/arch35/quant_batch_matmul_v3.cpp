@@ -270,33 +270,33 @@ template <int TPL_TRANS>
 struct QbmmV3TeALayout;
 template <>
 struct QbmmV3TeALayout<0> {
-    using Type = AscendC::Te::NDExtLayoutPtn;
+    using Type = asc::te::nd_ext_layout_ptn;
 };
 template <>
 struct QbmmV3TeALayout<1> {
-    using Type = AscendC::Te::DNExtLayoutPtn;
+    using Type = asc::te::dn_ext_layout_ptn;
 };
 
 template <int TPL_TRANS>
 struct QbmmV3TeBLayoutNd;
 template <>
 struct QbmmV3TeBLayoutNd<0> {
-    using Type = AscendC::Te::NDExtLayoutPtn;
+    using Type = asc::te::nd_ext_layout_ptn;
 };
 template <>
 struct QbmmV3TeBLayoutNd<1> {
-    using Type = AscendC::Te::DNExtLayoutPtn;
+    using Type = asc::te::dn_ext_layout_ptn;
 };
 
 template <int TPL_TRANS>
 struct QbmmV3TeBLayoutNz;
 template <>
 struct QbmmV3TeBLayoutNz<0> {
-    using Type = AscendC::Te::NZLayoutPtn;
+    using Type = asc::te::nz_layout_ptn;
 };
 template <>
 struct QbmmV3TeBLayoutNz<1> {
-    using Type = AscendC::Te::ZNLayoutPtn;
+    using Type = asc::te::zn_layout_ptn;
 };
 #endif
 
@@ -389,17 +389,17 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     if constexpr (TPL_APILEVEL == TPL_API_LEVEL_BLAZE && TPL_ATRANS == 0) {
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                                     0);
             } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
             if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                                     Blaze::Gemm::A_FULL_LOAD_MODE);
             } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                       Blaze::Gemm::A_FULL_LOAD_MODE);
             }
         }
@@ -427,38 +427,37 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                           Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
-                                                                 0);
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                                  Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                    Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                             Blaze::Gemm::A_FULL_LOAD_MODE);
         }
 #endif
@@ -473,38 +472,37 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                                           Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
-                                                                 0);
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                                                  Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                                    Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                             Blaze::Gemm::A_FULL_LOAD_MODE);
         }
 #endif
@@ -523,9 +521,9 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
 #if CUBE_TEMPLATE_ND
-            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
 #elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
-            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
 #endif
         }
 #endif
@@ -535,11 +533,11 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) { // Kernel Type = 0;
-                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) { // Kernel Type = 1;
-                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                                        Blaze::Gemm::A_FULL_LOAD_MODE);
             }
 #endif
@@ -555,11 +553,11 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
 #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn, 0);
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, asc::te::nd_ext_layout_ptn,
                                                        Blaze::Gemm::A_FULL_LOAD_MODE);
             }
 #endif

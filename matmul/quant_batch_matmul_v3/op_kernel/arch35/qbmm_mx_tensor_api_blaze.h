@@ -33,7 +33,7 @@ __aicore__ inline void QbmmMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR s
     using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
 
     // 定义shape的形状，tuple保存 m n k batch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,

@@ -31,7 +31,7 @@ __aicore__ inline void QbmmMxStreamKBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_
     using OutType = C_TYPE;
     using WorkspaceType = float;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     using DispatchPolicy = Blaze::Gemm::MatmulWithScaleMx<FULL_LOAD_MODE, false,
                                                           Blaze::Gemm::KernelQbmmMultiBlockStreamK>;

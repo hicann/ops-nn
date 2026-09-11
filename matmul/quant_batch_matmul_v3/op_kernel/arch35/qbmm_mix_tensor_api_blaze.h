@@ -31,7 +31,7 @@ __aicore__ inline void QbmmMixTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     using OutType = C_TYPE;
     using L0CType = typename AscendC::GetMmDstType<AType>::Type;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
                                                                                 bLayout, AType>;
 

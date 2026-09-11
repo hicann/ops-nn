@@ -33,10 +33,10 @@ __aicore__ inline void MatMulStreamKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bia
 
     using LayoutA = A_LAYOUT;
     using LayoutB = B_LAYOUT;
-    using LayoutC = AscendC::Te::NDExtLayoutPtn;
+    using LayoutC = asc::te::nd_ext_layout_ptn;
 
     // 定义shape的形状，tuple保存 m n k batch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulStreamK<ProblemShape>;

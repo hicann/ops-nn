@@ -39,14 +39,14 @@ __aicore__ inline void RunWeightQuantMxBlazeSwat(
     using CType = DTYPE_Y;
     using BiasType = DTYPE_Y;
 
-    using LayoutA = AscendC::Te::NDExtLayoutPtn;
-    using LayoutB = AscendC::Std::conditional_t<IS_WEIGHT_NZ, AscendC::Te::ZNLayoutPtn, AscendC::Te::DNExtLayoutPtn>;
-    using LayoutC = AscendC::Te::NDExtLayoutPtn;
-    using LayoutScaleA = AscendC::Te::ScaleANDLayoutPtn;
-    using LayoutScaleB = AscendC::Te::ScaleBDNLayoutPtn;
+    using LayoutA = asc::te::nd_ext_layout_ptn;
+    using LayoutB = AscendC::Std::conditional_t<IS_WEIGHT_NZ, asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>;
+    using LayoutC = asc::te::nd_ext_layout_ptn;
+    using LayoutScaleA = asc::te::scalea_nd_layout_ptn;
+    using LayoutScaleB = asc::te::scaleb_dn_layout_ptn;
     using LayoutBias = LayoutC;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t>;
     using DispatchPolicy = Blaze::Gemm::MatmulWithWeightQuantMx;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<
         DispatchPolicy, AscendC::Std::tuple<AType, ScaleAType>, AscendC::Std::tuple<LayoutA, LayoutScaleA>,
@@ -56,14 +56,14 @@ __aicore__ inline void RunWeightQuantMxBlazeSwat(
     using KernelImpl = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, void, BlockScheduler>;
 
     typename KernelImpl::Params params{
-        AscendC::Te::MakeShape(static_cast<int64_t>(tilingData.m), static_cast<int64_t>(tilingData.n),
-                               static_cast<int64_t>(tilingData.k)),
+        asc::te::make_shape(static_cast<int64_t>(tilingData.m), static_cast<int64_t>(tilingData.n),
+                            static_cast<int64_t>(tilingData.k)),
         {x1, x1Scale, x2Scale, y,
-         AscendC::Te::MakeShape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
-                                static_cast<int64_t>(tilingData.tileShapeKL1),
-                                static_cast<int64_t>(tilingData.tileShapeScaleKL1)),
-         AscendC::Te::MakeShape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
-                                static_cast<int64_t>(tilingData.baseK)),
+         asc::te::make_shape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
+                             static_cast<int64_t>(tilingData.tileShapeKL1),
+                             static_cast<int64_t>(tilingData.tileShapeScaleKL1)),
+         asc::te::make_shape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
+                             static_cast<int64_t>(tilingData.baseK)),
          tilingData.l1BufferNum, tilingData.hasBias != 0U},
         {x2, bias, tilingData.kBubSize, tilingData.nBubSize},
         {tilingData.baseM, tilingData.baseN, tilingData.mTailTile, tilingData.nTailTile, tilingData.mBaseTailSplitCnt,

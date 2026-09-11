@@ -42,7 +42,7 @@ __aicore__ inline void QuantMatmulActivationQuantKernel(GM_ADDR x1, GM_ADDR x2, 
     using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueGeluMxQuant<OutType, MatmulOutType>;
 
     // 定义shape的形状，tuple保存 m n k batch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,

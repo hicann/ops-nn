@@ -17,7 +17,7 @@
 
 using namespace AscendC;
 
-using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
 #define MATMUL_EMU_SPLIT_WEIGHT_DISPATCH(layoutA, layoutB)                                                            \
     do {                                                                                                              \
@@ -50,8 +50,8 @@ __global__ __aicore__ void matmul_emu_split_weight(GM_ADDR x, GM_ADDR wHigh, GM_
     constexpr bool aTran = (A_TRANS == MATMUL_EMU_SPLIT_WEIGHT_TRANS);
     constexpr bool bTran = (B_TRANS == MATMUL_EMU_SPLIT_WEIGHT_TRANS);
 
-    using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
-    using layoutB = AscendC::Std::conditional_t<bTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutA = AscendC::Std::conditional_t<aTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
+    using layoutB = AscendC::Std::conditional_t<bTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     MATMUL_EMU_SPLIT_WEIGHT_DISPATCH(layoutA, layoutB);
 }
 

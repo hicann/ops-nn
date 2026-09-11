@@ -31,7 +31,7 @@ __aicore__ inline void BatchMatMulIterBatchBroadcastKernel(GM_ADDR aGM, GM_ADDR 
     using LayoutC = C_LAYOUT;
     using LayoutBias = LayoutC;
 
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
 
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerIterBatchBroadcast<ProblemShape>;
 

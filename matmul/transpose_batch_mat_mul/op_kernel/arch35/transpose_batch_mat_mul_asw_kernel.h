@@ -44,7 +44,7 @@ __aicore__ inline void TBMMTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM
     using LayoutBias = LayoutC;
 
     // 定义shape的形状，tuple保存 m n k batch splitBatch
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t, int64_t>;
 
     static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
     static constexpr bool isNDFormat = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);

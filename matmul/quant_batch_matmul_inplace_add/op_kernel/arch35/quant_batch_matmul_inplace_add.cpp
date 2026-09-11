@@ -58,40 +58,40 @@ using namespace AscendC;
 using namespace matmul;
 
 #if IS_BLAZE && QBMMIA_IS_MX
-#define QBMMIA_MX_WITHOUT_BATCH_DISPATCH(aLayout, bLayout, fullLoadMode)                                            \
-    QbmmiaMxWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, AscendC::Te::NDExtLayoutPtn, \
+#define QBMMIA_MX_WITHOUT_BATCH_DISPATCH(aLayout, bLayout, fullLoadMode)                                           \
+    QbmmiaMxWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, asc::te::nd_ext_layout_ptn, \
                                         fullLoadMode>(x1, x2, x2_scale, x1_scale, y, &tilingData)
 
-#define QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(fullLoadMode)                                                         \
-    do {                                                                                                              \
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                           \
-            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                                    \
-            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                                    \
-            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                                    \
-            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, fullLoadMode); \
-        }                                                                                                             \
+#define QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(fullLoadMode)                                                       \
+    do {                                                                                                            \
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                         \
+            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                                  \
+            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                                  \
+            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                                  \
+            QBMMIA_MX_WITHOUT_BATCH_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
+        }                                                                                                           \
     } while (0)
 #endif
 
 #if IS_BLAZE && QBMMIA_IS_MX
-#define QBMMIA_MX_BLAZE_DISPATCH(aLayout, bLayout, fullLoadMode)                                                       \
-    QbmmiaMxTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, AscendC::Te::NDExtLayoutPtn, fullLoadMode>( \
+#define QBMMIA_MX_BLAZE_DISPATCH(aLayout, bLayout, fullLoadMode)                                                      \
+    QbmmiaMxTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, asc::te::nd_ext_layout_ptn, fullLoadMode>( \
         x1, x2, x2_scale, x1_scale, y, &tilingData)
 
-#define QBMMIA_MX_BLAZE_LAYOUT_DISPATCH(fullLoadMode)                                                         \
-    do {                                                                                                      \
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                   \
-            QBMMIA_MX_BLAZE_DISPATCH(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                            \
-            QBMMIA_MX_BLAZE_DISPATCH(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                            \
-            QBMMIA_MX_BLAZE_DISPATCH(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, fullLoadMode); \
-        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                            \
-            QBMMIA_MX_BLAZE_DISPATCH(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, fullLoadMode); \
-        }                                                                                                     \
+#define QBMMIA_MX_BLAZE_LAYOUT_DISPATCH(fullLoadMode)                                                       \
+    do {                                                                                                    \
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {                                                 \
+            QBMMIA_MX_BLAZE_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {                                          \
+            QBMMIA_MX_BLAZE_DISPATCH(asc::te::nd_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {                                          \
+            QBMMIA_MX_BLAZE_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn, fullLoadMode); \
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {                                          \
+            QBMMIA_MX_BLAZE_DISPATCH(asc::te::dn_ext_layout_ptn, asc::te::dn_ext_layout_ptn, fullLoadMode); \
+        }                                                                                                   \
     } while (0)
 #endif
 

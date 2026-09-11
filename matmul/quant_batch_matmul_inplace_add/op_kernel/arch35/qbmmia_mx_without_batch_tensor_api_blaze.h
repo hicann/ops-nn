@@ -31,7 +31,7 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
     using OutType = C_TYPE;
 
     using BlockEpilogue = Block::BlockEpilogueEmpty;
-    using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockScheduler = Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout,
                                                                    AType>;
 
