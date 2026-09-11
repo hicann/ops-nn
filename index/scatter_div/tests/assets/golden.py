@@ -104,7 +104,17 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     return [out]
 
 
-__golden__ = {"kernel": {"scatter_div": "__golden_scatter_div"}}
+def __golden_scatter_div_e2e(var, indices, updates, use_locking=None, **kwargs):
+    def _np(x):
+        return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+    return __golden_scatter_div(_np(var), _np(indices), _np(updates))
+
+
+__golden__ = {
+    "kernel": {"scatter_div": "__golden_scatter_div"},
+    "e2e": {"tf.compat.v1.scatter_div": "__golden_scatter_div_e2e"},
+}
 
 # ----------------------------------------------------------------------------
 # TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
@@ -200,12 +210,25 @@ def scatter_div_input(var, indices, updates, **kwargs):
     return [var, indices, updates]
 
 
+def _tp_widen(t):
+    """加宽到内核的累加类型(fp16/bf16 按 fp32 累算), 与内核同算法: 链式相除整条链
+    都在加宽类型上做, 只在出口窄一次。整型保持整型(截断除须在整型域内逐步做)。"""
+    return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
+
+
+def _tp_narrow(outs, dt):
+    """算完窄回算子输出 dtype, 必须与 _tp_widen 成对。"""
+    return [o.to(dt) if o.is_floating_point() else o for o in outs]
+
+
 class _ScatterDivCompose:
     def __call__(self, var, indices, updates, **kwargs):
-        work = _tp_t(var)
-        if _scatter_noop(work, updates):
-            return [work]
-        upd = _tp_t(updates).reshape((-1,) + tuple(work.shape[1:]))
+        work0 = _tp_t(var)
+        if _scatter_noop(work0, updates):
+            return [work0]
+        _dt = work0.dtype
+        work = _tp_widen(work0)
+        upd = _tp_widen(_tp_t(updates)).reshape((-1,) + tuple(work.shape[1:]))
         it = (
             indices
             if isinstance(indices, torch.Tensor)
@@ -220,18 +243,36 @@ class _ScatterDivCompose:
         # 不用 dtype.is_floating_point 泛判, 避免与 golden 的分支口径分叉。
         # _INT_DTYPES = {int32, int8, uint8}（def 注册的整型面）的 torch 对应;
         # 不能用 work.numpy() 反查——CUDA 张量转不了 numpy。
-        is_int = work.dtype in (torch.int32, torch.int8, torch.uint8)
-        for k in range(idx.numel()):
-            i = int(idx[k])
-            if is_int:
-                denom = upd[k]
-                nonzero = denom != 0
-                safe = torch.where(nonzero, denom, torch.ones_like(denom))
-                q = torch.div(work[i], safe, rounding_mode="trunc")
-                work[i] = torch.where(nonzero, q, work[i])
-            else:
-                work[i] = torch.div(work[i], upd[k])
-        return [work]
+        is_int = _dt in (torch.int32, torch.int8, torch.uint8)
+        # 分层向量化: 串行依赖只在同一行内部, 不同行互相独立。按作用次序分层、层内
+        # 批量相除, 循环次数由索引数降为单行最大重复次数; stable 排序保证同行内仍按
+        # 原顺序, 与逐条相除逐位一致。
+        n = int(idx.numel())
+        if n:
+            ix = idx.cpu().numpy()
+            order = np.argsort(ix, kind="stable")
+            s = ix[order]
+            rank = np.arange(n) - np.searchsorted(s, s, side="left")
+            lay = np.argsort(rank, kind="stable")
+            sel_all = torch.as_tensor(order[lay], device=idx.device)
+            row_all = torch.as_tensor(ix[order[lay]], device=idx.device).to(torch.int64)
+            rk = rank[lay]
+            bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
+            for r in range(len(bounds) - 1):
+                a, b = int(bounds[r]), int(bounds[r + 1])
+                if a == b:
+                    continue
+                sel, rows = sel_all[a:b], row_all[a:b]
+                d = upd.index_select(0, sel)
+                cur = work.index_select(0, rows)
+                if is_int:
+                    nonzero = d != 0
+                    safe = torch.where(nonzero, d, torch.ones_like(d))
+                    q = torch.div(cur, safe, rounding_mode="trunc")
+                    work[rows] = torch.where(nonzero, q, cur)
+                else:
+                    work[rows] = torch.div(cur, d)
+        return _tp_narrow([work], _dt)
 
 
 # ---------------------------------------------------------------------------
@@ -371,8 +412,43 @@ class ScatterDivKernelSpec:
     tolerance = _TOL_KERNEL
 
 
+# e2e(TF 前端)通路判据: 与 kernel 腿同口径。不声明则回落默认的绝对容差判据,
+# 输出量级接近 dtype 上限时 1 ULP 即超限。
+_TOL_E2E = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "int32": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
+}
+
+
+class _TpE2eDiv:
+    """e2e 三方腿适配: 该通路按框架 API 形参名下发, 与 def 注册名不同, 故另立适配类
+    按位置转调同一竞品类, 不改变竞品语义。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterDivCompose()(ref, indices, updates)
+
+
+class _TpE2eDivTf:
+    """同上, tf provider 腿。"""
+
+    def __call__(self, ref, indices, updates, use_locking=None, **kwargs):
+        return _ScatterDivTfCompose()(ref, indices, updates)
+
+
+class ScatterDivE2eSpec:
+    """e2e 通路 spec: 三方腿与判据。"""
+
+    third_party = {"torch": _TpE2eDiv, "tf": _TpE2eDivTf}
+    tolerance = _TOL_E2E
+
+
 __spec__ = {
     "scatter_div": "ScatterDivKernelSpec",
+    "tf.compat.v1.scatter_div": "ScatterDivE2eSpec",
     "aclnnScatterDiv": "ScatterDivAclnnSpec",
 }
 
