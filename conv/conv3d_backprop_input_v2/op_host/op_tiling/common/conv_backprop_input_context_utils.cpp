@@ -961,7 +961,7 @@ bool HandleConv3DTranspose(gert::TilingContext* context, const Conv3dBpInputV2Ru
         otherParams.c_shape.w = standard_w + otherParams.output_padding.output_padding_w - runInfoV2.pad_l -
                                 runInfoV2.pad_r;
         otherParams.c_shape.batch = otherParams.a_shape.batch;
-        otherParams.c_shape.c = otherParams.b_shape.c;
+        otherParams.c_shape.c = otherParams.b_shape.c * runInfoV2.groups;
         otherParams.c_shape.c1 = Ops::Base::CeilDiv(otherParams.c_shape.c, otherParams.c_shape.c0);
     }
     return true;
