@@ -593,7 +593,7 @@ def conv3d_v2_golden(
     groups: int = 1,
     data_format: str = NCDHW_FORMAT,
     offset_x: int = 0,
-    pad_mod: str = "SPECIFIC",
+    pad_mode: str = "SPECIFIC",
     enable_hf32: bool = False,
     **kwargs,
 ):
@@ -695,7 +695,7 @@ def conv3d_v2_golden(
     input_pad, pad_torch = _process_conv3d_padding(
         x_np,
         pads,
-        pad_mod,
+        pad_mode,
         filter_np.shape,
         stride_d,
         stride_h,

@@ -20,10 +20,10 @@
   - 输出表示为：
 
   $$
-  \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{scale} \times \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
+  \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{scale} \times \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
-  其中，$\star$ 表示卷积计算，支持空洞卷积、分组卷积。$N$ 代表batch size，$C$ 代表通道数，$H$ 和 $W$ 分别代表高和宽，相应输出维度的计算公式如下：
+  其中，$\star$ 表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$ 代表batch size，$C$ 代表通道数，$H$ 和 $W$ 分别代表高和宽，相应输出维度的计算公式如下：
 
   $$
   H_{\text{out}} = (H + \text{pad\_top} + \text{pad\_bottom} - (\text{dilation\_h} \times (K_h - 1) + 1)) / \text{stride\_h} + 1 \\
@@ -41,13 +41,13 @@
 | offset | 可选输入 | 偏移张量offset（未使用）。 | FLOAT | NCHW |
 | y | 输出 | 公式中的输出张量y。 | FLOAT、FLOAT16、BFLOAT16、FLOAT8_E4M3FN、HIFLOAT8 | NCHW |
 | dtype | 属性 | 表示输出y的数据类型。支持的列表包括 [0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。 | INT32 | - |
-| strides | 属性 | 卷积扫描步长，包括stride_h, stride_w。stride_n, stride_c大小必须为1。 | INT32 | - |
+| strides | 属性 | 卷积扫描步长，包括stride_h, stride_w。| INT32 | - |
 | pads | 可选属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
-| dilations | 可选属性 | 卷积核中元素的间隔，包括dilation_h, dilation_w。dilation_n, dilation_c大小必须为1。 | INT32 | - |
+| dilations | 可选属性 | 卷积核中元素的间隔，包括dilation_h, dilation_w。| INT32 | - |
 | groups | 可选属性 | 从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。 | INT32 | - |
 | data_format | 可选属性 | 输入数据格式，仅支持"NCHW"。 | STRING | - |
 | offset_x | 可选属性 | 量化算法中的偏移，用于pad的填充值。支持范围 [-128, 127]。当`x`类型为`HIFLOAT8`或`FLOAT8_E4M3FN`时，仅支持配置为0。 | INT32 | - |
-| round_mode | 可选属性 | 舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。 | STRING | - |
+| round_mode | 可选属性 | 表述输出的舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。 | STRING | - |
 
 ## 约束说明
 

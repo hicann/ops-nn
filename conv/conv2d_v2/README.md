@@ -32,10 +32,10 @@
   - 输出表示为：
 
   $$
-    \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
+    \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
-  其中，$\star$ 表示卷积计算，支持空洞卷积、分组卷积。$N$ 代表`batch size`，$C$ 代表通道数，$H$ 和 $W$ 分别代表高和宽，相应输出维度的计算公式如下：
+  其中，$\star$ 表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$ 代表`batch size`，$C$ 代表通道数，$H$ 和 $W$ 分别代表高和宽，相应输出维度的计算公式如下：
 
   $$
     H_{\text{out}} = (H + \text{pad\_top} + \text{pad\_bottom} - (\text{dilation\_h} \times (K_h - 1) + 1)) / \text{stride\_h} + 1 \\
@@ -90,7 +90,7 @@
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，包括stride_h, stride_w。stride_n, stride_c大小必须为1。</td>
+<td>卷积扫描步长，包括stride_h, stride_w。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -104,7 +104,7 @@
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，包括dilation_h, dilation_w。dilation_n, dilation_c大小必须为1。</td>
+<td>卷积核中元素的间隔，包括dilation_h, dilation_w。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -132,14 +132,14 @@
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
+<td>表示pads自动填充的模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>是否启用HF32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启HF32计算。</td>
+<td>表示是否启用hf32计算，支持true、false。仅支持在`x`、`filter`、`bias`、`y`都为`FLOAT`类型时，该参数配置为true才能正确开启hf32计算。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>

@@ -36,7 +36,7 @@
   \text{output}(N_i, C_{\text{out}_j}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}}) = \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k) + \text{bias}(C_{\text{out}_j})
   $$
 
-  其中，$\star$ 表示卷积计算，根据卷积输入的维度，卷积的类型（空洞卷积、分组卷积）而定。$N$ 代表批次大小（batch size），$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高度和宽度，相应输出维度的计算公式如下：
+  其中，$\star$ 表示卷积计算，根据卷积输入的维度，卷积的类型（空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1））而定。$N$ 代表批次大小（batch size），$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高度和宽度，相应输出维度的计算公式如下：
 
   - 对于入参`transposed = False`时：
 
@@ -194,7 +194,7 @@ aclnnStatus aclnnConvolution(
   <tr>
   <td>output（aclTensor*）</td>
   <td>输出</td>
-  <td>公式中的out，表示卷积输出。</td>
+  <td>表示卷积输出。</td>
   <td><ul><li>支持空Tensor。</li><li>数据类型需要与input与weight推导之后的数据类型保持一致。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>

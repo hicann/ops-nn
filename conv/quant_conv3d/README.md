@@ -44,10 +44,10 @@
   - 输出表示为：
 
   $$
-    \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{scale} \times \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
+    \text{y}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{scale} \times \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
-  其中，$\star$ 表示卷积计算，支持空洞卷积、分组卷积。$N$ 代表batch size，$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高和宽，相应输出维度的计算公式如下：
+  其中，$\star$ 表示卷积计算，支持空洞卷积（`dilations` > 1）、分组卷积（`groups` > 1）。$N$ 代表batch size，$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高和宽，相应输出维度的计算公式如下：
 
   $$
     D_{\text{out}} = (D + \text{pad\_head} + \text{pad\_tail} - (\text{dilation\_d} \times (K_d - 1) + 1)) / \text{stride\_d} + 1 \\
@@ -117,7 +117,7 @@
 <tr>
 <td>strides</td>
 <td>属性</td>
-<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。stride_n, stride_c大小必须为1。</td>
+<td>卷积扫描步长，stride_d ∈ [1,1000000]，stride_h, stride_w ∈ [1,63]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -131,7 +131,7 @@
 <tr>
 <td>dilations</td>
 <td>可选属性</td>
-<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。dilation_n, dilation_c大小必须为1。</td>
+<td>卷积核中元素的间隔，dilation_h, dilation_w ∈ [1,255]，dilation_d ∈ [1,1000000]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -159,14 +159,14 @@
 <tr>
 <td>round_mode</td>
 <td>可选属性</td>
-<td>舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。</td>
+<td>表示输出的舍入模式。如果输出的数据类型是HIFLOAT8，此时该参数必须为'round'。默认为'rint'。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
+<td>表示pads自动填充的模式，支持"SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>

@@ -27,10 +27,10 @@
 
 - 接口功能：实现输入输出维度为 **T**（时间或空间维度）、**B**（批次）、**C**（通道）的一维卷积。
 - 计算公式：
-  假定输入（self）的shape是($H_{\text{in}},N,C_{\text{in}}$)，输出（out）的shape是($H_{\text{out}},N,C_{\text{out}}$)，那输出将被表示为：
+  假定输入（self）的shape是($H_{\text{in}},N,C_{\text{in}}$)，输出（output）的shape是($H_{\text{out}},N,C_{\text{out}}$)，那输出将被表示为：
 
   $$
-  out_{N_i,C_{out j}} = bias(C_{out j}) + \sum_{k = 0}^{C_{in} - 1} weight(k, C_{out j}) \cdot self(N_i, k)
+  output_{N_i,C_{out j}} = bias(C_{out j}) + \sum_{k = 0}^{C_{in} - 1} weight(k, C_{out j}) \cdot self(N_i, k)
   $$
 
   其中$N$表示批次大小（batch size），$C$表示通道数，$H$代表时间或空间维度。
@@ -78,7 +78,12 @@ aclnnStatus aclnnConvTbc(
   <td>self（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的self，表示卷积输入。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。<li>shape为（H<sub>in</sub>,N,C<sub>in</sub>）。</li></li><li>H≥0，N≥0，C<sub>in</sub>≥1。</li></ul></td>
+  <td><ul>
+  <li>支持空Tensor。</li>
+  <li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li>
+  <li>shape为（H<sub>in</sub>,N,C<sub>in</sub>）。</li>
+  <li>H≥0，N≥0，C<sub>in</sub>≥1。</li>
+  </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -88,7 +93,12 @@ aclnnStatus aclnnConvTbc(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>shape为（K,C<sub>in</sub>,C<sub>out</sub>）。</li><li>所有维度≥1。</li></ul></td>
+  <td><ul>
+  <li>支持空Tensor。</li>
+  <li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li>
+  <li>shape为（K,C<sub>in</sub>,C<sub>out</sub>）。</li>
+  <li>所有维度≥1。</li>
+  </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -98,7 +108,10 @@ aclnnStatus aclnnConvTbc(
   <td>bias（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的bias，表示卷积偏置。</td>
-  <td><ul><li>数据类型与self、weight一致。</li><li>一维且与weight第一维相等，不允许传入空指针。</li></ul></td>
+  <td><ul>
+  <li>数据类型与self、weight一致。</li>
+  <li>一维且与weight第一维相等，不允许传入空指针。</li>
+  </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16</td>
   <td>ND</td>
   <td>1</td>
@@ -117,8 +130,13 @@ aclnnStatus aclnnConvTbc(
   <tr>
   <td>output（aclTensor*）</td>
   <td>输出</td>
-  <td>公式中的out，表示卷积输出。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与self一致。</li><li>shape为（H<sub>out</sub>,N,C<sub>out</sub>）。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
+  <td>表示卷积输出。</td>
+  <td><ul>
+  <li>支持空Tensor。</li>
+  <li>数据类型与self一致。</li>
+  <li>shape为（H<sub>out</sub>,N,C<sub>out</sub>）。</li>
+  <li>通道数等于weight第一维，其他维度≥0。</li>
+  </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
   <td>3</td>
@@ -128,7 +146,12 @@ aclnnStatus aclnnConvTbc(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断Cube单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul><ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许FLOAT降低精度计算，提升性能。</li></ul><ul><li> 2（USE_FP16）：使用FLOAT16精度进行计算。</li></ul><ul><li> 3（USE_HF32）：使用HFLOAT32（混合精度）进行计算。</li></ul></td>
+  <td>
+  <ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul>
+  <ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许FLOAT降低精度计算，提升性能。</li></ul>
+  <ul><li> 2（USE_FP16）：使用FLOAT16精度进行计算。</li></ul>
+  <ul><li> 3（USE_HF32）：使用HFLOAT32（混合精度）进行计算。</li></ul>
+  </td>
   <td>INT8</td>
   <td>-</td>
   <td>-</td>
