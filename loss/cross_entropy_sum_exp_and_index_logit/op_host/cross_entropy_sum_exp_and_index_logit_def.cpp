@@ -81,6 +81,7 @@ public:
             .ExtendCfgInfo("jitCompile.flag", "static_false,dynamic_false");
 
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("ascend350", config_950);
     }
 };
 

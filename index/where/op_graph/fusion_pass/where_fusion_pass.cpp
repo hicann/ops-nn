@@ -67,9 +67,10 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
     const std::string soc = platform_info.str_info.short_soc_version;
     bool is_platform5102 = (soc == "MC62CM12A");
     bool is_platform950 = (soc == "Ascend950");
+    bool is_platform350 = (soc == "Ascend350");
     OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
-    if (!(is_platform5102 || is_platform950)) {
-        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Only support Ascend910_93 and Ascend950");
+    if (!(is_platform5102 || is_platform950 || is_platform350)) {
+        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Only support Ascend910_93 and Ascend950 and Ascend350");
         return false;
     }
 

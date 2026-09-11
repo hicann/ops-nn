@@ -9,7 +9,7 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/cross_entropy_sum_exp_and_index_logit.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )

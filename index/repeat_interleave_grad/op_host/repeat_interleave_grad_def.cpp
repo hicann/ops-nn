@@ -52,6 +52,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "repeat_interleave_grad_apt");
         this->AICore().AddConfig("ascend950", config_91095);
+        this->AICore().AddConfig("ascend350", config_91095);
     }
 };
 OP_ADD(RepeatInterleaveGrad);
