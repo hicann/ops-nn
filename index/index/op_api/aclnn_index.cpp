@@ -116,8 +116,11 @@ static bool CheckPtrValid(const aclTensor* self, const aclTensorList* indices, c
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices, const aclTensor* out)
 {
-    bool bf16Invalid = op::GetCurrentPlatformInfo().GetSocVersion() < op::SocVersion::ASCEND910B &&
-                       self->GetDataType() == op::DataType::DT_BF16;
+    bool bf16Invalid = false;
+    auto bf16CurArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (bf16CurArch != NpuArch::DAV_2201 && !Ops::NN::AclnnUtil::IsRegbase(bf16CurArch)) {
+        bf16Invalid = (self->GetDataType() == op::DataType::DT_BF16);
+    }
     if (bf16Invalid) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self not implemented for DT_BF16, when SocVersion is less than ASCEND910B.");
         return false;
@@ -489,8 +492,8 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorLis
         return ACLNN_SUCCESS;
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    auto b4curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (b4curArch == NpuArch::DAV_2201) {
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
         if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
