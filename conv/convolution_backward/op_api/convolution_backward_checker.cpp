@@ -21,17 +21,25 @@ extern "C" {
 
 static constexpr const char* ACLNN_CONVOLUTION_BACKWARD_NAME = "aclnnConvolutionBackwardGetWorkspaceSize";
 // 工具方法----------------------------------------------------------------------------------------------------------
+
+// transposed=false时按README约束不支持8bit
+static const std::initializer_list<DataType>& GetDtypeSupportList4ConvBackwardApi(bool transposed)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        static const std::initializer_list<DataType> TRANSPOSED_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                        DataType::DT_BF16, DataType::DT_HIFLOAT8};
+        static const std::initializer_list<DataType> NORMAL_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                    DataType::DT_BF16};
+        return transposed ? TRANSPOSED_LIST : NORMAL_LIST;
+    }
+    return GetDtypeSupportListBySocVersion();
+}
+
 bool CheckDtypeValid(const aclTensor* inputTensor, bool transposed)
 {
     // 检查输入aclTensor的数据类型是否在ConvolutionBackward支持列表内
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        auto dtypeSupportList = GetDtypeSupportListBySocVersion4ConvBackward(transposed);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
-    } else {
-        auto dtypeSupportList = GetDtypeSupportListBySocVersion();
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
-    }
+    auto dtypeSupportList = GetDtypeSupportList4ConvBackwardApi(transposed);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor, dtypeSupportList, return false);
     return true;
 }
 
