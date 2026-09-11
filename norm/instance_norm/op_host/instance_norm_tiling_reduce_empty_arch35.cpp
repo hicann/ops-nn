@@ -80,8 +80,10 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     OP_LOGI(context_->GetNodeName(), "InstanceNormReduceEmptyTiling DoOpTiling: class member ubBlockSize is %lu !",
             ubBlockSize);
     // 核内切分计算（头核）
-    perCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, perCoreElements),
+    int64_t perCoreAligned = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, perCoreElements),
                                                    ubBlockSize / elemSize);
+    // perCoreElements 小于对齐粒度时 FloorAlign 下溢为 0，回退为单次全量拷贝
+    perCorePerLoopElements = (perCoreAligned == 0) ? perCoreElements : perCoreAligned;
     perCoreLoops = Ops::Base::CeilDiv(perCoreElements, perCorePerLoopElements);
     perCoreLastLoopElements = perCoreElements - (perCoreLoops - 1) * perCorePerLoopElements;
 
@@ -94,8 +96,10 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     int64_t lastCoreLastLoopElements = lastCoreElements;
 
     // 尾核核内切分计算
-    lastCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, lastCoreElements),
+    int64_t lastCoreAligned = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, lastCoreElements),
                                                     ubBlockSize / elemSize);
+    // lastCoreElements 小于对齐粒度时 FloorAlign 下溢为 0，回退为单次全量拷贝
+    lastCorePerLoopElements = (lastCoreAligned == 0) ? lastCoreElements : lastCoreAligned;
     lastCoreLoops = Ops::Base::CeilDiv(lastCoreElements, lastCorePerLoopElements);
     lastCoreLastLoopElements = lastCoreElements - (lastCoreLoops - 1) * lastCorePerLoopElements;
 
