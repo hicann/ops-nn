@@ -12,6 +12,10 @@ add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
 )
 
+if(TARGET ${OPHOST_NAME}_tiling_obj)
+    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/op_host/sparse_tensor_dense_mat_mul_def.cpp)
+endif()
+
 add_kernel_sources(
     AUTO_SYNC false
 )
