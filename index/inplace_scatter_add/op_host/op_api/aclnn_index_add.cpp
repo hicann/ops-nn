@@ -112,22 +112,22 @@ static bool CheckDtypeValid(const op::DataType selfDtype, const op::DataType ind
                                                                      ASCEND910_DTYPE_SUPPORT_LIST;
 
     if (!CheckType(selfDtype, dtypeSupportList)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s should be in dtype support list [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s should be in dtype support list %s.",
                 op::ToString(selfDtype).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }
     if (!CheckType(indexDtype, INDEX_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "index dtype %s should be in dtype support list [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "index dtype %s should be in dtype support list %s.",
                 op::ToString(indexDtype).GetString(), op::ToString(INDEX_DTYPE_SUPPORT_LIST).GetString());
         return false;
     }
     if (!CheckType(sourceDtype, dtypeSupportList)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "source dtype %s should be in dtype support list [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "source dtype %s should be in dtype support list %s.",
                 op::ToString(sourceDtype).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }
     if (!CheckType(outDtype, dtypeSupportList)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outDtype dtype %s should be in dtype support list [%s].",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outDtype dtype %s should be in dtype support list %s.",
                 op::ToString(sourceDtype).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }

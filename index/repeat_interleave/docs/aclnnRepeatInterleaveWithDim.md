@@ -90,7 +90,7 @@ aclnnStatus aclnnRepeatInterleaveWithDim(
         <td>输入</td>
         <td>功能说明中待被数据复制的输入tensor。</td>
         <td>支持空Tensor。</td>
-        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
+        <td>UINT8、UINT16、UINT32、UINT64、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnRepeatInterleaveWithDim(
         <td>输出</td>
         <td>功能说明中数据复制完成的输出tensor。</td>
         <td>数据类型需要与self一致。<br>如果repeats中有多个值，out的shape在dim维度下的size等于repeats中所有元素的和。<br>如果repeats只有一个元素时，out的shape在dim维度下的size等于repeats * self的dim维度下的size。</td>
-        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
+        <td>UINT8、UINT16、UINT32、UINT64、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
