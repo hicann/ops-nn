@@ -2539,6 +2539,9 @@ sort@ops-nn:
   src:
     release:
       style:
+        - ops/ops-nn/index/kth_value/
+        - ops/ops-nn/index/median/
+        - ops/ops-nn/index/nan_median/
         - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.cpp
         - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.h
         - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique2.cpp
