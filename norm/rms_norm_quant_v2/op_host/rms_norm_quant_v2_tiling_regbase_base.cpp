@@ -112,6 +112,47 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOptionalInput()
     return true;
 }
 
+bool RmsNormQuantV2RegbaseTilingBase::CheckInputOutputShapeSize()
+{
+    OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckInputOutputShapeSize.");
+    const std::vector<std::pair<const gert::StorageShape*, const char*>> tensorShapes = {
+        {context_->GetInputShape(X_INDEX), "x"},
+        {context_->GetInputShape(GAMMA_INDEX), "gamma"},
+        {context_->GetInputShape(SCALES1_INDEX), "scales1"},
+        {context_->GetOptionalInputShape(SCALES2_INDEX), "scales2"},
+        {context_->GetOptionalInputShape(ZERO_POINTS1_INDEX), "zero_points1"},
+        {context_->GetOptionalInputShape(ZERO_POINTS2_INDEX), "zero_points2"},
+        {context_->GetOptionalInputShape(BETA_INDEX), "beta"},
+        {context_->GetOutputShape(Y1_INDEX), "y1"},
+        {context_->GetOutputShape(Y2_INDEX), "y2"},
+    };
+    for (const auto& [tensorShape, tensorName] : tensorShapes) {
+        if (tensorShape != nullptr && tensorShape->GetStorageShape().GetShapeSize() == 0) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), tensorName, "0",
+                                                      "RmsNormQuantV2 and RmsNormQuantV3 do not support empty "
+                                                      "tensors on Ascend 950");
+            return false;
+        }
+    }
+
+    const gert::RuntimeAttrs* attrs = context_->GetAttrs();
+    bool outputRstd = false;
+    if (attrs != nullptr && attrs->GetAttrNum() > static_cast<size_t>(OUTPUT_RSTD_ATTR_INDEX)) {
+        const bool* outputRstdPtr = attrs->GetBool(OUTPUT_RSTD_ATTR_INDEX);
+        outputRstd = outputRstdPtr != nullptr && *outputRstdPtr;
+    }
+    if (outputRstd) {
+        const gert::StorageShape* rstdShape = context_->GetOutputShape(RSTD_INDEX);
+        if (rstdShape != nullptr && rstdShape->GetStorageShape().GetShapeSize() == 0) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "rstd", "0",
+                                                      "RmsNormQuantV3 does not support an empty rstd tensor when "
+                                                      "output_rstd is true");
+            return false;
+        }
+    }
+    return true;
+}
+
 bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeDim()
 {
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckInputShapeDim.");
@@ -599,14 +640,6 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     tilingParams.r = 1;
     tilingParams.q = 1;
 
-    for (size_t i = 0; i < xDimNum; i++) {
-        if (0 == xShape.GetDim(i)) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x",
-                                                      std::to_string(xShape.GetDim(i)).c_str(),
-                                                      "Input x does not support empty tensor");
-            return ge::GRAPH_FAILED;
-        }
-    }
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         tilingParams.a *= xShape.GetDim(i);
     }
@@ -616,13 +649,6 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     for (size_t i = 0; i < scales1DimNum; i++) {
         tilingParams.q *= scales1Shape.GetDim(i);
     }
-    if (0 == tilingParams.r) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "gamma",
-                                                  std::to_string(tilingParams.r).c_str(),
-                                                  "Input gamma does not support empty tensor");
-        return ge::GRAPH_FAILED;
-    }
-
     // Set input dtype
     auto xDataType = context_->GetInputTensor(X_INDEX)->GetDataType();
     auto scaleDataType = context_->GetInputTensor(SCALES1_INDEX)->GetDataType();
@@ -680,6 +706,7 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(!CheckOptionalInput(),
                 OP_LOGE(context_->GetNodeName(), "Scales2 is required when zero_points2 is present."),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShapeSize(), , return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(context_->GetNodeName(), "The input shape dim is invalid."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(context_->GetNodeName(), "The input shape relationship is invalid."),

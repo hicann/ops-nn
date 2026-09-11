@@ -27,6 +27,32 @@ protected:
     static void SetUpTestCase() { cout << "rms_norm_quant_v3_test SetUp" << endl; }
 
     static void TearDownTestCase() { cout << "rms_norm_quant_v3_test TearDown" << endl; }
+
+    aclnnStatus RunEmptyTensorCase(size_t emptyTensorIndex, bool outputRstd = true)
+    {
+        op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+        const vector<int64_t> xShape = emptyTensorIndex == 0 ? vector<int64_t>{0, 64} : vector<int64_t>{8, 64};
+        const vector<int64_t> gammaShape = emptyTensorIndex == 1 ? vector<int64_t>{0} : vector<int64_t>{64};
+        const vector<int64_t> scaleShape = emptyTensorIndex == 2 ? vector<int64_t>{0} : vector<int64_t>{1};
+        const vector<int64_t> offsetShape = emptyTensorIndex == 3 ? vector<int64_t>{0} : vector<int64_t>{1};
+        const vector<int64_t> betaShape = emptyTensorIndex == 4 ? vector<int64_t>{0} : vector<int64_t>{64};
+        const vector<int64_t> yShape = emptyTensorIndex == 5 ? vector<int64_t>{0, 64} : vector<int64_t>{8, 64};
+        const vector<int64_t> rstdShape = emptyTensorIndex == 6 ? vector<int64_t>{0, 1} : vector<int64_t>{8, 1};
+
+        auto xDesc = TensorDesc(xShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto gammaDesc = TensorDesc(gammaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto scaleDesc = TensorDesc(scaleShape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto offsetDesc = TensorDesc(offsetShape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto betaDesc = TensorDesc(betaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto yDesc = TensorDesc(yShape, ACL_INT8, ACL_FORMAT_ND);
+        auto rstdDesc = TensorDesc(rstdShape, ACL_FLOAT, ACL_FORMAT_ND);
+
+        auto ut = OP_API_UT(aclnnRmsNormQuantV3,
+                            INPUT(xDesc, gammaDesc, scaleDesc, offsetDesc, betaDesc, 1e-5, true, outputRstd),
+                            OUTPUT(yDesc, rstdDesc));
+        uint64_t workspaceSize = 0;
+        return ut.TestGetWorkspaceSize(&workspaceSize);
+    }
 };
 
 TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_001)
@@ -223,4 +249,18 @@ TEST_F(l2_rms_norm_quant_v3_test, ascend950_case_008)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_rms_norm_quant_v3_test, ascend950_empty_tensor_returns_param_invalid)
+{
+    constexpr size_t tensorCount = 7;
+    for (size_t emptyTensorIndex = 0; emptyTensorIndex < tensorCount; ++emptyTensorIndex) {
+        SCOPED_TRACE("empty tensor index: " + std::to_string(emptyTensorIndex));
+        EXPECT_EQ(RunEmptyTensorCase(emptyTensorIndex), ACLNN_ERR_PARAM_INVALID);
+    }
+}
+
+TEST_F(l2_rms_norm_quant_v3_test, ascend950_disabled_rstd_allows_empty_placeholder)
+{
+    EXPECT_EQ(RunEmptyTensorCase(6, false), ACLNN_SUCCESS);
 }

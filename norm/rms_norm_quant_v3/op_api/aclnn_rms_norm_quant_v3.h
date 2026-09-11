@@ -55,7 +55,8 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [out] rstd:
  * 公式中的输出rstd，RMS归一化的标准差倒数。数据类型支持FLOAT32。
- * 支持空Tensor，数据格式支持ND。
+ * 当outputRstd为true时不支持空Tensor；当outputRstd为false时该输出无效，支持空指针或空Tensor占位。
+ * 数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

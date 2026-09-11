@@ -135,6 +135,7 @@ public:
                                     string srcName);
     bool CheckShapeNull();
     bool CheckOptionalInput();
+    bool CheckInputOutputShapeSize();
     bool CheckInputShapeDim();
     bool CheckInputShapeValue();
     bool CheckInputDtype();
