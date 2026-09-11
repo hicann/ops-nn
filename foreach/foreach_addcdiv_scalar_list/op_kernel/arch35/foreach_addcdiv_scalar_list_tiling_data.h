@@ -18,12 +18,18 @@
 #define FOREACH_ADDCDIV_SCALAR_LIST_TILING_DATA_H
 
 constexpr int32_t MAX_TENSOR_NUM_FOREACH_ADDCDIV = 256;
+constexpr int32_t MAX_CORE_NUM_FOREACH_ADDCDIV = 80;
 
 class ForeachAddcdivScalarListTilingData {
 public:
-    int32_t tensorNum = 0;
-    int32_t needCoreNum = 0;
-    int64_t perTensorElementNum[MAX_TENSOR_NUM_FOREACH_ADDCDIV];
+    int32_t needCoreNum = 0;                                     // Number of cores needed
+    int32_t tensorCount = 0;                                     // Tensor list length
+    int64_t totalDataCount = 0;                                  // Total elements across all tensors
+    int64_t tensorDataCountList[MAX_TENSOR_NUM_FOREACH_ADDCDIV]; // Element count per tensor
+    uint16_t tensorStartList[MAX_CORE_NUM_FOREACH_ADDCDIV];      // Start tensor index per core
+    uint16_t tensorEndList[MAX_CORE_NUM_FOREACH_ADDCDIV];        // End tensor index per core
+    int64_t tensorStartOffsetList[MAX_CORE_NUM_FOREACH_ADDCDIV]; // Offset in start tensor per core
+    int64_t tensorEndOffsetList[MAX_CORE_NUM_FOREACH_ADDCDIV];   // Offset in end tensor per core (inclusive)
 };
 
 #endif // FOREACH_ADDCDIV_SCALAR_LIST_TILING_DATA_H

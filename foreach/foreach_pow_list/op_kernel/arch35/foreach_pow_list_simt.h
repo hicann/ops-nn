@@ -249,71 +249,7 @@ __simt_callee__ inline void PowElementRange(__gm__ T* x1, __gm__ T* x2, __gm__ T
         } else {
             float bF = ConvertToFloat<T>(bVal);
             float eF = ConvertToFloat<T>(eVal);
-            float result;
-
-            if (SimtIsNaN(bF) || SimtIsNaN(eF)) {
-                uint32_t nanBits = FLOAT32_QNAN;
-                __builtin_memcpy(&result, &nanBits, sizeof(result));
-            } else if (eF == 0.0f) {
-                result = 1.0f;
-            } else if (bF == 1.0f) {
-                result = 1.0f;
-            } else if (SimtIsPosInf(bF)) {
-                result = (eF > 0.0f) ? FloatToInf(true) : 0.0f;
-            } else if (SimtIsNegInf(bF)) {
-                if (SimtIsPosInf(eF)) {
-                    result = FloatToInf(true);
-                } else if (SimtIsNegInf(eF)) {
-                    result = 0.0f;
-                } else if (eF > 0.0f && IsIntegerExp(eF)) {
-                    result = IsOddInteger(eF) ? FloatToInf(false) : FloatToInf(true);
-                } else if (eF < 0.0f && IsIntegerExp(eF)) {
-                    result = IsOddInteger(-eF) ? -0.0f : 0.0f;
-                } else if (eF > 0.0f) {
-                    result = FloatToInf(true);
-                } else {
-                    result = 0.0f;
-                }
-            } else if (SimtIsPosInf(eF)) {
-                float absB = fabsf(bF);
-                if (absB > 1.0f) {
-                    result = FloatToInf(true);
-                } else if (absB < 1.0f) {
-                    result = 0.0f;
-                } else if (bF == -1.0f) {
-                    result = 1.0f;
-                } else {
-                    result = 0.0f;
-                }
-            } else if (SimtIsNegInf(eF)) {
-                float absB = fabsf(bF);
-                if (absB > 1.0f) {
-                    result = 0.0f;
-                } else if (absB < 1.0f) {
-                    result = FloatToInf(true);
-                } else if (bF == -1.0f) {
-                    result = 1.0f;
-                } else {
-                    result = FloatToInf(true);
-                }
-            } else if (bF < 0.0f && IsIntegerExp(eF)) {
-                if (fabsf(eF) >= INT32_MAX_PLUS_ONE) {
-                    float absBase = fabsf(bF);
-                    float tmp = powf(absBase, eF);
-                    if (IsOddInteger(eF)) {
-                        tmp = -tmp;
-                    }
-                    result = tmp;
-                } else {
-                    result = NegBaseIntExp(bF, eF);
-                }
-            } else if (bF < 0.0f) {
-                uint32_t nanBits = FLOAT32_QNAN;
-                __builtin_memcpy(&result, &nanBits, sizeof(result));
-            } else {
-                result = powf(bF, eF);
-            }
-
+            float result = powf(bF, eF);
             y[idx] = ConvertFromFloat<T>(result);
         }
     }

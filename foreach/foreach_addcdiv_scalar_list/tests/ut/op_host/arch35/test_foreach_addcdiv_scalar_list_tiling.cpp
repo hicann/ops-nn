@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
- * Please refer to the License for details. You may not use this file in compliance with the License.
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
@@ -58,10 +58,17 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_float32)
                                               1024 * 1024, // ubsize
                                               4096);       // max tiling data size
     uint64_t expectTilingKey = 1;                          // FP32 = TILING_KEY_FLOAT32 = 1
-    // tensorNum=1, needCoreNum=2 → combined int64 = 8589934593
-    // perTensorElementNum[0]=2048, rest=0
-    string expectTilingData = "8589934593 2048 ";
-    for (int i = 1; i < 256; i++)
+    // needCoreNum=2, tensorCount=1 → combined int64 = 2 + 1*4294967296 = 4294967298
+    // totalDataCount=2048, tensorDataCountList[0]=2048
+    // core0: tensor[0,0] offset[0,1023], core1: tensor[0,0] offset[1024,2047]
+    string expectTilingData = "4294967298 2048 2048 ";
+    for (int i = 3; i < 299; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1024 ";
+    for (int i = 300; i < 378; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1023 2047 ";
+    for (int i = 380; i < 458; i++)
         expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
@@ -89,11 +96,17 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_float16)
                                               },
                                               &compileInfo, 24, 1024 * 1024, 4096);
     uint64_t expectTilingKey = 0; // FP16 = TILING_KEY_FLOAT16 = 0
-    // tensorNum=1, needCoreNum=2 → combined int64 = 1 + 2*4294967296 = 8589934593
-    // perTensorElementNum[0]=2048, rest=0
-    string expectTilingData = "8589934593 2048 ";
+    // needCoreNum=2, tensorCount=1 → combined int64 = 4294967298
+    // core0: tensor[0,0] offset[0,1023], core1: tensor[0,0] offset[1024,2047]
+    string expectTilingData = "4294967298 2048 2048 ";
     std::vector<size_t> expectWorkspaces = {0};
-    for (int i = 1; i < 256; i++)
+    for (int i = 3; i < 299; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1024 ";
+    for (int i = 300; i < 378; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1023 2047 ";
+    for (int i = 380; i < 458; i++)
         expectTilingData += "0 ";
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
@@ -120,10 +133,16 @@ TEST_F(ForeachAddcdivScalarListTiling, foreach_addcdiv_scalar_list_bfloat16)
                                               },
                                               &compileInfo, 24, 1024 * 1024, 4096);
     uint64_t expectTilingKey = 2; // BF16 = TILING_KEY_BFLOAT16 = 2
-    // tensorNum=1, needCoreNum=2 → combined int64 = 8589934593
-    // perTensorElementNum[0]=2048, rest=0
-    string expectTilingData = "8589934593 2048 ";
-    for (int i = 1; i < 256; i++)
+    // needCoreNum=2, tensorCount=1 → combined int64 = 4294967298
+    // core0: tensor[0,0] offset[0,1023], core1: tensor[0,0] offset[1024,2047]
+    string expectTilingData = "4294967298 2048 2048 ";
+    for (int i = 3; i < 299; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1024 ";
+    for (int i = 300; i < 378; i++)
+        expectTilingData += "0 ";
+    expectTilingData += "1023 2047 ";
+    for (int i = 380; i < 458; i++)
         expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
