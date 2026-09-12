@@ -23,8 +23,8 @@ extern "C" {
  * @param [in] x1: matmul左矩阵，数据类型支持：float8_e4m3fn, float8_e5m2, float4_e2m1（MX量化场景）, hifloat8。
  * @param [in] x2: matmul右矩阵，数据类型支持：float8_e4m3fn, float8_e5m2, float4_e2m1（MX量化场景）, hifloat8。
  * @param [in] bias: 偏置，当前不支持。
- * @param [in] x1Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0。
- * @param [in] x2Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0。
+ * @param [in] x1Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0, uint64/int64（HIFP8场景支持）。
+ * @param [in] x2Scale: 量化参数中的缩放因子，数据类型支持：float32, float8_e8m0, uint64/int64（HIFP8场景支持）。
  * @param [in] dtype: 输出矩阵的数据类型。数据类型支持：int32。
  * @param [in] groupSize: 输出矩阵的分组大小。数据类型支持：int64。
  * @param [in] permX1: 表示输入x1的转置数组。
