@@ -62,6 +62,13 @@ constexpr int64_t DILATION_45 = 45;
 constexpr int64_t MIN_KL0_FP32 = 2;
 constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
 constexpr int64_t PAD_DIM_SIMPLE = 2;
+constexpr int64_t REDUCE_SUM_THRESHOLD = 4000000;
+
+enum class Dw1x1TransToMmMode {
+    NONE,    // 不满足1x1 dw转matmul条件
+    BATCH_1, // batch=1路径
+    BATCH_N  // batch>1路径
+};
 const std::vector<DataType> REDUCESUM_SUPPORTED_DTYPES = {DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
 static bool IsInputSupportFp32Local()
 {
@@ -2316,6 +2323,34 @@ static aclnnStatus GenConvMmDwInputBy1x1Mode(BatchMatmulInput& batchMmInput,
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus GenConvMmDwInputBy1x1BatchNMode(BatchMatmulInput& batchMmInput,
+                                                   ConvolutionBackwardInputTensor& inputTensor, aclOpExecutor* executor)
+{
+    // 1x1x1 kernel + batch>1 场景下，dw 可转为 3D batch matmul：
+    // gradOutput [N, Co, D, H, W] -> [N, Co, D*H*W]，作为左矩阵(不转置)
+    // input       [N, Cin, D, H, W] -> [N, Cin, D*H*W]，作为右矩阵(转置)
+    // matmul 输出 [N, Co, Cin] -> ReduceSum(0) -> [Co, Cin]，对应 gradWeight [Co, Cin, 1, 1, 1]
+    auto gradOutput = inputTensor.gradOutput;
+    auto input = inputTensor.input;
+    op::Shape gradOutputShape3d = op::Shape({gradOutput->GetViewShape()[0], gradOutput->GetViewShape()[1],
+                                             CalcCountByAxisVec(gradOutput->GetViewShape(), {2, 3, 4})});
+    auto gradOutput3d = ViewWithShape(gradOutput, gradOutputShape3d, executor);
+    CHECK_RET(gradOutput3d != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto gradOutputND = l0op::ReFormat(gradOutput3d, op::Format::FORMAT_ND);
+
+    op::Shape inputShape3d = op::Shape(
+        {input->GetViewShape()[0], input->GetViewShape()[1], CalcCountByAxisVec(input->GetViewShape(), {2, 3, 4})});
+    auto input3d = ViewWithShape(input, inputShape3d, executor);
+    CHECK_RET(input3d != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto inputND = l0op::ReFormat(input3d, op::Format::FORMAT_ND);
+
+    batchMmInput.leftData = gradOutputND;
+    batchMmInput.isLeftTranspose = false;
+    batchMmInput.rightData = inputND;
+    batchMmInput.isRightTranspose = true;
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus GenConvMmDwOutputByMode(aclTensor*& mmDwOutput, ConvolutionBackwardResult& outputTensor,
                                            aclOpExecutor* executor)
 {
@@ -2337,13 +2372,21 @@ static aclnnStatus GenConvMmDwOutputByMode(aclTensor*& mmDwOutput, ConvolutionBa
 static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTensor& inputTensor,
                                                      ConvolutionBackwardResult& outputTensor,
                                                      ConvolutionBackwardParams& params, aclOpExecutor* executor,
-                                                     bool w1B1FmNDwTransToMmFlag = false)
+                                                     Conv3DBp2MmMode conv2MmMode,
+                                                     Dw1x1TransToMmMode dw1x1Mode = Dw1x1TransToMmMode::NONE)
 {
+    // FM=KERNEL与1x1同时命中(输入D/H/W全为1的1x1x1卷积)时优先走FM=KERNEL
+    if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL) {
+        dw1x1Mode = Dw1x1TransToMmMode::NONE;
+    }
     BatchMatmulInput batchMmInput;
     aclnnStatus status;
-    if (w1B1FmNDwTransToMmFlag) {
-        OP_LOGD("Enter 1x1 dw matmul optimization path");
+    if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_1) {
+        OP_LOGD("Enter 1x1 dw batch1 matmul optimization path");
         status = GenConvMmDwInputBy1x1Mode(batchMmInput, inputTensor, executor);
+    } else if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_N) {
+        OP_LOGI("Enter 1x1 dw batchN matmul optimization path");
+        status = GenConvMmDwInputBy1x1BatchNMode(batchMmInput, inputTensor, executor);
     } else {
         status = GenConvMmDwInputByMode(batchMmInput, inputTensor, executor);
     }
@@ -2357,12 +2400,24 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
         OP_LOGD("GenConvMmDwOutputByMode False");
         return status;
     }
+    if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_N) {
+        mmDwOutput->SetDataType(DataType::DT_FLOAT);
+    }
     auto gradWeightNND = ExecBatchMatmulOp(batchMmInput.leftData, batchMmInput.rightData, mmDwOutput,
                                            batchMmInput.isLeftTranspose, batchMmInput.isRightTranspose,
                                            params.cubeMathType, executor);
     OP_CHECK(gradWeightNND != nullptr,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ExecBatchMatmulOp for 3ddw return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
+
+    if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_N) {
+        // batchN路径: [N, Co, Cin]沿N维ReduceSum得到gradWeight [Co, Cin]
+        int64_t reduceAxes[] = {0};
+        aclIntArray* reduceDims = executor->AllocIntArray(reduceAxes, sizeof(reduceAxes) / sizeof(reduceAxes[0]));
+        CHECK_RET(reduceDims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        gradWeightNND = l0op::ReduceSumOp(gradWeightNND, reduceDims, true, executor);
+        CHECK_RET(gradWeightNND != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     auto gradWeightNCDHW = ViewWithShape(gradWeightNND, outputTensor.gradWeight->GetViewShape(), executor);
     CHECK_RET(gradWeightNCDHW != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -2373,6 +2428,16 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
                   ACLNN_SUCCESS,
               ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
+}
+
+static uint64_t GetL2CacheSize()
+{
+    uint64_t l2CacheSize = 0;
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo != nullptr) {
+        platformInfo->GetLocalMemSize(fe::LocalMemType::L2, l2CacheSize);
+    }
+    return l2CacheSize;
 }
 
 static bool IsGreaterL2Cache(const ConvolutionBackwardInputTensor& inputTensor, const ConvolutionBackwardParams& params)
@@ -2393,8 +2458,9 @@ static bool IsGreaterL2Cache(const ConvolutionBackwardInputTensor& inputTensor, 
     if (typeSize == -1) {
         return false;
     }
-    const int64_t l2CacheSize = 128 * 1024 * 1024;
-    // 是否是超大shape, 超过l2cache(128MB)进行拦截
+    const int64_t l2CacheSize = static_cast<int64_t>(GetL2CacheSize());
+    OP_LOGD("L2Cache size from platform: %ld", l2CacheSize);
+    // 是否是超大shape, 超过l2cache进行拦截
     if ((m * k + k * n + n * m) * typeSize > l2CacheSize) {
         OP_LOGD("Original ConvBackpropInput can not convert to Matmul, m = %ld, k = %ld, n = %ld", m, k, n);
         return true;
@@ -2483,6 +2549,7 @@ static bool IsGreaterL2CacheForDw1x1(const ConvolutionBackwardInputTensor& input
 {
     op::Shape weightShape = inputTensor.weight->GetViewShape();
     op::Shape inputShape = inputTensor.input->GetViewShape();
+    int64_t batchDim = inputShape.GetDim(NCDHW_N_DIM);
     int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
     int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
     int64_t dInDim = inputShape.GetDim(NCDHW_D_DIM);
@@ -2497,59 +2564,80 @@ static bool IsGreaterL2CacheForDw1x1(const ConvolutionBackwardInputTensor& input
     if (typeSize == -1) {
         return false;
     }
-    const int64_t l2CacheSize = 128 * 1024 * 1024;
-    // 数据量超过l2cache(128MB)时不走matmul路径
-    if ((m * k + k * n + n * m) * typeSize > l2CacheSize) {
-        OP_LOGD("dw 1x1 shape exceeds L2Cache, can not convert to Matmul, m = %ld, k = %ld, n = %ld", m, k, n);
+    const int64_t l2CacheSize = static_cast<int64_t>(GetL2CacheSize());
+    OP_LOGD("L2Cache size from platform: %ld", l2CacheSize);
+    // 数据量超过l2cache时不走matmul路径，batch>1时需乘以batch
+    if (batchDim * (m * k + k * n + n * m) * typeSize > l2CacheSize) {
+        OP_LOGD("dw 1x1 shape exceeds L2Cache, batch = %ld, m = %ld, k = %ld, n = %ld", batchDim, m, k, n);
         return true;
     }
     return false;
 }
 
-static bool Is1x1DwTransToMm(const ConvolutionBackwardInputTensor& inputTensor, const ConvolutionBackwardParams& params)
+static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTensor& inputTensor,
+                                                const ConvolutionBackwardParams& params)
 {
-    // only support  ASCEND950
+    // only support ASCEND950
     if (!(Ops::NN::AclnnUtil::IsRegbase())) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: current platform is not ASCEND950");
+        return Dw1x1TransToMmMode::NONE;
     }
-    op::Shape weightShape = inputTensor.weight->GetViewShape();
-    // 5D NCDHW weight + 1x1x1 kernel
+    // only support NCDHW
     if (inputTensor.gradOutput->GetStorageFormat() != op::Format::FORMAT_NCDHW ||
         inputTensor.input->GetStorageFormat() != op::Format::FORMAT_NCDHW ||
         inputTensor.weight->GetStorageFormat() != op::Format::FORMAT_NCDHW) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: storage format is not NCDHW");
+        return Dw1x1TransToMmMode::NONE;
     }
+    op::Shape weightShape = inputTensor.weight->GetViewShape();
+    // 5D NCDHW weight + 1x1x1 kernel
     if (weightShape.GetDimNum() != CONV3DINPUTDIM || weightShape[dDimNCDHWIdx] != 1 || weightShape[hDimNCDHWIdx] != 1 ||
         weightShape[wDimNCDHWIdx] != 1) {
-        return false;
-    }
-    // batch=1
-    if (inputTensor.input->GetViewShape()[nDimNCDHWIdx] != 1) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: weight is not 5D 1x1x1 kernel");
+        return Dw1x1TransToMmMode::NONE;
     }
     // groups=1
     if (params.groups != 1) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: groups is %d, only support groups=1", params.groups);
+        return Dw1x1TransToMmMode::NONE;
     }
     // stride=1
     if ((*params.stride)[CONV3D_ATTR_D_IDX] != 1 || (*params.stride)[CONV3D_ATTR_H_IDX] != 1 ||
         (*params.stride)[CONV3D_ATTR_W_IDX] != 1) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: stride is not 1");
+        return Dw1x1TransToMmMode::NONE;
     }
     // pad=0
     if (!Is3DPaddingAllZero(params.padding)) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: padding is not all zero");
+        return Dw1x1TransToMmMode::NONE;
     }
     // dilation=1
     if ((*params.dilation)[CONV3D_ATTR_D_IDX] != 1 || (*params.dilation)[CONV3D_ATTR_H_IDX] != 1 ||
         (*params.dilation)[CONV3D_ATTR_W_IDX] != 1) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: dilation is not 1");
+        return Dw1x1TransToMmMode::NONE;
     }
-    // 是否是超大shape,超过l2cache(128MB)进行拦截
+    // 是否是超大shape,超过l2cache进行拦截
     if (IsGreaterL2CacheForDw1x1(inputTensor)) {
-        return false;
+        OP_LOGD("Dw1x1TransToMm return NONE: shape exceeds L2Cache limit");
+        return Dw1x1TransToMmMode::NONE;
     }
-    return true;
+
+    int64_t batchDim = inputTensor.input->GetViewShape().GetDim(nDimNCDHWIdx);
+    if (batchDim == 1) {
+        OP_LOGD("Dw1x1TransToMm return BATCH_1: batch=1, 1x1 dw trans to matmul");
+        return Dw1x1TransToMmMode::BATCH_1;
+    }
+    // N*Co*Cin过大时ReduceSum开销显著，跳过batchN matmul路径
+    int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
+    int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+    if (batchDim * cOutDim * cInDim > REDUCE_SUM_THRESHOLD) {
+        OP_LOGD("Dw1x1TransToMm return NONE: ReduceSum input size exceeds threshold");
+        return Dw1x1TransToMmMode::NONE;
+    }
+    OP_LOGD("Dw1x1TransToMm return BATCH_N: batch=%ld, 1x1 dw trans to batch matmul", batchDim);
+    return Dw1x1TransToMmMode::BATCH_N;
 }
 
 static aclnnStatus CalculateW1B1FmNDxByMm(ConvolutionBackwardInputTensor& inputTensor,
@@ -2610,9 +2698,10 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
     OP_LOGD("Enter CalculateConv3DBackwardByMatmulImpl");
     // 是否满足新的条件
     bool w1B1FmNDxTransToMmFlag = IsW1B1FmNDxTransToMm(inputTensor, params); // 判定条件函数
-    bool w1B1FmNDwTransToMmFlag = Is1x1DwTransToMm(inputTensor, params);
+    auto dw1x1Mode = GetDw1x1TransToMmMode(inputTensor, params);
     auto conv2MmMode = GetConv3DBp2MmMode(inputTensor, params);
-    if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_NO_MM && !w1B1FmNDxTransToMmFlag && !w1B1FmNDwTransToMmFlag) {
+    if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_NO_MM && !w1B1FmNDxTransToMmFlag &&
+        dw1x1Mode == Dw1x1TransToMmMode::NONE) {
         return ACLNN_SUCCESS;
     }
     if ((*params.outputMask)[0]) {
@@ -2643,17 +2732,15 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
             }
         }
     }
-    // dw: FM=KERNEL场景 或 1x1x1 kernel + batch=1 + stride=1 + pad=0 + dilation=1 + groups=1场景
-    if ((*params.outputMask)[1] &&
-        (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL || w1B1FmNDwTransToMmFlag)) {
-        // FM=KERNEL与1x1重叠时优先走FM=KERNEL路径
-        if (conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL) {
-            w1B1FmNDwTransToMmFlag = false;
+    // dw: FM=KERNEL场景优先，1x1x1 kernel + batch=1/batch>1 + stride=1 + pad=0 + dilation=1 + groups=1场景兜底
+    if ((*params.outputMask)[1]) {
+        if (dw1x1Mode != Dw1x1TransToMmMode::NONE ||
+            conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL) {
+            auto status = CalculateConv3DBackwardDwByMmMode(inputTensor, outputTensor, params, executor, conv2MmMode,
+                                                            dw1x1Mode);
+            CHECK_RET(status == ACLNN_SUCCESS, status);
+            conv3DBp2MatmulMask[1] = true;
         }
-        auto status = CalculateConv3DBackwardDwByMmMode(inputTensor, outputTensor, params, executor,
-                                                        w1B1FmNDwTransToMmFlag);
-        CHECK_RET(status == ACLNN_SUCCESS, status);
-        conv3DBp2MatmulMask[1] = true;
     }
     return ACLNN_SUCCESS;
 }
