@@ -488,7 +488,7 @@ int main() {
   aclTensor* xGradOut = nullptr;
   std::vector<float> gradLossHostData = {0.1};
   std::vector<float> logProbHostData = {-0.2, -0.2, -0.2, -0.2, -0.2, -0.2};
-  std::vector<float> targetHostData = {0, 0};
+  std::vector<int64_t> targetHostData = {0, 0};
   std::vector<float> weightHostData = {1.0, 1.0, 1.0};
   std::vector<float> xGradOutHostData = {-0.0091, 0.0409, 0.0409, -0.0091, 0.0409, 0.0409};
   int64_t ignoreIndex = -100;
