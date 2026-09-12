@@ -114,10 +114,10 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>inputTokens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出inputTokens，用于更新vLLM模型中的token值。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度为1+specNum。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
-      <td>2</td>
+      <td>1</td>
       <td>×</td>
     </tr>
     <tr>
@@ -134,7 +134,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>inputPositions（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出inputPositions，用于记录token的index。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>seqLens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，用于记录不同blockIdx下seq的长度，公式中的输入/输出seqLens。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>slotMapping（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出slotMapping，用于将token值在序列中的位置映射到物理位置。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -163,8 +163,8 @@ aclnnStatus aclnnAdvanceStepV2(
     <tr>
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
-      <td>待进行AdvanceStepV2计算的入参，用于记录不同blockIdx下block的大小，公式中的输入blockTables。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td>待进行AdvanceStepV2计算的入参，用于记录不同blockIdx下block的物理块编号，公式中的输入blockTables。</td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -274,13 +274,13 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   <tr>
     <td rowspan="5">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
     <td rowspan="5">561002</td>
-    <td>输入inputTokens、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum的shape的第一维长度与numSeqs不一致。</td>
+    <td>输入inputTokens、inputPositions、seqLens、slotMapping的shape不是[numSeqs * (1+specNum)]，或者blockTables、specToken、acceptedNum的shape的第一维长度与numSeqs不一致。</td>
   </tr>
   <tr>
-    <td>输入sampledTokenIds的shape的第一维长度与numQueries不一致，或者shape的第二维长度不为1。</td>
+    <td>输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1+specNum。</td>
   </tr>
   <tr>
-    <td>输入inputTokens的shape的第二维长度不为1+specNum。</td>
+    <td>输入acceptedNum的shape的长度与numSeqs不一致。</td>
   </tr>
     <tr>
     <td>输入specToken的shape的第二维长度不为specNum。</td>
@@ -347,7 +347,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_advance_step_v2.h"//不确定头文件名字
+#include "aclnnop/aclnn_advance_step_v2.h"
 #define CHECK_RET(cond, return_expr) \
     do {                               \
     if (!(cond)) {                   \
@@ -375,7 +375,7 @@ void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
                         *deviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("mean result[%ld] is: %ld\n", i, resultData[i]);
+    LOG_PRINT("advanceStepV2 result[%ld] is: %ld\n", i, resultData[i]);
     }
 }
 
@@ -422,16 +422,22 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> input1Shape = {16};
-    std::vector<int64_t> input2Shape = {8,2};
-    std::vector<int64_t> input3Shape = {8,1000};
-    std::vector<int64_t> input4Shape = {8,1};
-    std::vector<int64_t> input5Shape = {8};
-    std::vector<int64_t> input1HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input2HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input3HostData(8000, 7);
-    std::vector<int64_t> input4HostData = {0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input5HostData = {0, 1, 2, 3, 4, 5, 6, 7};
+    std::vector<int64_t> input1Shape = {72};
+    std::vector<int64_t> input2Shape = {8,9};
+    std::vector<int64_t> input3Shape = {72};
+    std::vector<int64_t> input4Shape = {72};
+    std::vector<int64_t> input5Shape = {72};
+    std::vector<int64_t> input6Shape = {8,1000};
+    std::vector<int64_t> input7Shape = {8,8};
+    std::vector<int64_t> input8Shape = {8};
+    std::vector<int64_t> input1HostData(8*9, 1);
+    std::vector<int64_t> input2HostData(8*9, 1);
+    std::vector<int64_t> input3HostData(8*9, 1);
+    std::vector<int64_t> input4HostData(8*9, 8);
+    std::vector<int64_t> input5HostData(8*9, 1);
+    std::vector<int64_t> input6HostData(8*1000, 1);
+    std::vector<int64_t> input7HostData(8*8, 1);
+    std::vector<int64_t> input8HostData(8, 1);
 
     void* input1DeviceAddr = nullptr;
     aclTensor* input1 = nullptr;
@@ -454,17 +460,17 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(input2HostData, input2Shape, &input2DeviceAddr, aclDataType::ACL_INT64, &input2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input3DeviceAddr, aclDataType::ACL_INT64, &input3);
+    ret = CreateAclTensor(input3HostData, input3Shape, &input3DeviceAddr, aclDataType::ACL_INT64, &input3);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input4DeviceAddr, aclDataType::ACL_INT64, &input4);
+    ret = CreateAclTensor(input4HostData, input4Shape, &input4DeviceAddr, aclDataType::ACL_INT64, &input4);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input5);
+    ret = CreateAclTensor(input5HostData, input5Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input5);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input3HostData, input3Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
+    ret = CreateAclTensor(input6HostData, input6Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input4HostData, input4Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input7);
+    ret = CreateAclTensor(input7HostData, input7Shape, &input7DeviceAddr, aclDataType::ACL_INT64, &input7);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input5HostData, input5Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input8);
+    ret = CreateAclTensor(input8HostData, input8Shape, &input8DeviceAddr, aclDataType::ACL_INT64, &input8);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     int64_t numseq = 8;
