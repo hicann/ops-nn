@@ -26,6 +26,7 @@ constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr uint32_t BYTE_BLOCK = 32;
 constexpr uint64_t TWO = 2;
 constexpr uint32_t TWO_U32 = 2;
+constexpr uint32_t THREE_U32 = 3;
 constexpr uint32_t FOUR_U32 = 4;
 constexpr uint64_t ONE_U64 = 1;
 constexpr uint32_t ONE_U32 = 1;
