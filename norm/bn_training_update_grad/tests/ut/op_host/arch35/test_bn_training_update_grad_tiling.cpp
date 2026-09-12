@@ -14,7 +14,8 @@
  *        epsilon 缺省（OPTIONAL，缺省 0.0001 须放行）、
  *        反向校验（dtype/format/rank/空 tensor/统计量元素数/grads≠x shape）；
  *        NHWC（C=末维）：channelSplit/rowSplit 两切分、窗口化大 C、
- *        ND C==1 大规模与 R==1 巨 C 两条 reroute、grads/x 格式一致性、统计量≠末维。
+ *        ND C==1 大规模与 R==1 巨 C 两条 reroute、grads/x 格式一致性、统计量≠末维；
+ *        rowSplit（含 SyncAll）须设 batch mode（schedule_mode=1），ND/channelSplit 保持默认 0。
  */
 
 #include <iostream>
@@ -55,13 +56,14 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 
 // 四输入(grads/x/batch_mean/batch_variance) 两输出(diff_scale/diff_offset)，format 固定 ND。
 // hasEpsilon=false 时不下发 epsilon 属性（OPTIONAL 缺省 0.0001，须放行）。
-// xFmt 独立于 gradsFmt（grads/x 格式一致性校验用）；td 非空时回填 tiling data 快照。
+// xFmt 独立于 gradsFmt（grads/x 格式一致性校验用）；td 非空时回填 tiling data 快照；
+// scheduleMode 非空时回填调度模式（rowSplit 含 SyncAll 须为 1=batch mode，其余默认 0）。
 ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint64_t& tilingKey,
                           int64_t* blockDim = nullptr, size_t* workspaceSize = nullptr,
                           ge::DataType gradsDt = ge::DT_FLOAT, ge::DataType xDt = ge::DT_FLOAT,
                           ge::DataType statDt = ge::DT_FLOAT, ge::Format fmt = ge::FORMAT_ND, bool hasEpsilon = true,
                           const std::vector<int64_t>* xDims = nullptr, ge::Format xFmt = ge::FORMAT_ND,
-                          BNTrainingUpdateGradTilingData* td = nullptr)
+                          BNTrainingUpdateGradTilingData* td = nullptr, uint32_t* scheduleMode = nullptr)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -164,6 +166,9 @@ ge::graphStatus RunTiling(const std::vector<int64_t>& gradsDims, int64_t c, uint
             }
             *td = *tdSnap;
         }
+        if (scheduleMode != nullptr) {
+            *scheduleMode = tiling_context->GetScheduleMode();
+        }
     }
     return ret;
 }
@@ -185,10 +190,14 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_channel_split)
     uint64_t key = 0;
     int64_t blockDim = 0;
     size_t ws = 1;
-    EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, &blockDim, &ws), ge::GRAPH_SUCCESS);
+    uint32_t schedMode = 1;
+    EXPECT_EQ(RunTiling({2, 3, 4, 5}, 3, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_ND,
+                        true, nullptr, ge::FORMAT_ND, nullptr, &schedMode),
+              ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0U);
-    EXPECT_EQ(blockDim, 3); // channelCores=3
-    EXPECT_EQ(ws, 0U);      // 零核间通信，无 workspace
+    EXPECT_EQ(blockDim, 3);   // channelCores=3
+    EXPECT_EQ(ws, 0U);        // 零核间通信，无 workspace
+    EXPECT_EQ(schedMode, 0U); // ND 零核间通信无 SyncAll：不设 batch mode（保持默认）
 }
 
 // channel 充足占满核：C=128 → channelCores=64（UT 假平台 AIV 64 核），blockDim=64
@@ -337,9 +346,10 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_channel_split_small)
     uint64_t key = 0;
     int64_t blockDim = 0;
     size_t ws = 1;
+    uint32_t schedMode = 1;
     BNTrainingUpdateGradTilingData td = {};
     EXPECT_EQ(RunTiling({2, 4, 5, 3}, 3, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
-                        true, nullptr, ge::FORMAT_NHWC, &td),
+                        true, nullptr, ge::FORMAT_NHWC, &td, &schedMode),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0U);
     EXPECT_EQ(td.isNhwc, 1);
@@ -347,6 +357,7 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_channel_split_small)
     EXPECT_EQ(td.numC, 3);          // C=末维
     EXPECT_EQ(blockDim, 3);         // channelCores=min(3,64)
     EXPECT_EQ(ws, 0U);
+    EXPECT_EQ(schedMode, 0U); // channelSplit 零通信无 SyncAll：不设 batch mode（保持默认）
 }
 
 // NHWC rowSplit（rows=200≥64、C=7）：原子加直写输出（零 ws），mode=2
@@ -355,9 +366,10 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split)
     uint64_t key = 0;
     int64_t blockDim = 0;
     size_t ws = 1;
+    uint32_t schedMode = 0;
     BNTrainingUpdateGradTilingData td = {};
     EXPECT_EQ(RunTiling({200, 7}, 7, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::FORMAT_NHWC,
-                        true, nullptr, ge::FORMAT_NHWC, &td),
+                        true, nullptr, ge::FORMAT_NHWC, &td, &schedMode),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(td.isNhwc, 1);
     EXPECT_EQ(td.nhwcSplitMode, 2);
@@ -365,6 +377,8 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split)
     EXPECT_EQ(td.cLenCap, 64); // W=ceil64(7)=64
     EXPECT_EQ(blockDim, 64);   // rowSplit 恒满核
     EXPECT_EQ(ws, 0U);         // 原子加直写：零 workspace
+    // rowSplit 跨核合并含 SyncAll：须 batch mode（所有核同波启动），否则分波启动死锁
+    EXPECT_EQ(schedMode, 1U);
 }
 
 // NHWC rowSplit 大 C（C=4096 在窗预算内，单窗全 C）
@@ -373,13 +387,15 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split_c4096_cap)
     uint64_t key = 0;
     int64_t blockDim = 0;
     size_t ws = 1;
+    uint32_t schedMode = 0;
     BNTrainingUpdateGradTilingData td = {};
     EXPECT_EQ(RunTiling({100, 4096}, 4096, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC, &td),
+                        ge::FORMAT_NHWC, true, nullptr, ge::FORMAT_NHWC, &td, &schedMode),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(td.nhwcSplitMode, 2);
     EXPECT_EQ(td.cLenCap, 4096); // W=ceil64(4096)=4096（单窗全 C）
     EXPECT_EQ(ws, 0U);
+    EXPECT_EQ(schedMode, 1U); // SyncAll 路径：batch mode
 }
 
 // NHWC rows<核数回退 channelSplit（{10,7}：rows=10<64）
@@ -433,15 +449,17 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nd_c1_reroute_g22)
     uint64_t key = 0;
     int64_t blockDim = 0;
     size_t ws = 0;
+    uint32_t schedMode = 0;
     BNTrainingUpdateGradTilingData td = {};
     EXPECT_EQ(RunTiling({32, 1, 224, 16, 5, 96}, 1, key, &blockDim, &ws, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                        ge::FORMAT_ND, true, nullptr, ge::FORMAT_ND, &td),
+                        ge::FORMAT_ND, true, nullptr, ge::FORMAT_ND, &td, &schedMode),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(td.isNhwc, 1);
     EXPECT_EQ(td.nhwcSplitMode, 2);
     EXPECT_EQ(td.numC, 1);
     EXPECT_EQ(ws, 0U); // 原子加直写：零 workspace
     EXPECT_EQ(blockDim, 64);
+    EXPECT_EQ(schedMode, 1U); // reroute 到 rowSplit（SyncAll 路径）：batch mode
 }
 
 // ND C==1 小规模不 reroute（{1,1,65}=65 元素 < 1M：仍走原快路）
