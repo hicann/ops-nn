@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
  * \brief
  */
 
+#include <cstring>
 #include <iostream>
-#include <fstream>
-#include <vector>
 #include <gtest/gtest.h>
 
 #include "log/log.h"
@@ -272,4 +271,155 @@ TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Til
     ASSERT_NE(tilingData, nullptr);
     // EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "16 4 32 4 1 1 32 0 16 0 1 0 ");
     // dlog_setlevel(0, 3, 0);
+}
+
+// ---------------------------------------------------------------------------
+// 分派窗口回归（2026-09-11 高维 probe 摊销布局 + VF 高窗，契约见 tiling cpp 文件头注释）。
+// TilingData 字段序（头 6 个 uint32 + 3 个 uint64）：
+// tableSize bitWidth dim keyNum amsgrad maximize blockX blockY blockNum
+// keys={{2}} → keyNum=2，bucket_size=16 → tableSize=16，faker CORE_NUM=64。
+// ---------------------------------------------------------------------------
+struct AdamWTilingOut {
+    uint32_t tableSize, bitWidth, dim, keyNum, amsgrad, maximize;
+    uint64_t blockX, blockY, blockNum;
+};
+
+static AdamWTilingOut RunAdamWTiling(int64_t dim, ge::DataType valuesDtype, uint64_t& tilingKeyOut)
+{
+    gert::StorageShape table_handle_shape = {{1}, {1}};
+    gert::StorageShape keys_shape = {{2}, {2}};
+    gert::StorageShape state_shape = {{2, dim}, {2, dim}};
+    gert::StorageShape scalar_shape = {{1}, {1}};
+
+    string compile_info_string = R"({
+         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                           "Intrinsic_fix_pipe_l0c2out": false,
+                           "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l0c2ub": true,
+                           "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                           "CORE_NUM": 64}
+                           })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::EmbeddingHashTableApplyAdamWCompileInfo compile_info;
+
+    std::string op_type("EmbeddingHashTableApplyAdamW");
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    EXPECT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(13, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&table_handle_shape, &keys_shape, &state_shape, &state_shape, &scalar_shape,
+                                    &scalar_shape, &scalar_shape, &scalar_shape, &scalar_shape, &scalar_shape,
+                                    &scalar_shape, &state_shape, &state_shape})
+                      .OutputShapes({&state_shape, &state_shape, &scalar_shape, &scalar_shape, &state_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(11, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(12, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, valuesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dim)},
+                                  {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(16)},
+                                  {"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    tilingKeyOut = tiling_context->GetTilingKey();
+    auto tilingData = tiling_context->GetRawTilingData();
+    EXPECT_NE(tilingData, nullptr);
+
+    AdamWTilingOut out{};
+    const uint8_t* p = static_cast<const uint8_t*>(tilingData->GetData());
+    memcpy(&out.tableSize, p, 6 * sizeof(uint32_t));
+    memcpy(&out.blockX, p + 6 * sizeof(uint32_t), 3 * sizeof(uint64_t));
+    return out;
+}
+
+TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_Dispatch_Window_Test)
+{
+    uint64_t tilingKey = 0;
+    // 主窗口合并 VF（dim=32 偶数 fp32）：merge=4，nextPow2(8) 封顶 4 → bx=4 by=128
+    auto t32 = RunAdamWTiling(32, ge::DT_FLOAT, tilingKey);
+    EXPECT_EQ(t32.blockX, 4);
+    EXPECT_EQ(t32.blockY, 128);
+    EXPECT_EQ(t32.blockNum, 1);
+    EXPECT_EQ(tilingKey, 104);
+    // 130~256 legacy：bx=ceil(130/32)*32=160，by=512/160=3
+    auto t130 = RunAdamWTiling(130, ge::DT_FLOAT, tilingKey);
+    EXPECT_EQ(t130.blockX, 160);
+    EXPECT_EQ(t130.blockY, 3);
+    EXPECT_EQ(t130.blockNum, 1);
+    // 257~736 probe 摊销布局 fp32：bx=32 by=16（奇偶同）
+    for (int64_t dim : {512, 736, 1023}) {
+        auto t = RunAdamWTiling(dim, ge::DT_FLOAT, tilingKey);
+        EXPECT_EQ(t.blockX, 32) << "dim=" << dim;
+        EXPECT_EQ(t.blockY, 16) << "dim=" << dim;
+        EXPECT_EQ(t.blockNum, 1) << "dim=" << dim;
+    }
+    // 布局段 fp16：bx=64 by=8（v7 标定，bx=32 在 fp16 部分档实测回退）
+    auto t258h = RunAdamWTiling(258, ge::DT_FLOAT16, tilingKey);
+    EXPECT_EQ(t258h.blockX, 64);
+    EXPECT_EQ(t258h.blockY, 8);
+    EXPECT_EQ(t258h.bitWidth, 2);
+    EXPECT_EQ(tilingKey, 102);
+    auto t768h = RunAdamWTiling(768, ge::DT_FLOAT16, tilingKey);
+    EXPECT_EQ(t768h.blockX, 64);
+    EXPECT_EQ(t768h.blockY, 8);
+    EXPECT_EQ(t768h.blockNum, 1);
+    // >736 fp32 偶数合并 VF：merge=4，nextPow2(185/256) 封顶 32 → bx=32 by=16
+    for (int64_t dim : {740, 1024}) {
+        auto t = RunAdamWTiling(dim, ge::DT_FLOAT, tilingKey);
+        EXPECT_EQ(t.blockX, 32) << "dim=" << dim;
+        EXPECT_EQ(t.blockY, 16) << "dim=" << dim;
+        EXPECT_EQ(t.blockNum, 1) << "dim=" << dim;
+    }
 }
