@@ -185,7 +185,8 @@ private:
 
     TQue<QuePosition::VECIN, 1> groupIndexQue;
     TBuf<QuePosition::VECCALC> groupIndexSumBuf;
-    TBufPool<QuePosition::VECCALC, 12> tBufPool;
+    static constexpr uint8_t TBUF_POOL_SIZE = 12;
+    TBufPool<QuePosition::VECCALC, TBUF_POOL_SIZE> tBufPool;
 
     LocalTensor<T0> x0Local;
     LocalTensor<T0> x1Local;

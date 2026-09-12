@@ -52,6 +52,7 @@ constexpr int64_t B32_ALIGN_NUM = BLOCK_SIZE / B32_BYTES;
 constexpr int64_t PER_BLOCK_FP16 = 128;
 constexpr int64_t PER_MX_FP16 = 32;
 constexpr int64_t FP4_PACK_NUM = 2;
+constexpr int64_t SWIGLU_SPLIT_FACTOR = 2;
 constexpr int64_t MX_SCALE_ALIGN_FACTOR = 2;
 constexpr size_t MIN_X_DIM_NUM = 2;
 constexpr size_t MAX_DIM_NUM = 8;
@@ -71,6 +72,7 @@ constexpr size_t OUTPUT_INDEX_Y_SCALE = 1;
 constexpr size_t OUTPUT_INDEX_Y_ORIGIN = 2;
 constexpr size_t CACHE_LINE_SIZE = 128;
 constexpr float DEFAULT_CLAMP_LIMIT = -1.0f;
+constexpr float FLOAT_COMPARE_EPSILON = 1e-6f;
 constexpr int64_t BLOCK_QUANT_TILING_KEY = 1000;
 constexpr int64_t BLOCK_QUANT_YORIGIN_TILING_KEY = 1100;
 constexpr int64_t MX_QUANT_TILING_KEY = 2000;
@@ -87,7 +89,7 @@ int64_t ShapeElementNum(const gert::Shape& shape)
 }
 } // namespace
 
-ge::graphStatus SwigluGroupQuantTiling::GetPlatformInfoCommon(gert::TilingContext* context, uint64_t& coreNum,
+ge::graphStatus SwigluGroupQuantTiling::GetPlatformInfoCommon(const gert::TilingContext* context, uint64_t& coreNum,
                                                               uint64_t& ubSize)
 {
     auto platformInfo = context->GetPlatformInfo();
@@ -128,7 +130,7 @@ ge::graphStatus SwigluGroupQuantTiling::GetClampLimitAttr(const gert::RuntimeAtt
     auto clampLimitAttr = attrs->GetAttrPointer<float>(ATTR_INDEX_CLAMP_LIMIT);
     if (clampLimitAttr != nullptr) {
         // DEFAULT_CLAMP_LIMIT means user did not pass clamp_limit.
-        if (*clampLimitAttr != DEFAULT_CLAMP_LIMIT) {
+        if (std::fabs(*clampLimitAttr - DEFAULT_CLAMP_LIMIT) > FLOAT_COMPARE_EPSILON) {
             OP_CHECK_IF(!(*clampLimitAttr > 0.0f),
                         OP_LOGE(context_->GetNodeName(), "attr clamp_limit should be greater than 0.0, got %f.",
                                 *clampLimitAttr),
@@ -187,9 +189,9 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
 
     auto outputOriginAttr = attrs->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
     if (outputOriginAttr != nullptr) {
-        outputOrigin_ = (*outputOriginAttr) ? 1 : 0;
+        outputOrigin_ = *outputOriginAttr;
     }
-    OP_CHECK_IF((outputOrigin_ != 0), OP_LOGE(context_->GetNodeName(), "attr output_origin must be false."),
+    OP_CHECK_IF(outputOrigin_, OP_LOGE(context_->GetNodeName(), "attr output_origin must be false."),
                 return ge::GRAPH_FAILED);
 
     if (GetClampLimitAttr(attrs) == ge::GRAPH_FAILED) {
@@ -460,7 +462,7 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
             return ge::GRAPH_FAILED);
     }
 
-    splitD_ = d_ / 2;
+    splitD_ = d_ / SWIGLU_SPLIT_FACTOR;
     scaleCol_ = CeilDiv(splitD_, splitFactor_);
 
     if (CheckOutputInfo(xDtype, xStorageShape) == ge::GRAPH_FAILED) {
@@ -687,8 +689,7 @@ void SwigluGroupQuantTiling::SetTilingData()
 
 ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
 {
-    ge::graphStatus status;
-    status = CalcGroupIndexTiling();
+    ge::graphStatus status = CalcGroupIndexTiling();
     if (status == ge::GRAPH_FAILED) {
         return status;
     }
