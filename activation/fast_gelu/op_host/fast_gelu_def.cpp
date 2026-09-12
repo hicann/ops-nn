@@ -33,6 +33,7 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "fast_gelu_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

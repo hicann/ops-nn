@@ -1,0 +1,4919 @@
+{
+    "op_type": "Quantize",
+    "op_list": [
+      {
+        "bin_filename": "Quantize_09d01b35d143ca636863a16602476fbe",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_43dafac844f59a4120e07126a2e280e8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bfe122f7e377292904d57769ed395bbe",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_89e7139595dae2a14ab1d071bf063321",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_d31df0642fbc63eb4e58941883e9a7c6",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_cd2b01b443844f62fcd020e6624004b0",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e48a983a2e892c528288078e6174266d",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_5534b764c8a9f5370f63122ee44820ea",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_5ee84e0e7b085db2d9df70374f7fca5a",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_9fbd20da29421293846fe10ae94f5db5",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bba09cedb0b626dd1aa20f9c74de7c09",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_8541710653ceeba9cf2342ffbf6175b3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e994f268138d761f7a71bf9ab2861301",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_d53f21e7639d0370fb41710c3b51f932",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_3b6ddda8af693384fbf992cb692fa4f9",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_9317bd07a95de332a88161c7d6491fc3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_c6b401b3fb8c0e19b83e1be3fe4d5c75",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_dc8ca2172d40eeaa6674b00cfd1fde09",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_308f65ae09e57c46f7aad2c00c42c1aa",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fa1923c1b7ac87aa045b4afe8a66f9fa",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_627c2e0a51039f54cc49bb5292d12a1b",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_84a3f01bd2d8ddae8d2f0a4f7cf08c06",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_c75f3a50bd3ec6b2226f2e6e587101ee",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_391509d1df03c85772e23d97bc8f0ffb",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_ca9c170f7f31be470ab99e1453c4b954",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_df95c32c66742187b09ddac4d0a53314",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e81fac37b9d9135d16720297cc7381a5",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_a98f9370913392a3ae8ec243f4490c30",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_5ef8464a2df8c8ee1f91bded1c41c887",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_6c5ef0e958d7d71c729128fd9b470abe",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_8929f2d9ab4e8c71dcd0583621fdd6ed",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_4f83d1684a193b8dd3f5576c7fba7484",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_1dde90ff1dd5f88f4b4ad5e342856f20",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_6652f3c32e50e6eece764b92f487088a",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_4e45f8f7f9a0758853a48aa64b0beabf",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_65fa7f61c81976ab05681179c4b9d818",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_907444c3d5545ff8f6a47022d1aee808",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_5c69b781e83337ae64553e76ef702f21",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bc9985efc904ccd467fde50cc52313b8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_40236adac775269cb29cc4f534ad6302",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_491856ab8492b2802d090ed38baca25d",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_d714c2a25a004974936db62d938f01f3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_b0bfc18b03ba1ec2ce93fa563aee7745",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_32a78aadc82c8a40f86c012a2a25b8a7",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e6335dbb5ce9eb85e6423d6b1125d737",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_d50a829380e224a035f1519b31e7e971",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_0842876b2423826552cd9e38781bf8c4",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_62590b6978eb71c13aac99945b9898e8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_b632465012a2814bf21bc784abbae468",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e1e96881ebc6848b9c8d554ab64a6fea",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_38fed7e24df5c133f7f0130c26dd415e",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_a5e59aa808f5fe9291014ca011fe33b2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e596fa72e1fe8340795b61bf82cf2b42",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_0c77ceabefb1031e9575796c4e7c8a2c",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_cab49741c3b1c3c4fd17add2deabf198",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_112900a6ff2f4c6604d37bfa31b45754",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_e6232558b2f314fc958ecb5da6bec54a",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_8b5df5a02000420fe5f4e2c62c325e36",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_60dd64476c1b344f7636397296dd3cb4",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_b8e1234b35a8be121d6cf507d1f51dc1",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_uint8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_uint8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_uint8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_int8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_int8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_int8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_float8_e4m3fn",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_float8_e4m3fn",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_float8_e4m3fn",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp32_fp32_fp32_float8_e5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_fp16_fp32_fp32_float8_e5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Quantize_bf16_fp32_fp32_float8_e5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scales",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "zero_points",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dtype",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

@@ -44,6 +44,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "mish_grad_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

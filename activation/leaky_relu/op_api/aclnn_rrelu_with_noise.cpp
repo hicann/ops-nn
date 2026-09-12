@@ -156,8 +156,8 @@ static aclnnStatus GenerateUniformRandom(const aclTensor* selfReshapeOut, const 
                                          const aclScalar* upper, int64_t seed, int64_t offset,
                                          const aclTensor** computeOut, aclOpExecutor* executor)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201) {
         auto inputShape = op::ToShapeVector(selfReshapeOut->GetViewShape());
         auto inputShapeArray = executor->AllocIntArray(inputShape.data(), inputShape.size());
         CHECK_RET(inputShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);

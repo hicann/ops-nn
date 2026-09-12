@@ -20,6 +20,8 @@
 #include "aclnn_kernels/contiguous.h"
 #include "sigmoid_grad.h"
 #include "opdev/op_dfx.h"
+#include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -33,8 +35,8 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
 
 inline static bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 inline static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* gradInput)

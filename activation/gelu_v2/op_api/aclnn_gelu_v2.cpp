@@ -14,6 +14,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -36,8 +37,8 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* y)

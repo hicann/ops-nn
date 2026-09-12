@@ -1,0 +1,113 @@
+{
+  "op_type": "GeluV2",
+  "op_list": [
+    {
+      "bin_filename": "GeluV2_c18250cba30a5c123c2039070bc869ec",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "approximate",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "GeluV2_4a5111502b3aecc4adbee9b165947d64",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "approximate",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "GeluV2_c5eef60d3d1a556d24bb4f081c0aa3ec",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "approximate",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

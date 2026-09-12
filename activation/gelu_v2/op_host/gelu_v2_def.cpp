@@ -43,6 +43,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "gelu_v2_apt");
         this->AICore().AddConfig("ascend950", config950);
+        this->AICore().AddConfig("ascend350", config950);
     }
 };
 

@@ -61,6 +61,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend350", config);
     }
 };
 

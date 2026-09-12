@@ -25,6 +25,8 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 #include "logsigmoid_grad.h"
 #include "aclnn_kernels/cast.h"
@@ -54,8 +56,8 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, con
 
 static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return BF16_DTYPE_SUPPORT_LIST;
     } else {
         return DTYPE_SUPPORT_LIST;
@@ -64,8 +66,8 @@ static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportLis
 
 static inline const std::initializer_list<op::DataType>& GetOutputDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return BF16_DTYPE_SUPPORT_LIST;
     } else {
         return DTYPE_SUPPORT_LIST;

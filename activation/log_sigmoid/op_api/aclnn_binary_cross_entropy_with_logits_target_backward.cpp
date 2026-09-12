@@ -28,6 +28,7 @@
 #include "opdev/op_log.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 using namespace op;
 
 template <typename T, typename... Ts>
@@ -58,8 +59,8 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     }
     return DTYPE_SUPPORT_LIST;

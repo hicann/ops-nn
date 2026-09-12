@@ -1,0 +1,245 @@
+{
+	"op_type": "ReluGradV2",
+	"op_list": [
+		{
+			"bin_filename": "ReluGradV2_ba25f0ac52c80d5c7b1aa27fa34cb1aa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "bfloat16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		},
+		{
+			"bin_filename": "ReluGradV2_e1759e2b792120852dd9d7b84aa90eaa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "float16",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		},
+		{
+			"bin_filename": "ReluGradV2_5ad32a03ba5d748fd1603e0ff48b69aa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "float32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		},
+		{
+			"bin_filename": "ReluGradV2_99518cac5700b0a6489285e62db716aa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "int32",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		},
+		{
+			"bin_filename": "ReluGradV2_fd2d2b43ba293a761dd769dd99db2eaa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "int8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		},
+		{
+			"bin_filename": "ReluGradV2_f26b540b588d442ecf92aed489251aaa",
+			"inputs": [
+				{
+					"name": "gradients",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				},
+				{
+					"name": "mask",
+					"index": 1,
+					"dtype": "uint1",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			],
+			"outputs": [
+				{
+					"name": "backprops",
+					"index": 0,
+					"dtype": "uint8",
+					"format": "ND",
+					"paramType": "required",
+					"shape": [
+						-2
+					],
+					"format_match_mode": "FormatAgnostic"
+				}
+			]
+		}
+	]
+}
