@@ -1,18 +1,17 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_advance_step_v2.h" //不确定头文件名字
+#include "aclnnop/aclnn_advance_step_v2.h"
 #define CHECK_RET(cond, return_expr) \
     do {                             \
         if (!(cond)) {               \
@@ -40,9 +39,9 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
     std::vector<int64_t> resultData(size, 0);
     auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
                            size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("mean result[%ld] is: %ld\n", i, resultData[i]);
+        LOG_PRINT("advanceStepV2 result[%ld] is: %ld\n", i, resultData[i]);
     }
 }
 
@@ -92,16 +91,22 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> input1Shape = {16};
-    std::vector<int64_t> input2Shape = {8, 2};
-    std::vector<int64_t> input3Shape = {8, 1000};
-    std::vector<int64_t> input4Shape = {8, 1};
-    std::vector<int64_t> input5Shape = {8};
-    std::vector<int64_t> input1HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input2HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input3HostData(8000, 7);
-    std::vector<int64_t> input4HostData = {0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> input5HostData = {0, 1, 2, 3, 4, 5, 6, 7};
+    std::vector<int64_t> input1Shape = {72};
+    std::vector<int64_t> input2Shape = {8, 9};
+    std::vector<int64_t> input3Shape = {72};
+    std::vector<int64_t> input4Shape = {72};
+    std::vector<int64_t> input5Shape = {72};
+    std::vector<int64_t> input6Shape = {8, 1000};
+    std::vector<int64_t> input7Shape = {8, 8};
+    std::vector<int64_t> input8Shape = {8};
+    std::vector<int64_t> input1HostData(8 * 9, 1);
+    std::vector<int64_t> input2HostData(8 * 9, 1);
+    std::vector<int64_t> input3HostData(8 * 9, 1);
+    std::vector<int64_t> input4HostData(8 * 9, 8);
+    std::vector<int64_t> input5HostData(8 * 9, 1);
+    std::vector<int64_t> input6HostData(8 * 1000, 1);
+    std::vector<int64_t> input7HostData(8 * 8, 1);
+    std::vector<int64_t> input8HostData(8, 1);
 
     void* input1DeviceAddr = nullptr;
     aclTensor* input1 = nullptr;
@@ -124,17 +129,17 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(input2HostData, input2Shape, &input2DeviceAddr, aclDataType::ACL_INT64, &input2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input3DeviceAddr, aclDataType::ACL_INT64, &input3);
+    ret = CreateAclTensor(input3HostData, input3Shape, &input3DeviceAddr, aclDataType::ACL_INT64, &input3);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input4DeviceAddr, aclDataType::ACL_INT64, &input4);
+    ret = CreateAclTensor(input4HostData, input4Shape, &input4DeviceAddr, aclDataType::ACL_INT64, &input4);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input1HostData, input1Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input5);
+    ret = CreateAclTensor(input5HostData, input5Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input5);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input3HostData, input3Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
+    ret = CreateAclTensor(input6HostData, input6Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input4HostData, input4Shape, &input5DeviceAddr, aclDataType::ACL_INT64, &input7);
+    ret = CreateAclTensor(input7HostData, input7Shape, &input7DeviceAddr, aclDataType::ACL_INT64, &input7);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(input5HostData, input5Shape, &input6DeviceAddr, aclDataType::ACL_INT64, &input8);
+    ret = CreateAclTensor(input8HostData, input8Shape, &input8DeviceAddr, aclDataType::ACL_INT64, &input8);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     int64_t numseq = 8;

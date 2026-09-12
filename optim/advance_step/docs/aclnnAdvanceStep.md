@@ -161,7 +161,7 @@ aclnnStatus aclnnAdvanceStep(
       <tr>
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
-      <td>待进行AdvanceStep计算的入参，用于记录不同blockIdx下block的大小，公式中的输入blockTables。</td>
+      <td>待进行AdvanceStep计算的入参，用于记录不同blockIdx下block的物理块编号，公式中的输入blockTables。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
@@ -347,7 +347,7 @@ void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
                         *deviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("mean result[%ld] is: %ld\n", i, resultData[i]);
+    LOG_PRINT("advanceStep result[%ld] is: %ld\n", i, resultData[i]);
     }
 }
 
@@ -394,7 +394,7 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> inputShape = {8,1};
+    std::vector<int64_t> inputShape = {8};
     std::vector<int64_t> input2Shape = {4,1};
     std::vector<int64_t> inputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<int64_t> input2HostData = {0, 1, 2, 3};
