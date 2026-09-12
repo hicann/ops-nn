@@ -22,6 +22,9 @@
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 #include "../../../op_host/op_tiling/arch35/transpose_batch_mat_mul_tiling_advanced.h"
+#include "../../../op_host/op_tiling/transpose_batch_mat_mul_einsum_tiling.h"
+#include "../../../op_host/op_tiling/transpose_batch_mat_mul_base_tiling.h"
+#include "../../../op_host/op_tiling/transpose_batch_mat_mul_simplifiedkey.h"
 
 using namespace std;
 using namespace ge;
@@ -308,7 +311,8 @@ static TilingTestParam ascend910B_cases_params[] = {
      32,
      "24 1 1024 4096 4096 1 384 4096 16 384 32 256 8 1 1 0 0 0 0 393216 16384 0 1 1 1 1 128 4 0 0 2 2 1 0 0 0 0 0 0 0 "
      "0 0 0 0 0 0 0 0 0 0 1 1 1 8 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 8 8 8 1 1 1 1 1 1 1 1 1 8 8 8 0 0 1 8 0 0 0 0 "
-     "0 0 0 0 1 0 ",
+     "0 0 0 0 1 "
+     "0 ",
      {1, 0, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -624,6 +628,7 @@ struct CheckScaleContext {
     optiling::MatmulV3CompileInfo compileInfo;
     std::unique_ptr<unsigned char[]> tilingData;
     std::unique_ptr<unsigned char[]> wsSize;
+    fe::PlatFormInfos platformInfo;
 
     CheckScaleContext(const std::initializer_list<int64_t>& x1Shape, const std::initializer_list<int64_t>& x2Shape,
                       const std::initializer_list<int64_t>& yShape, ge::DataType dtype = DT_FLOAT16,
@@ -635,7 +640,6 @@ struct CheckScaleContext {
         outShapes.emplace_back(yShape, yShape);
         std::vector<void*> outShapeRefs = {static_cast<void*>(&outShapes[0])};
 
-        fe::PlatFormInfos platformInfo;
         platformInfo.Init();
 
         holder = gert::TilingContextFaker()
@@ -701,4 +705,444 @@ TEST(TransposeBatchMatMulCheckScaleTest, ScaleNonFp16)
     EXPECT_EQ(tiling.CheckScale(scaleShape), ge::GRAPH_FAILED);
 }
 
+// ================== EinsumTiling destructor test ==================
+TEST(TransposeBatchMatMulEinsumTilingTest, Destructor)
+{
+    {
+        auto* tiling = new optiling::transpose_batch_mat_mul::TransposeBatchMatMulEinsumTiling(nullptr);
+        delete tiling;
+    }
+    {
+        optiling::transpose_batch_mat_mul::TransposeBatchMatMulEinsumTiling tiling(nullptr);
+    }
+}
+
+// ================== GenSimplifiedKey test ==================
+TEST(TransposeBatchMatMulGenSimplifiedKeyTest, ContextNull)
+{
+    char key[128] = {0};
+    auto ret = optiling::transpose_batch_matmul::GenSimplifiedKey(nullptr, key);
+    EXPECT_EQ(ret, ge::GRAPH_FAILED);
+}
+
+TEST(TransposeBatchMatMulGenSimplifiedKeyTest, KeyNull)
+{
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::StorageShape inputShape = {{2, 64, 128}, {2, 64, 128}};
+    gert::StorageShape outputShape = {{2, 64, 64}, {2, 64, 64}};
+    gert::KernelRunContextHolder holder;
+    optiling::MatmulV3CompileInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    holder = gert::TilingContextFaker()
+                 .SetOpType("TransposeBatchMatMul")
+                 .NodeIoNum(2, 1)
+                 .IrInstanceNum({1, 1})
+                 .InputShapes({&inputShape, &inputShape})
+                 .OutputShapes({&outputShape})
+                 .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .CompileInfo(&compileInfo)
+                 .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                 .TilingData(tilingData.get())
+                 .Workspace(wsSize)
+                 .Build();
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(ctx, nullptr);
+    auto ret = optiling::transpose_batch_matmul::GenSimplifiedKey(ctx, nullptr);
+    EXPECT_EQ(ret, ge::GRAPH_FAILED);
+}
+
+// ================== Advanced tiling failure path tests ==================
+
+namespace {
+
+// Build a TilingContext for advanced tiling tests with custom perm / dtype / optional inputs.
+// Returns the context via holder (holder must outlive the context).
+struct AdvancedContext {
+    gert::KernelRunContextHolder holder;
+    gert::TilingContext* ctx = nullptr;
+    std::vector<gert::StorageShape> outShapes;
+    optiling::MatmulV3CompileInfo compileInfo;
+    std::unique_ptr<unsigned char[]> tilingData;
+    std::unique_ptr<unsigned char[]> wsSize;
+    fe::PlatFormInfos platformInfo;
+    // Store optional shapes as members to ensure they outlive the faker build
+    gert::StorageShape biasShape_ = {{0}, {0}};
+    gert::StorageShape scaleSs_ = {{0}, {0}};
+
+    AdvancedContext(const std::initializer_list<int64_t>& x1Shape, const std::initializer_list<int64_t>& x2Shape,
+                    const std::initializer_list<int64_t>& yShape, ge::DataType dtype = DT_FLOAT16,
+                    const std::initializer_list<int64_t>& perm_x1 = {1, 0, 2},
+                    const std::initializer_list<int64_t>& perm_x2 = {0, 1, 2},
+                    const std::initializer_list<int64_t>& perm_y = {1, 0, 2}, int64_t batchSplitFactor = 1,
+                    bool hasBias = false, bool hasScale = false, const std::initializer_list<int64_t>& scaleShape = {0})
+        : tilingData(gert::TilingData::CreateCap(2048)), wsSize(gert::ContinuousVector::Create<size_t>(4096))
+    {
+        gert::StorageShape x1ShapeSs = {x1Shape, x1Shape};
+        gert::StorageShape x2ShapeSs = {x2Shape, x2Shape};
+        outShapes.emplace_back(yShape, yShape);
+        std::vector<void*> outShapeRefs = {static_cast<void*>(&outShapes[0])};
+
+        platformInfo.Init();
+
+        // Build input shapes: x1, x2, [bias], [scale]
+        std::vector<gert::StorageShape*> inputShapes = {&x1ShapeSs, &x2ShapeSs};
+        int inputCount = 2;
+        if (hasBias) {
+            biasShape_ = {{yShape}, {yShape}};
+            inputShapes.push_back(&biasShape_);
+            inputCount++;
+        }
+        if (hasScale) {
+            scaleSs_ = {{scaleShape}, {scaleShape}};
+            inputShapes.push_back(&scaleSs_);
+            inputCount++;
+        }
+        std::vector<uint32_t> instanceNum(inputCount, 1);
+
+        holder = gert::TilingContextFaker()
+                     .SetOpType("TransposeBatchMatMul")
+                     .NodeIoNum(inputCount, 1)
+                     .IrInstanceNum(instanceNum)
+                     .InputShapes(inputShapes)
+                     .OutputShapes(outShapeRefs)
+                     .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x1)},
+                                 {"perm_x2", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x2)},
+                                 {"perm_y", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_y)},
+                                 {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(batchSplitFactor)}})
+                     .NodeInputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeInputTd(1, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeOutputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .CompileInfo(&compileInfo)
+                     .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                     .TilingData(tilingData.get())
+                     .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsSize.get()))
+                     .Build();
+        ctx = holder.GetContext<gert::TilingContext>();
+    }
+};
+
+} // namespace
+
+// 覆盖 advanced tiling 221,225: invalid permX1
+TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidPermX1)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 2, 1}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2});
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 231,235: invalid permX2
+TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidPermX2)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{1, 0, 2}, /*perm_y=*/{1, 0, 2});
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 240,244: invalid permY
+TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidPermY)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{0, 1, 2});
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 132,141: invalid dtype (not in supported list)
+TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidDtype)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_INT32);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 335,337: bias exists
+TEST(TransposeBatchMatMulAdvancedTilingTest, BiasExists)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                      /*batchSplitFactor=*/1, /*hasBias=*/true);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 340,342: scale exists with CheckScale returning failure
+TEST(TransposeBatchMatMulAdvancedTilingTest, ScaleExistsInvalid)
+{
+    // scale shape {64} does not match batch*n = 2*256 = 512
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                      /*batchSplitFactor=*/1, /*hasBias=*/false, /*hasScale=*/true,
+                      /*scaleShape=*/{64});
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 256,261: batchSplitFactor not divisible by batch
+TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidBatchSplitFactor)
+{
+    // batch = 2 (from perm_x1={1,0,2}, x1[0]=2), batchSplitFactor=3, 2%3 != 0
+    AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                      /*batchSplitFactor=*/3);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 advanced tiling 395,400: batchA != batchB (via GetBatchInfo in DoTiling)
+TEST(TransposeBatchMatMulAdvancedTilingTest, BatchMismatch)
+{
+    // x1 batch = 64 (from perm_x1={1,0,2}, aShape[1]=64), x2 batch = 4 (from perm_x2={0,1,2}, bShape[0]=4)
+    // GetBatchInfo detects batchA(64) != batchB(4) and returns GRAPH_FAILED
+    AdvancedContext c({2, 64, 128}, {4, 128, 256}, {2, 64, 256}, DT_FLOAT16);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// ================== Base tiling failure path tests ==================
+// These test error paths in transpose_batch_mat_mul_base_tiling.cpp
+// by directly instantiating TransposeBatchMatMulBaseTiling and calling
+// protected methods (made public via `#define protected public`).
+
+namespace {
+
+// Minimal context builder for base tiling tests
+struct BaseTilingContext {
+    gert::KernelRunContextHolder holder;
+    gert::TilingContext* ctx = nullptr;
+    std::vector<gert::StorageShape> outShapes;
+    optiling::MatmulV3CompileInfo compileInfo;
+    std::unique_ptr<unsigned char[]> tilingData;
+    std::unique_ptr<unsigned char[]> wsSize;
+    gert::StorageShape biasShape_ = {{0}, {0}};
+    gert::StorageShape scaleSs_ = {{0}, {0}};
+    fe::PlatFormInfos platformInfo;
+
+    BaseTilingContext(const std::initializer_list<int64_t>& x1Shape, const std::initializer_list<int64_t>& x2Shape,
+                      const std::initializer_list<int64_t>& yShape, ge::DataType dtype = DT_FLOAT16,
+                      const std::initializer_list<int64_t>& perm_x1 = {1, 0, 2},
+                      const std::initializer_list<int64_t>& perm_x2 = {0, 1, 2},
+                      const std::initializer_list<int64_t>& perm_y = {1, 0, 2}, int64_t batchSplitFactor = 1,
+                      bool hasBias = false, bool hasScale = false,
+                      const std::initializer_list<int64_t>& scaleShape = {0})
+        : tilingData(gert::TilingData::CreateCap(2048)), wsSize(gert::ContinuousVector::Create<size_t>(4096))
+    {
+        gert::StorageShape x1ShapeSs = {x1Shape, x1Shape};
+        gert::StorageShape x2ShapeSs = {x2Shape, x2Shape};
+        outShapes.emplace_back(yShape, yShape);
+        std::vector<void*> outShapeRefs = {static_cast<void*>(&outShapes[0])};
+
+        platformInfo.Init();
+
+        std::vector<gert::StorageShape*> inputShapes = {&x1ShapeSs, &x2ShapeSs};
+        int inputCount = 2;
+        if (hasBias) {
+            biasShape_ = {{yShape}, {yShape}};
+            inputShapes.push_back(&biasShape_);
+            inputCount++;
+        }
+        if (hasScale) {
+            scaleSs_ = {{scaleShape}, {scaleShape}};
+            inputShapes.push_back(&scaleSs_);
+            inputCount++;
+        }
+        std::vector<uint32_t> instanceNum(inputCount, 1);
+
+        holder = gert::TilingContextFaker()
+                     .SetOpType("TransposeBatchMatMul")
+                     .NodeIoNum(inputCount, 1)
+                     .IrInstanceNum(instanceNum)
+                     .InputShapes(inputShapes)
+                     .OutputShapes(outShapeRefs)
+                     .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x1)},
+                                 {"perm_x2", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x2)},
+                                 {"perm_y", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_y)},
+                                 {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(batchSplitFactor)}})
+                     .NodeInputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeInputTd(1, dtype, FORMAT_ND, FORMAT_ND)
+                     .NodeOutputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+                     .CompileInfo(&compileInfo)
+                     .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                     .TilingData(tilingData.get())
+                     .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsSize.get()))
+                     .Build();
+        ctx = holder.GetContext<gert::TilingContext>();
+    }
+};
+
+} // namespace
+
+// 覆盖 base_tiling 619-620: unsupported perm (transA_ not 213 or 123)
+TEST(TransposeBatchMatMulBaseTilingTest, InvalidPerm)
+{
+    BaseTilingContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                        /*perm_x1=*/{2, 0, 1}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2});
+    // transA_ = (2+1)(0+1)(1+1) = 312, not 213 or 123
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 522-523: illegal m/k/n values (m=0)
+TEST(TransposeBatchMatMulBaseTilingTest, InvalidDim)
+{
+    BaseTilingContext c({0, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 491: unsupported dtype
+TEST(TransposeBatchMatMulBaseTilingTest, InvalidDtype)
+{
+    BaseTilingContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_INT32);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 422-423: scale with batch*n >= 65536 (kSupportedInnerAxis)
+TEST(TransposeBatchMatMulBaseTilingTest, ScaleTooLarge)
+{
+    // batch*n = 64*256 = 16384, but scale shape dim0 = 65536 >= 65536 → fails
+    BaseTilingContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                        /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                        /*batchSplitFactor=*/1, /*hasBias=*/false, /*hasScale=*/true,
+                        /*scaleShape=*/{65536});
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 559-563: bias shape n does not match nOriValue
+TEST(TransposeBatchMatMulBaseTilingTest, BiasNNotMatch)
+{
+    // biasValue = biasShape[lastDim-1] = 64 (from biasShape={2,64,256}), nOriValue = 256
+    // 64 != 256 → GRAPH_FAILED via GetShapeBias
+    BaseTilingContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
+                        /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                        /*batchSplitFactor=*/1, /*hasBias=*/true);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// ================== Einsum mode tiling test ==================
+TEST(TransposeBatchMatMulEinsumTest, DoTilingEinsumMode)
+{
+    // Use Ascend910B (non-advanced) platform to trigger base tiling dispatcher
+    TilingTestParam param = ascend910B_cases_params[0];
+    gert::StorageShape x1_shape = {param.x1_shape, param.x1_shape};
+    gert::StorageShape x2_shape = {param.x2_shape, param.x2_shape};
+    std::vector<gert::StorageShape> output_shapes(1, {param.y_shape, param.y_shape});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+
+    optiling::MatmulV3CompileInfo compile_info;
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(param.compile_info.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    aicore_spec["cube_freq"] = "1800";
+
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling_parse;
+    ASSERT_NE(tiling_parse_func, nullptr);
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tiling_data = gert::TilingData::CreateCap(2048);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    gert::KernelRunContextHolder holder;
+    // Use perm_x2={0,2,1} to trigger IsPpMatmulEinsumMode (PermDecode returns 132)
+    holder = gert::TilingContextFaker()
+                 .SetOpType(param.op_type.c_str())
+                 .NodeIoNum(2, 1)
+                 .IrInstanceNum({1, 1})
+                 .InputShapes({&x1_shape, &x2_shape})
+                 .OutputShapes(output_shapes_ref)
+                 .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                             {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
+                             {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                             {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                             {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                 .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
+                 .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
+                 .NodeOutputTd(0, param.y_dtype, param.y_ori_format, param.y_format)
+                 .CompileInfo(&compile_info)
+                 .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                 .TilingData(tiling_data.get())
+                 .Workspace(ws_size)
+                 .Build();
+
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling;
+    ASSERT_NE(tiling_func, nullptr);
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    uint64_t tiling_key = tiling_context->GetTilingKey();
+    // Expected: BATCH_SPLIT=0(2b), PP_MAT_MUL_EINSUM_MODE=1(2b), PERM_X1=2(4b), PERM_X2=1(4b)
+    // tiling_key = 0 | (1<<2) | (2<<4) | (1<<8) = 292
+    EXPECT_EQ(tiling_key, 292UL);
+    EXPECT_GT(tiling_context->GetBlockDim(), static_cast<uint32_t>(0));
+}
+
+TEST(TransposeBatchMatMulGenSimplifiedKeyTest, ValidKey)
+{
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::StorageShape inputShape = {{2, 64, 128}, {2, 64, 128}};
+    gert::StorageShape outputShape = {{2, 64, 64}, {2, 64, 64}};
+    gert::KernelRunContextHolder holder;
+    optiling::MatmulV3CompileInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    holder = gert::TilingContextFaker()
+                 .SetOpType("TransposeBatchMatMul")
+                 .NodeIoNum(2, 1)
+                 .IrInstanceNum({1, 1})
+                 .InputShapes({&inputShape, &inputShape})
+                 .OutputShapes({&outputShape})
+                 .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                 .CompileInfo(&compileInfo)
+                 .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                 .TilingData(tilingData.get())
+                 .Workspace(wsSize)
+                 .Build();
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(ctx, nullptr);
+    char key[128] = {0};
+    auto ret = optiling::transpose_batch_matmul::GenSimplifiedKey(ctx, key);
+    EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+}
 } // namespace

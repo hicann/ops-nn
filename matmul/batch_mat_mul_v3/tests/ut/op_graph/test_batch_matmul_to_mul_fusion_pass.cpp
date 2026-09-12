@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include "acl/acl_rt.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
 #include "es_math_ops.h"
@@ -22,6 +23,13 @@
 #include "platform/platform_info.h"
 #include "register/register_custom_pass.h"
 #include "../../../op_graph/fusion_pass/batch_matmul_to_mul_fusion_pass.h"
+
+extern "C" aclError aclsysGetVersionNum(char* pkgName, int32_t* versionNum)
+{
+    (void)pkgName;
+    *versionNum = 90100000;
+    return ACL_SUCCESS;
+}
 
 using namespace ge;
 using namespace ge::es;

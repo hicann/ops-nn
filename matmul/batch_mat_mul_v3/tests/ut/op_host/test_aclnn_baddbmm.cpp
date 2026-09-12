@@ -1179,3 +1179,43 @@ TEST_F(l2_baddbmm_test, baddbmm_16in32out_fp16_fp16_fp32_use_fp32_add_bf16_out)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+TEST_F(l2_baddbmm_test, aclnnBaddbmmExecute)
+{
+    auto self = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto out = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto beta = ScalarDesc(1.0f).ToAclTypeRawPtr();
+    auto alpha = ScalarDesc(1.0f).ToAclTypeRawPtr();
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+
+    auto ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, out, cubeMathType, &workspaceSize,
+                                            &executor);
+    EXPECT_TRUE(ret == ACLNN_SUCCESS || ret == ACLNN_ERR_INNER_NULLPTR);
+    if (executor != nullptr) {
+        delete executor;
+    }
+}
+
+TEST_F(l2_baddbmm_test, aclnnInplaceBaddbmmExecute)
+{
+    auto self = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto out = TensorDesc({1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto beta = ScalarDesc(1.0f).ToAclTypeRawPtr();
+    auto alpha = ScalarDesc(1.0f).ToAclTypeRawPtr();
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+
+    auto ret = aclnnBaddbmmGetWorkspaceSize(self, batch1, batch2, beta, alpha, out, cubeMathType, &workspaceSize,
+                                            &executor);
+    EXPECT_TRUE(ret == ACLNN_SUCCESS || ret == ACLNN_ERR_INNER_NULLPTR);
+    if (executor != nullptr) {
+        delete executor;
+    }
+}

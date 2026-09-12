@@ -1740,3 +1740,35 @@ TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_transpose)
     aclRet = ut_true_true.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+TEST_F(l2_batch_matmul_test, aclnnBatchMatMulExecute)
+{
+    auto self = TensorDesc({2, 64, 128}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto mat2 = TensorDesc({2, 128, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto out = TensorDesc({2, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+
+    auto ret = aclnnBatchMatMulGetWorkspaceSize(self, mat2, out, cubeMathType, &workspaceSize, &executor);
+    EXPECT_TRUE(ret == ACLNN_SUCCESS || ret == ACLNN_ERR_INNER_NULLPTR);
+    if (executor != nullptr) {
+        delete executor;
+    }
+}
+
+TEST_F(l2_batch_matmul_test, aclnnBatchMatMulWeightNzExecute)
+{
+    auto self = TensorDesc({2, 64, 128}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto mat2 = TensorDesc({2, 128, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    auto out = TensorDesc({2, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclTypeRawPtr();
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+
+    auto ret = aclnnBatchMatMulWeightNzGetWorkspaceSize(self, mat2, out, cubeMathType, &workspaceSize, &executor);
+    EXPECT_TRUE(ret == ACLNN_SUCCESS || ret == ACLNN_ERR_INNER_NULLPTR || ret == ACLNN_ERR_PARAM_INVALID);
+    if (executor != nullptr) {
+        delete executor;
+    }
+}

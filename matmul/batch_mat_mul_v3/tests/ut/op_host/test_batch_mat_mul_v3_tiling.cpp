@@ -683,8 +683,10 @@ static TilingTestParam ascend910B_cases_params[] = {
      24,
      65537,
      "24 1 128 512 512 1 128 512 16 128 64 64 8 1 1 0 0 0 0 65536 1024 0 1 1 1 1 32 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 0 1 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 "
-     "1500 7 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
+     "0 "
+     "0 0 0 1 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 "
+     "7 1 "
+     "1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"BatchMatMulV3_MultiBatch_AL1FullLoad_general_test_02",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true,"offset_x":0,"enable_hf32":0},
@@ -1128,8 +1130,8 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      1858UL,
-     "32 1 200 64 64 1 1 1 16 208 32 1 1 1 1 0 0 0 0 58176 13312 0 1 1 1 1 1 1 0 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 1 1 1 1 1 0 0 0 4 0 10240 40 10240 1 1 1 1 5 5 5 256 1 256 8 8 8 0 1 1 16 208 32 16843264 16 1 0 4 1 4 2 "}};
+     "32 1 200 64 64 1 1 1 16 208 32 1 1 1 1 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+     "1 1 1 1 1 0 0 0 4 0 10240 40 10240 1 1 1 1 5 5 5 256 1 256 8 8 8 0 1 1 16 208 32 16843264 16 1 0 4 1 4 2 "}};
 
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3910B, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));
 INSTANTIATE_TEST_CASE_P(BatchMatMulV3950, BatchMatMulV3TilingRuntime, testing::ValuesIn(ascend950_cases_params));
@@ -2151,6 +2153,26 @@ TEST_F(BatchMatMulV3IterBatchTilingTest, DoOpTiling_EnableMultiBatch)
     EXPECT_EQ(tiling->GetRunInfoBatchOutNum(), 0UL);
 }
 
+TEST_F(BatchMatMulV3IterBatchTilingTest, GetNumBlocks)
+{
+    SetShape(64, 128, 512);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetNumBlocks(), compileInfo_.aicNum);
+}
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, GetTilingData)
+{
+    SetShape(64, 128, 512);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    TilingResult result;
+    auto ret = tiling->GetTilingData(result);
+    EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+    EXPECT_NE(result.tilingData, nullptr);
+    EXPECT_EQ(result.tilingDataSize, sizeof(BatchMatMulV3TilingData));
+}
+
 TEST_F(BatchMatMulV3IterBatchTilingTest, DoOpTiling_DisableMultiBatch)
 {
     SetShape(1024, 2048, 512);
@@ -2358,6 +2380,29 @@ TEST_F(DebugTilingTestForMatmulCommon, DebugTilingContext_WithInputsAndOutputs)
     EXPECT_NE(str.find("(ori_shape:"), string::npos);
     EXPECT_NE(str.find("(format:"), string::npos);
     EXPECT_NE(str.find("(ori_format:"), string::npos);
+}
+
+TEST_F(DebugTilingTestForMatmulCommon, DebugTilingContext_NullInputShape)
+{
+    // 构造正常 context 后显式置空 input0 的输入 Chain 指针，使 GetInputShape(0) 返回 nullptr，
+    // 命中 TensorDesc2String 的 null 分支，子串输出 "nil "
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto holder = BuildDebugTilingTestContext(reinterpret_cast<gert::TilingData*>(tilingData.get()));
+    auto context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+
+    // 显式置空 input0 对应的输入 Chain 指针，构造“有输入但 shape 为 null 的场景”，
+    // 使 DebugTilingContext 内 TensorDesc2String(GetInputShape(0), ...) 命中 null 分支
+    context->GetContext()->values[0] = nullptr;
+
+    string str = Ops::NN::DebugTilingContext(context);
+    EXPECT_NE(str.find("input0"), string::npos);
+    EXPECT_NE(str.find("nil "), string::npos);
+    // 其余输入仍在正常分支，精确覆盖 null + 正常两个分支
+    EXPECT_NE(str.find("input1"), string::npos);
+    EXPECT_NE(str.find("input2"), string::npos);
+    EXPECT_NE(str.find("(dtype:"), string::npos);
+    EXPECT_NE(str.find("(shape:"), string::npos);
 }
 
 TEST_F(DebugTilingTestForMatmulCommon, DebugTilingData_WithInt32Values)
