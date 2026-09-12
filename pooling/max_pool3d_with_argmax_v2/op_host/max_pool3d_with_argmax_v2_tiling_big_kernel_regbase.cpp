@@ -314,6 +314,10 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DoOpTiling()
 {
     DoUBTiling();
     SetTilingData();
+
+    if (multiCoreNum_ > 1) {
+        context_->SetScheduleMode(1);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
