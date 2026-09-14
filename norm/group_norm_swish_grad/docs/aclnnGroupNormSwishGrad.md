@@ -483,7 +483,7 @@ int main() {
   std::vector<float> dbetaOutHostData = {2.0, 2, 2};
   int64_t numGroups = 1;
   char* dataFormatOptional = nullptr;
-  float swishScale = 1.0f;
+  double swishScale = 1.0;
   bool dgammaIsRequire = true;
   bool dbetaIsRequire = true;
   // 创建dy aclTensor

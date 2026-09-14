@@ -566,6 +566,12 @@ int main() {
   }
 
 
+  // 释放aclnnAddRelu申请的workspace，避免后续原地接口申请时覆盖指针造成内存泄漏
+  if (workspaceSize > 0) {
+    aclrtFree(workspaceAddr);
+    workspaceAddr = nullptr;
+  }
+
   // aclnnInplaceAddRelu接口调用示例
   // 3. 调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceAddRelu\n");
