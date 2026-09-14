@@ -43,9 +43,9 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
-    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, const char* activationType,
-    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut,
-    aclTensor* yScaleOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, char* activationType,
+    char* quantMode, char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut, aclTensor* yScaleOut,
+    uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantMatmulActivationQuant的第二段接口，用于执行计算。

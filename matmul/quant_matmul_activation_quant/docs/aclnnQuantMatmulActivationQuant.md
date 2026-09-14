@@ -84,7 +84,6 @@
             |   DataType    | emax |
             | :-----------: | :--: |
             |  FLOAT4_E2M1  |  2   |
-            |  FLOAT4_E1M2  |  0   |
             | FLOAT8_E4M3FN |  8   |
             |  FLOAT8_E5M2  |  15  |
 
@@ -254,7 +253,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>1、3</td>
+        <td>3-7</td>
         <td>✓</td>
       </tr>
       <tr>
@@ -269,7 +268,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>1、3</td>
+        <td>3-7</td>
         <td>✓</td>
       </tr>
       <tr>
@@ -375,7 +374,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
         <td>
           <ul>
-            <li>当scaleAlg为0或1时，dstTypeMax不生效，传入0.0即可。</li>
+            <li>当scaleAlg为0或1时，dstTypeMax不生效，不作拦截，建议传入0.0。</li>
             <li>当scaleAlg为2时，dstTypeMax支持取值0.0和6.0-12.0。取值为0.0表示使用目标类型的默认最大值，取值为6.0-12.0时使用指定值。</li>
           </ul>
         </td>
@@ -408,7 +407,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
             <li>不支持空Tensor。</li>
             <li>shape在尾轴上为y对应轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</li>
             <li>yScale输出需要对每两行数据进行交织处理。</li>
-            <li>shape和矩阵乘计算结果一致，(batch, m, n/32, 2)，batch可不存在。</li>
+            <li>shape和矩阵乘计算结果一致，(batch, m, ceil(n/64), 2)，batch可不存在。</li>
           </ul>
         </td>
         <td>FLOAT8_E8M0</td>
@@ -535,8 +534,6 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 - 确定性计算：
   - aclnnQuantMatmulActivationQuant默认确定性实现。
 
-<details>
-
 - **公共约束：**
   <a id="公共约束"></a>
   - x1仅支持ND格式，x2仅支持ND格式。
@@ -560,44 +557,40 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
   - y的shape支持2~6维，(batch, m, n)，batch可不存在，m与x1的m一致，n与x2的n一致。
 
   <details>
+    <summary><strong>MX量化场景约束：</strong></summary>
+    <a id="MX量化"></a>
 
-  <summary><strong>MX量化场景约束：</strong></summary>
-  <a id="MX量化"></a>
+    - 输入和输出支持以下数据类型组合：
+    <a id="输入和输出支持以下数据类型组合MX"></a>
 
-  - 输入和输出支持以下数据类型组合：
-  <a id="输入和输出支持以下数据类型组合MX"></a>
+        | x1            | x2            | x1Scale     | x2Scale     | bias         | y                         | yScale      |
+        |---------------|---------------|-------------|-------------|--------------|---------------------------|-------------|
+        | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E4M3FN             | FLOAT8_E8M0 |
+        | FLOAT8_E5M2   | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E5M2               | FLOAT8_E8M0 |
+        | FLOAT8_E5M2   | FLOAT8_E5M2   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E5M2               | FLOAT8_E8M0 |
+        | FLOAT8_E4M3FN | FLOAT8_E5M2   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E4M3FN             | FLOAT8_E8M0 |
+        | FLOAT4_E2M1   | FLOAT4_E2M1   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT4_E2M1               | FLOAT8_E8M0 |
 
-      | x1            | x2            | x1Scale     | x2Scale     | bias         | y                         | yScale      |
-      |---------------|---------------|-------------|-------------|--------------|---------------------------|-------------|
-      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E4M3FN             | FLOAT8_E8M0 |
-      | FLOAT8_E5M2   | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E5M2               | FLOAT8_E8M0 |
-      | FLOAT8_E5M2   | FLOAT8_E5M2   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E5M2               | FLOAT8_E8M0 |
-      | FLOAT8_E4M3FN | FLOAT8_E5M2   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT8_E4M3FN             | FLOAT8_E8M0 |
-      | FLOAT4_E2M1   | FLOAT4_E2M1   | FLOAT8_E8M0 | FLOAT8_E8M0 | null/FLOAT32 | FLOAT4_E2M1               | FLOAT8_E8M0 |
+    - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
 
-  - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+        |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM, gsN, gsK]|groupSize|
+        |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
+        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E5M2|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT8_E4M3FN|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
+        |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li><li>转置：(batch_x1, k, m)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li><li>转置：(batch_x1, ceil(k / 64), m, 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
 
-      |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM, gsN, gsK]|groupSize|
-      |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-      |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-      |MX全量化|FLOAT8_E5M2|FLOAT8_E4M3FN|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-      |MX全量化|FLOAT8_E5M2|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-      |MX全量化|FLOAT8_E4M3FN|FLOAT8_E5M2|<li>非转置：(batch_x1, m, k)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-      |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch_x1, m, k)</li><li>转置：(batch_x1, k, m)</li>|<li>非转置：(batch_x2, k, n)</li><li>转置：(batch_x2, n, k)</li>|<li>非转置：(batch_x1, m, ceil(k / 64), 2)</li><li>转置：(batch_x1, ceil(k / 64), m, 2)</li>|<li>非转置：(batch_x2, ceil(k / 64), n, 2)</li><li>转置：(batch_x2, n, ceil(k / 64), 2)</li>|(n,)或(batch_max, 1, n)|null|[1, 1, 32]|4295032864|
-
-  - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
-  - MX量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-  - yOut的数据类型由x1的数据类型决定，两者必须保持一致。
-  - MXFP4场景约束（x1、x2、y数据类型均为FLOAT4_E2M1）：
-    - scaleAlg仅支持取值0和2。
-    - 当scaleAlg为2时，dstTypeMax支持取值0.0和6.0-12.0。
-    - roundMode支持{"rint", "floor", "round"}。
-    - x1和x2的内轴必须为偶数，且k必须大于2。
-    - y的N维度必须为偶数。
-
+    - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。
+    - MX量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
+    - yOut的数据类型由x1的数据类型决定，两者必须保持一致。
+    - MXFP4场景约束（x1、x2、y数据类型均为FLOAT4_E2M1）：
+      - scaleAlg仅支持取值0和2。
+      - 当scaleAlg为2时，dstTypeMax支持取值0.0和6.0-12.0。
+      - roundMode支持{"rint", "floor", "round"}。
+      - x1和x2的内轴必须为偶数，且k必须大于2。
+      - y的N维度必须为偶数。
   </details>
-
-</details>
 
 ## 调用示例
 
@@ -675,33 +668,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       aclrtResetDevice(deviceId);
       aclFinalize();
   }
-  // 将float8_e4m3的uint8_t表示转换为float表示
-  float Fp8E4M3ToFloat(uint8_t h)
-  {
-      int sign = (h >> 7) & 0x1;
-      int exponent = (h >> 3) & 0xF;
-      int mantissa = h & 0x7U;
-      float value = 0.0f;
-      if (exponent == 0) {
-          if (mantissa == 0) {
-              return sign ? -0.0f : 0.0f;
-          } else {
-              value = static_cast<float>(mantissa) / 8.0f;
-              value = ldexp(value, -6);
-          }
-      } else {
-          value = static_cast<float>(mantissa) / 8.0f + 1.0f;
-          value = ldexp(value, exponent - 7);
-      }
-      return sign ? -value : value;
-  }
 
-  float Fp8E8M0ToFloat(uint8_t h)
-  {
-      uint32_t exponent = h & 0x00FFU;
-      uint32_t fBits = exponent << 23;
-      return *reinterpret_cast<float*>(&fBits);
-  }
   int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
@@ -712,13 +679,13 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       int64_t n = 128;
       bool transposeX1 = false;
       bool transposeX2 = false;
-      int64_t groupSize = 32;
+      constexpr int64_t MX_SCALE_BLOCK_SIZE = 64; // scale块对齐大小，用于计算scale shape
       std::vector<int64_t> x1Shape = {m, k};
       std::vector<int64_t> x2Shape = {k, n};
-      std::vector<int64_t> x1ScaleShape = {m, k / groupSize / 2, 2};
-      std::vector<int64_t> x2ScaleShape = {k / groupSize / 2, n, 2};
+      std::vector<int64_t> x1ScaleShape = {m, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+      std::vector<int64_t> x2ScaleShape = {(k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, n, 2};
       std::vector<int64_t> outShape = {m, n};
-      std::vector<int64_t> outScaleShape = {m, n / groupSize / 2, 2};
+      std::vector<int64_t> outScaleShape = {m, (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
       void* x1DeviceAddr = nullptr;
       void* x2DeviceAddr = nullptr;
       void* x1ScaleDeviceAddr = nullptr;
@@ -734,10 +701,10 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       aclTensor* outScale = nullptr;
       std::vector<uint8_t> x1HostData(m * k, 0b00111000);                  // float8_e4m3的1.0
       std::vector<uint8_t> x2HostData(k * n, 0b00111000);                  // float8_e4m3的1.0
-      std::vector<uint8_t> x1ScaleHostData(m * k / groupSize, 0b01111111); // float8_e8m0的1.0
-      std::vector<uint8_t> x2ScaleHostData(k * n / groupSize, 0b01111111); // float8_e8m0的1.0
+      std::vector<uint8_t> x1ScaleHostData(m * (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * 2, 0b01111111); // float8_e8m0的1.0
+      std::vector<uint8_t> x2ScaleHostData((k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * n * 2, 0b01111111); // float8_e8m0的1.0
       std::vector<uint8_t> outHostData(m * n, 0);
-      std::vector<uint8_t> outScaleHostData(m * n / groupSize, 0);
+      std::vector<uint8_t> outScaleHostData(m * (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * 2, 0);
       // 创建x1 aclTensor
       ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &x1);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
@@ -764,16 +731,21 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
       // 创建mxscale aclTensor
-      ret = CreateAclTensor(outScaleHostData, outScaleShape, &outScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &outScale);
+      ret = CreateAclTensor(outScaleHostData, outScaleShape, &outScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                            &outScale);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outScaleTensorPtr(outScale, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> outScaleDeviceAddrPtr(outScaleDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 3. 调用CANN算子库API，需要修改为具体的API名称
+      // 3. 调用CANN算子库API，需要修改为具体的Api名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
-    int64_t groupSizeValue = 4295032864;
-      ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(x1, x2, x1Scale, x2Scale, nullptr,
-                  transposeX1, transposeX2, groupSizeValue, "gelu_tanh", "mx", "rint", 0, 0.0, out, outScale, &workspaceSize, &executor);
+      int64_t groupSizeValue = 4295032864;
+      char activationType[] = "gelu_tanh";
+      char quantMode[] = "mx";
+      char roundMode[] = "rint";
+      ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2,
+                                                            groupSizeValue, activationType, quantMode, roundMode, 0, 0.0, out,
+                                                            outScale, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulActivationQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
       // 根据第一段接口计算出的workspaceSize申请device内存
@@ -797,15 +769,16 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("result[%ld] is: %f\n", i, Fp8E4M3ToFloat(resultData[i]));
+          LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
       }
       size = GetShapeSize(outScaleShape);
       std::vector<uint8_t> scaleData(size, 0);
       ret = aclrtMemcpy(scaleData.data(), scaleData.size() * sizeof(scaleData[0]), outScaleDeviceAddr,
                         size * sizeof(scaleData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result from device to host failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result from device to host failed. ERROR: %d\n", ret);
+                return ret);
       for (int64_t i = 0; i < size; i++) {
-          LOG_PRINT("scale[%ld] is: %f\n", i, Fp8E8M0ToFloat(scaleData[i]));
+          LOG_PRINT("scale[%ld] is: %d\n", i, scaleData[i]);
       }
       return ACL_SUCCESS;
   }
@@ -817,7 +790,8 @@ x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（ND格式），x1Scale为FLOAT8_E8M0，
       int32_t deviceId = 0;
       aclrtStream stream;
       auto ret = AclnnQuantMatmulActivationQuantTest(deviceId, stream);
-      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulActivationQuantTest failed. ERROR: %d\n", ret); return ret);
+      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulActivationQuantTest failed. ERROR: %d\n", ret);
+                    return ret);
       Finalize(deviceId, stream);
       return 0;
   }

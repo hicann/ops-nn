@@ -41,6 +41,13 @@ void QuantMatmulActivationQuantMXBasicAPITiling::Reset()
 
 bool QuantMatmulActivationQuantMXBasicAPITiling::IsCapable()
 {
+    if (compileInfo_.aicNum == 0 || compileInfo_.aivNum != compileInfo_.aicNum * 2) {
+        CUBE_INNER_ERR_REPORT(
+            context_->GetNodeName(),
+            "QuantMatmulActivationQuantMX is only supported for aicNum:aivNum=1:2, aicNum=%u, aivNum=%u",
+            compileInfo_.aicNum, compileInfo_.aivNum);
+        return false;
+    }
     return IsMxQuant() && AdaptiveSlidingWindowMXBasicAPITiling::IsCapable();
 }
 

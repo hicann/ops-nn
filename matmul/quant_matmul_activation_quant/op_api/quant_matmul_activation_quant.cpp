@@ -39,20 +39,36 @@ const std::array<aclTensor*, QUANT_MATMUL_ACTIVATION_QUANT_OUT_NUM> QuantMatmulA
     Format format = Format::FORMAT_ND;
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
-    op::Shape yOutShape = x1Shape;
     auto x1DimNum = x1Shape.GetDimNum();
     auto x2DimNum = x2Shape.GetDimNum();
+    op::Shape yOutShape = (x1DimNum >= x2DimNum) ? x1Shape : x2Shape;
+    auto outDimNum = yOutShape.GetDimNum();
 
-    auto yOutDim0 = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - LAST_FIRST_DIM_INDEX) :
-                                  x1->GetViewShape().GetDim(x1DimNum - LAST_SECOND_DIM_INDEX);
-    auto yOutDim1 = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - LAST_SECOND_DIM_INDEX) :
-                                  x2->GetViewShape().GetDim(x2DimNum - LAST_FIRST_DIM_INDEX);
-    yOutShape.SetDim(x1DimNum - LAST_SECOND_DIM_INDEX, yOutDim0);
-    yOutShape.SetDim(x1DimNum - LAST_FIRST_DIM_INDEX, yOutDim1);
+    auto yOutDim0 = transposeX1 ? x1Shape.GetDim(x1DimNum - LAST_FIRST_DIM_INDEX) :
+                                  x1Shape.GetDim(x1DimNum - LAST_SECOND_DIM_INDEX);
+    auto yOutDim1 = transposeX2 ? x2Shape.GetDim(x2DimNum - LAST_SECOND_DIM_INDEX) :
+                                  x2Shape.GetDim(x2DimNum - LAST_FIRST_DIM_INDEX);
+
+    size_t x1BatchCount = (x1DimNum >= 2) ? (x1DimNum - 2) : 0;
+    size_t x2BatchCount = (x2DimNum >= 2) ? (x2DimNum - 2) : 0;
+    size_t batchDimNum = std::max(x1BatchCount, x2BatchCount);
+    for (size_t i = 0; i < batchDimNum; ++i) {
+        int64_t x1Idx = static_cast<int64_t>(i) - static_cast<int64_t>(batchDimNum - x1BatchCount);
+        int64_t x2Idx = static_cast<int64_t>(i) - static_cast<int64_t>(batchDimNum - x2BatchCount);
+        int64_t x1Dim = (x1Idx >= 0) ? x1Shape.GetDim(static_cast<size_t>(x1Idx)) : 1;
+        int64_t x2Dim = (x2Idx >= 0) ? x2Shape.GetDim(static_cast<size_t>(x2Idx)) : 1;
+        if (x1Dim != x2Dim && x1Dim != 1 && x2Dim != 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch dims are not broadcastable: x1=%ld, x2=%ld", x1Dim, x2Dim);
+            return {nullptr, nullptr};
+        }
+        yOutShape.SetDim(i, std::max(x1Dim, x2Dim));
+    }
+    yOutShape.SetDim(outDimNum - LAST_SECOND_DIM_INDEX, yOutDim0);
+    yOutShape.SetDim(outDimNum - LAST_FIRST_DIM_INDEX, yOutDim1);
 
     op::Shape yScaleOutShape = yOutShape;
     auto yScaleOutDim1 = (Ops::Base::CeilDiv(yOutDim1, BLOCKSIZE) + MXFP_MULTI_BASE_SIZE - 1) / MXFP_MULTI_BASE_SIZE;
-    yScaleOutShape.SetDim(x1DimNum - LAST_FIRST_DIM_INDEX, yScaleOutDim1);
+    yScaleOutShape.SetDim(outDimNum - LAST_FIRST_DIM_INDEX, yScaleOutDim1);
     yScaleOutShape.AppendDim(DIM_TWO);
 
     auto yOut = executor->AllocTensor(yOutShape, x1->GetDataType(), format);

@@ -54,10 +54,10 @@ static const std::initializer_list<op::DataType> Y_DTYPE_SUPPORT_LIST = {
 
 constexpr uint32_t MX_X1_DIM = 2U;
 constexpr uint32_t MX_X1_DIM_MIN = 2U;
-constexpr uint32_t MX_X1_DIM_MAX = 6L;
+constexpr uint32_t MX_X1_DIM_MAX = 6U;
 constexpr uint32_t MX_X2_DIM = 2U;
 constexpr uint32_t MX_X2_DIM_MIN = 4U;
-constexpr uint32_t MX_X2_DIM_MAX = 8L;
+constexpr uint32_t MX_X2_DIM_MAX = 8U;
 constexpr uint32_t MX_X1_SCALE_DIM = 3U;
 constexpr uint32_t MX_X2_SCALE_DIM = 3U;
 constexpr uint32_t PERTENSOR_SCALE_DIM = 1U;
@@ -77,15 +77,6 @@ static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 static const int64_t PERGROUP_GROUP_SIZE = 32L;
 static const size_t MX_SCALE_MAX_DIM = 3;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
-
-static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
-{
-    if (x1 == nullptr || x2 == nullptr) {
-        return false;
-    }
-    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
-           (x2->GetDataType() == op::DataType::DT_FLOAT || x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1);
-}
 
 static inline bool IsFloatEqual(float a, float b) { return std::abs(a - b) <= std::numeric_limits<float>::epsilon(); }
 
@@ -217,17 +208,10 @@ static inline void GetExpectedScaleShape(const QuantMatmulActivationQuantWeightN
     int64_t x2DimNum = static_cast<int64_t>(x2View.GetDimNum());
     int64_t x1BatchDimNum = std::max<int64_t>(x1DimNum - static_cast<int64_t>(MX_X1_DIM), 0);
     int64_t x2BatchDimNum = std::max<int64_t>(x2DimNum - static_cast<int64_t>(MX_X2_DIM), 0);
-    int64_t maxBatchDimNum = std::max(x1BatchDimNum, x2BatchDimNum);
 
     x1ScaleExpectShape = op::Shape();
-    x2ScaleExpectShape = op::Shape();
-    for (int64_t i = 0; i < maxBatchDimNum; ++i) {
-        int64_t x1Idx = i - (maxBatchDimNum - x1BatchDimNum);
-        int64_t x2Idx = i - (maxBatchDimNum - x2BatchDimNum);
-        int64_t x1BatchDim = (x1Idx >= 0) ? x1View.GetDim(x1Idx) : 1;
-        int64_t x2BatchDim = (x2Idx >= 0) ? x2View.GetDim(x2Idx) : 1;
-        x1ScaleExpectShape.AppendDim(x1BatchDim);
-        x2ScaleExpectShape.AppendDim(x2BatchDim);
+    for (int64_t i = 0; i < x1BatchDimNum; ++i) {
+        x1ScaleExpectShape.AppendDim(x1View.GetDim(i));
     }
     if (params.transposeX1) {
         x1ScaleExpectShape.AppendDim(Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE));
@@ -238,6 +222,10 @@ static inline void GetExpectedScaleShape(const QuantMatmulActivationQuantWeightN
     }
     x1ScaleExpectShape.AppendDim(MXFP_MULTI_BASE_SIZE);
 
+    x2ScaleExpectShape = op::Shape();
+    for (int64_t i = 0; i < x2BatchDimNum; ++i) {
+        x2ScaleExpectShape.AppendDim(x2View.GetDim(i));
+    }
     if (params.transposeX2) {
         x2ScaleExpectShape.AppendDim(shapeInfo.nDim);
         x2ScaleExpectShape.AppendDim(Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE));
@@ -325,26 +313,29 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, boo
 static inline aclnnStatus IsMxQuantDim(const QuantMatmulActivationQuantWeightNzParams& params, const char* apiName)
 {
     int64_t x1DimNum = static_cast<int64_t>(params.x1->GetViewShape().GetDimNum());
+    int64_t x2DimNum = static_cast<int64_t>(params.x2->GetViewShape().GetDimNum());
     int64_t x1BatchDimNum = std::max<int64_t>(x1DimNum - static_cast<int64_t>(MX_X1_DIM), 0);
-    int64_t expectedScaleDimNum = static_cast<int64_t>(MX_X1_SCALE_DIM) + x1BatchDimNum;
+    int64_t x2BatchDimNum = std::max<int64_t>(x2DimNum - static_cast<int64_t>(MX_X2_DIM), 0);
 
     auto x1ScaleDimNum = params.x1Scale->GetViewShape().GetDimNum();
     auto x2ScaleDimNum = params.x2Scale->GetViewShape().GetDimNum();
-    if (static_cast<int64_t>(x2ScaleDimNum) != expectedScaleDimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            apiName, "x2Scale", FormatString("%zuD", x2ScaleDimNum).c_str(),
-            FormatString("when the quantization mode is mx, the shape dim of x2Scale must be %ld "
-                         "(batch dim of x1 %ld + fixed dim %zu)",
-                         expectedScaleDimNum, x1BatchDimNum, MX_X2_SCALE_DIM)
-                .c_str());
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (static_cast<int64_t>(x1ScaleDimNum) != expectedScaleDimNum) {
+    int64_t expectedX1ScaleDimNum = x1BatchDimNum + static_cast<int64_t>(MX_X1_SCALE_DIM);
+    int64_t expectedX2ScaleDimNum = x2BatchDimNum + static_cast<int64_t>(MX_X2_SCALE_DIM);
+    if (static_cast<int64_t>(x1ScaleDimNum) != expectedX1ScaleDimNum) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             apiName, "x1Scale", FormatString("%zuD", x1ScaleDimNum).c_str(),
             FormatString("when the quantization mode is mx, the shape dim of x1Scale must be %ld "
-                         "(batch dim of x1 %ld + fixed dim %zu)",
-                         expectedScaleDimNum, x1BatchDimNum, MX_X1_SCALE_DIM)
+                         "(x1 batch dim %ld + fixed dim %zu)",
+                         expectedX1ScaleDimNum, x1BatchDimNum, MX_X1_SCALE_DIM)
+                .c_str());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (static_cast<int64_t>(x2ScaleDimNum) != expectedX2ScaleDimNum) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            apiName, "x2Scale", FormatString("%zuD", x2ScaleDimNum).c_str(),
+            FormatString("when the quantization mode is mx, the shape dim of x2Scale must be %ld "
+                         "(x2 batch dim %ld + fixed dim %zu)",
+                         expectedX2ScaleDimNum, x2BatchDimNum, MX_X2_SCALE_DIM)
                 .c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -372,59 +363,6 @@ static inline aclnnStatus CheckInputDtypeValid(const QuantMatmulActivationQuantW
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus CheckMxfp8DtypeValid(const QuantMatmulActivationQuantWeightNzParams& params,
-                                               const char* apiName)
-{
-    if (CheckInputDtypeValid(params, apiName) != ACLNN_SUCCESS) {
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (params.x1Scale->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x1Scale", op::ToString(params.x1Scale->GetDataType()).GetString(),
-            "when the quantization mode is mx, the dtype of x1Scale must be FLOAT8_E8M0");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (params.x2Scale->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x2Scale", op::ToString(params.x2Scale->GetDataType()).GetString(),
-            "when the quantization mode is mx, the dtype of x2Scale must be FLOAT8_E8M0");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    OP_LOGD("QuantMatmulActivationQuant CheckMxfp8DtypeValid success.");
-    return ACLNN_SUCCESS;
-}
-
-static inline aclnnStatus CheckMxfp4DtypeValid(const QuantMatmulActivationQuantWeightNzParams& params,
-                                               const char* apiName)
-{
-    if (params.x1->GetDataType() != op::DataType::DT_FLOAT4_E2M1) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x1", op::ToString(params.x1->GetDataType()).GetString(),
-            "when the quantization mode is mx and x2 is FP4, the dtype of x1 must be FLOAT4_E2M1");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (params.x2->GetDataType() != op::DataType::DT_FLOAT4_E2M1) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x2", op::ToString(params.x2->GetDataType()).GetString(),
-            "when the quantization mode is mx and x1 is FP4, the dtype of x2 must be FLOAT4_E2M1");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (params.x1Scale->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x1Scale", op::ToString(params.x1Scale->GetDataType()).GetString(),
-            "when the quantization mode is mx, the dtype of x1Scale must be FLOAT8_E8M0");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (params.x2Scale->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "x2Scale", op::ToString(params.x2Scale->GetDataType()).GetString(),
-            "when the quantization mode is mx, the dtype of x2Scale must be FLOAT8_E8M0");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    OP_LOGD("QuantMatmulActivationQuant CheckMxfp4DtypeValid success.");
-    return ACLNN_SUCCESS;
-}
-
 static inline aclnnStatus CheckDtype(const QuantMatmulActivationQuantWeightNzParams& params, const char* apiName)
 {
     auto x1Dtype = params.x1->GetDataType();
@@ -433,15 +371,13 @@ static inline aclnnStatus CheckDtype(const QuantMatmulActivationQuantWeightNzPar
     auto x2ScaleDtype = params.x2Scale->GetDataType();
     auto yDtype = params.y->GetDataType();
     auto yScaleDtype = params.yScale->GetDataType();
-    if (yDtype != static_cast<op::DataType>(params.y_dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            apiName, "y", op::ToString(yDtype).GetString(),
-            FormatString("the dtype of y must be %s, which is the same as x1",
-                         op::ToString(static_cast<op::DataType>(params.y_dtype)).GetString())
-                .c_str());
+
+    if (CheckInputDtypeValid(params, apiName) != ACLNN_SUCCESS) {
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (IsMxFp8Input(params.x1, params.x2, params.y, params.yScale)) {
+
+    if (IsMxFp8Input(params.x1, params.x2, params.y, params.yScale) ||
+        IsMxFp4Input(params.x1, params.x2, params.y, params.yScale)) {
         CHECK_COND(IsMxQuantDim(params, apiName) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
                    "Check IsMxQuantDim failed.");
         if (params.bias != nullptr && params.bias->GetDataType() != op::DataType::DT_FLOAT) {
@@ -449,16 +385,28 @@ static inline aclnnStatus CheckDtype(const QuantMatmulActivationQuantWeightNzPar
                                                   "the dtype of bias must be FLOAT");
             return ACLNN_ERR_PARAM_INVALID;
         }
-        return CheckMxfp8DtypeValid(params, apiName);
-    } else if (IsMxFp4Input(params.x1, params.x2, params.y, params.yScale)) {
-        CHECK_COND(IsMxQuantDim(params, apiName) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
-                   "Check IsMxQuantDim failed.");
-        if (params.bias != nullptr && params.bias->GetDataType() != op::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(apiName, "bias", op::ToString(params.bias->GetDataType()).GetString(),
-                                                  "the dtype of bias must be FLOAT");
+        if (x1ScaleDtype != op::DataType::DT_FLOAT8_E8M0) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                apiName, "x1Scale", op::ToString(x1ScaleDtype).GetString(),
+                "when the quantization mode is mx, the dtype of x1Scale must be FLOAT8_E8M0");
             return ACLNN_ERR_PARAM_INVALID;
         }
-        return CheckMxfp4DtypeValid(params, apiName);
+        if (x2ScaleDtype != op::DataType::DT_FLOAT8_E8M0) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                apiName, "x2Scale", op::ToString(x2ScaleDtype).GetString(),
+                "when the quantization mode is mx, the dtype of x2Scale must be FLOAT8_E8M0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (yDtype != static_cast<op::DataType>(params.y_dtype)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                apiName, "y", op::ToString(yDtype).GetString(),
+                FormatString("the dtype of y must be %s, which is the same as x1",
+                             op::ToString(static_cast<op::DataType>(params.y_dtype)).GetString())
+                    .c_str());
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        OP_LOGD("QuantMatmulActivationQuant CheckDtype success.");
+        return ACLNN_SUCCESS;
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             apiName, "x1, x2, x1Scale, x2Scale, y, yScale",

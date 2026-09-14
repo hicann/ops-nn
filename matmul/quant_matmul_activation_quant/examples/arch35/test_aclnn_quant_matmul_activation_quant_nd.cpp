@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <cmath>
@@ -77,36 +78,6 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclrtResetDevice(deviceId);
     aclFinalize();
 }
-// 将float8_e4m3的uint8_t表示转换为float表示
-float Fp8E4M3ToFloat(uint8_t h)
-{
-    int sign = (h >> 7) & 0x1;
-    int exponent = (h >> 3) & 0xF;
-    int mantissa = h & 0x7U;
-    float value = 0.0f;
-    if (exponent == 0) {
-        if (mantissa == 0) {
-            return sign ? -0.0f : 0.0f;
-        } else {
-            value = static_cast<float>(mantissa) / 8.0f;
-            value = ldexp(value, -6);
-        }
-    } else {
-        value = static_cast<float>(mantissa) / 8.0f + 1.0f;
-        value = ldexp(value, exponent - 7);
-    }
-
-    return sign ? -value : value;
-}
-
-float Fp8E8M0ToFloat(uint8_t h)
-{
-    uint32_t exponent = h & 0x00FFU; // exponent bits
-    // mantissa 左移 23 - 7
-    uint32_t fBits = exponent << 23;
-    // 强转float
-    return *reinterpret_cast<float*>(&fBits);
-}
 
 int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
 {
@@ -118,13 +89,13 @@ int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
     int64_t n = 128;
     bool transposeX1 = false;
     bool transposeX2 = false;
-    int64_t groupSize = 32;
+    constexpr int64_t MX_SCALE_BLOCK_SIZE = 64; // scale块对齐大小，用于计算scale shape
     std::vector<int64_t> x1Shape = {m, k};
     std::vector<int64_t> x2Shape = {k, n};
-    std::vector<int64_t> x1ScaleShape = {m, k / groupSize / 2, 2};
-    std::vector<int64_t> x2ScaleShape = {k / groupSize / 2, n, 2};
+    std::vector<int64_t> x1ScaleShape = {m, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> x2ScaleShape = {(k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, n, 2};
     std::vector<int64_t> outShape = {m, n};
-    std::vector<int64_t> outScaleShape = {m, n / groupSize / 2, 2};
+    std::vector<int64_t> outScaleShape = {m, (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
     void* x1ScaleDeviceAddr = nullptr;
@@ -138,12 +109,14 @@ int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* bias = nullptr;
     aclTensor* out = nullptr;
     aclTensor* outScale = nullptr;
-    std::vector<uint8_t> x1HostData(m * k, 0b00111000);                  // float8_e4m3的1.0
-    std::vector<uint8_t> x2HostData(k * n, 0b00111000);                  // float8_e4m3的1.0
-    std::vector<uint8_t> x1ScaleHostData(m * k / groupSize, 0b01111111); // float8_e8m0的1.0
-    std::vector<uint8_t> x2ScaleHostData(k * n / groupSize, 0b01111111); // float8_e8m0的1.0
+    std::vector<uint8_t> x1HostData(m * k, 0b00111000); // float8_e4m3的1.0
+    std::vector<uint8_t> x2HostData(k * n, 0b00111000); // float8_e4m3的1.0
+    std::vector<uint8_t> x1ScaleHostData(m * (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * 2,
+                                         0b01111111); // float8_e8m0的1.0
+    std::vector<uint8_t> x2ScaleHostData((k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * n * 2,
+                                         0b01111111); // float8_e8m0的1.0
     std::vector<uint8_t> outHostData(m * n, 0);
-    std::vector<uint8_t> outScaleHostData(m * n / groupSize, 0);
+    std::vector<uint8_t> outScaleHostData(m * (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE * 2, 0);
     // 创建x1 aclTensor
     ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &x1);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
@@ -179,9 +152,12 @@ int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     int64_t groupSizeValue = 4295032864;
-    ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(x1, x2, x1Scale, x2Scale, nullptr, transposeX1, transposeX2,
-                                                          groupSizeValue, "gelu_tanh", "mx", "rint", 0, 0.0, out,
-                                                          outScale, &workspaceSize, &executor);
+    char activationType[] = "gelu_tanh";
+    char quantMode[] = "mx";
+    char roundMode[] = "rint";
+    ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2,
+                                                          groupSizeValue, activationType, quantMode, roundMode, 0, 0.0,
+                                                          out, outScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulActivationQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -205,7 +181,7 @@ int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, Fp8E4M3ToFloat(resultData[i]));
+        LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
     }
     size = GetShapeSize(outScaleShape);
     std::vector<uint8_t> scaleData(size, 0);
@@ -214,7 +190,7 @@ int AclnnQuantMatmulActivationQuantTest(int32_t deviceId, aclrtStream& stream)
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result from device to host failed. ERROR: %d\n", ret);
               return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("scale[%ld] is: %f\n", i, Fp8E8M0ToFloat(scaleData[i]));
+        LOG_PRINT("scale[%ld] is: %d\n", i, scaleData[i]);
     }
     return ACL_SUCCESS;
 }

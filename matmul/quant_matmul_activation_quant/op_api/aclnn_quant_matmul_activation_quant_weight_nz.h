@@ -30,15 +30,15 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
-    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, const char* activationType,
-    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut,
-    aclTensor* yScaleOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, char* activationType,
+    char* quantMode, char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut, aclTensor* yScaleOut,
+    uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnQuantMatmulActivatiionQuant的第二段接口，用于执行计算。
+ * @brief aclnnQuantMatmulActivationQuant的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspace_size: 在npu
- * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulActivatiionQuantGetWorkspaceSize获取。
+ * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulActivationQuantGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
