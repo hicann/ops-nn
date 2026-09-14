@@ -181,7 +181,7 @@ ge::graphStatus BatchNormExt2TilingBase::CheckSmallShapesValid(int64_t aDimLen)
                     OP_LOGE(context_->GetNodeName(), "Input %ld is required in inference mode.", i),
                     return ge::GRAPH_FAILED);
         // 训练模式下 mean/var 必须为空的校验在 infershape(BatchNormExt2InferShape)落地,
-        // 与 A2 TBE _shape_check 语义一致; 此处 tiling 不重复拦截, 避免 UT 需要构造缺省可选输入。
+        // 与 A2 TBE _shape_check 语义一致; 此处 tiling 不重复校验, 避免 UT 需要构造缺省可选输入。
         if (!desc) {
             // training 模式下 mean/var 输入可为空；本算子无 running stats 更新，factor 恒为 1.0
             OP_LOGD(context_->GetNodeName(), "Input %ld is None in training mode.", i);

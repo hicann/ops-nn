@@ -152,7 +152,7 @@ ge::graphStatus INInferV2Tiling::CheckXDescAndShape()
 
 ge::graphStatus INInferV2Tiling::CheckOptionalInputs(int64_t ncPlanes)
 {
-    // 统计量（mean/variance）：proto/def 层 optional，实际必须提供——null 检查即拦截点；
+    // 统计量（mean/variance）：proto/def 层 optional，实际必须提供——null 检查即校验点；
     // 恒为 [N,C] 逻辑布局（fractal 组合下 [N,C1,1,1,C0]，内存等价），元素数必须等于 N*C
     std::string ncReason = "elements must equal N*C (" + std::to_string(ncPlanes) + ")";
     auto meanShape = context_->GetOptionalInputShape(INPUT_MEAN_INDEX);

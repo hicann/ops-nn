@@ -166,7 +166,7 @@ bool FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t perBufElems,
 
 // MultiCoreSplit(maxBroShape, ubSplit, maxCores, out) — 多核切分
 
-// totalTiles = aO × Π_{j<k} maxBroShape[j]；核数动态计算（禁止硬编码）：
+// totalTiles = aO × Π_{j<k} maxBroShape[j]；核数动态计算（禁止使用固定值）：
 // numCores = min(totalTiles, maxCores)；主核 tilesMain 个 tile、coresTail 个
 // 尾核各多处理 1 个 tile（核间最大差 1 tile，均衡）。
 

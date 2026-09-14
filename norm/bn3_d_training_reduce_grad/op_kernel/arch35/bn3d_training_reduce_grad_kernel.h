@@ -128,7 +128,7 @@ __simd_vf__ inline void ChainSVF(__ubuf__ T* dst, __ubuf__ T* src, T eps, int64_
         int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(VL);
         mask = AscendC::Reg::UpdateMask<T>(remaining); // remaining 自动递减, 不可再手动递减
         AscendC::Reg::LoadAlign(rDst, src + off);
-        AscendC::Reg::Adds(rDst, rDst, eps, mask); // bv + eps（ε 经参数传入, 禁止硬编码）
+        AscendC::Reg::Adds(rDst, rDst, eps, mask); // bv + eps（ε 经参数传入, 禁止使用固定值）
         AscendC::Reg::Sqrt(rDst, rDst, mask);      // sqrt(...)
         AscendC::Reg::StoreAlign(dst + off, rDst, mask);
     }
@@ -745,7 +745,7 @@ class BN3DTrainingReduceGradKernel {
     int64_t nddmaParamOuterIters_[NUM_PARAM_INPUTS];
     int64_t nddmaDims_;
     float invNum_; // 1/num
-    float eps_;    // attr epsilon（TilingData 传入, 禁止硬编码）
+    float eps_;    // attr epsilon（TilingData 传入, 禁止使用固定值）
 
 public:
     __aicore__ inline void Init(GM_ADDR inputs[MAX_INPUT_SLOTS], GM_ADDR outputs[MAX_OUTPUT_SLOTS],
@@ -834,7 +834,7 @@ __aicore__ inline void BN3DTrainingReduceGradKernel<T, RANK>::Init(GM_ADDR input
     nddmaDims_ = (RANK - td_->split.axis <= ND) ? (RANK - td_->split.axis) : ND;
     InitNddmaGroup<T>(nddmaParams_, nddmaOuterIters_, IN_GRADS, NUM_DATA_INPUTS);
     InitNddmaGroup<float>(nddmaParamParams_, nddmaParamOuterIters_, IN_DIFF_SCALE, NUM_PARAM_INPUTS);
-    // 标量预计算: ·inv_num 替代 ÷num; eps 来自 TilingData（禁止硬编码）
+    // 标量预计算: ·inv_num 替代 ÷num; eps 来自 TilingData（禁止使用固定值）
     invNum_ = 1.0f / static_cast<float>(td_->num);
     eps_ = td_->epsilon;
     // 多核场景刷新 NDDMA Cache

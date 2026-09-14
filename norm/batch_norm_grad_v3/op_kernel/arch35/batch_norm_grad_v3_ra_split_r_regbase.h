@@ -141,7 +141,7 @@ private:
     // fused-single 与 fused-pair 的 UB 布局完全一致，仅 dy/x 输入 que 的深度不同(inBufNum)：
     // single 双缓冲驻留 1 个 tile，pair 需 4 buffer 同时驻留 2 个 tile。
     // 【重要】任何这里的 buffer 增删/大小改动，必须同步 host GetTilingKey() 的 fusedCommonUb/inBuf 合计
-    // UB 兜底估算，否则兜底会失真、放过它本要拦截的 NO_OUTPUT。
+    // UB 兜底估算，否则兜底会失真、放过它本要拒绝的 NO_OUTPUT。
     __aicore__ inline void FusedInitBuffer(const int32_t inBufNum)
     {
         int64_t rDimSize = currLoopFactor_ * aFactorAlign_;

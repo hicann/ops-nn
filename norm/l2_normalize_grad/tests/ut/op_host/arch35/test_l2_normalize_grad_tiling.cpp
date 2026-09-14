@@ -206,7 +206,7 @@ TEST_F(L2NormalizeGradTiling, dim_empty_falls_back_to_default)
     EXPECT_EQ(keyEmpty, keyOne);
 }
 
-// ---------------- 反向：非法输入必须被拦截 ----------------
+// ---------------- 反向：非法输入必须被校验拒绝 ----------------
 
 // dtype 非 fp16/fp32
 TEST_F(L2NormalizeGradTiling, reject_invalid_dtype)

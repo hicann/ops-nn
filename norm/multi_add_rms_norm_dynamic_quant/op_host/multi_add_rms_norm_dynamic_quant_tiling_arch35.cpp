@@ -562,8 +562,9 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
     uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
     // single_row 内核 UB 精确记账(对应 regbase_single_row.h InitBuffer,禁魔法系数):
     //   D 相关 = D_aligned × (5 块 sizeof(T_X) + 2 块 sizeof(float));固定 = scalesQue(2×ROW_FACTOR×sizeof(float))。
-    // 参照 add_rms_norm_dynamic_quant 曾用 16*D 硬编码,本算子 multi-add 变体多了 yOutQue+yBufFp32 → 手写系数漏算致
-    // D∈(14506,16320] 溢出(泛化 D=15360 实测 NO_OUTPUT,bug#1)。改按 buffer 结构求和后,加 buffer 自动更新、不再漏。
+    // 参照 add_rms_norm_dynamic_quant 曾按 16*D 固定系数估算,本算子 multi-add 变体多了 yOutQue+yBufFp32 →
+    // 手写系数漏算致 D∈(14506,16320] 溢出(泛化 D=15360 实测 NO_OUTPUT,bug#1)。改按 buffer 结构求和后,加 buffer
+    // 自动更新、不再漏。
     uint64_t singleRowUbSize = D_aligned * (SINGLE_ROW_XDTYPE_BUF_NUM * tilingParams.xDtypeSize +
                                             SINGLE_ROW_FP32_BUF_NUM * sizeof(float)) +
                                NUM_TWO * SINGLE_ROW_ROW_FACTOR *
