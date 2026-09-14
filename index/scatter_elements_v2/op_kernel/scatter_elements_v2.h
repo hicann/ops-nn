@@ -75,9 +75,12 @@ public:
             inputLocal.SetValue(kIndex, updatesLocal.GetValue(k));
             return;
         }
-        int hitCount = countLocal.GetValue(kIndex);
-        countLocal.SetValue(kIndex, hitCount + 1);
-        bool useUpdateOnly = includeSelf == 0 && hitCount == 0;
+        bool useUpdateOnly = false;
+        if (NeedHitCount()) {
+            int hitCount = countLocal.GetValue(kIndex);
+            countLocal.SetValue(kIndex, hitCount + 1);
+            useUpdateOnly = includeSelf == 0 && hitCount == 0;
+        }
         if constexpr (IsCastFloatType()) {
             if (IsCastFloat()) {
                 float inputValue = inputTemp.GetValue(kIndex);
@@ -400,13 +403,29 @@ private:
         inQueueUpdates.FreeTensor(updatesLocal);
     }
 
-    __aicore__ inline bool NeedHitCount() const
+    __aicore__ inline bool IsReduceMode() const
     {
         return mode >= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_BEGIN &&
                mode <= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_END;
     }
 
-    __aicore__ inline bool IsCastFloat() const { return IsCastFloatType() && NeedHitCount(); }
+    __aicore__ inline bool NeedHitCount() const
+    {
+        if (!IsReduceMode()) {
+            return false;
+        }
+        // Hit count is required only where the result depends on the number of hits:
+        // include_self=false (the first hit must replace the loaded self, later hits
+        // accumulate) and mean (division by hit count). include_self=true add/mul/min/max
+        // always combine over the already-loaded self, so skip the per-chunk count
+        // bookkeeping that dominated wide-row performance.
+        return includeSelf == 0 || mode == ScatterElementsV2NS::SCATTER_MODE_MEAN;
+    }
+
+    // fp16/bf16 reductions accumulate in fp32 and cast back once (CAST_RINT) for precision.
+    // This is independent of hit-count bookkeeping: include_self=true add/mul/min/max need
+    // no counts but still require the fp32 intermediate.
+    __aicore__ inline bool IsCastFloat() const { return IsCastFloatType() && IsReduceMode(); }
 
     __aicore__ static constexpr bool IsCastFloatType()
     {
