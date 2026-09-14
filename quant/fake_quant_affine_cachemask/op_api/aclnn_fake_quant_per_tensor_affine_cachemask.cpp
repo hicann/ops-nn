@@ -168,7 +168,8 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(const aclTens
         fakeQuantOut = const_cast<aclTensor*>(selfContiguous);
         fakeQuantMask = const_cast<aclTensor*>(GetOutputTensorWithValueTrue(out, uniqueExecutor.get()));
     } else {
-        int64_t tensorSize = (int64_t)(selfContiguous->GetViewShape().GetDim(0));
+        int64_t dimNum = selfContiguous->GetViewShape().GetDimNum();
+        int64_t tensorSize = (dimNum == 0) ? (int64_t)1 : (int64_t)(selfContiguous->GetViewShape().GetDim(0));
         int64_t tensorShape[1] = {tensorSize};
         auto expectShape = uniqueExecutor.get()->AllocIntArray(tensorShape, 1);
         CHECK_RET(expectShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
