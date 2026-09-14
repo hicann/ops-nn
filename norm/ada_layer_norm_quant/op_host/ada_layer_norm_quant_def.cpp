@@ -59,6 +59,7 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Output("out")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8, ge::DT_INT8})
@@ -69,10 +70,17 @@ public:
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
+        Add91095Config();
+    }
+
+private:
+    void Add91095Config()
+    {
         OpAICoreConfig config_91095;
         config_91095.Input("x").ParamType(REQUIRED).DataType(xDataType).Format(format).UnknownShapeFormat(format);
         config_91095.Input("scale").ParamType(REQUIRED).DataType(xDataType).Format(format).UnknownShapeFormat(format);

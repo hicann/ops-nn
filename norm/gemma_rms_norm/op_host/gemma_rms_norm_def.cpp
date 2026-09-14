@@ -41,6 +41,7 @@ public:
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
 
         this->AICore().AddConfig("ascend910b");
@@ -50,6 +51,12 @@ public:
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
 
+        AddRegbaseConfig();
+    }
+
+private:
+    void AddRegbaseConfig()
+    {
         OpAICoreConfig config_regbase;
         config_regbase.Input("x")
             .ParamType(REQUIRED)
@@ -80,7 +87,6 @@ public:
         this->AICore().AddConfig("ascend950", config_regbase);
     }
 
-private:
     OpAICoreConfig GetKirinCoreConfig() const
     {
         OpAICoreConfig gemmaKirinConfig;

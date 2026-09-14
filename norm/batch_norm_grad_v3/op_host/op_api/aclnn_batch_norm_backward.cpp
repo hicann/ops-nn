@@ -476,10 +476,10 @@ aclnnStatus BatchNormBackwardProc(const aclTensor* gradOut, const aclTensor* inp
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormBackward(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
-                              const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
-                              const aclTensor* saveInvstd, bool training, float eps, aclTensor** gradInput,
-                              aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+static aclnnStatus PrepareBackwardDefaultParams(const aclTensor* input, const aclTensor*& weight,
+                                                const aclTensor*& runningMean, const aclTensor*& runningVar,
+                                                const aclTensor*& saveMean, const aclTensor*& saveInvstd,
+                                                aclOpExecutor* executor)
 {
     // batch norm backward: prepare default values for optional tensors
     size_t batchNormDimC = input->GetViewShape()[1];
@@ -504,6 +504,16 @@ aclnnStatus BatchNormBackward(const aclTensor* gradOut, const aclTensor* input, 
         CHECK_RET(saveInvstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus BatchNormBackward(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                              const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
+                              const aclTensor* saveInvstd, bool training, float eps, aclTensor** gradInput,
+                              aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+{
+    auto prepRet = PrepareBackwardDefaultParams(input, weight, runningMean, runningVar, saveMean, saveInvstd, executor);
+    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
     size_t dimNum = input->GetViewShape().GetDimNum();
     auto batchNormGradOutPre = gradOut;
     auto batchNormInputPre = input;
@@ -541,7 +551,6 @@ aclnnStatus BatchNormBackward(const aclTensor* gradOut, const aclTensor* input, 
     }
     return ACLNN_SUCCESS;
 }
-
 static aclnnStatus ComputeGradWeight(const aclIntArray* reduceDim, const aclTensor* gradOutCasted,
                                      const aclTensor* inputCasted, const aclTensor* meanCasted,
                                      const aclTensor* varCasted, const float eps, aclTensor** gradWeight,
@@ -647,19 +656,22 @@ static aclnnStatus CalcGradWeightGradBias(const aclTensor* gradOut, const aclTen
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
-                                         const aclTensor* runningMean, const aclTensor* runningVar,
-                                         const aclTensor* saveMean, const aclTensor* saveInvstd, bool training,
-                                         float eps, const aclBoolArray* outputMask, aclTensor** gradInput,
-                                         aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+static aclnnStatus PrepareRegbaseGradCasts(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                           const aclTensor* runningMean, const aclTensor* runningVar,
+                                           const aclTensor* saveMean, const aclTensor* saveInvstd,
+                                           aclOpExecutor* executor, const aclTensor*& gradOutContiguous,
+                                           const aclTensor*& inputContiguous, const aclTensor*& weightContiguous,
+                                           const aclTensor*& runningMeanContiguous,
+                                           const aclTensor*& runningVarContiguous, const aclTensor*& saveMeanCast,
+                                           const aclTensor*& saveInvstdCast)
 {
-    auto gradOutContiguous = l0op::Contiguous(gradOut, executor);
+    gradOutContiguous = l0op::Contiguous(gradOut, executor);
     CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto inputContiguous = l0op::Contiguous(input, executor);
+    inputContiguous = l0op::Contiguous(input, executor);
     CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto weightContiguous = l0op::Contiguous(weight, executor);
+    weightContiguous = l0op::Contiguous(weight, executor);
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (gradOutContiguous->GetDataType() == op::DataType::DT_FLOAT) {
@@ -667,10 +679,10 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
         CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    auto runningMeanContiguous = l0op::Contiguous(runningMean, executor);
+    runningMeanContiguous = l0op::Contiguous(runningMean, executor);
     CHECK_RET(runningMeanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto runningVarContiguous = l0op::Contiguous(runningVar, executor);
+    runningVarContiguous = l0op::Contiguous(runningVar, executor);
     CHECK_RET(runningVarContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (gradOutContiguous->GetDataType() == op::DataType::DT_FLOAT ||
@@ -689,7 +701,7 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
         saveMeanTmp->SetDataType(op::DataType::DT_FLOAT);
         saveMeanContiguous = saveMeanTmp;
     }
-    auto saveMeanCast = l0op::Cast(saveMeanContiguous, op::DataType::DT_FLOAT, executor);
+    saveMeanCast = l0op::Cast(saveMeanContiguous, op::DataType::DT_FLOAT, executor);
     CHECK_RET(saveMeanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto saveInvstdContiguous = l0op::Contiguous(saveInvstd, executor);
@@ -701,9 +713,29 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
         saveInvstdTmp->SetDataType(op::DataType::DT_FLOAT);
         saveInvstdContiguous = saveInvstdTmp;
     }
-    auto saveInvstdCast = l0op::Cast(saveInvstdContiguous, op::DataType::DT_FLOAT, executor);
+    saveInvstdCast = l0op::Cast(saveInvstdContiguous, op::DataType::DT_FLOAT, executor);
     CHECK_RET(saveInvstdCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                         const aclTensor* runningMean, const aclTensor* runningVar,
+                                         const aclTensor* saveMean, const aclTensor* saveInvstd, bool training,
+                                         float eps, const aclBoolArray* outputMask, aclTensor** gradInput,
+                                         aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+{
+    const aclTensor* gradOutContiguous = nullptr;
+    const aclTensor* inputContiguous = nullptr;
+    const aclTensor* weightContiguous = nullptr;
+    const aclTensor* runningMeanContiguous = nullptr;
+    const aclTensor* runningVarContiguous = nullptr;
+    const aclTensor* saveMeanCast = nullptr;
+    const aclTensor* saveInvstdCast = nullptr;
+    auto prepRet = PrepareRegbaseGradCasts(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd,
+                                           executor, gradOutContiguous, inputContiguous, weightContiguous,
+                                           runningMeanContiguous, runningVarContiguous, saveMeanCast, saveInvstdCast);
+    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
     std::array<aclTensor*, BN_GRAD_V3_RESULT_CNT> grad = l0op::BatchNormGradV3(
         gradOutContiguous, inputContiguous, weightContiguous, runningMeanContiguous, runningVarContiguous, saveMeanCast,
         saveInvstdCast, training, eps, executor);
@@ -724,7 +756,6 @@ aclnnStatus BatchNormBackwardProcRegbase(const aclTensor* gradOut, const aclTens
 
     return ACLNN_SUCCESS;
 }
-
 aclnnStatus BatchNormBackwardRegbase(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
                                      const aclTensor* runningMean, const aclTensor* runningVar,
                                      const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,

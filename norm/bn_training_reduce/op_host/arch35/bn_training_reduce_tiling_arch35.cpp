@@ -57,38 +57,10 @@ bool IsFirstRoundSmallR(int64_t reduceLen)
            kFirstRoundSmallRLens.cend();
 }
 
-bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTrainingReducePublicResult& result)
+static void FillSmallRTilingData(const BNTrainingReducePublicInputs& inputs, BNTrainingReducePublicResult& result,
+                                 int64_t channels, int64_t reduceLen, int64_t tileCount, int32_t usedCores,
+                                 int64_t smallLoops, int32_t bigCores, int64_t inputBytes, int64_t outputBytes)
 {
-    const int64_t n = inputs.shape[0];
-    const int64_t channels = inputs.shape[1];
-    const int64_t h = inputs.shape[2];
-    const int64_t w = inputs.shape[3];
-    const int64_t dtypeBytes = DTypeBytes(inputs.inputDtype);
-    if (!inputs.inputPresent || inputs.rank != kNchwRank || inputs.format != BNTrainingReducePublicFormat::NCHW ||
-        n != 1 || channels <= 0 || h <= 0 || w <= 0 || dtypeBytes == 0 || inputs.coreNum <= 0 || inputs.ubSize <= 0 ||
-        h > std::numeric_limits<int64_t>::max() / w) {
-        return false;
-    }
-    const int64_t reduceLen = h * w;
-    if (!IsFirstRoundSmallR(reduceLen)) {
-        return false;
-    }
-
-    const int64_t inputBytes = AlignBytes(kSmallRTileChannels * reduceLen * dtypeBytes);
-    const int64_t outputBytes = AlignBytes(kSmallRTileChannels * static_cast<int64_t>(sizeof(float)));
-    if (inputBytes > inputs.ubSize || outputBytes > inputs.ubSize - inputBytes ||
-        outputBytes > inputs.ubSize - inputBytes - outputBytes) {
-        return false;
-    }
-
-    const int64_t tileCount = (channels + kSmallRTileChannels - 1) / kSmallRTileChannels;
-    const int32_t usedCores = static_cast<int32_t>(std::min<int64_t>(tileCount, inputs.coreNum));
-    if (usedCores <= 0) {
-        return false;
-    }
-    const int64_t smallLoops = tileCount / usedCores;
-    const int32_t bigCores = static_cast<int32_t>(tileCount % usedCores);
-
     result.status = BNTrainingReducePublicStatus::SUCCESS;
     result.tilingKey = static_cast<int64_t>(BNTrainingReduceTilingKey::SMALL_R);
     result.blockDim = static_cast<uint32_t>(usedCores);
@@ -126,9 +98,52 @@ bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTraining
     td.tmpBufUbSize = outputBytes;
     td.cacheBufUbSize = 0;
     td.rGroupCnt = 0;
-    return true;
 }
 
+bool TryBuildSmallRConfig(const BNTrainingReducePublicInputs& inputs, BNTrainingReducePublicResult& result)
+{
+    int64_t reduceLen = 0;
+    int64_t inputBytes = 0;
+    int64_t outputBytes = 0;
+    int64_t tileCount = 0;
+    int32_t usedCores = 0;
+    int64_t smallLoops = 0;
+    int32_t bigCores = 0;
+
+    const int64_t n = inputs.shape[0];
+    const int64_t channels = inputs.shape[1];
+    const int64_t h = inputs.shape[2];
+    const int64_t w = inputs.shape[3];
+    const int64_t dtypeBytes = DTypeBytes(inputs.inputDtype);
+    if (!inputs.inputPresent || inputs.rank != kNchwRank || inputs.format != BNTrainingReducePublicFormat::NCHW ||
+        n != 1 || channels <= 0 || h <= 0 || w <= 0 || dtypeBytes == 0 || inputs.coreNum <= 0 || inputs.ubSize <= 0 ||
+        h > std::numeric_limits<int64_t>::max() / w) {
+        return false;
+    }
+    reduceLen = h * w;
+    if (!IsFirstRoundSmallR(reduceLen)) {
+        return false;
+    }
+
+    inputBytes = AlignBytes(kSmallRTileChannels * reduceLen * dtypeBytes);
+    outputBytes = AlignBytes(kSmallRTileChannels * static_cast<int64_t>(sizeof(float)));
+    if (inputBytes > inputs.ubSize || outputBytes > inputs.ubSize - inputBytes ||
+        outputBytes > inputs.ubSize - inputBytes - outputBytes) {
+        return false;
+    }
+
+    tileCount = (channels + kSmallRTileChannels - 1) / kSmallRTileChannels;
+    usedCores = static_cast<int32_t>(std::min<int64_t>(tileCount, inputs.coreNum));
+    if (usedCores <= 0) {
+        return false;
+    }
+    smallLoops = tileCount / usedCores;
+    bigCores = static_cast<int32_t>(tileCount % usedCores);
+
+    FillSmallRTilingData(inputs, result, inputs.shape[1], reduceLen, tileCount, usedCores, smallLoops, bigCores,
+                         inputBytes, outputBytes);
+    return true;
+}
 BNTrainingReducePublicDType ConvertDType(ge::DataType dtype)
 {
     switch (dtype) {
@@ -170,15 +185,11 @@ bool NormalizeOutputShape(const gert::Shape& outputShape, const BNTrainingReduce
     return true;
 }
 
-bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePublicInputs& inputs)
+static bool PopulateInputTensorInfo(gert::TilingContext* context, BNTrainingReducePublicInputs& inputs,
+                                    ge::Format& storageFormat)
 {
     const auto* inputShape = context->GetInputShape(0);
     const auto* inputDesc = context->GetInputDesc(0);
-    inputs.inputPresent = inputShape != nullptr && inputDesc != nullptr;
-    if (!inputs.inputPresent) {
-        return true;
-    }
-
     const auto& xShape = inputShape->GetStorageShape();
     const size_t inputRank = xShape.GetDimNum();
     if (inputRank > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
@@ -193,7 +204,7 @@ bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePubli
     for (size_t i = 0; i < inputRank; ++i) {
         inputs.shape[i] = xShape.GetDim(i);
     }
-    const ge::Format storageFormat = inputDesc->GetStorageFormat();
+    storageFormat = inputDesc->GetStorageFormat();
     if (storageFormat == ge::FORMAT_NCHW) {
         inputs.format = BNTrainingReducePublicFormat::NCHW;
     } else if (storageFormat == ge::FORMAT_NHWC) {
@@ -206,6 +217,23 @@ bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePubli
         return false;
     }
     inputs.inputDtype = ConvertDType(inputDesc->GetDataType());
+
+    return true;
+}
+
+bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePublicInputs& inputs)
+{
+    const auto* inputShape = context->GetInputShape(0);
+    const auto* inputDesc = context->GetInputDesc(0);
+    inputs.inputPresent = inputShape != nullptr && inputDesc != nullptr;
+    if (!inputs.inputPresent) {
+        return true;
+    }
+
+    ge::Format storageFormat = ge::FORMAT_ND;
+    if (!PopulateInputTensorInfo(context, inputs, storageFormat)) {
+        return false;
+    }
 
     const auto* sumShape = context->GetOutputShape(0);
     const auto* squareSumShape = context->GetOutputShape(1);
@@ -232,7 +260,6 @@ bool PopulateInterfaceInputs(gert::TilingContext* context, BNTrainingReducePubli
     inputs.deterministic = context->GetDeterministic() == 1;
     return true;
 }
-
 bool PopulatePlatformInputs(gert::TilingContext* context, BNTrainingReducePublicInputs& inputs)
 {
     auto* platformInfo = context->GetPlatformInfo();

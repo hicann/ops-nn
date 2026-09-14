@@ -123,6 +123,72 @@ static aclnnStatus CheckBatchNormElemtParams(const aclTensor* input, const aclTe
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus PrepareAndComputeBatchNorm(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                              const aclTensor* mean, const aclTensor* invstd, double eps,
+                                              aclOpExecutor* executor, aclTensor*& bnOutput)
+{
+    auto inputShape = input->GetViewShape();
+    auto inputDims = inputShape.GetDimNum();
+    auto inputContiguous = l0op::Contiguous(input, executor);
+    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const size_t maxDims = 5;
+    if (inputDims > maxDims) {
+        const int64_t shapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
+        aclIntArray* shapeArray = executor->AllocIntArray(shapes, 5);
+        inputContiguous = l0op::Reshape(inputContiguous, shapeArray, executor);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    size_t dimC = inputShape[1];
+    if (weight == nullptr) {
+        weight = FillScalar(dimC, 1, executor);
+        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    if (bias == nullptr) {
+        bias = FillScalar(dimC, 0, executor);
+        CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    auto invstdContiguous = l0op::Contiguous(invstd, executor);
+    CHECK_RET(invstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto variance = l0op::Mul(invstdContiguous, invstdContiguous, executor);
+    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto one = l0op::OnesLike(variance, executor);
+    CHECK_RET(one != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    variance = l0op::Div(one, variance, executor);
+    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto epsScalar = executor->AllocScalar(static_cast<float>(eps));
+    auto epsTensor = executor->ConvertToTensor(epsScalar, variance->GetDataType());
+
+    variance = l0op::Sub(variance, epsTensor, executor);
+    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto weightContiguous = l0op::Contiguous(weight, executor);
+    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto biasContiguous = l0op::Contiguous(bias, executor);
+    CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanContiguous = l0op::Contiguous(mean, executor);
+    CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanNonConst = const_cast<aclTensor*>(meanContiguous);
+    auto varianceNonConst = const_cast<aclTensor*>(variance);
+    bnOutput = nullptr;
+    auto bnResult = BatchNorm(inputContiguous, weightContiguous, biasContiguous, meanNonConst, varianceNonConst, false,
+                              0.0, eps, &bnOutput, nullptr, nullptr, executor);
+    CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
                                                 aclTensor* mean, aclTensor* invstd, double eps, aclTensor* output,
                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -144,64 +210,11 @@ aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const ac
     auto inputShape = input->GetViewShape();
     auto inputDims = inputShape.GetDimNum();
 
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    aclTensor* bnOutput = nullptr;
+    auto prepRet = PrepareAndComputeBatchNorm(input, weight, bias, mean, invstd, eps, uniqueExecutor.get(), bnOutput);
+    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
 
     const size_t maxDims = 5;
-    if (inputDims > maxDims) {
-        const int64_t shapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
-        aclIntArray* shapeArray = uniqueExecutor.get()->AllocIntArray(shapes, 5);
-        inputContiguous = l0op::Reshape(inputContiguous, shapeArray, uniqueExecutor.get());
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
-        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    size_t dimC = inputShape[1];
-    if (weight == nullptr) {
-        weight = FillScalar(dimC, 1, uniqueExecutor.get());
-        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    if (bias == nullptr) {
-        bias = FillScalar(dimC, 0, uniqueExecutor.get());
-        CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    auto invstdContiguous = l0op::Contiguous(invstd, uniqueExecutor.get());
-    CHECK_RET(invstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto variance = l0op::Mul(invstdContiguous, invstdContiguous, uniqueExecutor.get());
-    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto one = l0op::OnesLike(variance, uniqueExecutor.get());
-    CHECK_RET(one != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    variance = l0op::Div(one, variance, uniqueExecutor.get());
-    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto epsScalar = uniqueExecutor.get()->AllocScalar(static_cast<float>(eps));
-    auto epsTensor = uniqueExecutor.get()->ConvertToTensor(epsScalar, variance->GetDataType());
-
-    variance = l0op::Sub(variance, epsTensor, uniqueExecutor.get());
-    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto biasContiguous = l0op::Contiguous(bias, uniqueExecutor.get());
-    CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanContiguous = l0op::Contiguous(mean, uniqueExecutor.get());
-    CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanNonConst = const_cast<aclTensor*>(meanContiguous);
-    auto varianceNonConst = const_cast<aclTensor*>(variance);
-    aclTensor* bnOutput = nullptr;
-    auto bnResult = BatchNorm(inputContiguous, weightContiguous, biasContiguous, meanNonConst, varianceNonConst, false,
-                              0.0, eps, &bnOutput, nullptr, nullptr, uniqueExecutor.get());
-    CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
-
     if (inputDims > maxDims) {
         int64_t originShapes[inputDims];
         for (size_t i = 0; i < inputDims; ++i) {

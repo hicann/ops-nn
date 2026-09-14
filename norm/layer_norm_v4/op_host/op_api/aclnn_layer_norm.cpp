@@ -189,33 +189,9 @@ static bool CheckLen(const aclTensor* input, const aclIntArray* normalizedShape,
     return CheckArrayLen(normalizedShape);
 }
 
-static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-                       const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
-                       const aclTensor* rstdOutOptional)
+static bool CheckNormalizedShapeMatch(const aclTensor* input, const aclIntArray* normalizedShape,
+                                      const aclTensor* weightOptional, const aclTensor* biasOptional)
 {
-    // 1.检查入参维度是否小于8维
-    if (!CheckLen(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional)) {
-        return false;
-    }
-    // 2.检查normalizedShape的长度是否大于等于1
-    if (normalizedShape->Size() < LEAST_NORMALIZED_SHAPE_LEN) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
-                normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
-        return false;
-    }
-    // 3.检查input维度是否不小于normalizedShape的长度
-    OP_CHECK_MIN_DIM(input, normalizedShape->Size(), return false);
-    // 4.校验weight存在时与normalizedShape长度是否相同
-    if (weightOptional) {
-        OP_CHECK_WRONG_DIMENSION(weightOptional, normalizedShape->Size(), return false);
-    }
-    // 5.校验bias存在时与normalizedShape长度是否相同
-    if (biasOptional) {
-        OP_CHECK_WRONG_DIMENSION(biasOptional, normalizedShape->Size(), return false);
-    }
-
-    // 6.检查输入与normalizedShape间的关系
     auto inputShape = input->GetViewShape();
     const size_t beginAxis = inputShape.GetDimNum() - normalizedShape->Size();
     for (size_t index = 0; index < normalizedShape->Size(); index++) {
@@ -251,6 +227,39 @@ static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShap
                 return false;
             }
         }
+    }
+    return true;
+}
+
+static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
+                       const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
+                       const aclTensor* rstdOutOptional)
+{
+    // 1.检查入参维度是否小于8维
+    if (!CheckLen(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional)) {
+        return false;
+    }
+    // 2.检查normalizedShape的长度是否大于等于1
+    if (normalizedShape->Size() < LEAST_NORMALIZED_SHAPE_LEN) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
+                normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
+        return false;
+    }
+    // 3.检查input维度是否不小于normalizedShape的长度
+    OP_CHECK_MIN_DIM(input, normalizedShape->Size(), return false);
+    // 4.校验weight存在时与normalizedShape长度是否相同
+    if (weightOptional) {
+        OP_CHECK_WRONG_DIMENSION(weightOptional, normalizedShape->Size(), return false);
+    }
+    // 5.校验bias存在时与normalizedShape长度是否相同
+    if (biasOptional) {
+        OP_CHECK_WRONG_DIMENSION(biasOptional, normalizedShape->Size(), return false);
+    }
+
+    // 6.检查输入与normalizedShape间的关系
+    if (!CheckNormalizedShapeMatch(input, normalizedShape, weightOptional, biasOptional)) {
+        return false;
     }
 
     // 7.校验三个输出的shape

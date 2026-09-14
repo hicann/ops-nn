@@ -185,10 +185,6 @@ static auto GetOptionalAttr(const gert::RuntimeAttrs* attrs, const int idx, cons
 class AddLayerNormQuantEmptyTiling {
 public:
     explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context) {}
-    // Tiling entry. Return code convention:
-    //     1 GRAPH_SUCCESS: success, no need to invoke the execution tiling implementation
-    //     2 GRAPH_FAILED: failed, stop tiling
-    //     3 GRAPH_PARAM_INVALID: input unsupported, fall back to the execution tiling implementation
     ge::graphStatus DoTiling();
 
 protected:

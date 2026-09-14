@@ -28,6 +28,13 @@
 
 using namespace op;
 #ifdef __cplusplus
+template <typename ExecutorPtr>
+static void SetWorkspaceAndRelease(ExecutorPtr& uniqueExecutor, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+}
+
 extern "C" {
 #endif
 
@@ -210,6 +217,29 @@ static const aclTensor* ContiguousX(const aclTensor* opt, aclOpExecutor* executo
     return l0op::Contiguous(opt, executor);
 }
 
+static bool HandleEmptyTensor(bool hasEmptyTensor, uint64_t* workspaceSize)
+{
+    if (!hasEmptyTensor) {
+        return false;
+    }
+    OP_LOGW("Got empty tensor in aclnnAddRmsNormQuant!");
+    *workspaceSize = 0;
+    return true;
+}
+
+static aclnnStatus ToContiguousInputs(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                      aclOpExecutor* executor, const aclTensor*& x1Cont, const aclTensor*& x2Cont,
+                                      const aclTensor*& gammaCont)
+{
+    x1Cont = l0op::Contiguous(x1, executor);
+    x2Cont = l0op::Contiguous(x2, executor);
+    gammaCont = l0op::Contiguous(gamma, executor);
+    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
                                                         const aclTensor* gamma, const aclTensor* smoothScale1Optional,
                                                         const aclTensor* smoothScale2Optional, double epsilon,
@@ -235,21 +265,17 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(const aclTensor* x1, con
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
     bool hasReduceEmptyTensor = gamma->IsEmpty();
     // 非reduce轴为0处理
-    if (hasEmptyTensor) {
-        OP_LOGW("Got empty tensor in aclnnAddRmsNormQuant!");
-        *workspaceSize = 0;
+    if (HandleEmptyTensor(hasEmptyTensor, workspaceSize)) {
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
-    auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
-    auto x2Cont = l0op::Contiguous(x2, uniqueExecutor.get());
-    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
-
-    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* x1Cont = nullptr;
+    const aclTensor* x2Cont = nullptr;
+    const aclTensor* gammaCont = nullptr;
+    auto contRet = ToContiguousInputs(x1, x2, gamma, uniqueExecutor.get(), x1Cont, x2Cont, gammaCont);
+    CHECK_RET(contRet == ACLNN_SUCCESS, contRet);
 
     auto s1Cont = ContiguousX(smoothScale1Optional, uniqueExecutor.get());
     auto s2Cont = ContiguousX(smoothScale2Optional, uniqueExecutor.get());
@@ -283,8 +309,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(const aclTensor* x1, con
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    SetWorkspaceAndRelease(uniqueExecutor, workspaceSize, executor);
     OP_LOGD("Finish aclnnAddRmsNormQuantGetWorkspaceSize.");
     return ACLNN_SUCCESS;
 }

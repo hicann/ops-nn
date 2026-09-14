@@ -315,6 +315,51 @@ aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTens
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus RunRmsNormQuantKernel(const aclTensor* xCont, const aclTensor* scaleCont,
+                                         const aclTensor* offsetCont, const aclTensor* gamma, const aclTensor* beta,
+                                         const aclTensor* regbaseGamma, const aclTensor* regbaseBeta, double epsilon,
+                                         int32_t yType, aclTensor* y, aclOpExecutor* executor)
+{
+    aclnnStatus ret = ACLNN_SUCCESS;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        bool divMode = true;
+        auto gammaCont = l0op::Contiguous(regbaseGamma, executor);
+        auto betaCont = l0op::Contiguous(regbaseBeta, executor);
+        CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        std::array<aclTensor*, kRmsNormQuantResultNum> addRmsNormQuantOuts = l0op::RmsNormQuantV2(
+            xCont, gammaCont, scaleCont, nullptr, offsetCont, nullptr, betaCont, epsilon, divMode, yType, executor);
+        aclTensor* resultTensor = std::get<IDX_0>(addRmsNormQuantOuts);
+        CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* outTensor = resultTensor;
+        if (yType == op::DataType::DT_INT4 && y->GetDataType() == op::DataType::DT_INT32) {
+            ret = Int42Int32PackedTensor(resultTensor, outTensor, executor);
+            auto viewCopyY = l0op::ViewCopy(outTensor, y, executor);
+            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        } else {
+            auto viewCopyY = l0op::ViewCopy(resultTensor, y, executor);
+            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+    } else {
+        auto gammaCont = l0op::Contiguous(gamma, executor);
+        auto betaCont = l0op::Contiguous(beta, executor);
+        CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto resultTensor = l0op::RmsNormQuant(xCont, gammaCont, betaCont, scaleCont, offsetCont, epsilon, yType,
+                                               executor);
+        const aclTensor* outTensor = resultTensor;
+        if (yType == op::DataType::DT_INT4) {
+            ret = Int42Int32PackedTensor(resultTensor, outTensor, executor);
+            auto viewCopyY = l0op::ViewCopy(outTensor, y, executor);
+            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        } else {
+            auto viewCopyY = l0op::ViewCopy(resultTensor, y, executor);
+            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                               const aclTensor* scale, const aclTensor* offset, double epsilon,
                                               aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -346,48 +391,13 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     CHECK_RET(xCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(offsetCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(scaleCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        bool divMode = true;
-        auto gammaCont = l0op::Contiguous(inputTensorOri.gamma, uniqueExecutor.get());
-        auto betaCont = l0op::Contiguous(inputTensorOri.beta, uniqueExecutor.get());
-        CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        std::array<aclTensor*, kRmsNormQuantResultNum> addRmsNormQuantOuts = l0op::RmsNormQuantV2(
-            xCont, gammaCont, scaleCont, nullptr, offsetCont, nullptr, betaCont, epsilon, divMode, yType,
-            uniqueExecutor.get());
-        aclTensor* resultTensor = std::get<IDX_0>(addRmsNormQuantOuts);
-        CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const aclTensor* outTensor = resultTensor;
-        if (yType == op::DataType::DT_INT4 && y->GetDataType() == op::DataType::DT_INT32) {
-            ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());
-            auto viewCopyY = l0op::ViewCopy(outTensor, y, uniqueExecutor.get());
-            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        } else {
-            auto viewCopyY = l0op::ViewCopy(resultTensor, y, uniqueExecutor.get());
-            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-    } else {
-        auto gammaCont = l0op::Contiguous(gamma, uniqueExecutor.get());
-        auto betaCont = l0op::Contiguous(beta, uniqueExecutor.get());
-        CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto resultTensor = l0op::RmsNormQuant(xCont, gammaCont, betaCont, scaleCont, offsetCont, epsilon, yType,
-                                               uniqueExecutor.get());
-        const aclTensor* outTensor = resultTensor;
-        if (yType == op::DataType::DT_INT4) {
-            ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());
-            auto viewCopyY = l0op::ViewCopy(outTensor, y, uniqueExecutor.get());
-            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        } else {
-            auto viewCopyY = l0op::ViewCopy(resultTensor, y, uniqueExecutor.get());
-            CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-    }
+    ret = RunRmsNormQuantKernel(xCont, scaleCont, offsetCont, gamma, beta, inputTensorOri.gamma, inputTensorOri.beta,
+                                epsilon, yType, y, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-
 aclnnStatus aclnnRmsNormQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRmsNormQuant);

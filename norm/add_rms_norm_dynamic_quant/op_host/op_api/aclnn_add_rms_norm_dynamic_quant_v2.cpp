@@ -209,6 +209,28 @@ static aclnnStatus AddRmsNormDynamicQuantV2Int42Int32PackedTensor(bool processOu
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CopyAddRmsNormV2Results(aclTensor* y1ComputeOut, aclTensor* y2ComputeOut, aclTensor* xComputeOut,
+                                           aclTensor* scale1ComputeOut, aclTensor* scale2ComputeOut, aclTensor* y1Out,
+                                           aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
+                                           aclTensor* scale2Out, aclOpExecutor* executor)
+{
+    auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);
+    CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyScale1Result = l0op::ViewCopy(scale1ComputeOut, scale1Out, executor);
+    CHECK_RET(viewCopyScale1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, y2Out, executor);
+    CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyScale2Result = l0op::ViewCopy(scale2ComputeOut, scale2Out, executor);
+    CHECK_RET(viewCopyScale2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyXResult = l0op::ViewCopy(xComputeOut, xOut, executor);
+    CHECK_RET(viewCopyXResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus ComputeAddRmsNormDynamicQuantV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
                                                    const aclTensor* smoothScale1Optional,
                                                    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional,
@@ -265,24 +287,12 @@ static aclnnStatus ComputeAddRmsNormDynamicQuantV2(const aclTensor* x1, const ac
     }
 
     // 将结果拷贝到输出tensor
-    auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);
-    CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyScale1Result = l0op::ViewCopy(scale1ComputeOut, scale1Out, executor);
-    CHECK_RET(viewCopyScale1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, y2Out, executor);
-    CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyScale2Result = l0op::ViewCopy(scale2ComputeOut, scale2Out, executor);
-    CHECK_RET(viewCopyScale2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyXResult = l0op::ViewCopy(xComputeOut, xOut, executor);
-    CHECK_RET(viewCopyXResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CopyAddRmsNormV2Results(y1ComputeOut, y2ComputeOut, xComputeOut, scale1ComputeOut, scale2ComputeOut,
+                                      y1Out, y2Out, xOut, scale1Out, scale2Out, executor) == ACLNN_SUCCESS,
+              ACLNN_ERR_INNER_NULLPTR);
 
     return ACLNN_SUCCESS;
 }
-
 static const aclTensor* ContiguousTensor(const aclTensor* opt, aclOpExecutor* executor)
 {
     if (nullptr == opt) {

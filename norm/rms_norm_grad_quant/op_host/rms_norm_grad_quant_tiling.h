@@ -156,17 +156,19 @@ protected:
     ge::DataType gammaDtype_{ge::DataType::DT_FLOAT};
     uint32_t tilingKey_{0};
     RmsNormGradQuantRegbaseTilingData tilingData_;
-    ge::graphStatus CheckShapeBeSameWithOne(gert::Shape& shape);
-    ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
-    ge::graphStatus CheckShapeDimNum(gert::Shape& shape, int64_t minDimNum, int64_t maxDimNum, const char* name);
-    ge::graphStatus CheckShapePrefixMatch(gert::Shape& prefixShape, gert::Shape& fullShape, const char* prefixName,
-                                          const char* fullName);
-    ge::graphStatus CheckShapeSuffixMatch(gert::Shape& suffixShape, gert::Shape& fullShape, const char* suffixName,
-                                          const char* fullName);
+    ge::graphStatus CheckShapeBeSameWithOne(const gert::Shape& shape);
+    ge::graphStatus CheckShapeAllPositive(const gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtype();
-    ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
-    void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
+    ge::graphStatus CheckDyAndXShapes(gert::Shape& dyShape);
+    ge::graphStatus CheckRstdGammaAndScalesShapes(gert::Shape& rstdShape, gert::Shape& gammaShape);
+    ge::graphStatus CheckRelationShapes(const gert::Shape& dyShape, const gert::Shape& rstdShape,
+                                        const gert::Shape& gammaShape);
+    ge::graphStatus CheckOutputShapes(const gert::Shape& dyShape, const gert::Shape& gammaShape);
+    ge::graphStatus CheckShapesEqual(const gert::Shape& shape0, const gert::Shape& shape1);
+    ge::graphStatus CheckDyAndXDtype();
+    ge::graphStatus CheckRstdGammaAndScaleXDtype();
+    ge::graphStatus CheckOffsetAndOutputDtype();
     void CalcUsedCoreNumGamma();
     ge::graphStatus CalcUbBufferSizeDgamma();
     ge::graphStatus CalcTilingDataDgamma();
@@ -217,6 +219,9 @@ private:
 
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
+    ge::graphStatus CheckDyAndXShapes();
+    ge::graphStatus CheckRstdGammaShapes(gert::Shape& gammaStorage);
+    ge::graphStatus CheckScalesOffsetXShapes(gert::Shape& gammaStorage);
     ge::graphStatus CheckInputsDtype();
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
     void CalcRowsAndCols(gert::Shape& gammaShape);

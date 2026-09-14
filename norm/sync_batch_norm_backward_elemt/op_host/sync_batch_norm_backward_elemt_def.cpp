@@ -20,6 +20,26 @@ class SyncBatchNormBackwardElemt : public OpDef {
 public:
     explicit SyncBatchNormBackwardElemt(const char* name) : OpDef(name)
     {
+        AddInputs();
+
+        this->Output("grad_input")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .DynamicRankSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "sync_batch_norm_backward_elemt_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+
+private:
+    void AddInputs()
+    {
         this->Input("grad_output")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16})
@@ -62,19 +82,6 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("grad_input")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .AutoContiguous();
-
-        OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .DynamicRankSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "sync_batch_norm_backward_elemt_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 OP_ADD(SyncBatchNormBackwardElemt);

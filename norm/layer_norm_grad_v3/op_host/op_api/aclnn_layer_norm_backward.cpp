@@ -125,12 +125,12 @@ static bool CheckShapeEqual(const aclTensor* input, const aclIntArray* normalize
     return true;
 }
 
-static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
-                       const aclTensor* mean, const aclTensor* rstd, const aclTensor* weightOptional,
-                       const aclTensor* biasOptional, const aclBoolArray* outputMask, const aclTensor* gradInputOut,
-                       const aclTensor* gradWeightOut, const aclTensor* gradBiasOut, int64_t M, int64_t N)
+static bool CheckDimLimitsAndNormalizedRange(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                             const aclTensor* rstd, const aclIntArray* normalizedShape,
+                                             const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                             const aclBoolArray* outputMask, const aclTensor* gradInputOut,
+                                             const aclTensor* gradWeightOut, const aclTensor* gradBiasOut)
 {
-    // 1.检查输入维度是否小于8维
     OP_CHECK_MAX_DIM(gradOut, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(input, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(mean, MAX_DIM_LEN, return false);
@@ -160,6 +160,7 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
         return false;
     }
     // 3.检查input维度是否不小于normalizedShape的长度
+
     OP_CHECK_MIN_DIM(input, normalizedShape->Size(), return false);
     // 4.检查input和normalizedShape间的约束关系
     if (!CheckShapeEqual(input, normalizedShape)) {
@@ -184,6 +185,20 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     }
 
     // 7.校验gradOut与input输入是否相等
+    return true;
+}
+
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
+                       const aclTensor* mean, const aclTensor* rstd, const aclTensor* weightOptional,
+                       const aclTensor* biasOptional, const aclBoolArray* outputMask, const aclTensor* gradInputOut,
+                       const aclTensor* gradWeightOut, const aclTensor* gradBiasOut, int64_t M, int64_t N)
+{
+    // 1.检查输入维度是否小于8维
+    if (!CheckDimLimitsAndNormalizedRange(gradOut, input, mean, rstd, normalizedShape, weightOptional, biasOptional,
+                                          outputMask, gradInputOut, gradWeightOut, gradBiasOut)) {
+        return false;
+    }
+
     OP_CHECK_SHAPE_NOT_EQUAL(gradOut, input, return false);
     // 8.校验mean和rstd的shape是否相等
     OP_CHECK_SHAPE_NOT_EQUAL(mean, rstd, return false);
@@ -209,10 +224,8 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
                 ToString(gradBiasOut->GetViewShape()).GetString(), N);
         return false;
     }
-
     return true;
 }
-
 static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
                                const aclTensor* mean, const aclTensor* rstd, const aclTensor* weightOptional,
                                const aclTensor* biasOptional, const aclBoolArray* outputMask, aclTensor* gradInputOut,

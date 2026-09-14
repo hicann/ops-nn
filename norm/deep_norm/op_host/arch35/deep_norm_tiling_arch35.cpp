@@ -39,7 +39,8 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr uint32_t VL_FP32 = 256U / sizeof(float); // fp32 vector length (matches kernel)
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
-constexpr uint32_t POWER_TWO_FOLD = 2; // power-of-two fold factor
+constexpr uint32_t POWER_TWO_FOLD = 2;     // power-of-two fold factor
+constexpr uint32_t SCALAR_QUEUE_COUNT = 3; // mean/rstd queues plus the sum buffer
 constexpr uint32_t MIN_REDUCE_TMP_ELEMS = 2 * VL_FP32;
 constexpr uint32_t MAX_PARTIAL_TILE_LENGTH = 4096;
 // The legacy arch22 kernel switches from its intermediate Extra path to the
@@ -56,9 +57,9 @@ constexpr int32_t INPUT_GAMMA_INDEX = 3;
 constexpr int32_t OUTPUT_MEAN_INDEX = 0;
 constexpr int32_t OUTPUT_RSTD_INDEX = 1;
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(const gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    auto platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -75,7 +76,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 // The shared legacy-compatible checker validates output ranks and leading dims but
 // does not require the reduced trailing dims to be one. Enforce that contract
 // only in arch35 so this fix does not alter the legacy tiling path.
-static ge::graphStatus CheckReduceOutputTail(gert::TilingContext* context)
+static ge::graphStatus CheckReduceOutputTail(const gert::TilingContext* context)
 {
     auto xShapePtr = context->GetInputShape(INPUT_X_INDEX);
     auto gammaShapePtr = context->GetInputShape(INPUT_GAMMA_INDEX);
@@ -101,7 +102,7 @@ static ge::graphStatus CheckReduceOutputTail(gert::TilingContext* context)
 }
 
 // Parses x/gamma shapes into the reduce-axis length numCol and the leading-dim product numRow.
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& numCol, int64_t& numRow)
+static ge::graphStatus GetShapeInfo(const gert::TilingContext* context, int64_t& numCol, int64_t& numRow)
 {
     auto xShapePtr = context->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
@@ -136,7 +137,7 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& numCo
 }
 
 // Reads the alpha/epsilon attributes, falling back to the operator defaults when absent.
-static ge::graphStatus GetAttrInfo(gert::TilingContext* context, float& alpha, float& eps)
+static ge::graphStatus GetAttrInfo(const gert::TilingContext* context, float& alpha, float& eps)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -148,9 +149,9 @@ static ge::graphStatus GetAttrInfo(gert::TilingContext* context, float& alpha, f
 }
 
 // Computes the core split, aligned reduce length and power-of-two fold point, with uint32 range guard.
-static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t numCol, int64_t numRow, int64_t coreNum,
-                                        int64_t& rowPerCore, int64_t& usedCoreNum, int64_t& numColAlign,
-                                        int64_t& powerSplit)
+static ge::graphStatus CalcTilingParams(const gert::TilingContext* context, int64_t numCol, int64_t numRow,
+                                        int64_t coreNum, int64_t& rowPerCore, int64_t& usedCoreNum,
+                                        int64_t& numColAlign, int64_t& powerSplit)
 {
     rowPerCore = CeilDiv(numRow, coreNum);
     OP_CHECK_IF(rowPerCore <= 0,
@@ -176,7 +177,7 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t nu
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetDtypeSize(gert::TilingContext* context, uint64_t& dtypeSize)
+static ge::graphStatus GetDtypeSize(const gert::TilingContext* context, uint64_t& dtypeSize)
 {
     auto xDescPtr = context->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDescPtr);
@@ -197,11 +198,11 @@ static uint64_t CalcFullLoadUbRequired(uint64_t numColAlign, uint64_t dtypeSize)
     uint64_t reduceTmpElems = CeilAlign(foldLoops, static_cast<uint64_t>(BLK_B32));
     reduceTmpElems = std::max(reduceTmpElems, static_cast<uint64_t>(MIN_REDUCE_TMP_ELEMS));
     uint64_t tensorBytes = numColAlign * (UB_QUEUE_COUNT * dtypeSize + sizeof(float));
-    uint64_t scalarBytes = 3 * BLOCK_SIZE; // mean/rstd queues and sum buffer
+    uint64_t scalarBytes = static_cast<uint64_t>(SCALAR_QUEUE_COUNT) * BLOCK_SIZE; // mean/rstd queues and sum buffer
     return tensorBytes + reduceTmpElems * sizeof(float) + scalarBytes;
 }
 
-static ge::graphStatus CalcPartialTileLength(gert::TilingContext* context, uint64_t ubSize, uint64_t dtypeSize,
+static ge::graphStatus CalcPartialTileLength(const gert::TilingContext* context, uint64_t ubSize, uint64_t dtypeSize,
                                              uint32_t& tileLength)
 {
     OP_CHECK_IF(ubSize <= PARTIAL_RESERVED_SIZE,

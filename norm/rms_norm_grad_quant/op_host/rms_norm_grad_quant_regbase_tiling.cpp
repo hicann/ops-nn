@@ -69,7 +69,7 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeAllPositive(gert::Shape& shape)
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeAllPositive(const gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(shape.GetDim(i) <= 0,
@@ -80,7 +80,7 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeAllPositive(gert::Shape
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeBeSameWithOne(gert::Shape& shape)
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeBeSameWithOne(const gert::Shape& shape)
 {
     OP_CHECK_IF(shape.GetDimNum() != 1,
                 OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs 1", shape.GetDimNum()),
@@ -91,51 +91,7 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeBeSameWithOne(gert::Sha
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeDimNum(gert::Shape& shape, int64_t minDimNum,
-                                                                int64_t maxDimNum, const char* name)
-{
-    auto dimNum = static_cast<int64_t>(shape.GetDimNum());
-    OP_CHECK_IF(dimNum < minDimNum || dimNum > maxDimNum,
-                OP_LOGE(context_->GetNodeName(), "DimNum of %s should be in range [%ld, %ld], but actual %ld.", name,
-                        minDimNum, maxDimNum, dimNum),
-                return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapePrefixMatch(gert::Shape& prefixShape, gert::Shape& fullShape,
-                                                                     const char* prefixName, const char* fullName)
-{
-    OP_CHECK_IF(prefixShape.GetDimNum() > fullShape.GetDimNum(),
-                OP_LOGE(context_->GetNodeName(), "DimNum of %s (%zu) should not exceed dimNum of %s (%zu).", prefixName,
-                        prefixShape.GetDimNum(), fullName, fullShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
-    for (size_t i = 0; i < prefixShape.GetDimNum(); i++) {
-        OP_CHECK_IF(prefixShape.GetDim(i) != fullShape.GetDim(i),
-                    OP_LOGE(context_->GetNodeName(), "Dim %lu of %s (%ld) should be equal to dim %lu of %s (%ld).", i,
-                            prefixName, prefixShape.GetDim(i), i, fullName, fullShape.GetDim(i)),
-                    return ge::GRAPH_FAILED);
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeSuffixMatch(gert::Shape& suffixShape, gert::Shape& fullShape,
-                                                                     const char* suffixName, const char* fullName)
-{
-    OP_CHECK_IF(suffixShape.GetDimNum() > fullShape.GetDimNum(),
-                OP_LOGE(context_->GetNodeName(), "DimNum of %s (%zu) should not exceed dimNum of %s (%zu).", suffixName,
-                        suffixShape.GetDimNum(), fullName, fullShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
-    size_t offset = fullShape.GetDimNum() - suffixShape.GetDimNum();
-    for (size_t i = 0; i < suffixShape.GetDimNum(); i++) {
-        OP_CHECK_IF(suffixShape.GetDim(i) != fullShape.GetDim(offset + i),
-                    OP_LOGE(context_->GetNodeName(), "Dim %lu of %s (%ld) should be equal to dim %zu of %s (%ld).", i,
-                            suffixName, suffixShape.GetDim(i), offset + i, fullName, fullShape.GetDim(offset + i)),
-                    return ge::GRAPH_FAILED);
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapesEqual(const gert::Shape& shape0, const gert::Shape& shape1)
 {
     OP_CHECK_IF(shape0.GetDimNum() != shape1.GetDimNum(),
                 OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
@@ -151,33 +107,24 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapesEqual(gert::Shape& sha
     return ge::GRAPH_SUCCESS;
 }
 
-void RmsNormGradQuantRegbaseTiling::CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape)
-{
-    rows_ = 1;
-    cols_ = 1;
-    for (size_t i = 0; i < xShape.GetDimNum() - gammaShape.GetDimNum(); i++) {
-        rows_ *= xShape.GetDim(i);
-    }
-    for (size_t i = 0; i < gammaShape.GetDimNum(); i++) {
-        cols_ *= gammaShape.GetDim(i);
-    }
-}
-
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckDyAndXShapes(gert::Shape& dyShape)
 {
     // check dy
     auto inputShape = context_->GetInputShape(INPUT_INDEX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape0 = inputShape->GetStorageShape();
-    if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
+    dyShape = inputShape->GetStorageShape();
+    if (CheckShapeAllPositive(dyShape) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
+            context_->GetNodeName(), "dy", ToString(dyShape).c_str(),
             "The shape of input dy can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
-    if (CheckShapeDimNum(storageShape0, MIN_DIMS_DY_X_DX, MAX_DIMS_DY_X_DX, "dy") != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
+
+    auto dimNum = static_cast<int64_t>(dyShape.GetDimNum());
+    OP_CHECK_IF(dimNum < MIN_DIMS_DY_X_DX || dimNum > MAX_DIMS_DY_X_DX,
+                OP_LOGE(context_->GetNodeName(), "DimNum of %s should be in range [%ld, %ld], but actual %ld.", "dy",
+                        MIN_DIMS_DY_X_DX, MAX_DIMS_DY_X_DX, dimNum),
+                return ge::GRAPH_FAILED);
 
     // check x
     inputShape = context_->GetInputShape(INPUT_INDEX_1);
@@ -191,20 +138,25 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     }
 
     // check shapes of input0 and input1 are equal
-    if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
-        std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
+    if (CheckShapesEqual(dyShape, storageShape1) != ge::GRAPH_SUCCESS) {
+        std::string shapeMsg = ToString(dyShape) + " and " + ToString(storageShape1);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
                                                "The shapes of input dy and input x should be the same");
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckRstdGammaAndScalesShapes(gert::Shape& rstdShape,
+                                                                             gert::Shape& gammaShape)
+{
     // check rstd
-    inputShape = context_->GetInputShape(INPUT_INDEX_2);
+    auto inputShape = context_->GetInputShape(INPUT_INDEX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape2 = inputShape->GetStorageShape();
-    if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
+    rstdShape = inputShape->GetStorageShape();
+    if (CheckShapeAllPositive(rstdShape) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
+            context_->GetNodeName(), "rstd", ToString(rstdShape).c_str(),
             "The shape of input rstd can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
@@ -212,10 +164,10 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     // check gamma
     inputShape = context_->GetInputShape(INPUT_INDEX_3);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape3 = inputShape->GetStorageShape();
-    if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
+    gammaShape = inputShape->GetStorageShape();
+    if (CheckShapeAllPositive(gammaShape) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
+            context_->GetNodeName(), "gamma", ToString(gammaShape).c_str(),
             "The shape of input gamma can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
@@ -245,26 +197,60 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     } else {
         hasOffsetX_ = ComputeModeOffsetX::WITHOUT_OFFSET_X;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
-    CalcRowsAndCols(storageShape0, storageShape3);
-    OP_CHECK_IF(storageShape0.GetDimNum() != storageShape2.GetDimNum() + storageShape3.GetDimNum(),
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckRelationShapes(const gert::Shape& dyShape,
+                                                                   const gert::Shape& rstdShape,
+                                                                   const gert::Shape& gammaShape)
+{
+    rows_ = 1;
+    cols_ = 1;
+    for (size_t i = 0; i < dyShape.GetDimNum() - gammaShape.GetDimNum(); i++) {
+        rows_ *= dyShape.GetDim(i);
+    }
+    for (size_t i = 0; i < gammaShape.GetDimNum(); i++) {
+        cols_ *= gammaShape.GetDim(i);
+    }
+    OP_CHECK_IF(dyShape.GetDimNum() != rstdShape.GetDimNum() + gammaShape.GetDimNum(),
                 OP_LOGE(context_->GetNodeName(),
                         "The dimNum of x (%zu) should be equal to the sum of dimNum of rstd (%zu) and gamma (%zu).",
-                        storageShape0.GetDimNum(), storageShape2.GetDimNum(), storageShape3.GetDimNum()),
+                        dyShape.GetDimNum(), rstdShape.GetDimNum(), gammaShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
-    if (CheckShapePrefixMatch(storageShape2, storageShape0, "rstd", "x") != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (CheckShapeSuffixMatch(storageShape3, storageShape0, "gamma", "x") != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
 
+    OP_CHECK_IF(rstdShape.GetDimNum() > dyShape.GetDimNum(),
+                OP_LOGE(context_->GetNodeName(), "DimNum of %s (%zu) should not exceed dimNum of %s (%zu).", "rstd",
+                        rstdShape.GetDimNum(), "x", dyShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < rstdShape.GetDimNum(); i++) {
+        OP_CHECK_IF(rstdShape.GetDim(i) != dyShape.GetDim(i),
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of %s (%ld) should be equal to dim %lu of %s (%ld).", i,
+                            "rstd", rstdShape.GetDim(i), i, "x", dyShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
+    }
+    OP_CHECK_IF(gammaShape.GetDimNum() > dyShape.GetDimNum(),
+                OP_LOGE(context_->GetNodeName(), "DimNum of %s (%zu) should not exceed dimNum of %s (%zu).", "gamma",
+                        gammaShape.GetDimNum(), "x", dyShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    size_t offset = dyShape.GetDimNum() - gammaShape.GetDimNum();
+    for (size_t i = 0; i < gammaShape.GetDimNum(); i++) {
+        OP_CHECK_IF(gammaShape.GetDim(i) != dyShape.GetDim(offset + i),
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of %s (%ld) should be equal to dim %zu of %s (%ld).", i,
+                            "gamma", gammaShape.GetDim(i), offset + i, "x", dyShape.GetDim(offset + i)),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckOutputShapes(const gert::Shape& dyShape,
+                                                                 const gert::Shape& gammaShape)
+{
     // check output dxOut shape equal to dy shape
     auto outputShape = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto storageShapeDxOut = outputShape->GetStorageShape();
-    if (CheckShapesEqual(storageShapeDxOut, storageShape0) != ge::GRAPH_SUCCESS) {
-        std::string shapeMsg = ToString(storageShapeDxOut) + " and " + ToString(storageShape0);
+    if (CheckShapesEqual(storageShapeDxOut, dyShape) != ge::GRAPH_SUCCESS) {
+        std::string shapeMsg = ToString(storageShapeDxOut) + " and " + ToString(dyShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dxOut and dy", shapeMsg.c_str(),
                                                "The shape of output dxOut should be the same as the shape of input dy");
         return ge::GRAPH_FAILED;
@@ -274,8 +260,8 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     outputShape = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto storageShapeDgammaOut = outputShape->GetStorageShape();
-    if (CheckShapesEqual(storageShapeDgammaOut, storageShape3) != ge::GRAPH_SUCCESS) {
-        std::string shapeMsg = ToString(storageShapeDgammaOut) + " and " + ToString(storageShape3);
+    if (CheckShapesEqual(storageShapeDgammaOut, gammaShape) != ge::GRAPH_SUCCESS) {
+        std::string shapeMsg = ToString(storageShapeDgammaOut) + " and " + ToString(gammaShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "dgammaOut and gamma", shapeMsg.c_str(),
             "The shape of output dgammaOut should be the same as the shape of input gamma");
@@ -288,7 +274,24 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
+{
+    gert::Shape dyShape;
+    gert::Shape rstdShape;
+    gert::Shape gammaShape;
+    if (CheckDyAndXShapes(dyShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckRstdGammaAndScalesShapes(rstdShape, gammaShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckRelationShapes(dyShape, rstdShape, gammaShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return CheckOutputShapes(dyShape, gammaShape);
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckDyAndXDtype()
 {
     auto dyDesc = context_->GetInputDesc(INPUT_INDEX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
@@ -309,6 +312,11 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
         return ge::GRAPH_FAILED;
     }
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckRstdGammaAndScaleXDtype()
+{
     auto rstdDesc = context_->GetInputDesc(INPUT_INDEX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
     auto rstdDtype = rstdDesc->GetDataType();
@@ -342,6 +350,11 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
     }
 
     // check offsetX
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckOffsetAndOutputDtype()
+{
     auto regbaseOffsetXDesc = context_->GetInputDesc(INPUT_INDEX_5);
     if (regbaseOffsetXDesc != nullptr) {
         auto regbaseOffsetXDtype = regbaseOffsetXDesc->GetDataType();
@@ -367,8 +380,18 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
     OP_CHECK_IF((dgammaDtype != ge::DataType::DT_FLOAT),
                 OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(dgammaDtype).c_str(), "FLOAT"),
                 return ge::GRAPH_FAILED);
-
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsDtype()
+{
+    if (CheckDyAndXDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckRstdGammaAndScaleXDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return CheckOffsetAndOutputDtype();
 }
 
 ge::graphStatus RmsNormGradQuantRegbaseTiling::GetShapeAttrsInfo()

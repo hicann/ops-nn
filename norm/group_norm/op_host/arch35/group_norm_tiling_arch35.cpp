@@ -334,6 +334,37 @@ static void SetUbTiling(GroupNormTilingData& tilingData)
 }
 
 // 按归约轴和通道轴的UB占用选择TwoPass或Welford模板。
+static bool TrySetFullLoadTiling(const gert::TilingContext* context, GroupNormTilingData& tilingData, int64_t ubSize,
+                                 int64_t xDtypeSize, int64_t reduceCount, int64_t gammaUbSize, int64_t betaUbSize,
+                                 int64_t& otherUbSize, int64_t& ubRemain, int64_t& maxReduceCount,
+                                 bool& isReduceFullLoad)
+{
+    if (maxReduceCount > reduceCount) {
+        isReduceFullLoad = true;
+        tilingData.set_tilingKey(static_cast<int64_t>(GroupNormTilingKey::TILINGKEY_TWOPASS_PERF));
+        return true;
+    }
+    bool isLargeChannel = static_cast<int64_t>(tilingData.get_shapeC()) > MAX_CHANNEL_SIZE;
+    int64_t newUbRemain = ubRemain;
+    // 大通道场景按单组大小重算gamma和beta占用。
+    if (isLargeChannel) {
+        int64_t gammaSplitUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA, tilingData.get_shapeD());
+        int64_t betaSplitUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_BETA, tilingData.get_shapeD());
+        otherUbSize = otherUbSize - gammaUbSize - betaUbSize + gammaSplitUbSize + betaSplitUbSize;
+        newUbRemain = ubSize <= otherUbSize ? 0 : ubSize - otherUbSize;
+        int64_t newMaxReduceCount = (newUbRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
+        if (newMaxReduceCount > reduceCount) {
+            isReduceFullLoad = true;
+            maxReduceCount = newMaxReduceCount;
+            ubRemain = newUbRemain;
+            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormTilingKey::TILINGKEY_TWOPASS_GENERALIZED));
+            return true;
+        }
+    }
+    // 归约轴无法全载时释放二分累加空间并切换Welford模板。
+    return false;
+}
+
 static void SetTilingKey4Ascend950(const gert::TilingContext* context, int64_t& maxReduceCount, int64_t& ubRemain,
                                    bool& isReduceFullLoad, GroupNormTilingData& tilingData)
 {
@@ -368,31 +399,13 @@ static void SetTilingKey4Ascend950(const gert::TilingContext* context, int64_t& 
     OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 
-    if (maxReduceCount > reduceCount) {
-        isReduceFullLoad = true;
-        tilingData.set_tilingKey(static_cast<int64_t>(GroupNormTilingKey::TILINGKEY_TWOPASS_PERF));
+    if (TrySetFullLoadTiling(context, tilingData, ubSize, xDtypeSize, reduceCount, gammaUbSize, betaUbSize, otherUbSize,
+                             ubRemain, maxReduceCount, isReduceFullLoad)) {
         return;
     }
-    bool isLargeChannel = static_cast<int64_t>(tilingData.get_shapeC()) > MAX_CHANNEL_SIZE;
-    int64_t newUbRemain = ubRemain;
-    // 大通道场景按单组大小重算gamma和beta占用。
-    if (isLargeChannel) {
-        int64_t gammaSplitUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA, tilingData.get_shapeD());
-        int64_t betaSplitUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_BETA, tilingData.get_shapeD());
-        otherUbSize = otherUbSize - gammaUbSize - betaUbSize + gammaSplitUbSize + betaSplitUbSize;
-        newUbRemain = ubSize <= otherUbSize ? 0 : ubSize - otherUbSize;
-        int64_t newMaxReduceCount = (newUbRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
-        if (newMaxReduceCount > reduceCount) {
-            isReduceFullLoad = true;
-            maxReduceCount = newMaxReduceCount;
-            ubRemain = newUbRemain;
-            tilingData.set_tilingKey(static_cast<int64_t>(GroupNormTilingKey::TILINGKEY_TWOPASS_GENERALIZED));
-            return;
-        }
-    }
-    // 归约轴无法全载时释放二分累加空间并切换Welford模板。
     isReduceFullLoad = false;
     int64_t meanAndRstdSize = meanUbSize + rstdUbSize + meanUbExtraSize + varianceUbExtraSize;
+    bool isLargeChannel = static_cast<int64_t>(tilingData.get_shapeC()) > MAX_CHANNEL_SIZE;
     if (isLargeChannel) {
         ubRemain = ubSize - meanAndRstdSize;
         tilingData.set_tilingKey(static_cast<int64_t>(GroupNormTilingKey::TILINGKEY_WELFORD_GENERALIZED));
@@ -402,7 +415,6 @@ static void SetTilingKey4Ascend950(const gert::TilingContext* context, int64_t& 
     }
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 }
-
 static void SetDichotomyAddParams(const gert::TilingContext* context, GroupNormTilingData& tilingData)
 {
     int64_t reduceCount = tilingData.get_shapeD() * tilingData.get_hwNum();

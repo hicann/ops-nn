@@ -148,14 +148,14 @@ __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLe
     loop.loop1Size = 1;
     loop.loop2Size = 1;
     if (axisCount >= kLoop1Axes) {
-        loop.loop1Size = static_cast<uint32_t>(ubAxes[2].ubSize);
-        loop.loop1SrcStride = static_cast<uint64_t>(ubAxes[2].gmStride * typeBytes);
-        loop.loop1DstStride = static_cast<uint64_t>(ubStride[2]);
+        loop.loop1Size = static_cast<uint32_t>(ubAxes[kLoop1AxisIdx].ubSize);
+        loop.loop1SrcStride = static_cast<uint64_t>(ubAxes[kLoop1AxisIdx].gmStride * typeBytes);
+        loop.loop1DstStride = static_cast<uint64_t>(ubStride[kLoop1AxisIdx]);
     }
     if (axisCount >= kLoop2Axes) {
-        loop.loop2Size = static_cast<uint32_t>(ubAxes[3].ubSize);
-        loop.loop2SrcStride = static_cast<uint64_t>(ubAxes[3].gmStride * typeBytes);
-        loop.loop2DstStride = static_cast<uint64_t>(ubStride[3]);
+        loop.loop2Size = static_cast<uint32_t>(ubAxes[kLoop2AxisIdx].ubSize);
+        loop.loop2SrcStride = static_cast<uint64_t>(ubAxes[kLoop2AxisIdx].gmStride * typeBytes);
+        loop.loop2DstStride = static_cast<uint64_t>(ubStride[kLoop2AxisIdx]);
     }
     const bool useLoopMode = axisCount >= kLoop1Axes;
     if (useLoopMode) {

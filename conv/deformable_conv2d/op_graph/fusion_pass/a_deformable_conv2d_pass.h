@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "../../../common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
-#include "ge/es_graph_builder.h"
 #include "ge/fusion/pass/decompose_pass.h"
 #include "platform/soc_spec.h"
 
@@ -28,9 +27,7 @@ namespace Conv {
 namespace DfmConv2dFusion {
 const std::string FUSION_NAME = "ADeformableConv2dPass";
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {
-    {"Ascend950", NpuArch::DAV_3510}
-};
+const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
 
 const ge::AscendString DFM_CONV2D = "DeformableConv2D";
 const ge::AscendString DFM_GROUPS = "deformable_groups";
@@ -70,23 +67,22 @@ struct DfmPos {
 
 class __attribute__((visibility("default"))) ADeformableConv2dPass : public ge::fusion::DecomposePass {
 public:
-    explicit ADeformableConv2dPass(const std::vector<ge::AscendString> &opTypes)
-        : DecomposePass(opTypes) {}
+    explicit ADeformableConv2dPass(const std::vector<ge::AscendString>& opTypes) : DecomposePass(opTypes) {}
 
 protected:
-    bool MeetRequirements(const ge::GNode &convNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
+    bool MeetRequirements(const ge::GNode& convNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
 
 private:
     void InitMember();
-    bool GetDfmDescInfo(const ge::GNode &convNode);
+    bool GetDfmDescInfo(const ge::GNode& convNode);
     bool ParseFilter();
-    bool GetDfmAttrs(const ge::GNode &convNode);
+    bool GetDfmAttrs(const ge::GNode& convNode);
     bool ResolveDfmPos();
     bool CalcDfmOutShape();
-    bool SetConv2dAttrs(ge::GNode &conv2dNode);
-    bool UpdateConv2dDesc(ge::GNode &conv2dNode);
-    bool UpdateDfmOffsetDesc(ge::GNode &dfmOffsetNode);
+    bool SetConv2dAttrs(ge::GNode& conv2dNode);
+    bool UpdateConv2dDesc(ge::GNode& conv2dNode);
+    bool UpdateDfmOffsetDesc(ge::GNode& dfmOffsetNode);
 
     ConvFusionUtils::ConvDescInfo convDescInfo;
     ConvFusionUtils::ConvBaseAttrs baseAttrs;

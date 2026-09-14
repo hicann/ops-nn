@@ -114,44 +114,11 @@ static bool CheckDimMaxMin(const gert::TilingContext* context, size_t x1DimNum, 
     return true;
 }
 
-static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, size_t gammaDimNum)
+static bool CheckX1X2YShapes(const gert::TilingContext* context, const gert::StorageShape* x1_shape,
+                             const gert::StorageShape* x2_shape, const gert::StorageShape* y1_shape,
+                             const gert::StorageShape* y2_shape, const gert::StorageShape* x_shape,
+                             const gert::StorageShape* rstd_shape, size_t x1DimNum, bool rstdEmpty)
 {
-    const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
-    const gert::StorageShape* x2_shape = context->GetInputShape(INPUT_X2_INDEX);
-    const gert::StorageShape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
-    const gert::StorageShape* y1_shape = context->GetOutputShape(OUTPUT_Y1_INDEX);
-    const gert::StorageShape* y2_shape = context->GetOutputShape(OUTPUT_Y2_INDEX);
-    const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
-    const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
-    // check rstd/gamma shape
-    bool rstdEmpty = false;
-    for (uint32_t i = 0; i < x1DimNum - gammaDimNum; i++) {
-        OP_CHECK_IF(rstd_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i),
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x1",
-                                                           (Ops::Base::ToString(rstd_shape->GetStorageShape()) +
-                                                            " and " + Ops::Base::ToString(x1_shape->GetStorageShape()))
-                                                               .c_str(),
-                                                           ("The shape of rstd should be the same as the first " +
-                                                            std::to_string(x1DimNum - gammaDimNum) + " dim of x1")
-                                                               .c_str()),
-                    return false);
-        if (rstd_shape->GetStorageShape().GetDim(i) == 0) {
-            rstdEmpty = true;
-        }
-    }
-    for (uint32_t i = 0; i < gammaDimNum; i++) {
-        OP_CHECK_IF(
-            gamma_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(x1DimNum - gammaDimNum + i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context->GetNodeName(), "gamma and x1",
-                (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
-                 Ops::Base::ToString(x1_shape->GetStorageShape()))
-                    .c_str(),
-                ("The shape of gamma should be equal to the last " + std::to_string(gammaDimNum) + " dim of x1")
-                    .c_str()),
-            return false);
-    }
-
     for (uint32_t i = 0; i < x1DimNum; i++) {
         if (x1_shape->GetStorageShape().GetDim(i) == 0) {
             if (!rstdEmpty) {
@@ -189,6 +156,50 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
     return true;
 }
 
+static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, size_t gammaDimNum)
+{
+    const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
+    const gert::StorageShape* x2_shape = context->GetInputShape(INPUT_X2_INDEX);
+    const gert::StorageShape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
+    const gert::StorageShape* y1_shape = context->GetOutputShape(OUTPUT_Y1_INDEX);
+    const gert::StorageShape* y2_shape = context->GetOutputShape(OUTPUT_Y2_INDEX);
+    const gert::StorageShape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
+    const gert::StorageShape* x_shape = context->GetOutputShape(OUTPUT_X_INDEX);
+    // check rstd/gamma shape
+    bool rstdEmpty = false;
+
+    for (uint32_t i = 0; i < x1DimNum - gammaDimNum; i++) {
+        OP_CHECK_IF(rstd_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x1",
+                                                           (Ops::Base::ToString(rstd_shape->GetStorageShape()) +
+                                                            " and " + Ops::Base::ToString(x1_shape->GetStorageShape()))
+                                                               .c_str(),
+                                                           ("The shape of rstd should be the same as the first " +
+                                                            std::to_string(x1DimNum - gammaDimNum) + " dim of x1")
+                                                               .c_str()),
+                    return false);
+        if (rstd_shape->GetStorageShape().GetDim(i) == 0) {
+            rstdEmpty = true;
+        }
+    }
+
+    for (uint32_t i = 0; i < gammaDimNum; i++) {
+        OP_CHECK_IF(
+            gamma_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(x1DimNum - gammaDimNum + i),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "gamma and x1",
+                (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
+                 Ops::Base::ToString(x1_shape->GetStorageShape()))
+                    .c_str(),
+                ("The shape of gamma should be equal to the last " + std::to_string(gammaDimNum) + " dim of x1")
+                    .c_str()),
+            return false);
+    }
+    if (!CheckX1X2YShapes(context, x1_shape, x2_shape, y1_shape, y2_shape, x_shape, rstd_shape, x1DimNum, rstdEmpty)) {
+        return false;
+    }
+    return true;
+}
 static bool CheckInputOutputShape(const gert::TilingContext* context)
 {
     const gert::StorageShape* x1_shape = context->GetInputShape(INPUT_X1_INDEX);
