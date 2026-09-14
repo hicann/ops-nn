@@ -40,7 +40,7 @@ static std::vector<const gert::Tensor*> getIndicesWithMask(std::vector<const ger
         } else if (mask[i] == 1) {
             indicesList.emplace_back(indices[i - numZeros]);
         } else {
-            OP_LOGE("aclnnfallback", "Illegal value of mask");
+            OP_LOGE("aclnnfallback", "Illegal value of mask[%ld]: %d.", i, static_cast<int32_t>(mask[i]));
         }
     }
 
@@ -80,7 +80,7 @@ static graphStatus IndexByTensorHostExecuteFunc(OpExecuteContext* hostApiCtx)
                                                                           ge_mask, mask_num, &emptyTensor);
 
     auto api_ret = CANN_OPS_OPB_SYN_EXEC_ACLNN(hostApiCtx, aclnnIndex, self_ge, inputTensorList, out_ge);
-    OP_CHECK_IF(api_ret != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "api_ret faild:%d", api_ret),
+    OP_CHECK_IF(api_ret != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "api_ret failed:%d", api_ret),
                 return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
