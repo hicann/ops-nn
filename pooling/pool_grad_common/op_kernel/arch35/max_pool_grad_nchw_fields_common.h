@@ -18,7 +18,12 @@
 
 #include <cstdint>
 
+#include "pool_utils/arch35/compute/pool_grad_scatter_compute.h"
+
 namespace MaxPoolGradNCHWCommonNameSpace {
+
+using PoolUtils::Compute::PEnd;
+using PoolUtils::Compute::PStart;
 
 /*
  * 功能：MaxPoolGrad NCHW 系 kernel 基类共用字段，覆盖 tiling 解析与轴切分所需的公共成员。
@@ -88,6 +93,94 @@ protected:
     int64_t wProBatchSize_ = 1;
     int64_t curHProBatchSize_ = 1;
     int64_t curWProBatchSize_ = 1;
+
+    /*
+     * 功能：解析 MaxPoolGrad NCHW 系 kernel 共用的 tiling 字段。
+     * 说明：scatter / backward 两个基类的 ParseTilingData 前半段完全一致，此处收编为唯一实现；
+     *       各基类自身特有的字段（如 inputBufferSize_、isOverlap_）仍在各自 ParseTilingData 内赋值。
+     *       以 tiling 结构体类型为模板参数，避免公共字段头反向依赖具体算子的 tiling 头。
+     */
+    template <typename TilingDataT>
+    __aicore__ inline void ParseCommonTilingData(const TilingDataT& tilingData)
+    {
+        hArgmax_ = tilingData.hArgmax;
+        wArgmax_ = tilingData.wArgmax;
+
+        hOutput_ = tilingData.hOutput;
+        wOutput_ = tilingData.wOutput;
+
+        kernelH_ = tilingData.hKernel;
+        kernelW_ = tilingData.wKernel;
+
+        strideH_ = tilingData.hStride;
+        strideW_ = tilingData.wStride;
+
+        padH_ = tilingData.padH;
+        padW_ = tilingData.padW;
+
+        dilationH_ = tilingData.dilationH;
+        dilationW_ = tilingData.dilationW;
+
+        highAxisInner_ = tilingData.highAxisInner;
+        highAxisTail_ = tilingData.highAxisTail;
+        highAxisOuter_ = tilingData.highAxisOuter;
+
+        hOutputInner_ = tilingData.hOutputInner;
+        hOutputTail_ = tilingData.hOutputTail;
+        hOutputOuter_ = tilingData.hOutputOuter;
+
+        wOutputInner_ = tilingData.wOutputInner;
+        wOutputTail_ = tilingData.wOutputTail;
+        wOutputOuter_ = tilingData.wOutputOuter;
+
+        normalCoreProcessNum_ = tilingData.normalCoreProcessNum;
+        tailCoreProcessNum_ = tilingData.tailCoreProcessNum;
+        usedCoreNum_ = tilingData.usedCoreNum;
+
+        outputBufferSize_ = tilingData.outputBufferSize;
+        gradBufferSize_ = tilingData.gradBufferSize;
+        argmaxBufferSize_ = tilingData.argmaxBufferSize;
+
+        hProBatchSize_ = tilingData.hProBatchSize;
+        wProBatchSize_ = tilingData.wProBatchSize;
+    }
+
+    /*
+     * 功能：计算 MaxPoolGrad NCHW 系 kernel 共用的轴切分与 argmax 窗口边界。
+     * 说明：scatter / backward 两个基类的 ScalarCompute 主体完全一致，此处收编为唯一实现；
+     *       backward 额外需要 hArgmaxActualStart_/wArgmaxActualStart_，通过出参返回，
+     *       保持原有计算顺序、边界公式与取整方式不变。
+     */
+    __aicore__ inline void ScalarComputeCommon(int64_t loopNum, int64_t maxDataNumInOneBlock,
+                                               int64_t& hArgmaxActualStart, int64_t& wArgmaxActualStart)
+    {
+        int64_t baseBlockIdx = blockIdx_ * normalCoreProcessNum_ + loopNum;
+        highAxisIndex_ = baseBlockIdx / (hOutputOuter_ * wOutputOuter_);
+        highAxisActual_ = highAxisIndex_ == (highAxisOuter_ - 1) ? highAxisTail_ : highAxisInner_;
+
+        int64_t tempTail = baseBlockIdx % (hOutputOuter_ * wOutputOuter_);
+        hAxisIndex_ = tempTail / wOutputOuter_;
+        hOutputActual_ = hAxisIndex_ == (hOutputOuter_ - 1) ? hOutputTail_ : hOutputInner_;
+
+        wAxisIndex_ = tempTail % wOutputOuter_;
+        wOutputActual_ = wAxisIndex_ == (wOutputOuter_ - 1) ? wOutputTail_ : wOutputInner_;
+        wOutputAligned_ = (wOutputActual_ + maxDataNumInOneBlock - 1) / maxDataNumInOneBlock * maxDataNumInOneBlock;
+
+        hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, dilationH_, strideH_);
+        int64_t hArgmaxActualEnd = PEnd(hAxisIndex_ * hOutputInner_ + hOutputActual_ - 1, padH_, strideH_, hArgmax_);
+        wArgmaxActualStart = PStart(wAxisIndex_ * wOutputInner_, padW_, kernelW_, dilationW_, strideW_);
+        int64_t wArgmaxActualEnd = PEnd(wAxisIndex_ * wOutputInner_ + wOutputActual_ - 1, padW_, strideW_, wArgmax_);
+        wArgmaxActual_ = wArgmaxActualEnd - wArgmaxActualStart;
+        wArgmaxAligned_ = (wArgmaxActual_ + maxDataNumInOneBlock - 1) / maxDataNumInOneBlock * maxDataNumInOneBlock;
+        hArgmaxActual_ = hArgmaxActualEnd - hArgmaxActualStart;
+
+        curHProBatchSize_ = hProBatchSize_ > hArgmaxActual_ ? hArgmaxActual_ : hProBatchSize_;
+        curWProBatchSize_ = wProBatchSize_ > wArgmaxActual_ ? wArgmaxActual_ : wProBatchSize_;
+
+        highAxisArgmaxOffset_ = highAxisIndex_ * highAxisInner_ * argmaxPlaneSize_;
+        hAxisArgmaxOffset_ = hArgmaxActualStart * wArgmax_;
+        wAxisArgmaxOffset_ = wArgmaxActualStart;
+    }
 };
 
 } // namespace MaxPoolGradNCHWCommonNameSpace

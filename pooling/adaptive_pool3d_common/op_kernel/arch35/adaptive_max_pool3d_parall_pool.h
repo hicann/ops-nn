@@ -21,6 +21,7 @@
 #include "../inc/platform.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "adaptive_pool3d_tiling_struct.h"
+#include "pool_utils/arch35/compute/adaptive_pool3d_block_split_param.h"
 #include "pool_utils/arch35/compute/adaptive_pool3d_parall_pool_compute.h"
 #include "pool_utils/arch35/data_move/adaptive_pool3d_parall_pool_data_move.h"
 #include "pool_utils/arch35/data_move/adaptive_pool_transpose_data_move.h"
@@ -32,25 +33,8 @@ using namespace ops;
 constexpr uint64_t TRANS_ADDR_LEN = 16;
 constexpr uint64_t TRANS_LEN_B32 = 8;
 
-struct BlockSplitParam {
-    int64_t ncIdx;
-    int64_t doIdx;
-    int64_t hoIdx;
-    int64_t woIdx;
-    int64_t ncNum;
-    int64_t doNum;
-    int64_t hoNum;
-    int64_t woNum;
-
-    int64_t kerDStartIdx;
-    int64_t kerHStartIdx;
-    int64_t kerWStartIdx;
-
-    int64_t diDataLen;
-    int64_t hiDataLen;
-    int64_t wiDataLen;
-    int64_t xOffset;
-};
+// BlockSplitParam 与 AdaptiveAvgPool3D 侧定义完全一致，已收编至 pool_utils，此处仅做类型别名。
+using BlockSplitParam = PoolUtils::Compute::AdaptivePool3dBlockSplitParam;
 
 template <typename T, typename U>
 class AdaptiveMaxPool3dParaPool {

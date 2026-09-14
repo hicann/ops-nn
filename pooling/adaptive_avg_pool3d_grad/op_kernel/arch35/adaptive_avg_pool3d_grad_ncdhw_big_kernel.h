@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "../inc/platform.h"
 #include "adaptive_avg_pool3d_grad_struct.h"
+#include "pool_utils/arch35/adaptive_avg_pool3d_grad_ncdhw_fields.h"
 #include "pool_utils/arch35/compute/adaptive_avg_pool_grad_compute.h"
 #include "pool_utils/arch35/data_move/adaptive_avg_pool_grad_data_move.h"
 
@@ -93,7 +94,7 @@ constexpr AscendC::Reg::CastTrait castTraitInt32Int64 = {
 };
 
 template <typename T, typename INDEX>
-class AdaptiveAvgPool3dGradNCDHWBigKernel {
+class AdaptiveAvgPool3dGradNCDHWBigKernel : protected PoolUtils::Fields::AdaptiveAvgPool3dGradNcdhwFields {
 public:
     __aicore__ inline AdaptiveAvgPool3dGradNCDHWBigKernel(void){};
     __aicore__ inline void Init(GM_ADDR gradInput, GM_ADDR y, TPipe& pipeIn,
@@ -169,61 +170,13 @@ public:
     GlobalTensor<T> gradInputGm_;
     GlobalTensor<T> yGm_;
 
-    uint32_t blockIdx_ = 0;
-
-    int64_t dOutput_ = 1;
-    int64_t hOutput_ = 1;
-    int64_t wOutput_ = 1;
-
-    int64_t dGradInput_ = 1;
-    int64_t hGradInput_ = 1;
-    int64_t wGradInput_ = 1;
-
-    int64_t highAxisInner_ = 1;
-    int64_t highAxisTail_ = 1;
-    int64_t highAxisOuter_ = 1;
-    int64_t highAxisActual_ = 1;
-
-    int64_t dOutputInner_ = 1;
-    int64_t dOutputTail_ = 1;
-    int64_t dOutputOuter_ = 1;
-    int64_t dOutputActual_ = 1;
-
-    int64_t hOutputInner_ = 1;
-    int64_t hOutputTail_ = 1;
-    int64_t hOutputOuter_ = 1;
-    int64_t hOutputActual_ = 1;
-
-    int64_t wOutputInner_ = 1;
-    int64_t wOutputTail_ = 1;
-    int64_t wOutputOuter_ = 1;
-    int64_t wOutputActual_ = 1;
+    // 公共轴切分 / 偏移字段已收编至 PoolUtils::Fields::AdaptiveAvgPool3dGradNcdhwFields，此处仅保留本 kernel 特有字段。
     int64_t wOutputAligned_ = 1;
-
-    int64_t normalCoreProcessNum_ = 1;
-    int64_t tailCoreProcessNum_ = 1;
-    int64_t curCoreProcessNum_ = 1;
-    int64_t usedCoreNum_ = 1;
 
     int64_t outputBufferSize_ = 1;
     int64_t gradInputBufferSize_ = 1;
 
-    int64_t highAxisIndex_ = 0;
-    int64_t hAxisIndex_ = 0;
-    int64_t wAxisIndex_ = 0;
-    int64_t dAxisIndex_ = 0;
-
-    int64_t hGradInputActual_ = 0;
-    int64_t dGradInputActual_ = 0;
-    int64_t wGradInputActual_ = 0;
     int64_t wGradInputAligned_ = 0;
-
-    int64_t gradInputPlaneSize_ = 0;
-
-    int64_t highAxisGradInputOffset_ = 0;
-    int64_t hAxisGradInputOffset_ = 0;
-    int64_t dAxisGradInputOffset_ = 0;
-    int64_t wAxisGradInputOffset_ = 0;
 
     int64_t dStLeftCornerIdx = 0;
     int64_t hStLeftCornerIdx = 0;

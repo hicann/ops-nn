@@ -38,6 +38,9 @@ using namespace ops;
 using namespace AdaptiveAvgPool2dOp;
 using namespace AdaptiveAvgPool2dPoolingBaseNs;
 
+constexpr uint16_t AAP_SPLIT_H_ROWS_2 = 2;
+constexpr uint16_t AAP_SPLIT_H_ROWS_3 = 3;
+
 template <typename T, const uint32_t NC_FACTOR>
 __simd_vf__ inline void SplitHAccumulateRowsToHoWUpsampleVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
                                                             __ubuf__ int32_t* wiWoStartAddr,
@@ -162,219 +165,75 @@ __simd_vf__ inline void SplitHScatterTempToOutBufVf(__ubuf__ float* tempAddr, __
     }
 }
 
-template <typename T, const uint32_t NC_FACTOR, bool IS_FIRST>
-__simd_vf__ inline void SplitHAccumulateRowsToHoRows2Kw2Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
-                                                           __ubuf__ int32_t* wStartAddr, uint32_t outBase,
-                                                           uint16_t woStart, uint16_t woEnd, uint16_t r0, uint16_t r1,
-                                                           uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
-{
-    if constexpr (IS_FIRST) {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-        for (uint16_t wo = woStart; wo < woEnd; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-            uint32_t rowBase0 = (static_cast<uint32_t>(r0) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase1 = (static_cast<uint32_t>(r1) * wInAlign + wStart) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                rowBase0 += vfLenFp32;
-                rowBase1 += vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-            }
-        }
-    } else {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-        for (uint16_t wo = woStart; wo < woEnd; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-            uint32_t rowBase0 = (static_cast<uint32_t>(r0) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase1 = (static_cast<uint32_t>(r1) * wInAlign + wStart) * vlNum;
-            Reg::LoadAlign(sumReg, outAddr + sumOffset);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                rowBase0 += vfLenFp32;
-                rowBase1 += vfLenFp32;
-                Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-            }
-        }
-    }
-}
-
-template <typename T, const uint32_t NC_FACTOR, bool IS_FIRST>
-__simd_vf__ inline void SplitHAccumulateRowsToHoRows3Kw2Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
-                                                           __ubuf__ int32_t* wStartAddr, uint32_t outBase,
-                                                           uint16_t woStart, uint16_t woEnd, uint16_t r0, uint16_t r1,
-                                                           uint16_t r2, uint32_t vlNum, uint32_t wInAlign,
-                                                           uint32_t vfLenFp32)
-{
-    if constexpr (IS_FIRST) {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-        for (uint16_t wo = woStart; wo < woEnd; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-            uint32_t rowBase0 = (static_cast<uint32_t>(r0) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase1 = (static_cast<uint32_t>(r1) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase2 = (static_cast<uint32_t>(r2) * wInAlign + wStart) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                rowBase0 += vfLenFp32;
-                rowBase1 += vfLenFp32;
-                rowBase2 += vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-            }
-        }
-    } else {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-        for (uint16_t wo = woStart; wo < woEnd; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-            uint32_t rowBase0 = (static_cast<uint32_t>(r0) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase1 = (static_cast<uint32_t>(r1) * wInAlign + wStart) * vlNum;
-            uint32_t rowBase2 = (static_cast<uint32_t>(r2) * wInAlign + wStart) * vlNum;
-            Reg::LoadAlign(sumReg, outAddr + sumOffset);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                rowBase0 += vfLenFp32;
-                rowBase1 += vfLenFp32;
-                rowBase2 += vfLenFp32;
-                Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-            }
-        }
-    }
-}
-
-template <typename T, const uint32_t NC_FACTOR>
-__simd_vf__ inline void SplitHAccumulateExtraColRows2Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
-                                                        __ubuf__ int32_t* wStartAddr, __ubuf__ int32_t* wKerSizeAddr,
-                                                        __ubuf__ int32_t* extraWoIdxAddr, uint32_t outBase,
-                                                        uint16_t extraCount, uint16_t r0, uint16_t r1, uint32_t vlNum,
-                                                        uint32_t wInAlign, uint32_t vfLenFp32)
+// W↓ fast path: every window is exactly two columns wide and covers ROW_NUM (2 or 3) input rows.
+// ROW_NUM and IS_FIRST are compile-time parameters, so each instantiation still expands to the same
+// straight-line vector loop as the hand-unrolled rowCount==2 / rowCount==3 variants it replaces:
+// IS_FIRST only selects whether the running outBuf value is folded in before the row sum, and
+// ROW_NUM only appends the third row's two columns.
+template <typename T, const uint32_t NC_FACTOR, bool IS_FIRST, uint16_t ROW_NUM>
+__simd_vf__ inline void SplitHAccumulateRowsToHoKw2Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
+                                                      __ubuf__ int32_t* wStartAddr, uint32_t outBase, uint16_t woStart,
+                                                      uint16_t woEnd, uint16_t r0, uint16_t r1, uint16_t r2,
+                                                      uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
 {
     Reg::RegTensor<float> inputReg;
     Reg::RegTensor<float> sumReg;
     Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-    for (uint16_t i = 0; i < extraCount; i++) {
-        uint16_t wo = static_cast<uint16_t>(extraWoIdxAddr[i]);
+    for (uint16_t wo = woStart; wo < woEnd; wo++) {
         uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-        uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
+        uint32_t rowBase0 = (static_cast<uint32_t>(r0) * wInAlign + wStart) * vlNum;
+        uint32_t rowBase1 = (static_cast<uint32_t>(r1) * wInAlign + wStart) * vlNum;
+        uint32_t rowBase2 = 0;
+        if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+            rowBase2 = (static_cast<uint32_t>(r2) * wInAlign + wStart) * vlNum;
+        }
 
-        Reg::LoadAlign(sumReg, outAddr + sumOffset);
-        for (uint16_t k = 2; k < kernelW; k++) {
-            uint32_t colOff0 = (static_cast<uint32_t>(r0) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
-            uint32_t colOff1 = (static_cast<uint32_t>(r1) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff0);
+        if constexpr (IS_FIRST) {
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
+        } else {
+            Reg::LoadAlign(sumReg, outAddr + sumOffset);
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
             Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff1);
+        }
+        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
+        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
+        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
+        Reg::Add(sumReg, sumReg, inputReg, preg);
+        if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
             Reg::Add(sumReg, sumReg, inputReg, preg);
         }
         Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
-            for (uint16_t k = 2; k < kernelW; k++) {
-                uint32_t colOff0 = (static_cast<uint32_t>(r0) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum +
-                                   vfLenFp32;
-                uint32_t colOff1 = (static_cast<uint32_t>(r1) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum +
-                                   vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff0);
+            rowBase0 += vfLenFp32;
+            rowBase1 += vfLenFp32;
+            if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+                rowBase2 += vfLenFp32;
+            }
+            if constexpr (IS_FIRST) {
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, rowBase0);
+            } else {
+                Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0);
                 Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff1);
+            }
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase0 + vlNum);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase1 + vlNum);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
+            if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, rowBase2 + vlNum);
                 Reg::Add(sumReg, sumReg, inputReg, preg);
             }
             Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
@@ -382,12 +241,13 @@ __simd_vf__ inline void SplitHAccumulateExtraColRows2Vf(__ubuf__ T* inputAddr, _
     }
 }
 
-template <typename T, const uint32_t NC_FACTOR>
-__simd_vf__ inline void SplitHAccumulateExtraColRows3Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
-                                                        __ubuf__ int32_t* wStartAddr, __ubuf__ int32_t* wKerSizeAddr,
-                                                        __ubuf__ int32_t* extraWoIdxAddr, uint32_t outBase,
-                                                        uint16_t extraCount, uint16_t r0, uint16_t r1, uint16_t r2,
-                                                        uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
+// W↓ fast path, pass 2: the kW>2 tail columns of the windows listed in extraWoIdxAddr.
+template <typename T, const uint32_t NC_FACTOR, uint16_t ROW_NUM>
+__simd_vf__ inline void SplitHAccumulateExtraColVf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
+                                                   __ubuf__ int32_t* wStartAddr, __ubuf__ int32_t* wKerSizeAddr,
+                                                   __ubuf__ int32_t* extraWoIdxAddr, uint32_t outBase,
+                                                   uint16_t extraCount, uint16_t r0, uint16_t r1, uint16_t r2,
+                                                   uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
 {
     Reg::RegTensor<float> inputReg;
     Reg::RegTensor<float> sumReg;
@@ -403,13 +263,15 @@ __simd_vf__ inline void SplitHAccumulateExtraColRows3Vf(__ubuf__ T* inputAddr, _
         for (uint16_t k = 2; k < kernelW; k++) {
             uint32_t colOff0 = (static_cast<uint32_t>(r0) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
             uint32_t colOff1 = (static_cast<uint32_t>(r1) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
-            uint32_t colOff2 = (static_cast<uint32_t>(r2) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff0);
             Reg::Add(sumReg, sumReg, inputReg, preg);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff1);
             Reg::Add(sumReg, sumReg, inputReg, preg);
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff2);
-            Reg::Add(sumReg, sumReg, inputReg, preg);
+            if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+                uint32_t colOff2 = (static_cast<uint32_t>(r2) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum;
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff2);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
+            }
         }
         Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
@@ -420,14 +282,17 @@ __simd_vf__ inline void SplitHAccumulateExtraColRows3Vf(__ubuf__ T* inputAddr, _
                                    vfLenFp32;
                 uint32_t colOff1 = (static_cast<uint32_t>(r1) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum +
                                    vfLenFp32;
-                uint32_t colOff2 = (static_cast<uint32_t>(r2) * wInAlign + wStart + static_cast<uint32_t>(k)) * vlNum +
-                                   vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff0);
                 Reg::Add(sumReg, sumReg, inputReg, preg);
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff1);
                 Reg::Add(sumReg, sumReg, inputReg, preg);
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff2);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
+                if constexpr (ROW_NUM == AAP_SPLIT_H_ROWS_3) {
+                    uint32_t colOff2 = (static_cast<uint32_t>(r2) * wInAlign + wStart + static_cast<uint32_t>(k)) *
+                                           vlNum +
+                                       vfLenFp32;
+                    ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, colOff2);
+                    Reg::Add(sumReg, sumReg, inputReg, preg);
+                }
             }
             Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
@@ -440,16 +305,17 @@ __simd_vf__ inline void SplitHAccumulateRowsToHoVf(__ubuf__ T* inputAddr, __ubuf
                                                    uint32_t outBase, uint16_t woNum, uint16_t rStart, uint16_t rEnd,
                                                    uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
 {
-    if constexpr (IS_FIRST) {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-        for (uint16_t wo = 0; wo < woNum; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
+    for (uint16_t wo = 0; wo < woNum; wo++) {
+        uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
+        uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
+        uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
+        uint16_t rBegin = rStart;
 
+        if constexpr (IS_FIRST) {
             uint32_t firstRowBase = (static_cast<uint32_t>(rStart) * wInAlign + wStart) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, firstRowBase);
             for (uint16_t k = 1; k < kernelW; k++) {
@@ -457,72 +323,49 @@ __simd_vf__ inline void SplitHAccumulateRowsToHoVf(__ubuf__ T* inputAddr, __ubuf
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
                 Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum;
-                for (uint16_t k = 0; k < kernelW; k++) {
-                    uint32_t inOff = rowBase + static_cast<uint32_t>(k) * vlNum;
-                    ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                    Reg::Add(sumReg, sumReg, inputReg, preg);
-                }
+            rBegin = static_cast<uint16_t>(rStart + 1);
+        } else {
+            Reg::LoadAlign(sumReg, outAddr + sumOffset);
+        }
+        for (uint16_t r = rBegin; r < rEnd; r++) {
+            uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum;
+            for (uint16_t k = 0; k < kernelW; k++) {
+                uint32_t inOff = rowBase + static_cast<uint32_t>(k) * vlNum;
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
             }
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
+        }
+        Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                firstRowBase = (static_cast<uint32_t>(rStart) * wInAlign + wStart) * vlNum + vfLenFp32;
+        if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
+            uint16_t rBegin128 = rStart;
+            if constexpr (IS_FIRST) {
+                uint32_t firstRowBase = (static_cast<uint32_t>(rStart) * wInAlign + wStart) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, firstRowBase);
                 for (uint16_t k = 1; k < kernelW; k++) {
                     uint32_t inOff = firstRowBase + static_cast<uint32_t>(k) * vlNum;
                     ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
                     Reg::Add(sumReg, sumReg, inputReg, preg);
                 }
-                for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                    uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum + vfLenFp32;
-                    for (uint16_t k = 0; k < kernelW; k++) {
-                        uint32_t inOff = rowBase + static_cast<uint32_t>(k) * vlNum;
-                        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                        Reg::Add(sumReg, sumReg, inputReg, preg);
-                    }
-                }
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+                rBegin128 = static_cast<uint16_t>(rStart + 1);
+            } else {
+                Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             }
-        }
-    } else {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
-
-        for (uint16_t wo = 0; wo < woNum; wo++) {
-            uint32_t wStart = static_cast<uint32_t>(wStartAddr[wo]);
-            uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
-            uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
-
-            Reg::LoadAlign(sumReg, outAddr + sumOffset);
-            for (uint16_t r = rStart; r < rEnd; r++) {
-                uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum;
+            for (uint16_t r = rBegin128; r < rEnd; r++) {
+                uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum + vfLenFp32;
                 for (uint16_t k = 0; k < kernelW; k++) {
                     uint32_t inOff = rowBase + static_cast<uint32_t>(k) * vlNum;
                     ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
                     Reg::Add(sumReg, sumReg, inputReg, preg);
                 }
             }
-            Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                Reg::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
-                for (uint16_t r = rStart; r < rEnd; r++) {
-                    uint32_t rowBase = (static_cast<uint32_t>(r) * wInAlign + wStart) * vlNum + vfLenFp32;
-                    for (uint16_t k = 0; k < kernelW; k++) {
-                        uint32_t inOff = rowBase + static_cast<uint32_t>(k) * vlNum;
-                        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                        Reg::Add(sumReg, sumReg, inputReg, preg);
-                    }
-                }
-                Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
-            }
+            Reg::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
 
+// kW=1 W↑ path: the W reduce is identical for both IS_FIRST values, only the scatter differs
+// (store vs load+add+store), so the reduce is written once and the scatter is picked at compile time.
 template <typename T, const uint32_t NC_FACTOR, bool IS_FIRST>
 __simd_vf__ inline void SplitHAccumulateRowsToHoWUpsampleKW1Vf(__ubuf__ T* inputAddr, __ubuf__ float* outAddr,
                                                                __ubuf__ int32_t* wiWoStartAddr,
@@ -530,81 +373,48 @@ __simd_vf__ inline void SplitHAccumulateRowsToHoWUpsampleKW1Vf(__ubuf__ T* input
                                                                uint16_t wiNum, uint16_t rStart, uint16_t rEnd,
                                                                uint32_t vlNum, uint32_t wInAlign, uint32_t vfLenFp32)
 {
-    if constexpr (IS_FIRST) {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+    Reg::RegTensor<float> inputReg;
+    Reg::RegTensor<float> sumReg;
+    Reg::RegTensor<float> outReg;
+    Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-        for (uint16_t wi = 0; wi < wiNum; wi++) {
-            uint32_t inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
-            for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-            }
-
-            uint32_t woStart = static_cast<uint32_t>(wiWoStartAddr[wi]);
-            uint16_t woCount = static_cast<uint16_t>(wiWoCountAddr[wi]);
-            for (uint16_t j = 0; j < woCount; j++) {
-                uint32_t wo = woStart + static_cast<uint32_t>(j);
-                uint32_t sumOffset = outBase + wo * vlNum;
-                Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-            }
-
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum + vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
-                for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                    uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum +
-                                     vfLenFp32;
-                    ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                    Reg::Add(sumReg, sumReg, inputReg, preg);
-                }
-                for (uint16_t j = 0; j < woCount; j++) {
-                    uint32_t wo = woStart + static_cast<uint32_t>(j);
-                    uint32_t sumOffset = outBase + wo * vlNum + vfLenFp32;
-                    Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
-                }
-            }
+    for (uint16_t wi = 0; wi < wiNum; wi++) {
+        uint32_t inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
+        ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
+        for (uint16_t r = rStart + 1; r < rEnd; r++) {
+            uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
+            Reg::Add(sumReg, sumReg, inputReg, preg);
         }
-    } else {
-        Reg::RegTensor<float> inputReg;
-        Reg::RegTensor<float> sumReg;
-        Reg::RegTensor<float> outReg;
-        Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
 
-        for (uint16_t wi = 0; wi < wiNum; wi++) {
-            uint32_t inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
-            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
-            for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                Reg::Add(sumReg, sumReg, inputReg, preg);
-            }
-
-            uint32_t woStart = static_cast<uint32_t>(wiWoStartAddr[wi]);
-            uint16_t woCount = static_cast<uint16_t>(wiWoCountAddr[wi]);
-            for (uint16_t j = 0; j < woCount; j++) {
-                uint32_t wo = woStart + static_cast<uint32_t>(j);
-                uint32_t sumOffset = outBase + wo * vlNum;
+        uint32_t woStart = static_cast<uint32_t>(wiWoStartAddr[wi]);
+        uint16_t woCount = static_cast<uint16_t>(wiWoCountAddr[wi]);
+        for (uint16_t j = 0; j < woCount; j++) {
+            uint32_t wo = woStart + static_cast<uint32_t>(j);
+            uint32_t sumOffset = outBase + wo * vlNum;
+            if constexpr (IS_FIRST) {
+                Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
+            } else {
                 Reg::LoadAlign(outReg, outAddr + sumOffset);
                 Reg::Add(outReg, outReg, sumReg, preg);
                 Reg::StoreAlign(outAddr + sumOffset, outReg, preg);
             }
+        }
 
-            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-                inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum + vfLenFp32;
-                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
-                for (uint16_t r = rStart + 1; r < rEnd; r++) {
-                    uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum +
-                                     vfLenFp32;
-                    ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
-                    Reg::Add(sumReg, sumReg, inputReg, preg);
-                }
-                for (uint16_t j = 0; j < woCount; j++) {
-                    uint32_t wo = woStart + static_cast<uint32_t>(j);
-                    uint32_t sumOffset = outBase + wo * vlNum + vfLenFp32;
+        if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
+            inOff0 = (static_cast<uint32_t>(rStart) * wInAlign + static_cast<uint32_t>(wi)) * vlNum + vfLenFp32;
+            ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, sumReg, preg, inOff0);
+            for (uint16_t r = rStart + 1; r < rEnd; r++) {
+                uint32_t inOff = (static_cast<uint32_t>(r) * wInAlign + static_cast<uint32_t>(wi)) * vlNum + vfLenFp32;
+                ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inOff);
+                Reg::Add(sumReg, sumReg, inputReg, preg);
+            }
+            for (uint16_t j = 0; j < woCount; j++) {
+                uint32_t wo = woStart + static_cast<uint32_t>(j);
+                uint32_t sumOffset = outBase + wo * vlNum + vfLenFp32;
+                if constexpr (IS_FIRST) {
+                    Reg::StoreAlign(outAddr + sumOffset, sumReg, preg);
+                } else {
                     Reg::LoadAlign(outReg, outAddr + sumOffset);
                     Reg::Add(outReg, outReg, sumReg, preg);
                     Reg::StoreAlign(outAddr + sumOffset, outReg, preg);
@@ -658,19 +468,15 @@ private:
     // is resolved at compile time and each instantiation stays a single straight-line vector loop.
     template <bool IS_FIRST>
     __aicore__ inline void AccumulateRowsToHo(int64_t hoLocal, int64_t rowLoStart, int64_t rowLoEnd);
-    template <bool IS_FIRST>
-    __aicore__ inline void AccumulateRowsToHoRows2(int64_t hoLocal, int64_t rowLoStart);
-    template <bool IS_FIRST>
-    __aicore__ inline void AccumulateRowsToHoRows3(int64_t hoLocal, int64_t rowLoStart);
-    template <bool IS_FIRST>
-    __aicore__ inline void AccumulateRowsToHoRows2Kw2(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
+    // ROW_NUM (2 or 3) is the number of input rows the Ho window covers. It only decides how many
+    // rows the unrolled kW==2 pass reduces, so both fast paths share one implementation.
+    template <bool IS_FIRST, uint16_t ROW_NUM>
+    __aicore__ inline void AccumulateRowsToHoRowsN(int64_t hoLocal, int64_t rowLoStart);
+    template <bool IS_FIRST, uint16_t ROW_NUM>
+    __aicore__ inline void AccumulateRowsToHoRowsNKw2(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
                                                       int64_t rowLoStart);
-    template <bool IS_FIRST>
-    __aicore__ inline void AccumulateRowsToHoRows3Kw2(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
-                                                      int64_t rowLoStart);
-    __aicore__ inline void AccumulateExtraColRows2(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
-                                                   int64_t rowLoStart);
-    __aicore__ inline void AccumulateExtraColRows3(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
+    template <uint16_t ROW_NUM>
+    __aicore__ inline void AccumulateExtraColRowsN(int64_t hoLocal, uint16_t woStart, uint16_t woEnd,
                                                    int64_t rowLoStart);
     __aicore__ inline void AccumulateRowsToHoWUpsample(int64_t hoLocal, int64_t rowLoStart, int64_t rowLoEnd);
     __aicore__ inline void ClearTempBuf();
@@ -848,59 +654,22 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::ScatterTempT
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-template <bool IS_FIRST>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRows2(int64_t hoLocal,
+template <bool IS_FIRST, uint16_t ROW_NUM>
+__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRowsN(int64_t hoLocal,
                                                                                             int64_t rowLoStart)
 {
     uint16_t woNum = static_cast<uint16_t>(this->tilingData_->wOut);
 
     // Pass 1: all wo treated as kW=2 (one VF entry)
-    AccumulateRowsToHoRows2Kw2<IS_FIRST>(hoLocal, 0, woNum, rowLoStart);
+    AccumulateRowsToHoRowsNKw2<IS_FIRST, ROW_NUM>(hoLocal, 0, woNum, rowLoStart);
 
     // Pass 2: all kW>2 positions in one single VF entry
-    AccumulateExtraColRows2(hoLocal, 0, woNum, rowLoStart);
+    AccumulateExtraColRowsN<ROW_NUM>(hoLocal, 0, woNum, rowLoStart);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-template <bool IS_FIRST>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRows3(int64_t hoLocal,
-                                                                                            int64_t rowLoStart)
-{
-    uint16_t woNum = static_cast<uint16_t>(this->tilingData_->wOut);
-
-    // Pass 1: all wo treated as kW=2 (one VF entry)
-    AccumulateRowsToHoRows3Kw2<IS_FIRST>(hoLocal, 0, woNum, rowLoStart);
-
-    // Pass 2: all kW>2 positions in one single VF entry
-    AccumulateExtraColRows3(hoLocal, 0, woNum, rowLoStart);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-template <bool IS_FIRST>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRows2Kw2(int64_t hoLocal,
-                                                                                               uint16_t woStart,
-                                                                                               uint16_t woEnd,
-                                                                                               int64_t rowLoStart)
-{
-    LocalTensor<T> transLocal = this->transBuf_.template Get<T>();
-    LocalTensor<float> outLocal = this->outBuf_.template Get<float>();
-    LocalTensor<int32_t> wStartLocal = this->wStartBuf_.template Get<int32_t>();
-    __ubuf__ T* inputAddr = (__ubuf__ T*)transLocal.GetPhyAddr();
-    __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
-    __ubuf__ int32_t* wStartAddr = (__ubuf__ int32_t*)wStartLocal.GetPhyAddr();
-
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint32_t outBase = static_cast<uint32_t>(hoLocal) * static_cast<uint32_t>(this->tilingData_->wOut) * this->vlNum_;
-    uint16_t r0 = static_cast<uint16_t>(rowLoStart);
-    uint16_t r1 = static_cast<uint16_t>(rowLoStart + 1);
-
-    SplitHAccumulateRowsToHoRows2Kw2Vf<T, NC_FACTOR, IS_FIRST>(inputAddr, outAddr, wStartAddr, outBase, woStart, woEnd,
-                                                               r0, r1, this->vlNum_, this->wInAlign_, vfLenFp32);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-template <bool IS_FIRST>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRows3Kw2(int64_t hoLocal,
+template <bool IS_FIRST, uint16_t ROW_NUM>
+__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRowsToHoRowsNKw2(int64_t hoLocal,
                                                                                                uint16_t woStart,
                                                                                                uint16_t woEnd,
                                                                                                int64_t rowLoStart)
@@ -918,50 +687,13 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateRo
     uint16_t r1 = static_cast<uint16_t>(rowLoStart + 1);
     uint16_t r2 = static_cast<uint16_t>(rowLoStart + 2);
 
-    SplitHAccumulateRowsToHoRows3Kw2Vf<T, NC_FACTOR, IS_FIRST>(inputAddr, outAddr, wStartAddr, outBase, woStart, woEnd,
-                                                               r0, r1, r2, this->vlNum_, this->wInAlign_, vfLenFp32);
+    SplitHAccumulateRowsToHoKw2Vf<T, NC_FACTOR, IS_FIRST, ROW_NUM>(
+        inputAddr, outAddr, wStartAddr, outBase, woStart, woEnd, r0, r1, r2, this->vlNum_, this->wInAlign_, vfLenFp32);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateExtraColRows2(int64_t hoLocal,
-                                                                                            uint16_t woStart,
-                                                                                            uint16_t woEnd,
-                                                                                            int64_t rowLoStart)
-{
-    LocalTensor<T> transLocal = this->transBuf_.template Get<T>();
-    LocalTensor<float> outLocal = this->outBuf_.template Get<float>();
-    LocalTensor<int32_t> wStartLocal = this->wStartBuf_.template Get<int32_t>();
-    LocalTensor<int32_t> wKerSizeLocal = this->wKerSizeBuf_.template Get<int32_t>();
-    __ubuf__ T* inputAddr = (__ubuf__ T*)transLocal.GetPhyAddr();
-    __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
-    __ubuf__ int32_t* wStartAddr = (__ubuf__ int32_t*)wStartLocal.GetPhyAddr();
-    __ubuf__ int32_t* wKerSizeAddr = (__ubuf__ int32_t*)wKerSizeLocal.GetPhyAddr();
-
-    LocalTensor<int32_t> extraWoIdxLocal = extraWoIdxBuf_.template Get<int32_t>();
-    __ubuf__ int32_t* extraWoIdxAddr = (__ubuf__ int32_t*)extraWoIdxLocal.GetPhyAddr();
-
-    uint32_t vfLenFp32 = AAP_V_REG_SIZE / sizeof(float);
-    uint32_t outBase = static_cast<uint32_t>(hoLocal) * static_cast<uint32_t>(this->tilingData_->wOut) * this->vlNum_;
-    uint16_t r0 = static_cast<uint16_t>(rowLoStart);
-    uint16_t r1 = static_cast<uint16_t>(rowLoStart + 1);
-
-    // Pre-build list of kW>2 indices (scalar, outside VF)
-    uint16_t extraCount = 0;
-    for (uint16_t wo = woStart; wo < woEnd; wo++) {
-        if (static_cast<uint16_t>(wKerSizeAddr[wo]) > 2) {
-            extraWoIdxAddr[extraCount++] = static_cast<int32_t>(wo);
-        }
-    }
-    if (extraCount == 0) {
-        return;
-    }
-
-    SplitHAccumulateExtraColRows2Vf<T, NC_FACTOR>(inputAddr, outAddr, wStartAddr, wKerSizeAddr, extraWoIdxAddr, outBase,
-                                                  extraCount, r0, r1, this->vlNum_, this->wInAlign_, vfLenFp32);
-}
-
-template <typename T, typename ID_T, const uint32_t NC_FACTOR>
-__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateExtraColRows3(int64_t hoLocal,
+template <uint16_t ROW_NUM>
+__aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateExtraColRowsN(int64_t hoLocal,
                                                                                             uint16_t woStart,
                                                                                             uint16_t woEnd,
                                                                                             int64_t rowLoStart)
@@ -995,8 +727,9 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::AccumulateEx
         return;
     }
 
-    SplitHAccumulateExtraColRows3Vf<T, NC_FACTOR>(inputAddr, outAddr, wStartAddr, wKerSizeAddr, extraWoIdxAddr, outBase,
-                                                  extraCount, r0, r1, r2, this->vlNum_, this->wInAlign_, vfLenFp32);
+    SplitHAccumulateExtraColVf<T, NC_FACTOR, ROW_NUM>(inputAddr, outAddr, wStartAddr, wKerSizeAddr, extraWoIdxAddr,
+                                                      outBase, extraCount, r0, r1, r2, this->vlNum_, this->wInAlign_,
+                                                      vfLenFp32);
 }
 
 template <typename T, typename ID_T, const uint32_t NC_FACTOR>
@@ -1234,15 +967,15 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::ProcessOneBl
                     }
                 } else if (rowCount == 2 && isKwGe2) {
                     if (isFirst) {
-                        AccumulateRowsToHoRows2<true>(hoGlobal - hoGlobalStart, rowLoStart);
+                        AccumulateRowsToHoRowsN<true, AAP_SPLIT_H_ROWS_2>(hoGlobal - hoGlobalStart, rowLoStart);
                     } else {
-                        AccumulateRowsToHoRows2<false>(hoGlobal - hoGlobalStart, rowLoStart);
+                        AccumulateRowsToHoRowsN<false, AAP_SPLIT_H_ROWS_2>(hoGlobal - hoGlobalStart, rowLoStart);
                     }
                 } else if (rowCount == 3 && isKwGe2) {
                     if (isFirst) {
-                        AccumulateRowsToHoRows3<true>(hoGlobal - hoGlobalStart, rowLoStart);
+                        AccumulateRowsToHoRowsN<true, AAP_SPLIT_H_ROWS_3>(hoGlobal - hoGlobalStart, rowLoStart);
                     } else {
-                        AccumulateRowsToHoRows3<false>(hoGlobal - hoGlobalStart, rowLoStart);
+                        AccumulateRowsToHoRowsN<false, AAP_SPLIT_H_ROWS_3>(hoGlobal - hoGlobalStart, rowLoStart);
                     }
                 } else {
                     if (isFirst) {

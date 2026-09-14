@@ -274,6 +274,89 @@ public:
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
 
+    /*
+     * 功能：multipleLineProcessVF2 / multipleLineProcessVF2Int64 共用的循环参数。
+     * 说明：两个函数的入口参数推导段原先逐行重复，此处收编为唯一实现，
+     *       字段顺序与原赋值顺序一致，取值、类型与截断行为保持不变。
+     */
+    struct MultiLineVF2Params {
+        int64_t wOutput;
+        int64_t hOutput;
+        int64_t wOutputActual;
+        int64_t wOutputAligned;
+        int64_t hOutputActual;
+        int64_t highAxisActual;
+        int64_t curHIndex;
+        int64_t curWIndex;
+        int64_t wGradAligned;
+        int64_t wGradActual;
+        uint16_t hGradActual;
+        uint32_t hGradActualStart;
+        uint32_t wGradActualStart;
+        int32_t divisorOverride;
+        int64_t highOutStride;
+
+        uint16_t kH;
+        uint16_t kW;
+        uint16_t padH;
+        uint16_t padW;
+        uint16_t padDownH;
+        uint16_t padRightW;
+        uint32_t strideH;
+        uint32_t strideW;
+
+        uint16_t hProBatchSize;
+        uint16_t wProBatchSize;
+
+        uint32_t wFullBatchCount;
+        uint16_t hFullBatchCount;
+        uint16_t wRemainTail;
+        uint32_t whFullBatchCount;
+
+        uint16_t highConcurrentCount;
+        uint16_t highBlockConcurrentCount;
+        uint16_t highBlockRemainTail;
+        uint16_t hRemainTail;
+
+        uint32_t mask0;
+        uint32_t mask1;
+        uint32_t mask2;
+        uint32_t mask3;
+        uint32_t mask4;
+        uint32_t mask5;
+        uint32_t mask6;
+        uint32_t mask7;
+    };
+
+    __aicore__ inline void PrepareMultiLineVF2Params(MultiLineVF2Params& p) const;
+
+    /*
+     * 功能：VF2 主循环块与 highBlockRemainTail 尾块共用的向量计算体。
+     * 说明：两处原先为逐行重复的 __VEC_SCOPE__ 体，差异仅在于 mask 组与 high 偏移来源，
+     *       此处收编为唯一实现，通过入参传入 4 个 mask 与两个 high 偏移，
+     *       循环边界、循环次序、索引计算、精度转换与累加顺序均保持不变。
+     */
+    template <const Reg::RegTrait& Trait>
+    __aicore__ inline void MultiLineVF2Block(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                             __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+                                             const MultiLineVF2Params& p, uint32_t highGradOffset,
+                                             uint32_t highOutputOffset, uint32_t maskFull, uint32_t maskWTail,
+                                             uint32_t maskHTail, uint32_t maskHWTail);
+
+    /*
+     * 功能：int64 索引场景下 VF2 主循环块与 highBlockRemainTail 尾块共用的向量计算体。
+     * 说明：int64 索引每个 RegTensor 占两个物理寄存器，因此仍按 h 行逐个进入 __VEC_SCOPE__，
+     *       与 MultiLineVF2Block 的单 scope 结构不同，不能合并；此处仅把原来重复两份的
+     *       行内计算体收编为唯一实现，mask 组与 high 偏移由入参传入，
+     *       循环边界、循环次序、索引计算、精度转换与累加顺序均保持不变。
+     */
+    template <const Reg::RegTrait& Trait>
+    __aicore__ inline void MultiLineVF2BlockInt64(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                  __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+                                                  const MultiLineVF2Params& p, uint32_t highGradOffset,
+                                                  uint32_t highOutputOffset, uint32_t maskFull, uint32_t maskWTail,
+                                                  uint32_t maskHTail, uint32_t maskHWTail);
+
     TPipe* pipe_ = nullptr;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQue_;
@@ -915,198 +998,71 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
     }
 }
 
+/*
+ * 功能：推导 multipleLineProcessVF2 / multipleLineProcessVF2Int64 的公共循环参数。
+ * 说明：内容与原两处内联推导逐行等价，仅收编为唯一实现，不改变任何取值与计算顺序。
+ */
+template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
+__aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE,
+                                               COUNT_PAD>::PrepareMultiLineVF2Params(MultiLineVF2Params& p) const
+{
+    p.wOutput = tilingData_->wOutput;
+    p.hOutput = tilingData_->hOutput;
+    p.wOutputActual = wOutputActual_;
+    p.wOutputAligned = wOutputAligned_;
+    p.hOutputActual = hOutputActual_;
+    p.highAxisActual = highAxisActual_;
+    p.curHIndex = hAxisIndex_ * tilingData_->hOutputInner;
+    p.curWIndex = wAxisIndex_ * tilingData_->wOutputInner;
+    p.wGradAligned = wGradAligned_;
+    p.wGradActual = wGradActual_;
+    p.hGradActual = hGradActual_;
+    p.hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
+    p.wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
+    p.divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    p.highOutStride = p.wOutputAligned * p.hOutputActual;
+
+    p.kH = static_cast<uint16_t>(tilingData_->hKernel);
+    p.kW = static_cast<uint16_t>(tilingData_->wKernel);
+    p.padH = static_cast<uint16_t>(tilingData_->padTopH);
+    p.padW = static_cast<uint16_t>(tilingData_->padLeftW);
+    p.padDownH = static_cast<uint16_t>(tilingData_->padDownH);
+    p.padRightW = static_cast<uint16_t>(tilingData_->padRightW);
+    p.strideH = static_cast<uint32_t>(tilingData_->hStride);
+    p.strideW = static_cast<uint32_t>(tilingData_->wStride);
+
+    p.hProBatchSize = curHProBatchSize_;
+    p.wProBatchSize = curWProBatchSize_;
+
+    p.wFullBatchCount = p.wGradActual / p.wProBatchSize;
+    p.hFullBatchCount = p.hGradActual / p.hProBatchSize;
+    p.wRemainTail = p.wGradActual % p.wProBatchSize;
+    p.whFullBatchCount = p.wFullBatchCount * p.hFullBatchCount;
+
+    p.highConcurrentCount = V_REG_SIZE / (p.whFullBatchCount * sizeof(float));
+
+    p.highBlockConcurrentCount = p.highAxisActual / p.highConcurrentCount;
+    p.highBlockRemainTail = p.highAxisActual - p.highBlockConcurrentCount * p.highConcurrentCount;
+
+    p.hRemainTail = p.hGradActual - p.hFullBatchCount * p.hProBatchSize;
+
+    p.mask0 = p.highConcurrentCount * p.whFullBatchCount;
+    p.mask1 = p.highConcurrentCount * p.hFullBatchCount * 1;
+    p.mask2 = p.highConcurrentCount * 1 * p.wFullBatchCount;
+    p.mask3 = p.highConcurrentCount * 1 * 1;
+    p.mask4 = p.highBlockRemainTail * p.whFullBatchCount;
+    p.mask5 = p.highBlockRemainTail * p.hFullBatchCount * 1;
+    p.mask6 = p.highBlockRemainTail * 1 * p.wFullBatchCount;
+    p.mask7 = p.highBlockRemainTail * 1 * 1;
+}
+
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
 template <const Reg::RegTrait& Trait>
-__aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipleLineProcessVF2(
-    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3)
+__aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::MultiLineVF2Block(
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+    const MultiLineVF2Params& p, uint32_t highGradOffset, uint32_t highOutputOffset, uint32_t maskFull,
+    uint32_t maskWTail, uint32_t maskHTail, uint32_t maskHWTail)
 {
-    int64_t wOutput = tilingData_->wOutput;
-    int64_t hOutput = tilingData_->hOutput;
-    int64_t wOutputActual = wOutputActual_;
-    int64_t wOutputAligned = wOutputAligned_;
-    int64_t hOutputActual = hOutputActual_;
-    int64_t highAxisActual = highAxisActual_;
-    int64_t curHIndex = hAxisIndex_ * tilingData_->hOutputInner;
-    int64_t curWIndex = wAxisIndex_ * tilingData_->wOutputInner;
-    int64_t wGradAligned = wGradAligned_;
-    int64_t wGradActual = wGradActual_;
-    uint16_t hGradActual = hGradActual_;
-    uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
-    uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
-    int64_t highOutStride = wOutputAligned * hOutputActual;
-
-    uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
-    uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);
-    uint16_t padH = static_cast<uint16_t>(tilingData_->padTopH);
-    uint16_t padW = static_cast<uint16_t>(tilingData_->padLeftW);
-    uint16_t padDownH = static_cast<uint16_t>(tilingData_->padDownH);
-    uint16_t padRightW = static_cast<uint16_t>(tilingData_->padRightW);
-    uint32_t strideH = static_cast<uint32_t>(tilingData_->hStride);
-    uint32_t strideW = static_cast<uint32_t>(tilingData_->wStride);
-
-    uint16_t hProBatchSize = curHProBatchSize_;
-    uint16_t wProBatchSize = curWProBatchSize_;
-
-    uint32_t wFullBatchCount = wGradActual / wProBatchSize;
-    uint16_t hFullBatchCount = hGradActual / hProBatchSize;
-    uint16_t wRemainTail = wGradActual % wProBatchSize;
-    uint32_t whFullBatchCount = wFullBatchCount * hFullBatchCount;
-
-    uint16_t highConcurrentCount = V_REG_SIZE / (whFullBatchCount * sizeof(float));
-
-    uint16_t highBlockConcurrentCount = highAxisActual / highConcurrentCount;
-    uint16_t highBlockRemainTail = highAxisActual - highBlockConcurrentCount * highConcurrentCount;
-
-    uint16_t hRemainTail = hGradActual - hFullBatchCount * hProBatchSize;
-
-    uint32_t mask0 = highConcurrentCount * whFullBatchCount;
-    uint32_t mask1 = highConcurrentCount * hFullBatchCount * 1;
-    uint32_t mask2 = highConcurrentCount * 1 * wFullBatchCount;
-    uint32_t mask3 = highConcurrentCount * 1 * 1;
-    uint32_t mask4 = highBlockRemainTail * whFullBatchCount;
-    uint32_t mask5 = highBlockRemainTail * hFullBatchCount * 1;
-    uint32_t mask6 = highBlockRemainTail * 1 * wFullBatchCount;
-    uint32_t mask7 = highBlockRemainTail * 1 * 1;
-
-    GenIndicesToUb(helpAddr, wProBatchSize, hProBatchSize, wGradAligned, wFullBatchCount, hFullBatchCount, hGradActual);
-    GenIndicesToUbForT3<T3, Trait>(helpAddrT3, whFullBatchCount, wFullBatchCount, wProBatchSize, hProBatchSize,
-                                   hFullBatchCount);
-
-    for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-        uint32_t highGradOffset = highBlockIdx * highConcurrentCount * hGradActual * wGradAligned;
-        uint32_t highOutputOffset = highBlockIdx * highConcurrentCount * hOutputActual * wOutputAligned;
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-            AscendC::Reg::RegTensor<int32_t> wMaxReg;
-            AscendC::Reg::RegTensor<int32_t> hMaxReg;
-            if constexpr (IS_CHECK_RANGE == 1) {
-                AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-            }
-
-            AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
-            AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOne;
-            AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
-            AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
-            AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-            AscendC::Reg::RegTensor<int32_t> wIndexReg;
-            AscendC::Reg::RegTensor<int32_t> hIndexReg;
-            AscendC::Reg::RegTensor<int32_t> highIdxReg;
-            AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-            AscendC::Reg::RegTensor<T3, Trait> initial3DRegHIdx;
-            AscendC::Reg::RegTensor<T3, Trait> initial3DRegWIdx;
-            AscendC::Reg::RegTensor<T3, Trait> initial3DRegHIdxOne;
-            AscendC::Reg::RegTensor<T3, Trait> initial2DRegWIdx;
-            AscendC::Reg::RegTensor<T3, Trait> outWStart;
-            AscendC::Reg::RegTensor<T3, Trait> outHStart;
-            AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-            if constexpr (COUNT_PAD == 0) {
-                AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-            }
-
-            AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-
-            AscendC::Reg::LoadAlign(initial3DRegIndex, helpAddr);
-            AscendC::Reg::LoadAlign(initial3DRegIndexOne, helpAddr + V_REG_SIZE / sizeof(uint32_t));
-            AscendC::Reg::LoadAlign(initial2DRegIndex, helpAddr + INDEX_TWO * V_REG_SIZE / sizeof(uint32_t));
-            AscendC::Reg::LoadAlign(initial2DRegIndexOne, helpAddr + INDEX_THREE * V_REG_SIZE / sizeof(uint32_t));
-
-            AscendC::Reg::LoadAlign(initial3DRegWIdx, helpAddrT3);
-            AscendC::Reg::LoadAlign(initial3DRegHIdx, helpAddrT3 + INDEX_TWO * V_REG_SIZE / sizeof(T3));
-            AscendC::Reg::LoadAlign(initial3DRegHIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * V_REG_SIZE / sizeof(T3));
-            AscendC::Reg::LoadAlign(initial2DRegWIdx, helpAddrT3 + INDEX_THREE * INDEX_TWO * V_REG_SIZE / sizeof(T3));
-
-            for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
-                // 整batch
-                T3 hGradOffset = hProBatchIdx + hGradActualStart;
-                ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, strideH);
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, whFullBatchCount, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wGradActualStart;
-                    uint32_t offset = wBatchIdx + hProBatchIdx * wGradAligned + highGradOffset;
-                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
-
-                    ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask0);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask0);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask0, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-
-                // 尾段零散点
-                ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, strideH);
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, hFullBatchCount, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                    uint32_t offset = wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wGradAligned +
-                                      highGradOffset;
-                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
-
-                    AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask1);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask1);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask1, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-            }
-
-            // hRemainTail
-            for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
-                T3 hGradOffset = hProBatchIdx + hProBatchSize * hFullBatchCount + hGradActualStart;
-                AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * strideH));
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, wFullBatchCount, 0);
-                // 整batch
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wGradActualStart;
-                    uint32_t offset = wBatchIdx + (hProBatchSize * hFullBatchCount + hProBatchIdx) * wGradAligned +
-                                      highGradOffset;
-                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
-
-                    ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask2);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask2);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask2, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-
-                // 尾段零散点
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, 1, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                    uint32_t offset = wBatchIdx + wProBatchSize * wFullBatchCount +
-                                      (hProBatchSize * hFullBatchCount + hProBatchIdx) * wGradAligned + highGradOffset;
-                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
-
-                    AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask3);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask3, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-            }
-        }
-    }
-
     __VEC_SCOPE__
     {
         AscendC::Reg::RegTensor<int32_t> zeroConstReg;
@@ -1114,8 +1070,8 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
         AscendC::Reg::RegTensor<int32_t> hMaxReg;
         if constexpr (IS_CHECK_RANGE == 1) {
             AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-            AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-            AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
+            AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(p.wOutputActual));
+            AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(p.hOutputActual));
         }
 
         AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
@@ -1140,6 +1096,7 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
         }
 
         AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+
         AscendC::Reg::LoadAlign(initial3DRegIndex, helpAddr);
         AscendC::Reg::LoadAlign(initial3DRegIndexOne, helpAddr + V_REG_SIZE / sizeof(uint32_t));
         AscendC::Reg::LoadAlign(initial2DRegIndex, helpAddr + INDEX_TWO * V_REG_SIZE / sizeof(uint32_t));
@@ -1150,92 +1107,89 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
         AscendC::Reg::LoadAlign(initial3DRegHIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * V_REG_SIZE / sizeof(T3));
         AscendC::Reg::LoadAlign(initial2DRegWIdx, helpAddrT3 + INDEX_THREE * INDEX_TWO * V_REG_SIZE / sizeof(T3));
 
-        // highBlockRemainTail
-        uint32_t highGradOffset = highBlockConcurrentCount * highConcurrentCount * hGradActual * wGradAligned;
-        uint32_t highOutputOffset = highBlockConcurrentCount * highConcurrentCount * hOutputActual * wOutputAligned;
-        // 整H batch
-        for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
+        for (uint16_t hProBatchIdx = 0; hProBatchIdx < p.hProBatchSize; hProBatchIdx++) {
             // 整batch
-            T3 hGradOffset = hProBatchIdx + hGradActualStart;
-            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, strideH);
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, whFullBatchCount, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wGradActualStart;
-                uint32_t offset = wBatchIdx + hProBatchIdx * wGradAligned + highGradOffset;
+            T3 hGradOffset = hProBatchIdx + p.hGradActualStart;
+            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, p.strideH);
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.whFullBatchCount, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wProBatchSize; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wGradActualStart;
+                uint32_t offset = wBatchIdx + hProBatchIdx * p.wGradAligned + highGradOffset;
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
 
-                ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, strideW);
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask4);
+                ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, p.strideW);
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskFull);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask4);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask4, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskFull);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskFull, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
 
             // 尾段零散点
-            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, strideH);
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, hFullBatchCount, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                uint32_t offset = wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wGradAligned +
+            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, p.strideH);
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.hFullBatchCount, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wRemainTail; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount + p.wGradActualStart;
+                uint32_t offset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount + hProBatchIdx * p.wGradAligned +
                                   highGradOffset;
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
 
-                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask5);
+                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * p.strideW));
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskWTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask5);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask5, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskWTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskWTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
         }
 
         // hRemainTail
-        for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
-            T3 hGradOffset = hProBatchIdx + hProBatchSize * hFullBatchCount + hGradActualStart;
-            AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * strideH));
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, wFullBatchCount, 0);
+        for (uint16_t hProBatchIdx = 0; hProBatchIdx < p.hRemainTail; hProBatchIdx++) {
+            T3 hGradOffset = hProBatchIdx + p.hProBatchSize * p.hFullBatchCount + p.hGradActualStart;
+            AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * p.strideH));
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.wFullBatchCount, 0);
             // 整batch
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wGradActualStart;
-                uint32_t offset = wBatchIdx + (hFullBatchCount * hProBatchSize + hProBatchIdx) * wGradAligned +
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wProBatchSize; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wGradActualStart;
+                uint32_t offset = wBatchIdx + (p.hProBatchSize * p.hFullBatchCount + hProBatchIdx) * p.wGradAligned +
                                   highGradOffset;
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
 
-                ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, strideW);
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask6);
+                ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, p.strideW);
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskHTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask6);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask6, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskHTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskHTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
 
             // 尾段零散点
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, 1, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                uint32_t offset = wBatchIdx + wProBatchSize * wFullBatchCount +
-                                  (hFullBatchCount * hProBatchSize + hProBatchIdx) * wGradAligned + highGradOffset;
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, 1, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wRemainTail; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount + p.wGradActualStart;
+                uint32_t offset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount +
+                                  (p.hProBatchSize * p.hFullBatchCount + hProBatchIdx) * p.wGradAligned +
+                                  highGradOffset;
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
 
-                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask7);
+                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * p.strideW));
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskHWTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask7);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask7, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskHWTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskHWTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
         }
     }
@@ -1243,234 +1197,39 @@ __aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
 
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
 template <const Reg::RegTrait& Trait>
-__aicore__ inline void
-AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipleLineProcessVF2Int64(
+__aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipleLineProcessVF2(
     __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3)
 {
-    int64_t wOutput = tilingData_->wOutput;
-    int64_t hOutput = tilingData_->hOutput;
-    int64_t wOutputActual = wOutputActual_;
-    int64_t wOutputAligned = wOutputAligned_;
-    int64_t hOutputActual = hOutputActual_;
-    int64_t highAxisActual = highAxisActual_;
-    int64_t curHIndex = hAxisIndex_ * tilingData_->hOutputInner;
-    int64_t curWIndex = wAxisIndex_ * tilingData_->wOutputInner;
-    int64_t wGradAligned = wGradAligned_;
-    int64_t wGradActual = wGradActual_;
-    uint16_t hGradActual = hGradActual_;
-    uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
-    uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
-    int64_t highOutStride = wOutputAligned * hOutputActual;
+    MultiLineVF2Params p;
+    PrepareMultiLineVF2Params(p);
 
-    uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
-    uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);
-    uint16_t padH = static_cast<uint16_t>(tilingData_->padTopH);
-    uint16_t padW = static_cast<uint16_t>(tilingData_->padLeftW);
-    uint16_t padDownH = static_cast<uint16_t>(tilingData_->padDownH);
-    uint16_t padRightW = static_cast<uint16_t>(tilingData_->padRightW);
-    uint32_t strideH = static_cast<uint32_t>(tilingData_->hStride);
-    uint32_t strideW = static_cast<uint32_t>(tilingData_->wStride);
+    GenIndicesToUb(helpAddr, p.wProBatchSize, p.hProBatchSize, p.wGradAligned, p.wFullBatchCount, p.hFullBatchCount,
+                   p.hGradActual);
+    GenIndicesToUbForT3<T3, Trait>(helpAddrT3, p.whFullBatchCount, p.wFullBatchCount, p.wProBatchSize, p.hProBatchSize,
+                                   p.hFullBatchCount);
 
-    uint16_t hProBatchSize = curHProBatchSize_;
-    uint16_t wProBatchSize = curWProBatchSize_;
-
-    uint32_t wFullBatchCount = wGradActual / wProBatchSize;
-    uint16_t hFullBatchCount = hGradActual / hProBatchSize;
-    uint16_t wRemainTail = wGradActual % wProBatchSize;
-    uint32_t whFullBatchCount = wFullBatchCount * hFullBatchCount;
-
-    uint16_t highConcurrentCount = V_REG_SIZE / (whFullBatchCount * sizeof(float));
-
-    uint16_t highBlockConcurrentCount = highAxisActual / highConcurrentCount;
-    uint16_t highBlockRemainTail = highAxisActual - highBlockConcurrentCount * highConcurrentCount;
-
-    uint16_t hRemainTail = hGradActual - hFullBatchCount * hProBatchSize;
-
-    uint32_t mask0 = highConcurrentCount * whFullBatchCount;
-    uint32_t mask1 = highConcurrentCount * hFullBatchCount * 1;
-    uint32_t mask2 = highConcurrentCount * 1 * wFullBatchCount;
-    uint32_t mask3 = highConcurrentCount * 1 * 1;
-    uint32_t mask4 = highBlockRemainTail * whFullBatchCount;
-    uint32_t mask5 = highBlockRemainTail * hFullBatchCount * 1;
-    uint32_t mask6 = highBlockRemainTail * 1 * wFullBatchCount;
-    uint32_t mask7 = highBlockRemainTail * 1 * 1;
-
-    GenIndicesToUb(helpAddr, wProBatchSize, hProBatchSize, wGradAligned, wFullBatchCount, hFullBatchCount, hGradActual);
-    GenIndicesToUbForT3<T3, Trait>(helpAddrT3, whFullBatchCount, wFullBatchCount, wProBatchSize, hProBatchSize,
-                                   hFullBatchCount);
-
-    for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-        uint32_t highGradOffset = highBlockIdx * highConcurrentCount * hGradActual * wGradAligned;
-        uint32_t highOutputOffset = highBlockIdx * highConcurrentCount * hOutputActual * wOutputAligned;
-        for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
-            __VEC_SCOPE__
-            {
-                AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                if constexpr (IS_CHECK_RANGE == 1) {
-                    AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                    AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                    AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                }
-
-                AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
-                AscendC::Reg::RegTensor<uint32_t> initial3DRegIndexOne;
-                AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                AscendC::Reg::RegTensor<int32_t> highIdxReg;
-                AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                AscendC::Reg::RegTensor<T3, Trait> initial3DRegHIdx;
-                AscendC::Reg::RegTensor<T3, Trait> initial3DRegWIdx;
-                AscendC::Reg::RegTensor<T3, Trait> initial3DRegHIdxOne;
-                AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                if constexpr (COUNT_PAD == 0) {
-                    AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                }
-
-                AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-
-                AscendC::Reg::LoadAlign(initial3DRegIndex, helpAddr);
-                AscendC::Reg::LoadAlign(initial3DRegIndexOne, helpAddr + V_REG_SIZE / sizeof(uint32_t));
-
-                AscendC::Reg::LoadAlign(initial3DRegWIdx, helpAddrT3);
-                AscendC::Reg::LoadAlign(initial3DRegHIdx, helpAddrT3 + INDEX_TWO * V_REG_SIZE / sizeof(T3));
-                AscendC::Reg::LoadAlign(initial3DRegHIdxOne,
-                                        helpAddrT3 + INDEX_TWO * INDEX_TWO * V_REG_SIZE / sizeof(T3));
-
-                // 整batch
-                T3 hGradOffset = hProBatchIdx + hGradActualStart;
-                ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, strideH);
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, whFullBatchCount, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wGradActualStart;
-                    uint32_t offset = (wBatchIdx + hProBatchIdx * wGradAligned + highGradOffset);
-                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
-
-                    ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask0);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask0);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask0, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-
-                // 尾段零散点
-                ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, strideH);
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, hFullBatchCount, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                    uint32_t offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wGradAligned +
-                                       highGradOffset);
-                    AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
-
-                    AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask1);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask1);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask1, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-            }
-        }
-
-        // hRemainTail
-        for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
-            __VEC_SCOPE__
-            {
-                AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                if constexpr (IS_CHECK_RANGE == 1) {
-                    AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                    AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                    AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                }
-
-                AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
-                AscendC::Reg::RegTensor<uint32_t> initial2DRegIndexOne;
-                AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                AscendC::Reg::RegTensor<int32_t> highIdxReg;
-                AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                AscendC::Reg::RegTensor<T3, Trait> initial2DRegWIdx;
-                AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                if constexpr (COUNT_PAD == 0) {
-                    AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                }
-
-                AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-
-                AscendC::Reg::LoadAlign(initial2DRegIndex, helpAddr + INDEX_TWO * V_REG_SIZE / sizeof(uint32_t));
-                AscendC::Reg::LoadAlign(initial2DRegIndexOne, helpAddr + INDEX_THREE * V_REG_SIZE / sizeof(uint32_t));
-
-                AscendC::Reg::LoadAlign(initial2DRegWIdx,
-                                        helpAddrT3 + INDEX_THREE * INDEX_TWO * V_REG_SIZE / sizeof(T3));
-
-                T3 hGradOffset = hProBatchIdx + hProBatchSize * hFullBatchCount + hGradActualStart;
-                AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * strideH));
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, wFullBatchCount, 0);
-                // 整batch
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wGradActualStart;
-                    uint32_t offset = (wBatchIdx + (hProBatchSize * hFullBatchCount + hProBatchIdx) * wGradAligned +
-                                       highGradOffset);
-                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
-
-                    ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, strideW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask2);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask2);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask2, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-
-                // 尾段零散点
-                GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, 1, 0);
-                for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                    uint32_t offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
-                                       (hProBatchSize * hFullBatchCount + hProBatchIdx) * wGradAligned +
-                                       highGradOffset);
-                    AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
-
-                    AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                                 padW, mask3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask3);
-                    DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask3, wOutputAligned,
-                                                       highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg, highIdxReg);
-                }
-            }
-        }
+    for (uint16_t highBlockIdx = 0; highBlockIdx < p.highBlockConcurrentCount; ++highBlockIdx) {
+        uint32_t highGradOffset = highBlockIdx * p.highConcurrentCount * p.hGradActual * p.wGradAligned;
+        uint32_t highOutputOffset = highBlockIdx * p.highConcurrentCount * p.hOutputActual * p.wOutputAligned;
+        MultiLineVF2Block<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, p, highGradOffset, highOutputOffset, p.mask0,
+                                 p.mask1, p.mask2, p.mask3);
     }
 
     // highBlockRemainTail
-    uint32_t highGradOffset = highBlockConcurrentCount * highConcurrentCount * hGradActual * wGradAligned;
-    uint32_t highOutputOffset = highBlockConcurrentCount * highConcurrentCount * hOutputActual * wOutputAligned;
-    // 整H batch
-    for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
+    uint32_t highGradOffset = p.highBlockConcurrentCount * p.highConcurrentCount * p.hGradActual * p.wGradAligned;
+    uint32_t highOutputOffset = p.highBlockConcurrentCount * p.highConcurrentCount * p.hOutputActual * p.wOutputAligned;
+    MultiLineVF2Block<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, p, highGradOffset, highOutputOffset, p.mask4,
+                             p.mask5, p.mask6, p.mask7);
+}
+
+template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
+template <const Reg::RegTrait& Trait>
+__aicore__ inline void AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::MultiLineVF2BlockInt64(
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+    const MultiLineVF2Params& p, uint32_t highGradOffset, uint32_t highOutputOffset, uint32_t maskFull,
+    uint32_t maskWTail, uint32_t maskHTail, uint32_t maskHWTail)
+{
+    for (uint16_t hProBatchIdx = 0; hProBatchIdx < p.hProBatchSize; hProBatchIdx++) {
         __VEC_SCOPE__
         {
             AscendC::Reg::RegTensor<int32_t> zeroConstReg;
@@ -1478,8 +1237,8 @@ AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipl
             AscendC::Reg::RegTensor<int32_t> hMaxReg;
             if constexpr (IS_CHECK_RANGE == 1) {
                 AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
+                AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(p.wOutputActual));
+                AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(p.hOutputActual));
             }
 
             AscendC::Reg::RegTensor<uint32_t> initial3DRegIndex;
@@ -1510,49 +1269,49 @@ AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipl
             AscendC::Reg::LoadAlign(initial3DRegHIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * V_REG_SIZE / sizeof(T3));
 
             // 整batch
-            T3 hGradOffset = hProBatchIdx + hGradActualStart;
-            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, strideH);
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, whFullBatchCount, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wGradActualStart;
-                uint32_t offset = (wBatchIdx + hProBatchIdx * wGradAligned + highGradOffset);
+            T3 hGradOffset = hProBatchIdx + p.hGradActualStart;
+            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdx, hGradOffset, p.strideH);
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.whFullBatchCount, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wProBatchSize; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wGradActualStart;
+                uint32_t offset = (wBatchIdx + hProBatchIdx * p.wGradAligned + highGradOffset);
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
 
-                ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, strideW);
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask4);
+                ComputeOutRegStart<T3, Trait>(outWStart, initial3DRegWIdx, wGradOffset, p.strideW);
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskFull);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask4);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask4, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskFull);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskFull, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
 
             // 尾段零散点
-            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, strideH);
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, hFullBatchCount, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                uint32_t offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wGradAligned +
+            ComputeOutRegStart<T3, Trait>(outHStart, initial3DRegHIdxOne, hGradOffset, p.strideH);
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.hFullBatchCount, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wRemainTail; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount + p.wGradActualStart;
+                uint32_t offset = (wBatchIdx + p.wProBatchSize * p.wFullBatchCount + hProBatchIdx * p.wGradAligned +
                                    highGradOffset);
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
 
-                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask5);
+                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * p.strideW));
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskWTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask5);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask5, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskWTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskWTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
         }
     }
 
-    // hRemainTail
-    for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
+    // p.hRemainTail
+    for (uint16_t hProBatchIdx = 0; hProBatchIdx < p.hRemainTail; hProBatchIdx++) {
         __VEC_SCOPE__
         {
             AscendC::Reg::RegTensor<int32_t> zeroConstReg;
@@ -1560,8 +1319,8 @@ AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipl
             AscendC::Reg::RegTensor<int32_t> hMaxReg;
             if constexpr (IS_CHECK_RANGE == 1) {
                 AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
+                AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(p.wOutputActual));
+                AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(p.hOutputActual));
             }
 
             AscendC::Reg::RegTensor<uint32_t> initial2DRegIndex;
@@ -1587,47 +1346,76 @@ AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipl
 
             AscendC::Reg::LoadAlign(initial2DRegWIdx, helpAddrT3 + INDEX_THREE * INDEX_TWO * V_REG_SIZE / sizeof(T3));
 
-            T3 hGradOffset = hProBatchIdx + hProBatchSize * hFullBatchCount + hGradActualStart;
-            AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * strideH));
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, wFullBatchCount, 0);
+            T3 hGradOffset = hProBatchIdx + p.hProBatchSize * p.hFullBatchCount + p.hGradActualStart;
+            AscendC::Reg::Duplicate(outHStart, static_cast<T3>(hGradOffset * p.strideH));
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, p.wFullBatchCount, 0);
             // 整batch
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wGradActualStart;
-                uint32_t offset = (wBatchIdx + (hFullBatchCount * hProBatchSize + hProBatchIdx) * wGradAligned +
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wProBatchSize; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wGradActualStart;
+                uint32_t offset = (wBatchIdx + (p.hProBatchSize * p.hFullBatchCount + hProBatchIdx) * p.wGradAligned +
                                    highGradOffset);
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
 
-                ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, strideW);
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask6);
+                ComputeOutRegStart<T3, Trait>(outWStart, initial2DRegWIdx, wGradOffset, p.strideW);
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskHTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask6);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask6, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskHTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskHTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
 
             // 尾段零散点
-            GenGatterIndex2D<int32_t>(highIdxReg, highOutStride, 1, 0);
-            for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                T3 wGradOffset = wBatchIdx + wProBatchSize * wFullBatchCount + wGradActualStart;
-                uint32_t offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
-                                   (hFullBatchCount * hProBatchSize + hProBatchIdx) * wGradAligned + highGradOffset);
+            GenGatterIndex2D<int32_t>(highIdxReg, p.highOutStride, 1, 0);
+            for (uint16_t wBatchIdx = 0; wBatchIdx < p.wRemainTail; wBatchIdx++) {
+                T3 wGradOffset = wBatchIdx + p.wProBatchSize * p.wFullBatchCount + p.wGradActualStart;
+                uint32_t offset = (wBatchIdx + p.wProBatchSize * p.wFullBatchCount +
+                                   (p.hProBatchSize * p.hFullBatchCount + hProBatchIdx) * p.wGradAligned +
+                                   highGradOffset);
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
 
-                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * strideW));
-                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, padH,
-                                             padW, mask7);
+                AscendC::Reg::Duplicate(outWStart, static_cast<T3>(wGradOffset * p.strideW));
+                ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, p.curWIndex, p.curHIndex,
+                                             p.padH, p.padW, maskHWTail);
                 GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                    divisorReg, outWStart, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH, padRightW,
-                    kH, kW, divisorOverride, mask7);
-                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask7, wOutputAligned,
-                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg, highIdxReg);
+                    divisorReg, outWStart, outHStart, zeroConstRegT, p.hOutput, p.wOutput, p.padH, p.padW, p.padDownH,
+                    p.padRightW, p.kH, p.kW, p.divisorOverride, maskHWTail);
+                DoSingleNCNchw<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, maskHWTail, p.wOutputAligned,
+                                                   highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, p.kH, p.kW,
+                                                   divisorReg, wIndexReg, hIndexReg, highIdxReg);
             }
         }
     }
+}
+
+template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
+template <const Reg::RegTrait& Trait>
+__aicore__ inline void
+AvgPoolV2GradNCHWKernel<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::multipleLineProcessVF2Int64(
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3)
+{
+    MultiLineVF2Params p;
+    PrepareMultiLineVF2Params(p);
+
+    GenIndicesToUb(helpAddr, p.wProBatchSize, p.hProBatchSize, p.wGradAligned, p.wFullBatchCount, p.hFullBatchCount,
+                   p.hGradActual);
+    GenIndicesToUbForT3<T3, Trait>(helpAddrT3, p.whFullBatchCount, p.wFullBatchCount, p.wProBatchSize, p.hProBatchSize,
+                                   p.hFullBatchCount);
+
+    for (uint16_t highBlockIdx = 0; highBlockIdx < p.highBlockConcurrentCount; ++highBlockIdx) {
+        uint32_t highGradOffset = highBlockIdx * p.highConcurrentCount * p.hGradActual * p.wGradAligned;
+        uint32_t highOutputOffset = highBlockIdx * p.highConcurrentCount * p.hOutputActual * p.wOutputAligned;
+        MultiLineVF2BlockInt64<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, p, highGradOffset, highOutputOffset,
+                                      p.mask0, p.mask1, p.mask2, p.mask3);
+    }
+
+    // highBlockRemainTail
+    uint32_t highGradOffset = p.highBlockConcurrentCount * p.highConcurrentCount * p.hGradActual * p.wGradAligned;
+    uint32_t highOutputOffset = p.highBlockConcurrentCount * p.highConcurrentCount * p.hOutputActual * p.wOutputAligned;
+    MultiLineVF2BlockInt64<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, p, highGradOffset, highOutputOffset, p.mask4,
+                                  p.mask5, p.mask6, p.mask7);
 }
 
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>

@@ -52,6 +52,29 @@ public:
     __aicore__ inline void ProcessNoGradBlock();
     __aicore__ inline void CopyOut();
 
+    /*
+     * 功能：ConCMergeHWProcVF 中 6 个分支共用的向量计算体。
+     * 说明：6 处原先为逐行重复的 __VEC_SCOPE__ 体，差异仅在于 mask 与 3 个索引寄存器的
+     *       help 缓冲偏移，此处收编为唯一实现，通过入参传入；
+     *       DataCopy 参数与次数、循环边界、精度转换与累加顺序均保持不变。
+     */
+    template <const Reg::RegTrait& Trait>
+    __aicore__ inline void MergeHwBlock(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr,
+                                        __ubuf__ T3* helpAddrT3, uint32_t offset, T3 wGradOffset, T3 hGradOffset,
+                                        uint32_t nOffset, uint32_t mask, uint32_t idxRegOffset, uint32_t hRegOffset,
+                                        uint32_t wRegOffset);
+
+    /*
+     * 功能：ConCMergeWProcVF 中 w 整块与 w 尾块共用的向量计算体。
+     * 说明：两处原先为逐行重复的 __VEC_SCOPE__ 体，差异仅在于 mask 与 grad 偏移，
+     *       此处收编为唯一实现，通过入参传入；__VEC_SCOPE__ 的范围、DataCopy 参数与次数、
+     *       循环边界与循环次序、精度转换与累加顺序均保持不变。
+     */
+    template <const Reg::RegTrait& Trait>
+    __aicore__ inline void MergeWBlock(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr,
+                                       __ubuf__ T3* helpAddrT3, uint32_t offset, T3 wGradOffset, T3 hGradOffset,
+                                       uint32_t nOffset, uint32_t mask);
+
     TPipe* pipe_ = nullptr;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQue_;
@@ -614,6 +637,81 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
 
 template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
 template <const Reg::RegTrait& Trait>
+__aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::MergeWBlock(
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+    uint32_t offset, T3 wGradOffset, T3 hGradOffset, uint32_t nOffset, uint32_t mask)
+{
+    const int64_t hOutput = tilingData_->hOutput;
+    const int64_t wOutput = tilingData_->wOutput;
+    const uint16_t cOutputActual = cOutputActual_;
+    const uint16_t cOutputAligned = cOutputAligned_;
+    const int64_t wOutputActual = wOutputActual_;
+    const int64_t hOutputActual = hOutputActual_;
+    const int64_t curHIndex = hAxisIndex_ * tilingData_->hOutputInner;
+    const int64_t curWIndex = wAxisIndex_ * tilingData_->wOutputInner;
+    const int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    const uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
+    const uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);
+    const uint16_t padH = static_cast<uint16_t>(tilingData_->padTop);
+    const uint16_t padW = static_cast<uint16_t>(tilingData_->padLeft);
+    const uint16_t padDownH = static_cast<uint16_t>(tilingData_->padBottom);
+    const uint16_t padRightW = static_cast<uint16_t>(tilingData_->padRight);
+    const uint32_t strideH = static_cast<uint32_t>(tilingData_->hStride);
+    const uint32_t strideW = static_cast<uint32_t>(tilingData_->wStride);
+
+    __VEC_SCOPE__
+    {
+        AscendC::Reg::RegTensor<int32_t> zeroConstReg;
+        AscendC::Reg::RegTensor<int32_t> wMaxReg;
+        AscendC::Reg::RegTensor<int32_t> hMaxReg;
+        if constexpr (IS_CHECK_RANGE == 1) {
+            AscendC::Reg::Duplicate(zeroConstReg, int32_t(0));
+            AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
+            AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
+        }
+
+        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::RegTensor<int32_t> wIndexReg;
+        AscendC::Reg::RegTensor<int32_t> hIndexReg;
+        AscendC::Reg::RegTensor<int32_t> divisorReg;
+
+        AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
+        AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
+        AscendC::Reg::RegTensor<T3, Trait> outWStart;
+        AscendC::Reg::RegTensor<T3, Trait> outHStart;
+        AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
+        if constexpr (COUNT_PAD == 0) {
+            AscendC::Reg::Duplicate(zeroConstRegT, T3(0));
+        }
+
+        AscendC::Reg::MaskReg allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
+
+        AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
+        AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3);
+
+        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMask);
+        AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
+        AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
+
+        AscendC::Reg::Duplicate(outHStart, T3(hGradOffset * strideH));
+
+        GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(divisorReg, tmplWRegIdx, outHStart, zeroConstRegT,
+                                                                      hOutput, wOutput, padH, padW, padDownH, padRightW,
+                                                                      kH, kW, divisorOverride, mask);
+        ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex, padW);
+        ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex, cOutputAligned,
+                                     padH, padW, mask);
+
+        DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, wOutputActual, cOutputAligned,
+                                       zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg, wIndexReg, hIndexReg,
+                                       (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
+    }
+}
+
+template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
+template <const Reg::RegTrait& Trait>
 __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::ConCMergeWProcVF(
     __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3)
 {
@@ -679,130 +777,25 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
 
             for (uint16_t wRepeatIdx = 0; wRepeatIdx < repeatimes; wRepeatIdx++) {
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    __VEC_SCOPE__
-                    {
-                        AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                        AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                        AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                        if constexpr (IS_CHECK_RANGE == 1) {
-                            AscendC::Reg::Duplicate(zeroConstReg, int32_t(0));
-                            AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
-                            AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
-                        }
-
-                        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-                        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                        AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                        AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                        AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                        AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                        if constexpr (COUNT_PAD == 0) {
-                            AscendC::Reg::Duplicate(zeroConstRegT, T3(0));
-                        }
-
-                        AscendC::Reg::MaskReg
-                            allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                        AscendC::Reg::MaskReg
-                            allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                        AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
-                        AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3);
-
-                        T3 hGradOffset = hIdx + hGradActualStart;
-                        T3 wGradOffset = wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize + wGradActualStart;
-                        uint32_t offset = (wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize +
-                                           hIdx * wGradActual) *
-                                              cOutputAligned +
-                                          nGradOffset;
-
-                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMask);
-                        AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
-                        AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                        AscendC::Reg::Duplicate(outHStart, T3(hGradOffset * strideH));
-
-                        GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                            divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                            padRightW, kH, kW, divisorOverride, mask0);
-                        ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned,
-                                                         curWIndex, padW);
-                        ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                     cOutputAligned, padH, padW, mask0);
-
-                        DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask0, nOffset, wOutputActual,
-                                                       cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg,
-                                                       (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                    }
+                    T3 hGradOffset = hIdx + hGradActualStart;
+                    T3 wGradOffset = wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize + wGradActualStart;
+                    uint32_t offset = (wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize + hIdx * wGradActual) *
+                                          cOutputAligned +
+                                      nGradOffset;
+                    MergeWBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                       mask0);
                 }
             }
 
             // 尾段整batch  用不满mask
             for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                __VEC_SCOPE__
-                {
-                    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                    AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                    AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                    if constexpr (IS_CHECK_RANGE == 1) {
-                        AscendC::Reg::Duplicate(zeroConstReg, int32_t(0));
-                        AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
-                        AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
-                    }
-
-                    AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                    AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                    AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                    AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                    if constexpr (COUNT_PAD == 0) {
-                        AscendC::Reg::Duplicate(zeroConstRegT, T3(0));
-                    }
-
-                    AscendC::Reg::MaskReg
-                        allMask = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                    AscendC::Reg::MaskReg
-                        allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                    AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
-                    AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3);
-
-                    T3 hGradOffset = hIdx + hGradActualStart;
-                    T3 wGradOffset = wBatchIdx + repeatimes * concurrencyCount * wProBatchSize + wGradActualStart;
-                    uint32_t offset = (wBatchIdx + repeatimes * concurrencyCount * wProBatchSize + hIdx * wGradActual) *
-                                          cOutputAligned +
-                                      nGradOffset;
-
-                    AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMask);
-                    AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                    AscendC::Reg::Duplicate(outHStart, T3(hGradOffset * strideH));
-
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask1);
-                    ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex,
-                                                     padW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                 cOutputAligned, padH, padW, mask1);
-
-                    DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask1, nOffset, wOutputActual,
-                                                   cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg,
-                                                   (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                }
+                T3 hGradOffset = hIdx + hGradActualStart;
+                T3 wGradOffset = wBatchIdx + repeatimes * concurrencyCount * wProBatchSize + wGradActualStart;
+                uint32_t offset = (wBatchIdx + repeatimes * concurrencyCount * wProBatchSize + hIdx * wGradActual) *
+                                      cOutputAligned +
+                                  nGradOffset;
+                MergeWBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                   mask1);
             }
 
             // 尾段零散点
@@ -867,6 +860,84 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                 }
             }
         }
+    }
+}
+
+template <typename T1, typename T3, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE, const uint32_t COUNT_PAD>
+template <const Reg::RegTrait& Trait>
+__aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>::MergeHwBlock(
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ uint32_t* helpAddr, __ubuf__ T3* helpAddrT3,
+    uint32_t offset, T3 wGradOffset, T3 hGradOffset, uint32_t nOffset, uint32_t mask, uint32_t idxRegOffset,
+    uint32_t hRegOffset, uint32_t wRegOffset)
+{
+    const int64_t m_wOutput = tilingData_->wOutput;
+    const int64_t m_hOutput = tilingData_->hOutput;
+    const int64_t m_wOutputActual = wOutputActual_;
+    const int64_t m_hOutputActual = hOutputActual_;
+    const uint16_t m_cOutputActual = static_cast<uint16_t>(cOutputActual_);
+    const uint16_t m_cOutputAligned = static_cast<uint16_t>(cOutputAligned_);
+    const int64_t m_curHIndex = hAxisIndex_ * tilingData_->hOutputInner;
+    const int64_t m_curWIndex = wAxisIndex_ * tilingData_->wOutputInner;
+    const int32_t m_divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    const uint16_t m_kH = static_cast<uint16_t>(tilingData_->hKernel);
+    const uint16_t m_kW = static_cast<uint16_t>(tilingData_->wKernel);
+    const uint16_t m_padH = static_cast<uint16_t>(tilingData_->padTop);
+    const uint16_t m_padW = static_cast<uint16_t>(tilingData_->padLeft);
+    const uint16_t m_padDownH = static_cast<uint16_t>(tilingData_->padBottom);
+    const uint16_t m_padRightW = static_cast<uint16_t>(tilingData_->padRight);
+    const uint32_t m_strideH = static_cast<uint32_t>(tilingData_->hStride);
+    const uint32_t m_strideW = static_cast<uint32_t>(tilingData_->wStride);
+
+    __VEC_SCOPE__
+    {
+        AscendC::Reg::RegTensor<int32_t> zeroConstReg;
+        AscendC::Reg::RegTensor<int32_t> wMaxReg;
+        AscendC::Reg::RegTensor<int32_t> hMaxReg;
+        if constexpr (IS_CHECK_RANGE == 1) {
+            AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
+            AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(m_wOutputActual));
+            AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(m_hOutputActual));
+        }
+
+        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
+        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
+        AscendC::Reg::RegTensor<int32_t> wIndexReg;
+        AscendC::Reg::RegTensor<int32_t> hIndexReg;
+        AscendC::Reg::RegTensor<int32_t> divisorReg;
+
+        AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
+        AscendC::Reg::RegTensor<T3, Trait> initialHRegIdx;
+        AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
+        AscendC::Reg::RegTensor<T3, Trait> outWStart;
+        AscendC::Reg::RegTensor<T3, Trait> outHStart;
+        AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
+        if constexpr (COUNT_PAD == 0) {
+            AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
+        }
+
+        AscendC::Reg::MaskReg allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
+
+        AscendC::Reg::LoadAlign(initialRegIndex, helpAddr + idxRegOffset);
+        AscendC::Reg::LoadAlign(initialHRegIdx, helpAddrT3 + hRegOffset);
+        AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3 + wRegOffset);
+        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
+        AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
+        AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, m_strideW, allMaskT3);
+
+        AscendC::Reg::Adds(outHStart, initialHRegIdx, hGradOffset, allMaskT3);
+        AscendC::Reg::Muls(outHStart, outHStart, m_strideH, allMaskT3);
+        GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(divisorReg, tmplWRegIdx, outHStart, zeroConstRegT,
+                                                                      m_hOutput, m_wOutput, m_padH, m_padW, m_padDownH,
+                                                                      m_padRightW, m_kH, m_kW, m_divisorOverride, mask);
+        ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, m_cOutputActual, m_cOutputAligned, m_curWIndex,
+                                         m_padW);
+        ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, m_curWIndex, m_curHIndex,
+                                     m_cOutputAligned, m_padH, m_padW, mask);
+
+        DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, m_wOutputActual,
+                                       m_cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, m_kH, m_kW, divisorReg,
+                                       wIndexReg, hIndexReg, (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
     }
 }
 
@@ -974,60 +1045,8 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                        hIdx * wGradActual * hProBatchSize * hConcurrentCount) *
                                           cOutputAligned +
                                       nGradOffset;
-                    __VEC_SCOPE__
-                    {
-                        AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                        AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                        AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                        if constexpr (IS_CHECK_RANGE == 1) {
-                            AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                            AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                            AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                        }
-
-                        AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-                        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                        AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                        AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> initialHRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                        AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                        AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                        if constexpr (COUNT_PAD == 0) {
-                            AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                        }
-
-                        AscendC::Reg::MaskReg
-                            allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                        AscendC::Reg::MaskReg
-                            allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                        AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
-                        AscendC::Reg::LoadAlign(initialHRegIdx, helpAddrT3);
-                        AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3 + INDEX_TWO * vecElemCountT3);
-                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
-                        AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                        AscendC::Reg::Adds(outHStart, initialHRegIdx, hGradOffset, allMaskT3);
-                        AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                        GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                            divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                            padRightW, kH, kW, divisorOverride, mask0);
-                        ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned,
-                                                         curWIndex, padW);
-                        ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                     cOutputAligned, padH, padW, mask0);
-
-                        DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask0, nOffset, wOutputActual,
-                                                       cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg,
-                                                       (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                    }
+                    MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset,
+                                        nOffset, mask0, 0, 0, INDEX_TWO * vecElemCountT3);
                 }
 
                 // 尾段零散点
@@ -1038,62 +1057,9 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                           cOutputAligned +
                                       nGradOffset;
 
-                    __VEC_SCOPE__
-                    {
-                        AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                        AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                        AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                        if constexpr (IS_CHECK_RANGE == 1) {
-                            AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                            AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                            AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                        }
-
-                        AscendC::Reg::RegTensor<uint32_t> initialRegIndexOne;
-                        AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                        AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                        AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                        AscendC::Reg::RegTensor<T3, Trait> initialWRegIdxOne;
-                        AscendC::Reg::RegTensor<T3, Trait> initialHRegIdxOne;
-                        AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                        AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                        AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                        AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                        if constexpr (COUNT_PAD == 0) {
-                            AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                        }
-
-                        AscendC::Reg::MaskReg
-                            allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                        AscendC::Reg::MaskReg
-                            allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                        AscendC::Reg::LoadAlign(initialRegIndexOne, helpAddr + vecElemCountU32);
-                        AscendC::Reg::LoadAlign(initialHRegIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * vecElemCountT3);
-                        AscendC::Reg::LoadAlign(initialWRegIdxOne,
-                                                helpAddrT3 + INDEX_THREE * INDEX_TWO * vecElemCountT3);
-
-                        AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                        AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdxOne, wGradOffset, allMaskT3);
-                        AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                        AscendC::Reg::Adds(outHStart, initialHRegIdxOne, hGradOffset, allMaskT3);
-                        AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                        GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                            divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                            padRightW, kH, kW, divisorOverride, mask1);
-                        ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned,
-                                                         curWIndex, padW);
-                        ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                     cOutputAligned, padH, padW, mask1);
-
-                        DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask1, nOffset, wOutputActual,
-                                                       cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW,
-                                                       divisorReg, wIndexReg, hIndexReg,
-                                                       (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                    }
+                    MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset,
+                                        nOffset, mask1, vecElemCountU32, INDEX_TWO * INDEX_TWO * vecElemCountT3,
+                                        INDEX_THREE * INDEX_TWO * vecElemCountT3);
                 }
             }
         }
@@ -1108,60 +1074,8 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                    blockConcurrentCount * hConcurrentCount * hProBatchSize * wGradActual) *
                                       cOutputAligned +
                                   nGradOffset;
-                __VEC_SCOPE__
-                {
-                    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                    AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                    AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                    if constexpr (IS_CHECK_RANGE == 1) {
-                        AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                        AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                        AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                    }
-
-                    AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                    AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> initialHRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                    AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                    AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                    if constexpr (COUNT_PAD == 0) {
-                        AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                    }
-
-                    AscendC::Reg::MaskReg
-                        allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                    AscendC::Reg::MaskReg
-                        allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                    AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
-                    AscendC::Reg::LoadAlign(initialHRegIdx, helpAddrT3);
-                    AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3 + INDEX_TWO * vecElemCountT3);
-
-                    AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                    AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                    AscendC::Reg::Adds(outHStart, initialHRegIdx, hGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask2);
-                    ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex,
-                                                     padW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                 cOutputAligned, padH, padW, mask2);
-                    DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask2, nOffset, wOutputActual,
-                                                   cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg,
-                                                   (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                }
+                MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                    mask2, 0, 0, INDEX_TWO * vecElemCountT3);
             }
 
             // 尾段零散点
@@ -1172,61 +1086,9 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                       cOutputAligned +
                                   nGradOffset;
 
-                __VEC_SCOPE__
-                {
-                    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                    AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                    AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                    if constexpr (IS_CHECK_RANGE == 1) {
-                        AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                        AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                        AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                    }
-
-                    AscendC::Reg::RegTensor<uint32_t> initialRegIndexOne;
-                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                    AscendC::Reg::RegTensor<T3, Trait> initialWRegIdxOne;
-                    AscendC::Reg::RegTensor<T3, Trait> initialHRegIdxOne;
-                    AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                    AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                    AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-                    if constexpr (COUNT_PAD == 0) {
-                        AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                    }
-
-                    AscendC::Reg::MaskReg
-                        allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                    AscendC::Reg::MaskReg
-                        allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                    AscendC::Reg::LoadAlign(initialRegIndexOne, helpAddr + vecElemCountU32);
-                    AscendC::Reg::LoadAlign(initialHRegIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * vecElemCountT3);
-                    AscendC::Reg::LoadAlign(initialWRegIdxOne, helpAddrT3 + INDEX_THREE * INDEX_TWO * vecElemCountT3);
-
-                    AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                    AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdxOne, wGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                    AscendC::Reg::Adds(outHStart, initialHRegIdxOne, hGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask3);
-                    ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex,
-                                                     padW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                 cOutputAligned, padH, padW, mask3);
-
-                    DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask3, nOffset, wOutputActual,
-                                                   cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg,
-                                                   (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                }
+                MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                    mask3, vecElemCountU32, INDEX_TWO * INDEX_TWO * vecElemCountT3,
+                                    INDEX_THREE * INDEX_TWO * vecElemCountT3);
             }
         }
 
@@ -1243,62 +1105,8 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                       cOutputAligned +
                                   nGradOffset;
 
-                __VEC_SCOPE__
-                {
-                    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                    AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                    AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                    if constexpr (IS_CHECK_RANGE == 1) {
-                        AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                        AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                        AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                    }
-
-                    AscendC::Reg::RegTensor<uint32_t> initialRegIndex;
-                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                    AscendC::Reg::RegTensor<T3, Trait> initialWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> initialHRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                    AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                    AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-
-                    if constexpr (COUNT_PAD == 0) {
-                        AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                    }
-
-                    AscendC::Reg::MaskReg
-                        allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                    AscendC::Reg::MaskReg
-                        allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                    AscendC::Reg::LoadAlign(initialRegIndex, helpAddr);
-                    AscendC::Reg::LoadAlign(initialHRegIdx, helpAddrT3);
-                    AscendC::Reg::LoadAlign(initialWRegIdx, helpAddrT3 + INDEX_TWO * vecElemCountT3);
-
-                    AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                    AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdx, wGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                    AscendC::Reg::Adds(outHStart, initialHRegIdx, hGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask4);
-                    ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex,
-                                                     padW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                 cOutputAligned, padH, padW, mask4);
-
-                    DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask4, nOffset, wOutputActual,
-                                                   cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg,
-                                                   (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                }
+                MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                    mask4, 0, 0, INDEX_TWO * vecElemCountT3);
             }
 
             // 尾段零散点
@@ -1310,62 +1118,9 @@ __aicore__ inline void AvgPoolV2GradKernelNHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RAN
                                       cOutputAligned +
                                   nGradOffset;
 
-                __VEC_SCOPE__
-                {
-                    AscendC::Reg::RegTensor<int32_t> zeroConstReg;
-                    AscendC::Reg::RegTensor<int32_t> wMaxReg;
-                    AscendC::Reg::RegTensor<int32_t> hMaxReg;
-                    if constexpr (IS_CHECK_RANGE == 1) {
-                        AscendC::Reg::Duplicate(zeroConstReg, static_cast<int32_t>(0));
-                        AscendC::Reg::Duplicate(wMaxReg, static_cast<int32_t>(wOutputActual));
-                        AscendC::Reg::Duplicate(hMaxReg, static_cast<int32_t>(hOutputActual));
-                    }
-
-                    AscendC::Reg::RegTensor<uint32_t> initialRegIndexOne;
-                    AscendC::Reg::RegTensor<uint32_t> parallelRegIndex;
-                    AscendC::Reg::RegTensor<int32_t> wIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> hIndexReg;
-                    AscendC::Reg::RegTensor<int32_t> divisorReg;
-
-                    AscendC::Reg::RegTensor<T3, Trait> initialWRegIdxOne;
-                    AscendC::Reg::RegTensor<T3, Trait> initialHRegIdxOne;
-                    AscendC::Reg::RegTensor<T3, Trait> tmplWRegIdx;
-                    AscendC::Reg::RegTensor<T3, Trait> outWStart;
-                    AscendC::Reg::RegTensor<T3, Trait> outHStart;
-                    AscendC::Reg::RegTensor<T3, Trait> zeroConstRegT;
-
-                    if constexpr (COUNT_PAD == 0) {
-                        AscendC::Reg::Duplicate(zeroConstRegT, static_cast<T3>(0));
-                    }
-
-                    AscendC::Reg::MaskReg
-                        allMaskU32 = AscendC::Reg::CreateMask<uint32_t, AscendC::Reg::MaskPattern::ALL>();
-                    AscendC::Reg::MaskReg
-                        allMaskT3 = AscendC::Reg::CreateMask<T3, AscendC::Reg::MaskPattern::ALL, Trait>();
-
-                    AscendC::Reg::LoadAlign(initialRegIndexOne, helpAddr + vecElemCountU32);
-                    AscendC::Reg::LoadAlign(initialHRegIdxOne, helpAddrT3 + INDEX_TWO * INDEX_TWO * vecElemCountT3);
-                    AscendC::Reg::LoadAlign(initialWRegIdxOne, helpAddrT3 + INDEX_THREE * INDEX_TWO * vecElemCountT3);
-
-                    AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                    AscendC::Reg::Adds(tmplWRegIdx, initialWRegIdxOne, wGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(tmplWRegIdx, tmplWRegIdx, strideW, allMaskT3);
-
-                    AscendC::Reg::Adds(outHStart, initialHRegIdxOne, hGradOffset, allMaskT3);
-                    AscendC::Reg::Muls(outHStart, outHStart, strideH, allMaskT3);
-                    GenDivisor<T3, Trait, HAS_DIVISOR, IS_CHECK_RANGE, COUNT_PAD>(
-                        divisorReg, tmplWRegIdx, outHStart, zeroConstRegT, hOutput, wOutput, padH, padW, padDownH,
-                        padRightW, kH, kW, divisorOverride, mask5);
-                    ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex,
-                                                     padW);
-                    ComputeOutWHIndex<T3, Trait>(wIndexReg, hIndexReg, outWStart, outHStart, curWIndex, curHIndex,
-                                                 cOutputAligned, padH, padW, mask5);
-
-                    DoMulCNhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask5, nOffset, wOutputActual,
-                                                   cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, kH, kW, divisorReg,
-                                                   wIndexReg, hIndexReg,
-                                                   (AscendC::Reg::RegTensor<int32_t>&)tmplWRegIdx);
-                }
+                MergeHwBlock<Trait>(yAddr, gradAddr, helpAddr, helpAddrT3, offset, wGradOffset, hGradOffset, nOffset,
+                                    mask5, vecElemCountU32, INDEX_TWO * INDEX_TWO * vecElemCountT3,
+                                    INDEX_THREE * INDEX_TWO * vecElemCountT3);
             }
         }
     }

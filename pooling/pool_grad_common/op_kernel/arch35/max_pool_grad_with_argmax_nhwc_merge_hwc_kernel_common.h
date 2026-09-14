@@ -28,45 +28,44 @@ public:
     __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
                                       __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
     {
-        uint16_t nOutputActual = static_cast<uint16_t>(this->nOutputActual_);
-        int64_t hOutputActual = this->hOutputActual_;
-        int64_t wOutputActual = this->wOutputActual_;
+        typename MaxPoolGradWithArgmaxKernelNHWCBase<
+            T1, T2, int32_t, IS_CHECK_RANGE, VER,
+            MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<T1, T2, IS_CHECK_RANGE, VER>>::MergeHwcProcParams p;
+        this->template PrepareMergeHwcProcParams<T2>(p);
 
-        int64_t curHIndex = this->hAxisIndex_ * this->hOutputInner_;
-        int64_t curWIndex = this->wAxisIndex_ * this->wOutputInner_;
+        uint16_t nOutputActual = p.nOutputActual;
+        int64_t hOutputActual = p.hOutputActual;
+        int64_t wOutputActual = p.wOutputActual;
 
-        uint16_t hArgmaxActual = this->hArgmaxActual_;
-        uint16_t wArgmaxActual = this->wArgmaxActual_;
-        uint16_t cOutputActual = this->cOutputActual_;
-        uint16_t cOutputAligned = this->cOutputAligned_;
+        int64_t curHIndex = p.curHIndex;
+        int64_t curWIndex = p.curWIndex;
 
-        uint16_t computeSizeT2 = this->V_REG_SIZE / sizeof(T2);
-        uint16_t concurrencyCount = computeSizeT2 / cOutputActual;
+        uint16_t hArgmaxActual = p.hArgmaxActual;
+        uint16_t wArgmaxActual = p.wArgmaxActual;
+        uint16_t cOutputActual = p.cOutputActual;
+        uint16_t cOutputAligned = p.cOutputAligned;
 
-        uint16_t hProBatchSize = this->curHProBatchSize_;
-        uint16_t wProBatchSize = this->curWProBatchSize_;
+        uint16_t hProBatchSize = p.hProBatchSize;
+        uint16_t wProBatchSize = p.wProBatchSize;
 
-        int64_t wOutput = this->wOutput_;
-        int64_t cOutput = this->cOutput_;
+        int64_t wOutput = p.wOutput;
 
-        uint32_t wFullBatchCount = wArgmaxActual / wProBatchSize;
-        uint16_t hFullBatchCount = hArgmaxActual / hProBatchSize;
-        uint16_t wRemainTail = wArgmaxActual % wProBatchSize;
+        uint32_t wFullBatchCount = p.wFullBatchCount;
+        uint16_t wRemainTail = p.wRemainTail;
 
-        uint16_t hConcurrentCount = concurrencyCount / wFullBatchCount;
+        uint16_t hConcurrentCount = p.hConcurrentCount;
 
-        uint16_t blockConcurrentCount = hFullBatchCount / hConcurrentCount;
-        uint16_t hRemain = hArgmaxActual - blockConcurrentCount * hConcurrentCount * hProBatchSize;
+        uint16_t blockConcurrentCount = p.blockConcurrentCount;
 
-        uint16_t hRemainBatchCount = hRemain / hProBatchSize;
-        uint16_t hRemainTail = hRemain - hRemainBatchCount * hProBatchSize;
+        uint16_t hRemainBatchCount = p.hRemainBatchCount;
+        uint16_t hRemainTail = p.hRemainTail;
 
-        uint32_t mask0 = wFullBatchCount * hConcurrentCount * cOutputActual;
-        uint32_t mask1 = 1 * hConcurrentCount * cOutputActual;
-        uint32_t mask2 = wFullBatchCount * hRemainBatchCount * cOutputActual;
-        uint32_t mask3 = 1 * hRemainBatchCount * cOutputActual;
-        uint32_t mask4 = wFullBatchCount * cOutputActual;
-        uint32_t mask5 = 1 * cOutputActual;
+        uint32_t mask0 = p.mask0;
+        uint32_t mask1 = p.mask1;
+        uint32_t mask2 = p.mask2;
+        uint32_t mask3 = p.mask3;
+        uint32_t mask4 = p.mask4;
+        uint32_t mask5 = p.mask5;
 
         __VEC_SCOPE__
         {

@@ -129,6 +129,101 @@ public:
     int64_t wProBatchSize_ = 1;
     int64_t curHProBatchSize_ = 1;
     int64_t curWProBatchSize_ = 1;
+
+    /*
+     * 功能：NHWC merge-HWC 系 kernel（int32 / int64 两个 argmax 变体）ConCProcVF 的公共入口参数。
+     * 说明：两个变体的参数推导段原先逐行重复，此处收编为唯一实现；
+     *       字段顺序与原赋值顺序一致，取值、类型与截断行为保持不变。
+     */
+    struct MergeHwcProcParams {
+        uint16_t nOutputActual;
+        int64_t hOutputActual;
+        int64_t wOutputActual;
+
+        int64_t curHIndex;
+        int64_t curWIndex;
+
+        uint16_t hArgmaxActual;
+        uint16_t wArgmaxActual;
+        uint16_t cOutputActual;
+        uint16_t cOutputAligned;
+
+        uint16_t computeSizeT2;
+        uint16_t concurrencyCount;
+
+        uint16_t hProBatchSize;
+        uint16_t wProBatchSize;
+
+        int64_t wOutput;
+
+        uint32_t wFullBatchCount;
+        uint16_t hFullBatchCount;
+        uint16_t wRemainTail;
+
+        uint16_t hConcurrentCount;
+
+        uint16_t blockConcurrentCount;
+        uint16_t hRemain;
+
+        uint16_t hRemainBatchCount;
+        uint16_t hRemainTail;
+
+        uint32_t mask0;
+        uint32_t mask1;
+        uint32_t mask2;
+        uint32_t mask3;
+        uint32_t mask4;
+        uint32_t mask5;
+    };
+
+    /*
+     * 功能：推导 merge-HWC 变体 ConCProcVF 的公共入口参数。
+     * 说明：内容与原两处内联推导逐行等价，仅收编为唯一实现，不改变任何取值与计算顺序。
+     *       argmax 下标类型（int32/int64）差异仍由各变体模板参数 T2 决定。
+     */
+    template <typename ArgmaxT>
+    __aicore__ inline void PrepareMergeHwcProcParams(MergeHwcProcParams& p) const
+    {
+        p.nOutputActual = static_cast<uint16_t>(nOutputActual_);
+        p.hOutputActual = hOutputActual_;
+        p.wOutputActual = wOutputActual_;
+
+        p.curHIndex = hAxisIndex_ * hOutputInner_;
+        p.curWIndex = wAxisIndex_ * wOutputInner_;
+
+        p.hArgmaxActual = hArgmaxActual_;
+        p.wArgmaxActual = wArgmaxActual_;
+        p.cOutputActual = cOutputActual_;
+        p.cOutputAligned = cOutputAligned_;
+
+        p.computeSizeT2 = V_REG_SIZE / sizeof(ArgmaxT);
+        p.concurrencyCount = p.computeSizeT2 / p.cOutputActual;
+
+        p.hProBatchSize = curHProBatchSize_;
+        p.wProBatchSize = curWProBatchSize_;
+
+        p.wOutput = wOutput_;
+
+        p.wFullBatchCount = p.wArgmaxActual / p.wProBatchSize;
+        p.hFullBatchCount = p.hArgmaxActual / p.hProBatchSize;
+        p.wRemainTail = p.wArgmaxActual % p.wProBatchSize;
+
+        p.hConcurrentCount = p.concurrencyCount / p.wFullBatchCount;
+
+        p.blockConcurrentCount = p.hFullBatchCount / p.hConcurrentCount;
+        p.hRemain = p.hArgmaxActual - p.blockConcurrentCount * p.hConcurrentCount * p.hProBatchSize;
+
+        p.hRemainBatchCount = p.hRemain / p.hProBatchSize;
+        p.hRemainTail = p.hRemain - p.hRemainBatchCount * p.hProBatchSize;
+
+        p.mask0 = p.wFullBatchCount * p.hConcurrentCount * p.cOutputActual;
+        p.mask1 = 1 * p.hConcurrentCount * p.cOutputActual;
+        p.mask2 = p.wFullBatchCount * p.hRemainBatchCount * p.cOutputActual;
+        p.mask3 = 1 * p.hRemainBatchCount * p.cOutputActual;
+        p.mask4 = p.wFullBatchCount * p.cOutputActual;
+        p.mask5 = 1 * p.cOutputActual;
+    }
+
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
 

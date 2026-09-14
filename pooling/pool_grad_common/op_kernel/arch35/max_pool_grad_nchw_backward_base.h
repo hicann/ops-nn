@@ -83,36 +83,8 @@ template <typename T1, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::ParseTilingData(
     const MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData)
 {
-    hArgmax_ = tilingData.hArgmax;
-    wArgmax_ = tilingData.wArgmax;
-    hOutput_ = tilingData.hOutput;
-    wOutput_ = tilingData.wOutput;
-    kernelH_ = tilingData.hKernel;
-    kernelW_ = tilingData.wKernel;
-    strideH_ = tilingData.hStride;
-    strideW_ = tilingData.wStride;
-    padH_ = tilingData.padH;
-    padW_ = tilingData.padW;
-    dilationH_ = tilingData.dilationH;
-    dilationW_ = tilingData.dilationW;
-    highAxisInner_ = tilingData.highAxisInner;
-    highAxisTail_ = tilingData.highAxisTail;
-    highAxisOuter_ = tilingData.highAxisOuter;
-    hOutputInner_ = tilingData.hOutputInner;
-    hOutputTail_ = tilingData.hOutputTail;
-    hOutputOuter_ = tilingData.hOutputOuter;
-    wOutputInner_ = tilingData.wOutputInner;
-    wOutputTail_ = tilingData.wOutputTail;
-    wOutputOuter_ = tilingData.wOutputOuter;
-    normalCoreProcessNum_ = tilingData.normalCoreProcessNum;
-    tailCoreProcessNum_ = tilingData.tailCoreProcessNum;
-    usedCoreNum_ = tilingData.usedCoreNum;
+    ParseCommonTilingData(tilingData);
     inputBufferSize_ = tilingData.inputBufferSize;
-    outputBufferSize_ = tilingData.outputBufferSize;
-    gradBufferSize_ = tilingData.gradBufferSize;
-    argmaxBufferSize_ = tilingData.argmaxBufferSize;
-    hProBatchSize_ = tilingData.hProBatchSize;
-    wProBatchSize_ = tilingData.wProBatchSize;
     argmaxPlaneSize_ = hArgmax_ * wArgmax_;
     isOverlap_ = (kernelH_ > strideH_) || (kernelW_ > strideW_);
 }
@@ -120,32 +92,11 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::ParseTil
 template <typename T1, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::ScalarCompute(int64_t loopNum)
 {
-    int64_t baseBlockIdx = blockIdx_ * normalCoreProcessNum_ + loopNum;
-    highAxisIndex_ = baseBlockIdx / (hOutputOuter_ * wOutputOuter_);
-    highAxisActual_ = highAxisIndex_ == (highAxisOuter_ - 1) ? highAxisTail_ : highAxisInner_;
-    int64_t tempTail = baseBlockIdx % (hOutputOuter_ * wOutputOuter_);
-    hAxisIndex_ = tempTail / wOutputOuter_;
-    hOutputActual_ = hAxisIndex_ == (hOutputOuter_ - 1) ? hOutputTail_ : hOutputInner_;
-    wAxisIndex_ = tempTail % wOutputOuter_;
-    wOutputActual_ = wAxisIndex_ == (wOutputOuter_ - 1) ? wOutputTail_ : wOutputInner_;
-    wOutputAligned_ = (wOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
-                      MAX_DATA_NUM_IN_ONE_BLOCK;
-
-    int64_t hArgmaxActualStart = PStart(hAxisIndex_ * hOutputInner_, padH_, kernelH_, dilationH_, strideH_);
-    int64_t hArgmaxActualEnd = PEnd(hAxisIndex_ * hOutputInner_ + hOutputActual_ - 1, padH_, strideH_, hArgmax_);
-    int64_t wArgmaxActualStart = PStart(wAxisIndex_ * wOutputInner_, padW_, kernelW_, dilationW_, strideW_);
-    int64_t wArgmaxActualEnd = PEnd(wAxisIndex_ * wOutputInner_ + wOutputActual_ - 1, padW_, strideW_, wArgmax_);
-    wArgmaxActual_ = wArgmaxActualEnd - wArgmaxActualStart;
-    wArgmaxAligned_ = (wArgmaxActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
-                      MAX_DATA_NUM_IN_ONE_BLOCK;
-    hArgmaxActual_ = hArgmaxActualEnd - hArgmaxActualStart;
+    int64_t hArgmaxActualStart = 0;
+    int64_t wArgmaxActualStart = 0;
+    ScalarComputeCommon(loopNum, MAX_DATA_NUM_IN_ONE_BLOCK, hArgmaxActualStart, wArgmaxActualStart);
     hArgmaxActualStart_ = hArgmaxActualStart;
     wArgmaxActualStart_ = wArgmaxActualStart;
-    curHProBatchSize_ = hProBatchSize_ > hArgmaxActual_ ? hArgmaxActual_ : hProBatchSize_;
-    curWProBatchSize_ = wProBatchSize_ > wArgmaxActual_ ? wArgmaxActual_ : wProBatchSize_;
-    highAxisArgmaxOffset_ = highAxisIndex_ * highAxisInner_ * argmaxPlaneSize_;
-    hAxisArgmaxOffset_ = hArgmaxActualStart * wArgmax_;
-    wAxisArgmaxOffset_ = wArgmaxActualStart;
 }
 
 template <typename T1, const uint32_t IS_CHECK_RANGE>

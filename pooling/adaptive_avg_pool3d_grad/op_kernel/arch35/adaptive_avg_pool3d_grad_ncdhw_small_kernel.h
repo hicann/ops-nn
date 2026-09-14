@@ -34,7 +34,7 @@ constexpr uint64_t TRANS_ADDR_LEN = 16;
 constexpr uint64_t TRANS_LEN_B32 = 8;
 
 template <typename T, typename INDEX>
-class AdaptiveAvgPool3dGradNCDHWSmallKernel {
+class AdaptiveAvgPool3dGradNCDHWSmallKernel : protected PoolUtils::Fields::AdaptiveAvgPool3dGradNcdhwFields {
 public:
     __aicore__ inline AdaptiveAvgPool3dGradNCDHWSmallKernel() {}
 
@@ -74,62 +74,14 @@ private:
     GlobalTensor<T> gradInputGm_;
     GlobalTensor<T> yGm_;
 
-    uint32_t blockIdx_ = 0;
+    // 公共轴切分 / 偏移字段已收编至 PoolUtils::Fields::AdaptiveAvgPool3dGradNcdhwFields，此处仅保留本 kernel 特有字段。
     int64_t curLoopNum_ = 0;
-
-    int64_t dOutput_ = 1;
-    int64_t hOutput_ = 1;
-    int64_t wOutput_ = 1;
-
-    int64_t dGradInput_ = 1;
-    int64_t hGradInput_ = 1;
-    int64_t wGradInput_ = 1;
-
-    int64_t highAxisInner_ = 1;
-    int64_t highAxisTail_ = 1;
-    int64_t highAxisOuter_ = 1;
-    int64_t highAxisActual_ = 1;
-
-    int64_t dOutputInner_ = 1;
-    int64_t dOutputTail_ = 1;
-    int64_t dOutputOuter_ = 1;
-    int64_t dOutputActual_ = 1;
-
-    int64_t hOutputInner_ = 1;
-    int64_t hOutputTail_ = 1;
-    int64_t hOutputOuter_ = 1;
-    int64_t hOutputActual_ = 1;
-
-    int64_t wOutputInner_ = 1;
-    int64_t wOutputTail_ = 1;
-    int64_t wOutputOuter_ = 1;
-    int64_t wOutputActual_ = 1;
-
-    int64_t normalCoreProcessNum_ = 1;
-    int64_t tailCoreProcessNum_ = 1;
-    int64_t curCoreProcessNum_ = 1;
-    int64_t usedCoreNum_ = 1;
 
     int64_t inputQueBufferSize_ = 1;
     int64_t transQueBufferSize_ = 1;
     int64_t transOutQueBufferSize_ = 1;
 
-    int64_t highAxisIndex_ = 0;
-    int64_t hAxisIndex_ = 0;
-    int64_t wAxisIndex_ = 0;
-    int64_t dAxisIndex_ = 0;
-
-    int64_t hGradInputActual_ = 0;
-    int64_t dGradInputActual_ = 0;
-    int64_t wGradInputActual_ = 0;
-
-    int64_t gradInputPlaneSize_ = 0;
     int64_t outputPlaneSize_ = 0;
-
-    int64_t highAxisGradInputOffset_ = 0;
-    int64_t hAxisGradInputOffset_ = 0;
-    int64_t dAxisGradInputOffset_ = 0;
-    int64_t wAxisGradInputOffset_ = 0;
 
     int64_t dStLeftCornerIdx_ = 0;
     int64_t hStLeftCornerIdx_ = 0;
