@@ -86,8 +86,8 @@ int main()
     void* outDeviceAddr = nullptr;
     aclTensor* self = nullptr;
     aclTensor* out = nullptr;
-    std::vector<float> selfHostData = {0,    1.123,  -2.001, 303.45,    40009, -50.1234, 60.666, -7.6543,
-                                       8000, -9.009, 1024,   -11.23345, 12,    1356,     -14.99, -15.34023};
+    std::vector<float> selfHostData = {-0.95, -0.5, -0.1, 0.0,  0.1,  0.3, 0.5,  0.7,
+                                       0.9,   0.99, -0.3, 0.25, -0.8, 0.6, -0.2, 0.45};
     std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // 创建self aclTensor
