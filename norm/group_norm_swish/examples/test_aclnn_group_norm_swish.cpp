@@ -109,7 +109,7 @@ int main()
     std::vector<float> rstdOutHostData = {2.0, 2};
 
     int64_t numGroups = 1;
-    double eps = 0.00001;
+    double eps = 1e-5;
     bool activateSwish = true;
     double scale = 1.0;
     char* dataFormatOptional = "NCHW";

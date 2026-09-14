@@ -49,7 +49,7 @@ aclnnStatus aclnnReluV3(
   |----------------------------|-------|-----------------------------|--------------|-----------------------------------------|---------|-----------|-----------|
   | x（aclTensor *）             | 输入    | 待进行ReluV3计算的入参，公式中的$x$。     | -            | FLOAT16、FLOAT、INT32、INT8、UINT8、BFLOAT16 | NC1HWC0 | 5         | √         |
   | yOut（aclTensor *）          | 输出    | 待进行ReluV3计算的出参，公式中的$y$。     | shape需要与x一致。 | FLOAT16、FLOAT、INT32、INT8、UINT8、BFLOAT16 | NC1HWC0 | 5         | √         |
-  | maskOut（aclTensor *）       | 输出    | 待进行ReluV3计算的出参，公式中的$mask$。  | shape需要与x一致。 | UINT8                                   | ND      | 5         | √         |
+  | maskOut（aclTensor *）       | 输出    | 待进行ReluV3计算的出参，公式中的$mask$。  | 除最后一维外与x一致，最后一维为(x最后一维+7)/8（按位打包，向上取整）。 | UINT8                                   | ND      | 5         | √         |
   | workspaceSize（uint64_t *）  | 输出    | 返回需要在Device侧申请的workspace大小。 | -            | -                                       | -       | -         | -         |
   | executor（aclOpExecutor **） | 输出    | 返回op执行器，包含了算子计算流程。          | -            | -                                       | -       | -         | -         |
 
@@ -82,7 +82,7 @@ aclnnStatus aclnnReluV3(
           <td>x和yOut的数据类型不相同。</td>
       </tr>
       <tr>
-          <td>x、yOut、maskOut的shape不是5维，或者shape不一致。</td>
+          <td>x、yOut的shape不是5维或不一致，或者maskOut的shape不符合要求。</td>
       </tr>
       </tbody>
   </table>
@@ -198,7 +198,8 @@ int main() {
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {1, 1, 1, 1, 16};
     std::vector<int64_t> yOutShape = {1, 1, 1, 1, 16};
-    std::vector<int64_t> maskOutShape = {1, 1, 1, 1, 2};
+    std::vector<int64_t> maskOutShape = xShape;
+    maskOutShape.back() = (xShape.back() + 7) / 8;
     void* xDeviceAddr = nullptr;
     void* yOutDeviceAddr = nullptr;
     void* maskOutDeviceAddr = nullptr;
@@ -207,7 +208,7 @@ int main() {
     aclTensor* maskOut = nullptr;
     std::vector<float> xHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<float> yOutHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    std::vector<uint8_t> maskOutHostData = {0, 0};
+    std::vector<uint8_t> maskOutHostData(GetShapeSize(maskOutShape), 0);
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);

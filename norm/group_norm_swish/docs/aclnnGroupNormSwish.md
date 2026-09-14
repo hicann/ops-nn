@@ -157,7 +157,7 @@ aclnnStatus aclnnGroupNormSwish(
        <td>eps（double）</td>
        <td>输入</td>
        <td>防止产生除0的偏移，yOut和rstdOut计算公式中的eps值。</td>
-       <td>建议值1.0。</td>
+       <td>建议值1e-5。</td>
        <td>-</td>
        <td>-</td>
        <td>-</td>
@@ -411,7 +411,7 @@ int main() {
   std::vector<float> rstdOutHostData = {2.0, 2};
 
   int64_t numGroups = 1;
-  double eps = 0.00001;
+  double eps = 1e-5;
   bool activateSwish = true;
   double scale = 1.0;
   char* dataFormatOptional = "NCHW";

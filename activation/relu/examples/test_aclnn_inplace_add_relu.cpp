@@ -152,6 +152,7 @@ int main()
     aclrtFree(outDeviceAddr);
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);
+        workspaceAddr = nullptr;
     }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);

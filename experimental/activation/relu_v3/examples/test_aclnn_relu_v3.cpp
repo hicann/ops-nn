@@ -97,7 +97,8 @@ int main()
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {1, 1, 1, 1, 16};
     std::vector<int64_t> yOutShape = {1, 1, 1, 1, 16};
-    std::vector<int64_t> maskOutShape = {1, 1, 1, 1, 2};
+    std::vector<int64_t> maskOutShape = xShape;
+    maskOutShape.back() = (xShape.back() + 7) / 8;
     void* xDeviceAddr = nullptr;
     void* yOutDeviceAddr = nullptr;
     void* maskOutDeviceAddr = nullptr;
@@ -106,7 +107,7 @@ int main()
     aclTensor* maskOut = nullptr;
     std::vector<float> xHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<float> yOutHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    std::vector<uint8_t> maskOutHostData = {0, 0};
+    std::vector<uint8_t> maskOutHostData(GetShapeSize(maskOutShape), 0);
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
