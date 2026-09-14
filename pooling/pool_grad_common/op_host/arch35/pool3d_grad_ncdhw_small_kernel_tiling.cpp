@@ -16,6 +16,7 @@
 #include "platform/platform_info.h"
 #include "op_host/tiling_templates_registry.h"
 #include "pool3d_grad_ncdhw_small_kernel_tiling.h"
+#include "pool_grad_tiling_split_helper.h"
 #include "ascendc/host_api/tiling/template_argument.h"
 
 namespace optiling {
@@ -55,20 +56,9 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingCont
         inputData->wPadBack != 0 || inputData->dPadBack != 0) {
         baseData.isPad = 1;
     }
-    baseData.dProBatchSize = 1;
-    if (inputData->dKernel > inputData->dStride) {
-        baseData.dProBatchSize = Ops::Base::CeilDiv(inputData->dKernel, inputData->dStride);
-    }
-
-    baseData.hProBatchSize = 1;
-    if (inputData->hKernel > inputData->hStride) {
-        baseData.hProBatchSize = Ops::Base::CeilDiv(inputData->hKernel, inputData->hStride);
-    }
-
-    baseData.wProBatchSize = 1;
-    if (inputData->wKernel > inputData->wStride) {
-        baseData.wProBatchSize = Ops::Base::CeilDiv(inputData->wKernel, inputData->wStride);
-    }
+    baseData.dProBatchSize = PoolGradTiling::CalcProBatchSize(inputData->dKernel, inputData->dStride);
+    baseData.hProBatchSize = PoolGradTiling::CalcProBatchSize(inputData->hKernel, inputData->hStride);
+    baseData.wProBatchSize = PoolGradTiling::CalcProBatchSize(inputData->wKernel, inputData->wStride);
 
     baseData.isOverlap = 0;
     if (baseData.wProBatchSize != 1 || baseData.hProBatchSize != 1 || baseData.dProBatchSize != 1) {
@@ -133,130 +123,50 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetUBSize()
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitNC()
 {
-    splitData.wOutputInner = inputData->wX;
-    splitData.hOutputInner = inputData->hX;
     splitData.dOutputInner = inputData->dX;
-    splitData.highAxisInner = Ops::Base::CeilDiv(baseData.inputNCSize, baseData.coreUsedForBestPerformance);
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        return true;
-    }
-
-    splitData.highAxisInner = 1;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = baseData.inputNCSize;
-        int64_t bestSplit = 1;
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.highAxisInner = mid;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.highAxisInner = bestSplit;
-        return true;
-    } else {
-        return false;
-    }
+    PoolGradTiling::PoolGradNchwDims dims{inputData->hX, inputData->wX, inputData->hStride, inputData->wStride};
+    return PoolGradTiling::TrySplitNc(splitData, dims, baseData.inputNCSize, baseData.coreUsedForBestPerformance,
+                                      *this);
 }
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignD()
 {
+    return TrySplitAlignedAxis(&Pool3DGradNCDHWSplitInfo::dOutputInner, inputData->dX, inputData->dStride,
+                               &Pool3DGradNCDHWSplitInfo::hOutputInner, inputData->hX,
+                               &Pool3DGradNCDHWSplitInfo::wOutputInner, inputData->wX);
+}
+
+bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignedAxis(int64_t Pool3DGradNCDHWSplitInfo::*axisInner,
+                                                                 int64_t axisX, int64_t axisStride,
+                                                                 int64_t Pool3DGradNCDHWSplitInfo::*otherInnerA,
+                                                                 int64_t otherValA,
+                                                                 int64_t Pool3DGradNCDHWSplitInfo::*otherInnerB,
+                                                                 int64_t otherValB)
+{
     splitData.highAxisInner = 1;
-    splitData.hOutputInner = inputData->hX;
-    splitData.wOutputInner = inputData->wX;
-    int64_t halfInput = inputData->dX / 2;
-    splitData.dOutputInner = inputData->dStride;
+    splitData.*otherInnerA = otherValA;
+    splitData.*otherInnerB = otherValB;
+    splitData.*axisInner = axisStride;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(halfInput, inputData->dStride);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.dOutputInner = mid * inputData->dStride;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.dOutputInner = bestSplit * inputData->dStride;
+        splitData.*axisInner = PoolGradTiling::SearchMaxSplit(*this, splitData, axisInner, axisStride,
+                                                              Ops::Base::CeilDiv(axisX / 2, axisStride));
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignH()
 {
-    splitData.highAxisInner = 1;
-    splitData.dOutputInner = inputData->dX;
-    splitData.wOutputInner = inputData->wX;
-
-    splitData.hOutputInner = inputData->hStride;
-    int64_t halfInput = inputData->hX / 2;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(halfInput, inputData->hStride);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.hOutputInner = mid * inputData->hStride;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.hOutputInner = bestSplit * inputData->hStride;
-        return true;
-    } else {
-        return false;
-    }
+    return TrySplitAlignedAxis(&Pool3DGradNCDHWSplitInfo::hOutputInner, inputData->hX, inputData->hStride,
+                               &Pool3DGradNCDHWSplitInfo::dOutputInner, inputData->dX,
+                               &Pool3DGradNCDHWSplitInfo::wOutputInner, inputData->wX);
 }
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignW()
 {
-    splitData.highAxisInner = 1;
-    splitData.hOutputInner = inputData->hStride;
-    splitData.dOutputInner = inputData->dStride;
-    splitData.wOutputInner = inputData->wStride;
-    int64_t halfInput = inputData->wX / 2;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        int64_t left = 1;
-        int64_t right = Ops::Base::CeilDiv(halfInput, inputData->wStride);
-        int64_t bestSplit = 1;
-
-        while (left <= right) {
-            int64_t mid = left + (right - left) / 2;
-            splitData.wOutputInner = mid * inputData->wStride;
-
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-                bestSplit = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-
-        splitData.wOutputInner = bestSplit * inputData->wStride;
-        return true;
-    } else {
-        return false;
-    }
+    return TrySplitAlignedAxis(&Pool3DGradNCDHWSplitInfo::wOutputInner, inputData->wX, inputData->wStride,
+                               &Pool3DGradNCDHWSplitInfo::hOutputInner, inputData->hStride,
+                               &Pool3DGradNCDHWSplitInfo::dOutputInner, inputData->dStride);
 }
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::SplitUnalignDHW()
@@ -333,21 +243,14 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
-    int64_t tempWOutputTail = inputData->wX % splitData.wOutputInner;
-    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
-
-    splitData.hOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
-    int64_t tempHOutputTail = inputData->hX % splitData.hOutputInner;
-    splitData.hOutputTail = tempHOutputTail == 0 ? splitData.hOutputInner : tempHOutputTail;
-
-    splitData.dOutputOuter = Ops::Base::CeilDiv(inputData->dX, splitData.dOutputInner);
-    int64_t tempDOutputTail = inputData->dX % splitData.dOutputInner;
-    splitData.dOutputTail = tempDOutputTail == 0 ? splitData.dOutputInner : tempDOutputTail;
-
-    splitData.highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-    int64_t tempHighAxisTail = baseData.inputNCSize % splitData.highAxisInner;
-    splitData.highAxisTail = tempHighAxisTail == 0 ? splitData.highAxisInner : tempHighAxisTail;
+    PoolGradTiling::CalcAxisOuterTail(inputData->wX, splitData.wOutputInner, splitData.wOutputOuter,
+                                      splitData.wOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(inputData->hX, splitData.hOutputInner, splitData.hOutputOuter,
+                                      splitData.hOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(inputData->dX, splitData.dOutputInner, splitData.dOutputOuter,
+                                      splitData.dOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(baseData.inputNCSize, splitData.highAxisInner, splitData.highAxisOuter,
+                                      splitData.highAxisTail);
 }
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::DoBlockTiling()

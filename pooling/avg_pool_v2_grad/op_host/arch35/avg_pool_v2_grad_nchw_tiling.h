@@ -24,6 +24,7 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 #include "avg_pool_v2_grad_tiling_base.h"
+#include "../../../pool_grad_common/op_host/arch35/pool_grad_tiling_split_helper.h"
 #include "../../op_kernel/arch35/avg_pool_v2_grad_tiling_data.h"
 #include "../../op_kernel/arch35/avg_pool_v2_grad_tiling_key.h"
 
@@ -105,6 +106,9 @@ protected:
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
+
+private:
+    PoolGradTiling::PoolGradNchwDims GetNchwDims() const;
 
 public:
     AvgPoolV2GradInputInfo inputData;

@@ -29,7 +29,8 @@ using PoolUtils::Index::Gen3DIndexOneNhwc;
 using PoolUtils::Index::GenInitial3DIndicesNhwc;
 using PoolUtils::Index::IndexConvNhwc;
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0, int32_t VER = 0>
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0, int32_t VER = 0,
+          typename DerivedT = void>
 class MaxPoolGradWithArgmaxKernelNHWCBase {
 public:
     __aicore__ inline MaxPoolGradWithArgmaxKernelNHWCBase(void){};
@@ -42,6 +43,12 @@ public:
     __aicore__ inline void CopyIn();
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
+    // 公共生命周期流程 (CRTP 模板方法): 派生类通过继承获得 Compute/ProcessPerLoop/Process,
+    // 并提供同签名入口 ConCProcVF(yAddr, gradAddr, argmaxAddr, helpAddr)。
+    // Compute 内经 static_cast<DerivedT*> 编译期派发到派生类实现, 无虚函数开销。
+    __aicore__ inline void Compute();
+    __aicore__ inline void ProcessPerLoop();
+    __aicore__ inline void Process();
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradQue_;
@@ -131,8 +138,8 @@ public:
     constexpr static int64_t VREG_LENGTH_DATA_NUM_T2 = platform::GetVRegSize() / sizeof(T2);
 };
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::ParseTilingData(
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::ParseTilingData(
     const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData)
 {
     hArgmax_ = tilingData.hArgmax;
@@ -181,8 +188,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     curWProBatchSize_ = wProBatchSize_;
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::Init(
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::Init(
     GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
     const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData)
 {
@@ -207,8 +214,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     pipe_.InitBuffer(helpBuf_, HELP_BUFFER);
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::ScalarCompute(
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::ScalarCompute(
     int64_t loopNum)
 {
     int64_t baseBlockIdx = blockIdx_ * normalCoreProcessNum_ + loopNum;
@@ -244,8 +251,9 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     cAxisArgmaxOffset_ = cAxisIndex_ * cOutputInner_;
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::ProcessNoArgmaxBlock()
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void
+MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::ProcessNoArgmaxBlock()
 {
     uint32_t calcCount = static_cast<uint32_t>(outputBufferSize_) / sizeof(T1);
     LocalTensor<T1> yLocal = outputQue_.AllocTensor<T1>();
@@ -255,8 +263,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     return;
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::CopyIn()
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::CopyIn()
 {
     LocalTensor<T1> gradLocal = gradQue_.AllocTensor<T1>();
     LocalTensor<T2> argmaxLocal = argmaxQue_.AllocTensor<T2>();
@@ -301,8 +309,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     argmaxQue_.EnQue(argmaxLocal);
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::CopyOut()
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::CopyOut()
 {
     LocalTensor<T1> yLocal = outputQue_.DeQue<T1>();
 
@@ -330,6 +338,60 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     DataCopyPad(yGm_[outputGmOffset], yLocal, copyOutParamT1);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
     outputQue_.FreeTensor(yLocal);
+}
+
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::Compute()
+{
+    uint32_t calCount = outputBufferSize_ / sizeof(computeType);
+    LocalTensor<computeType> yLocal = outputQue_.AllocTensor<computeType>();
+    Duplicate(yLocal, computeType(0), calCount);
+
+    LocalTensor<T1> gradLocal = gradQue_.DeQue<T1>();
+    LocalTensor<T2> argmaxLocal = argmaxQue_.DeQue<T2>();
+
+    __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
+    __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
+    __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+
+    LocalTensor<uint32_t> helpTensor = helpBuf_.Get<uint32_t>();
+    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
+
+    static_cast<DerivedT*>(this)->ConCProcVF(yAddr, gradAddr, argmaxAddr, helpAddr);
+
+    if constexpr (std::negation<std::is_same<T1, float>>::value) {
+        Cast(yLocal.ReinterpretCast<T1>(), yLocal, RoundMode::CAST_RINT, calCount);
+    }
+
+    outputQue_.EnQue(yLocal);
+    gradQue_.FreeTensor(gradLocal);
+    argmaxQue_.FreeTensor(argmaxLocal);
+}
+
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::ProcessPerLoop()
+{
+    if (hArgmaxActual_ <= 0 || wArgmaxActual_ <= 0) {
+        ProcessNoArgmaxBlock(); // ceilMode为false时，最后的尾块可能是这种情况
+        return;
+    }
+
+    CopyIn();
+    Compute();
+    CopyOut();
+}
+
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER, DerivedT>::Process()
+{
+    if (blockIdx_ >= usedCoreNum_) {
+        return;
+    }
+
+    for (int64_t loopNum = 0; loopNum < curCoreProcessNum_; loopNum++) {
+        ScalarCompute(loopNum);
+        ProcessPerLoop();
+    }
 }
 } // namespace MaxPoolGradWithArgmaxNHWCNameSpace
 #endif // MAX_POOL_GRAD_WITH_ARGMAX__NHWC_KERNEL_H_

@@ -72,20 +72,9 @@ void AvgPoolV2GradCommonNHWCTiling::InitializationVars()
         baseData.isPad = 1;
     }
 
-    baseData.hProBatchSize = 1;
-    if (inputData.kernelSize[H_DIM] > inputData.stride[H_DIM]) {
-        baseData.hProBatchSize = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM], inputData.stride[H_DIM]);
-    }
-
-    baseData.wProBatchSize = 1;
-    if (inputData.kernelSize[W_DIM] > inputData.stride[W_DIM]) {
-        baseData.wProBatchSize = Ops::Base::CeilDiv(inputData.kernelSize[W_DIM], inputData.stride[W_DIM]);
-    }
-
-    baseData.isOverlap = 0;
-    if (baseData.wProBatchSize != 1 || baseData.hProBatchSize != 1) {
-        baseData.isOverlap = 1;
-    }
+    baseData.hProBatchSize = PoolGradTiling::CalcProBatchSize(inputData.kernelSize[H_DIM], inputData.stride[H_DIM]);
+    baseData.wProBatchSize = PoolGradTiling::CalcProBatchSize(inputData.kernelSize[W_DIM], inputData.stride[W_DIM]);
+    baseData.isOverlap = (baseData.wProBatchSize != 1 || baseData.hProBatchSize != 1) ? 1 : 0;
 }
 
 uint64_t AvgPoolV2GradCommonNHWCTiling::GetTilingKey() const
@@ -123,9 +112,7 @@ void AvgPoolV2GradCommonNHWCTiling::DoBufferCalculate()
 }
 bool AvgPoolV2GradCommonNHWCTiling::IsMeetTargetCoreNum() const
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     return PoolGradTiling::IsMeetTargetCoreNumNhwc(splitData, dims, baseData.coreUsedForBestPerformance);
 }
 bool AvgPoolV2GradCommonNHWCTiling::IsMeetUBSize()
@@ -139,37 +126,27 @@ bool AvgPoolV2GradCommonNHWCTiling::IsMeetUBSize()
 }
 bool AvgPoolV2GradCommonNHWCTiling::TrySplitN()
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     return PoolGradTiling::TrySplitN(splitData, dims, baseData.coreUsedForBestPerformance, *this);
 }
 bool AvgPoolV2GradCommonNHWCTiling::TrySplitAlignH()
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     return PoolGradTiling::TrySplitAlignH(splitData, dims, *this);
 }
 bool AvgPoolV2GradCommonNHWCTiling::TrySplitAlignW()
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     return PoolGradTiling::TrySplitAlignW(splitData, dims, *this);
 }
 bool AvgPoolV2GradCommonNHWCTiling::TrySplitAlignC()
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     return PoolGradTiling::TrySplitAlignC(splitData, dims, baseData.moveDataNumCacheLine, *this);
 }
 void AvgPoolV2GradCommonNHWCTiling::SplitUnalignHWC()
 {
-    PoolGradTiling::PoolGradNhwcDims dims{inputData.batches,           inputData.channels,
-                                          inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
-                                          inputData.stride[H_DIM],     inputData.stride[W_DIM]};
+    PoolGradTiling::PoolGradNhwcDims dims = GetNhwcDims();
     PoolGradTiling::SplitUnalignHwc(splitData, dims, baseData.isPad, baseData.isOverlap, baseData.moveDataNumCacheLine,
                                     baseData.proDataNumInOneBeat, *this);
 }
@@ -225,25 +202,25 @@ void AvgPoolV2GradCommonNHWCTiling::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData.inputShape[W_DIM], splitData.wOutputInner);
-    int64_t tempWOutputTail = inputData.inputShape[W_DIM] % splitData.wOutputInner;
-    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
-
-    splitData.hOutputOuter = Ops::Base::CeilDiv(inputData.inputShape[H_DIM], splitData.hOutputInner);
-    int64_t tempHOutputTail = inputData.inputShape[H_DIM] % splitData.hOutputInner;
-    splitData.hOutputTail = tempHOutputTail == 0 ? splitData.hOutputInner : tempHOutputTail;
-
-    splitData.nOutputOuter = Ops::Base::CeilDiv(inputData.batches, splitData.nOutputInner);
-    int64_t tempNOutputTail = inputData.batches % splitData.nOutputInner;
-    splitData.nOutputTail = tempNOutputTail == 0 ? splitData.nOutputInner : tempNOutputTail;
-
-    splitData.cOutputOuter = Ops::Base::CeilDiv(inputData.channels, splitData.cOutputInner);
-    int64_t tempCOutputTail = inputData.channels % splitData.cOutputInner;
-    splitData.cOutputTail = tempCOutputTail == 0 ? splitData.cOutputInner : tempCOutputTail;
+    PoolGradTiling::CalcAxisOuterTail(inputData.inputShape[W_DIM], splitData.wOutputInner, splitData.wOutputOuter,
+                                      splitData.wOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(inputData.inputShape[H_DIM], splitData.hOutputInner, splitData.hOutputOuter,
+                                      splitData.hOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(inputData.batches, splitData.nOutputInner, splitData.nOutputOuter,
+                                      splitData.nOutputTail);
+    PoolGradTiling::CalcAxisOuterTail(inputData.channels, splitData.cOutputInner, splitData.cOutputOuter,
+                                      splitData.cOutputTail);
 }
 void AvgPoolV2GradCommonNHWCTiling::DoBlockTiling()
 {
     PoolGradTiling::DoBlockTilingNhwc(splitData, baseData.totalCoreNum);
+}
+
+PoolGradTiling::PoolGradNhwcDims AvgPoolV2GradCommonNHWCTiling::GetNhwcDims() const
+{
+    return PoolGradTiling::PoolGradNhwcDims{inputData.batches,           inputData.channels,
+                                            inputData.inputShape[H_DIM], inputData.inputShape[W_DIM],
+                                            inputData.stride[H_DIM],     inputData.stride[W_DIM]};
 }
 void AvgPoolV2GradCommonNHWCTiling::PrintBaseData() const
 {

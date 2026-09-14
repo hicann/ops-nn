@@ -18,6 +18,7 @@
 
 #include "../../op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 #include "max_pool_grad_with_argmax_tiling_common.h"
+#include "pool_grad_tiling_common_base.h"
 
 namespace optiling {
 static constexpr int64_t T3_INT64 = 10;
@@ -71,36 +72,35 @@ struct MaxPoolGradWithArgmaxNHWCSplitInfo {
     int64_t totalBufferSize{0};
 };
 
-class MaxPoolGradWithArgmaxNHWCTilingCommon {
+class MaxPoolGradWithArgmaxNHWCTilingCommon
+    : public PoolGradTilingCommonBase<MaxPoolGradWithArgmaxNHWCBaseInfo, MaxPoolGradWithArgmaxNHWCSplitInfo,
+                                      MaxPoolGradWithArgmaxInputInfoCommon> {
 public:
     bool IsMeetTargetCoreNum() const;
-    bool IsMeetUBSize();
-    void DynamicAdjustmentWH();
-    MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input) {}
+    MaxPoolGradWithArgmaxNHWCTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input)
+        : PoolGradTilingCommonBase<MaxPoolGradWithArgmaxNHWCBaseInfo, MaxPoolGradWithArgmaxNHWCSplitInfo,
+                                   MaxPoolGradWithArgmaxInputInfoCommon>(input)
+    {}
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
-    ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);
     ge::graphStatus PostTiling(gert::TilingContext* context_);
     MaxPoolGradWithArgmaxNHWCSplitInfo GetSplitData();
     MaxPoolGradWithArgmaxNHWCBaseInfo GetBaseData();
     bool CheckUBSize();
 
 private:
-    void DoUBTiling();
+    void DoUBTiling() override;
     bool TrySplitN();
     bool TrySplitAlignH();
     bool TrySplitAlignW();
     bool TrySplitAlignC();
     void SplitUnalignHWC();
     void SearchBestTiling();
-    void SetTilingData(gert::TilingContext* context, uint64_t key);
-    void PrintBaseData() const;
-    void PrintSplitData() const;
-    void DoBlockTiling();
-    void DoBufferCalculate();
-
-    MaxPoolGradWithArgmaxNHWCBaseInfo baseData;
-    MaxPoolGradWithArgmaxNHWCSplitInfo splitData;
-    MaxPoolGradWithArgmaxInputInfoCommon* inputData;
+    void SetTilingData(gert::TilingContext* context, uint64_t key) override;
+    void PrintBaseData() const override;
+    void PrintSplitData() const override;
+    void DoBlockTiling() override;
+    void DoBufferCalculate() override;
+    PoolGradTiling::PoolGradNhwcDims GetNhwcDims() const;
 };
 
 } // namespace optiling

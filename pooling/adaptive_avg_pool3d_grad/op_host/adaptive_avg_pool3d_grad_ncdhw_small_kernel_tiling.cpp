@@ -65,27 +65,8 @@ static inline int64_t ShrinkInnerStrict(int64_t total, int64_t curInner)
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::InitializationVars()
 {
-    gradInputN = inputData.nGrad;
-    gradInputC = inputData.cGrad;
-    gradInputD = inputData.dGrad;
-    gradInputH = inputData.hGrad;
-    gradInputW = inputData.wGrad;
-
-    gradOutputN = inputData.nX;
-    gradOutputC = inputData.cX;
-    gradOutputD = inputData.dX;
-    gradOutputH = inputData.hX;
-    gradOutputW = inputData.wX;
-
-    baseData.vRegSize = Ops::Base::GetVRegSize(context_);
-    baseData.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-    baseData.inputBytes = inputData.inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE;
-    baseData.availableUb = ubSize_ - UB_RESVERVED_SIZE - UB_TEMP_BUFF_SIZE;
-    baseData.totalCoreNum = coreNum_;
-    baseData.coreUsedForBestPerformance = baseData.totalCoreNum;
-    baseData.maxDataNumInOneBlock = baseData.ubBlockSize / baseData.inputBytes;
+    InitCommonVars();
     baseData.proDataNumInOneBeatT2 = baseData.vRegSize / baseData.inputBytes;
-    baseData.inputNCSize = gradOutputN * gradOutputC;
 }
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::DoBufferCalculate()
@@ -161,23 +142,6 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     splitData.dOutputInner = 1;
     splitData.hOutputInner = 1;
     splitData.wOutputInner = 1;
-    DoBufferCalculate();
-    return splitData.totalBufferSize <= baseData.availableUb;
-}
-
-bool AdaptiveAvgPool3dGradTilingSmallKernel::IsMeetTargetCoreNum()
-{
-    const int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
-    const int64_t tmpHOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
-    const int64_t tmpDOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
-    const int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-
-    return tmpDOutputOuter * tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >=
-           baseData.coreUsedForBestPerformance;
-}
-
-bool AdaptiveAvgPool3dGradTilingSmallKernel::IsMeetUBSize()
-{
     DoBufferCalculate();
     return splitData.totalBufferSize <= baseData.availableUb;
 }
@@ -470,63 +434,9 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::ApplyCoarseFallback()
     SplitUnalignDHW();
 }
 
-void AdaptiveAvgPool3dGradTilingSmallKernel::DoUBTiling()
-{
-    SearchBestTiling();
-    DoBufferCalculate();
-
-    splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
-    splitData.wOutputTail = (gradOutputW % splitData.wOutputInner == 0) ? splitData.wOutputInner :
-                                                                          (gradOutputW % splitData.wOutputInner);
-
-    splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
-    splitData.hOutputTail = (gradOutputH % splitData.hOutputInner == 0) ? splitData.hOutputInner :
-                                                                          (gradOutputH % splitData.hOutputInner);
-
-    splitData.dOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
-    splitData.dOutputTail = (gradOutputD % splitData.dOutputInner == 0) ? splitData.dOutputInner :
-                                                                          (gradOutputD % splitData.dOutputInner);
-
-    splitData.highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-    splitData.highAxisTail = (baseData.inputNCSize % splitData.highAxisInner == 0) ?
-                                 splitData.highAxisInner :
-                                 (baseData.inputNCSize % splitData.highAxisInner);
-}
-
-void AdaptiveAvgPool3dGradTilingSmallKernel::DoBlockTiling()
-{
-    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
-                                  splitData.dOutputOuter;
-
-    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
-    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
-                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
-}
-
 void AdaptiveAvgPool3dGradTilingSmallKernel::SetTilingData()
 {
-    tilingData->dInput = gradInputD;
-    tilingData->hInput = gradInputH;
-    tilingData->wInput = gradInputW;
-    tilingData->dOutput = gradOutputD;
-    tilingData->hOutput = gradOutputH;
-    tilingData->wOutput = gradOutputW;
-    tilingData->highAxisInner = splitData.highAxisInner;
-    tilingData->highAxisTail = splitData.highAxisTail;
-    tilingData->highAxisOuter = splitData.highAxisOuter;
-    tilingData->dOutputInner = splitData.dOutputInner;
-    tilingData->dOutputTail = splitData.dOutputTail;
-    tilingData->dOutputOuter = splitData.dOutputOuter;
-    tilingData->hOutputInner = splitData.hOutputInner;
-    tilingData->hOutputTail = splitData.hOutputTail;
-    tilingData->hOutputOuter = splitData.hOutputOuter;
-    tilingData->wOutputInner = splitData.wOutputInner;
-    tilingData->wOutputTail = splitData.wOutputTail;
-    tilingData->wOutputOuter = splitData.wOutputOuter;
-    tilingData->normalCoreProcessNum = splitData.normalCoreProcessNum;
-    tilingData->tailCoreProcessNum = splitData.tailCoreProcessNum;
-    tilingData->usedCoreNum = splitData.usedCoreNum;
+    SetCommonTilingData(tilingData);
     tilingData->inputQueBufferSize = splitData.inputQueBufferSize;
     tilingData->transQueBufferSize = splitData.transQueBufferSize;
     tilingData->transOutQueBufferSize = splitData.transOutQueBufferSize;
@@ -592,14 +502,6 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::GetWorkspaceSize()
-{
-    auto workspaces = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = WORKSPACE_SIZE;
-    return ge::GRAPH_SUCCESS;
-}
-
 uint64_t AdaptiveAvgPool3dGradTilingSmallKernel::GetTilingKey() const
 {
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
@@ -614,8 +516,6 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::PostTiling()
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
-
-ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3dGrad, AdaptiveAvgPool3dGradTilingSmallKernel, 20);
 } // namespace optiling
