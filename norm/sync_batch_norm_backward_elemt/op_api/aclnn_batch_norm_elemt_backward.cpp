@@ -283,6 +283,113 @@ static aclnnStatus MeanByCounter(const aclTensor* sumDy, const aclTensor* sumDyX
 }
 }; // namespace
 
+static aclnnStatus PrepareElemtBackwardContiguousTensors(
+    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+    const aclTensor* weight, const aclTensor* sumDy, const aclTensor* sumDyXmu, const aclTensor* counter,
+    aclOpExecutor* executor, const aclTensor*& gradOutContiguous, const aclTensor*& inputContiguous,
+    const aclTensor*& meanContiguous, const aclTensor*& invstdContiguous, const aclTensor*& weightContiguous,
+    const aclTensor*& sumDyContiguous, const aclTensor*& sumDyXmuContiguous, const aclTensor*& counterContiguous)
+{
+    gradOutContiguous = l0op::Contiguous(gradOut, executor);
+    CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    inputContiguous = l0op::Contiguous(input, executor);
+    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    meanContiguous = l0op::Contiguous(mean, executor);
+    CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    invstdContiguous = l0op::Contiguous(invstd, executor);
+    CHECK_RET(invstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    weightContiguous = l0op::Contiguous(weight, executor);
+    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    sumDyContiguous = l0op::Contiguous(sumDy, executor);
+    CHECK_RET(sumDyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    sumDyXmuContiguous = l0op::Contiguous(sumDyXmu, executor);
+    CHECK_RET(sumDyXmuContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    counterContiguous = l0op::Contiguous(counter, executor);
+    CHECK_RET(counterContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 对入参执行cast
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus RunElemtBackwardCore(const aclTensor* gradOutContiguous, const aclTensor* inputContiguous,
+                                        const aclTensor* meanContiguous, const aclTensor* invstdContiguous,
+                                        const aclTensor* weightContiguous, const aclTensor* sumDyContiguous,
+                                        const aclTensor* sumDyXmuContiguous, const aclTensor* counterContiguous,
+                                        size_t dimC, size_t dimNum, aclTensor* gradInput, aclOpExecutor* executor)
+{
+    auto promoteType = GetPromoteType(gradOutContiguous, inputContiguous, meanContiguous, invstdContiguous,
+                                      weightContiguous, sumDyContiguous, sumDyXmuContiguous);
+    auto gradOutCast = l0op::Cast(gradOutContiguous, promoteType, executor);
+    CHECK_RET(gradOutCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto inputCast = l0op::Cast(inputContiguous, promoteType, executor);
+    CHECK_RET(inputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanCast = l0op::Cast(meanContiguous, promoteType, executor);
+    CHECK_RET(meanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto invstdCast = l0op::Cast(invstdContiguous, promoteType, executor);
+    CHECK_RET(invstdCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto weightCast = l0op::Cast(weightContiguous, promoteType, executor);
+    CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto sumDyCast = l0op::Cast(sumDyContiguous, promoteType, executor);
+    CHECK_RET(sumDyCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto sumDyXmuCast = l0op::Cast(sumDyXmuContiguous, promoteType, executor);
+    CHECK_RET(sumDyXmuCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 对sumDy和sumDyXmu求均值
+    const aclTensor* meanDy;
+    const aclTensor* meanDyXmu;
+    auto meanResult = MeanByCounter(sumDyCast, sumDyXmuCast, counterContiguous, &meanDy, &meanDyXmu, executor);
+    CHECK_RET(meanResult == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+
+    // 对参数执行升维和广播
+    auto meanReshape = Reshape(inputCast, meanCast, dimC, dimNum, executor);
+    CHECK_RET(meanReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto invstdReshape = Reshape(inputCast, invstdCast, dimC, dimNum, executor);
+    CHECK_RET(invstdReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto weightReshape = Reshape(inputCast, weightCast, dimC, dimNum, executor);
+    CHECK_RET(weightReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanDyReshape = Reshape(inputCast, meanDy, dimC, dimNum, executor);
+    CHECK_RET(meanDyReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanDyXmuReshape = Reshape(inputCast, meanDyXmu, dimC, dimNum, executor);
+    CHECK_RET(meanDyXmuReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanDyCast = l0op::Cast(meanDyReshape, promoteType, executor);
+    CHECK_RET(meanDyCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto meanDyXmuCast = l0op::Cast(meanDyXmuReshape, promoteType, executor);
+    CHECK_RET(meanDyXmuCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto output = l0op::SyncBatchNormBackwardElemt(gradOutCast, inputCast, meanReshape, invstdReshape, weightReshape,
+                                                   meanDyCast, meanDyXmuCast, executor);
+
+    CHECK_RET(output != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto outputCast = l0op::Cast(output, gradInput->GetDataType(), executor);
+    CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyResult = l0op::ViewCopy(outputCast, gradInput, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
                                                         const aclTensor* mean, const aclTensor* invstd,
                                                         const aclTensor* weight, const aclTensor* sumDy,
@@ -319,100 +426,27 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(const aclTensor* gradOut
     size_t dimNum = input->GetViewShape().GetDimNum();
 
     // 对所有入参执行非连续转连续
-    auto gradOutContiguous = l0op::Contiguous(gradOut, uniqueExecutor.get());
-    CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
-    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanContiguous = l0op::Contiguous(mean, uniqueExecutor.get());
-    CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto invstdContiguous = l0op::Contiguous(invstd, uniqueExecutor.get());
-    CHECK_RET(invstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto sumDyContiguous = l0op::Contiguous(sumDy, uniqueExecutor.get());
-    CHECK_RET(sumDyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto sumDyXmuContiguous = l0op::Contiguous(sumDyXmu, uniqueExecutor.get());
-    CHECK_RET(sumDyXmuContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto counterContiguous = l0op::Contiguous(counter, uniqueExecutor.get());
-    CHECK_RET(counterContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 对入参执行cast
-    auto promoteType = GetPromoteType(gradOutContiguous, inputContiguous, meanContiguous, invstdContiguous,
-                                      weightContiguous, sumDyContiguous, sumDyXmuContiguous);
-    auto gradOutCast = l0op::Cast(gradOutContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(gradOutCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto inputCast = l0op::Cast(inputContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(inputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanCast = l0op::Cast(meanContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(meanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto invstdCast = l0op::Cast(invstdContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(invstdCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto weightCast = l0op::Cast(weightContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto sumDyCast = l0op::Cast(sumDyContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(sumDyCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto sumDyXmuCast = l0op::Cast(sumDyXmuContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(sumDyXmuCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 对sumDy和sumDyXmu求均值
-    const aclTensor* meanDy;
-    const aclTensor* meanDyXmu;
-    auto meanResult = MeanByCounter(sumDyCast, sumDyXmuCast, counterContiguous, &meanDy, &meanDyXmu,
-                                    uniqueExecutor.get());
-    CHECK_RET(meanResult == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-
-    // 对参数执行升维和广播
-    auto meanReshape = Reshape(inputCast, meanCast, dimC, dimNum, uniqueExecutor.get());
-    CHECK_RET(meanReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto invstdReshape = Reshape(inputCast, invstdCast, dimC, dimNum, uniqueExecutor.get());
-    CHECK_RET(invstdReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto weightReshape = Reshape(inputCast, weightCast, dimC, dimNum, uniqueExecutor.get());
-    CHECK_RET(weightReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanDyReshape = Reshape(inputCast, meanDy, dimC, dimNum, uniqueExecutor.get());
-    CHECK_RET(meanDyReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanDyXmuReshape = Reshape(inputCast, meanDyXmu, dimC, dimNum, uniqueExecutor.get());
-    CHECK_RET(meanDyXmuReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanDyCast = l0op::Cast(meanDyReshape, promoteType, uniqueExecutor.get());
-    CHECK_RET(meanDyCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto meanDyXmuCast = l0op::Cast(meanDyXmuReshape, promoteType, uniqueExecutor.get());
-    CHECK_RET(meanDyXmuCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto output = l0op::SyncBatchNormBackwardElemt(gradOutCast, inputCast, meanReshape, invstdReshape, weightReshape,
-                                                   meanDyCast, meanDyXmuCast, uniqueExecutor.get());
-
-    CHECK_RET(output != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto outputCast = l0op::Cast(output, gradInput->GetDataType(), uniqueExecutor.get());
-    CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto viewCopyResult = l0op::ViewCopy(outputCast, gradInput, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 固定写法，获取计算过程中需要使用的workspace大小
+    const aclTensor* gradOutContiguous = nullptr;
+    const aclTensor* inputContiguous = nullptr;
+    const aclTensor* meanContiguous = nullptr;
+    const aclTensor* invstdContiguous = nullptr;
+    const aclTensor* weightContiguous = nullptr;
+    const aclTensor* sumDyContiguous = nullptr;
+    const aclTensor* sumDyXmuContiguous = nullptr;
+    const aclTensor* counterContiguous = nullptr;
+    auto prepRet = PrepareElemtBackwardContiguousTensors(gradOut, input, mean, invstd, weight, sumDy, sumDyXmu, counter,
+                                                         uniqueExecutor.get(), gradOutContiguous, inputContiguous,
+                                                         meanContiguous, invstdContiguous, weightContiguous,
+                                                         sumDyContiguous, sumDyXmuContiguous, counterContiguous);
+    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
+    auto coreRet = RunElemtBackwardCore(gradOutContiguous, inputContiguous, meanContiguous, invstdContiguous,
+                                        weightContiguous, sumDyContiguous, sumDyXmuContiguous, counterContiguous, dimC,
+                                        dimNum, gradInput, uniqueExecutor.get());
+    CHECK_RET(coreRet == ACLNN_SUCCESS, coreRet);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-
 aclnnStatus aclnnBatchNormElemtBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                         const aclrtStream stream)
 {

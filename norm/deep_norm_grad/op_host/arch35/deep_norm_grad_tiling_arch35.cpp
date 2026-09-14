@@ -94,7 +94,7 @@ ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CheckTensorPointers(gert::TilingContext* context)
+ge::graphStatus CheckTensorPointers(const gert::TilingContext* context)
 {
     for (int32_t i = INPUT_DY; i <= INPUT_RSTD; ++i) {
         OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(i));
@@ -107,7 +107,7 @@ ge::graphStatus CheckTensorPointers(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CheckDtypes(gert::TilingContext* context)
+ge::graphStatus CheckDtypes(const gert::TilingContext* context)
 {
     ge::DataType dataType = context->GetInputDesc(INPUT_DY)->GetDataType();
     OP_CHECK_IF(dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16,
@@ -132,7 +132,7 @@ ge::graphStatus CheckDtypes(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MulShapeDim(gert::TilingContext* context, uint64_t& product, int64_t dim)
+ge::graphStatus MulShapeDim(const gert::TilingContext* context, uint64_t& product, int64_t dim)
 {
     OP_CHECK_IF(dim <= 0,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
@@ -228,7 +228,8 @@ ge::graphStatus CheckShapes(gert::TilingContext* context, uint64_t& numRows, uin
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CalcTileLength(gert::TilingContext* context, uint64_t ubSize, uint32_t dtypeSize, uint32_t& tileLength)
+ge::graphStatus CalcTileLength(const gert::TilingContext* context, uint64_t ubSize, uint32_t dtypeSize,
+                               uint32_t& tileLength)
 {
     uint64_t bytesPerElement = DTYPE_QUEUE_COUNT * dtypeSize + FP32_BUFFER_COUNT * sizeof(float);
     uint64_t maxElements = (ubSize - UB_RESERVED_BYTES) / bytesPerElement;

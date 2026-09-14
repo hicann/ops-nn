@@ -67,100 +67,57 @@ static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
     return true;
 }
 
-static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeContext* context)
+static ge::graphStatus HandleUnknownRankShapesV2(gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                                 const gert::Shape* gammaShape, gert::Shape* y1Shape,
+                                                 gert::Shape* y2Shape, gert::Shape* y3Shape, gert::Shape* y4Shape,
+                                                 gert::Shape* outScale1Shape, gert::Shape* outScale2Shape,
+                                                 bool smooth1Exist, bool smooth2Exist,
+                                                 const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen)
 {
-    OP_LOGI(context, "Begin to do InferShape4AddRmsNormDynamicQuantV2");
-
-    // get input shapes
-    const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
-    const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
-
-    // get output shapes
-    gert::Shape* y1Shape = context->GetOutputShape(Y1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
-    gert::Shape* y2Shape = context->GetOutputShape(Y2_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
-    gert::Shape* y3Shape = context->GetOutputShape(Y3_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y3Shape);
-    gert::Shape* y4Shape = context->GetOutputShape(Y4_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y4Shape);
-    gert::Shape* xShape = context->GetOutputShape(X_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-    gert::Shape* outScale1Shape = context->GetOutputShape(OUT_SCALE1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outScale1Shape);
-    gert::Shape* outScale2Shape = context->GetOutputShape(OUT_SCALE2_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outScale2Shape);
-
-    // get optional shapes
-    const gert::Shape* smooth1Shape = context->GetOptionalInputShape(SMOOTH1_IDX);
-    bool smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
-    const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
-    bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
-    const gert::Shape* betaShape = context->GetOptionalInputShape(BETA_IDX);
-    bool betaExist = CheckOptionalShapeExisting(betaShape);
-
-    // get attr
-    auto attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const gert::ContinuousVector* outputMaskAttr = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_OUTPUT_MASK_IDX);
-
-    OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
-    OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
-    OP_CHECK_IF(betaExist && (*gammaShape != *betaShape), OP_LOGE(context, "GammaShape is not same to betaShape."),
-                return GRAPH_FAILED);
-
-    *xShape = *x1Shape;
-    *y1Shape = gert::Shape({1});
-    *y2Shape = gert::Shape({1});
-    gert::Shape outScaleShape;
-    auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
-                return GRAPH_FAILED);
-    size_t v2OutputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
-
-    // unknown rank
-    if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
-        if (v2OutputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-            const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
-            if (v2OutputMask[0]) {
-                SetUnknownRank(*outScale1Shape);
-                *y1Shape = *x1Shape;
-            } else {
-                *outScale1Shape = gert::Shape({1});
-            }
-            if (v2OutputMask[1]) {
-                SetUnknownRank(*outScale2Shape);
-                *y2Shape = *x1Shape;
-            } else {
-                *outScale2Shape = gert::Shape({1});
-            }
-            *y3Shape = v2OutputMask[2] ? *x1Shape : gert::Shape({1});
-            *y4Shape = v2OutputMask[3] ? *x1Shape : gert::Shape({1});
-        } else {
-            *y1Shape = *x1Shape;
+    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+        const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
+        if (v2OutputMask[0]) {
             SetUnknownRank(*outScale1Shape);
-            *y3Shape = *x1Shape;
-            *y4Shape = *x1Shape;
-            if (smooth1Exist && smooth2Exist) {
-                *y2Shape = *x1Shape;
-                *outScale2Shape = *outScale1Shape;
-            } else {
-                *outScale2Shape = gert::Shape({1});
-            }
+            *y1Shape = *x1Shape;
+        } else {
+            *outScale1Shape = gert::Shape({1});
         }
-        OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2 with unknown rank.");
-        return GRAPH_SUCCESS;
+        if (v2OutputMask[1]) {
+            SetUnknownRank(*outScale2Shape);
+            *y2Shape = *x1Shape;
+        } else {
+            *outScale2Shape = gert::Shape({1});
+        }
+        *y3Shape = v2OutputMask[2] ? *x1Shape : gert::Shape({1});
+        *y4Shape = v2OutputMask[3] ? *x1Shape : gert::Shape({1});
+    } else {
+        *y1Shape = *x1Shape;
+        SetUnknownRank(*outScale1Shape);
+        *y3Shape = *x1Shape;
+        *y4Shape = *x1Shape;
+        if (smooth1Exist && smooth2Exist) {
+            *y2Shape = *x1Shape;
+            *outScale2Shape = *outScale1Shape;
+        } else {
+            *outScale2Shape = gert::Shape({1});
+        }
     }
+    OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2 with unknown rank.");
+    return GRAPH_SUCCESS;
+}
 
+static ge::graphStatus FillKnownRankShapesV2(gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                             const gert::Shape& outScaleShape, gert::Shape* y1Shape,
+                                             gert::Shape* y2Shape, gert::Shape* y3Shape, gert::Shape* y4Shape,
+                                             gert::Shape* outScale1Shape, gert::Shape* outScale2Shape,
+                                             const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen,
+                                             bool smooth1Exist, bool smooth2Exist)
+{
     *outScale1Shape = gert::Shape({1});
     *outScale2Shape = gert::Shape({1});
 
-    if (v2OutputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-        OP_CHECK_IF(v2OutputMaskLen != NUM_FOUR,
+    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+        OP_CHECK_IF(outputMaskLen != NUM_FOUR,
                     OP_LOGE(context, "When output_mask is not NULL, the array size must be 4."), return GRAPH_FAILED);
 
         const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
@@ -189,10 +146,125 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
         }
     }
 
-    OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2");
     return GRAPH_SUCCESS;
 }
 
+static ge::graphStatus FetchOptionalInputsAndAttr(gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                                  const gert::Shape* gammaShape, bool& smooth1Exist, bool& smooth2Exist,
+                                                  bool& betaExist, const gert::Shape*& smooth1Shape,
+                                                  const gert::Shape*& smooth2Shape, const gert::Shape*& betaShape,
+                                                  const gert::ContinuousVector*& outputMaskAttr, gert::Shape* xShape,
+                                                  gert::Shape* y1Shape, gert::Shape* y2Shape)
+{
+    smooth1Shape = context->GetOptionalInputShape(SMOOTH1_IDX);
+    smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
+    smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
+    smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
+    betaShape = context->GetOptionalInputShape(BETA_IDX);
+    betaExist = CheckOptionalShapeExisting(betaShape);
+
+    // get attr
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    outputMaskAttr = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_OUTPUT_MASK_IDX);
+
+    OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
+    OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
+    OP_CHECK_IF(betaExist && (*gammaShape != *betaShape), OP_LOGE(context, "GammaShape is not same to betaShape."),
+                return GRAPH_FAILED);
+    *xShape = *x1Shape;
+    *y1Shape = gert::Shape({1});
+    *y2Shape = gert::Shape({1});
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus FetchMainShapes(gert::InferShapeContext* context, const gert::Shape*& x1Shape,
+                                       const gert::Shape*& gammaShape, gert::Shape*& y1Shape, gert::Shape*& y2Shape,
+                                       gert::Shape*& y3Shape, gert::Shape*& y4Shape, gert::Shape*& xShape,
+                                       gert::Shape*& outScale1Shape, gert::Shape*& outScale2Shape)
+{
+    // get input shapes
+    x1Shape = context->GetInputShape(X1_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+    gammaShape = context->GetInputShape(GAMMA_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+
+    // get output shapes
+    y1Shape = context->GetOutputShape(Y1_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
+    y2Shape = context->GetOutputShape(Y2_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
+    y3Shape = context->GetOutputShape(Y3_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y3Shape);
+    y4Shape = context->GetOutputShape(Y4_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y4Shape);
+    xShape = context->GetOutputShape(X_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    outScale1Shape = context->GetOutputShape(OUT_SCALE1_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outScale1Shape);
+    outScale2Shape = context->GetOutputShape(OUT_SCALE2_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outScale2Shape);
+
+    // get optional shapes
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeContext* context)
+{
+    OP_LOGI(context, "Begin to do InferShape4AddRmsNormDynamicQuantV2");
+
+    const gert::Shape* x1Shape = nullptr;
+    const gert::Shape* gammaShape = nullptr;
+    gert::Shape* y1Shape = nullptr;
+    gert::Shape* y2Shape = nullptr;
+    gert::Shape* y3Shape = nullptr;
+    gert::Shape* y4Shape = nullptr;
+    gert::Shape* xShape = nullptr;
+    gert::Shape* outScale1Shape = nullptr;
+    gert::Shape* outScale2Shape = nullptr;
+    if (FetchMainShapes(context, x1Shape, gammaShape, y1Shape, y2Shape, y3Shape, y4Shape, xShape, outScale1Shape,
+                        outScale2Shape) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    bool smooth1Exist = false;
+    bool smooth2Exist = false;
+    bool betaExist = false;
+    const gert::Shape* smooth1Shape = nullptr;
+    const gert::Shape* smooth2Shape = nullptr;
+    const gert::Shape* betaShape = nullptr;
+    const gert::ContinuousVector* outputMaskAttr = nullptr;
+    if (FetchOptionalInputsAndAttr(context, x1Shape, gammaShape, smooth1Exist, smooth2Exist, betaExist, smooth1Shape,
+                                   smooth2Shape, betaShape, outputMaskAttr, xShape, y1Shape,
+                                   y2Shape) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
+    OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
+    gert::Shape outScaleShape;
+    auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
+    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
+                return GRAPH_FAILED);
+    size_t outputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
+
+    // unknown rank
+    if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
+        return HandleUnknownRankShapesV2(context, x1Shape, gammaShape, y1Shape, y2Shape, y3Shape, y4Shape,
+                                         outScale1Shape, outScale2Shape, smooth1Exist, smooth2Exist, outputMaskAttr,
+                                         outputMaskLen);
+    }
+    auto knownRet = FillKnownRankShapesV2(context, x1Shape, outScaleShape, y1Shape, y2Shape, y3Shape, y4Shape,
+                                          outScale1Shape, outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist,
+                                          smooth2Exist);
+    if (knownRet != GRAPH_SUCCESS) {
+        return knownRet;
+    }
+    OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2");
+    return GRAPH_SUCCESS;
+}
 static graphStatus InferDataType4AddRmsNormDynamicQuantV2(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4AddRmsNormDynamicQuantV2");

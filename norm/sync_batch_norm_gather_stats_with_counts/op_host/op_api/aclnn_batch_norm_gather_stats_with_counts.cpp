@@ -418,6 +418,50 @@ static aclnnStatus GatherStatsWithCountsFused(const aclTensor* mean, const aclTe
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus ProcessBatchNormGatherStatsWithCounts(const aclTensor* input, const aclTensor* mean,
+                                                         const aclTensor* invstd, const aclTensor* counts,
+                                                         aclTensor* runningMean, aclTensor* runningVar,
+                                                         aclTensor* meanAll, aclTensor* invstdAll, double momentum,
+                                                         double eps, aclOpExecutor* executor)
+{
+    aclnnStatus ret = ACLNN_SUCCESS;
+    std::array<const aclTensor*, OUTPUT_TENSOR_NUM> gatherResult;
+    const aclTensor *runningMeanMid = nullptr, *runningVarMid = nullptr;
+
+    if (IsSocVersion950()) {
+        runningMeanMid = CalculateRunningTensorNoCast(runningMean, input->GetViewShape()[1], input->GetDataType(),
+                                                      executor);
+        CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        runningVarMid = CalculateRunningTensorNoCast(runningVar, input->GetViewShape()[1], input->GetDataType(),
+                                                     executor);
+        CHECK_RET(runningVarMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        ret = GatherStatsWithCountsFused(mean, invstd, counts, runningMeanMid, runningVarMid, meanAll, invstdAll,
+                                         runningMean, runningVar, momentum, eps, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    } else {
+        runningMeanMid = CalculateRunningTensor(runningMean, input->GetViewShape()[1], executor);
+        CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        runningVarMid = CalculateRunningTensor(runningVar, input->GetViewShape()[1], executor);
+        CHECK_RET(runningVarMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        gatherResult = GatherStatsWithCounts(mean, invstd, counts, runningVarMid, momentum, eps, executor);
+        auto meanAllOutput = gatherResult[MEAN_INDEX];
+        CHECK_RET(meanAllOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto invstdOutput = gatherResult[INVSTD_INDEX];
+        CHECK_RET(invstdOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto runningVarOutput = gatherResult[RUNNING_VAR_INDEX];
+        CHECK_RET(runningVarOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        ret = CopyRunningTensorToDst(runningMean, runningVar, meanAllOutput, runningMeanMid, runningVarOutput, momentum,
+                                     executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = CopyMeanAndInvstdToDst(meanAllOutput, invstdOutput, meanAll, invstdAll, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(const aclTensor* input, const aclTensor* mean,
                                                                 const aclTensor* invstd, aclTensor* runningMean,
                                                                 aclTensor* runningVar, double momentum, double eps,
@@ -444,45 +488,13 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(const aclTensor*
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-    std::array<const aclTensor*, OUTPUT_TENSOR_NUM> gatherResult;
-    const aclTensor *runningMeanMid = nullptr, *runningVarMid = nullptr;
-
-    if (IsSocVersion950()) {
-        runningMeanMid = CalculateRunningTensorNoCast(runningMean, input->GetViewShape()[1], input->GetDataType(),
-                                                      uniqueExecutor.get());
-        CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        runningVarMid = CalculateRunningTensorNoCast(runningVar, input->GetViewShape()[1], input->GetDataType(),
-                                                     uniqueExecutor.get());
-        CHECK_RET(runningVarMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ret = GatherStatsWithCountsFused(mean, invstd, counts, runningMeanMid, runningVarMid, meanAll, invstdAll,
-                                         runningMean, runningVar, momentum, eps, uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    } else {
-        runningMeanMid = CalculateRunningTensor(runningMean, input->GetViewShape()[1], uniqueExecutor.get());
-        CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        runningVarMid = CalculateRunningTensor(runningVar, input->GetViewShape()[1], uniqueExecutor.get());
-        CHECK_RET(runningVarMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        gatherResult = GatherStatsWithCounts(mean, invstd, counts, runningVarMid, momentum, eps, uniqueExecutor.get());
-        auto meanAllOutput = gatherResult[MEAN_INDEX];
-        CHECK_RET(meanAllOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto invstdOutput = gatherResult[INVSTD_INDEX];
-        CHECK_RET(invstdOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto runningVarOutput = gatherResult[RUNNING_VAR_INDEX];
-        CHECK_RET(runningVarOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ret = CopyRunningTensorToDst(runningMean, runningVar, meanAllOutput, runningMeanMid, runningVarOutput, momentum,
-                                     uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = CopyMeanAndInvstdToDst(meanAllOutput, invstdOutput, meanAll, invstdAll, uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    }
+    auto processRet = ProcessBatchNormGatherStatsWithCounts(input, mean, invstd, counts, runningMean, runningVar,
+                                                            meanAll, invstdAll, momentum, eps, uniqueExecutor.get());
+    CHECK_RET(processRet == ACLNN_SUCCESS, processRet);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-
 aclnnStatus aclnnBatchNormGatherStatsWithCounts(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                 const aclrtStream stream)
 {

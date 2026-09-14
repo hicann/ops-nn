@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "es_math_ops.h"
 #include "es_nn_ops.h"
 #include "ge/es_graph_builder.h"
 #include "platform/platform_info.h"
@@ -45,7 +46,15 @@ const char* const kInplaceAddLayerNorm = "InplaceAddLayerNorm";
 
 class ZInplaceAddLayerNormFusionPassTest : public testing::Test {
 protected:
-    void SetUp() override { SetPlatform("Ascend950"); }
+    // 部分 CANN 环境未提供 es::Relu，额外消费者统一用 es::Cast 构造。
+    // GNode 是轻量句柄，与图内节点共享底层对象，故可跨改图操作保留并观察接线变化。
+    GNode extraConsumer_;
+
+    void SetUp() override
+    {
+        extraConsumer_ = GNode();
+        SetPlatform("Ascend950");
+    }
 
     static void SetPlatform(const std::string& soc, int64_t l2Size = kL2Size)
     {
@@ -59,10 +68,10 @@ protected:
         PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
     }
 
-    // 构造单个 AddLayerNorm 节点的图。
-    static std::shared_ptr<Graph> BuildGraph(bool withBias, int64_t rows = kRowsInBand, int64_t cols = kCols,
-                                             DataType xDtype = DT_FLOAT16, DataType gammaDtype = DT_FLOAT16,
-                                             bool extraConsumerOnX1 = false, bool extraConsumerOnY = false)
+    // 构造单个 AddLayerNorm 节点的图。额外消费者经成员 extraConsumer_ 暴露给用例。
+    std::shared_ptr<Graph> BuildGraph(bool withBias, int64_t rows = kRowsInBand, int64_t cols = kCols,
+                                      DataType xDtype = DT_FLOAT16, DataType gammaDtype = DT_FLOAT16,
+                                      bool extraConsumerOnX1 = false, bool extraConsumerOnY = false)
     {
         const std::vector<int64_t> xShape = {rows, cols};
         const std::vector<int64_t> pShape = {cols};
@@ -94,13 +103,20 @@ protected:
         UpdateOutputDesc(out.x, 3, xDtype, xShape);
 
         std::vector<es::EsTensorHolder> outputs = {out.y, out.mean, out.rstd, out.x};
+        es::EsTensorHolder extraConsumer;
         if (extraConsumerOnX1) {
-            outputs.emplace_back(es::Relu(x1));
+            extraConsumer = es::Cast(x1, DT_FLOAT);
+            outputs.emplace_back(extraConsumer);
         }
         if (extraConsumerOnY) {
-            outputs.emplace_back(es::Relu(out.y));
+            extraConsumer = es::Cast(out.y, DT_FLOAT);
+            outputs.emplace_back(extraConsumer);
         }
-        return builder.BuildAndReset(outputs);
+        std::shared_ptr<Graph> graph = builder.BuildAndReset(outputs);
+        if (extraConsumer.GetProducer() != nullptr) {
+            extraConsumer_ = *extraConsumer.GetProducer();
+        }
+        return graph;
     }
 
     static void UpdateInputDesc(const es::EsTensorHolder& tensor, int32_t index, DataType dtype,
@@ -165,12 +181,12 @@ TEST_F(ZInplaceAddLayerNormFusionPassTest, control_edges_transferred_to_new_node
 
     GNode addLn;
     ASSERT_TRUE(FindNodeByType(graph, kAddLayerNorm, addLn));
-    GNode relu;
-    ASSERT_TRUE(FindNodeByType(graph, "Relu", relu));
+    ASSERT_NE(extraConsumer_.GetInDataNodesAndPortIndexs(0).first, nullptr)
+        << "extra consumer node was not built or not wired";
 
-    // Relu --ctrl--> AddLayerNorm --ctrl--> Relu 都挂上，覆盖入/出两个方向
-    ASSERT_EQ(graph->AddControlEdge(relu, addLn), GRAPH_SUCCESS);
-    ASSERT_EQ(graph->AddControlEdge(addLn, relu), GRAPH_SUCCESS);
+    // extraConsumer_ --ctrl--> AddLayerNorm --ctrl--> extraConsumer_ 都挂上，覆盖入/出两个方向
+    ASSERT_EQ(graph->AddControlEdge(extraConsumer_, addLn), GRAPH_SUCCESS);
+    ASSERT_EQ(graph->AddControlEdge(addLn, extraConsumer_), GRAPH_SUCCESS);
     ASSERT_EQ(addLn.GetInControlNodes().size(), 1U);
     ASSERT_EQ(addLn.GetOutControlNodes().size(), 1U);
 
@@ -222,13 +238,11 @@ TEST_F(ZInplaceAddLayerNormFusionPassTest, inputs_and_outputs_rewired)
 
 TEST_F(ZInplaceAddLayerNormFusionPassTest, downstream_consumer_rewired_to_new_node)
 {
-    // y 除了作为图输出，还被一个 Relu 消费；替换后该 Relu 的生产者必须是新节点
+    // y 除了作为图输出，还被一个 Cast 消费；替换后该 Cast 的生产者必须是新节点
     auto graph = BuildGraph(false, kRowsInBand, kCols, DT_FLOAT16, DT_FLOAT16, false, true);
     ASSERT_EQ(RunPass(graph), SUCCESS);
 
-    GNode relu;
-    ASSERT_TRUE(FindNodeByType(graph, "Relu", relu));
-    auto producer = relu.GetInDataNodesAndPortIndexs(0).first;
+    auto producer = extraConsumer_.GetInDataNodesAndPortIndexs(0).first;
     ASSERT_NE(producer, nullptr);
     AscendString producerType;
     producer->GetType(producerType);

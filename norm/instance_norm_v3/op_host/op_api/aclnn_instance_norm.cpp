@@ -130,6 +130,67 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus ComputeInstanceNormOutputs(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                              const char* dataFormat, double eps, bool needTranspose,
+                                              aclTensor** yComputeOut, aclTensor** meanComputeOut,
+                                              aclTensor** varianceComputeOut, aclOpExecutor* executor)
+{
+    auto xContiguous = l0op::Contiguous(x, executor);
+    auto gammaContiguous = l0op::Contiguous(gamma, executor);
+    auto betaContiguous = l0op::Contiguous(beta, executor);
+    CHECK_RET(xContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    if (needTranspose) {
+        std::vector<int64_t> permNHWC2NCHW = {IDX_0, IDX_3, IDX_1, IDX_2};
+        std::vector<int64_t> permNCHW2NHWC = {IDX_0, IDX_2, IDX_3, IDX_1};
+        aclIntArray* axesNHWC2NCHW = executor->AllocIntArray(permNHWC2NCHW.data(), DIM_NUM);
+        aclIntArray* axesNCHW2NHWC = executor->AllocIntArray(permNCHW2NHWC.data(), DIM_NUM);
+        CHECK_RET((axesNCHW2NHWC != nullptr && axesNHWC2NCHW != nullptr), ACLNN_ERR_INNER_NULLPTR);
+
+        auto xTranspose = l0op::Transpose(xContiguous, axesNHWC2NCHW, executor);
+        CHECK_RET(xTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        const char* realDataFormat = "NCHW";
+        auto instanceNormOut = l0op::InstanceNormV3(xTranspose, gammaContiguous, betaContiguous, realDataFormat, eps,
+                                                    executor);
+        *yComputeOut = std::get<IDX_0>(instanceNormOut);
+        *meanComputeOut = std::get<IDX_1>(instanceNormOut);
+        *varianceComputeOut = std::get<IDX_2>(instanceNormOut);
+        CHECK_RET(*yComputeOut != nullptr && *meanComputeOut != nullptr && *varianceComputeOut != nullptr,
+                  ACLNN_ERR_INNER_NULLPTR);
+        auto yTransposed = l0op::Transpose(*yComputeOut, axesNCHW2NHWC, executor);
+        CHECK_RET(yTransposed != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto yTransposedView = executor->CreateView(yTransposed, yTransposed->GetViewShape(),
+                                                    yTransposed->GetViewOffset());
+        CHECK_RET(yTransposedView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        *yComputeOut = yTransposedView;
+
+    } else {
+        auto instanceNormOut = l0op::InstanceNormV3(xContiguous, gammaContiguous, betaContiguous, dataFormat, eps,
+                                                    executor);
+        *yComputeOut = std::get<IDX_0>(instanceNormOut);
+        *meanComputeOut = std::get<IDX_1>(instanceNormOut);
+        *varianceComputeOut = std::get<IDX_2>(instanceNormOut);
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CopyInstanceNormResults(const aclTensor* yComputeOut, const aclTensor* meanOut,
+                                           const aclTensor* varianceOut, aclTensor* y, aclTensor* mean,
+                                           aclTensor* variance, aclOpExecutor* executor)
+{
+    CHECK_RET(yComputeOut != nullptr && meanOut != nullptr && varianceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyYResult = l0op::ViewCopy(yComputeOut, y, executor);
+    CHECK_RET(viewCopyYResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyMeanResult = l0op::ViewCopy(meanOut, mean, executor);
+    CHECK_RET(viewCopyMeanResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyVarResult = l0op::ViewCopy(varianceOut, variance, executor);
+    CHECK_RET(viewCopyVarResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnInstanceNormGetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
                                               const char* dataFormat, double eps, aclTensor* y, aclTensor* mean,
                                               aclTensor* variance, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -138,15 +199,12 @@ aclnnStatus aclnnInstanceNormGetWorkspaceSize(const aclTensor* x, const aclTenso
 
     L2_DFX_PHASE_1(aclnnInstanceNorm, DFX_IN(x, gamma, beta, dataFormat, eps), DFX_OUT(y, mean, variance));
 
-    // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 参数检查
     auto ret = CheckParams(x, gamma, beta, dataFormat, y, mean, variance);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 当前仅支持310P
     ret = CheckPlatform();
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -155,78 +213,39 @@ aclnnStatus aclnnInstanceNormGetWorkspaceSize(const aclTensor* x, const aclTenso
     ret = CheckInputAndWeightShape(x, gamma, beta, needTranspose);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 支持空tensor
     bool hasEmptyTensor = x->IsEmpty() || gamma->IsEmpty() || beta->IsEmpty() || y->IsEmpty() || mean->IsEmpty() ||
                           variance->IsEmpty();
     if (hasEmptyTensor) {
-        // 根据实际支持情况补充
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    // 固定写法，将输入转换成连续的tensor
-    auto xContiguous = l0op::Contiguous(x, uniqueExecutor.get());
-    auto gammaContiguous = l0op::Contiguous(gamma, uniqueExecutor.get());
-    auto betaContiguous = l0op::Contiguous(beta, uniqueExecutor.get());
-    CHECK_RET(xContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    aclTensor* yComputeOut = nullptr;
-    aclTensor* meanOut = nullptr;
-    aclTensor* varianceOut = nullptr;
-
+    aclTensor *yComputeOut = nullptr, *meanOut = nullptr, *varianceOut = nullptr;
+    ret = ComputeInstanceNormOutputs(x, gamma, beta, dataFormat, eps, needTranspose, &yComputeOut, &meanOut,
+                                     &varianceOut, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (needTranspose) {
-        std::vector<int64_t> permNHWC2NCHW = {IDX_0, IDX_3, IDX_1, IDX_2};
-        std::vector<int64_t> permNCHW2NHWC = {IDX_0, IDX_2, IDX_3, IDX_1};
-        aclIntArray* axesNHWC2NCHW = uniqueExecutor.get()->AllocIntArray(permNHWC2NCHW.data(), DIM_NUM);
-        aclIntArray* axesNCHW2NHWC = uniqueExecutor.get()->AllocIntArray(permNCHW2NHWC.data(), DIM_NUM);
-        CHECK_RET((axesNCHW2NHWC != nullptr && axesNHWC2NCHW != nullptr), ACLNN_ERR_INNER_NULLPTR);
-
-        // x 做 transpose 到 NCHW
-        auto xTranspose = l0op::Transpose(xContiguous, axesNHWC2NCHW, uniqueExecutor.get());
-        CHECK_RET(xTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 进行 instanceNorm 计算
-        const char* realDataFormat = "NCHW";
-        auto instanceNormOut = l0op::InstanceNormV3(xTranspose, gammaContiguous, betaContiguous, realDataFormat, eps,
-                                                    uniqueExecutor.get());
-        yComputeOut = std::get<IDX_0>(instanceNormOut);
-        meanOut = std::get<IDX_1>(instanceNormOut);
-        varianceOut = std::get<IDX_2>(instanceNormOut);
-        CHECK_RET(yComputeOut != nullptr && meanOut != nullptr && varianceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // 将结果 yComputeOut 进行 transpose，转换成正确的 NHWC
-        yComputeOut = const_cast<aclTensor*>(l0op::Transpose(yComputeOut, axesNCHW2NHWC, uniqueExecutor.get()));
-
-        int64_t nhwcReduceShapeValue[DIM_NUM] = {meanOut->GetViewShape().GetDim(0), 1, 1,
-                                                 meanOut->GetViewShape().GetDim(1)};
+        int64_t nhwcReduceShapeValue[DIM_NUM] = {(meanOut)->GetViewShape().GetDim(0), 1, 1,
+                                                 (meanOut)->GetViewShape().GetDim(1)};
         aclIntArray* nhwcReduceShape = uniqueExecutor.get()->AllocIntArray(nhwcReduceShapeValue, DIM_NUM);
         CHECK_RET(nhwcReduceShape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        meanOut = const_cast<aclTensor*>(l0op::Reshape(meanOut, nhwcReduceShape, uniqueExecutor.get()));
-        varianceOut = const_cast<aclTensor*>(l0op::Reshape(varianceOut, nhwcReduceShape, uniqueExecutor.get()));
-    } else {
-        auto instanceNormOut = l0op::InstanceNormV3(xContiguous, gammaContiguous, betaContiguous, dataFormat, eps,
-                                                    uniqueExecutor.get());
-        yComputeOut = std::get<IDX_0>(instanceNormOut);
-        meanOut = std::get<IDX_1>(instanceNormOut);
-        varianceOut = std::get<IDX_2>(instanceNormOut);
+        auto meanReshaped = l0op::Reshape(meanOut, nhwcReduceShape, uniqueExecutor.get());
+        CHECK_RET(meanReshaped != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto meanReshapedView = uniqueExecutor.get()->CreateView(meanReshaped, meanReshaped->GetViewShape(),
+                                                                 meanReshaped->GetViewOffset());
+        CHECK_RET(meanReshapedView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        meanOut = meanReshapedView;
+        auto varianceReshaped = l0op::Reshape(varianceOut, nhwcReduceShape, uniqueExecutor.get());
+        CHECK_RET(varianceReshaped != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto varianceReshapedView = uniqueExecutor.get()->CreateView(varianceReshaped, varianceReshaped->GetViewShape(),
+                                                                     varianceReshaped->GetViewOffset());
+        CHECK_RET(varianceReshapedView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        varianceOut = varianceReshapedView;
     }
-    CHECK_RET(yComputeOut != nullptr && meanOut != nullptr && varianceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    ret = CopyInstanceNormResults(yComputeOut, meanOut, varianceOut, y, mean, variance, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 将 yComputeOut 结果拷贝到 y 上
-    auto viewCopyYResult = l0op::ViewCopy(yComputeOut, y, uniqueExecutor.get());
-    CHECK_RET(viewCopyYResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 将 meanOut 结果拷贝到 mean 上
-    auto viewCopyMeanResult = l0op::ViewCopy(meanOut, mean, uniqueExecutor.get());
-    CHECK_RET(viewCopyMeanResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 将 varianceOut 结果拷贝到 variance 上
-    auto viewCopyVarResult = l0op::ViewCopy(varianceOut, variance, uniqueExecutor.get());
-    CHECK_RET(viewCopyVarResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     OP_LOGD("Finish aclnnInstanceNormGetWorkspaceSize");

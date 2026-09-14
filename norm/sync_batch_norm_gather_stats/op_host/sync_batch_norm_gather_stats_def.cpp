@@ -44,6 +44,25 @@ public:
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+
+        AddOutputs();
+
+        this->Attr("momentum").AttrType(REQUIRED).Float();
+        this->Attr("eps").AttrType(REQUIRED).Float();
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "sync_batch_norm_gather_stats_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+
+private:
+    void AddOutputs()
+    {
         this->Output("batch_mean")
             .ParamType(REQUIRED)
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
@@ -64,18 +83,6 @@ public:
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-
-        this->Attr("momentum").AttrType(REQUIRED).Float();
-        this->Attr("eps").AttrType(REQUIRED).Float();
-        OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicFormatFlag(false)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "sync_batch_norm_gather_stats_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 

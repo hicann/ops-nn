@@ -37,6 +37,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
+
         this->Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16})
@@ -52,14 +53,23 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Attr("num_groups").AttrType(REQUIRED).Int();
         this->Attr("data_format").AttrType(OPTIONAL).String("NCHW");
         this->Attr("eps").AttrType(OPTIONAL).Float(1e-5);
         this->Attr("activate_swish").AttrType(OPTIONAL).Bool(true);
         this->Attr("swish_scale").AttrType(OPTIONAL).Float(1.0);
+
         this->AICore().AddConfig("kirinx90");
         this->AICore().AddConfig("kirin9030");
 
+        Add910bConfigs();
+        Add950Config();
+    }
+
+private:
+    void Add910bConfigs()
+    {
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -102,7 +112,10 @@ public:
 
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
+    }
 
+    void Add950Config()
+    {
         OpAICoreConfig config_950;
         config_950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

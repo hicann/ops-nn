@@ -112,6 +112,24 @@ static uint32_t CalcTilingKeyWithOptionalInput(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+static void CalcOptionalUbNum(const uint32_t hasScales2, const uint32_t hasBeta, const uint32_t hasZeroPoints1,
+                              const uint32_t hasZeroPoints2)
+{
+    // 可选参数占用ubFactor的大小, 有beta和s2时，才是新增场景，否则不做改变
+    if (hasScales2 > INT_ZERO || hasBeta > INT_ZERO) {
+        optionalUbNum_0 = hasBeta * SIZE_HALF + hasZeroPoints1 * SIZE_FLOAT + SIZE_FLOAT;
+        optionalUbNum_1 = SIZE_FLOAT;
+        if (hasScales2 > INT_ZERO) {
+            optionalUbNum_0 += SIZE_FLOAT + SIZE_HALF;
+            optionalUbNum_1 += SIZE_FLOAT;
+            if (hasZeroPoints2 > INT_ZERO) {
+                optionalUbNum_0 += SIZE_FLOAT;
+                optionalUbNum_1 += SIZE_FLOAT;
+            }
+        }
+    }
+}
+
 ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, uint32_t& numRow)
 {
     const gert::StorageShape* scales2Shape = context->GetOptionalInputShape(INPUT_IDX_SCALES2);
@@ -154,20 +172,7 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     numCol = static_cast<uint32_t>(numColTmp);
     numRow = static_cast<uint32_t>(numRowTmp);
     float avgFactor = (numCol == INT_ZERO) ? 0.0f : 1.0f / static_cast<float>(numCol);
-    // 可选参数占用ubFactor的大小, 有beta和s2时，才是新增场景，否则不做改变
-    if (hasScales2 > INT_ZERO || hasBeta > INT_ZERO) {
-        optionalUbNum_0 = hasBeta * SIZE_HALF + hasZeroPoints1 * SIZE_FLOAT + SIZE_FLOAT;
-        optionalUbNum_1 = SIZE_FLOAT;
-        if (hasScales2 > INT_ZERO) {
-            optionalUbNum_0 += SIZE_FLOAT + SIZE_HALF;
-            optionalUbNum_1 += SIZE_FLOAT;
-            if (hasZeroPoints2 > INT_ZERO) {
-                optionalUbNum_0 += SIZE_FLOAT;
-                optionalUbNum_1 += SIZE_FLOAT;
-            }
-        }
-    }
-
+    CalcOptionalUbNum(hasScales2, hasBeta, hasZeroPoints1, hasZeroPoints2);
     addRMSNormQuantTilingData.set_divMode(divMode ? INT_ONE : INT_ZERO);
     addRMSNormQuantTilingData.set_epsilon(epsilon);
     addRMSNormQuantTilingData.set_avgFactor(avgFactor);
@@ -179,11 +184,9 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalcModeAndUbFactor(gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo,
-                                uint32_t blockFactor, uint32_t numCol)
+static void GetSocVersionAndUbSize(gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo,
+                                   platform_ascendc::SocVersion& socVersion, uint64_t& ubSize)
 {
-    platform_ascendc::SocVersion socVersion;
-    uint64_t ubSize = 0;
     if (nullptr == ptrCompileInfo) {
         auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
         socVersion = ascendc_platform.GetSocVersion();
@@ -192,7 +195,13 @@ static void CalcModeAndUbFactor(gert::TilingContext* context, const AddRmsNormQu
         ubSize = ptrCompileInfo->maxUbSize;
         socVersion = ptrCompileInfo->curSocVersion;
     }
-
+}
+static void CalcModeAndUbFactor(gert::TilingContext* context, const AddRmsNormQuantCompileInfo* ptrCompileInfo,
+                                uint32_t blockFactor, uint32_t numCol)
+{
+    platform_ascendc::SocVersion socVersion;
+    uint64_t ubSize = 0;
+    GetSocVersionAndUbSize(context, ptrCompileInfo, socVersion, ubSize);
     ubSize = ubSize > INT_ZERO ? ubSize : SIZE_OF_UB;
     uint32_t modeKey = MODE_NORMAL; // 0: Normal, 1: SplitD, 2: MultiN 3: SingleN
     auto xDataType = context->GetInputDesc(0)->GetDataType();
@@ -241,7 +250,6 @@ static void CalcModeAndUbFactor(gert::TilingContext* context, const AddRmsNormQu
     context->SetTilingKey(modeKey);
     addRMSNormQuantTilingData.set_ubFactor(ubFactor);
 }
-
 static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* context)
 {
     OP_LOGD("Tiling4AddRmsNormQuantNotRegbase", "Enter Tiling4AddRmsNormQuantNotRegbase");

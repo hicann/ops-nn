@@ -63,6 +63,77 @@ static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
     return true;
 }
 
+static ge::graphStatus HandleUnknownRankShapes(gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                               const gert::Shape* gammaShape, gert::Shape* y1Shape,
+                                               gert::Shape* y2Shape, gert::Shape* outScale1Shape,
+                                               gert::Shape* outScale2Shape, bool smooth1Exist, bool smooth2Exist,
+                                               const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen)
+{
+    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+        const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
+        if (outputMask[0]) {
+            SetUnknownRank(*outScale1Shape);
+            *y1Shape = *x1Shape;
+        } else {
+            *outScale1Shape = gert::Shape({1});
+        }
+        if (outputMask[1]) {
+            SetUnknownRank(*outScale2Shape);
+            *y2Shape = *x1Shape;
+        } else {
+            *outScale2Shape = gert::Shape({1});
+        }
+    } else {
+        *y1Shape = *x1Shape;
+        SetUnknownRank(*outScale1Shape);
+        if (smooth1Exist && smooth2Exist) {
+            *y2Shape = *x1Shape;
+            *outScale2Shape = *outScale1Shape;
+        } else {
+            *outScale2Shape = gert::Shape({1});
+        }
+    }
+    OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuant with unknown rank.");
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus FillKnownRankShapes(gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                           const gert::Shape& outScaleShape, gert::Shape* y1Shape, gert::Shape* y2Shape,
+                                           gert::Shape* outScale1Shape, gert::Shape* outScale2Shape,
+                                           const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen,
+                                           bool smooth1Exist, bool smooth2Exist)
+{
+    *outScale1Shape = gert::Shape({1});
+    *outScale2Shape = gert::Shape({1});
+
+    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
+        OP_CHECK_IF(outputMaskLen != OUTPUT_MASK_LEN,
+                    OP_LOGE(context, "When output_mask is not NULL, the array size must be %d.", OUTPUT_MASK_LEN),
+                    return GRAPH_FAILED);
+        const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
+        if (outputMask[0]) {
+            *y1Shape = *x1Shape;
+            *outScale1Shape = outScaleShape;
+        }
+        if (outputMask[1]) {
+            *y2Shape = *x1Shape;
+            *outScale2Shape = outScaleShape;
+        }
+    } else {
+        bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
+        OP_CHECK_IF(isOnlyExistSmooth2,
+                    OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
+                    return GRAPH_FAILED);
+        *y1Shape = *x1Shape;
+        *outScale1Shape = outScaleShape;
+        if (smooth2Exist) {
+            *y2Shape = *x1Shape;
+            *outScale2Shape = outScaleShape;
+        }
+    }
+    return GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext* context)
 {
     OP_LOGI(context, "Begin to do InferShape4AddRmsNormDynamicQuant");
@@ -103,61 +174,13 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
 
     // unknown rank
     if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
-        if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-            const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
-            if (outputMask[0]) {
-                SetUnknownRank(*outScale1Shape);
-                *y1Shape = *x1Shape;
-            } else {
-                *outScale1Shape = gert::Shape({1});
-            }
-            if (outputMask[1]) {
-                SetUnknownRank(*outScale2Shape);
-                *y2Shape = *x1Shape;
-            } else {
-                *outScale2Shape = gert::Shape({1});
-            }
-        } else {
-            *y1Shape = *x1Shape;
-            SetUnknownRank(*outScale1Shape);
-            if (smooth1Exist && smooth2Exist) {
-                *y2Shape = *x1Shape;
-                *outScale2Shape = *outScale1Shape;
-            } else {
-                *outScale2Shape = gert::Shape({1});
-            }
-        }
-        OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuant with unknown rank.");
-        return GRAPH_SUCCESS;
+        return HandleUnknownRankShapes(context, x1Shape, gammaShape, y1Shape, y2Shape, outScale1Shape, outScale2Shape,
+                                       smooth1Exist, smooth2Exist, outputMaskAttr, outputMaskLen);
     }
-
-    *outScale1Shape = gert::Shape({1});
-    *outScale2Shape = gert::Shape({1});
-
-    if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-        OP_CHECK_IF(outputMaskLen != OUTPUT_MASK_LEN,
-                    OP_LOGE(context, "When output_mask is not NULL, the array size must be %d.", OUTPUT_MASK_LEN),
-                    return GRAPH_FAILED);
-        const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
-        if (outputMask[0]) {
-            *y1Shape = *x1Shape;
-            *outScale1Shape = outScaleShape;
-        }
-        if (outputMask[1]) {
-            *y2Shape = *x1Shape;
-            *outScale2Shape = outScaleShape;
-        }
-    } else {
-        bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
-        OP_CHECK_IF(isOnlyExistSmooth2,
-                    OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
-                    return GRAPH_FAILED);
-        *y1Shape = *x1Shape;
-        *outScale1Shape = outScaleShape;
-        if (smooth2Exist) {
-            *y2Shape = *x1Shape;
-            *outScale2Shape = outScaleShape;
-        }
+    auto knownRet = FillKnownRankShapes(context, x1Shape, outScaleShape, y1Shape, y2Shape, outScale1Shape,
+                                        outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist, smooth2Exist);
+    if (knownRet != GRAPH_SUCCESS) {
+        return knownRet;
     }
     OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuant");
     return GRAPH_SUCCESS;

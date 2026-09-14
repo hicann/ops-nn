@@ -97,7 +97,7 @@ void RmsNormGradQuantEmptyTiling::CalcRowsAndCols(gert::Shape& gammaShape)
     }
 }
 
-ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsShape()
+ge::graphStatus RmsNormGradQuantEmptyTiling::CheckDyAndXShapes()
 {
     // check dy
     auto inputShape = context_->GetInputShape(INPUT_INDEX_0);
@@ -126,9 +126,13 @@ ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsShape()
                                                "The shapes of input dy and input x should be the same");
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus RmsNormGradQuantEmptyTiling::CheckRstdGammaShapes(gert::Shape& gammaStorage)
+{
     // check rstd
-    inputShape = context_->GetInputShape(INPUT_INDEX_2);
+    auto inputShape = context_->GetInputShape(INPUT_INDEX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
@@ -141,20 +145,24 @@ ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsShape()
     // check gamma
     inputShape = context_->GetInputShape(INPUT_INDEX_3);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
-    if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
+    gammaStorage = EnsureNotScalar(inputShape->GetStorageShape());
+    if (CheckShapeAllPositive(gammaStorage) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
+            context_->GetNodeName(), "gamma", ToString(gammaStorage).c_str(),
             "The shape of input gamma can not be an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
-    CalcRowsAndCols(storageShape3);
+ge::graphStatus RmsNormGradQuantEmptyTiling::CheckScalesOffsetXShapes(gert::Shape& gammaStorage)
+{
+    CalcRowsAndCols(gammaStorage);
     OP_CHECK_IF(cols_ == 0, OP_LOGE(context_->GetNodeName(), "The shape of input gamma should not be zero."),
                 return ge::GRAPH_FAILED);
 
     // check scalesX (required input)
-    inputShape = context_->GetInputShape(INPUT_INDEX_4);
+    auto inputShape = context_->GetInputShape(INPUT_INDEX_4);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     {
         auto storageShape4 = inputShape->GetStorageShape();
@@ -178,7 +186,21 @@ ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsShape()
     } else {
         hasOffsetX_ = rms_norm_grad_quant::ComputeModeOffsetX::WITHOUT_OFFSET_X;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus RmsNormGradQuantEmptyTiling::CheckInputsShape()
+{
+    gert::Shape gammaStorage;
+    if (CheckDyAndXShapes() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckRstdGammaShapes(gammaStorage) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckScalesOffsetXShapes(gammaStorage) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

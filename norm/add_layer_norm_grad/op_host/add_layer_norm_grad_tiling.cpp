@@ -107,6 +107,54 @@ static inline void ComputeCoexistFactor(const bool hasDxInput, uint32_t& coexist
     }
 }
 
+static void CalcFloatDtypeTiling(const uint32_t actualAvailUb, int32_t& ndAvailUb, bool& cutDPath,
+                                 TilingStruct& tilingStruct, const uint32_t coexistTensorInput32WithN)
+{
+    tilingStruct.dInnerLength = tilingStruct.numLastDim;
+    ndAvailUb = actualAvailUb / sizeof(float) -
+                ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_ONLY_D;
+    tilingStruct.nAvailInUb = ndAvailUb / (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistTensorInput32WithN +
+                                           ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1);
+    if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
+        cutDPath = true;
+        tilingStruct.nAvailInUb = 1;
+        ndAvailUb = actualAvailUb / sizeof(float) - ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1;
+        tilingStruct.dInnerLength = ndAvailUb / (COEXIST_TENSOR_INPUT32_ONLY_D + coexistTensorInput32WithN);
+        tilingStruct.dInnerLength = ROUND_DOWN(tilingStruct.dInnerLength, BLOCK_NUMBER); // 6120
+    }
+}
+
+static void CalcFp16Bf16DtypeTiling(const uint32_t actualAvailUb, int32_t& ndAvailUb, bool& cutDPath,
+                                    TilingStruct& tilingStruct, const uint32_t coexistFp32TensorInput16WithN,
+                                    const uint32_t coexistFp16TensorInput16WithN)
+{
+    tilingStruct.dInnerLength = tilingStruct.numLastDim;
+    ndAvailUb = actualAvailUb -
+                (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_ONLY_D * sizeof(float) +
+                 ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_ONLY_D *
+                     SIZE_OF_BF16_FP16);
+    tilingStruct.nAvailInUb = ndAvailUb /
+                              (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
+                               ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16 +
+                               ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistFp32TensorInput16WithN *
+                                   sizeof(float) +
+                               ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) * coexistFp16TensorInput16WithN *
+                                   SIZE_OF_BF16_FP16);
+    if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
+        cutDPath = true;
+        tilingStruct.nAvailInUb = 1;
+        ndAvailUb = actualAvailUb -
+                    (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
+                     ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16);
+        tilingStruct.dInnerLength = actualAvailUb /
+                                    ((coexistFp16TensorInput16WithN + COEXIST_FP16_TENSOR_INPUT16_ONLY_D) *
+                                         SIZE_OF_BF16_FP16 +
+                                     (coexistFp32TensorInput16WithN + COEXIST_FP32_TENSOR_INPUT16_ONLY_D) *
+                                         sizeof(float));
+        tilingStruct.dInnerLength = ROUND_DOWN(tilingStruct.dInnerLength, BLOCK_NUMBER_FP16); // 4656
+    }
+}
+
 void AddLayerNormGradTilingImpl(const uint32_t dtypeKey, const uint32_t actualAvailUb, int32_t& ndAvailUb,
                                 bool& cutDPath, TilingStruct& tilingStruct, const bool hasDxInput)
 {
@@ -146,53 +194,16 @@ void AddLayerNormGradTilingImpl(const uint32_t dtypeKey, const uint32_t actualAv
     ComputeCoexistFactor(hasDxInput, coexistTensorInput32WithN, coexistFp32TensorInput16WithN,
                          coexistFp16TensorInput16WithN);
     if (dtypeKey == FLOAT_DTYPE_KEY) {
-        tilingStruct.dInnerLength = tilingStruct.numLastDim;
-        ndAvailUb = actualAvailUb / sizeof(float) -
-                    ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_ONLY_D;
-        tilingStruct.nAvailInUb = ndAvailUb /
-                                  (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistTensorInput32WithN +
-                                   ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1);
-        if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
-            cutDPath = true;
-            tilingStruct.nAvailInUb = 1;
-            ndAvailUb = actualAvailUb / sizeof(float) - ROUND_UP(1, BLOCK_NUMBER) * COEXIST_TENSOR_INPUT32_D_1;
-            tilingStruct.dInnerLength = ndAvailUb / (COEXIST_TENSOR_INPUT32_ONLY_D + coexistTensorInput32WithN);
-            tilingStruct.dInnerLength = ROUND_DOWN(tilingStruct.dInnerLength, BLOCK_NUMBER); // 6120
-        }
+        CalcFloatDtypeTiling(actualAvailUb, ndAvailUb, cutDPath, tilingStruct, coexistTensorInput32WithN);
     } else if (dtypeKey == FLOAT16_DTYPE_KEY || dtypeKey == BFLOAT16_DTYPE_KEY) {
-        tilingStruct.dInnerLength = tilingStruct.numLastDim;
-        ndAvailUb = actualAvailUb - (ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) *
-                                         COEXIST_FP32_TENSOR_INPUT16_ONLY_D * sizeof(float) +
-                                     ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) *
-                                         COEXIST_FP16_TENSOR_INPUT16_ONLY_D * SIZE_OF_BF16_FP16);
-        tilingStruct.nAvailInUb = ndAvailUb /
-                                  (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
-                                   ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 *
-                                       SIZE_OF_BF16_FP16 +
-                                   ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER) * coexistFp32TensorInput16WithN *
-                                       sizeof(float) +
-                                   ROUND_UP(tilingStruct.numLastDim, BLOCK_NUMBER_FP16) *
-                                       coexistFp16TensorInput16WithN * SIZE_OF_BF16_FP16);
-        if (tilingStruct.nAvailInUb < 1 || ndAvailUb < 0) {
-            cutDPath = true;
-            tilingStruct.nAvailInUb = 1;
-            ndAvailUb = actualAvailUb -
-                        (ROUND_UP(1, BLOCK_NUMBER) * COEXIST_FP32_TENSOR_INPUT16_D_1 * sizeof(float) +
-                         ROUND_UP(1, BLOCK_NUMBER_FP16) * COEXIST_FP16_TENSOR_INPUT16_D_1 * SIZE_OF_BF16_FP16);
-            tilingStruct.dInnerLength = actualAvailUb /
-                                        ((coexistFp16TensorInput16WithN + COEXIST_FP16_TENSOR_INPUT16_ONLY_D) *
-                                             SIZE_OF_BF16_FP16 +
-                                         (coexistFp32TensorInput16WithN + COEXIST_FP32_TENSOR_INPUT16_ONLY_D) *
-                                             sizeof(float));
-            tilingStruct.dInnerLength = ROUND_DOWN(tilingStruct.dInnerLength, BLOCK_NUMBER_FP16); // 4656
-        }
+        CalcFp16Bf16DtypeTiling(actualAvailUb, ndAvailUb, cutDPath, tilingStruct, coexistFp32TensorInput16WithN,
+                                coexistFp16TensorInput16WithN);
     } else {
         cutDPath = true;
         tilingStruct.nAvailInUb = 1;
         tilingStruct.dInnerLength = REDUCE_AXIS_IN_UB_MAX;
     }
 }
-
 void AddLayerNormGradGetTilingKey(GetTilingKeyParam& tilingKeyParam, const TilingStruct& tilingStruct,
                                   const bool hasDxInput)
 {

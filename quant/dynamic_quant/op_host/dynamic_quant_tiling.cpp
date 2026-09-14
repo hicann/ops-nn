@@ -230,7 +230,16 @@ ge::graphStatus DynamicQuantTiling::CheckSmoothShape(const gert::TilingContext* 
     auto groupShape = context->GetOptionalInputShape(GROUP_INDEX);
     if (groupShape != nullptr) {
         size_t groupDimNum = groupShape->GetStorageShape().GetDimNum();
-        groupNum = groupShape->GetStorageShape().GetDim(groupDimNum > 0U ? groupDimNum - 1U : 0U);
+        int64_t groupNumTmp = 0;
+        if (groupDimNum > 0U) {
+            groupNumTmp = groupShape->GetStorageShape().GetDim(groupDimNum - 1U);
+        }
+        OP_CHECK_IF(
+            groupNumTmp < 0,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNumTmp),
+                                                  "The value of groupNum must be greater than or equal to 0"),
+            return ge::GRAPH_FAILED);
+        groupNum = static_cast<uint32_t>(groupNumTmp);
         OP_CHECK_IF((groupNum > MAX_EXPERT_NUM),
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
                                                           "The value of groupNum must be less than or equal to 1024"),

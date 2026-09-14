@@ -31,6 +31,8 @@ constexpr int32_t kLoop1Axes = 3;           // enable loop1 copy when at least t
 constexpr int32_t kLoop2Axes = 4;           // enable loop2 copy when at least four axes exist
 constexpr uint64_t kPower2Lower2 = 2ULL;    // bisection-tree threshold: value <= 2 maps to 1
 constexpr uint64_t kPower2Upper4 = 4ULL;    // value <= 4 maps to 2
+constexpr int32_t kLoop1AxisIdx = kLoop1Axes - 1;
+constexpr int32_t kLoop2AxisIdx = kLoop2Axes - 1;
 
 constexpr AscendC::Reg::CastTrait kCastTraitToFp32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
                                                    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_NONE};

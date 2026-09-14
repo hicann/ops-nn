@@ -30,6 +30,13 @@
 
 using namespace op;
 #ifdef __cplusplus
+template <typename ExecutorPtr>
+static void SetWorkspaceAndRelease(ExecutorPtr& uniqueExecutor, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+}
+
 extern "C" {
 #endif
 
@@ -514,65 +521,70 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor,
     return ACLNN_SUCCESS;
 }
 
+static bool CheckDtypeValidV2For910BAnd310P(AddRmsNormQuantV2InputTensor& inputTensor,
+                                            AddRmsNormQuantV2OutputTensor& outputTensor)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_SCALE, return false);
+    if (nullptr != inputTensor.betaOptional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    }
+    if (nullptr != inputTensor.zeroPoints1Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_ZEROPOINT,
+                                   return false);
+    }
+
+    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
+    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
+
+    OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y1Out, op::DataType::DT_INT8, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y2Out, op::DataType::DT_INT8, return false); // Mandatory output
+    if (nullptr != outputTensor.resOut) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    }
+    if (nullptr != outputTensor.xOut) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+    }
+    return true;
+}
+
 static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
 {
-    if (IsRegbase()) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        if (nullptr != inputTensor.betaOptional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        }
-        if (nullptr != inputTensor.zeroPoints1Optional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT,
-                                       return false);
-        }
-        if (nullptr != inputTensor.scales2Optional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales2Optional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        }
-        if (nullptr != inputTensor.zeroPoints2Optional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints2Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT,
-                                       return false);
-        }
-        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
-        if (nullptr != outputTensor.resOut) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        }
-        if (nullptr != outputTensor.xOut) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-        }
-        CHECK_RET(CheckCommonDtypeRelationV2(inputTensor, outputTensor), false);
-        CHECK_RET(CheckRegbaseDtypeCombinationV2(inputTensor.x1, inputTensor.scales1, inputTensor.zeroPoints1Optional,
-                                                 inputTensor.zeroPoints2Optional),
-                  false);
-    } else {
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_SCALE, return false);
-        if (nullptr != inputTensor.betaOptional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X,
-                                       return false);
-        }
-        if (nullptr != inputTensor.zeroPoints1Optional) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional,
-                                       ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
-        }
-
-        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
-        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
-
-        OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y1Out, op::DataType::DT_INT8, return false);
-        OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y2Out, op::DataType::DT_INT8, return false); // Mandatory output
-        if (nullptr != outputTensor.resOut) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-        }
-        if (nullptr != outputTensor.xOut) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-        }
+    if (!IsRegbase()) {
+        return CheckDtypeValidV2For910BAnd310P(inputTensor, outputTensor);
     }
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    if (nullptr != inputTensor.betaOptional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+    if (nullptr != inputTensor.zeroPoints1Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT,
+                                   return false);
+    }
+    if (nullptr != inputTensor.scales2Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales2Optional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+    if (nullptr != inputTensor.zeroPoints2Optional) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints2Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT,
+                                   return false);
+    }
+    OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+    if (nullptr != outputTensor.resOut) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+    if (nullptr != outputTensor.xOut) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    }
+    CHECK_RET(CheckCommonDtypeRelationV2(inputTensor, outputTensor), false);
+    CHECK_RET(CheckRegbaseDtypeCombinationV2(inputTensor.x1, inputTensor.scales1, inputTensor.zeroPoints1Optional,
+                                             inputTensor.zeroPoints2Optional),
+              false);
     return true;
 }
 
@@ -789,6 +801,29 @@ void SpecialTransform(AddRmsNormQuantV2InputTensor& inputTensor, aclOpExecutor* 
 }
 } // namespace AddRmsNormQuantV2ACLNN
 
+static bool HandleEmptyTensorV2(bool anyEmptyTensor, uint64_t* workspaceSize)
+{
+    if (!anyEmptyTensor) {
+        return false;
+    }
+    OP_LOGW("Got empty tensor in aclnnAddRmsNormQuantV2!");
+    *workspaceSize = 0;
+    return true;
+}
+
+static aclnnStatus ToContiguousInputsV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                        aclOpExecutor* executor, const aclTensor*& x1Cont, const aclTensor*& x2Cont,
+                                        const aclTensor*& gammaCont)
+{
+    x1Cont = l0op::Contiguous(x1, executor);
+    x2Cont = l0op::Contiguous(x2, executor);
+    gammaCont = l0op::Contiguous(gamma, executor);
+    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
                                                    const aclTensor* scales1, const aclTensor* scales2Optional,
                                                    const aclTensor* zeroPoints1Optional,
@@ -816,21 +851,17 @@ aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(const aclTensor* x1, const ac
 
     // 支持空tensor
     bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
-    if (anyEmptyTensor) {
-        OP_LOGW("Got empty tensor in aclnnAddRmsNormQuantV2!");
-        *workspaceSize = 0;
+    if (HandleEmptyTensorV2(anyEmptyTensor, workspaceSize)) {
         uniqueExecutorForV2.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
-    auto x1Cont = l0op::Contiguous(x1, uniqueExecutorForV2.get());
-    auto x2Cont = l0op::Contiguous(x2, uniqueExecutorForV2.get());
-    auto gammaCont = l0op::Contiguous(gamma, uniqueExecutorForV2.get());
-
-    CHECK_RET(x1Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(x2Cont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* x1Cont = nullptr;
+    const aclTensor* x2Cont = nullptr;
+    const aclTensor* gammaCont = nullptr;
+    auto contRet = ToContiguousInputsV2(x1, x2, gamma, uniqueExecutorForV2.get(), x1Cont, x2Cont, gammaCont);
+    CHECK_RET(contRet == ACLNN_SUCCESS, contRet);
 
     auto biasCont = AddRmsNormQuantV2ACLNN::GetTensorContiguousV2(betaOptional, uniqueExecutorForV2.get());
     auto s1Cont = AddRmsNormQuantV2ACLNN::GetTensorContiguousV2(inputTensorOri.scales1, uniqueExecutorForV2.get());
@@ -857,8 +888,7 @@ aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(const aclTensor* x1, const ac
     }
 
     // 获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutorForV2->GetWorkspaceSize();
-    uniqueExecutorForV2.ReleaseTo(executor);
+    SetWorkspaceAndRelease(uniqueExecutorForV2, workspaceSize, executor);
     OP_LOGD("Finish aclnnAddRmsNormQuantV2GetWorkspaceSize.");
     return ACLNN_SUCCESS;
 }

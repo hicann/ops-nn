@@ -19,6 +19,7 @@
 #include <dlfcn.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <set>
 #include <string>
 #include <utility>
@@ -40,7 +41,14 @@ using GetOptionValueFn = graphStatus (*)(const void*, const AscendString&, Ascen
 // GE 库以 RTLD_GLOBAL 加载，故查全局符号表；
 GetOptionValueFn ResolveGetOptionValue()
 {
-    static GetOptionValueFn fn = reinterpret_cast<GetOptionValueFn>(dlsym(RTLD_DEFAULT, kGetOptionValueSymbol));
+    static GetOptionValueFn fn = []() {
+        void* symbol = dlsym(RTLD_DEFAULT, kGetOptionValueSymbol);
+        GetOptionValueFn resolved = nullptr;
+        if (symbol != nullptr) {
+            std::memcpy(&resolved, &symbol, sizeof(resolved));
+        }
+        return resolved;
+    }();
     return fn;
 }
 
@@ -188,7 +196,6 @@ bool IsShapeSupport(const GNode& node, int64_t l2Size)
         return false;
     }
     const Shape x1Shape = x1Desc.GetShape();
-
     if (IsDynamicShape(x1Shape)) {
         const size_t dimNum = x1Shape.GetDimNum();
         if (dimNum == 0U) {

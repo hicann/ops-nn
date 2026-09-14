@@ -53,6 +53,46 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::SetTilingData()
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckInputDtypeConsistency(const gert::TilingContext* tilingContext,
+                                                  ge::DataType gradOutputDtype, ge::DataType saveInputDtype,
+                                                  ge::DataType meanDtype, ge::DataType invstdDtype,
+                                                  ge::DataType weightDtype, ge::DataType meanDyDtype,
+                                                  ge::DataType meanDyXmuDtype)
+{
+    // Validate dtype consistency
+    auto AllSame = [](ge::DataType ref, std::initializer_list<ge::DataType> dtypes) {
+        return std::all_of(dtypes.begin(), dtypes.end(), [ref](ge::DataType d) { return d == ref; });
+    };
+    bool isFloat16FloatCase = (gradOutputDtype == ge::DT_FLOAT16 && meanDtype == ge::DT_FLOAT);
+    bool valid = isFloat16FloatCase ? (gradOutputDtype == saveInputDtype &&
+                                       AllSame(meanDtype, {invstdDtype, weightDtype, meanDyDtype, meanDyXmuDtype})) :
+                                      AllSame(gradOutputDtype, {saveInputDtype, meanDtype, invstdDtype, weightDtype,
+                                                                meanDyDtype, meanDyXmuDtype});
+    if (!valid) {
+        std::string reasonMsg = isFloat16FloatCase ?
+                                    "The dtype of save_input must be float16 and the dtypes of remaining tensors "
+                                    "invstd, weight, mean_dy and mean_dy_xmu must be float, "
+                                    "when the dtype of grad_output is float16 and the dtype of mean is float" :
+                                    "The dtypes of all input parameters must be the same, when the dtype of "
+                                    "grad_output is not float16 or the dtype of mean is not float";
+
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(gradOutputDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(saveInputDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(meanDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(invstdDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(weightDtype) + ", " +
+                                ge::TypeUtils::DataTypeToSerialString(meanDyDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(meanDyXmuDtype);
+
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(),
+                                               "grad_output, save_input, mean, invstd, weight, mean_dy and mean_dy_xmu",
+                                               dtypesStr.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcInputDtype()
 {
     auto gradOutputDesc = tilingContext->GetInputDesc(GRAD_OUTPUT_INDEX);
@@ -89,42 +129,9 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, meanDyXmuDesc);
     this->meanDyXmuDtype = meanDyXmuDesc->GetDataType();
 
-    // Validate dtype consistency
-    auto AllSame = [](ge::DataType ref, std::initializer_list<ge::DataType> dtypes) {
-        return std::all_of(dtypes.begin(), dtypes.end(), [ref](ge::DataType d) { return d == ref; });
-    };
-    bool isFloat16FloatCase = (this->gradOutputDtype == ge::DT_FLOAT16 && this->meanDtype == ge::DT_FLOAT);
-    bool valid = isFloat16FloatCase ?
-                     (this->gradOutputDtype == this->saveInputDtype &&
-                      AllSame(this->meanDtype,
-                              {this->invstdDtype, this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype})) :
-                     AllSame(this->gradOutputDtype, {this->saveInputDtype, this->meanDtype, this->invstdDtype,
-                                                     this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype});
-    if (!valid) {
-        std::string reasonMsg = isFloat16FloatCase ?
-                                    "The dtype of save_input must be float16 and the dtypes of remaining tensors "
-                                    "invstd, weight, mean_dy and mean_dy_xmu must be float, "
-                                    "when the dtype of grad_output is float16 and the dtype of mean is float" :
-                                    "The dtypes of all input parameters must be the same, when the dtype of "
-                                    "grad_output is not float16 or the dtype of mean is not float";
-
-        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype) + ", " +
-                                ge::TypeUtils::DataTypeToSerialString(this->saveInputDtype) + ", " +
-                                ge::TypeUtils::DataTypeToSerialString(this->meanDtype) + ", " +
-                                ge::TypeUtils::DataTypeToSerialString(this->invstdDtype) + ", " +
-                                ge::TypeUtils::DataTypeToSerialString(this->weightDtype) + ", " +
-                                ge::TypeUtils::DataTypeToSerialString(this->meanDyDtype) + " and " +
-                                ge::TypeUtils::DataTypeToSerialString(this->meanDyXmuDtype);
-
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(),
-                                               "grad_output, save_input, mean, invstd, weight, mean_dy and mean_dy_xmu",
-                                               dtypesStr.c_str(), reasonMsg.c_str());
-        return ge::GRAPH_FAILED;
-    }
-
-    return ge::GRAPH_SUCCESS;
+    return CheckInputDtypeConsistency(tilingContext, this->gradOutputDtype, this->saveInputDtype, this->meanDtype,
+                                      this->invstdDtype, this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype);
 }
-
 ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcOutputDtype()
 {
     auto outputDesc = tilingContext->GetOutputDesc(GRAD_INPUT_INDEX);

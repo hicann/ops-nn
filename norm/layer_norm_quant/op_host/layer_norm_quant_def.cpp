@@ -45,6 +45,7 @@ public:
             .DataType({ge::DT_INT8, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Output("result")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT8, ge::DT_INT8})
@@ -55,11 +56,19 @@ public:
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
         this->Attr("quant_mode").AttrType(OPTIONAL).Int(0);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
+        Add310PConfig();
+        Add950Config();
+    }
+
+private:
+    void Add310PConfig()
+    {
         OpAICoreConfig config310P;
         config310P.Input("x")
             .ParamType(REQUIRED)
@@ -102,7 +111,10 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend310p", config310P);
+    }
 
+    void Add950Config()
+    {
         OpAICoreConfig config_950;
         config_950.Input("x")
             .ParamType(REQUIRED)

@@ -303,6 +303,62 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus ComputeGroupNormResult(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta,
+                                          int64_t N, int64_t C, int64_t group, double eps, bool isNormSocLists,
+                                          aclOpExecutor* executor, const aclTensor*& y, const aclTensor*& mean,
+                                          const aclTensor*& variance)
+{
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    auto selfContiguous = l0op::Contiguous(self, executor);
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto gammaContiguous = GetGamma(selfContiguous, gamma, C, executor);
+    CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto betaContiguous = GetBeta(selfContiguous, beta, C, executor);
+    CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 根据芯片确定调用GroupNorm，还是GroupNormSilu
+    std::tuple<aclTensor*, aclTensor*, aclTensor*> result;
+    if (isNormSocLists) {
+        result = l0op::GroupNormSilu(selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps),
+                                     false, executor);
+    } else {
+        const aclTensor* xCast = selfContiguous;
+        const aclTensor* gammaCast = gammaContiguous;
+        const aclTensor* betaCast = betaContiguous;
+        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && npuArch == NpuArch::DAV_1001) {
+            xCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(xCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            gammaCast = l0op::Cast(gammaContiguous, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(gammaCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            betaCast = l0op::Cast(betaContiguous, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(betaCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+
+        const bool isTraining = true;
+        auto resultGN = l0op::GroupNorm(xCast, gammaCast, betaCast, N, group, static_cast<float>(eps), isTraining,
+                                        executor);
+        auto yResult = std::get<Y_INDEX>(resultGN);
+        auto meanResult = std::get<MEAN_INDEX>(resultGN);
+        auto varianceResult = std::get<RSTD_INDEX>(resultGN);
+        CHECK_RET((yResult != nullptr) && (meanResult != nullptr) && (varianceResult != nullptr),
+                  ACLNN_ERR_INNER_NULLPTR);
+
+        result = GroupNormOutCastProcess(selfContiguous, yResult, meanResult, varianceResult, executor);
+    }
+
+    y = std::get<0>(result);
+    CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    mean = std::get<1>(result);
+    CHECK_RET(mean != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    variance = std::get<2>(result);
+    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta,
                                            int64_t N, int64_t C, int64_t HxW, int64_t group, double eps, aclTensor* out,
                                            aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize,
@@ -328,57 +384,16 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTenso
         return ACLNN_SUCCESS;
     }
 
-    // 固定写法，将输入self, gamma, beta转换成连续的tensor
-    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto gammaContiguous = GetGamma(selfContiguous, gamma, C, uniqueExecutor.get());
-    CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto betaContiguous = GetBeta(selfContiguous, beta, C, uniqueExecutor.get());
-    CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 根据芯片确定调用GroupNorm，还是GroupNormSilu
-    std::tuple<aclTensor*, aclTensor*, aclTensor*> result;
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool isNormSocLists = (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_2002 ||
                            Ops::NN::AclnnUtil::IsRegbase(npuArch));
-    if (isNormSocLists) {
-        result = l0op::GroupNormSilu(selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps),
-                                     false, uniqueExecutor.get());
-    } else {
-        const aclTensor* xCast = selfContiguous;
-        const aclTensor* gammaCast = gammaContiguous;
-        const aclTensor* betaCast = betaContiguous;
-        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && npuArch == NpuArch::DAV_1001) {
-            xCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-            CHECK_RET(xCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            gammaCast = l0op::Cast(gammaContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-            CHECK_RET(gammaCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            betaCast = l0op::Cast(betaContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-            CHECK_RET(betaCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
+    const aclTensor* y = nullptr;
+    const aclTensor* mean = nullptr;
+    const aclTensor* variance = nullptr;
+    auto coreRet = ComputeGroupNormResult(self, gamma, beta, N, C, group, eps, isNormSocLists, uniqueExecutor.get(), y,
+                                          mean, variance);
+    CHECK_RET(coreRet == ACLNN_SUCCESS, coreRet);
 
-        const bool isTraining = true;
-        auto resultGN = l0op::GroupNorm(xCast, gammaCast, betaCast, N, group, static_cast<float>(eps), isTraining,
-                                        uniqueExecutor.get());
-        auto yResult = std::get<Y_INDEX>(resultGN);
-        auto meanResult = std::get<MEAN_INDEX>(resultGN);
-        auto varianceResult = std::get<RSTD_INDEX>(resultGN);
-        CHECK_RET((yResult != nullptr) && (meanResult != nullptr) && (varianceResult != nullptr),
-                  ACLNN_ERR_INNER_NULLPTR);
-
-        result = GroupNormOutCastProcess(selfContiguous, yResult, meanResult, varianceResult, uniqueExecutor.get());
-    }
-
-    auto y = std::get<0>(result);
-    CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto mean = std::get<1>(result);
-    CHECK_RET(mean != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto variance = std::get<2>(result);
-    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
     auto outViewCopyResult = l0op::ViewCopy(y, out, uniqueExecutor.get());
     CHECK_RET(outViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -413,7 +428,6 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTenso
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-
 aclnnStatus aclnnGroupNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnGroupNorm);
