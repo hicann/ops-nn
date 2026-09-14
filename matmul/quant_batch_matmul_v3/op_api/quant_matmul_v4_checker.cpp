@@ -107,8 +107,9 @@ static inline bool CheckDtypeValidOnOnlyL0c2ubPertoken(TupleTensor mandatoryTens
         return false;
     }
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
-    if (bias != nullptr && bias->GetDataType() != op::DataType::DT_INT32) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Bias dtype should be INT32, actual dtype is %s",
+    if (bias != nullptr && bias->GetDataType() != op::DataType::DT_INT32 &&
+        bias->GetDataType() != op::DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Bias dtype should be INT32 or FLOAT, actual dtype is %s",
                 op::ToString(bias->GetDataType()).GetString());
         return false;
     }

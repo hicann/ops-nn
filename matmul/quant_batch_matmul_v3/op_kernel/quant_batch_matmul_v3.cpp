@@ -187,26 +187,30 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         op.Process(true);                                                                                          \
     } while (0)
 
-#define INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(templateClass)                         \
-    do {                                                                                      \
-        GET_TILING_DATA_WITH_STRUCT(QuantMatmulPertokenTilingDataArch20, tilingData, tiling); \
-        if (tilingData.swizzleDirect == 0 && tilingData.withBias == false) {                  \
-            templateClass<0, false> op;                                                       \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
-            op.Process();                                                                     \
-        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true) {            \
-            templateClass<0, true> op;                                                        \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
-            op.Process();                                                                     \
-        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == false) {           \
-            templateClass<1, false> op;                                                       \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
-            op.Process();                                                                     \
-        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true) {            \
-            templateClass<1, true> op;                                                        \
-            op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                      \
-            op.Process();                                                                     \
-        }                                                                                     \
+#define INVOKE_QMM_PERTOKEN_ARCH20(templateClass, swizzle, biasFlag, biasType)                              \
+    do {                                                                                                    \
+        templateClass<swizzle, biasFlag, format_x1, format_x2, format_y, int8_t, float, biasType, half> op; \
+        op.Init(x1, x2, bias, scale, pertokenScale, y, &tilingData);                                        \
+        op.Process();                                                                                       \
+    } while (0)
+
+#define INVOKE_QUANT_BATCH_MATMUL_PERTOKEN_ARCH20_IMPL(templateClass)                            \
+    do {                                                                                         \
+        GET_TILING_DATA_WITH_STRUCT(QuantMatmulPertokenTilingDataArch20, tilingData, tiling);    \
+        const bool isFp32Bias = (tilingData.biasDtype == static_cast<uint32_t>(DT_FLOAT));       \
+        if (tilingData.swizzleDirect == 0 && tilingData.withBias == false) {                     \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 0, false, int32_t);                        \
+        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true && isFp32Bias) { \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 0, true, float);                           \
+        } else if (tilingData.swizzleDirect == 0 && tilingData.withBias == true) {               \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 0, true, int32_t);                         \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == false) {              \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 1, false, int32_t);                        \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true && isFp32Bias) { \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 1, true, float);                           \
+        } else if (tilingData.swizzleDirect == 1 && tilingData.withBias == true) {               \
+            INVOKE_QMM_PERTOKEN_ARCH20(templateClass, 1, true, int32_t);                         \
+        }                                                                                        \
     } while (0)
 
 template <int TRANS, int KERNEL_TEMPLATE_TYPE, int PERTOKEN, int OPTIONATTR>

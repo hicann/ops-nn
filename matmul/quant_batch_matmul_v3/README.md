@@ -80,6 +80,12 @@
       out = (x1@x2 + bias) * scale * pertokenScaleOptional
       $$
 
+    - 有pertoken、bias FLOAT32
+
+      $$
+      out = x1@x2 * scale * pertokenScaleOptional + bias
+      $$
+
 ## 参数说明
 
 <table class="tg"><thead>
@@ -154,7 +160,7 @@
   - x1只支持INT8数据类型。
   - x2只支持INT8数据类型。
   - scale只支持UINT64、FLOAT32数据类型。
-  - bias只支持INT32数据类型。
+  - bias只支持INT32数据类型，pertoken场景额外支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和INT32数据类型。
 - Kirin X90/Kirin 9030 处理器系列产品：

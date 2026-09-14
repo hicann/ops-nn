@@ -87,10 +87,18 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::GetShapeAttrsInfo()
     params_.k = aShape[aDims - CONST_ONE];
     params_.n = bShape[bDims - CONST_TWO];
 
-    // Process Bias
+    // Process Bias. INT32/FP32 share one static bin; kernel dispatches on biasDtype.
+    qbmmTilingDataArch20_.withBias = false;
+    qbmmTilingDataArch20_.biasWithBatch = false;
+    qbmmTilingDataArch20_.biasDtype = static_cast<uint32_t>(ge::DT_INT32);
     if (context_->GetOptionalInputDesc(INDEX_BIAS) != nullptr &&
         context_->GetOptionalInputDesc(INDEX_OFFSET) == nullptr) {
+        auto biasDtype = context_->GetOptionalInputDesc(INDEX_BIAS)->GetDataType();
+        OP_TILING_CHECK(biasDtype != ge::DT_INT32 && biasDtype != ge::DT_FLOAT,
+                        OP_LOGE(params_.opName, "Arch20 Pertoken mode bias dtype only support INT32 or FLOAT."),
+                        return ge::GRAPH_FAILED;);
         qbmmTilingDataArch20_.withBias = true;
+        qbmmTilingDataArch20_.biasDtype = static_cast<uint32_t>(biasDtype);
         auto biasShape = context_->GetOptionalInputShape(INDEX_BIAS)->GetOriginShape();
         if (biasShape.GetDimNum() == 1) {
             qbmmTilingDataArch20_.biasWithBatch = false;
@@ -146,7 +154,8 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::DoTiling()
     params_.isPertokenArch20 = true;
     params_.isInt8 = true;
     tiling_.GetHardwareInfo();
-    GetShapeAttrsInfo();
+    OP_TILING_CHECK(GetShapeAttrsInfo() != ge::GRAPH_SUCCESS, OP_LOGE("Arch20Pertoken: ", "GetShapeAttrsInfo failed."),
+                    return ge::GRAPH_FAILED);
     if (!tiling_.GetMatMulTilingData()) {
         return ge::GRAPH_FAILED;
     }
