@@ -17,6 +17,8 @@
 #ifndef AVG_POOL3_D_GRAD_BASE_H_
 #define AVG_POOL3_D_GRAD_BASE_H_
 
+#include <type_traits>
+
 #include "kernel_operator.h"
 
 namespace AvgPool3DGrad {
@@ -91,7 +93,13 @@ __aicore__ inline void ComputeDivisor1D(MicroAPI::RegTensor<int32_t>& divisorAxi
     }
 
     AscendC::MicroAPI::Sub(divisorAxisT, endReg, startReg, maskT);
-    divisorAxis = (AscendC::MicroAPI::RegTensor<int32_t>&)divisorAxisT.reg[0];
+    if constexpr (std::is_same<T, int64_t>::value) {
+        AscendC::MicroAPI::RegTensor<int32_t> divisorAxisI32;
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(divisorAxisI32, divisorAxisT, maskT);
+        divisorAxis = divisorAxisI32;
+    } else {
+        divisorAxis = (AscendC::MicroAPI::RegTensor<int32_t>&)divisorAxisT.reg[0];
+    }
 }
 
 // 3D divisor: D*H*W pool size, optionally dynamic per element (COUNT_PAD / IS_CHECK_RANGE).
@@ -344,9 +352,15 @@ __aicore__ inline void ComputeOutDHWIndex(MicroAPI::RegTensor<int32_t>& dIndexRe
     AscendC::MicroAPI::Adds(dIndexRegTwo, outDStart, static_cast<T>(-curDIndex - padD), maskT);
     AscendC::MicroAPI::Adds(hIndexRegTwo, outHStart, static_cast<T>(-curHIndex - padH), maskT);
     AscendC::MicroAPI::Adds(wIndexRegTwo, outWStart, static_cast<T>(-curWIndex - padW), maskT);
-    dIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)dIndexRegTwo.reg[0];
-    hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegTwo.reg[0];
-    wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
+    if constexpr (std::is_same<T, int64_t>::value) {
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(dIndexReg, dIndexRegTwo, maskT);
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(hIndexReg, hIndexRegTwo, maskT);
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(wIndexReg, wIndexRegTwo, maskT);
+    } else {
+        dIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)dIndexRegTwo.reg[0];
+        hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegTwo.reg[0];
+        wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
+    }
 }
 
 template <typename T, const MicroAPI::RegTrait& Trait = MicroAPI::RegTraitNumOne>
@@ -358,7 +372,11 @@ __aicore__ inline void ComputeOutWIndex(MicroAPI::RegTensor<int32_t>& wIndexReg,
     uint32_t numT = count;
     AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<T, Trait>(numT);
     AscendC::MicroAPI::Adds(wIndexRegTwo, outWStart, static_cast<T>(-curWIndex - padW), maskT);
-    wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
+    if constexpr (std::is_same<T, int64_t>::value) {
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(wIndexReg, wIndexRegTwo, maskT);
+    } else {
+        wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
+    }
 }
 
 template <typename T, const MicroAPI::RegTrait& Trait = MicroAPI::RegTraitNumOne>
@@ -374,8 +392,13 @@ __aicore__ inline void ComputeOutWHIndex(MicroAPI::RegTensor<int32_t>& wIndexReg
     AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<T, Trait>(numT);
     AscendC::MicroAPI::Adds(wIndexRegTwo, outWStart, static_cast<T>(-curWIndex - padW), maskT);
     AscendC::MicroAPI::Adds(hIndexRegTwo, outHStart, static_cast<T>(-curHIndex - padH), maskT);
-    wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
-    hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegTwo.reg[0];
+    if constexpr (std::is_same<T, int64_t>::value) {
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(wIndexReg, wIndexRegTwo, maskT);
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(hIndexReg, hIndexRegTwo, maskT);
+    } else {
+        wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegTwo.reg[0];
+        hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegTwo.reg[0];
+    }
 }
 
 __aicore__ inline void FilterMaskForHwParallel(MicroAPI::MaskReg& preg, MicroAPI::RegTensor<int32_t>& hIndexReg,

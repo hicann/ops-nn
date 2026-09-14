@@ -56,7 +56,7 @@ __aicore__ inline void GradientAccBigC(__local_mem__ computeType* yAddr, MicroAP
     AscendC::MicroAPI::RegTensor<computeType> divisorResReg;
     AscendC::MicroAPI::DataCopy(scatterAccResReg, yAddr + scatterIndex);
     AscendC::MicroAPI::Cast<computeType, int32_t, castTraitI32F32>(divisorCastReg, divisorReg, pregRes);
-    AscendC::MicroAPI::Div(divisorResReg, gradReg, divisorCastReg, pregRes);
+    AscendC::MicroAPI::Div<computeType, &divHighPrecisionMode>(divisorResReg, gradReg, divisorCastReg, pregRes);
     AscendC::MicroAPI::Add(scatterAccResReg, scatterAccResReg, divisorResReg, pregRes);
     AscendC::MicroAPI::DataCopy(yAddr + scatterIndex, scatterAccResReg, pregRes);
 }
@@ -92,7 +92,7 @@ __aicore__ inline void DoSingleCNdhwc(__local_mem__ computeType* yAddr, __local_
     }
 }
 
-template <typename T1, const uint32_t IS_CHECK_RANGE>
+template <typename T1, typename T3, const MicroAPI::RegTrait& Trait, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void DoMulCNdhwc(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
                                    MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t gradMaskCount,
                                    int32_t nOffset, int32_t wOutputActual, int32_t hOutputActual, int32_t dOutputActual,
@@ -101,8 +101,16 @@ __aicore__ inline void DoMulCNdhwc(__local_mem__ computeType* yAddr, __local_mem
                                    MicroAPI::RegTensor<int32_t>& dMaxReg, uint16_t kD, uint16_t kH, uint16_t kW,
                                    MicroAPI::RegTensor<int32_t>& divisorReg, MicroAPI::RegTensor<int32_t>& wIndexReg,
                                    MicroAPI::RegTensor<int32_t>& hIndexReg, MicroAPI::RegTensor<int32_t>& dIndexReg,
-                                   AscendC::MicroAPI::RegTensor<int32_t>& tmplWRegIdx)
+                                   AscendC::MicroAPI::RegTensor<T3, Trait>& tmplWRegIdxT3)
 {
+    AscendC::MicroAPI::RegTensor<int32_t> tmplWRegIdx;
+    if constexpr (std::is_same<T3, int64_t>::value) {
+        AscendC::MicroAPI::MaskReg
+            allMaskI32 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::Cast<int32_t, T3, castTraitI64I32>(tmplWRegIdx, tmplWRegIdxT3, allMaskI32);
+    } else {
+        tmplWRegIdx = (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdxT3;
+    }
     AscendC::MicroAPI::RegTensor<computeType> gradReg;
     AscendC::MicroAPI::RegTensor<int32_t> scatterStartIdxReg;
     AscendC::MicroAPI::RegTensor<int32_t> scatterIndexReg;
@@ -212,9 +220,15 @@ __aicore__ inline void ComputeOutDHWIndex(MicroAPI::RegTensor<int32_t>& wIndexRe
     AscendC::MicroAPI::Adds(wIndexRegT, outWStart, static_cast<T>(-(curWIndex + padW) * cOutputAligned), maskT);
     AscendC::MicroAPI::Adds(hIndexRegT, outHStart, static_cast<T>(-curHIndex - padH), maskT);
     AscendC::MicroAPI::Adds(dIndexRegT, outDStart, static_cast<T>(-curDIndex - padD), maskT);
-    wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegT;
-    hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegT;
-    dIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)dIndexRegT;
+    if constexpr (std::is_same<T, int64_t>::value) {
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(wIndexReg, wIndexRegT, maskT);
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(hIndexReg, hIndexRegT, maskT);
+        AscendC::MicroAPI::Cast<int32_t, T, castTraitI64I32>(dIndexReg, dIndexRegT, maskT);
+    } else {
+        wIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)wIndexRegT;
+        hIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)hIndexRegT;
+        dIndexReg = (AscendC::MicroAPI::RegTensor<int32_t>&)dIndexRegT;
+    }
 }
 
 template <typename T>
@@ -552,7 +566,11 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint16_t computeSize = V_REG_SIZE / sizeof(float);
     uint16_t concurrencyCount = computeSize / cOutputActual_;
     if (concurrencyCount < 2) {
-        ConCProcVF3D<AscendC::MicroAPI::RegTraitNumOne>(yAddr, gradAddr);
+        if constexpr (std::is_same<T3, int64_t>::value) {
+            ConCProcVF3D<AscendC::MicroAPI::RegTraitNumTwo>(yAddr, gradAddr);
+        } else {
+            ConCProcVF3D<AscendC::MicroAPI::RegTraitNumOne>(yAddr, gradAddr);
+        }
     } else {
         uint32_t wFullBatchCount = wGradActual_ / curWProBatchSize_;
         uint16_t hConcurrentCount = concurrencyCount / wFullBatchCount;
@@ -871,11 +889,10 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                             ComputeOutDHWIndex<T3, Trait>(wIndexReg, hIndexReg, dIndexReg, outWStart, outHStart,
                                                           outDStart, curWIndex, curHIndex, curDIndex, cOutputAligned,
                                                           padD, padH, padW, mask0);
-                            DoMulCNdhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask0, nOffset,
-                                                            wOutputActual, hOutputActual, dOutputActual, cOutputAligned,
-                                                            zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW,
-                                                            divisorReg, wIndexReg, hIndexReg, dIndexReg,
-                                                            (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdx);
+                            DoMulCNdhwc<T1, T3, Trait, IS_CHECK_RANGE>(
+                                yAddr, gradAddr, parallelRegIndex, mask0, nOffset, wOutputActual, hOutputActual,
+                                dOutputActual, cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW,
+                                divisorReg, wIndexReg, hIndexReg, dIndexReg, tmplWRegIdx);
                         }
                     }
                 }
@@ -931,11 +948,10 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                         ComputeOutDHWIndex<T3, Trait>(wIndexReg, hIndexReg, dIndexReg, outWStart, outHStart, outDStart,
                                                       curWIndex, curHIndex, curDIndex, cOutputAligned, padD, padH, padW,
                                                       mask1);
-                        DoMulCNdhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask1, nOffset,
-                                                        wOutputActual, hOutputActual, dOutputActual, cOutputAligned,
-                                                        zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW, divisorReg,
-                                                        wIndexReg, hIndexReg, dIndexReg,
-                                                        (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdx);
+                        DoMulCNdhwc<T1, T3, Trait, IS_CHECK_RANGE>(
+                            yAddr, gradAddr, parallelRegIndex, mask1, nOffset, wOutputActual, hOutputActual,
+                            dOutputActual, cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW,
+                            divisorReg, wIndexReg, hIndexReg, dIndexReg, tmplWRegIdx);
                     }
                 }
 
@@ -992,11 +1008,10 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                         ComputeOutDHWIndex<T3, Trait>(wIndexReg, hIndexReg, dIndexReg, outWStart, outHStart, outDStart,
                                                       curWIndex, curHIndex, curDIndex, cOutputAligned, padD, padH, padW,
                                                       mask2);
-                        DoMulCNdhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask2, nOffset,
-                                                        wOutputActual, hOutputActual, dOutputActual, cOutputAligned,
-                                                        zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW, divisorReg,
-                                                        wIndexReg, hIndexReg, dIndexReg,
-                                                        (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdx);
+                        DoMulCNdhwc<T1, T3, Trait, IS_CHECK_RANGE>(
+                            yAddr, gradAddr, parallelRegIndex, mask2, nOffset, wOutputActual, hOutputActual,
+                            dOutputActual, cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH, kW,
+                            divisorReg, wIndexReg, hIndexReg, dIndexReg, tmplWRegIdx);
                     }
                 }
             }
@@ -1077,10 +1092,10 @@ __aicore__ inline void DoMergeHWBlock3D(
         ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex, padW);
         ComputeOutDHWIndex<T3, Trait>(wIndexReg, hIndexReg, dIndexReg, outWStart, outHStart, outDStart, curWIndex,
                                       curHIndex, curDIndex, cOutputAligned, padD, padH, padW, mask);
-        DoMulCNdhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, wOutputActual, hOutputActual,
-                                        dOutputActual, cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH,
-                                        kW, divisorReg, wIndexReg, hIndexReg, dIndexReg,
-                                        (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdx);
+        DoMulCNdhwc<T1, T3, Trait, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, wOutputActual,
+                                                   hOutputActual, dOutputActual, cOutputAligned, zeroConstReg, wMaxReg,
+                                                   hMaxReg, dMaxReg, kD, kH, kW, divisorReg, wIndexReg, hIndexReg,
+                                                   dIndexReg, tmplWRegIdx);
     }
 }
 
@@ -1166,10 +1181,10 @@ __aicore__ inline void DoMergeDHWCBlock3D(
         ComputeStridedIndices<T3, Trait>(outWStart, tmplWRegIdx, cOutputActual, cOutputAligned, curWIndex, padW);
         ComputeOutDHWIndex<T3, Trait>(wIndexReg, hIndexReg, dIndexReg, outWStart, outHStart, outDStart, curWIndex,
                                       curHIndex, curDIndex, cOutputAligned, padD, padH, padW, mask);
-        DoMulCNdhwc<T1, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, wOutputActual, hOutputActual,
-                                        dOutputActual, cOutputAligned, zeroConstReg, wMaxReg, hMaxReg, dMaxReg, kD, kH,
-                                        kW, divisorReg, wIndexReg, hIndexReg, dIndexReg,
-                                        (AscendC::MicroAPI::RegTensor<int32_t>&)tmplWRegIdx);
+        DoMulCNdhwc<T1, T3, Trait, IS_CHECK_RANGE>(yAddr, gradAddr, parallelRegIndex, mask, nOffset, wOutputActual,
+                                                   hOutputActual, dOutputActual, cOutputAligned, zeroConstReg, wMaxReg,
+                                                   hMaxReg, dMaxReg, kD, kH, kW, divisorReg, wIndexReg, hIndexReg,
+                                                   dIndexReg, tmplWRegIdx);
     }
 }
 

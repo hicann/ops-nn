@@ -203,7 +203,8 @@ aclnnStatus aclnnSwigluGroupGradGetWorkspaceSize(const aclTensor* gradY, const a
                                                  uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(aclnnSwigluGroupGrad, DFX_IN(gradY, x, weightOptional, yOriginOptional, groupIndexOptional),
+    L2_DFX_PHASE_1(aclnnSwigluGroupGrad,
+                   DFX_IN(gradY, x, weightOptional, yOriginOptional, groupIndexOptional, clampLimit),
                    DFX_OUT(gradXOut, gradWeightOutOptional));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
