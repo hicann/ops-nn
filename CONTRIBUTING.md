@@ -163,6 +163,8 @@ ${op_class}                           # 算子分类
 │   ├── op_host                       # 算子定义、Tiling 相关实现
 │   │   ├── ${op_name}_def.cpp        # 算子定义文件
 │   │   ├── ${op_name}_tiling.cpp     # 算子 Tiling 实现文件
+│   │   ├── ${op_name}_tiling_${sub_case}.cpp # 可选，子场景 Tiling 实现，${sub_case} 表示子场景（如 arch35）
+│   │   ├── ${op_name}_tiling_${sub_case}.h # 可选，子场景 Tiling 实现头文件
 │   │   └── CMakeLists.txt
 │   ├── op_kernel                     # 算子 Kernel 目录
 │   │   ├── ${op_name}.cpp            # Kernel 入口文件，包含主函数和调度逻辑
@@ -174,6 +176,10 @@ ${op_class}                           # 算子分类
 │   └── tests                         # 算子测试文件
 │       └── ut                        # 算子 UT 测试文件
 ```
+
+完整的算子目录结构（含各可选交付件）参见 [项目目录结构](docs/zh/install/dir_structure.md#项目目录)。
+
+> **说明**：op_host 目录下参与编译的 Tiling 实现文件，文件名须包含 `_tiling` 标识（如 `${op_name}_tiling.cpp`、`${op_name}_tiling_${sub_case}.cpp`），否则不会被编译系统识别。针对子场景（如特定架构 arch35）拆分 Tiling 实现时，请遵循此命名规则。
 
 ### PR 上库要求
 
