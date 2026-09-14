@@ -861,7 +861,7 @@ static const aclIntArray* AdaptOutputPaddingTo5D(const aclTensor* input, const a
         return outputPadding;
     }
 
-    FVector<int64_t> newOutputPad(5, 0);
+    FVector<int64_t> newOutputPad(CONV3D_DIM, 0);
     if (input->GetStorageFormat() == op::Format::FORMAT_NCDHW) {
         newOutputPad = {0, 0, (*outputPadding)[0], (*outputPadding)[1], (*outputPadding)[2]};
     } else {
