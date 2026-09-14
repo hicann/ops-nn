@@ -40,9 +40,9 @@ aclnnStatus aclnnEluV2(
 | 参数名           | 输入/输出 | 描述                         | 使用说明                 | 类型              | 数据格式    | 维度      | 非连续Tensor |
 | ------------- | ----- | -------------------------- | -------------------- | --------------- | ------- | ------- | --------- |
 | self          | 输入    | 输入数据张量                     | 数据类型支持fp16，fp32，bf16 | aclTensor*      | ND      | 1-8     | √         |
-| alpha         | 输入    | 输入参数                       | 数据类型fp32，，默认值为1.0    | aclScalar*      |         |         |           |
-| scale         | 输入    | 输入参数                       | 数据类型fp32，，默认值为1.0    | aclScalar*      |         |         |           |
-| inputScale    | 输入    | 输入参数                       | 数据类型fp32，，默认值为1.0    | aclScalar*      |         |         |           |
+| alpha         | 输入    | 输入参数                       | 数据类型fp32，默认值为1.0    | aclScalar*      |         |         |           |
+| scale         | 输入    | 输入参数                       | 数据类型fp32，默认值为1.0    | aclScalar*      |         |         |           |
+| inputScale    | 输入    | 输入参数                       | 数据类型fp32，默认值为1.0    | aclScalar*      |         |         |           |
 | out           | 输出    | 输出数据张量                     | 数据类型同输入self          | aclTensor*      | 同输入self | 同输入self | √         |
 | workspaceSize | 输出    | 返回需要在Device侧申请的workspace大小 |                      | uint64_t*       |         |         |           |
 | executor      | 输出    | 返回op执行器，包含了算子计算流程          |                      | aclOpExecutor** |         |         |           |

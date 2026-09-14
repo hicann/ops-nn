@@ -153,4 +153,4 @@ $$
 
 | 调用方式 | 样例代码 | 说明 |
 | :--- | :--- | :--- |
-| GE图模式 | [test_geir_inplace_apply_ftrl_dynamic.cpp](/examples/test_geir_inplace_apply_ftrl_dynamic.cpp) | 通过 GE 图模式调用，算子 IR 定义见 [算子IR](op_graph/inplace_apply_ftrl_proto.h)。 |
+| GE图模式 | [test_geir_inplace_apply_ftrl_dynamic.cpp](./examples/test_geir_inplace_apply_ftrl_dynamic.cpp) | 通过 GE 图模式调用，算子 IR 定义见 [算子IR](op_graph/inplace_apply_ftrl_proto.h)。 |

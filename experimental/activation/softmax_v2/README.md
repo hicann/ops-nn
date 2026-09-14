@@ -37,4 +37,4 @@ $$
 
 | 调用方式  | 样例代码                                                     | 说明                                                         |
 | :-------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| aclnn接口 | [test_softmax_v2v](ops-math/conversion/transposev/examples/test_aclnn_test_softmax_v2v.cpp) | 通过[aclnnSoftmaxV2v]接口方式调用softmax_v2v算子。 |
+| aclnn接口 | [test_aclnn_softmax_v2](./examples/test_aclnn_softmax_v2.cpp) | 通过aclnnSoftmaxV2接口方式调用SoftmaxV2算子。 |

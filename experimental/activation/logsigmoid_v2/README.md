@@ -40,7 +40,7 @@ $$
       <td>待进行 LogsigmoidV2 计算的输入张量。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-    </tr>  
+    </tr>
     <tr>
       <td>z</td>
       <td>输出</td>
@@ -58,7 +58,7 @@ $$
 
 | 调用方式 | 调用样例 | 说明 |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_logsigmoid_v2.cpp](./examples/test_aclnn_logsigmoid_v2.cpp) | 通过 [test_aclnn_logsigmoid_v2](./docs/test_aclnn_logsigmoid_v2.md) 接口方式调用 LogsigmoidV2 算子。 |
+| aclnn调用 | [test_aclnn_logsigmoid_v2.cpp](./examples/test_aclnn_logsigmoid_v2.cpp) | 通过aclnnLogsigmoidV2接口方式调用LogsigmoidV2算子。 |
 
 ## 贡献说明
 

@@ -6,7 +6,7 @@
 
 ## 接口原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用 `aclnnMedianGetWorkspaceSize` 接口获取入参并根据计算流程计算所需 workspace 大小，再调用 `aclnnMedian` 接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用 `aclnnMedianGetWorkspaceSize` 接口获取入参并根据计算流程计算所需 workspace 大小，再调用 `aclnnMedian` 接口执行计算。
 
 - `aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor *self, int64_t dim, bool keepDim, aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
 - `aclnnStatus aclnnMedian(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`

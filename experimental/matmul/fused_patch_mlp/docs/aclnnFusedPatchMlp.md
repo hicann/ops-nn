@@ -32,7 +32,7 @@
 
 ## 函数原型
 
-每个算子分为两段式接口(详见'../../../docs/zh/context/两段式接口.md')，必须先调用“aclnnFusedPatchMlpGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnFusedPatchMlp”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFusedPatchMlpGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnFusedPatchMlp”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnFusedPatchMlpGetWorkspaceSize(
