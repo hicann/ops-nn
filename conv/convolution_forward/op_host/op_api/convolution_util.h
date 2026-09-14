@@ -135,9 +135,8 @@ const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* ex
 bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>& newStrides, uint32_t dims);
 void GetUbSize();
 void GetL1Size();
-bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
-                    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
-                    const aclTensor* bias);
+bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride,
+                    const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias);
 bool CheckL1SizeLimitsDma(uint32_t inputDtypeSize, uint64_t biasL1Size, uint32_t weightDtypeSize, int64_t k0);
 uint64_t Conv2DInferHiL1(uint64_t inputHoL1, uint64_t khDilated, uint64_t hi, uint64_t strideH);
 uint64_t ConvAlignB(uint64_t a, uint64_t b);
