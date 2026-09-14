@@ -134,6 +134,37 @@ static ge::graphStatus CheckScatterReduceInputs(gert::TilingContext* context)
     return CheckScatterReduceShapes(context);
 }
 
+// 按 UB 实测容量反解 phase-3 的列切分上限。
+// 每列存活的 UB: accUb + rowAccUb(2 份 ACC) + varUb + updQue 深度 8(共 9 份 PARAMS_T)
+// + tmp(int32) + MUL 浮点路径 Mul 前暂存掩码的 preMask(每列不足 1B, 按 1B 计)。
+// phase-1 的排序缓冲在 pipe_.Reset() 后已释放, phase-3 可用整块 UB; 只需扣掉每个 buffer
+// 各自向上按 block 对齐的损失。列上限由容量反解, 而非先定死再判超限 —— sliceSize 再大
+// 也只是多切几个 chunk, 不存在因某轴过大而不支持。
+static uint64_t ResolveUbChunkMax(gert::TilingContext* context)
+{
+    constexpr uint64_t BLOCK_BYTES = static_cast<uint64_t>(ScatterReduceCommon::UB_BLOCK_BYTES);
+    constexpr uint64_t ACC_BUF_NUM = 2UL;                   // accUb, rowAccUb
+    constexpr uint64_t PARAM_BUF_NUM = 9UL;                 // varUb + updQue 深度 8
+    constexpr uint64_t TMP_BUF_BYTES = sizeof(int32_t);     // tmp 固定为 int32
+    constexpr uint64_t ACC_WIDEN_BYTES = sizeof(float);     // 见 kernel 侧 AccT: 窄类型提升到 float
+    constexpr uint64_t SUBWORD_BYTES_MAX = sizeof(int16_t); // 2B 及以下视为窄类型
+    constexpr uint64_t BUF_COUNT = 5UL;                     // InitBuffer 次数, 与 kernel 侧一致
+
+    uint64_t ubSize = 0;
+    platform_ascendc::PlatformAscendC(context->GetPlatformInfo())
+        .GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    auto varDesc = context->GetInputDesc(0);
+    const uint64_t dtypeBytes = (varDesc == nullptr) ?
+                                    ACC_WIDEN_BYTES :
+                                    static_cast<uint64_t>(ge::GetSizeByDataType(varDesc->GetDataType()));
+    const uint64_t accBytes = (dtypeBytes <= SUBWORD_BYTES_MAX) ? ACC_WIDEN_BYTES : dtypeBytes;
+    const uint64_t colBytes = ACC_BUF_NUM * accBytes + PARAM_BUF_NUM * dtypeBytes + TMP_BUF_BYTES;
+    const uint64_t alignReserve = BUF_COUNT * BLOCK_BYTES;
+    const uint64_t usable = (ubSize > alignReserve) ? (ubSize - alignReserve) : 0UL;
+    const uint64_t chunkMax = (colBytes == 0UL) ? 0UL : usable / colBytes / BLOCK_BYTES * BLOCK_BYTES;
+    return (chunkMax < BLOCK_BYTES) ? BLOCK_BYTES : chunkMax; // 保底一个对齐粒度
+}
+
 ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
 {
     if (CheckScatterReduceInputs(context) != ge::GRAPH_SUCCESS) {
@@ -180,6 +211,7 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     td->tailBlockTilingSize = tailCoreIndices * sliceSize;
     td->sliceSize = sliceSize;
     td->varFirstDim = varFirstDim;
+    td->ubChunkMax = ResolveUbChunkMax(context);
 
     context->SetBlockDim(blockNum);
     context->SetTilingKey(0);

@@ -55,24 +55,43 @@ def __golden_scatter_min(*input_arrays, **kwargs):
     # var 原样返回 (kernel 同样在 sliceSize==0 时直接 return)。不加这道会让下面
     # upd_flat=(0,1) 在循环里 upd_flat[i] 越界 -> IndexError(golden 侧 GOLDEN_FAILURE)。
     if slice_size == 0:
-        return [var.astype(out_dtype)]
+        return [var]  # 出口不 cast, TTK 负责
 
     # 中间计算用 float32, 整型保持原类型精确比对
-    is_float = np.issubdtype(out_dtype, np.floating)
-    work_dtype = np.float32 if is_float else out_dtype
+    # 浮点跟随 TTK 下发的 dtype(理由同 scatter_mul 的注释): 写死 float32 会撤销 Promote,
+    # 使 golden 与三方腿逼近逐位相等, 三比值分母被夹, RMSE 比值假红。
+    # dtype 规则(两档分开):
+    #  * 浮点: **完全不 cast**, 由 TTK 的 golden_mode=Promote 保障(cross_check 时 fp16/bf16
+    #    ->fp32、fp32->fp64 下发), 出口也不窄回, TTK 负责。自行 cast 会撤销 Promote, 真值塌
+    #    到与三方腿同精度, 三比值分母被夹, RMSE 比值假红。bf16 由 TTK 自行桥接(numpy 无原生
+    #    bf16), 与 Promote 正交, golden 无需处理。
+    #  * 整型: 没有三方腿(判据 binary_equal -> need_3party=False), TTK 也从不 Promote 整型,
+    #    故按 **NPU 的实现逻辑** 决定是否 cast —— 内核 AccT 对 int32 原生, 对 int8/uint8 经
+    #    SubwordWidenToI32 提到 int32 做整条链, 末尾 NarrowStore 窄回, golden 同步复刻。
+    # 计算 dtype 一律**跟随 NPU 的 AccT**, 唯一例外是"浮点 + 三方": 那时 TTK 已按
+    # golden_mode=Promote 把入参抬档下发(fp16/bf16->fp32、fp32->fp64), golden 零 cast 直接算
+    # 即为高精度真值。其余情形(整型恒是两方; 浮点在两方泛化下) TTK 不提升, 必须由 golden
+    # 自己复刻内核: AccT 对 fp16/bf16 是 float、对 int8/uint8 是 int32、对 fp32/int32 原生,
+    # 出口再复刻 NarrowStore 窄回。判 Promote 用 TTK 下发的 golden_mode, 不靠 dtype 猜。
+    promoted = kwargs.get("golden_mode") == "Promote"
+    sub_int = np.issubdtype(out_dtype, np.integer) and out_dtype.itemsize < 4
+    narrow_fp = (not promoted) and out_dtype == np.float16
+    acc_dtype = np.int32 if sub_int else (np.float32 if narrow_fp else out_dtype)
+    need_narrow = acc_dtype != out_dtype
+    work_dtype = acc_dtype
 
     result = (
-        var.astype(work_dtype).reshape(var_first_dim, slice_size)
+        var.astype(work_dtype, copy=False).reshape(var_first_dim, slice_size)
         if var_first_dim
-        else var.astype(work_dtype).reshape(0, slice_size)
+        else var.astype(work_dtype, copy=False).reshape(0, slice_size)
     )
 
     idx_flat = indices.reshape(-1).astype(np.int64)
     # updates 扁平化为 (indices_num, slice_size)
     upd_flat = (
-        updates.astype(work_dtype).reshape(-1, slice_size)
+        updates.astype(work_dtype, copy=False).reshape(-1, slice_size)
         if slice_size
-        else updates.astype(work_dtype).reshape(-1, 1)
+        else updates.astype(work_dtype, copy=False).reshape(-1, 1)
     )
 
     n = idx_flat.shape[0]
@@ -85,8 +104,11 @@ def __golden_scatter_min(*input_arrays, **kwargs):
         upd_t = torch.from_numpy(upd_flat[:n])
         result_t.index_reduce_(0, idx_t[valid], upd_t[valid], "amin", include_self=True)
 
-    out = result_t.numpy().reshape(var_shape).astype(out_dtype)
-    return [out]
+    # 出口不 cast —— TTK 负责窄回。自行 astype 会把 Promote 出来的高精度真值砍回去。
+    out_arr = result_t.numpy().reshape(var_shape)
+    if need_narrow:
+        out_arr = out_arr.astype(out_dtype)  # 复刻 NarrowStore
+    return [out_arr]
 
 
 def __golden_scatter_min_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -119,6 +141,7 @@ _TOL_KERNEL = {
     "int32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
     "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
 }
 
 

@@ -47,7 +47,7 @@ def __golden_scatter_max(*input_arrays, **kwargs):
     n_idx = idx_flat.shape[0]
 
     if n_idx == 0 or var_first_dim == 0 or updates.size == 0:
-        return [out.astype(var.dtype)]
+        return [out]  # 出口不 cast, TTK 负责
 
     # updates 展平为 (n_idx, *slice_shape)：slice_shape = var.shape[1:]
     slice_shape = out.shape[1:]
@@ -56,10 +56,31 @@ def __golden_scatter_max(*input_arrays, **kwargs):
     # 浮点用 float32 中间计算（fp16 numpy 不自动提升）；整型保持原类型精确比对。
     # 注意：max 不累加、永不溢出，整型绝不能转 float32——大 int32(>2^24) 经 float32
     # round-trip 会丢精度，导致与 kernel 的精确 int32 max 不符（曾误报 inf/大值用例失败）。
-    is_float = np.issubdtype(var.dtype, np.floating)
-    work_dtype = np.float32 if is_float else var.dtype
-    work = torch.from_numpy(out.astype(work_dtype))
-    upd_w = torch.from_numpy(upd.astype(work_dtype))
+    # 浮点跟随 TTK 下发的 dtype: cross_check 判据下 TTK 走 golden_mode=Promote 抬一档
+    # (fp32->fp64, fp16/bf16->fp32)下发, golden 据此成为双标杆里的高精度真值。此处若写死
+    # float32, 就把 fp64 真值砍回 fp32, golden 与三方腿(fp32)逼近逐位相等 -> 分母被夹 ->
+    # RMSE 比值假红。bf16 由 TTK 自行桥接, golden 无需处理。
+    # dtype 规则(两档分开):
+    #  * 浮点: **完全不 cast**, 由 TTK 的 golden_mode=Promote 保障(cross_check 时 fp16/bf16
+    #    ->fp32、fp32->fp64 下发), 出口也不窄回, TTK 负责。自行 cast 会撤销 Promote, 真值塌
+    #    到与三方腿同精度, 三比值分母被夹, RMSE 比值假红。bf16 由 TTK 自行桥接(numpy 无原生
+    #    bf16), 与 Promote 正交, golden 无需处理。
+    #  * 整型: 没有三方腿(判据 binary_equal -> need_3party=False), TTK 也从不 Promote 整型,
+    #    故按 **NPU 的实现逻辑** 决定是否 cast —— 内核 AccT 对 int32 原生, 对 int8/uint8 经
+    #    SubwordWidenToI32 提到 int32 做整条链, 末尾 NarrowStore 窄回, golden 同步复刻。
+    # 计算 dtype 一律**跟随 NPU 的 AccT**, 唯一例外是"浮点 + 三方": 那时 TTK 已按
+    # golden_mode=Promote 把入参抬档下发(fp16/bf16->fp32、fp32->fp64), golden 零 cast 直接算
+    # 即为高精度真值。其余情形(整型恒是两方; 浮点在两方泛化下) TTK 不提升, 必须由 golden
+    # 自己复刻内核: AccT 对 fp16/bf16 是 float、对 int8/uint8 是 int32、对 fp32/int32 原生,
+    # 出口再复刻 NarrowStore 窄回。判 Promote 用 TTK 下发的 golden_mode, 不靠 dtype 猜。
+    promoted = kwargs.get("golden_mode") == "Promote"
+    sub_int = np.issubdtype(var.dtype, np.integer) and var.dtype.itemsize < 4
+    narrow_fp = (not promoted) and var.dtype == np.float16
+    acc_dtype = np.int32 if sub_int else (np.float32 if narrow_fp else var.dtype)
+    need_narrow = acc_dtype != var.dtype
+    work_dtype = acc_dtype
+    work = torch.from_numpy(out.astype(work_dtype, copy=False))
+    upd_w = torch.from_numpy(upd.astype(work_dtype, copy=False))
 
     # 越界索引先剔除（与 kernel 的 skip 一致），剩下的交给 torch 竞品算子；
     # include_self=True 即 max(var 原值, 命中该行的所有 updates)，重复索引顺序无关。
@@ -69,7 +90,11 @@ def __golden_scatter_max(*input_arrays, **kwargs):
     if idx_t.numel() > 0:
         work.index_reduce_(0, idx_t, upd_w[valid], "amax", include_self=True)
 
-    return [work.numpy().astype(var.dtype)]
+    # 浮点出口不 cast(TTK 负责); 整型无 Promote, 由此处复刻 NarrowStore。
+    out_arr = work.numpy()
+    if need_narrow:
+        out_arr = out_arr.astype(var.dtype)
+    return [out_arr]
 
 
 def __golden_scatter_max_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -102,6 +127,7 @@ _TOL_KERNEL = {
     "int32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
     "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
 }
 
 

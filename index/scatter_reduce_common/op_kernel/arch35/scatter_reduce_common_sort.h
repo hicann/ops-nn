@@ -21,6 +21,8 @@
 #ifndef SCATTER_REDUCE_COMMON_SORT_H
 #define SCATTER_REDUCE_COMMON_SORT_H
 
+#include <cfloat>
+
 // Deep-prefetch fold skeleton shared by MUL and MAX/MIN: prime PREFETCH_DEPTH-1 scattered loads, then walk
 // the range keeping AHEAD loads in flight to hide the DMA latency, applying the Mode-selected fold per row. The
 // prefetch mechanics (prime DataCopyPad + per-iteration AHEAD prefetch DataCopyPad/AllocTensor/EnQue + DeQue/
@@ -31,9 +33,19 @@
 // end of every iteration. `tmp` is only read by the MAX/MIN int8 sign-extend (unused, may be empty, for MUL).
 // Shared deep-prefetch load management (see header decl): prime the first `primed` scattered loads. Identical
 // prime block formerly inlined verbatim in FoldRangeIntoAcc and DivRangeIntoVar.
+// int8 由 SubwordWidenToI32 零扩展而来, 需手工补符号: v -= (v >> 7) * 256。
+// 7 = 8位宽减符号位, 256 = 2^8, 均由 int8 的位宽决定, 非经验值。
+constexpr int32_t INT8_SIGN_SHIFT = 8 * static_cast<int32_t>(sizeof(int8_t)) - 1;
+constexpr int32_t INT8_SIGN_SPAN = 1 << (8 * static_cast<int32_t>(sizeof(int8_t)));
+
+// 浮点除法取 0 ULP 档: 默认的 DivAlgo::INTRINSIC 是硬件近似除, 实测 fp32 单次除法约 6.4% 的
+// 输入偏 1 ULP; 本算子对重复索引是链式相除, 偏差逐次累积, 与正确舍入的竞品相比会被 cross_check
+// 的比值判据判红。FTZ_FALSE 保留次正规数, 与 IEEE 一致。
+static constexpr AscendC::DivConfig PRECISE_DIV = {AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::PrimePrefetch(
-    TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T primed, ADDR_T rowStride, ADDR_T colOff,
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T primed, ADDR_T rowStride, ADDR_T colOff,
     const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     for (ADDR_T p = 0; p < primed; p++) {
@@ -48,8 +60,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pri
 // of `j` while still in range. Identical AHEAD block formerly inlined verbatim in the two consume loops.
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::PrefetchAhead(
-    TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T j, ADDR_T cnt, ADDR_T AHEAD, ADDR_T rowStride,
-    ADDR_T colOff, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T j, ADDR_T cnt, ADDR_T AHEAD,
+    ADDR_T rowStride, ADDR_T colOff, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     if (j + AHEAD < cnt) {
         uint32_t posN = originPosGm_.GetValue(startJ + j + AHEAD);
@@ -62,13 +74,13 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pre
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::FoldRangeIntoAcc(
     LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
-    TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
-    const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff,
+    ADDR_T width, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     if (startJ >= endJ) {
         return;
     }
-    constexpr ADDR_T AHEAD = 7; // PREFETCH_DEPTH(8) - 1; leave one buffer for the row being folded
+    constexpr ADDR_T AHEAD = static_cast<ADDR_T>(PREFETCH_AHEAD); // 留一笔给正在折叠的行
     const ADDR_T cnt = endJ - startJ;
     const ADDR_T primed = (cnt < AHEAD) ? cnt : AHEAD;
     PrimePrefetch(updQue, startJ, primed, rowStride, colOff, cp, pad);
@@ -101,8 +113,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Fol
                 SubwordWidenToI32(rowAccUb, curRaw, static_cast<uint32_t>(width));
                 if constexpr (AscendC::IsSameType<PARAMS_T, int8_t>::value) { // sign-extend int8: v -= 256*(v>>7)
                     PipeBarrier<PIPE_V>();
-                    ShiftRight(tmp, rowAccUb, static_cast<int32_t>(7), static_cast<int32_t>(width));
-                    Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(width));
+                    ShiftRight(tmp, rowAccUb, INT8_SIGN_SHIFT, static_cast<int32_t>(width));
+                    Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(width));
                     Sub(rowAccUb, rowAccUb, tmp, static_cast<int32_t>(width));
                 }
                 PipeBarrier<PIPE_V>();
@@ -132,8 +144,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Fol
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::MulRangeIntoAcc(
     LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
-    TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
-    const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff,
+    ADDR_T width, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     FoldRangeIntoAcc(accUb, rowAccUb, tmp, updQue, startJ, endJ, rowStride, colOff, width, cp, pad);
 }
@@ -145,8 +157,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Mul
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::MaxMinRangeIntoAcc(
     LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
-    TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
-    const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff,
+    ADDR_T width, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     FoldRangeIntoAcc(accUb, rowAccUb, tmp, updQue, startJ, endJ, rowStride, colOff, width, cp, pad);
 }
@@ -466,6 +478,36 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         AscendC::SyncAll();
     }
 }
+// 本核是否整体接管该段。段完整落在范围内自然整体处理; MUL 浮点路径则一律整体接管(行归属),
+// 因为 updates 单独连乘会脱离 var 的量级约束而溢出 —— 同 SortDivRowProcess 的取舍。
+template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
+__aicore__ inline bool ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::TakeSegmentWhole(ADDR_T segEnd,
+                                                                                              ADDR_T posEnd)
+{
+    if constexpr (Mode == MODE_MUL && AscendC::IsSameType<AccT, float>::value) {
+        return true;
+    }
+    return segEnd <= posEnd;
+}
+
+// 取较小值(避免三目表达式占行, 且语义直白)。
+template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
+__aicore__ inline ADDR_T ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::MinAddr(ADDR_T a, ADDR_T b)
+{
+    return (a < b) ? a : b;
+}
+
+// MUL 浮点走行归属时, 左边缘那段由前一个核整体接管, 本核直接跳过它; 其余 Mode 原样返回。
+template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
+__aicore__ inline ADDR_T ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::SkipSpilledLeftEdge(ADDR_T k, ADDR_T M)
+{
+    if constexpr (Mode == MODE_MUL && AscendC::IsSameType<AccT, float>::value) {
+        while (k > 0 && k < M && sortedIdxGm_.GetValue(k) == sortedIdxGm_.GetValue(k - 1)) {
+            k++;
+        }
+    }
+    return k;
+}
 
 // Sort-based position-split reducer for MUL/MAX/MIN (all three are associative+commutative, so a row's
 // updates can be split across cores and combined). Phase1 (SortIndices) groups equal indices contiguously.
@@ -501,8 +543,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     // DMAs in flight). The product is PER-COLUMN independent, so a wide row is processed in column chunks of
     // CHUNK = min(sliceSize, CHUNK_MAX), where CHUNK_MAX is the widest chunk that fits the phase-3 UB budget.
     // This makes sliceSize unbounded -- the chunk is a UB-derived tile, not a cap.
-    constexpr int32_t PREFETCH_DEPTH = 8;
-    const ADDR_T CHUNK = sliceSize < CHUNK_MAX ? sliceSize : CHUNK_MAX; // CHUNK_MAX: class-level, UB-derived
+    // 列切分上限由 host 按 UB 实测容量反解后下发(见 tiling 的 ubChunkMax), kernel 只做取小。
+    const ADDR_T CHUNK = MinAddr(sliceSize, static_cast<ADDR_T>(tiling_.ubChunkMax));
     const uint32_t cPad = (static_cast<uint32_t>(CHUNK) + 31) / 32 * 32;
     const ADDR_T sAlign = (CHUNK + 7) / 8 * 8; // per-core partial slot stride (one chunk wide)
     TBuf<TPosition::VECCALC> bAcc, bVar, bRowAcc;
@@ -514,14 +556,10 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     LocalTensor<ACC> accUb = bAcc.Get<ACC>();
     LocalTensor<PARAMS_T> varUb = bVar.Get<PARAMS_T>();
     LocalTensor<ACC> rowAccUb = bRowAcc.Get<ACC>();
-    // MAX/MIN int8 needs a signed-extend scratch (the int32 widen is zero-extended); MUL never sign-extends
-    // (its product is mod-256 correct through int32 wrapping), so its UB layout is unchanged by this guard.
+    // MAX/MIN int8 needs a signed-extend scratch (the int32 widen is zero-extended).
     TBuf<TPosition::VECCALC> bTmp;
-    LocalTensor<int32_t> tmp;
-    if constexpr (Mode != MODE_MUL) {
-        pipe_.InitBuffer(bTmp, cPad * sizeof(int32_t));
-        tmp = bTmp.Get<int32_t>();
-    }
+    pipe_.InitBuffer(bTmp, cPad * sizeof(int32_t));
+    LocalTensor<int32_t> tmp = bTmp.Get<int32_t>();
     const event_t evMV0 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE2_V));
     const event_t evVM3 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::V_MTE3));
     const event_t evM3M2 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_MTE2));
@@ -562,46 +600,60 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
 // SortReduceProcess Phase 3a: in-range fold for columns [c0,c0+chunkW). Whole segments fold var-first and
 // write var; a segment that spans this core's right boundary writes a pure in-range partial to
 // partialGm_[blockIdx] and returns its (row,end) in ownerSplitRow/ownerSplitEnd for phase 3b. The left-edge
+// 左边缘段(起点落在前一个核的范围内)的折叠: 本核只把范围内的部分算成 partial 落 workspace,
+// 由持有该段起点的核在 3b 合并。抽出以免 SortPhase3aFold 继续膨胀。
+template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
+__aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::FoldSpilledLeftEdge(
+    ADDR_T& k, ADDR_T posEnd, ADDR_T varFirstDim, ADDR_T sliceSize, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
+    LocalTensor<AccT>& accUb, LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0, event_t evVM3, event_t evM3M2,
+    const DataCopyExtParams& cp, const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad)
+{
+    using ACC = AccT;
+    int32_t r = sortedIdxGm_.GetValue(k);
+    ADDR_T s = k;
+    while (k < posEnd && sortedIdxGm_.GetValue(k) == r) {
+        k++;
+    }
+    if (r >= 0 && static_cast<ADDR_T>(r) < varFirstDim) {
+        uint32_t p0 = originPosGm_.GetValue(s);
+        LoadWiden(accUb, varUb, xGm_, static_cast<ADDR_T>(p0) * sliceSize + c0, chunkW, evMV0, cp, pad);
+        if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
+            ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
+            Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(chunkW));
+            Sub(accUb, accUb, tmp, static_cast<int32_t>(chunkW));
+            PipeBarrier<PIPE_V>();
+        }
+        if constexpr (Mode == MODE_MUL) {
+            MulRangeIntoAcc(accUb, rowAccUb, tmp, updQue, s + 1, k, sliceSize, c0, chunkW, cp, pad);
+        } else {
+            MaxMinRangeIntoAcc(accUb, rowAccUb, tmp, updQue, s + 1, k, sliceSize, c0, chunkW, cp, pad);
+        }
+        SetFlag<HardEvent::V_MTE3>(evVM3);
+        WaitFlag<HardEvent::V_MTE3>(evVM3); // pure partial, no narrow
+        DataCopyPad(partialGm_[static_cast<ADDR_T>(blockIdx_) * sAlign].template ReinterpretCast<ACC>(), accUb, cpAcc);
+        SetFlag<HardEvent::MTE3_MTE2>(evM3M2);
+        WaitFlag<HardEvent::MTE3_MTE2>(evM3M2); // store before reuse
+    }
+}
+
 // segment that spilled in from before posBegin writes a partial too (owned by the earlier core).
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::SortPhase3aFold(
     ADDR_T posBegin, ADDR_T posEnd, ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim, ADDR_T c0, ADDR_T chunkW,
     ADDR_T sAlign, LocalTensor<AccT>& accUb, LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb,
-    LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue, event_t evMV0, event_t evVM3, event_t evM3M2,
-    const DataCopyExtParams& cp, const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad,
-    int32_t& ownerSplitRow, ADDR_T& ownerSplitEnd)
+    LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0, event_t evVM3,
+    event_t evM3M2, const DataCopyExtParams& cp, const DataCopyExtParams& cpAcc,
+    const DataCopyPadExtParams<PARAMS_T>& pad, int32_t& ownerSplitRow, ADDR_T& ownerSplitEnd)
 {
     using ACC = AccT;
     // -------- Phase 3a: in-range product for columns [c0,c0+chunkW). Whole segments -> var; segments
     // spanning a core boundary -> partial to partialGm_[core], combined by the owner in phase 3b. --------
-    ADDR_T k = posBegin;
-    if (k > 0 && sortedIdxGm_.GetValue(k) == sortedIdxGm_.GetValue(k - 1)) { // left edge spilled in
-        int32_t r = sortedIdxGm_.GetValue(k);
-        ADDR_T s = k;
-        while (k < posEnd && sortedIdxGm_.GetValue(k) == r) {
-            k++;
-        }
-        if (r >= 0 && static_cast<ADDR_T>(r) < varFirstDim) {
-            uint32_t p0 = originPosGm_.GetValue(s);
-            LoadWiden(accUb, varUb, xGm_, static_cast<ADDR_T>(p0) * sliceSize + c0, chunkW, evMV0, cp, pad);
-            if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
-                ShiftRight(tmp, accUb, static_cast<int32_t>(7), static_cast<int32_t>(chunkW));
-                Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(chunkW));
-                Sub(accUb, accUb, tmp, static_cast<int32_t>(chunkW));
-                PipeBarrier<PIPE_V>();
-            }
-            if constexpr (Mode == MODE_MUL) {
-                MulRangeIntoAcc(accUb, rowAccUb, tmp, updQue, s + 1, k, sliceSize, c0, chunkW, cp, pad);
-            } else {
-                MaxMinRangeIntoAcc(accUb, rowAccUb, tmp, updQue, s + 1, k, sliceSize, c0, chunkW, cp, pad);
-            }
-            SetFlag<HardEvent::V_MTE3>(evVM3);
-            WaitFlag<HardEvent::V_MTE3>(evVM3); // pure partial, no narrow
-            DataCopyPad(partialGm_[static_cast<ADDR_T>(blockIdx_) * sAlign].template ReinterpretCast<ACC>(), accUb,
-                        cpAcc);
-            SetFlag<HardEvent::MTE3_MTE2>(evM3M2);
-            WaitFlag<HardEvent::MTE3_MTE2>(evM3M2); // store before reuse
-        }
+    // MUL 浮点走行归属: 左边缘段整体归前一个核, 本核直接跳过(见 TakeSegmentWhole 的说明)。
+    ADDR_T k = SkipSpilledLeftEdge(posBegin, M);
+    if (k > 0 && k < posEnd && sortedIdxGm_.GetValue(k) == sortedIdxGm_.GetValue(k - 1)) { // left edge spilled in
+        FoldSpilledLeftEdge(k, posEnd, varFirstDim, sliceSize, c0, chunkW, sAlign, accUb, varUb, rowAccUb, tmp, updQue,
+                            evMV0, evVM3, evM3M2, cp, cpAcc, pad);
     }
     while (k < posEnd && k < M) {
         int32_t r = sortedIdxGm_.GetValue(k);
@@ -617,11 +669,15 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             continue;
         }
         const ADDR_T base = static_cast<ADDR_T>(r) * sliceSize + c0;
-        if (segEnd <= posEnd) { // complete within range -> var-first fold, write var
+        // MUL 浮点采用行归属: 跨出本核范围的段也由起始核整体折叠(var-first), 不拆成跨核 partial。
+        // 理由与 SortDivRowProcess 相同 —— updates 单独连乘会冲出 fp32 范围("the divisor product
+        // overflows"), 而 var 从头参与时中间值受其量级约束。拆分虽能分摊热点行, 但会把本可表示的
+        // 结果算成 ±inf, 与参考实现(var-first)的折叠顺序产生系统性分歧。
+        if (TakeSegmentWhole(segEnd, posEnd)) { // var-first fold, write var
             LoadWiden(accUb, varUb, outputGm_, base, chunkW, evMV0, cp, pad);
             if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
-                ShiftRight(tmp, accUb, static_cast<int32_t>(7), static_cast<int32_t>(chunkW));
-                Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(chunkW));
+                ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
+                Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(chunkW));
                 Sub(accUb, accUb, tmp, static_cast<int32_t>(chunkW));
                 PipeBarrier<PIPE_V>();
             }
@@ -634,12 +690,14 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             // the store (MTE3) reads accUb/varUb; the NEXT segment's load (MTE2) reuses them -> wait
             SetFlag<HardEvent::MTE3_MTE2>(evM3M2);
             WaitFlag<HardEvent::MTE3_MTE2>(evM3M2);
-        } else { // owner of a split row -> pure in-range partial, finish in 3b
+            if (segEnd > posEnd)
+                break; // 该段已整体处理完, 后续位置归下一个核
+        } else {       // owner of a split row -> pure in-range partial, finish in 3b
             uint32_t p0 = originPosGm_.GetValue(segStart);
             LoadWiden(accUb, varUb, xGm_, static_cast<ADDR_T>(p0) * sliceSize + c0, chunkW, evMV0, cp, pad);
             if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
-                ShiftRight(tmp, accUb, static_cast<int32_t>(7), static_cast<int32_t>(chunkW));
-                Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(chunkW));
+                ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
+                Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(chunkW));
                 Sub(accUb, accUb, tmp, static_cast<int32_t>(chunkW));
                 PipeBarrier<PIPE_V>();
             }
@@ -654,7 +712,6 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         }
     }
 }
-
 // SortReduceProcess Phase 3b: the owner of a split row folds the covering cores' in-range partials (blockIdx+1
 // .. while their range start is inside the segment) plus var[r], then narrow-stores var[r]. A no-op when this
 // core did not own a split row.
@@ -690,23 +747,13 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         }
         LoadWiden(rowAccUb, varUb, outputGm_, base, chunkW, evMV0, cp, pad); // fold in var[r]
         if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
-            ShiftRight(tmp, rowAccUb, static_cast<int32_t>(7), static_cast<int32_t>(chunkW));
-            Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(chunkW));
+            ShiftRight(tmp, rowAccUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
+            Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(chunkW));
             Sub(rowAccUb, rowAccUb, tmp, static_cast<int32_t>(chunkW));
             PipeBarrier<PIPE_V>();
         }
         if constexpr (Mode == MODE_MUL) {
             Mul(accUb, accUb, rowAccUb, static_cast<int32_t>(chunkW));
-            if constexpr (AscendC::IsSameType<ACC, float>::value) {
-                // var==0 must absorb to 0 even when this split row's var-less update partial overflowed to
-                // +inf (0*inf=NaN otherwise; the reference folds var-first so 0 wins). rowAccUb still holds
-                // var[r]; borrow varUb (free until NarrowStore) as the compare mask. Float only -- integer
-                // MUL wraps mod 2^32 (no inf), so 0*x=0 already.
-                LocalTensor<uint8_t> zmask = varUb.template ReinterpretCast<uint8_t>();
-                CompareScalar(zmask, rowAccUb, static_cast<ACC>(0), CMPMODE::NE, static_cast<int32_t>(chunkW));
-                Select(accUb, zmask, accUb, static_cast<ACC>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                       static_cast<int32_t>(chunkW));
-            }
         } else if constexpr (Mode == MODE_MAX) {
             Max(accUb, accUb, rowAccUb, static_cast<int32_t>(chunkW));
         } else {
@@ -732,14 +779,14 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
 // no product is formed (it would overflow where the reference's sequential divide stays bounded).
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::DivRangeIntoVar(
-    LocalTensor<AccT>& accUb, LocalTensor<AccT>& updAcc, LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue,
-    ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width, const DataCopyExtParams& cp,
-    const DataCopyPadExtParams<PARAMS_T>& pad)
+    LocalTensor<AccT>& accUb, LocalTensor<AccT>& updAcc, LocalTensor<int32_t>& tmp,
+    TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff,
+    ADDR_T width, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     if (startJ >= endJ) {
         return;
     }
-    constexpr ADDR_T AHEAD = 7; // PREFETCH_DEPTH(8) - 1; leave one buffer for the row being divided
+    constexpr ADDR_T AHEAD = static_cast<ADDR_T>(PREFETCH_AHEAD); // 留一笔给正在相除的行
     const ADDR_T cnt = endJ - startJ;
     const ADDR_T primed = (cnt < AHEAD) ? cnt : AHEAD;
     PrimePrefetch(updQue, startJ, primed, rowStride, colOff, cp, pad); // origin read from GM (O(M/P) walk)
@@ -751,27 +798,31 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Div
                 SubwordWidenToI32(updAcc, curRaw, static_cast<uint32_t>(width)); // int8/uint8 -> int32 (zero-ext)
                 if constexpr (AscendC::IsSameType<PARAMS_T, int8_t>::value) {
                     PipeBarrier<PIPE_V>(); // sign-extend int8: v-=256*(v>>7)
-                    ShiftRight(tmp, updAcc, static_cast<int32_t>(7), static_cast<int32_t>(width));
-                    Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(width));
+                    ShiftRight(tmp, updAcc, INT8_SIGN_SHIFT, static_cast<int32_t>(width));
+                    Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(width));
                     Sub(updAcc, updAcc, tmp, static_cast<int32_t>(width));
                 }
             } else {
                 Adds(updAcc, curRaw, 0, static_cast<int32_t>(width)); // int32: copy out of the queue
             }
             PipeBarrier<PIPE_V>();
-            Abs(tmp, updAcc, static_cast<int32_t>(width));         // |upd|
-            Mins(tmp, tmp, 1, static_cast<int32_t>(width));        // (upd!=0) ? 1 : 0
-            Adds(tmp, tmp, -1, static_cast<int32_t>(width));       // -(upd==0)
-            Sub(updAcc, updAcc, tmp, static_cast<int32_t>(width)); // upd + (upd==0): 0-divisors -> 1
+            // 除数判零用精确等值比较 + Select(同 ops-math truncate_div/mod 的做法)。不可用 Abs 等算术
+            // 变换: |INT_MIN| 不可表示, Abs 溢出回绕后判零失效, 除数会被误换成 1。
+            // 掩码借 tmp 的存储: int8 符号扩展已用完 tmp, 二者不重叠。
+            LocalTensor<uint8_t> zmask = tmp.template ReinterpretCast<uint8_t>();
+            CompareScalar(zmask, updAcc, static_cast<AccT>(0), CMPMODE::NE, static_cast<int32_t>(width));
+            PipeBarrier<PIPE_V>();
+            Select(updAcc, zmask, updAcc, static_cast<AccT>(1), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   static_cast<int32_t>(width)); // upd!=0 保留, ==0 换成 1(除完即原值, 契约: 保持 var)
             PipeBarrier<PIPE_V>();
             Div(accUb, accUb, updAcc, static_cast<int32_t>(width));     // exact int32 trunc; /0 kept var
         } else {                                                        // fp16/fp32: float Div, /0 -> inf
             if constexpr (AscendC::IsSameType<PARAMS_T, AccT>::value) { // fp32
-                Div(accUb, accUb, curRaw, static_cast<int32_t>(width));
+                Div<AccT, PRECISE_DIV>(accUb, accUb, curRaw, static_cast<int32_t>(width));
             } else { // fp16 -> float
                 Cast(updAcc, curRaw, RoundMode::CAST_NONE, static_cast<int32_t>(width));
                 PipeBarrier<PIPE_V>();
-                Div(accUb, accUb, updAcc, static_cast<int32_t>(width));
+                Div<AccT, PRECISE_DIV>(accUb, accUb, updAcc, static_cast<int32_t>(width));
             }
         }
         PipeBarrier<PIPE_V>();
@@ -803,8 +854,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     if (posBegin >= posEnd) {
         return;
     }
-    constexpr int32_t PREFETCH_DEPTH = 8;
-    const ADDR_T CHUNK = sliceSize < CHUNK_MAX ? sliceSize : CHUNK_MAX; // full-slice column tile (UB-derived)
+    // 列切分上限同样取 host 下发值(见 tiling 的 ubChunkMax), kernel 只做取小。
+    const ADDR_T CHUNK = MinAddr(sliceSize, static_cast<ADDR_T>(tiling_.ubChunkMax));
     const uint32_t cPad = (static_cast<uint32_t>(CHUNK) + 31) / 32 * 32;
     // The sorted index / originPos arrays are read straight from GM (sortedIdxGm_/originPosGm_) -- the row-split
     // walk only touches this core's O(M/P) positions, so UB staging (which the old column-split needed for its
@@ -850,8 +901,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             const ADDR_T base = static_cast<ADDR_T>(r) * sliceSize + c0;
             LoadWiden(accUb, varUb, outputGm_, base, chunkW, evMV0, cp, pad); // acc = var[r] (widened)
             if constexpr (AscendC::IsSameType<PARAMS_T, int8_t>::value) {     // sign-extend int8 var
-                ShiftRight(tmp, accUb, static_cast<int32_t>(7), static_cast<int32_t>(chunkW));
-                Muls(tmp, tmp, static_cast<int32_t>(256), static_cast<int32_t>(chunkW));
+                ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
+                Muls(tmp, tmp, INT8_SIGN_SPAN, static_cast<int32_t>(chunkW));
                 Sub(accUb, accUb, tmp, static_cast<int32_t>(chunkW));
                 PipeBarrier<PIPE_V>();
             }

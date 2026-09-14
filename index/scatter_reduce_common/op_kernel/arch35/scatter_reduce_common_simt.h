@@ -101,6 +101,12 @@ public:
     using AccT = typename Conditional<
         sizeof(PARAMS_T) == 4, PARAMS_T,
         typename Conditional<AscendC::IsSameType<PARAMS_T, half>::value, float, int32_t>::type>::type;
+    // 更新行的深预取深度: 散列搬入是延迟受限的, 多留几笔在途。AHEAD 少一笔, 留给正在折叠的那行。
+    // UB_BLOCK_BYTES 定义在 struct.h(host/kernel 共用, 不便引 AscendC 命名空间), 在此绑定校验。
+    static_assert(ScatterReduceCommon::UB_BLOCK_BYTES == AscendC::ONE_BLK_SIZE,
+                  "UB_BLOCK_BYTES 必须与 AscendC::ONE_BLK_SIZE 一致");
+    static constexpr int32_t PREFETCH_DEPTH = 8;
+    static constexpr int32_t PREFETCH_AHEAD = PREFETCH_DEPTH - 1;
     // sort-based POSITION-split reducer for MUL/MAX/MIN (defined in scatter_reduce_common_sort.h): core 0
     // globally sorts indices into workspace, SyncAll, then every core reduces a count-balanced range of sorted
     // segments (each segment = one var row) with sliceSize column-tiling and a cross-core partial combine
@@ -115,10 +121,10 @@ public:
                                            ADDR_T varFirstDim, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
                                            LocalTensor<AccT>& accUb, LocalTensor<PARAMS_T>& varUb,
                                            LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
-                                           TQue<QuePosition::VECIN, 8>& updQue, event_t evMV0, event_t evVM3,
-                                           event_t evM3M2, const DataCopyExtParams& cp, const DataCopyExtParams& cpAcc,
-                                           const DataCopyPadExtParams<PARAMS_T>& pad, int32_t& ownerSplitRow,
-                                           ADDR_T& ownerSplitEnd);
+                                           TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0,
+                                           event_t evVM3, event_t evM3M2, const DataCopyExtParams& cp,
+                                           const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad,
+                                           int32_t& ownerSplitRow, ADDR_T& ownerSplitEnd);
     __aicore__ inline void SortPhase3bCombine(ADDR_T M, ADDR_T sliceSize, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
                                               int32_t ownerSplitRow, ADDR_T ownerSplitEnd, LocalTensor<AccT>& accUb,
                                               LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb,
@@ -147,16 +153,27 @@ public:
     __aicore__ inline void SortIndicesSmallM(ADDR_T M);
     __aicore__ inline void SortLocalRuns(ADDR_T M, ADDR_T P2, ADDR_T runLen0, int curSel);
     __aicore__ inline void SortMergeTree(ADDR_T M, ADDR_T P2, ADDR_T runLen0, ADDR_T nRounds, int curSel);
-    // CHUNK_MAX = widest phase-3 column chunk that fits its UB budget; sliceSize is tiled into CHUNK_MAX columns.
-    // (Phase-1 sort UB is bounded by SORT_TILE, not M -- the tiled merge-sort means there is no M gate at all.)
-    static constexpr uint32_t P3_COL_BYTES = 2u * sizeof(AccT) + (8u + 1u) * sizeof(PARAMS_T);
-    static constexpr ADDR_T CHUNK_MAX = static_cast<ADDR_T>(((176u * 1024u) / P3_COL_BYTES) / 32u * 32u);
+    // 左边缘段的折叠(定义在 scatter_reduce_common_sort.h): 只算范围内部分, 落 partial 供 3b 合并。
+    __aicore__ inline void FoldSpilledLeftEdge(
+        ADDR_T& k, ADDR_T posEnd, ADDR_T varFirstDim, ADDR_T sliceSize, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
+        LocalTensor<AccT>& accUb, LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb, LocalTensor<int32_t>& tmp,
+        TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0, event_t evVM3, event_t evM3M2,
+        const DataCopyExtParams& cp, const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad);
+    // 跳过归前一个核的左边缘段(定义在 scatter_reduce_common_sort.h)。
+    __aicore__ inline ADDR_T SkipSpilledLeftEdge(ADDR_T k, ADDR_T M);
+    // 本核是否整体接管该段(定义在 scatter_reduce_common_sort.h)。
+    __aicore__ inline bool TakeSegmentWhole(ADDR_T segEnd, ADDR_T posEnd);
+    // 取较小值。
+    __aicore__ inline ADDR_T MinAddr(ADDR_T a, ADDR_T b);
+    // phase-3 的列切分上限不在 kernel 侧定死: host 用 GetCoreMemSize 取到 UB 实测容量, 按类型折算
+    // 每列存活开销(accUb+rowAccUb+varUb+updQue深度8+tmp)后反解, 经 tiling 的 ubChunkMax 下发。
+    // sliceSize 只是被切成若干个这样的 chunk, 不构成上限, 故任一轴再大也不会不支持。
     // Shared deep-prefetch fold skeleton for MUL and MAX/MIN (defined in scatter_reduce_common_sort.h): primes
     // the scattered loads, keeps AHEAD in flight, and applies the Mode-selected fold (MUL product / MAX/MIN
     // max-min) per row with each path's exact PipeBarrier rhythm. MulRangeIntoAcc / MaxMinRangeIntoAcc are thin
     // wrappers over it; `tmp` is read only by the MAX/MIN int8 sign-extend (may be empty on the MUL path).
     __aicore__ inline void FoldRangeIntoAcc(LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb,
-                                            LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue,
+                                            LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue,
                                             ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
                                             const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad);
     // Deep-prefetch LOAD-MANAGEMENT shared by the fold (FoldRangeIntoAcc) and the divide (DivRangeIntoVar)
@@ -165,16 +182,16 @@ public:
     // in each caller so each path keeps its own barrier rhythm untouched.
     //   PrimePrefetch  : prime the first `primed` (= min(cnt, AHEAD)) scattered loads before the consume loop.
     //   PrefetchAhead  : inside the consume loop, prefetch the row AHEAD ahead of `j` while it is still in range.
-    __aicore__ inline void PrimePrefetch(TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T primed,
+    __aicore__ inline void PrimePrefetch(TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T primed,
                                          ADDR_T rowStride, ADDR_T colOff, const DataCopyExtParams& cp,
                                          const DataCopyPadExtParams<PARAMS_T>& pad);
-    __aicore__ inline void PrefetchAhead(TQue<QuePosition::VECIN, 8>& updQue, ADDR_T startJ, ADDR_T j, ADDR_T cnt,
-                                         ADDR_T AHEAD, ADDR_T rowStride, ADDR_T colOff, const DataCopyExtParams& cp,
-                                         const DataCopyPadExtParams<PARAMS_T>& pad);
+    __aicore__ inline void PrefetchAhead(TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ, ADDR_T j,
+                                         ADDR_T cnt, ADDR_T AHEAD, ADDR_T rowStride, ADDR_T colOff,
+                                         const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad);
     // Deep-prefetch multiply of updates[originPos[startJ..endJ)] columns [colOff,colOff+width) INTO accUb
     // (already initialised by caller). rowStride is the full row width (updates rows are rowStride apart).
     __aicore__ inline void MulRangeIntoAcc(LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb,
-                                           LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue,
+                                           LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue,
                                            ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
                                            const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad);
     // DivRangeIntoVar divides accUb (= var[row], in the ACC type) by the segment's updates in place. INTEGER
@@ -182,7 +199,7 @@ public:
     // and integer division stays order-independent); FLOAT divides in fp32 (/0 -> inf). updAcc holds the
     // widened update, tmp is the int 0->1 scratch.
     __aicore__ inline void DivRangeIntoVar(LocalTensor<AccT>& accUb, LocalTensor<AccT>& updAcc,
-                                           LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue,
+                                           LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue,
                                            ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
                                            const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad);
     // MaxMinRangeIntoAcc folds the segment's updates into accUb (already seeded) by Mode's max/min -- the
@@ -191,8 +208,9 @@ public:
     // the per-update widen scratch; tmp the int8 sign-extend scratch. max/min combine across cores, so this is
     // used for both whole segments and per-core partials.
     __aicore__ inline void MaxMinRangeIntoAcc(LocalTensor<AccT>& accUb, LocalTensor<AccT>& rowAccUb,
-                                              LocalTensor<int32_t>& tmp, TQue<QuePosition::VECIN, 8>& updQue,
-                                              ADDR_T startJ, ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
+                                              LocalTensor<int32_t>& tmp,
+                                              TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, ADDR_T startJ,
+                                              ADDR_T endJ, ADDR_T rowStride, ADDR_T colOff, ADDR_T width,
                                               const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad);
     // load srcGm[off..] (PARAMS_T) into accUb, widening subword/fp16 to the ACC type.
     __aicore__ inline void LoadWiden(LocalTensor<AccT>& accUb, LocalTensor<PARAMS_T>& varUb,
