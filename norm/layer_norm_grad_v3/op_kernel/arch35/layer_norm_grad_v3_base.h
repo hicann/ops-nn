@@ -33,6 +33,8 @@ using namespace NormCommon::NormCommonRegbase;
 using namespace LayerNormGradV3::Arith;
 using AscendC::Reg::LoadAlign;
 using AscendC::Reg::Move;
+using AscendC::Reg::MulAddDst;
+using AscendC::Reg::Neg;
 using AscendC::Reg::Reduce;
 using AscendC::Reg::StoreAlign;
 
@@ -1210,7 +1212,7 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
             AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
             AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
             AscendC::Reg::RegTensor<float> gammaReg;
-            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg4, Reg5;
             AscendC::Reg::MaskReg pMask;
             count = static_cast<uint32_t>(colSize);
             pMask = AscendC::Reg::UpdateMask<float>(count);
@@ -1223,9 +1225,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
                 LoadAlign(gammaReg, (__ubuf__ float*)gamma + 0 * innerLoopStride);
                 Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
                 Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, pMask);
+                MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg1, sum1Reg, pMask);
                 Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                 Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
                 StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
@@ -1246,7 +1248,7 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
             AscendC::Reg::RegTensor<float> xReg, dyReg, dxReg;
             AscendC::Reg::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
             AscendC::Reg::RegTensor<float> gammaReg;
-            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::Reg::RegTensor<float> Reg0, Reg1, Reg4, Reg5;
             AscendC::Reg::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 count = static_cast<uint32_t>(colSize);
@@ -1260,9 +1262,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
                     LoadAlign(gammaReg, (__ubuf__ float*)gamma + j * innerLoopStride);
                     Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
                     Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                    Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                    Neg<float, AscendC::Reg::MaskMergeMode::ZEROING>(xReg, xReg, pMask);
+                    MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg1, xReg, sum2Reg, pMask);
+                    Sub<float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg4, Reg1, sum1Reg, pMask);
                     Muls<float, float, AscendC::Reg::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                     Mul<float, AscendC::Reg::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
                     StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
