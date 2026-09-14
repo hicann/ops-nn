@@ -195,15 +195,9 @@ static ge::graphStatus ForeachAddcdivScalarTilingFunc(gert::TilingContext* conte
     needCoreNum = std::min(needCoreNum, coreNum);
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
 
-    if (totalDataCount == 0) {
-        needCoreNum = 0;
-    }
-
     tilingDataHost.needCoreNum = static_cast<int32_t>(needCoreNum);
 
-    if (needCoreNum > 0) {
-        AssignDataToEachCore(tilingDataHost, needCoreNum, dataTypeSize);
-    }
+    AssignDataToEachCore(tilingDataHost, needCoreNum, dataTypeSize);
 
     ForeachAddcdivScalarTilingDataHost* tilingData = context->GetTilingData<ForeachAddcdivScalarTilingDataHost>();
     *tilingData = tilingDataHost;
