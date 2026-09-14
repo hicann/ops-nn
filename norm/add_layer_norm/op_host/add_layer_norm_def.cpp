@@ -214,6 +214,7 @@ public:
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
         config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("ascend350", config_950);
     }
 };
 

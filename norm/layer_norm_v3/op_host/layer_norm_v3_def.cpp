@@ -59,6 +59,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "layer_norm_v3_apt");
         this->AICore().AddConfig("ascend950", regbaseCfg);
+        this->AICore().AddConfig("ascend350", regbaseCfg);
     }
 };
 
