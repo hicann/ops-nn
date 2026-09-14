@@ -55,10 +55,10 @@ constexpr int64_t BLK_N = 16;
 constexpr int64_t POSK_LIMIT = 65535;
 constexpr int64_t BLK_LEN = 32;
 constexpr int64_t CONST_DOUBLE = 2;
-std::map<op::DataType, uint32_t> gDataTypeSizeTab = {{op::DataType::DT_FLOAT16, 2}, {op::DataType::DT_FLOAT, 4},
-                                                     {op::DataType::DT_BF16, 2},    {op::DataType::DT_INT8, 1},
-                                                     {op::DataType::DT_UINT8, 1},   {op::DataType::DT_INT64, 8},
-                                                     {op::DataType::DT_UINT64, 8},  {op::DataType::DT_INT32, 4}};
+std::map<op::DataType, uint32_t> gDataTypeSizeTab = {
+    {op::DataType::DT_FLOAT16, 2}, {op::DataType::DT_FLOAT, 4}, {op::DataType::DT_BF16, 2},
+    {op::DataType::DT_INT8, 1},    {op::DataType::DT_UINT8, 1}, {op::DataType::DT_INT64, 8},
+    {op::DataType::DT_UINT64, 8},  {op::DataType::DT_INT32, 4}, {op::DataType::DT_HIFLOAT8, 1}};
 } // namespace SplitWInfo
 
 namespace op {
@@ -366,6 +366,7 @@ bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>
     uint32_t totalDims = std::min(viewStrides.size(), newStrides.size());
     if (dims > totalDims) {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "Invalid dims");
+        return false;
     }
     for (size_t i = 0; i < dims; i++) {
         if (viewStrides[i] != newStrides[i]) {
@@ -405,9 +406,8 @@ void GetL1Size()
     OP_LOGD("GetL1Size returned: %lu", g_l1Size);
 }
 
-bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
-                    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
-                    const aclTensor* bias)
+bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride,
+                    const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias)
 {
     int64_t orgKh = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::HI_INDEX));
     int64_t orgKw = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
@@ -421,10 +421,9 @@ bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* inp
     int64_t padRight = (*padding)[SplitWInfo::RIGHT_INDEX_ATTR];
     int64_t m0 = SplitWInfo::BLK_M;
     int64_t n0 = SplitWInfo::BLK_N;
-    int64_t k0 = SplitWInfo::BLK_LEN / SplitWInfo::gDataTypeSizeTab[opInfo->weightDtype];
-    uint32_t inputDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->inputDtype];
-    uint32_t weightDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->weightDtype];
-    uint32_t biasDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->biasDtype];
+    uint32_t weightDtypeSize = SplitWInfo::gDataTypeSizeTab[weight->GetDataType()];
+    uint32_t inputDtypeSize = SplitWInfo::gDataTypeSizeTab[input->GetDataType()];
+    int64_t k0 = SplitWInfo::BLK_LEN / weightDtypeSize;
     uint64_t nBL1min = n0;
 
     if (orgKh * orgKw * k0 > SplitWInfo::POSK_LIMIT) {
@@ -433,7 +432,7 @@ bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* inp
 
     uint64_t biasL1Size = 0;
     if (bias != nullptr) {
-        biasL1Size = ConvAlignB(nBL1min * biasDtypeSize, SplitWInfo::BLK_LEN);
+        biasL1Size = ConvAlignB(nBL1min * SplitWInfo::gDataTypeSizeTab[bias->GetDataType()], SplitWInfo::BLK_LEN);
     }
 
     uint64_t kBL1min = k0 * orgKh * orgKw;

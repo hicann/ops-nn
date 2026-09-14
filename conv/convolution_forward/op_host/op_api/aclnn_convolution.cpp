@@ -3388,8 +3388,7 @@ static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 // padding = [pad_top, pad_bottom, pad_left, pad_right]
 // 1. 不满足DMA的规格   2. load3d L1最小切分要在L1能够放下
 static bool isNotDMA(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
-                     struct ConvolutionOpInfo* opInfo = nullptr)
+                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation)
 {
     int64_t inputHeight = (int64_t)input->GetViewShape().GetDim(2);
     int64_t inputWidth = (int64_t)input->GetViewShape().GetDim(3);
@@ -3425,7 +3424,7 @@ static bool isNotDMA(const aclTensor* input, const aclTensor* weight, const aclT
     }
 
     if (IsSupportND()) {
-        return !CheckDmaLimits(opInfo, input, weight, stride, padding, dilation, bias);
+        return !CheckDmaLimits(input, weight, stride, padding, dilation, bias);
     }
 
     if (!alignResult) {
@@ -4327,7 +4326,7 @@ public:
             viewShape[N_DIM_NCHW_INDEX] * viewShape[C_DIM_NCHW_INDEX]};
         bool strideFlag = CheckDisContinuousStride(input, newStrides, CONV_2D_DIMS);
         if (strideFlag && input->GetViewOffset() == 0 && isSupportInputHWNC(input, opInfo, groups) &&
-            isNotDMA(input, weight, bias, output, stride, padding, dilation, &opInfo)) {
+            isNotDMA(input, weight, bias, output, stride, padding, dilation)) {
             OP_LOGD("Conv2d entering disContinuous branch");
             op::Shape newStorageShapeOp = op::Shape({viewShape[H_DIM_NCHW_INDEX], viewShape[W_DIM_NCHW_INDEX],
                                                      viewShape[N_DIM_NCHW_INDEX], viewShape[C_DIM_NCHW_INDEX]});
@@ -4509,7 +4508,7 @@ public:
                  viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]});
 
             auto inputView = executor->CreateView(input, viewShape2d, input->GetViewShape(), newStridesOp, 0);
-            if (isNotDMA(inputView, weight, bias, output, stride, padding, dilation, &opInfo)) {
+            if (isNotDMA(inputView, weight, bias, output, stride, padding, dilation)) {
                 const_cast<aclTensor*>(inputView)->SetStorageShape(storageShape2d);
                 const_cast<aclTensor*>(inputView)->SetOriginalShape(viewShape2d);
                 const_cast<aclTensor*>(inputView)->SetViewFormat(Format::FORMAT_NCHW);
