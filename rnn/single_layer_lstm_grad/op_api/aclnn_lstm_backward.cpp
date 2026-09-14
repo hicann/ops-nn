@@ -1621,20 +1621,17 @@ aclnnStatus PrepareLSTMBackwardNoneInputs(const aclTensor* input, const aclTenso
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLstmBackwardGetWorkspaceSize(const aclTensor* input, const aclTensorList* hx,
-                                              const aclTensorList* params, const aclTensor* dy, const aclTensor* dh,
-                                              const aclTensor* dc, const aclTensorList* i, const aclTensorList* g,
-                                              const aclTensorList* f, const aclTensorList* o, const aclTensorList* h,
-                                              const aclTensorList* c, const aclTensorList* tanhc,
-                                              const aclTensor* batchSizesOptional, bool hasBias, int64_t numLayers,
-                                              double dropout, bool train, bool bidirectional, bool batchFirst,
-                                              [[maybe_unused]] const aclBoolArray* outputMask, aclTensor* dxOut,
-                                              aclTensor* dhPrevOut, aclTensor* dcPrevOut, aclTensorList* dparamsOut,
-                                              uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
+    const aclTensor* input, const aclTensorList* hx, const aclTensorList* params, const aclTensor* dy,
+    const aclTensor* dh, const aclTensor* dc, const aclTensorList* i, const aclTensorList* g, const aclTensorList* f,
+    const aclTensorList* o, const aclTensorList* h, const aclTensorList* c, const aclTensorList* tanhc,
+    const aclTensor* batchSizesOptional, bool hasBias, int64_t numLayers, double dropout, bool train,
+    bool bidirectional, bool batchFirst, const aclBoolArray* outputMask, aclTensor* dxOut, aclTensor* dhPrevOut,
+    aclTensor* dcPrevOut, aclTensorList* dparamsOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnLstmBackward,
                    DFX_IN(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, batchSizesOptional, hasBias,
-                          numLayers, dropout, train, bidirectional, batchFirst),
+                          numLayers, dropout, train, bidirectional, batchFirst, outputMask),
                    DFX_OUT(dxOut, dhPrevOut, dcPrevOut, dparamsOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
