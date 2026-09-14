@@ -1599,7 +1599,10 @@ uint64_t Conv3dTilingEngine::CalcMinL1LoadSize(uint8_t outputOrder, std::string*
     uint64_t tmpHiAL1 = 0;
     uint64_t tmpWiAL1 = shapeInfo_.wi;
     if (outputOrder == Conv3dApiTiling::M_Mode) {
-        hoAL1min = m0 / shapeInfo_.wo + 2;
+        // An M tile may start and end inside output rows.
+        // Reserve two boundary rows beyond m0 / Wo for a conservative AL1 output-height estimate.
+        constexpr uint64_t AL1_OUTPUT_BOUNDARY_ROWS = 2;
+        hoAL1min = m0 / shapeInfo_.wo + AL1_OUTPUT_BOUNDARY_ROWS;
         tmpHiAL1 = InferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
         minAL1Size = tmpHiAL1 * shapeInfo_.wi * k0 * fMapDtypeSize;
     } else {
