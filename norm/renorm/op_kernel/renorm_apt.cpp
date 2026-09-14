@@ -27,6 +27,7 @@
 #include "arch35/renorm_global_long_p.h"
 #include "arch35/renorm_inner_split.h"
 #include "arch35/renorm_bm_cr_tiled.h"
+#include "arch35/renorm_elementwise.h"
 
 // 模板编号
 // 0: Template A (SM-CT) - Slice-Major Continuous Single-Level
@@ -429,6 +430,21 @@ __global__ __aicore__ void renorm(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_AD
         // p-power arithmetic while using an independent launch key.
         NsRenorm::Renorm<D_T_X, true> op;
         op.Init(x, y, &tilingData);
+        op.Process();
+    } else if constexpr (TEMPLATE == 60) {
+        // Template J: one contiguous pass when the reduction axis has length 1.
+        NsRenormElementwise::RenormElementwise<D_T_X> op;
+        op.Init(x, y, &tilingData);
+        op.Process();
+    } else if constexpr (TEMPLATE == 61) {
+        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+        AscendC::TPipe pipe;
+        // Stable packed B1 reduction: contiguous block DMA plus explicit
+        // per-core sum publication and merge.
+        NsRenormSmCrPacked::RenormSmCrPacked<D_T_X, true, true, false, false, false, false, false, false, false, false,
+                                             false, false, false, false, false, false, false, true>
+            op;
+        op.Init(x, y, workspace, &tilingData, &pipe);
         op.Process();
     }
 }

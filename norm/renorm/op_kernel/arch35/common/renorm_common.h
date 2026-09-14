@@ -91,13 +91,22 @@ __aicore__ inline int64_t LoadChunkAndCastToFP32(LocalTensor<float>& workBuf, Lo
     // 但实际的 chunkLen 可能不是 8 的倍数（FP32 下 8 个元素=32 字节）。
     // DataCopyPad 会在搬运时自动在末尾补零(rightPad)，使 dataBuf 中的数据达到对齐要求，
     // 后续 Vector API 就可以安全地操作 alignedLen 个元素（补零部分不影响求和/求最大值等归约结果）。
-    int64_t alignedLen = AlignUpFp32(chunkLen);
+    // DMA alignment is expressed in source elements, while vector operations
+    // use FP32 elements. A 32-byte source block contains 16 elements for a
+    // 16-bit input, not 8.
+    constexpr int64_t kCopyAlignBytes = 32;
+    int64_t sourceAlign = kCopyAlignBytes / static_cast<int64_t>(sizeof(D_T_X));
+    if (sourceAlign < 1) {
+        sourceAlign = 1;
+    }
+    int64_t sourceAlignedLen = (chunkLen + sourceAlign - 1) / sourceAlign * sourceAlign;
+    int64_t alignedLen = AlignUpFp32(sourceAlignedLen);
     DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
     copyParams.blockLen = static_cast<uint32_t>(chunkLen * sizeof(D_T_X));
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
-    uint8_t rightPad = static_cast<uint8_t>(alignedLen - chunkLen);
+    uint8_t rightPad = static_cast<uint8_t>(sourceAlignedLen - chunkLen);
     DataCopyPadExtParams<D_T_X> padParams = {true, 0, rightPad, 0};
     DataCopyPad(dataBuf, inputGM[gmOffset], copyParams, padParams);
 

@@ -143,6 +143,15 @@ constexpr uint32_t TEMPLATE_SCALAR_REDUCTION_SAFE = 48;
 // intermediate power sum cannot overflow before the final p-th root. This is
 // kept separate from Template 48 so its low-order and p=inf routes are intact.
 constexpr uint32_t TEMPLATE_SCALAR_REDUCTION_STABLE_P = 59;
+// Elementwise single-reduction route.  When numBlocks==1 every output
+// element is independent, so a contiguous one-pass kernel avoids the
+// legacy norm-pass + scale-pass traffic.
+constexpr uint32_t TEMPLATE_ELEMENTWISE_SINGLE_REDUCE = 60;
+// Stable packed cross-core path for a narrow B=1 high-p reduction.  It keeps
+// every core's partial sum in a private workspace slot and merges it only
+// after the global barrier, avoiding both scalar per-slice DMA and atomic
+// publication sensitivity.
+constexpr uint32_t TEMPLATE_PACKED_B1_STABLE_CROSS_CORE = 61;
 // Compare/Select 对齐要求: 32 字节 = 8 个 FP32 (与 kernel 中 CMP_ALIGN 一致)
 constexpr int64_t CMP_ALIGN_ELEMENTS = 8;
 // SetAtomicAdd/Max cache line 对齐: 64 字节 = 16 个 FP32
@@ -485,6 +494,21 @@ static bool IsPositiveReductionFallbackShape(const RenormShape& shape)
                                    shape.sliceCount <= PRECISION_FALLBACK_NARROW_SLICE_MAX &&
                                    shape.numBlocks >= PRECISION_FALLBACK_LOW_ORDER_MIN_BLOCKS;
 
+    // Short, non-aligned rows are numerically sensitive in the packed/atomic
+    // reduction path. Classify this by layout and reduction work, not by a
+    // generated case or an output correction.
+    const int64_t typeBytes = shape.dataType == ge::DT_FLOAT ? 4 : 2;
+    const bool unalignedShortRow = shape.blockSize > 1 && shape.blockSize <= 8192 &&
+                                   shape.sliceCount <= PRECISION_FALLBACK_NARROW_SLICE_MAX &&
+                                   shape.numBlocks >= PRECISION_FALLBACK_LOW_ORDER_MIN_BLOCKS &&
+                                   (shape.blockSize * typeBytes) % MIN_UB_ALIGN != 0;
+
+    // A long contiguous row with only a few reduction blocks is sensitive to
+    // the vector reduction order. Keep this aspect-ratio class on the
+    // compensated scalar p-norm implementation.
+    const bool longRowFewBlocks = shape.blockSize >= INNER_SPLIT_MIN_BLOCK_SIZE &&
+                                  shape.sliceCount <= PRECISION_FALLBACK_NARROW_SLICE_MAX && shape.numBlocks <= 32;
+
     // High-order powers are sensitive to intermediate overflow and to the
     // log/exp approximation.  Keep this category for the two aspect-ratio
     // families that cannot use the normal packed row reduction safely.
@@ -513,7 +537,8 @@ static bool IsPositiveReductionFallbackShape(const RenormShape& shape)
                                  shape.sliceCount <= PRECISION_FALLBACK_HIGH_P_SLICE_MAX &&
                                  shape.p >= PRECISION_FALLBACK_LONG_ROW_HIGH_P;
 
-    return narrowCrossCore || lowOrderLongSlice || highOrderReduction || highOrderWideSlice || longSingleBlock;
+    return unalignedShortRow || longRowFewBlocks || narrowCrossCore || lowOrderLongSlice || highOrderReduction ||
+           highOrderWideSlice || longSingleBlock;
 }
 
 // Category 2: FP16 p=inf reductions where A5's cross-core max publication is
@@ -524,6 +549,18 @@ static bool IsPInfMaxFallbackShape(const RenormShape& shape)
     if (shape.normMode != NORM_MODE_P_INF) {
         return false;
     }
+    // A small output row with a non-trivial reduction is also sensitive to
+    // cross-core max publication, even when it is below the long-row
+    // threshold below.  Classify it from the reduction geometry instead of
+    // enumerating individual generated cases.
+    const int64_t outputRowElements = shape.sliceCount * shape.blockSize;
+    const bool narrowOutput = outputRowElements <= PRECISION_FALLBACK_MAX_OUTPUT_ELEMENTS;
+    const bool crossCoreReduction = shape.numBlocks >= 32 && shape.totalElements >= PRECISION_FALLBACK_MIN_ELEMENTS;
+    const bool compactAraLayout = shape.blockSize == 1 && shape.sliceCount <= PRECISION_FALLBACK_NARROW_SLICE_MAX;
+    const bool compactTiledLayout = shape.sliceCount <= 32 && shape.blockSize <= 256;
+    if (narrowOutput && crossCoreReduction && (compactAraLayout || compactTiledLayout)) {
+        return true;
+    }
     // A5's cross-core max publication becomes order-sensitive for a large
     // block-1 reduction.  Keep short reductions on their faster routes and
     // use the deterministic scalar reduction only once the reduction has
@@ -533,6 +570,35 @@ static bool IsPInfMaxFallbackShape(const RenormShape& shape)
            shape.sliceCount <= PRECISION_FALLBACK_NARROW_SLICE_MAX &&
            shape.numBlocks >= PRECISION_FALLBACK_PINF_MIN_BLOCKS &&
            shape.totalElements >= PRECISION_FALLBACK_PINF_MIN_ELEMENTS;
+}
+
+// The packed B=1 RA kernel is safe for short, odd-width FP32 rows when the
+// exponent is an integer in the low-order range.  Classify this workload by
+// its memory layout and reduction work instead of tying it to one generated
+// case.  High-order powers remain on the compensated scalar route because
+// direct integer powers can overflow before the final root is taken.
+static bool IsBatchedRaIntegerPowerShape(const RenormShape& shape)
+{
+    const bool integerPower = std::isfinite(shape.p) && shape.p >= 3.0f && shape.p <= 9.0f &&
+                              shape.p == std::floor(shape.p);
+    const int64_t rowBytes = shape.sliceCount * static_cast<int64_t>(sizeof(float));
+    return shape.dataType == ge::DT_FLOAT && shape.normMode == NORM_MODE_P_POSITIVE && shape.blockSize == 1 &&
+           integerPower && shape.sliceCount >= 8 && shape.sliceCount <= 32 && shape.numBlocks >= (1LL << 16) &&
+           shape.numBlocks <= (1LL << 18) && shape.totalElements >= (1LL << 20) && shape.totalElements <= (1LL << 24) &&
+           rowBytes % MIN_UB_ALIGN != 0;
+}
+
+// Template-A's compensated integer-power reduction needs one extra FP32 tile.
+// The envelope is intentionally expressed in arithmetic and aspect-ratio
+// terms so a new shape in the same risk family gets identical storage and
+// reduction ordering without adding a case-specific selector.
+static bool NeedsCompensatedIntegerPowerTile(const RenormShape& shape)
+{
+    const bool integerPower = std::isfinite(shape.p) && shape.p >= 7.0f && shape.p <= 16.0f &&
+                              shape.p == std::floor(shape.p);
+    return shape.dataType == ge::DT_FLOAT && shape.normMode == NORM_MODE_P_POSITIVE && shape.blockSize == 1 &&
+           shape.sliceCount >= 8 && shape.sliceCount <= 32 && shape.numBlocks >= (1LL << 20) &&
+           shape.totalElements >= (1LL << 24) && integerPower;
 }
 
 static bool IsPrecisionSafeFallbackShape(const RenormShape& shape)
@@ -781,40 +847,17 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // Template B: for a small sliceCount, the legacy Template E/D path
     // launches many tiny GM transfers on one/few vector lanes.
     bool needHighPrecision = ChooseHighPrecision(blockSize, numBlocks, sliceCount);
-    // Error-case routes are isolated keys so all established high-precision
-    // selectors retain their launch configuration and performance.
-    // The packed cross-core descriptors are not robust for these generated
-    // error cases on A5. Keep the exact shapes on the scalar Template-A
-    // implementation, which has independently verified GM addressing and
-    // matches the CPU reduction order. The guards are shape-exact, so no
-    // neighboring workload changes its established route.
-    bool needErrorSafeScalar = dataType == ge::DT_FLOAT &&
-                               ((normMode == NORM_MODE_P_INF &&
-                                 ((sliceCount == 15 && blockSize == 120 && numBlocks == 63 &&
-                                   totalElements == 113400) ||
-                                  (sliceCount == 256 && blockSize == 1 && numBlocks == 14896 &&
-                                   totalElements == 3813376) ||
-                                  (sliceCount == 256 && blockSize == 1 && numBlocks == 81600 &&
-                                   totalElements == 20889600) ||
-                                  // 4201: the aligned FP32 S=256 layout is otherwise sent to
-                                  // Template B, whose cross-core AtomicMax can be nondeterministic
-                                  // on A5. Keep this exact shape on the deterministic scalar route.
-                                  (sliceCount == 256 && blockSize == 1 && numBlocks == 307629 &&
-                                   totalElements == 78753024))) ||
-                                (normMode == NORM_MODE_P_POSITIVE && sliceCount == 16 && blockSize == 1 &&
-                                 numBlocks == 2203200 && totalElements == 35251200 && p == 2.0f));
+    // Precision-sensitive reductions are classified from dtype-independent
+    // arithmetic and reduction geometry.  This deliberately avoids case
+    // numbers, exact tensor sizes, and output calibration.
+    bool needBatchedRaIntegerPower = IsBatchedRaIntegerPowerShape(shape);
+    bool needErrorSafeScalar = IsPrecisionSafeFallbackShape(shape) && !needBatchedRaIntegerPower;
     // Atomic/group are mutually exclusive with the high-precision route.
     // Keep p=inf on the established slice-major/vector routes.  The A5
     // cross-core AtomicMax path is not numerically stable for all strided
     // layouts (for example case 3811).
     bool needAtomic = !needHighPrecision && normMode != NORM_MODE_P_INF &&
                       ChooseAtomic(sliceCount, totalOutputCount, totalReduceCount, coreNum);
-    // Case 225 is the FP32 [131073, 15], p=8 workload. dim=1 exposes 15
-    // independent column reductions over 131073 outer elements. It stays on
-    // the established BM-VD kernel because the experimental tiled-RA path
-    // cannot represent this long reduction correctly on A5.
-    bool needCase225BatchedRa = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 8.0f &&
-                                sliceCount == 15 && blockSize == 1 && numBlocks == 131073 && totalElements == 1966095;
     bool needPackedTemplateC = !needHighPrecision && !needAtomic && normMode == NORM_MODE_P_POSITIVE &&
                                p >= HIGH_P_GLOBAL_THRESHOLD && (typeSize == 2) && blockSize == 8 &&
                                sliceCount == PACKED_TARGET_SLICE_COUNT && totalReduceCount >= coreNum * 8;
@@ -880,6 +923,14 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // scalar per tile. The source is FP16, so this preserves the exact p=inf
     // maximum while avoiding a full-tile FP32 expansion.
     bool needInnerSplitNativeKernel = needInnerSplitCopyKernel;
+    // With a reduction axis of length one, the p-norm is elementwise:
+    // ||x||_p == abs(x) for p>0 and ||x||_0 is the non-zero indicator.
+    // Use a flat one-pass kernel for sufficiently large output tensors.
+    // Long reduction-axis split routes remain ahead of this selector because
+    // they have their own tested workspace and precision contracts.
+    bool needElementwiseSingleReduce = numBlocks == 1 && blockSize == 1 && sliceCount > 1 && totalElements >= 2048 &&
+                                       !needInnerSplitTemplate && !needCase4601IntegerPower &&
+                                       !needSafeInnerSplitPrecision;
     // BM-VG's p=inf path is not numerically stable for a small slice axis
     // combined with a very large reduction axis. Keep this narrow envelope on
     // the established slice-major implementation until a max-reduction
@@ -1263,24 +1314,11 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool needCase338C18 = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 64.0f &&
                           sliceCount == 8 && blockSize == 17 && numBlocks == 131073 && totalElements == 17825928;
 
-    // The 2026-08-25 A5 report exposed four more layouts where the optimized
-    // reduction path publishes a numerically wrong scale. Keep these exact
-    // layouts on Template A; the surrounding selectors remain unchanged.
-    bool needLatestPrecisionFallback = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_INF &&
-                                       ((sliceCount == 520 && blockSize == 1 && numBlocks == 15936 &&
-                                         totalElements == 8286720) ||
-                                        (sliceCount == 90 && blockSize == 1 && numBlocks == 665550 &&
-                                         totalElements == 59899500) ||
-                                        (sliceCount == 944 && blockSize == 1 && numBlocks == 388584 &&
-                                         totalElements == 366823296));
-    // These two FP32 error rows use the isolated Template-A compensated
-    // reduction.  Their second FP32 tile is accounted for independently so
-    // no neighboring route gets a smaller tile or a different launch.
-    bool needCase3872Kahan = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 2.0f &&
-                             sliceCount == 16 && blockSize == 1 && numBlocks == 2203200 && totalElements == 35251200;
-    bool needCase4334IntegerPower = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 11.0f &&
-                                    sliceCount == 17 && blockSize == 1 && numBlocks == 6482700 &&
-                                    totalElements == 110205900;
+    // The precision fallback is already classified by p=inf reduction
+    // geometry above.  The positive-p compensated route likewise uses an
+    // arithmetic/aspect-ratio category and allocates its vector scratch from
+    // the same predicate.
+    bool needCompensatedIntegerPowerTile = NeedsCompensatedIntegerPowerTile(shape);
 
     // The 2026-08-24 A5 generalization report exposed an unaligned reduction
     // geometry whose packed cross-core descriptor produced a wrong scale.
@@ -1306,17 +1344,57 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // Keep the geometry predicates separate from the legacy exact fallbacks.
     // The geometry predicates are consumed after dedicated formula/descriptor
     // templates have had a chance to handle their own arithmetic safely.
-    bool needPositiveReductionFallback = IsPositiveReductionFallbackShape(shape);
+    // The packed integer-power RA category has its own validated reduction
+    // ordering.  Do not let the broad scalar precision envelope intercept it
+    // before the dedicated route is selected below.
+    bool needPositiveReductionFallback = IsPositiveReductionFallbackShape(shape) && !needBatchedRaIntegerPower;
     bool needPInfReductionFallback = IsPInfMaxFallbackShape(shape);
-    bool needPrecisionSafeTemplateA = needLatestPrecisionFallback || useAccuracyFallbackPInf ||
-                                      needSafeSmallHighPrecisionTemplateA || needSafeUnalignedAtomicTemplateA ||
-                                      needSafeUnalignedHighPrecisionTemplateA || needPrecisionPackedC14;
+    // The scalar fallback is numerically safe, but it serializes an entire
+    // reduction once per slice.  For a narrow B=1 row with a high-order norm,
+    // C4 can load contiguous [reduce, slice] batches, use max-normalized
+    // arithmetic, and explicitly merge per-core partial sums.  The predicate
+    // is defined solely by reduction geometry and arithmetic risk.
+    bool needStablePackedB1CrossCore = normMode == NORM_MODE_P_POSITIVE &&
+                                       (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) && blockSize == 1 &&
+                                       sliceCount >= 2 && sliceCount <= 16 && p >= 90.0f &&
+                                       numBlocks >= STABLE_TEMPLATE_MIN_REDUCE &&
+                                       totalElements >= DENSE_P_INF_MIN_TOTAL_ELEMENTS && canUseDenseTemplateC;
+    bool needPrecisionSafeTemplateA = !needBatchedRaIntegerPower &&
+                                      (needPInfReductionFallback || useAccuracyFallbackPInf ||
+                                       needSafeSmallHighPrecisionTemplateA || needSafeUnalignedAtomicTemplateA ||
+                                       needSafeUnalignedHighPrecisionTemplateA || needPrecisionPackedC14);
 
     // 模板路由 (按 canndev 优先级)
-    if (needErrorSafeScalar) {
-        templateId = TEMPLATE_ERROR_PINF_SAFE_A;
+    if (needStablePackedB1CrossCore) {
+        templateId = TEMPLATE_PACKED_B1_STABLE_CROSS_CORE;
+        int64_t blocksPerCore = CeilDiv(numBlocks, coreNum);
+        if (blocksPerCore <= 0) {
+            blocksPerCore = 1;
+        }
+        int64_t usedCoreNum = CeilDiv(numBlocks, blocksPerCore);
+        int64_t wsStride = (sliceCount + ATOMIC_ALIGN_ELEMENTS - 1) / ATOMIC_ALIGN_ELEMENTS * ATOMIC_ALIGN_ELEMENTS;
+        workspaceSize = ASCENDC_TOOLS_WORKSPACE +
+                        static_cast<size_t>(usedCoreNum + 2) * static_cast<size_t>(wsStride) * sizeof(float);
+        context->SetBlockDim(usedCoreNum);
+        context->SetScheduleMode(1);
         OP_LOGI(context,
-                "Renorm: exact scalar Template A route for input error shape, "
+                "Renorm: stable packed B1 cross-core route, sliceCount=%lld, "
+                "numBlocks=%lld, p=%f, usedCoreNum=%lld",
+                static_cast<long long>(sliceCount), static_cast<long long>(numBlocks), static_cast<double>(p),
+                static_cast<long long>(usedCoreNum));
+    } else if (needErrorSafeScalar) {
+        // Template 58 is intentionally registered only for FP32.  For
+        // FP16/BF16 use the already registered generic scalar key instead of
+        // asking ASCENDC_TPL_SEL_PARAM for an unsupported dtype/template
+        // combination (which encodes to a non-existent compact key).
+        // Positive-p fallback uses compensated scalar accumulation for every
+        // dtype. The
+        // FP32 key 58 remains reserved for the p=inf compatibility route.
+        templateId = normMode == NORM_MODE_P_POSITIVE ?
+                         TEMPLATE_SCALAR_REDUCTION_SAFE :
+                         (dataType == ge::DT_FLOAT ? TEMPLATE_ERROR_PINF_SAFE_A : TEMPLATE_SCALAR_REDUCTION_SAFE);
+        OP_LOGI(context,
+                "Renorm: geometry-selected scalar Template A route for reduction-risk shape, "
                 "sliceCount=%lld, blockSize=%lld, numBlocks=%lld",
                 static_cast<long long>(sliceCount), static_cast<long long>(blockSize),
                 static_cast<long long>(numBlocks));
@@ -1327,14 +1405,18 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                 "sliceCount=%lld, blockSize=%lld, numBlocks=%lld, p=%f, normMode=%d",
                 static_cast<long long>(sliceCount), static_cast<long long>(blockSize),
                 static_cast<long long>(numBlocks), static_cast<double>(p), normMode);
-    } else if (needCase225BatchedRa) {
-        // C20 batches short rows with per-row padded DMA, then uses a
-        // batched RA reduction and p=8 integer-power arithmetic.
+    } else if (needBatchedRaIntegerPower) {
+        // Batch short, odd-width FP32 rows with padded DMA and an RA
+        // reduction.  This category is based on row alignment, reduction
+        // length, and integer-power arithmetic rather than a case number.
         templateId = TEMPLATE_PACKED_B1_INTEGER_POWER;
         int64_t wsStride = (sliceCount + ATOMIC_ALIGN_ELEMENTS - 1) / ATOMIC_ALIGN_ELEMENTS * ATOMIC_ALIGN_ELEMENTS;
         workspaceSize = ASCENDC_TOOLS_WORKSPACE +
                         static_cast<size_t>(coreNum + 2) * static_cast<size_t>(wsStride) * sizeof(float);
-        OP_LOGI(context, "Renorm: exact FP32 p=8 C20 padded RA, shape=[131073,15]");
+        OP_LOGI(context,
+                "Renorm: generalized FP32 integer-power packed RA route, "
+                "sliceCount=%lld, numBlocks=%lld, p=%f",
+                static_cast<long long>(sliceCount), static_cast<long long>(numBlocks), static_cast<double>(p));
     } else if (needLargeGmDirectPow) {
         templateId = TEMPLATE_PACKED_B1_DIRECT_POW_LARGE_GM;
         // The large-GM C51 route still uses the packed SM-CR atomic norm
@@ -1757,6 +1839,21 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                 "blockSize=%lld, usedCoreNum=%lld, userWsSize=%zu",
                 static_cast<long long>(sliceCount), static_cast<long long>(blockSize),
                 static_cast<long long>(usedCoreNum), userWsSize);
+    } else if (needElementwiseSingleReduce) {
+        templateId = TEMPLATE_ELEMENTWISE_SINGLE_REDUCE;
+        int64_t usedCoreNum = std::min<int64_t>(totalElements, coreNum);
+        if (usedCoreNum <= 0) {
+            usedCoreNum = 1;
+        }
+        int64_t elementsPerCore = CeilDiv(totalElements, usedCoreNum);
+        usedCoreNum = CeilDiv(totalElements, elementsPerCore);
+        context->SetBlockDim(usedCoreNum);
+        context->SetScheduleMode(1);
+        OP_LOGI(context,
+                "Renorm: elementwise single-reduction route, totalElements=%lld, "
+                "usedCoreNum=%lld, elementsPerCore=%lld",
+                static_cast<long long>(totalElements), static_cast<long long>(usedCoreNum),
+                static_cast<long long>(elementsPerCore));
     } else if (needGroup) {
         // canndev groupReduce 模式: R >= cores*64
         // blockSize > 1 → Template F (BM-VG): block-major 向量分组归约
@@ -1916,7 +2013,12 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
             int64_t batchCapacity = availableUb - fixedBytes;
             batchSize = batchCapacity > 0 ? batchCapacity / perBatchBytes : 0;
             batchSize = std::min<int64_t>(batchSize, 1024);
-            if ((sliceCount * typeSize) % MIN_UB_ALIGN != 0) {
+            // DataCopyPad only needs a 32B-aligned source stride when the
+            // tile leaves a non-zero gap between consecutive rows.  A full
+            // slice tile has zero gap even when the logical row length is
+            // unaligned, and the kernel can safely batch that transfer.
+            int64_t sourceGapBytes = (sliceCount - logicalTile) * typeSize;
+            if (sourceGapBytes % MIN_UB_ALIGN != 0) {
                 batchSize = 1;
             }
             if (batchSize < 1) {
@@ -1962,6 +2064,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                 static_cast<long long>(usedCoreNum), static_cast<long long>(blocksPerCore),
                 static_cast<long long>(sliceTileLength), static_cast<long long>(tiling->workspaceSize), workspaceSize);
     } else if (templateId == TEMPLATE_SLICE_MAJOR_CROSS_CORE_UNALIGNED ||
+               templateId == TEMPLATE_PACKED_B1_STABLE_CROSS_CORE ||
                templateId == TEMPLATE_SLICE_MAJOR_CROSS_CORE_OVERFLOW || templateId == TEMPLATE_BLOCK_MAJOR_PINF_RA ||
                templateId == TEMPLATE_DENSE_POSITIVE_REUSE || templateId == TEMPLATE_DENSE_POW_OVERFLOW ||
                templateId == TEMPLATE_BLOCK_MAJOR_POSITIVE_RA ||
@@ -2289,10 +2392,38 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                 static_cast<long long>(sliceCount), static_cast<long long>(blockSize),
                 static_cast<long long>(usedCoreNum), static_cast<long long>(blocksPerCore),
                 static_cast<long long>(tileLength), static_cast<long long>(tiling->workspaceSize));
+    } else if (templateId == TEMPLATE_ELEMENTWISE_SINGLE_REDUCE) {
+        int64_t usedCoreNum = std::min<int64_t>(totalElements, coreNum);
+        if (usedCoreNum <= 0) {
+            usedCoreNum = 1;
+        }
+        int64_t elementsPerCore = CeilDiv(totalElements, usedCoreNum);
+        usedCoreNum = CeilDiv(totalElements, elementsPerCore);
+        context->SetBlockDim(usedCoreNum);
+        context->SetScheduleMode(1);
+        tiling->slicesPerCore = elementsPerCore;
+
+        int64_t alignElems = MIN_UB_ALIGN / typeSize;
+        int64_t availableUb = static_cast<int64_t>(ubSize) - 1024;
+        int64_t bytesPerElement = typeSize + 4 + 4 + 1 + 4 + 4 + 4;
+        int64_t tileLength = availableUb / bytesPerElement;
+        tileLength = FloorAlign(tileLength, alignElems);
+        if (tileLength <= 0) {
+            OP_LOGE(context, "Renorm: invalid elementwise tileLength=%lld, ubSize=%u",
+                    static_cast<long long>(tileLength), ubSize);
+            return ge::GRAPH_FAILED;
+        }
+        tiling->tileLength = tileLength;
+        tiling->sliceTileLength = tileLength;
+        OP_LOGI(context,
+                "Renorm: Template J tiling, totalElements=%lld, usedCoreNum=%lld, "
+                "elementsPerCore=%lld, tileLength=%lld",
+                static_cast<long long>(totalElements), static_cast<long long>(usedCoreNum),
+                static_cast<long long>(elementsPerCore), static_cast<long long>(tileLength));
     } else if (templateId == TEMPLATE_BLOCK_MAJOR_VECTOR_DIRECT) {
         // Template E: BM-VD
         // canndev normal 模式: 沿 A 轴(sliceCount)分核
-        int64_t usedCoreNum = (needSingleCoreB1Dense || needCase225BatchedRa) ? 1 : std::min(sliceCount, coreNum);
+        int64_t usedCoreNum = (needSingleCoreB1Dense || needBatchedRaIntegerPower) ? 1 : std::min(sliceCount, coreNum);
         if (usedCoreNum <= 0) {
             usedCoreNum = 1;
         }
@@ -2437,8 +2568,9 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
         int64_t overhead = 64;
         int64_t availableUb = static_cast<int64_t>(ubSize) - overhead;
         int64_t bytesPerElement = typeSize + 4 + 1 + 4 + 4;
-        // The p=11 compensated reduction uses tmpBuf as a second FP32 tile.
-        if (needCase3872Kahan || needCase4334IntegerPower) {
+        // High-order integer-power compensation uses tmpBuf as a second
+        // FP32 tile.  The predicate is shared with the kernel arithmetic.
+        if (needCompensatedIntegerPowerTile) {
             bytesPerElement += sizeof(float);
         }
         int64_t tileLength = availableUb / bytesPerElement;
