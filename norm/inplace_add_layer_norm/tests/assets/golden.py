@@ -14,6 +14,8 @@ import numpy as np
 
 __golden__ = {"kernel": {"inplace_add_layer_norm": "inplace_add_layer_norm_golden"}}
 
+__spec__ = {"inplace_add_layer_norm": "InplaceAddLayerNormTestSpec"}
+
 
 def inplace_add_layer_norm_golden(
     x1,
@@ -63,3 +65,49 @@ def inplace_add_layer_norm_golden(
     if not additional_output:
         return y_out, mean_out, rstd_out
     return y_out, mean_out, rstd_out, x.astype(yx_dtype)
+
+
+class TorchGpuThirdParty:
+    def __call__(
+        self,
+        x1,
+        x2,
+        gamma,
+        beta,
+        bias=None,
+        epsilon=1e-5,
+        additional_output=False,
+        **kwargs,
+    ):
+        import torch
+
+        out_dtype = x1.dtype
+        calc = torch.float32
+        if bias is not None:
+            x = x2.to(calc) + bias.to(calc) + x1.to(calc)
+        else:
+            x = x1.to(calc) + x2.to(calc)
+        normalized_shape = list(gamma.shape)
+        y, mean, rstd = torch.ops.aten.native_layer_norm(
+            x,
+            normalized_shape,
+            weight=gamma.to(calc),
+            bias=beta.to(calc),
+            eps=float(epsilon),
+        )
+
+        stat_shape = list(x1.shape[: x1.dim() - len(normalized_shape)]) + [1] * len(
+            normalized_shape
+        )
+        x_out = x.to(out_dtype) if additional_output else x2.clone().to(out_dtype)
+        return (
+            y.to(out_dtype),
+            mean.reshape(stat_shape).to(torch.float32),
+            rstd.reshape(stat_shape).to(torch.float32),
+            x_out,
+        )
+
+
+class InplaceAddLayerNormTestSpec:
+    golden = staticmethod(inplace_add_layer_norm_golden)
+    third_party = {"torch": TorchGpuThirdParty}
