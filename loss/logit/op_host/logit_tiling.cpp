@@ -31,10 +31,18 @@ constexpr uint64_t TILING_KEY_BFLOAT16 = 3;
 const static int64_t SIZE_16 = 16;
 const static int64_t LENGTH_1024 = 1024;
 
+// SINGLE BUFFER
+#define UB_NUM_INT16_ONE 8U
+#define UB_NUM_INT8_UINT8_ONE 14U
+// DOUBLE BUFFER
+#define UB_NUM_INT16_TWO 12U
+#define UB_NUM_INT8_UINT8_TWO 20U
+#define BLOCK_SIZE 256U
+
 class LogitTiling {
 public:
-    explicit LogitTiling(gert::TilingContext* context) : tilingContext(context){};
-    ge::graphStatus RunBigKernelTiling();
+    explicit LogitTiling(gert::TilingContext* context) : tilingContext(context) {};
+    ge::graphStatus RunBigKernelTiling(gert::TilingContext* context);
 
 private:
     ge::DataType dataType = ge::DT_UNDEFINED;
@@ -60,7 +68,7 @@ private:
     }
 };
 
-ge::graphStatus LogitTiling::RunBigKernelTiling()
+ge::graphStatus LogitTiling::RunBigKernelTiling(gert::TilingContext* context)
 {
     // 获取输入矩阵
     auto srcTensor = tilingContext->GetInputTensor(0);
@@ -73,8 +81,11 @@ ge::graphStatus LogitTiling::RunBigKernelTiling()
     if (attrs == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    const float epsilon = *(attrs->GetFloat(0));
+    float epsilon = *(attrs->GetFloat(0));
 
+    if (epsilon <= 0) {
+        epsilon = 1e-6;
+    }
     // 获取数据类型
     auto temp = tilingContext->GetInputDesc(0);
     if (temp == nullptr) {
@@ -89,6 +100,12 @@ ge::graphStatus LogitTiling::RunBigKernelTiling()
         tilingKey = TILING_KEY_FLOAT;
     } else if (dataType == ge::DT_BF16) {
         tilingKey = TILING_KEY_BFLOAT16;
+    } else if (dataType == ge::DT_INT16) {
+        tilingKey = 10;
+    } else if (dataType == ge::DT_INT8) {
+        tilingKey = 11;
+    } else if (dataType == ge::DT_UINT8) {
+        tilingKey = 12;
     } else {
         return ge::GRAPH_FAILED;
     }
@@ -109,10 +126,92 @@ ge::graphStatus LogitTiling::RunBigKernelTiling()
     tilingData.set_needCoreNum(needCoreNum);
     tilingData.set_eps(epsilon);
 
+    // 增加int16、int8、uint8处理分支
+    uint64_t coreNum = platformInfo.GetCoreNumAiv();
+    uint64_t ubSize = 0U; // init ubSize
+    platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+
+    uint64_t inputNum = tilingContext->GetInputShape(0)->GetStorageShape().GetShapeSize();
+    uint32_t typeLength = 2U;
+    if (tilingContext->GetInputDesc(0)->GetDataType() == ge::DT_INT8 ||
+        tilingContext->GetInputDesc(0)->GetDataType() == ge::DT_UINT8) {
+        typeLength = 1U;
+    }
+
+    if (0 == BLOCK_SIZE || 0 == coreNum || 0 == inputNum) {
+        OP_LOGE(context, "BLOCK_SIZE or coreNum or inputNum is 0");
+        return ge::GRAPH_FAILED;
+    }
+
+    uint64_t inputLength = typeLength * inputNum;
+    uint64_t inputBytes = inputLength / inputNum;
+    uint64_t inputLengthAlgin = (((inputLength + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE);
+    uint64_t ubDataNumber = 0U;
+    // bufferOpen = 1 is OPEN DOUBLE BUFFER
+    uint64_t bufferOpen = 1;
+    if (tilingContext->GetInputDesc(0)->GetDataType() == ge::DT_INT16) {
+        if ((inputLengthAlgin < coreNum * (((ubSize / BLOCK_SIZE) * BLOCK_SIZE) / UB_NUM_INT16_ONE))) {
+            bufferOpen = 0;
+            ubDataNumber = UB_NUM_INT16_ONE;
+        } else {
+            ubDataNumber = UB_NUM_INT16_TWO;
+        }
+    } else {
+        if ((inputLengthAlgin < coreNum * (((ubSize / BLOCK_SIZE) * BLOCK_SIZE) / UB_NUM_INT8_UINT8_ONE))) {
+            bufferOpen = 0;
+            ubDataNumber = UB_NUM_INT8_UINT8_ONE;
+        } else {
+            ubDataNumber = UB_NUM_INT8_UINT8_TWO;
+        }
+    }
+
+    if (0 == inputBytes) {
+        OP_LOGE(context, "inputBytes is 0");
+        return ge::GRAPH_FAILED;
+    }
+
+    uint64_t tileBlockNum = (ubSize / BLOCK_SIZE) / ubDataNumber;
+    uint64_t tileDataNum = (tileBlockNum * BLOCK_SIZE) / inputBytes;
+
+    if (tileDataNum >= inputNum) {
+        coreNum = 1;
+    } else {
+        coreNum = (static_cast<uint64_t>(coreNum) < inputLengthAlgin / BLOCK_SIZE) ? coreNum :
+                                                                                     inputLengthAlgin / BLOCK_SIZE;
+    }
+
+    uint64_t everyCoreInputBlockNum = inputLengthAlgin / BLOCK_SIZE / coreNum;
+    uint64_t tailBlockNum = (inputLengthAlgin / BLOCK_SIZE) % coreNum;
+    uint64_t smallCoreDataNum = everyCoreInputBlockNum * BLOCK_SIZE / inputBytes;
+    uint64_t smallTileNum = everyCoreInputBlockNum / tileBlockNum;
+    uint64_t finalSmallTileNum = (everyCoreInputBlockNum % tileBlockNum) == 0 ? smallTileNum : smallTileNum + 1;
+    uint64_t smallTailDataNum = smallCoreDataNum - (tileDataNum * smallTileNum);
+    smallTailDataNum = smallTailDataNum == 0 ? tileDataNum : smallTailDataNum;
+
+    everyCoreInputBlockNum += 1;
+    uint64_t bigCoreDataNum = everyCoreInputBlockNum * BLOCK_SIZE / inputBytes;
+    uint64_t bigTileNum = everyCoreInputBlockNum / tileBlockNum;
+    uint64_t finalBigTileNum = (everyCoreInputBlockNum % tileBlockNum) == 0 ? bigTileNum : bigTileNum + 1;
+    uint64_t bigTailDataNum = bigCoreDataNum - tileDataNum * bigTileNum;
+    bigTailDataNum = bigTailDataNum == 0 ? tileDataNum : bigTailDataNum;
+
+    tilingData.set_smallCoreDataNum(smallCoreDataNum);
+    tilingData.set_bigCoreDataNum(bigCoreDataNum);
+    tilingData.set_finalSmallTileNum(finalSmallTileNum);
+    tilingData.set_finalBigTileNum(finalBigTileNum);
+    tilingData.set_tileDataNum(tileDataNum);
+    tilingData.set_smallTailDataNum(smallTailDataNum);
+    tilingData.set_bigTailDataNum(bigTailDataNum);
+    tilingData.set_tailBlockNum(tailBlockNum);
+    tilingData.set_bufferOpen(bufferOpen);
+    // 以上是int16、int8、uint8类型的logit增加的代码
     tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
                             tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
+    if (dataType == ge::DT_UINT8 || dataType == ge::DT_INT8 || dataType == ge::DT_INT16) {
+        needCoreNum = coreNum;
+    }
     tilingContext->SetBlockDim(needCoreNum);
     return ge::GRAPH_SUCCESS;
 }
@@ -125,7 +224,7 @@ static ge::graphStatus TilingPrepare4LogitTiling([[maybe_unused]] gert::TilingPa
 static ge::graphStatus TilingLogitTiling(gert::TilingContext* context)
 {
     LogitTiling tilingObject(context);
-    return tilingObject.RunBigKernelTiling();
+    return tilingObject.RunBigKernelTiling(context);
 }
 
 IMPL_OP_OPTILING(Logit).Tiling(TilingLogitTiling).TilingParse<LogitCompileInfo>(TilingPrepare4LogitTiling);

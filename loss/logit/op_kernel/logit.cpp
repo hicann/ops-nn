@@ -39,6 +39,19 @@ extern "C" __global__ __aicore__ void logit(GM_ADDR input, GM_ADDR output, GM_AD
         op.Init(input, output, userWs, &tilingData);
         op.Process();
 #endif
+        // 增加int16 int8 uint8
+    } else if (TILING_KEY_IS(10)) {
+        NsLogit::KernelLogit<int16_t> op;
+        op.Init(input, output, userWs, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(11)) {
+        NsLogit::KernelLogit<int8_t> op;
+        op.Init(input, output, userWs, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(12)) {
+        NsLogit::KernelLogit<uint8_t> op;
+        op.Init(input, output, userWs, &tilingData);
+        op.Process();
     }
 #else
 #endif

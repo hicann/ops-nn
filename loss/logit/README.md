@@ -26,8 +26,8 @@
   其中：
 
   $$
-  z_i = 
-  \begin{cases} 
+  z_i =
+  \begin{cases}
   \text{eps}, & \text{if } x_i < \text{eps} \\
   x_i, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
   1 - \text{eps}, & \text{if } x_i > 1 - \text{eps}
@@ -56,7 +56,7 @@
       <td>input</td>
       <td>输入</td>
       <td>公式中的输入input。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -70,7 +70,7 @@
       <td>out</td>
       <td>输出</td>
       <td>公式中的y。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
   </tbody></table>

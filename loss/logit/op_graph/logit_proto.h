@@ -33,8 +33,8 @@ namespace ge {
 */
 
 REG_OP(Logit)
-    .INPUT(x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT16}))
+    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_FLOAT, DT_FLOAT, DT_FLOAT}))
     .ATTR(eps, Float, -1.0)
     .OP_END_FACTORY_REG(Logit)
 

@@ -11,13 +11,12 @@
 # ----------------------------------------------------------------------------
 
 import torch
-import torch.nn as nn
 from atk.configs.dataset_config import InputDataset
 from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.dataset.base_dataset import OpsDataset
-import logging
+
 
 def gpu_logit(x, eps):
     a = x.clone()
@@ -27,6 +26,7 @@ def gpu_logit(x, eps):
     a[x < lo] = lo
     return torch.log(a / (1 - a))
 
+
 @register("function_active_logit")
 class MethodTFgather(BaseApi):
     def __init__(self, task_result: TaskResult):
@@ -34,10 +34,8 @@ class MethodTFgather(BaseApi):
         OpsDataset.seed_everything()
         self.change_flag = None
 
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         x = input_data.kwargs["input"]
-
 
         eps = input_data.kwargs["eps"]
 

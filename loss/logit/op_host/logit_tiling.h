@@ -32,6 +32,17 @@ BEGIN_TILING_DATA_DEF(LogitTilingData)
 TILING_DATA_FIELD_DEF(int64_t, elementNum);
 TILING_DATA_FIELD_DEF(float, eps);
 TILING_DATA_FIELD_DEF(uint64_t, needCoreNum);
+// int16/int8/uint8的logit增加以下字段
+TILING_DATA_FIELD_DEF(uint64_t, smallCoreDataNum);
+TILING_DATA_FIELD_DEF(uint64_t, bigCoreDataNum);
+TILING_DATA_FIELD_DEF(uint64_t, finalBigTileNum);
+TILING_DATA_FIELD_DEF(uint64_t, finalSmallTileNum);
+TILING_DATA_FIELD_DEF(uint64_t, tileDataNum);
+TILING_DATA_FIELD_DEF(uint64_t, smallTailDataNum);
+TILING_DATA_FIELD_DEF(uint64_t, bigTailDataNum);
+TILING_DATA_FIELD_DEF(uint64_t, tailBlockNum);
+TILING_DATA_FIELD_DEF(uint64_t, bufferOpen);
+
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Logit, LogitTilingData)

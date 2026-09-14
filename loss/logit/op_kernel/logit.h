@@ -275,4 +275,185 @@ __aicore__ inline void LogitND<T>::CastAndCopyOut(int64_t outputOffset, int64_t 
 }
 
 } // namespace Logit
+
+// 增加int16 int8 uint8的logit实现
+namespace NsLogit {
+
+using namespace AscendC;
+
+constexpr int32_t DOUBLE_BUFFER_NUM = 2;
+constexpr int32_t SINGLE_BUFFER_NUM = 1;
+
+template <typename T>
+class KernelLogit {
+public:
+    __aicore__ inline KernelLogit(){};
+
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, const LogitTilingData* tilingData);
+    __aicore__ inline void Process();
+
+private:
+    __aicore__ inline void CopyIn(int32_t progress);
+    __aicore__ inline void CopyOut(int32_t progress);
+    __aicore__ inline void Compute(int32_t progress);
+
+private:
+    AscendC::TPipe pipe;
+    AscendC::TQue<AscendC::TPosition::VECIN, DOUBLE_BUFFER_NUM> inQueueX;
+    AscendC::TQue<AscendC::TPosition::VECOUT, DOUBLE_BUFFER_NUM> outQueueY;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> tmpQueue0, tmpQueue2, tmpQueueMask1, tmpQueueMask2, tmpQueueMask3;
+    AscendC::LocalTensor<uint8_t> mask1Local;
+    AscendC::LocalTensor<uint8_t> mask2Local;
+    AscendC::LocalTensor<uint8_t> mask3Local;
+    AscendC::LocalTensor<float> tmp0Local;
+    AscendC::LocalTensor<half> tmp2Local;
+    AscendC::LocalTensor<T> xLocal;
+    AscendC::LocalTensor<float> outLocal;
+
+    AscendC::GlobalTensor<T> inputGm;
+    AscendC::GlobalTensor<float> outGm;
+    uint64_t coreDataNum = 0;
+    uint64_t tileNum = 0;
+    uint64_t tileDataNum = 0;
+    uint64_t tailDataNum = 0;
+    uint64_t processDataNum = 0;
+
+    float eps = 0.0f;
+    float hi = 0.0f;
+    float nanValue = sqrt(static_cast<float>(-1.0));
+};
+
+template <typename T>
+__aicore__ inline void KernelLogit<T>::Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace,
+                                            const LogitTilingData* tilingData)
+{
+    ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
+    uint64_t coreId = AscendC::GetBlockIdx();
+    uint64_t globalBufferIndex = tilingData->bigCoreDataNum * coreId;
+    this->tileDataNum = tilingData->tileDataNum;
+    // default open double buffer
+    uint64_t BUFFER_NUM = DOUBLE_BUFFER_NUM;
+    if (tilingData->bufferOpen == 0) {
+        BUFFER_NUM = SINGLE_BUFFER_NUM;
+    }
+    if (coreId < tilingData->tailBlockNum) {
+        this->coreDataNum = tilingData->bigCoreDataNum;
+        this->tileNum = tilingData->finalBigTileNum;
+        this->tailDataNum = tilingData->bigTailDataNum;
+    } else {
+        this->coreDataNum = tilingData->smallCoreDataNum;
+        this->tileNum = tilingData->finalSmallTileNum;
+        this->tailDataNum = tilingData->smallTailDataNum;
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (coreId - tilingData->tailBlockNum);
+    }
+    inputGm.SetGlobalBuffer((__gm__ T*)input + globalBufferIndex, this->coreDataNum);
+    outGm.SetGlobalBuffer((__gm__ float*)output + globalBufferIndex, this->coreDataNum);
+
+    pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(outQueueY, BUFFER_NUM, this->tileDataNum * sizeof(float));
+
+    pipe.InitBuffer(tmpQueueMask1, this->tileDataNum * sizeof(uint8_t));
+    pipe.InitBuffer(tmpQueueMask2, this->tileDataNum * sizeof(uint8_t));
+    pipe.InitBuffer(tmpQueueMask3, this->tileDataNum * sizeof(uint8_t));
+
+    pipe.InitBuffer(tmpQueue0, this->tileDataNum * sizeof(float));
+
+    if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
+        pipe.InitBuffer(tmpQueue2, this->tileDataNum * sizeof(half));
+    }
+    this->eps = tilingData->eps;
+    this->hi = static_cast<float>(1.0) - (this->eps);
+}
+
+template <typename T>
+__aicore__ inline void KernelLogit<T>::CopyIn(int32_t progress)
+{
+    AscendC::LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
+    AscendC::DataCopy(xLocal, inputGm[progress * this->tileDataNum], this->processDataNum);
+    inQueueX.EnQue(xLocal);
+}
+
+template <typename T>
+__aicore__ inline void KernelLogit<T>::CopyOut(int32_t progress)
+{
+    AscendC::LocalTensor<float> outLocal = outQueueY.DeQue<float>();
+    AscendC::DataCopy(outGm[progress * this->tileDataNum], outLocal, this->processDataNum);
+    outQueueY.FreeTensor(outLocal);
+}
+template <typename T>
+__aicore__ inline void KernelLogit<T>::Compute(int32_t progress)
+{
+    AscendC::LocalTensor<uint8_t> mask1Local = tmpQueueMask1.AllocTensor<uint8_t>();
+    AscendC::LocalTensor<uint8_t> mask2Local = tmpQueueMask2.AllocTensor<uint8_t>();
+    AscendC::LocalTensor<uint8_t> mask3Local = tmpQueueMask3.AllocTensor<uint8_t>();
+    AscendC::LocalTensor<float> tmp0Local = tmpQueue0.AllocTensor<float>();
+
+    AscendC::LocalTensor<T> xLocal = inQueueX.DeQue<T>();
+    AscendC::LocalTensor<float> outLocal = outQueueY.AllocTensor<float>();
+    if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
+        tmp2Local = tmpQueue2.AllocTensor<half>();
+    }
+
+    if constexpr (std::is_same_v<T, int16_t>) {
+        AscendC::Cast(tmp0Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
+    } else if constexpr (std::is_same_v<T, int8_t>) {
+        AscendC::Cast(tmp2Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        AscendC::Cast(tmp0Local, tmp2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
+    } else if constexpr (std::is_same_v<T, uint8_t>) {
+        AscendC::Cast(tmp2Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
+        PipeBarrier<PIPE_V>();
+        AscendC::Cast(tmp0Local, tmp2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
+    }
+
+    AscendC::Compare(mask1Local, tmp0Local, tmp0Local, CMPMODE::EQ, this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Duplicate(outLocal, static_cast<float>(eps), this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Compare(mask2Local, tmp0Local, outLocal, CMPMODE::GE, this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Duplicate(outLocal, static_cast<float>(hi), this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Compare(mask3Local, tmp0Local, outLocal, CMPMODE::LE, this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Select(tmp0Local, mask3Local, tmp0Local, (float)hi, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                    this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Select(tmp0Local, mask2Local, tmp0Local, (float)eps, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                    this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Select(tmp0Local, mask1Local, tmp0Local, (float)nanValue, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                    this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Muls(outLocal, tmp0Local, float(-1.0), this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Adds(outLocal, outLocal, float(1.0), this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Div(tmp0Local, tmp0Local, outLocal, this->processDataNum);
+    PipeBarrier<PIPE_V>();
+    AscendC::Ln(outLocal, tmp0Local, this->processDataNum);
+    PipeBarrier<PIPE_V>();
+
+    outQueueY.EnQue<float>(outLocal);
+    inQueueX.FreeTensor(xLocal);
+}
+
+template <typename T>
+__aicore__ inline void KernelLogit<T>::Process()
+{
+    int32_t loopCount = this->tileNum;
+    this->processDataNum = this->tileDataNum;
+    for (int32_t i = 0; i < loopCount - 1; i++) {
+        CopyIn(i);
+        Compute(i);
+        CopyOut(i);
+    }
+    this->processDataNum = this->tailDataNum;
+    CopyIn(loopCount - 1);
+    Compute(loopCount - 1);
+    CopyOut(loopCount - 1);
+}
+
+} // namespace NsLogit
+
 #endif

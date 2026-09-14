@@ -98,7 +98,7 @@ aclnnStatus aclnnLogit(
       <td>输入</td>
       <td>输入的张量，公式中的x。</td>
       <td>支持空Tensor。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnLogit(
       <td>输出</td>
       <td>输出张量，公式中的输出y。</td>
       <td>输出的数据类型、数据格式和shape与输入input保持一致。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
