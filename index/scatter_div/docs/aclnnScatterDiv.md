@@ -228,7 +228,7 @@ aclnnStatus aclnnScatterDiv(
 - varRef的首维大小不超过INT32_MAX。
 - updates值域：数据类型为整数（INT32、INT8、UINT8）时，updates中的元素不能为0。
 - 确定性计算：
-  - aclnnScatterDiv默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - aclnnScatterDiv默认确定性实现。
 
 ## 调用示例
 

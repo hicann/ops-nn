@@ -38,19 +38,27 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
     # input order matches CSV input_shapes: var, indices, updates
     var, indices, updates = input_arrays[0], input_arrays[1], input_arrays[2]
 
-    out_dtype = var.dtype
-    # 浮点跟随 TTK 下发的 dtype: 判据是 cross_check 时 TTK 走 golden_mode=Promote 抬一档
-    # (fp32->fp64) 下发, 让 golden 成为精度标准 §4.5「双标杆」要求的更高精度真值。此处若
-    # 无条件降回 fp32, golden 会与三方腿(fp32 GPU, 同一 torch 算子)逐位相等 -> GPU 误差恒 0
-    # -> 三比值分母全部夹到 §4.5.1 的 err -> 有量纲的 RMSE 比值随输出量级爆表。
-    # 非 Promote 档下发的仍是原 dtype, 行为与改动前一致。整型仍用 int64 中间量防溢出。
-    if np.issubdtype(out_dtype, np.floating):
-        acc_dtype = np.float64 if var.dtype == np.float64 else np.float32
-    else:
-        acc_dtype = np.int64
+    # dtype 规则(两档分开):
+    #  * 浮点: **完全不 cast**, 由 TTK 的 golden_mode=Promote 保障(cross_check 时 fp16/bf16
+    #    ->fp32、fp32->fp64 下发), 出口也不窄回, TTK 负责。自行 cast 会撤销 Promote, 真值塌
+    #    到与三方腿同精度, 三比值分母被夹, RMSE 比值假红。bf16 由 TTK 自行桥接(numpy 无原生
+    #    bf16), 与 Promote 正交, golden 无需处理。
+    #  * 整型: 没有三方腿(判据 binary_equal -> need_3party=False), TTK 也从不 Promote 整型,
+    #    故按 **NPU 的实现逻辑** 决定是否 cast —— 内核 AccT 对 int32 原生, 对 int8/uint8 经
+    #    SubwordWidenToI32 提到 int32 做整条链, 末尾 NarrowStore 窄回, golden 同步复刻。
+    # 计算 dtype 一律**跟随 NPU 的 AccT**, 唯一例外是"浮点 + 三方": 那时 TTK 已按
+    # golden_mode=Promote 把入参抬档下发(fp16/bf16->fp32、fp32->fp64), golden 零 cast 直接算
+    # 即为高精度真值。其余情形(整型恒是两方; 浮点在两方泛化下) TTK 不提升, 必须由 golden
+    # 自己复刻内核: AccT 对 fp16/bf16 是 float、对 int8/uint8 是 int32、对 fp32/int32 原生,
+    # 出口再复刻 NarrowStore 窄回。判 Promote 用 TTK 下发的 golden_mode, 不靠 dtype 猜。
+    promoted = kwargs.get("golden_mode") == "Promote"
+    sub_int = np.issubdtype(var.dtype, np.integer) and var.dtype.itemsize < 4
+    narrow_fp = (not promoted) and var.dtype == np.float16
+    acc_dtype = np.int32 if sub_int else (np.float32 if narrow_fp else var.dtype)
+    need_narrow = acc_dtype != var.dtype
 
-    result = var.astype(acc_dtype).copy()
-    upd = updates.astype(acc_dtype)
+    result = var.astype(acc_dtype, copy=True)
+    upd = updates.astype(acc_dtype, copy=False)
 
     var_first = result.shape[0] if result.ndim >= 1 else 1
     idx_flat = indices.reshape(-1).astype(np.int64)
@@ -72,7 +80,11 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
         upd_t = torch.from_numpy(upd_slices)
         result_t.index_reduce_(0, idx_t[valid], upd_t[valid], "prod", include_self=True)
 
-    return [result_t.numpy().astype(out_dtype)]
+    # 出口不 cast —— TTK 负责窄回。自行 astype 会把 Promote 出来的高精度真值砍回去。
+    out = result_t.numpy()
+    if need_narrow:
+        out = out.astype(var.dtype)  # 复刻 NarrowStore
+    return [out]
 
 
 def __golden_scatter_mul_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -100,6 +112,8 @@ _TOL_KERNEL = {
     "bfloat16": {"standard": "cross_check", "level": "L1"},
     "int32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
 }
 
 
@@ -148,9 +162,15 @@ def _tp_widen(t):
 
     本算子对重复索引是链式规约, 内核**整条链都在 fp32 accUb 上做**, 只在 NarrowStore
     时窄一次。三方若在 fp16 上逐步截断, 就不是同一个算法: 实测 A100 上中间量会溢出成
-    inf(链长 257 的用例 13 个位置), 而内核算得出有限值。整型保持整型(内核也是 int32 原生)。
+    inf(链长 257 的用例 13 个位置), 而内核算得出有限值。整型不涉及: 整型判据是 binary_equal, need_3party=False, TTK 不执行 GPU 腿。
     """
-    return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
+    if t.dtype in (torch.float16, torch.bfloat16):
+        return t.float()
+    if t.dtype in (torch.int8, torch.uint8):
+        return t.to(
+            torch.int32
+        )  # 内核 AccT 对 1 字节类型提升到 int32(SubwordWidenToI32)
+    return t
 
 
 def _tp_narrow(outs, dt):
@@ -158,7 +178,9 @@ def _tp_narrow(outs, dt):
     少了它三方停在 fp32, 与走 Promote(fp16->fp32) 的 golden 逐位相等, 双标杆塌成单标杆,
     三比值分母夹到 §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级放大而假红
     (真机实测: 不窄回 rmse 比值 2348.6, 窄回后 1.0000)。"""
-    return [o.to(dt) if o.is_floating_point() else o for o in outs]
+    # 整型也要窄回: torch 在整型路径上会把中间量升到 int32, 只窄浮点会让 int8/uint8
+    # 出参漏成 int32。三方腿出口必须与算子 dtype 一致(复刻内核 NarrowStore)。
+    return [o.to(dt) for o in outs]
 
 
 def scatter_mul_input(var, indices, updates, **kwargs):

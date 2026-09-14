@@ -39,6 +39,20 @@ except ImportError:
 _INT_DTYPES = {"int32", "int8", "uint8"}
 
 
+def _int_trunc_div(row, denom):
+    """整型截断除(向零), 除数为 0 保持原值。全程 torch, 停留在入参 dtype。
+
+    除数为 -1 时改用 neg: torch 的原生整型除法遇 INT_MIN/-1 会触发 SIGFPE 硬件陷阱,
+    而回绕语义下 x / -1 恒等于 -x(INT_MIN 处 neg 同样回绕为 INT_MIN), 逐位等价。
+    """
+    nz = denom != 0
+    neg = denom == -1
+    safe = torch.where(nz & ~neg, denom, torch.ones_like(denom))
+    q = torch.div(row, safe, rounding_mode="trunc")
+    q = torch.where(neg, torch.neg(row), q)
+    return torch.where(nz, q, row)
+
+
 def __golden_scatter_div(*input_arrays, **kwargs):
     var, indices, updates = input_arrays[0], input_arrays[1], input_arrays[2]
 
@@ -53,23 +67,22 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     slice_shape = var.shape[1:]
     slice_size = int(np.prod(slice_shape)) if slice_shape else 1
 
-    # 工作 dtype: 整型走 int64 防连除溢出; 浮点**跟随 TTK 下发的 dtype, 只向上兜底不向下砍**。
-    # golden 在 cross_check 下收到的是 Promote 后的入参(fp16/bf16 -> fp32, fp32 -> float64),
-    # 若无条件 astype(np.float32) 就把 fp32 档的 float64 真值砍回 fp32 —— 等于撤销 Promote,
-    # 使 golden 与三方腿逼近逐位相等, 三比值分母被夹到精度标准 §4.5.1 的 err, RMSE 比值假红。
-    # bf16 无 numpy 原生类型, 只有它需要向上桥接到 fp32。
-    def _wd(a):
-        return (
-            np.float32 if a.dtype.kind == "V" or a.dtype.name == "bfloat16" else a.dtype
-        )
+    # 计算 dtype 一律**跟随 NPU 的 AccT**, 唯一例外是"浮点 + 三方": 那时 TTK 已按
+    # golden_mode=Promote 把入参抬档下发(fp16/bf16->fp32、fp32->fp64), golden 零 cast 直接算
+    # 即为高精度真值; 自行 cast 会撤销 Promote, 真值塌到与三方腿同精度, 三比值分母被夹,
+    # RMSE 比值假红。其余情形(整型恒是两方; 浮点在两方泛化下)TTK 不提升, 必须由 golden 自己
+    # 复刻内核: AccT 对 fp16/bf16 是 float、对 int8/uint8 是 int32、对 fp32/int32 原生, 出口
+    # 再复刻 NarrowStore 窄回。判 Promote 用 TTK 下发的 golden_mode, 不靠 dtype 猜。
+    promoted = kwargs.get("golden_mode") == "Promote"
+    sub_int = np.issubdtype(var.dtype, np.integer) and var.dtype.itemsize < 4
+    narrow_fp = (not promoted) and var.dtype == np.float16
+    need_narrow = sub_int or narrow_fp
+    acc = torch.int32 if sub_int else (torch.float32 if narrow_fp else None)
 
-    if is_int:
-        work = torch.from_numpy(var.astype(np.int64).reshape(var_first, slice_size))
-        upd = torch.from_numpy(updates.astype(np.int64).reshape(-1, slice_size))
-    else:
-        wdt = np.promote_types(_wd(var), _wd(updates))
-        work = torch.from_numpy(var.astype(wdt).reshape(var_first, slice_size))
-        upd = torch.from_numpy(updates.astype(wdt).reshape(-1, slice_size))
+    work = torch.from_numpy(var.reshape(var_first, slice_size).copy())
+    upd = torch.from_numpy(updates.reshape(-1, slice_size))
+    if acc is not None:
+        work, upd = work.to(acc), upd.to(acc)
 
     idx_flat = indices.reshape(-1).astype(np.int64)
     n = idx_flat.shape[0]
@@ -80,28 +93,17 @@ def __golden_scatter_div(*input_arrays, **kwargs):
             continue  # out-of-bound skip
         row = work.index_select(0, torch.tensor([idv]))
         if is_int:
-            # C++ integer division (truncation toward zero)
-            denom = upd[m : m + 1]
-            nonzero = denom != 0
-            # match C++ UB conservatively: leave unchanged is not defined;
-            # use trunc-toward-zero with denom guarded to avoid a division by zero.
-            safe = torch.where(nonzero, denom, torch.ones_like(denom))
-            res = torch.where(nonzero, torch.div(row, safe, rounding_mode="trunc"), row)
+            res = _int_trunc_div(row, upd[m : m + 1])
         else:
             res = torch.div(row, upd[m : m + 1])
         work.index_copy_(0, torch.tensor([idv]), res)
 
-    np_dtype = {
-        "float16": np.float16,
-        "float32": np.float32,
-        "bfloat16": np.float32,
-        "int32": np.int32,
-        "int8": np.int8,
-        "uint8": np.uint8,
-    }.get(out_dt_str, var.dtype)
-
-    out = work.numpy().reshape(var.shape).astype(np_dtype)
-    return [out]
+    # 浮点出口不 cast —— TTK 负责窄回; 自行 astype 会把 Promote 出来的高精度真值砍回去。
+    # 整型没有 Promote, TTK 也不会窄回, 故由本函数复刻内核的 NarrowStore(仅 int8/uint8 需要)。
+    out = work.numpy()
+    if need_narrow:
+        out = out.astype(var.dtype)  # 复刻 NarrowStore
+    return [out.reshape(var.shape)]
 
 
 def __golden_scatter_div_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -127,6 +129,8 @@ _TOL_KERNEL = {
     "bfloat16": {"standard": "cross_check", "level": "L1"},
     "int32": {"standard": "binary_equal"},
     "int64": {"standard": "binary_equal"},
+    "int8": {"standard": "binary_equal"},
+    "uint8": {"standard": "binary_equal"},
 }
 
 
@@ -212,13 +216,21 @@ def scatter_div_input(var, indices, updates, **kwargs):
 
 def _tp_widen(t):
     """加宽到内核的累加类型(fp16/bf16 按 fp32 累算), 与内核同算法: 链式相除整条链
-    都在加宽类型上做, 只在出口窄一次。整型保持整型(截断除须在整型域内逐步做)。"""
-    return t.float() if t.dtype in (torch.float16, torch.bfloat16) else t
+    都在加宽类型上做, 只在出口窄一次。整型不涉及: 整型判据是 binary_equal, need_3party=False, TTK 不执行 GPU 腿。"""
+    if t.dtype in (torch.float16, torch.bfloat16):
+        return t.float()
+    if t.dtype in (torch.int8, torch.uint8):
+        return t.to(
+            torch.int32
+        )  # 内核 AccT 对 1 字节类型提升到 int32(SubwordWidenToI32)
+    return t
 
 
 def _tp_narrow(outs, dt):
     """算完窄回算子输出 dtype, 必须与 _tp_widen 成对。"""
-    return [o.to(dt) if o.is_floating_point() else o for o in outs]
+    # 整型也要窄回: torch 在整型路径上会把中间量升到 int32, 只窄浮点会让 int8/uint8
+    # 出参漏成 int32。三方腿出口必须与算子 dtype 一致(复刻内核 NarrowStore)。
+    return [o.to(dt) for o in outs]
 
 
 class _ScatterDivCompose:

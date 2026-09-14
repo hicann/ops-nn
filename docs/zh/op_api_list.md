@@ -398,13 +398,13 @@
 | [aclnnRReluWithNoise&aclnnInplaceRReluWithNoise](../../activation/leaky_relu/docs/aclnnRReluWithNoise&aclnnInplaceRReluWithNoise.md) | 实现了带噪声的随机修正线性单元激活函数，它在输入小于等于0时，斜率为a；输入大于0时斜率为1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnScatter&aclnnInplaceScatter](../../index/scatter_elements_v2/docs/aclnnScatter&aclnnInplaceScatter.md) | 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) | 将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性 |
+| [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认确定性实现 |
 | [aclnnScatterNd](../../index/scatter_nd/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnScatterMax](../../index/scatter_max/docs/aclnnScatterMax.md) | 实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。 | - | 默认确定性实现 |
 | [aclnnScatterMin](../../index/scatter_min/docs/aclnnScatterMin.md) | 实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。 | - | 默认确定性实现 |
-| [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性 |
+| [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认确定性实现 |
 | [aclnnScatterReduce&aclnnInplaceScatterReduce](../../index/scatter_elements_v2/docs/aclnnScatterReduce&aclnnInplaceScatterReduce.md) | 对输入Tensor完成带规约语义的scatter操作，支持替换、累加、累乘、取最大值、取最小值、取平均值六种规约模式，可通过includeSelf控制是否将self中的原始值参与规约计算。 | - | - |
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
