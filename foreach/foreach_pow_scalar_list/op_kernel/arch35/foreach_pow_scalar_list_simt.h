@@ -31,8 +31,6 @@ using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
 constexpr uint32_t THREAD_NUM_64 = 512;
-constexpr float FLOAT_MANTISSA_INT_THRESHOLD = static_cast<float>(1 << 23);
-constexpr float INT32_OVERFLOW_THRESHOLD = static_cast<float>(1LL << 31);
 
 template <typename T>
 __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
@@ -59,87 +57,6 @@ template <>
 struct ComputeType<int32_t> {
     using type = int64_t;
 };
-
-static __simt_callee__ inline bool SimtIsNaN(float v)
-{
-    uint32_t bits;
-    __builtin_memcpy(&bits, &v, sizeof(bits));
-    return (bits & 0x7F800000u) == 0x7F800000u && (bits & 0x007FFFFFu) != 0u;
-}
-
-static __simt_callee__ inline bool SimtIsPosInf(float v)
-{
-    uint32_t bits;
-    __builtin_memcpy(&bits, &v, sizeof(bits));
-    return bits == 0x7F800000u;
-}
-
-static __simt_callee__ inline bool SimtIsNegInf(float v)
-{
-    uint32_t bits;
-    __builtin_memcpy(&bits, &v, sizeof(bits));
-    return bits == 0xFF800000u;
-}
-
-static __simt_callee__ inline bool IsIntegerExp(float exp)
-{
-    if (fabsf(exp) >= FLOAT_MANTISSA_INT_THRESHOLD)
-        return true;
-    float rounded = rintf(exp);
-    return fabsf(exp - rounded) < 1e-6f;
-}
-
-static __simt_callee__ inline bool IsOddInteger(float exp)
-{
-    if (fabsf(exp) >= INT32_OVERFLOW_THRESHOLD) {
-        return fmodf(fabsf(exp), 2.0f) == 1.0f;
-    }
-    int32_t n = static_cast<int32_t>(rintf(exp));
-    return (n & 1) != 0;
-}
-
-static __simt_callee__ inline float FloatToInf(bool positive)
-{
-    uint32_t bits = positive ? 0x7F800000u : 0xFF800000u;
-    float result;
-    __builtin_memcpy(&result, &bits, sizeof(result));
-    return result;
-}
-
-static __simt_callee__ inline float NegBaseIntExp(float base, float exp)
-{
-    float absBase = fabsf(base);
-    if (fabsf(exp) >= INT32_OVERFLOW_THRESHOLD) {
-        float result = powf(absBase, exp);
-        float rem = fmodf(fabsf(exp), 2.0f);
-        if (rem == 1.0f && base < 0.0f) {
-            result = -result;
-        }
-        return result;
-    }
-    int32_t n = static_cast<int32_t>(rintf(exp));
-    bool isNegExp = (n < 0);
-    if (isNegExp) {
-        n = -n;
-    }
-    float result = 1.0f;
-    float cur = absBase;
-    int32_t m = n;
-    while (m > 0) {
-        if (m & 1) {
-            result *= cur;
-        }
-        cur *= cur;
-        m >>= 1;
-    }
-    if (isNegExp) {
-        result = 1.0f / result;
-    }
-    if ((n & 1) && base < 0.0f) {
-        result = -result;
-    }
-    return result;
-}
 
 template <typename T>
 __simt_callee__ inline float ConvertToFloat(T val);
@@ -205,79 +122,10 @@ __simt_callee__ inline int64_t SimtPowInt(int64_t base, int64_t exp)
     return result;
 }
 
-static __simt_callee__ inline float SimtPowFloatSafe(float bF, float eF)
-{
-    if (SimtIsNaN(bF) || SimtIsNaN(eF)) {
-        uint32_t nanBits = 0x7FC00000u;
-        float result;
-        __builtin_memcpy(&result, &nanBits, sizeof(result));
-        return result;
-    }
-    if (eF == 0.0f) {
-        return 1.0f;
-    }
-    if (bF == 1.0f) {
-        return 1.0f;
-    }
-    if (SimtIsPosInf(bF)) {
-        return (eF > 0.0f) ? FloatToInf(true) : 0.0f;
-    }
-    if (SimtIsNegInf(bF)) {
-        if (SimtIsPosInf(eF)) {
-            return FloatToInf(true);
-        }
-        if (SimtIsNegInf(eF)) {
-            return 0.0f;
-        }
-        if (eF > 0.0f && IsIntegerExp(eF)) {
-            return IsOddInteger(eF) ? FloatToInf(false) : FloatToInf(true);
-        }
-        if (eF < 0.0f && IsIntegerExp(eF)) {
-            return IsOddInteger(-eF) ? -0.0f : 0.0f;
-        }
-        if (eF > 0.0f) {
-            return FloatToInf(true);
-        }
-        return 0.0f;
-    }
-    if (SimtIsPosInf(eF)) {
-        float absB = fabsf(bF);
-        if (absB > 1.0f)
-            return FloatToInf(true);
-        if (absB < 1.0f)
-            return 0.0f;
-        if (bF == -1.0f)
-            return 1.0f;
-        return 0.0f;
-    }
-    if (SimtIsNegInf(eF)) {
-        float absB = fabsf(bF);
-        if (absB > 1.0f)
-            return 0.0f;
-        if (absB < 1.0f)
-            return FloatToInf(true);
-        if (bF == -1.0f)
-            return 1.0f;
-        return FloatToInf(true);
-    }
-    if (bF < 0.0f && IsIntegerExp(eF)) {
-        return NegBaseIntExp(bF, eF);
-    }
-    return powf(bF, eF);
-}
-
 template <typename T, typename S>
 __simt_callee__ inline void PowComputeBody(__gm__ T* xData, __gm__ T* yData, S scalarVal, uint64_t idx)
 {
     using C = typename ComputeType<T>::type;
-    if (static_cast<C>(xData[idx]) == static_cast<C>(1)) {
-        yData[idx] = static_cast<T>(1);
-        return;
-    }
-    if (scalarVal == 0) {
-        yData[idx] = static_cast<T>(1);
-        return;
-    }
     if constexpr (std::is_same_v<C, int64_t>) {
         C xVal = static_cast<C>(xData[idx]);
         C sVal = static_cast<C>(scalarVal);
@@ -285,7 +133,7 @@ __simt_callee__ inline void PowComputeBody(__gm__ T* xData, __gm__ T* yData, S s
     } else {
         float bF = ConvertToFloat<T>(xData[idx]);
         float eF = static_cast<float>(scalarVal);
-        yData[idx] = ConvertFromFloat<T>(SimtPowFloatSafe(bF, eF));
+        yData[idx] = ConvertFromFloat<T>(powf(bF, eF));
     }
 }
 
