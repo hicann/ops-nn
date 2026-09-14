@@ -110,7 +110,8 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
 }
 
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType,
-                            int64_t blocksize, int64_t scaleAlg, const aclTensor* y, const aclTensor* mxscale)
+                            int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y,
+                            const aclTensor* mxscale)
 {
     // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
@@ -135,6 +136,36 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
                          op::ToString(static_cast<op::DataType>(dstType)).GetString(),
                          op::ToString(y->GetDataType()).GetString()),
                  return false);
+        bool isFp4 = (dstType == op::DataType::DT_FLOAT4_E2M1 || dstType == op::DataType::DT_FLOAT4_E1M2);
+        OP_CHECK(isFp4 || mode == "rint",
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For FLOAT8, roundMode only support 'rint', get: %s", mode.c_str()),
+                 return false);
+        OP_CHECK(!isFp4 || scaleAlg != 1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For FLOAT4, scaleAlg only support '0' or '2', get: %ld", scaleAlg),
+                 return false);
+        OP_CHECK(isFp4 || scaleAlg != 2,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For FLOAT8, scaleAlg only support '0' or '1', get: %ld", scaleAlg),
+                 return false);
+        if (isFp4) {
+            if (dstType == op::DataType::DT_FLOAT4_E2M1) {
+                OP_CHECK(dstTypeMax == 0.0 || (dstTypeMax >= 6.0 && dstTypeMax <= 12.0),
+                         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                                 "dstTypeMax:%f only support '0.0' or range [6.0, 12.0] for FLOAT4_E2M1.", dstTypeMax),
+                         return false);
+            } else {
+                static constexpr double kE1M2_MAX = 3.5;
+                static constexpr double kFloatUlpEpsilon = 2.5e-7;
+                OP_CHECK(dstTypeMax == 0.0 || (dstTypeMax >= 1.75 && dstTypeMax <= kE1M2_MAX - kFloatUlpEpsilon),
+                         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                                 "dstTypeMax:%f only support '0.0' or range [1.75, %1.7f) for FLOAT4_E1M2.", dstTypeMax,
+                                 kE1M2_MAX),
+                         return false);
+            }
+        } else {
+            OP_CHECK(dstTypeMax == 0.0,
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax only support '0.0' for FLOAT8, get: %f", dstTypeMax),
+                     return false);
+        }
     } else {
         auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for npuArch %u is not implemented", static_cast<uint32_t>(curArch));
@@ -144,11 +175,11 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
 }
 
 inline static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode,
-                                      int64_t dstType, int64_t blocksize, int64_t scaleAlg, const aclTensor* y,
-                                      const aclTensor* mxscale)
+                                      int64_t dstType, int64_t blocksize, int64_t scaleAlg, double dstTypeMax,
+                                      const aclTensor* y, const aclTensor* mxscale)
 {
     CHECK_RET(CheckNotNull(x, groupIndex, roundMode, y, mxscale), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, y, mxscale),
+    CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale),
               ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(x, groupIndex, blocksize, y, mxscale), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
@@ -167,7 +198,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, con
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, y, mxscale);
+    auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空Tensor处理
@@ -200,6 +231,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, con
                                               scaleAlg, dstTypeMax, uniqueExecutor.get());
     const aclTensor* yOut = std::get<0>(result);
     const aclTensor* mxscaleOut = std::get<1>(result);
+    CHECK_RET(yOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(mxscaleOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 如果出参y是非连续Tensor，需要把计算完的连续Tensor转非连续
     auto viewCopyResult0 = l0op::ViewCopy(yOut, y, uniqueExecutor.get());
     CHECK_RET(viewCopyResult0 != nullptr, ACLNN_ERR_INNER_NULLPTR);

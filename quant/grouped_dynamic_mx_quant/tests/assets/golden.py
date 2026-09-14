@@ -29,6 +29,11 @@ __input__ = {
     },
 }
 
+__spec__ = {
+    "grouped_dynamic_mx_quant": "GroupedDynamicMxQuantKernelSpec",
+    "torch_npu.npu_grouped_dynamic_mx_quant": "GroupedDynamicMxQuantE2ESpec",
+}
+
 
 DATA_TYPE_INT_TO_STR = {
     0: "float32",
@@ -547,6 +552,7 @@ def grouped_dynamic_mx_quant_golden(
     """
     group_idx = group_index
     block_size = blocksize
+    _remember_valid_mxscale_rows(group_idx, block_size, kwargs.get("testcase_name"))
     dst_type_str = (
         dst_type if isinstance(dst_type, str) else DATA_TYPE_INT_TO_STR[dst_type]
     )
@@ -622,6 +628,7 @@ def npu_grouped_dynamic_mx_quant_golden(x, group_index, *extra, **kwargs):
         blocksize=blocksize,
         scale_alg=scale_alg,
         dst_type_max=dst_type_max,
+        testcase_name=kwargs.get("testcase_name"),
     )
     ele = _pack_fp4_to_uint8(ele)
     return [np.ascontiguousarray(ele), np.ascontiguousarray(scale).view(np.uint8)]
@@ -734,3 +741,211 @@ def grouped_dynamic_mx_quant_v2_golden(
     )
 
     return [ele, scale]
+
+
+def _raw_uint8(array):
+    array = np.ascontiguousarray(np.asarray(array))
+    return np.frombuffer(array.tobytes(), dtype=np.uint8)
+
+
+def _binary_compare(actual, expected, output_name):
+    actual_raw = _raw_uint8(actual)
+    expected_raw = _raw_uint8(expected)
+    if actual_raw.size != expected_raw.size:
+        return {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": (
+                f"{output_name} byte size mismatch: "
+                f"actual={actual_raw.size}, expected={expected_raw.size}"
+            ),
+        }
+
+    diff_count = int(np.count_nonzero(actual_raw != expected_raw))
+    total = int(actual_raw.size)
+    precision = 100.0 if total == 0 else (total - diff_count) / total * 100.0
+    return {
+        "pass": diff_count == 0,
+        "precision": precision,
+        "error_info": (
+            None
+            if diff_count == 0
+            else f"{output_name} mismatch: {diff_count}/{total} bytes"
+        ),
+    }
+
+
+def _mx_element_compare(actual, expected):
+    actual_array = np.asarray(actual)
+    expected_array = np.asarray(expected)
+    if actual_array.size != expected_array.size:
+        return {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": (
+                "y element count mismatch: "
+                f"actual={actual_array.size}, expected={expected_array.size}"
+            ),
+        }
+
+    dtype_name = f"{actual_array.dtype} {expected_array.dtype}".lower()
+    if "float8_e4m3" not in dtype_name and "float8_e5m2" not in dtype_name:
+        return _binary_compare(actual_array, expected_array, "y")
+
+    actual_float = actual_array.reshape(-1).astype(np.float32)
+    expected_float = expected_array.reshape(-1).astype(np.float32)
+    if "float8_e4m3" in dtype_name:
+        rtol, atol, max_error_limit = 2**-2, 2**-4, 32 * 2**-3
+    else:
+        rtol, atol, max_error_limit = 2**-1, 2**-3, 32 * 2**-2
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        error = np.abs(actual_float - expected_float)
+        actual_nan = np.isnan(actual_float)
+        expected_nan = np.isnan(expected_float)
+        actual_inf = np.isinf(actual_float)
+        expected_inf = np.isinf(expected_float)
+        same_nan = actual_nan & expected_nan
+        same_inf = (
+            actual_inf
+            & expected_inf
+            & (np.sign(actual_float) == np.sign(expected_float))
+        )
+        mismatch_nonfinite = (
+            (actual_nan | expected_nan | actual_inf | expected_inf)
+            & ~same_nan
+            & ~same_inf
+        )
+        finite = np.isfinite(actual_float) & np.isfinite(expected_float)
+        matched = (
+            same_nan
+            | same_inf
+            | (finite & (error <= atol + rtol * np.abs(expected_float)))
+        )
+        matched_ratio = 1.0 if matched.size == 0 else float(matched.mean())
+        max_error = (
+            float("inf")
+            if mismatch_nonfinite.any()
+            else (float(error[finite].max()) if finite.any() else 0.0)
+        )
+
+    passed = matched_ratio >= 0.99 and max_error <= max_error_limit
+    return {
+        "pass": passed,
+        "precision": matched_ratio * 100.0,
+        "error_info": (
+            None
+            if passed
+            else (f"y matched_ratio={matched_ratio:.4f}, max_abs_error={max_error:.6g}")
+        ),
+    }
+
+
+def _valid_mxscale_rows(group_index, blocksize):
+    group_index = np.asarray(_to_numpy(group_index)).reshape(-1).astype(np.int64)
+    block_span = int(blocksize) * 2
+    if block_span <= 0:
+        raise ValueError(f"blocksize must be positive, but got {blocksize}")
+
+    valid_rows = []
+    group_start = 0
+    for group_idx, group_end in enumerate(group_index.tolist()):
+        group_size = group_end - group_start
+        if group_size < 0:
+            raise ValueError("group_index must be non-decreasing")
+        block_count = (group_size + block_span - 1) // block_span
+        scale_start = group_start // block_span + group_idx
+        valid_rows.extend(range(scale_start, scale_start + block_count))
+        group_start = group_end
+    return np.asarray(valid_rows, dtype=np.int64)
+
+
+_VALID_MXSCALE_ROWS_BY_TESTCASE = {}
+_VALID_MXSCALE_ROWS_CACHE_SIZE = 64
+
+
+def _remember_valid_mxscale_rows(group_index, blocksize, testcase_name):
+    """Keep compare metadata for TTK versions that release GEIR inputs early."""
+    if testcase_name is None:
+        return
+    if (
+        testcase_name not in _VALID_MXSCALE_ROWS_BY_TESTCASE
+        and len(_VALID_MXSCALE_ROWS_BY_TESTCASE) >= _VALID_MXSCALE_ROWS_CACHE_SIZE
+    ):
+        oldest = next(iter(_VALID_MXSCALE_ROWS_BY_TESTCASE))
+        del _VALID_MXSCALE_ROWS_BY_TESTCASE[oldest]
+    _VALID_MXSCALE_ROWS_BY_TESTCASE[testcase_name] = _valid_mxscale_rows(
+        group_index, blocksize
+    )
+
+
+def grouped_dynamic_mx_quant_compare(*outputs, compare_context):
+    output_count = len(outputs) // 2
+    if len(outputs) != 4 or output_count != 2:
+        return {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": f"expected two NPU and two golden outputs, got {len(outputs)}",
+        }
+
+    actual_y, actual_scale, golden_y, golden_scale = outputs
+    input_tensors = compare_context.input_tensors
+    if input_tensors is not None and len(input_tensors) >= 2:
+        blocksize = _pick_attr(
+            compare_context.attributes, "blocksize", "block_size", default=32
+        )
+        valid_rows = _valid_mxscale_rows(input_tensors[1], blocksize)
+    else:
+        valid_rows = _VALID_MXSCALE_ROWS_BY_TESTCASE.get(compare_context.testcase_name)
+
+    if valid_rows is None:
+        return [
+            _mx_element_compare(actual_y, golden_y),
+            {
+                "pass": False,
+                "precision": 0.0,
+                "error_info": (
+                    "group_index is unavailable in compare_context and no "
+                    "golden-time valid-row metadata was cached"
+                ),
+            },
+        ]
+
+    actual_scale = np.asarray(actual_scale)
+    golden_scale = np.asarray(golden_scale)
+    if actual_scale.ndim == 0 or golden_scale.ndim == 0:
+        scale_result = {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": "mxscale must have a row dimension",
+        }
+    elif valid_rows.size > 0 and (
+        int(valid_rows[-1]) >= actual_scale.shape[0]
+        or int(valid_rows[-1]) >= golden_scale.shape[0]
+    ):
+        scale_result = {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": (
+                f"valid mxscale row {int(valid_rows[-1])} exceeds shapes "
+                f"actual={actual_scale.shape}, expected={golden_scale.shape}"
+            ),
+        }
+    else:
+        scale_result = _binary_compare(
+            actual_scale[valid_rows], golden_scale[valid_rows], "mxscale(valid rows)"
+        )
+
+    return [_mx_element_compare(actual_y, golden_y), scale_result]
+
+
+class GroupedDynamicMxQuantKernelSpec:
+    # Sharing one Spec module lets GEIR compare reuse metadata captured by golden.
+    golden = grouped_dynamic_mx_quant_golden
+    compare = grouped_dynamic_mx_quant_compare
+
+
+class GroupedDynamicMxQuantE2ESpec:
+    # Keep the E2E golden and compare on the same TestSpec loading path as well.
+    golden = npu_grouped_dynamic_mx_quant_golden
+    compare = grouped_dynamic_mx_quant_compare
