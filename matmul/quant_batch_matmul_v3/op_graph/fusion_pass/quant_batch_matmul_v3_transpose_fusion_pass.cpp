@@ -70,6 +70,7 @@ constexpr int X1_SCALE_INDEX = 5;
 constexpr int MINI_SHAPE_LEN = 2;
 constexpr int MX_SCALE_LEN = 3;
 constexpr int INNER_SHAPE_LIMIT = 65535;
+constexpr int32_t TAEGET_VERSION = 90100000;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 // Number of transpose-equivalent candidates tracked for x1, x2, x1_scale, and x2_scale.
@@ -80,7 +81,7 @@ bool IsTargetVersion()
     int32_t version = 0;
     char geCompilerName[] = "ge-compiler";
     aclsysGetVersionNum(geCompilerName, &version);
-    if (version >= 90100000) {
+    if (version >= TAEGET_VERSION) {
         return true;
     }
     return false;

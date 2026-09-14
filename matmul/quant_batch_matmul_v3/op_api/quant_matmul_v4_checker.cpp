@@ -743,15 +743,15 @@ static inline bool CheckEmptyTensor(TupleTensor mandatoryTensors)
 }
 
 bool CheckA8W4FloatQuantType(const aclTensor* x1, const aclTensor* x2, const aclTensor* perTokenScale,
-                             const aclTensor* scale)
+                             const aclTensor* x2Scale)
 {
     if (isA8W4Float(x1, x2)) {
-        if (!IsMicroScaling(perTokenScale, scale) && !IsTCG(perTokenScale, scale)) {
+        if (!IsMicroScaling(perTokenScale, x2Scale) && !IsTCG(perTokenScale, x2Scale)) {
             std::string scaleInfo = std::string("perTokenScale=") +
                                     op::ToString(perTokenScale != nullptr ? perTokenScale->GetDataType() :
                                                                             op::DataType::DT_UNDEFINED)
                                         .GetString() +
-                                    ", scale=" + op::ToString(scale->GetDataType()).GetString();
+                                    ", scale=" + op::ToString(x2Scale->GetDataType()).GetString();
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                 "aclnnQuantMatmulV4", "perTokenScale/scale", scaleInfo.c_str(),
                 "A8W4 float scenario only supports MX quantization (perTokenScale and scale are FLOAT8_E8M0) "

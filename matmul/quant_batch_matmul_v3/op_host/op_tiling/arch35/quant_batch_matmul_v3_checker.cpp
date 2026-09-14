@@ -991,8 +991,7 @@ bool QuantBatchMatmulV3Checker::CheckShapeInBoundary(const gert::Shape& shape, u
     return true;
 }
 
-bool QuantBatchMatmulV3Checker::BiasShapeCheck(const gert::Shape& biasShape, const gert::Shape& scaleShape,
-                                               const gert::StorageShape* pertokenShape) const
+bool QuantBatchMatmulV3Checker::BiasShapeCheck(const gert::Shape& biasShape) const
 {
     auto biasDimNum = biasShape.GetDimNum();
     // Validate the [batch, 1, n] bias layout.
@@ -1107,7 +1106,7 @@ bool QuantBatchMatmulV3Checker::CheckDimValue(const gert::Shape& scaleShape, con
                         inputParams_.opName, "x1 K, x2 K", FormatString("%lu, %lu", inputParams_.kSize, kBSize).c_str(),
                         "the K dimension of x1 must be equal to the K dimension of x2"),
                     return false);
-    if (biasShape != nullptr && !BiasShapeCheck(biasShape->GetStorageShape(), scaleShape, pertokenShape)) {
+    if (biasShape != nullptr && !BiasShapeCheck(biasShape->GetStorageShape())) {
         return false;
     }
     if (offsetShape != nullptr) {

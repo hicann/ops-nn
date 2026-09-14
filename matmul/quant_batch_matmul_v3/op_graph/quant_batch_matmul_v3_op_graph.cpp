@@ -18,6 +18,15 @@
 
 namespace OpCheckHelper {
 
+static const size_t X1 = 0;
+static const size_t X2 = 1;
+static const size_t SCALE = 2;
+static const size_t OFFSET = 3;
+static const size_t BIAS = 4;
+static const size_t PERTOKEN_SCALE = 5;
+static const size_t Y = 6;
+static const size_t END = 7;
+
 const std::string INT4 = "int4";
 const std::string INT8 = "int8";
 const std::string INT32 = "int32";
@@ -43,8 +52,6 @@ struct DtFmtSpec {
     std::string format;
     std::string unknownshapeFormat;
 };
-
-enum TensorIdx { X1 = 0, X2, SCALE, OFFSET, BIAS, PERTOKEN_SCALE, Y, END };
 
 template <typename T>
 std::string Join(const std::vector<T>& sequence, std::string const& separator)
@@ -72,7 +79,7 @@ void ToJson(nlohmann::json& j, const std::vector<TensorSpec>& result)
     }
 }
 
-const std::vector<std::array<DtFmtSpec, TensorIdx::END>> listWeightNZ = {
+const std::vector<std::array<DtFmtSpec, END>> listWeightNZ = {
     // 实现QbmmV3 a8w8场景常量折叠时，weight只保留NZ格式
     // {{[X1],             [X2],         [SCALE],          [OFFSET],        [BIAS],     [PERTOKEN_SCALE],    [Y]}}
     {{{INT8, ND, ND},
@@ -160,7 +167,7 @@ const std::vector<std::array<DtFmtSpec, TensorIdx::END>> listWeightNZ = {
       {FP32, ND, ND},
       {INT8, ND, ND}}}};
 
-const std::vector<std::array<DtFmtSpec, TensorIdx::END>> listQbmmV3 = {
+const std::vector<std::array<DtFmtSpec, END>> listQbmmV3 = {
     // 非常量折叠场景与原始QbmmV3算子信息库内容一致
     // {{[X1],            [X2],           [SCALE],         [OFFSET],       [BIAS],      [PERTOKEN_SCALE],      [Y]}}
     {{{INT8, ND, ND},
@@ -281,7 +288,7 @@ public:
     explicit QbmmV3OpCheckHelper(const gert::OpCheckContext* context);
     virtual ~QbmmV3OpCheckHelper() = default;
     ge::graphStatus OpSelectFormat(ge::AscendString& result) const;
-    using DtFmtSpecList = std::vector<std::array<DtFmtSpec, TensorIdx::END>>;
+    using DtFmtSpecList = std::vector<std::array<DtFmtSpec, END>>;
     DtFmtSpecList GetDtFmtSpecList() const;
 
 private:
@@ -303,21 +310,21 @@ QbmmV3OpCheckHelper::DtFmtSpecList QbmmV3OpCheckHelper::GetDtFmtSpecList() const
 ge::graphStatus QbmmV3OpCheckHelper::OpSelectFormat(ge::AscendString& result) const
 {
     DtFmtSpecList dtfmtSpecList = GetDtFmtSpecList();
-    auto getDtypeList = [&dtfmtSpecList](enum TensorIdx idx) -> std::vector<std::string> {
+    auto getDtypeList = [&dtfmtSpecList](size_t idx) -> std::vector<std::string> {
         std::vector<std::string> output;
         for (auto& spec : dtfmtSpecList) {
             output.push_back(spec[idx].dtype);
         }
         return output;
     };
-    auto getFormatList = [&dtfmtSpecList](enum TensorIdx idx) -> std::vector<std::string> {
+    auto getFormatList = [&dtfmtSpecList](size_t idx) -> std::vector<std::string> {
         std::vector<std::string> output;
         for (auto& spec : dtfmtSpecList) {
             output.push_back(spec[idx].format);
         }
         return output;
     };
-    auto getUnknownShapeFormatList = [&dtfmtSpecList](enum TensorIdx idx) -> std::vector<std::string> {
+    auto getUnknownShapeFormatList = [&dtfmtSpecList](size_t idx) -> std::vector<std::string> {
         std::vector<std::string> output;
         for (auto& spec : dtfmtSpecList) {
             output.push_back(spec[idx].unknownshapeFormat);
@@ -327,7 +334,7 @@ ge::graphStatus QbmmV3OpCheckHelper::OpSelectFormat(ge::AscendString& result) co
 
     // 将dtFmtSpecList_内容拼成算子信息库的形式
     auto genTensorSpec = [getDtypeList, getFormatList, getUnknownShapeFormatList](
-                             std::string classify, std::string name, enum TensorIdx idx) -> TensorSpec {
+                             std::string classify, std::string name, size_t idx) -> TensorSpec {
         TensorSpec spec = {.classify = classify,
                            .desc = {.name = name,
                                     .dtypes = getDtypeList(idx),
@@ -336,13 +343,13 @@ ge::graphStatus QbmmV3OpCheckHelper::OpSelectFormat(ge::AscendString& result) co
         return spec;
     };
     std::vector<TensorSpec> opInfo;
-    opInfo.push_back(genTensorSpec("input0", "x1", TensorIdx::X1));
-    opInfo.push_back(genTensorSpec("input1", "x2", TensorIdx::X2));
-    opInfo.push_back(genTensorSpec("input2", "scale", TensorIdx::SCALE));
-    opInfo.push_back(genTensorSpec("input3", "offset", TensorIdx::OFFSET));
-    opInfo.push_back(genTensorSpec("input4", "bias", TensorIdx::BIAS));
-    opInfo.push_back(genTensorSpec("input5", "pertoken_scale", TensorIdx::PERTOKEN_SCALE));
-    opInfo.push_back(genTensorSpec("output0", "y", TensorIdx::Y));
+    opInfo.push_back(genTensorSpec("input0", "x1", X1));
+    opInfo.push_back(genTensorSpec("input1", "x2", X2));
+    opInfo.push_back(genTensorSpec("input2", "scale", SCALE));
+    opInfo.push_back(genTensorSpec("input3", "offset", OFFSET));
+    opInfo.push_back(genTensorSpec("input4", "bias", BIAS));
+    opInfo.push_back(genTensorSpec("input5", "pertoken_scale", PERTOKEN_SCALE));
+    opInfo.push_back(genTensorSpec("output0", "y", Y));
 
     nlohmann::json jsonResult;
     OpCheckHelper::ToJson(jsonResult, opInfo);
