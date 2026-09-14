@@ -75,6 +75,8 @@ TILING_DATA_FIELD_DEF(int16_t, dim);
 TILING_DATA_FIELD_DEF(uint32_t, sortSharedBufSize);
 // === 排序模板 tilingdata（嵌套 struct，字段定义见 ScatterElementsV2SortTilingData）
 TILING_DATA_FIELD_DEF_STRUCT(ScatterElementsV2SortTilingData, sortTiling);
+TILING_DATA_FIELD_DEF(int64_t, indicesUpdatesSameShape);
+TILING_DATA_FIELD_DEF(int64_t, enableAdaptiveReduce);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2AscTilingData)
@@ -103,9 +105,10 @@ protected:
     void GetCastTypeSize();
     void CombineIndicesAxis();
     uint32_t GetMaxSortTmpBuf(int64_t sortDim);
-    int64_t CalBestBaseSize(int64_t baseXoStart, int64_t baseXoEnd);
-    // 排序模板准入：dtype 白名单 + 索引轴主导 + 整型/浮点各自的形状条件 + index-count 切核收益
-    // aAxisCoreNum：DoOpTiling 先行算出的实际 A 轴切核核数 indicesUsedCoreNum_
+    int64_t GetSortTileBufferSize(int64_t sortDim, uint32_t* sortSharedBufSize = nullptr);
+    bool CanFitSortDim(int64_t sortDim, uint32_t* sortSharedBufSize = nullptr);
+    bool CanUseAdaptiveReduce(int64_t localADim, int64_t minBaseA);
+    int64_t FindMaxBaseSize(int64_t baseSizeStart, int64_t baseSizeEnd, int64_t fixedFactor);
     bool IsSortTemplateAdmitted(int64_t aAxisCoreNum) const;
     bool IsSortAdmittedInt() const;
     bool IsSortAdmittedFloat(int64_t aAxisCoreNum) const;
@@ -113,16 +116,20 @@ protected:
 private:
     int16_t dim_ = 0;
     int16_t rank_ = 1;
+    int64_t platformUbSize_ = 0;
     int64_t ubSize_ = 0;
+    int64_t globalSortLocalMemorySize_ = 0;
     int64_t totalCoreNum_ = 0;
     int64_t usedCoreNum_ = 0;
     int64_t loopLength_ = 0;
     int64_t allAxis_ = 1;
     int64_t dataAxis_ = 1;
     int64_t updatesAxis_ = 1;
+    bool indicesUpdatesSameShape_ = false;
+    bool enableAdaptiveReduce_ = false;
     int64_t castTypeSize_ = 0;
-    int64_t isDeterministic_ = 0;     // 原确定性模板语义开关（add 且 dtype∈SCAT_ELE_ADD_DETERM_DTYPE）
-    int64_t isSortDeterministic_ = 0; // 排序模板 dtype 资格（add 且 ∈SORT_DETERM / none 且 int），
+    int64_t isDeterministic_ = 0;     // 局部确定性模板准入（none，或 add 且为浮点类型）
+    int64_t isSortDeterministic_ = 0; // 排序模板 dtype/reduction 资格
 
     int64_t preAxis_ = 1;
     int64_t midAxis_ = 1;

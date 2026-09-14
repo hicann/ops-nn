@@ -250,6 +250,9 @@ __aicore__ inline void WithSortedProcess(AscendC::TPipe* pipe, GM_ADDR var, GM_A
         return;
     }
 
+    // ScatterElementsV2 is inplace; var and output alias. The ACLNN wrapper handles out-of-place copies.
+#if 0
+
     // === Stage-0: data(var) -> y(output) 全量拷贝（非 inplace 基数） ===
     // 拷贝队列为满 UB 分配，需 pipe.Reset() 释放后再进入 Phase 1 的小幅参数缓冲。
     {
@@ -260,6 +263,7 @@ __aicore__ inline void WithSortedProcess(AscendC::TPipe* pipe, GM_ADDR var, GM_A
     }
     // 拷贝末尾 MTE3 写 y 后，各核段互不重叠但可能被别核 Phase3 读，故需全核同步；
     SyncAll();
+#endif
 
     int32_t rank = td->rank;
     int32_t dimNormalized = td->sortTiling.dimNormalized;
