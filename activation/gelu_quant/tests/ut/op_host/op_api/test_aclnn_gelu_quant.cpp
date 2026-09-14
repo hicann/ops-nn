@@ -758,3 +758,22 @@ TEST_F(l2_gelu_quant_test, ascend910B2_gelu_quant_fp32_E5M2_none_dynamic_rint_sc
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
+
+// invalid self dtype (INT32) should return ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_gelu_quant_test, gelu_quant_dynamic_self_invalid_dtype_fail)
+{
+    TensorDesc x_desc = TensorDesc({64, 5}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
+    TensorDesc outScale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    const char* approximate = "none";
+    const char* quantMode = "dynamic";
+    const char* roundMode = "rint";
+    int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

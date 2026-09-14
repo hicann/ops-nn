@@ -249,7 +249,7 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* in
                                       const aclTensor* outScaleOptional)
 {
     // 当前仅支持arch3510
-    CHECK_RET(CheckPlatform(), ACLNN_ERR_RUNTIME_ERROR);
+    CHECK_RET(CheckPlatform(), ACLNN_ERR_PARAM_INVALID);
 
     // 1. 检查参数 quantMode 是否合法
     bool isDynQuant = true;
