@@ -645,13 +645,13 @@ int main() {
                                     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
                                     23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
                                     43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63};
-  std::vector<float> weightScaleData = {1.0};
-  std::vector<float> activationScaleData = {1.0};
-  std::vector<float> biasData = {1.0};
+  std::vector<float> weightScaleData(64, 1.0);
+  std::vector<float> activationScaleData(2, 1.0);
+  std::vector<float> biasData(64, 1.0);
   std::vector<int64_t> groupIndexData = {1};
-  std::vector<float> scaleHostData = {1};
+  std::vector<float> scaleHostData(32, 1);
   std::vector<float> offsetHostData = {1};
-  std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<int8_t> outHostData(64, 0);
   std::vector<float> scaleOutHostData = {0, 0};
 
   bool activateLeft = true;
@@ -659,14 +659,15 @@ int main() {
   int64_t activateDim = -1;
   int64_t swigluMode = 1;
   float clampLimit = 7.0;
-  float gluAlpha = 1.0;
-  float gluBias = 1.702;
+  float gluAlpha = 1.702;
+  float gluBias = 1.0;
 
   // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_INT32, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建weightScale
+  // 创建weightScale aclTensor
   ret = CreateAclTensor(weightScaleData, weightScaleShape, &weightScaleDeviceAddr, aclDataType::ACL_FLOAT, &weightScale);
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建activationScale
   ret = CreateAclTensor(activationScaleData, activationScaleShape, &activationScaleDeviceAddr, aclDataType::ACL_FLOAT, &activationScale);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -711,7 +712,7 @@ int main() {
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<int8_t> resultData(size, 0);
-  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);

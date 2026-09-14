@@ -437,18 +437,18 @@ int main() {
                                   83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95};
   std::vector<float> smoothScalesHostData = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                       1, 1, 1, 1, 1, 1, 1, 1};
-  std::vector<float> groupIndexHostData = {1, 3};
+  std::vector<int32_t> groupIndexHostData = {1, 3};
   std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   std::vector<float> scaleHostData = {0, 0, 0};
 
   // 创建x aclTensor
-  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
+  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-   // 创建scale aclTensor
+  // 创建smoothScales aclTensor
   ret = CreateAclTensor(smoothScalesHostData, smoothScalesShape, &smoothScalesDeviceAddr, aclDataType::ACL_FLOAT, &smoothScales);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-   // 创建groupIndex aclTensor
+  // 创建groupIndex aclTensor
   ret = CreateAclTensor(groupIndexHostData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT32, &groupIndex);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
@@ -480,7 +480,7 @@ int main() {
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<int8_t> resultData(size, 0);
-  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
