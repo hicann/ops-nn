@@ -35,6 +35,10 @@ struct CommonTilingInputs {
     int64_t ubBytes;
 };
 
+// 双缓冲流水线物理节点数（FP32: 2*4 数据+1 标量=9; FP16: 2*5+1=11），与 kernel 侧
+// inplace_apply_ada_max_tiling_data.h 的 PHYS_NODES_FP32/FP16 保持一致。
+int64_t BufCountForDtype(ge::DataType dtype);
+
 struct CommonTilingOutputs {
     int64_t perBufBytes;
     int64_t perBufElems;

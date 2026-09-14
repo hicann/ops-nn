@@ -18,12 +18,16 @@
  *       (Task 19, DESIGN §5.2/§5.5/§5.3 里程碑 M2 前半).
  *
  * Coverage:
- *   - §5.2 公共量: perBufBytes = (253952 / 5) & ~31 = 50784,
- *                  perBufElems = 50784 / 4          = 12696,
- *                  ubUsedBytes = 5 * 50784          = 253920.
+ *   - §5.2 公共量 (dtype 相关 P, 双缓冲流水线):
+ *       FP32 P=9:  perBufBytes = (253952 / 9) & ~31  = 28192,
+ *                  perBufElems = 28192 / 4           = 7048,
+ *                  ubUsedBytes = 9 * 28192           = 253728 (裕量 224 B).
+ *       FP16 P=11: perBufBytes = (253952 / 11) & ~31 = 23072,
+ *                  perBufElems = 23072 / 4           = 5768,
+ *                  ubUsedBytes = 11 * 23072          = 253792 (裕量 160 B).
  *   - §5.5 分支判定 4 分支互斥 (dtype × align 笛卡尔积 → tilingKey 0/1/2/3).
  *   - 空 Tensor N=0 → align 分支直返空 (totalTiles=0).
- *   - §5.3 UB 预算: 253920 ≤ 253952 (裕量 32 B).
+ *   - §5.3 UB 预算: ubUsedBytes ≤ 253952.
  *   - unsupported dtype (BF16/INT32) → tilingKey = -1.
  *
  * Oracle independence (per tiling-developer skill §五.5):
@@ -51,9 +55,12 @@ namespace {
 
 // ===========================================================================
 // §5.2 公共量常量 (手抄自 DESIGN §5.2 / §5.3, NOT from impl)
+// 双缓冲流水线: FP32 每 stage 4 数据节点 + 1 标量 = 2*4+1 = 9;
+//               FP16 每 stage 5 数据节点 (Cast 轮转) + 1 标量 = 2*5+1 = 11.
 // ===========================================================================
 constexpr int64_t UB_BYTES_DAV3510 = 253952; // 248 KiB (DAV_3510)
-constexpr int64_t P_PHYS_NODES = 5;          // 4 inputs + 1 tmp (§5.3)
+constexpr int64_t P_PHYS_NODES_FP32 = 9;     // 2-stage × 4 data + 1 scalar (§5.3)
+constexpr int64_t P_PHYS_NODES_FP16 = 11;    // 2-stage × 5 data + 1 scalar (§5.3)
 constexpr int64_t COMPUTE_DTYPE_SZ = 4;      // FP32 compute domain (§1.4)
 
 // 32B alignment helpers (independent of impl).
@@ -79,16 +86,16 @@ OracleCommon OracleCompute(ge::DataType dtype, int64_t N, int64_t ubBytes, int64
     (void)coreNumAiv; // coreNumAiv feeds MultiCoreSplit (Task 20), not common.
     OracleCommon t{};
 
-    // ---- §5.2 公共量 (platform-derived, independent of N/dtype) ----
-    t.P = P_PHYS_NODES;
-    int64_t raw = ubBytes / t.P;                      // integer division: 253952/5 = 50790
-    t.perBufBytes = AlignDown32(raw);                 // 50790 & ~31 = 50784
-    t.perBufElems = t.perBufBytes / COMPUTE_DTYPE_SZ; // 50784 / 4 = 12696
-    t.ubUsedBytes = t.P * t.perBufBytes;              // 5 * 50784 = 253920
-
-    // ---- §5.5 分支判定 (align-only → tilingKey 0/1, dtype 由 def 驱动) ----
+    // ---- §5.2 公共量 (platform-derived; P dtype 相关: fp32→9, fp16→11) ----
     bool isFp32 = (dtype == ge::DT_FLOAT);
     bool isFp16 = (dtype == ge::DT_FLOAT16);
+    t.P = isFp16 ? P_PHYS_NODES_FP16 : P_PHYS_NODES_FP32;
+    int64_t raw = ubBytes / t.P;                      // fp32: 253952/9 = 28216; fp16: 253952/11 = 23083
+    t.perBufBytes = AlignDown32(raw);                 // fp32: 28192; fp16: 23072
+    t.perBufElems = t.perBufBytes / COMPUTE_DTYPE_SZ; // fp32: 7048; fp16: 5768
+    t.ubUsedBytes = t.P * t.perBufBytes;              // fp32: 253728; fp16: 253792
+
+    // ---- §5.5 分支判定 (align-only → tilingKey 0/1, dtype 由 def 驱动) ----
     if (isFp32) {
         t.alignElem = 8;
     } else if (isFp16) {
@@ -164,7 +171,7 @@ INSTANTIATE_TEST_SUITE_P(Section52And55, CommonTilingTest,
                              TilingCase{"fp32_unalign_n100", ge::DT_FLOAT, 100, 32},   // key=1 (100%8=4)
                              TilingCase{"fp16_align_n16", ge::DT_FLOAT16, 16, 32},     // key=0
                              TilingCase{"fp16_unalign_n100", ge::DT_FLOAT16, 100, 32}, // key=1 (100%16=4)
-                             // §5.2 公共量覆盖 (different N/dtype, same perBufBytes=50784)
+                             // §5.2 公共量覆盖 (dtype 相关 perBufBytes: fp32=28192, fp16=23072)
                              TilingCase{"fp32_large_1m", ge::DT_FLOAT, 1048576, 32},
                              TilingCase{"fp16_large_1m", ge::DT_FLOAT16, 1048576, 32},
                              TilingCase{"fp32_n1", ge::DT_FLOAT, 1, 32},   // unalign (1%8=1)
@@ -179,26 +186,42 @@ INSTANTIATE_TEST_SUITE_P(Section52And55, CommonTilingTest,
 
 // ===========================================================================
 // §5.2 公共量独立校验 (exact values from §5.2 spec) + §5.3 UB 预算校验.
-//   Calls the IMPL (ComputeCommonQuantities) — under stub, fills sentinels
-//   → all EXPECT_EQ fail (red baseline). Under real impl (Task 20), passes.
+//   Calls the IMPL (ComputeCommonQuantities) with the production P per dtype.
 // ===========================================================================
 TEST(CommonQuantitiesTest, Section52And53ExactValuesAndBudget)
 {
-    optiling::CommonTilingOutputs act{};
-    optiling::ComputeCommonQuantities(UB_BYTES_DAV3510, P_PHYS_NODES, act);
-    // Oracle (recomputed inline):
-    int64_t raw = UB_BYTES_DAV3510 / P_PHYS_NODES;                          // 50790
-    int64_t expected_perBufBytes = AlignDown32(raw);                        // 50784
-    int64_t expected_perBufElems = expected_perBufBytes / COMPUTE_DTYPE_SZ; // 12696
-    int64_t expectedUbUsed = P_PHYS_NODES * expected_perBufBytes;           // 253920
-    // §5.2 公共量 exact values.
-    EXPECT_EQ(act.perBufBytes, expected_perBufBytes);
-    EXPECT_EQ(act.perBufElems, expected_perBufElems);
-    EXPECT_EQ(act.P, P_PHYS_NODES);
-    EXPECT_EQ(act.ubUsedBytes, expectedUbUsed);
-    // §5.3 UB 预算: 253920 ≤ 253952 (裕量 32 B ≥ 0).
-    EXPECT_LE(act.ubUsedBytes, UB_BYTES_DAV3510);
-    EXPECT_EQ(UB_BYTES_DAV3510 - act.ubUsedBytes, 32);
+    // FP32: P=9 (2-stage × 4 data + 1 scalar).
+    {
+        optiling::CommonTilingOutputs act{};
+        optiling::ComputeCommonQuantities(UB_BYTES_DAV3510, P_PHYS_NODES_FP32, act);
+        int64_t raw = UB_BYTES_DAV3510 / P_PHYS_NODES_FP32;                     // 28216
+        int64_t expected_perBufBytes = AlignDown32(raw);                        // 28192
+        int64_t expected_perBufElems = expected_perBufBytes / COMPUTE_DTYPE_SZ; // 7048
+        int64_t expectedUbUsed = P_PHYS_NODES_FP32 * expected_perBufBytes;      // 253728
+        EXPECT_EQ(act.perBufBytes, expected_perBufBytes);
+        EXPECT_EQ(act.perBufElems, expected_perBufElems);
+        EXPECT_EQ(act.P, P_PHYS_NODES_FP32);
+        EXPECT_EQ(act.ubUsedBytes, expectedUbUsed);
+        // §5.3 UB 预算: 253728 ≤ 253952 (裕量 224 B ≥ 0).
+        EXPECT_LE(act.ubUsedBytes, UB_BYTES_DAV3510);
+        EXPECT_EQ(UB_BYTES_DAV3510 - act.ubUsedBytes, 224);
+    }
+    // FP16: P=11 (2-stage × 5 data + 1 scalar).
+    {
+        optiling::CommonTilingOutputs act{};
+        optiling::ComputeCommonQuantities(UB_BYTES_DAV3510, P_PHYS_NODES_FP16, act);
+        int64_t raw = UB_BYTES_DAV3510 / P_PHYS_NODES_FP16;                     // 23083
+        int64_t expected_perBufBytes = AlignDown32(raw);                        // 23072
+        int64_t expected_perBufElems = expected_perBufBytes / COMPUTE_DTYPE_SZ; // 5768
+        int64_t expectedUbUsed = P_PHYS_NODES_FP16 * expected_perBufBytes;      // 253792
+        EXPECT_EQ(act.perBufBytes, expected_perBufBytes);
+        EXPECT_EQ(act.perBufElems, expected_perBufElems);
+        EXPECT_EQ(act.P, P_PHYS_NODES_FP16);
+        EXPECT_EQ(act.ubUsedBytes, expectedUbUsed);
+        // §5.3 UB 预算: 253792 ≤ 253952 (裕量 160 B ≥ 0).
+        EXPECT_LE(act.ubUsedBytes, UB_BYTES_DAV3510);
+        EXPECT_EQ(UB_BYTES_DAV3510 - act.ubUsedBytes, 160);
+    }
 }
 
 // ===========================================================================

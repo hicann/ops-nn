@@ -31,8 +31,12 @@
 
 #include "kernel_operator.h"
 
+// Div 精度档位：0-ULP Newton 多 pass → 1-ULP（含舍入修正，仍保正确邻位）。
+// 依据：golden=torch fp32 div（correctly-rounded=0-ULP）；INTRINSIC ~2ULP 在灾难性抵消
+// 用例（|var|≈|lr_adj·m/(v+ε)|）下相对误差放大 1e3~1e5 倍致 mare 超阈；1ULP 档实测
+// 全量通过且性能与 INTRINSIC 持平（kernel_200: 131/131 PASS）。
 static constexpr AscendC::Reg::DivSpecificMode kHighPrecDiv = {AscendC::Reg::MaskMergeMode::ZEROING, true,
-                                                               AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+                                                               AscendC::DivAlgo::PRECISION_1ULP_FTZ_FALSE};
 
 template <typename T>
 __simd_vf__ inline void AdaMaxVF(__ubuf__ T* varAddr, __ubuf__ T* mAddr, __ubuf__ T* vAddr, __ubuf__ T* gradAddr,
@@ -81,6 +85,49 @@ __aicore__ inline void CallAdaMaxVF(__ubuf__ T* varAddr, __ubuf__ T* mAddr, __ub
     uint16_t repeatTimes = AscendC::CeilDivision(static_cast<uint64_t>(count), ONE_REPEAT_SIZE);
     asc_vf_call<AdaMaxVF<T>>(varAddr, mAddr, vAddr, gradAddr, beta1, oneMinusBeta1, beta2, epsilon, lrAdj,
                              static_cast<uint32_t>(count), ONE_REPEAT_SIZE, repeatTimes);
+}
+
+// Narrow FP32 -> half with IEEE overflow semantics (dawsn pattern): CastTrait NO_SAT,
+// overflow produces +/-Inf instead of saturating to 65504, matching torch/golden cast.
+static constexpr AscendC::Reg::CastTrait NARROW_F32_TO_F16_NO_SAT = {
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
+
+__simd_vf__ inline void AdaMaxNarrowVF(__ubuf__ half* varOut, __ubuf__ half* mOut, __ubuf__ half* vOut,
+                                       __ubuf__ float* varIn, __ubuf__ float* mIn, __ubuf__ float* vIn, uint32_t count,
+                                       uint32_t oneRepeatSize, uint16_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<half> varHalfReg, mHalfReg, vHalfReg;
+    AscendC::Reg::RegTensor<float> varFloatReg, mFloatReg, vFloatReg;
+    AscendC::Reg::MaskReg mask;
+
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        uint32_t off = i * oneRepeatSize;
+        uint32_t rem = count - off;
+        mask = AscendC::Reg::UpdateMask<float>(rem);
+
+        AscendC::Reg::LoadAlign<float>(varFloatReg, varIn + off);
+        AscendC::Reg::LoadAlign<float>(mFloatReg, mIn + off);
+        AscendC::Reg::LoadAlign<float>(vFloatReg, vIn + off);
+
+        AscendC::Reg::Cast<half, float, NARROW_F32_TO_F16_NO_SAT>(varHalfReg, varFloatReg, mask);
+        AscendC::Reg::Cast<half, float, NARROW_F32_TO_F16_NO_SAT>(mHalfReg, mFloatReg, mask);
+        AscendC::Reg::Cast<half, float, NARROW_F32_TO_F16_NO_SAT>(vHalfReg, vFloatReg, mask);
+
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(varOut + off, varHalfReg, mask);
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(mOut + off, mHalfReg, mask);
+        AscendC::Reg::StoreAlign<half, AscendC::Reg::StoreDist::DIST_PACK_B32>(vOut + off, vHalfReg, mask);
+    }
+}
+
+__aicore__ inline void CallAdaMaxNarrowVF(__ubuf__ half* varOut, __ubuf__ half* mOut, __ubuf__ half* vOut,
+                                          __ubuf__ float* varIn, __ubuf__ float* mIn, __ubuf__ float* vIn,
+                                          int64_t count)
+{
+    constexpr uint32_t ONE_REPEAT_SIZE = AscendC::GetVecLen() / sizeof(float);
+    uint16_t repeatTimes = AscendC::CeilDivision(static_cast<uint64_t>(count), ONE_REPEAT_SIZE);
+    asc_vf_call<AdaMaxNarrowVF>(varOut, mOut, vOut, varIn, mIn, vIn, static_cast<uint32_t>(count), ONE_REPEAT_SIZE,
+                                repeatTimes);
 }
 
 #endif // INPLACE_APPLY_ADA_MAX_VF_H

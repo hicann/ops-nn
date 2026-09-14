@@ -29,7 +29,6 @@ namespace {
 
 constexpr int64_t ALIGN_ELEM_FP32 = 8;
 constexpr int64_t ALIGN_ELEM_FP16 = 16;
-constexpr int64_t BUF_COUNT = 5;
 constexpr int64_t ALIGN_BYTES = 32;
 constexpr int64_t FP32_BYTES_PER_ELEM = 4;
 
@@ -58,6 +57,8 @@ void ClearResult(SplitResult& split, MultiCoreResult& multicore)
 
 } // anonymous namespace
 
+int64_t BufCountForDtype(ge::DataType dtype) { return (dtype == ge::DT_FLOAT16) ? PHYS_NODES_FP16 : PHYS_NODES_FP32; }
+
 void ComputeCommonQuantities(int64_t ubBytes, int64_t P, CommonTilingOutputs& out)
 {
     out.P = P;
@@ -81,7 +82,7 @@ int32_t ChooseTilingKey(ge::DataType dtype, int64_t N)
 
 void ComputeCommonTiling(const CommonTilingInputs& in, CommonTilingOutputs& out)
 {
-    ComputeCommonQuantities(in.ubBytes, BUF_COUNT, out);
+    ComputeCommonQuantities(in.ubBytes, BufCountForDtype(in.dtype), out);
 
     bool isFp32 = (in.dtype == ge::DT_FLOAT);
     bool isFp16 = (in.dtype == ge::DT_FLOAT16);

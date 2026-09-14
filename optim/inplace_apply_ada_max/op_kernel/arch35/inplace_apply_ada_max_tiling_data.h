@@ -26,7 +26,10 @@
 
 constexpr int64_t MAX_INPUT_SLOTS = 9;
 constexpr int64_t MAX_OUTPUT_SLOTS = 3;
-constexpr int64_t PHYS_NODES = 5;
+constexpr int64_t PIPELINE_STAGES = 2;
+// 双缓冲流水线物理节点数：FP32 每 stage 4 数据节点，FP16 每 stage 5 数据节点（Cast 轮转），+1 标量节点
+constexpr int64_t PHYS_NODES_FP32 = 9;
+constexpr int64_t PHYS_NODES_FP16 = 11;
 
 struct SplitResult {
     int64_t axis;

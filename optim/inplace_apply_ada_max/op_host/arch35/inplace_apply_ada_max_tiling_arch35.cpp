@@ -36,7 +36,6 @@ namespace {
 constexpr int64_t TILING_RANK = 4;
 constexpr int64_t NUM_INPUTS = 9;
 constexpr int64_t NUM_STATE_TENSORS = 4;
-constexpr int64_t BUF_COUNT = 5;
 constexpr int64_t MAX_RANK = 8;
 constexpr int64_t ALIGN_ELEM_FP32 = 8;
 constexpr int64_t ALIGN_ELEM_FP16 = 16;
@@ -248,7 +247,7 @@ ge::graphStatus TilingFuncInplaceApplyAdaMax(gert::TilingContext* context)
     PadShapeToTilingRank(varShape, varRank, N, maxBroShapePadded);
 
     CommonTilingOutputs common{};
-    ComputeCommonQuantities(ubBytes, BUF_COUNT, common);
+    ComputeCommonQuantities(ubBytes, BufCountForDtype(dtype), common);
 
     int32_t tilingKey = ChooseTilingKey(dtype, N);
     if (tilingKey < 0) {
