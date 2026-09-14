@@ -21,7 +21,7 @@
 
 对于无昇腾设备的开发者，可直接使用CANNLab云开发环境，即“**一站式开发平台**”，该平台为您提供在线可直接运行的昇腾环境，环境中已安装必备的驱动、软件包和依赖，无需手动安装。
 
-> **说明**：环境默认安装最新版本CANN包，源码下载时注意与软件配套。更多关于开发平台的介绍请参考[CANNLab指导](https://gitcode.com/org/cann/discussions/54)。
+> **说明**：环境默认安装最新版本CANN包，源码下载时注意与软件配套。更多关于开发平台的介绍请参考[CANNLab指导](https://gitcode.com/cann/cann-learning-hub/blob/master/docs/CANNLab_env_experience_guide.md)。
 
 1. 进入开源项目，单击“`CANNLab`”按钮，使用已认证过的华为云账号登录。若未注册或认证，请根据页面提示进行注册和认证。
 
