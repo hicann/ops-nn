@@ -300,7 +300,9 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
                             std::min(compileInfo->totalCoreNum, static_cast<uint64_t>(gradRow));
     ubSize_ = compileInfo->ubSizePlatForm;
     if (coreNum_ == 0UL || embeddingDim_ == 0UL) {
-        OP_LOGE(tilingContext_, "coreNum %lu, embeddingDim %lu", coreNum_, embeddingDim_);
+        OP_LOGE(tilingContext_,
+                "coreNum or embeddingDim is zero, coreNum=%lu, embeddingDim=%lu, both must be greater than 0", coreNum_,
+                embeddingDim_);
         return ge::GRAPH_FAILED;
     }
     CalMaxFormerNum(ubSize_);

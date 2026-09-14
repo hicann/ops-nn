@@ -56,65 +56,79 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>kernelShape</td>
+      <td>x</td>
       <td>输入</td>
-      <td>最大池化的窗口大小。</td>
-      <td>INT64</td>
-      <td>ND</td>
+      <td>4维输入tensor。</td>
+      <td>FLOAT16、BF16、FLOAT32、DOUBLE、INT32、INT64、UINT8、INT16、INT8、UINT16、QINT8</td>
+      <td>NHWC、NCHW</td>
+    </tr>
+    <tr>
+      <td>ksize</td>
+      <td>属性</td>
+      <td>最大池化的窗口大小，长度为4的列表。N和C维度的ksize必须为1，H和W维度的ksize必须大于0。</td>
+      <td>ListInt</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>strides</td>
-      <td>输入</td>
-      <td>窗口移动的步长。</td>
-      <td>INT64</td>
-      <td>ND</td>
+      <td>属性</td>
+      <td>滑动窗口的步长，长度为4的列表。N和C维度的stride必须为1。</td>
+      <td>ListInt</td>
+      <td>-</td>
     </tr>
     <tr>
-      <td>autoPad</td>
-      <td>输入</td>
-      <td>指定padding的方式。</td>
-      <td>INT64</td>
-      <td>ND</td>
+      <td>padding_mode</td>
+      <td>属性</td>
+      <td>指定padding的方式。支持"SAME"、"VALID"、"CALCULATED"，默认为"CALCULATED"。"SAME"时补零使输出shape等于ceil(input shape / stride)；"VALID"时不补零；"CALCULATED"时使用pads计算输出shape。</td>
+      <td>String</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>pads</td>
-      <td>输入</td>
-      <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。</td>
-      <td>INT64</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>dilations</td>
-      <td>输入</td>
-      <td>沿着核空间轴方向的膨胀值，对应公式中的dilation_size。</td>
-      <td>INT64</td>
+      <td>属性</td>
+      <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。长度为4，指定[top, bottom, left, right]的填充量。仅在padding_mode为"CALCULATED"时生效。默认值为{0,0,0,0}。</td>
+      <td>ListInt</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>ceilMode</td>
-      <td>输入</td>
-      <td>计算输出形状的取整模式。</td>
-      <td>INT64</td>
+      <td>data_format</td>
+      <td>属性</td>
+      <td>输入输出的数据格式，支持"NHWC"和"NCHW"，默认为"NCHW"。</td>
+      <td>String</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>global_pooling</td>
+      <td>属性</td>
+      <td>是否使用全局池化。为True时忽略ksize和pads，输出H和W均为1。默认False。</td>
+      <td>Bool</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>ceil_mode</td>
+      <td>属性</td>
+      <td>计算输出形状的取整模式。True时向上取整，False时向下取整。padding_mode为"SAME"或"VALID"时仅支持False。默认False。</td>
+      <td>Bool</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>y</td>
       <td>输出</td>
-      <td>输出的tensor。</td>
-      <td>FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
-      <td>-</td>
+      <td>4维输出tensor，与输入x具有相同的数据类型和格式。</td>
+      <td>FLOAT16、BF16、FLOAT32、DOUBLE、INT32、INT64、UINT8、INT16、INT8、UINT16、QINT8</td>
+      <td>NHWC、NCHW</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
 
 - **值域限制说明：**
-  - kernelShape：对应公式中的k_h和k_w，长度为1或2，且数组元素必须都大于0。
-  - strides：对应公式中的s_h和s_w，数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。
-  - autoPad：其中0代表"NOTSET"，并且只支持数值0。
-  - pads：长度为0、1、2或4。当数组长度为0时，不进行填充。当数组长度为1时，H_top、H_bottom、W_left、W_right填充同一个值。当数组长度为2时，H_top、H_bottom分别填充数组第1个值，W_left、W_right分别填充数组第2个值。当数组长度为4时，按[H_top、W_left、H_bottom、W_right]位置关系进行填充。单个空间轴方向填充量之和需小于等于对应方向kernelShape。
-  - dilations：只支持数值为1的输入场景。长度为0、1、2或4。
-  - ceilMode：取值为0时，代表False，向下取整；非0值时，代表True，向上取整。
+  - ksize：长度为4的列表。H和W维度的ksize必须大于0，N和C维度的ksize必须为1。H和W维度的ksize乘积应小于等于255。
+  - strides：长度为4的列表。N和C维度的stride必须为1，H和W维度的stride必须大于0。
+  - padding_mode：支持"SAME"、"VALID"、"CALCULATED"三种模式。
+  - pads：长度为4，按[top, bottom, left, right]指定填充量，仅在padding_mode为"CALCULATED"时生效。pads应大于等于0且小于对应的kernel size。
+  - global_pooling：为True时，输出H和W均为1，ksize和pads被忽略。
+  - ceil_mode：padding_mode为"SAME"或"VALID"时仅支持False。
 
 ## 调用说明
 

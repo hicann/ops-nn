@@ -394,7 +394,7 @@ int main() {
   std::vector<int64_t> outShape = {2, 2, 2, 2};
   std::vector<int64_t> kernel_size = {2, 2};
   std::vector<int64_t> strides_size = {2, 2};
-  std::int64_t autoPads = 0;
+  std::int64_t autoPad = 0;
   std::vector<int64_t> padding_size = {0, 0, 0, 0};
   std::vector<int64_t> dilation_size = {1, 1};
   std::int64_t ceilMode = 1;
@@ -425,7 +425,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnMaxPool第一段接口
-  ret = aclnnMaxPoolGetWorkspaceSize(self, kernel_shape, strides, autoPads, padding, dilations, ceilMode, out, &workspaceSize, &executor);
+  ret = aclnnMaxPoolGetWorkspaceSize(self, kernel_shape, strides, autoPad, padding, dilations, ceilMode, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPoolGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;

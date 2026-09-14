@@ -115,7 +115,7 @@ static bool CheckDimension(const aclTensor* grad, const aclTensor* indices)
         indicesShapeSum *= indicesShape.GetDim(i);
     }
     if (indicesShapeSum != gradShapeSum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad shape %s does not match indices shape %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "grad shape %s does not match with indices shape %s.",
                 op::ToString(grad->GetViewShape()).GetString(), op::ToString(indices->GetViewShape()).GetString());
         return false;
     }
@@ -265,7 +265,7 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(const aclTen
     // 修改读取的数据类型
     if (!is950 && gradRow < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
-        OP_LOGD("aclnnEmbeddingDenseGradV2: indice sort by aicore");
+        OP_LOGD("aclnnEmbeddingDenseGradV2: indices sort by aicore");
     }
     // 对index进行sort操作
     indiceViewFloat = l0op::Reshape(indiceViewFloat, {gradRow}, executor);
