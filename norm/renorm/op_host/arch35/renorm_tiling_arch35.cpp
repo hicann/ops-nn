@@ -23,6 +23,7 @@
 #include "../../op_kernel/arch35/renorm_tiling_key.h"
 
 #include <cmath>
+#include <limits>
 #include <algorithm>
 #include <numeric>
 #include <set>
@@ -33,6 +34,8 @@ using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
 using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
+
+static bool IsFloatEqual(float a, float b) { return std::fabs(a - b) <= std::numeric_limits<float>::epsilon(); }
 
 constexpr size_t WS_SYS_SIZE = 0U;
 constexpr int64_t BUFFER_NUM = 2;
@@ -330,9 +333,9 @@ static ge::graphStatus GetScalarParams(gert::TilingContext* context, float& p, f
                 return ge::GRAPH_FAILED);
 
     // 确定 normMode
-    if (maxNorm == 0.0f) {
+    if (IsFloatEqual(maxNorm, 0.0f)) {
         normMode = NORM_MODE_MAXNORM_ZERO;
-    } else if (p == 0.0f) {
+    } else if (IsFloatEqual(p, 0.0f)) {
         normMode = NORM_MODE_P_ZERO;
     } else if (std::isinf(p)) {
         normMode = NORM_MODE_P_INF;
@@ -432,7 +435,7 @@ static bool ChooseAtomic(int64_t sliceCount, int64_t totalOutputCount, int64_t t
 //   3. reduceProduct >= coreNum * REDUCE_PRODUCT_COEFFICIENT(64) (R 轴足够大)
 // renorm 简化: commonProductExceptLastA = 1 (只有 sliceCount*blockSize 一个 A 轴)
 // 对应 Template F (BM-VG)
-static bool ChooseGroupAxis(int64_t totalOutputCount, int64_t totalReduceCount, int64_t coreNum)
+static bool ChooseGroupAxis(int64_t totalReduceCount, int64_t coreNum)
 {
     // renorm: commonProductExceptLastA = 1 (单 A 轴), 恒 < coreNum/2
     // AR group: reduceProduct >= coreNum * 64
@@ -609,7 +612,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                    (normMode == NORM_MODE_P_POSITIVE && p < HIGH_P_GLOBAL_THRESHOLD &&
                                     totalElements >= GLOBAL_MULTI_CORE_THRESHOLD &&
                                     numBlocks <= LONG_P_GLOBAL_REDUCE_BLOCKS && blockSize >= LONG_P_GLOBAL_BLOCK_SIZE &&
-                                    p == 7.0f && dataType == ge::DT_FLOAT &&
+                                    IsFloatEqual(p, 7.0f) && dataType == ge::DT_FLOAT &&
                                     totalElements == CASE_3807_TOTAL_ELEMENTS && blockSize == CASE_3807_BLOCK_SIZE &&
                                     numBlocks == CASE_3807_NUM_BLOCKS);
     // The same flat kernel also removes the row-by-row DMA overhead for a
@@ -651,9 +654,9 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                      (dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_INF && blockSize == 1 &&
                                       sliceCount >= 255 && sliceCount <= 257 && numBlocks >= coreNum * 1024 &&
                                       totalElements >= DENSE_P_INF_MIN_TOTAL_ELEMENTS);
-    bool useLargeGmGlobalTemplate = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 46.0f &&
-                                    sliceCount == 19 && blockSize == 1 && numBlocks == 186439680 &&
-                                    totalElements == 3542353920;
+    bool useLargeGmGlobalTemplate = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                    IsFloatEqual(p, 46.0f) && sliceCount == 19 && blockSize == 1 &&
+                                    numBlocks == 186439680 && totalElements == 3542353920;
     if (useLargeGmGlobalTemplate || useLongPositiveTemplate) {
         // A long single slice has no parallelism in the legacy slice-major
         // kernel.  Route it through the isolated global key; the key remains
@@ -802,7 +805,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                   (sliceCount == 256 && blockSize == 1 && numBlocks == 307629 &&
                                    totalElements == 78753024))) ||
                                 (normMode == NORM_MODE_P_POSITIVE && sliceCount == 16 && blockSize == 1 &&
-                                 numBlocks == 2203200 && totalElements == 35251200 && p == 2.0f));
+                                 numBlocks == 2203200 && totalElements == 35251200 && IsFloatEqual(p, 2.0f)));
     // Atomic/group are mutually exclusive with the high-precision route.
     // Keep p=inf on the established slice-major/vector routes.  The A5
     // cross-core AtomicMax path is not numerically stable for all strided
@@ -813,12 +816,12 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // independent column reductions over 131073 outer elements. It stays on
     // the established BM-VD kernel because the experimental tiled-RA path
     // cannot represent this long reduction correctly on A5.
-    bool needCase225BatchedRa = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 8.0f &&
+    bool needCase225BatchedRa = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 8.0f) &&
                                 sliceCount == 15 && blockSize == 1 && numBlocks == 131073 && totalElements == 1966095;
     bool needPackedTemplateC = !needHighPrecision && !needAtomic && normMode == NORM_MODE_P_POSITIVE &&
                                p >= HIGH_P_GLOBAL_THRESHOLD && (typeSize == 2) && blockSize == 8 &&
                                sliceCount == PACKED_TARGET_SLICE_COUNT && totalReduceCount >= coreNum * 8;
-    bool needGroup = !needHighPrecision && !needAtomic && ChooseGroupAxis(totalOutputCount, totalReduceCount, coreNum);
+    bool needGroup = !needHighPrecision && !needAtomic && ChooseGroupAxis(totalReduceCount, coreNum);
     // Template D is intentionally single-buffered for short reductions.  At a
     // very large sliceCount, however, each core processes many UB tiles even
     // when the reduction axis is small.  Route only this FP32 envelope to an
@@ -842,40 +845,42 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool needMediumInnerSplitTemplate = !needHighPrecision && numBlocks == 1 && normMode == NORM_MODE_P_POSITIVE &&
                                         sliceCount > 1 && sliceCount <= 24 &&
                                         ((dataType == ge::DT_FLOAT16 &&
-                                          ((sliceCount == 17 && blockSize == 392445 && p == 41.0f) ||
-                                           (sliceCount == 15 && blockSize == 275247 && p == 100.0f))) ||
+                                          ((sliceCount == 17 && blockSize == 392445 && IsFloatEqual(p, 41.0f)) ||
+                                           (sliceCount == 15 && blockSize == 275247 && IsFloatEqual(p, 100.0f)))) ||
                                          (dataType == ge::DT_BF16 && sliceCount == 9 && blockSize == 489328 &&
-                                          p == 65.0f) ||
+                                          IsFloatEqual(p, 65.0f)) ||
                                          (dataType == ge::DT_BF16 && sliceCount == 9 && blockSize == 217856 &&
-                                          p == 87.0f) ||
+                                          IsFloatEqual(p, 87.0f)) ||
                                          (dataType == ge::DT_FLOAT && sliceCount == 19 && blockSize == 522240 &&
-                                          p == 79.0f) ||
+                                          IsFloatEqual(p, 79.0f)) ||
                                          (dataType == ge::DT_FLOAT && sliceCount == 16 && blockSize == 1058400 &&
-                                          p == 78.0f) ||
+                                          IsFloatEqual(p, 78.0f)) ||
                                          // These one-block long reductions are dominated by the legacy
                                          // single-core scan. Reuse H4's reduction-axis split only for the
                                          // measured shapes; all neighboring layouts retain their routes.
                                          (dataType == ge::DT_FLOAT && sliceCount == 9 && blockSize == 383040 &&
-                                          p == 81.0f) ||
+                                          IsFloatEqual(p, 81.0f)) ||
                                          (dataType == ge::DT_FLOAT16 && sliceCount == 9 && blockSize == 697680 &&
-                                          p == 48.0f) ||
+                                          IsFloatEqual(p, 48.0f)) ||
                                          (dataType == ge::DT_BF16 && sliceCount == 8 && blockSize == 778240 &&
-                                          p == 52.0f));
+                                          IsFloatEqual(p, 52.0f)));
     needInnerSplitTemplate = needInnerSplitTemplate || needLargeInnerSplitTemplate || needMediumInnerSplitTemplate;
     // The compact H tile (24K elements) is numerically unstable for these
     // two very long positive-p rows on A5. Keep the existing standard H
     // kernel and its conservative 8K tile for these exact shapes only.
     bool needSafeInnerSplitPrecision = !needHighPrecision && numBlocks == 1 &&
-                                       ((dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 12.0f &&
-                                         sliceCount == 21 && blockSize == 3048192 && totalElements == 64012032) ||
-                                        (dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 9.0f &&
-                                         sliceCount == 19 && blockSize == 9767520 && totalElements == 185582880));
-    bool needCase4601IntegerPower = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 5.0f &&
-                                    sliceCount == 21 && blockSize == 23256000 && numBlocks == 1 &&
-                                    totalElements == 488376000;
+                                       ((dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE &&
+                                         IsFloatEqual(p, 12.0f) && sliceCount == 21 && blockSize == 3048192 &&
+                                         totalElements == 64012032) ||
+                                        (dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                                         IsFloatEqual(p, 9.0f) && sliceCount == 19 && blockSize == 9767520 &&
+                                         totalElements == 185582880));
+    bool needCase4601IntegerPower = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                    IsFloatEqual(p, 5.0f) && sliceCount == 21 && blockSize == 23256000 &&
+                                    numBlocks == 1 && totalElements == 488376000;
     bool needInnerSplitCopyKernel = needInnerSplitTemplate && dataType == ge::DT_FLOAT16 &&
                                     normMode == NORM_MODE_P_INF && sliceCount == 16 && blockSize == 2076928 &&
-                                    numBlocks == 1 && maxNorm == 74.0f;
+                                    numBlocks == 1 && IsFloatEqual(maxNorm, 74.0f);
     // The isolated H3 key reduces max(abs(x)) in FP16 and casts only one
     // scalar per tile. The source is FP16, so this preserves the exact p=inf
     // maximum while avoiding a full-tile FP32 expansion.
@@ -920,8 +925,9 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                             (sliceCount == 492 && blockSize == 441 && numBlocks == 160))) ||
                                           // A dense BF16 p=96 workload also has a 98B row.  Keep this
                                           // exact so ordinary BF16 BM-VG traffic remains unchanged.
-                                          (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 96.0f &&
-                                           sliceCount == 256 && blockSize == 49 && numBlocks == 2448));
+                                          (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                           IsFloatEqual(p, 96.0f) && sliceCount == 256 && blockSize == 49 &&
+                                           numBlocks == 2448));
     // Reuse F2 for short dense [R, A, B] matrices. The generic F route
     // distributes A across many cores and, for unaligned B, issues one DMA
     // per slice. A single packed A tile keeps every transfer contiguous.
@@ -934,8 +940,9 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                     blockSize >= 1500 && blockSize <= 4096 && numBlocks >= 32 && numBlocks <= 256);
     bool needNativePackedBmVg = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_INF && sliceCount == 131073 &&
                                 blockSize == 255 && numBlocks == 1;
-    bool needDensePowOverflowBmVg = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 96.0f &&
-                                    sliceCount == 256 && blockSize == 49 && numBlocks == 2448 && canUseTemplateF;
+    bool needDensePowOverflowBmVg = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                    IsFloatEqual(p, 96.0f) && sliceCount == 256 && blockSize == 49 &&
+                                    numBlocks == 2448 && canUseTemplateF;
 
     // Template C (SM-CR) UB 可行性检查:
     // Template C 的 UB 布局按 [sliceCount, batchBlocks * alignedBlockSize] 分配 5 个 buffer
@@ -957,7 +964,8 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool needSafeSmallHighPrecisionTemplateA = needHighPrecision && canUseTemplateC &&
                                                numBlocks >= STABLE_TEMPLATE_MIN_REDUCE &&
                                                ((normMode == NORM_MODE_P_INF && sliceCount <= 8) ||
-                                                (normMode == NORM_MODE_P_POSITIVE && p == 2.0f && sliceCount <= 16));
+                                                (normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 2.0f) &&
+                                                 sliceCount <= 16));
     // F2 keeps a short dense block on one core and therefore serializes the
     // reduction axis.  Once the workload is large enough to amortize SyncAll,
     // reuse the established C4 packed kernel to distribute numBlocks across
@@ -979,16 +987,18 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool denseHighPBlockOneCase = needHighPrecision && typeSize == 2 && blockSize == 1 && sliceCount <= 16 &&
                                   normMode == NORM_MODE_P_POSITIVE && p >= HIGH_P_GLOBAL_THRESHOLD &&
                                   totalReduceCount >= STABLE_TEMPLATE_MIN_REDUCE && canUseTemplateC;
-    bool needSafePackedC419 = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 50.0f &&
-                              sliceCount == 7 && blockSize == 7 && numBlocks == 4069800 && canUseTemplateC;
+    bool needSafePackedC419 = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                              IsFloatEqual(p, 50.0f) && sliceCount == 7 && blockSize == 7 && numBlocks == 4069800 &&
+                              canUseTemplateC;
     bool needContiguousTemplateC = canUseDenseTemplateC && logicalBlockBytes >= MIN_UB_ALIGN &&
                                    logicalBlockBytes % MIN_UB_ALIGN == 0 && totalReduceCount >= coreNum * 8 &&
                                    ((normMode == NORM_MODE_P_POSITIVE && sliceCount > 1 && denseHighPrecisionCase));
     // C7 is the dedicated early-overflow variant for the large BF16 high-p
     // blockSize=1 workload.
-    bool needUnalignedPackedKernel = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 96.0f &&
-                                     sliceCount == CASE_3832_SLICE_COUNT && blockSize == CASE_3832_BLOCK_SIZE &&
-                                     numBlocks == CASE_3832_NUM_BLOCKS && totalElements == CASE_3832_TOTAL_ELEMENTS;
+    bool needUnalignedPackedKernel = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                     IsFloatEqual(p, 96.0f) && sliceCount == CASE_3832_SLICE_COUNT &&
+                                     blockSize == CASE_3832_BLOCK_SIZE && numBlocks == CASE_3832_NUM_BLOCKS &&
+                                     totalElements == CASE_3832_TOTAL_ELEMENTS;
     // Reuse C4's dense, aligned block-group kernel for the remaining p=inf
     // layouts that are dominated by tiny slice-wise DMA in Template B/A.
     // Keep the envelope disjoint from the proven C6 route and from the
@@ -1053,19 +1063,20 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // elementwise batch accumulator safely.  Keep an isolated compact
     // allocation with the original per-block AR reduction so it can batch
     // more blocks without changing the arithmetic path used elsewhere.
-    bool needDensePositiveCompactKernel = (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 58.0f &&
-                                           sliceCount == 19 && blockSize == 20 && numBlocks == 92777 &&
-                                           totalElements == 35255260) ||
+    bool needDensePositiveCompactKernel = (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
+                                           IsFloatEqual(p, 58.0f) && sliceCount == 19 && blockSize == 20 &&
+                                           numBlocks == 92777 && totalElements == 35255260) ||
                                           (dataType == ge::DT_FLOAT16 && needDensePositivePackedKernel && p > 2.0f &&
                                            numBlocks >= 50000 && (sliceCount * blockSize) % CMP_ALIGN_ELEMENTS != 0 &&
-                                           !(sliceCount == 7 && blockSize == 7 && numBlocks == 4069800 && p == 50.0f));
+                                           !(sliceCount == 7 && blockSize == 7 && numBlocks == 4069800 &&
+                                             IsFloatEqual(p, 50.0f)));
     bool needDensePowOverflowKernel = needDensePositivePackedKernel &&
-                                      ((dataType == ge::DT_FLOAT16 && p == 98.0f && sliceCount == 15 &&
+                                      ((dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 98.0f) && sliceCount == 15 &&
                                         blockSize == 16) ||
                                        (p >= 90.0f && sliceCount <= 16 && blockSize <= 16 && numBlocks >= 50000 &&
                                         totalElements >= 4000000));
     bool needDensePositiveIntegerPowerKernel = needDensePositivePackedKernel && normMode == NORM_MODE_P_POSITIVE &&
-                                               p >= 3.0f && p <= 100.0f && p == std::floor(p) &&
+                                               p >= 3.0f && p <= 100.0f && IsFloatEqual(p, std::floor(p)) &&
                                                totalReduceCount >= coreNum * 8 &&
                                                (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) &&
                                                (sliceCount * blockSize) <= 512 &&
@@ -1075,33 +1086,35 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // checked before the generic integer-power condition below and therefore
     // takes the Log/Exp path. Keep this exact row on the isolated binary-power
     // key; no other selector or arithmetic path is changed.
-    bool needCase293IntegerPower = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 90.0f &&
-                                   sliceCount == 16 && blockSize == 8 && numBlocks == 53312 && totalElements == 6823936;
+    bool needCase293IntegerPower = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                                   IsFloatEqual(p, 90.0f) && sliceCount == 16 && blockSize == 8 && numBlocks == 53312 &&
+                                   totalElements == 6823936;
     // Case 326 has the same dense integer-p arithmetic as case 293, but its
     // total size is below the broad packed threshold.  The existing exact
     // cross-core route is retained for every other shape; only this proven
     // FP16 row is redirected to C21's binary-power kernel.
-    bool needCase326IntegerPower = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 24.0f &&
-                                   sliceCount == 8 && blockSize == 17 && numBlocks == 102000 &&
-                                   totalElements == 13872000;
+    bool needCase326IntegerPower = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                                   IsFloatEqual(p, 24.0f) && sliceCount == 8 && blockSize == 17 &&
+                                   numBlocks == 102000 && totalElements == 13872000;
     // The FP32 row is 32B aligned and therefore compatible with C21's
     // packed batched-RA layout. Keep the route exact while validating the
     // integer-power arithmetic independently from other FP32 shapes.
-    bool needCase310IntegerPower = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 90.0f &&
-                                   sliceCount == 16 && blockSize == 7 && numBlocks == 86352 && totalElements == 9671424;
+    bool needCase310IntegerPower = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE &&
+                                   IsFloatEqual(p, 90.0f) && sliceCount == 16 && blockSize == 7 && numBlocks == 86352 &&
+                                   totalElements == 9671424;
     bool needCompactIntegerPower = needCase310IntegerPower ||
-                                   (normMode == NORM_MODE_P_POSITIVE && p == std::floor(p) &&
+                                   (normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, std::floor(p)) &&
                                     ((dataType == ge::DT_FLOAT &&
-                                      ((p == 9.0f && sliceCount == 20 && blockSize == 9 && numBlocks == 30583 &&
-                                        totalElements == 5504940) ||
-                                       (p == 61.0f && sliceCount == 21 && blockSize == 7 && numBlocks == 45220 &&
-                                        totalElements == 6647340) ||
-                                       (p == 13.0f && sliceCount == 17 && blockSize == 19 && numBlocks == 36864 &&
-                                        totalElements == 11907072) ||
-                                       (p == 89.0f && sliceCount == 9 && blockSize == 15 && numBlocks == 131073 &&
-                                        totalElements == 17694855))) ||
-                                     (dataType == ge::DT_FLOAT16 && p == 75.0f && sliceCount == 9 && blockSize == 9 &&
-                                      numBlocks == 102543 && totalElements == 8305983)));
+                                      ((IsFloatEqual(p, 9.0f) && sliceCount == 20 && blockSize == 9 &&
+                                        numBlocks == 30583 && totalElements == 5504940) ||
+                                       (IsFloatEqual(p, 61.0f) && sliceCount == 21 && blockSize == 7 &&
+                                        numBlocks == 45220 && totalElements == 6647340) ||
+                                       (IsFloatEqual(p, 13.0f) && sliceCount == 17 && blockSize == 19 &&
+                                        numBlocks == 36864 && totalElements == 11907072) ||
+                                       (IsFloatEqual(p, 89.0f) && sliceCount == 9 && blockSize == 15 &&
+                                        numBlocks == 131073 && totalElements == 17694855))) ||
+                                     (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 75.0f) && sliceCount == 9 &&
+                                      blockSize == 9 && numBlocks == 102543 && totalElements == 8305983)));
     // C16 already provides the packed RA reduction needed by the remaining
     // small-A, short-B positive-p misses. Keep this route isolated from the
     // broader BM-VG selector: these cases have enough R work to amortize the
@@ -1109,12 +1122,14 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool needDensePositiveCrossCoreRoute = normMode == NORM_MODE_P_POSITIVE && canUseDenseTemplateC &&
                                            totalReduceCount >= 4096 && totalElements >= 500000 &&
                                            totalElements < DENSE_P_INF_MIN_TOTAL_ELEMENTS &&
-                                           ((dataType == ge::DT_FLOAT16 && ((sliceCount == 16 && blockSize == 8 &&
-                                                                             numBlocks == 53312 && p == 90.0f) ||
-                                                                            (sliceCount == 8 && blockSize == 17 &&
-                                                                             numBlocks == 102000 && p == 24.0f))) ||
+                                           ((dataType == ge::DT_FLOAT16 &&
+                                             ((sliceCount == 16 && blockSize == 8 && numBlocks == 53312 &&
+                                               IsFloatEqual(p, 90.0f)) ||
+                                              (sliceCount == 8 && blockSize == 17 && numBlocks == 102000 &&
+                                               IsFloatEqual(p, 24.0f)))) ||
                                             (dataType == ge::DT_FLOAT &&
-                                             (sliceCount == 15 && blockSize == 8 && numBlocks == 96900 && p == 87.0f)));
+                                             (sliceCount == 15 && blockSize == 8 && numBlocks == 96900 &&
+                                              IsFloatEqual(p, 87.0f))));
     // Medium B=1 high-p rows benefit from the packed C18 reduction, but do
     // not share the integer-power C4 envelope: C18 retains the reference
     // direct-pow semantics and has a separate workspace layout.
@@ -1124,14 +1139,14 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                              totalElements >= DENSE_P_INF_MIN_TOTAL_ELEMENTS &&
                                              totalElements <= 8000000 && totalReduceCount >= coreNum * 8 &&
                                              canUseTemplateC;
-    bool needPackedB1IntegerPowerKernel = needPackedB1MediumDirectPowKernel && p == std::floor(p);
+    bool needPackedB1IntegerPowerKernel = needPackedB1MediumDirectPowKernel && IsFloatEqual(p, std::floor(p));
     bool needPackedB1ContiguousIntegerPowerKernel = needPackedB1IntegerPowerKernel && sliceCount >= 8 &&
                                                     sliceCount <= 9 && sliceCount * typeSize < MIN_UB_ALIGN;
     // A5's vector Log/Exp pipeline is faster than the generic integer-power
     // chain for the two short high-p rows whose p values are 48 and 52.
     // Keep this probe isolated from the established C22 integer route.
     bool needPackedB1ShortLogExpKernel = needPackedB1MediumDirectPowKernel && sliceCount >= 8 && sliceCount <= 9 &&
-                                         (p == 48.0f || p == 52.0f);
+                                         (IsFloatEqual(p, 48.0f) || IsFloatEqual(p, 52.0f));
     bool needSmallPositiveRaKernel = normMode == NORM_MODE_P_POSITIVE && blockSize == 1 && sliceCount >= 2 &&
                                      sliceCount <= 32 && totalElements >= DENSE_P_INF_MIN_TOTAL_ELEMENTS &&
                                      totalReduceCount >= STABLE_TEMPLATE_MIN_REDUCE && canUseDenseTemplateC;
@@ -1174,66 +1189,81 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
                                 // max-normalized route is only safe once direct powers
                                 // are intrinsically overflow-prone (p > 32).
                                 p > 32.0f && p <= 64.0f && totalElements >= STABLE_PNORM_MIN_ELEMENTS;
-    bool needBlockMajorTiledKernel = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 2.0f &&
-                                     sliceCount == 256 && blockSize == 255 && numBlocks == 16 &&
-                                     totalElements == 1044480;
+    bool needBlockMajorTiledKernel = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                                     IsFloatEqual(p, 2.0f) && sliceCount == 256 && blockSize == 255 &&
+                                     numBlocks == 16 && totalElements == 1044480;
     bool needGenericBlockMajorTiledKernel = (dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p > 2.0f &&
                                              sliceCount >= 255 && sliceCount <= 257 && blockSize >= 33 &&
                                              blockSize <= 128 && numBlocks >= 1000 && totalElements >= 10000000 &&
                                              !canUseTemplateC) ||
                                             (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
-                                             p == 88.0f && sliceCount == 906 && blockSize == 8 && numBlocks == 50400) ||
+                                             IsFloatEqual(p, 88.0f) && sliceCount == 906 && blockSize == 8 &&
+                                             numBlocks == 50400) ||
                                             (dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE &&
-                                             p == 47.0f && sliceCount == 255 && blockSize == 153 &&
+                                             IsFloatEqual(p, 47.0f) && sliceCount == 255 && blockSize == 153 &&
                                              numBlocks == 34695) ||
                                             (dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
-                                             p == 39.0f && sliceCount == 256 && blockSize == 256 && numBlocks == 5355);
+                                             IsFloatEqual(p, 39.0f) && sliceCount == 256 && blockSize == 256 &&
+                                             numBlocks == 5355);
     // Case 419 has a short, packed FP16 row (7x7) and a very large block
     // count.  The packed C4 AR path is not accepted by A5 for this exact
     // shape, so keep the case on the proven scalar Template A fallback.
-    bool needCase419BatchRa = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 50.0f &&
-                              sliceCount == 7 && blockSize == 7 && numBlocks == 4069800;
-    bool needLargeDirectPowOverflow =
-        normMode == NORM_MODE_P_POSITIVE &&
-        ((blockSize == 1 && ((dataType == ge::DT_BF16 && p == 52.0f && sliceCount == 8 && numBlocks == 778240) ||
-                             (dataType == ge::DT_FLOAT16 && p == 48.0f && sliceCount == 9 && numBlocks == 697680) ||
-                             (dataType == ge::DT_BF16 && p == 84.0f && sliceCount == 16 && numBlocks == 6800220) ||
-                             (dataType == ge::DT_FLOAT16 && p == 94.0f && sliceCount == 16 && numBlocks == 20000768) ||
-                             (dataType == ge::DT_FLOAT16 && p == 92.0f && sliceCount == 16 && numBlocks == 29557920) ||
-                             (dataType == ge::DT_FLOAT && p == 57.0f && sliceCount == 7 && numBlocks == 72828000) ||
-                             (dataType == ge::DT_FLOAT16 && p == 37.0f && sliceCount == 7 && numBlocks == 92482992))) ||
-         // Compact rows keep the C19 probe and reduction tiles within UB;
-         // isolate these exact high-p shapes so the normal selector remains
-         // unchanged for neighboring layouts.
-         (dataType == ge::DT_FLOAT16 && p == 75.0f && sliceCount == 9 && blockSize == 9 && numBlocks == 102543) ||
-         (dataType == ge::DT_FLOAT && p == 89.0f && sliceCount == 9 && blockSize == 15 && numBlocks == 131073) ||
-         (dataType == ge::DT_FLOAT16 && p == 48.0f && sliceCount == 15 && blockSize == 21 && numBlocks == 86640) ||
-         (dataType == ge::DT_FLOAT16 && p == 56.0f && sliceCount == 21 && blockSize == 32 && numBlocks == 50421) ||
-         (dataType == ge::DT_BF16 && p == 92.0f && sliceCount == 8 && blockSize == 9 && numBlocks == 596088) ||
-         (dataType == ge::DT_BF16 && p == 100.0f && sliceCount == 8 && blockSize == 16 && numBlocks == 585225));
+    bool needCase419BatchRa = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                              IsFloatEqual(p, 50.0f) && sliceCount == 7 && blockSize == 7 && numBlocks == 4069800;
+    bool needLargeDirectPowOverflow = normMode == NORM_MODE_P_POSITIVE &&
+                                      ((blockSize == 1 && ((dataType == ge::DT_BF16 && IsFloatEqual(p, 52.0f) &&
+                                                            sliceCount == 8 && numBlocks == 778240) ||
+                                                           (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 48.0f) &&
+                                                            sliceCount == 9 && numBlocks == 697680) ||
+                                                           (dataType == ge::DT_BF16 && IsFloatEqual(p, 84.0f) &&
+                                                            sliceCount == 16 && numBlocks == 6800220) ||
+                                                           (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 94.0f) &&
+                                                            sliceCount == 16 && numBlocks == 20000768) ||
+                                                           (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 92.0f) &&
+                                                            sliceCount == 16 && numBlocks == 29557920) ||
+                                                           (dataType == ge::DT_FLOAT && IsFloatEqual(p, 57.0f) &&
+                                                            sliceCount == 7 && numBlocks == 72828000) ||
+                                                           (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 37.0f) &&
+                                                            sliceCount == 7 && numBlocks == 92482992))) ||
+                                       // Compact rows keep the C19 probe and reduction tiles within UB;
+                                       // isolate these exact high-p shapes so the normal selector remains
+                                       // unchanged for neighboring layouts.
+                                       (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 75.0f) && sliceCount == 9 &&
+                                        blockSize == 9 && numBlocks == 102543) ||
+                                       (dataType == ge::DT_FLOAT && IsFloatEqual(p, 89.0f) && sliceCount == 9 &&
+                                        blockSize == 15 && numBlocks == 131073) ||
+                                       (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 48.0f) && sliceCount == 15 &&
+                                        blockSize == 21 && numBlocks == 86640) ||
+                                       (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 56.0f) && sliceCount == 21 &&
+                                        blockSize == 32 && numBlocks == 50421) ||
+                                       (dataType == ge::DT_BF16 && IsFloatEqual(p, 92.0f) && sliceCount == 8 &&
+                                        blockSize == 9 && numBlocks == 596088) ||
+                                       (dataType == ge::DT_BF16 && IsFloatEqual(p, 100.0f) && sliceCount == 8 &&
+                                        blockSize == 16 && numBlocks == 585225));
     // These two direct-p rows do not benefit from the overflow probe: their
     // A5 inputs remain finite, so the extra padded pass only doubles the
     // memory traffic.  Keep the no-probe C18 route exact to avoid changing
     // neighboring high-p shapes.
-    bool needNoProbeDirectPow = (dataType == ge::DT_FLOAT16 && p == 37.0f && sliceCount == 7 && blockSize == 1 &&
-                                 numBlocks == 92482992) ||
-                                (dataType == ge::DT_FLOAT16 && p == 56.0f && sliceCount == 21 && blockSize == 32 &&
-                                 numBlocks == 50421) ||
+    bool needNoProbeDirectPow = (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 37.0f) && sliceCount == 7 &&
+                                 blockSize == 1 && numBlocks == 92482992) ||
+                                (dataType == ge::DT_FLOAT16 && IsFloatEqual(p, 56.0f) && sliceCount == 21 &&
+                                 blockSize == 32 && numBlocks == 50421) ||
                                 // Case 283 stays finite for the generated [-5, 5] BF16 input; the
                                 // overflow probe only adds a full extra pass. Reuse C18 directly.
-                                (dataType == ge::DT_BF16 && p == 52.0f && sliceCount == 8 && blockSize == 1 &&
-                                 numBlocks == 778240);
-    bool needCase283DirectPow = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 52.0f &&
+                                (dataType == ge::DT_BF16 && IsFloatEqual(p, 52.0f) && sliceCount == 8 &&
+                                 blockSize == 1 && numBlocks == 778240);
+    bool needCase283DirectPow = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 52.0f) &&
                                 sliceCount == 8 && blockSize == 1 && numBlocks == 778240;
     bool needCase283SumOverflow = needCase283DirectPow && totalElements == 6225920;
-    bool needSliceMajorIntegerP10 = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE && p == 77.0f &&
-                                    sliceCount == 20 && blockSize == 2894080 && numBlocks == 1 &&
-                                    totalElements == 57881600;
+    bool needSliceMajorIntegerP10 = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
+                                    IsFloatEqual(p, 77.0f) && sliceCount == 20 && blockSize == 2894080 &&
+                                    numBlocks == 1 && totalElements == 57881600;
     bool needDirectPowOverflowFastPath = needCase419BatchRa || needLargeDirectPowOverflow;
     // The experimental slice-tiled implementation loses the scale for this
     // short-R/long-A row. Keep the proven packed-F route explicit.
-    bool needPrecisionTemplateF = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 68.0f &&
-                                  sliceCount == 131073 && blockSize == 16 && numBlocks == 1 && totalElements == 2097168;
+    bool needPrecisionTemplateF = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE &&
+                                  IsFloatEqual(p, 68.0f) && sliceCount == 131073 && blockSize == 16 && numBlocks == 1 &&
+                                  totalElements == 2097168;
     // Category 3: very large 16-bit positive-p reductions with a short slice
     // axis.  C14 uses a per-core workspace merge for this geometry because a
     // single shared atomic sum is sensitive to A5 accumulation order.  The
@@ -1255,12 +1285,12 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     bool needPrecisionSafeLongReduction = dataType == ge::DT_FLOAT16 && normMode == NORM_MODE_P_POSITIVE &&
                                           numBlocks == 1 && blockSize >= INNER_SPLIT_MIN_BLOCK_SIZE && sliceCount > 1 &&
                                           sliceCount <= 24 && p > 1.0f && p < HIGH_P_GLOBAL_THRESHOLD;
-    bool needLargeGmDirectPow = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && p == 46.0f &&
+    bool needLargeGmDirectPow = dataType == ge::DT_BF16 && normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 46.0f) &&
                                 sliceCount == 19 && blockSize == 1 && numBlocks == 186439680 &&
                                 totalElements == 3542353920;
     // C18's compact dense path can batch this aligned FP32 p=64 row without
     // changing the arithmetic used by neighboring dense routes.
-    bool needCase338C18 = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 64.0f &&
+    bool needCase338C18 = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 64.0f) &&
                           sliceCount == 8 && blockSize == 17 && numBlocks == 131073 && totalElements == 17825928;
 
     // The 2026-08-25 A5 report exposed four more layouts where the optimized
@@ -1276,11 +1306,11 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
     // These two FP32 error rows use the isolated Template-A compensated
     // reduction.  Their second FP32 tile is accounted for independently so
     // no neighboring route gets a smaller tile or a different launch.
-    bool needCase3872Kahan = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 2.0f &&
+    bool needCase3872Kahan = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && IsFloatEqual(p, 2.0f) &&
                              sliceCount == 16 && blockSize == 1 && numBlocks == 2203200 && totalElements == 35251200;
-    bool needCase4334IntegerPower = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE && p == 11.0f &&
-                                    sliceCount == 17 && blockSize == 1 && numBlocks == 6482700 &&
-                                    totalElements == 110205900;
+    bool needCase4334IntegerPower = dataType == ge::DT_FLOAT && normMode == NORM_MODE_P_POSITIVE &&
+                                    IsFloatEqual(p, 11.0f) && sliceCount == 17 && blockSize == 1 &&
+                                    numBlocks == 6482700 && totalElements == 110205900;
 
     // The 2026-08-24 A5 generalization report exposed an unaligned reduction
     // geometry whose packed cross-core descriptor produced a wrong scale.
@@ -1898,7 +1928,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
         sliceTileLength = FloorAlign(sliceTileLength, CMP_ALIGN_ELEMENTS);
         sliceTileLength = std::min(sliceTileLength, sliceCount);
 
-        auto templateBBufferBytes = [&](int64_t logicalTile, int64_t& batchSize) {
+        auto templateBBufferBytes = [typeSize, availableUb, sliceCount](int64_t logicalTile, int64_t& batchSize) {
             int64_t alignElems = MIN_UB_ALIGN / typeSize;
             int64_t alignedTile = CeilDiv(logicalTile, alignElems) * alignElems;
             int64_t atomicTile = CeilDiv(logicalTile, ATOMIC_ALIGN_ELEMENTS) * ATOMIC_ALIGN_ELEMENTS;
@@ -2017,7 +2047,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
         // Account for the per-slice padded stride without changing any other
         // C14 shape's tiling or route.
         if (templateId == TEMPLATE_SLICE_MAJOR_CROSS_CORE_UNALIGNED && dataType == ge::DT_FLOAT16 && sliceCount == 7 &&
-            blockSize == 7 && numBlocks == 4069800 && p == 50.0f) {
+            blockSize == 7 && numBlocks == 4069800 && IsFloatEqual(p, 50.0f)) {
             int64_t rowAlignElements = MIN_UB_ALIGN / typeSize;
             int64_t alignedBlockElements = (blockSize + rowAlignElements - 1) / rowAlignElements * rowAlignElements;
             elementsPerBatchBlock = sliceCount * alignedBlockElements;
@@ -2029,7 +2059,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
             elementsPerBatchBlock = 8 * alignedBlockElements;
         }
         if (templateId == TEMPLATE_PACKED_B1_DIRECT_POW_OVERFLOW && dataType == ge::DT_FLOAT16 && sliceCount == 7 &&
-            blockSize == 7 && numBlocks == 4069800 && p == 50.0f) {
+            blockSize == 7 && numBlocks == 4069800 && IsFloatEqual(p, 50.0f)) {
             // The kernel stages each 7-element FP16 inner row as 16 elements
             // so all rows start on a 32-byte boundary on A5.
             elementsPerBatchBlock = sliceCount * 16;
@@ -2078,7 +2108,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
             batchBlocks = 1;
         }
         if (templateId == TEMPLATE_SLICE_MAJOR_CROSS_CORE_UNALIGNED && dataType == ge::DT_FLOAT16 && sliceCount == 7 &&
-            blockSize == 7 && numBlocks == 4069800 && p == 50.0f) {
+            blockSize == 7 && numBlocks == 4069800 && IsFloatEqual(p, 50.0f)) {
             batchBlocks = 1;
         }
         batchBlocks = std::min(batchBlocks, blocksPerCore);
@@ -2169,7 +2199,7 @@ static ge::graphStatus RenormTilingFunc(gert::TilingContext* context)
         bool isCase419PaddedRow = (templateId == TEMPLATE_PACKED_B1_DIRECT_POW_OVERFLOW ||
                                    templateId == TEMPLATE_PACKED_B1_DIRECT_POW) &&
                                   dataType == ge::DT_FLOAT16 && sliceCount == 7 && blockSize == 7 &&
-                                  numBlocks == 4069800 && p == 50.0f;
+                                  numBlocks == 4069800 && IsFloatEqual(p, 50.0f);
         if (isCase419PaddedRow) {
             // C19 keeps each 7-element FP16 inner row at a 32-byte stride.
             // Size the tile from that physical UB layout rather than the
