@@ -2542,10 +2542,10 @@ sort@ops-nn:
         - ops/ops-nn/index/kth_value/
         - ops/ops-nn/index/median/
         - ops/ops-nn/index/nan_median/
-        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.cpp
-        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.h
-        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique2.cpp
-        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique2.h
+        - ops/ops-nn/index/unique/op_api/aclnn_unique.cpp
+        - ops/ops-nn/index/unique/op_api/aclnn_unique.h
+        - ops/ops-nn/index/unique/op_api/aclnn_unique2.cpp
+        - ops/ops-nn/index/unique/op_api/aclnn_unique2.h
       opensource_style: null
       kernel_style: null
     unrelease:
