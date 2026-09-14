@@ -86,12 +86,13 @@ static bool CheckReduction(int64_t reduction, const aclTensor* out)
 {
     // 如果reduction != None，out的shape应为Scalar
     if ((reduction != 0) && (out->GetViewShape().GetDimNum() != 0)) {
-        OP_LOGW("Reduction is %ld, out shape must be [1].", reduction);
+        OP_LOGW("Reduction is %ld, out shape must be scalar, but got %s.", reduction,
+                op::ToString(out->GetViewShape()).GetString());
     }
 
     // 判断reduction取值是否合法
     if ((reduction < 0) || (reduction > REDUCTION_MAX_NUM)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction only support [0, 1, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction only support [0, 1, 2], but got %ld.", reduction);
         return false;
     }
 
