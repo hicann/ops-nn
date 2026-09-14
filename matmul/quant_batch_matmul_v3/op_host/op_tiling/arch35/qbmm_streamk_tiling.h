@@ -54,7 +54,7 @@ protected:
                     const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 private:
-    void Reset();
+    void ResetTilingData();
     bool IsMxInput() const;
     bool IsPertensorStreamKInput() const;
     bool IsPostDequantBiasInput() const;

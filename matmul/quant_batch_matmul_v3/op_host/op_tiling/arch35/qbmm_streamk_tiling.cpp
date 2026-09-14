@@ -832,10 +832,10 @@ FixpipeCostResult EstimateFixpipeCost(uint64_t n, uint64_t baseN, uint64_t nCnt,
 QBMMV3StreamKTiling::QBMMV3StreamKTiling(gert::TilingContext* context)
     : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
 {
-    Reset();
+    ResetTilingData();
 }
 
-void QBMMV3StreamKTiling::Reset()
+void QBMMV3StreamKTiling::ResetTilingData()
 {
     isBf16Opt_ = false;
     isUbQuant_ = false;

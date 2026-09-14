@@ -144,7 +144,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
     return true;
 }
 
-static void SetStorageShapeForNZ(aclTensor* tensor)
+static void SetStorageShapeForNZ(const aclTensor* tensor)
 {
     // storageShape的倒数第一维要放大8倍， 比如(n/32,k/16,16,4) -> (n/32,k/16,16,32)
     auto storageShape = tensor->GetStorageShape();

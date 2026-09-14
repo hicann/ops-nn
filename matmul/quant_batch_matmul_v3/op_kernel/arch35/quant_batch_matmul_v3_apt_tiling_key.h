@@ -31,11 +31,11 @@
 #endif
 
 #if defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__
-#define IS_BLAZE false
+#define IS_BLAZE 0
 #elif defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
-#define IS_BLAZE true
+#define IS_BLAZE 1
 #else
-#define IS_BLAZE false
+#define IS_BLAZE 0
 #endif
 
 #if (!defined(__CUBE_S8S4_S4S4__) || !__CUBE_S8S4_S4S4__) && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && \
@@ -71,7 +71,7 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_MX_DTYPE_TPL false
 #endif
 
-#if IS_BLAZE
+#if (IS_BLAZE == 1)
 #define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY QBMMV3_IS_MX_DTYPE_TPL
 #else
 #define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY false

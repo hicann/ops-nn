@@ -9,7 +9,6 @@
  */
 
 #include "aclnn_quant_matmul_v4.h"
-#include <dlfcn.h>
 #include "aclnn_quant_matmul_v3.h"
 #include "aclnn_quant_matmul_weight_nz.h"
 #include "securec.h"
