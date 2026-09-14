@@ -68,7 +68,6 @@
     </tr>
   </tbody></table>
 
-- Ascend 950PR/Ascend 950DT：不支持INT16。
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16、INT16。
 
 ## 约束说明

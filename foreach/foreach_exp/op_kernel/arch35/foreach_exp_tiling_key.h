@@ -21,13 +21,19 @@
 #define FOREACH_EXP_TPL_SCH_MODE_FLOAT 0
 #define FOREACH_EXP_TPL_SCH_MODE_FLOAT16 1
 #define FOREACH_EXP_TPL_SCH_MODE_BF16 2
+#define FOREACH_EXP_TPL_SCH_MODE_INT16 3
+#define FOREACH_EXP_TPL_SCH_MODE_INT8 4
+#define FOREACH_EXP_TPL_SCH_MODE_UINT8 5
 
-ASCENDC_TPL_ARGS_DECL(ForeachExp,
-                      ASCENDC_TPL_UINT_DECL(schMode, 3, ASCENDC_TPL_UI_LIST, FOREACH_EXP_TPL_SCH_MODE_FLOAT,
-                                            FOREACH_EXP_TPL_SCH_MODE_FLOAT16, FOREACH_EXP_TPL_SCH_MODE_BF16));
+ASCENDC_TPL_ARGS_DECL(ForeachExp, ASCENDC_TPL_UINT_DECL(schMode, 6, ASCENDC_TPL_UI_LIST, FOREACH_EXP_TPL_SCH_MODE_FLOAT,
+                                                        FOREACH_EXP_TPL_SCH_MODE_FLOAT16, FOREACH_EXP_TPL_SCH_MODE_BF16,
+                                                        FOREACH_EXP_TPL_SCH_MODE_INT16, FOREACH_EXP_TPL_SCH_MODE_INT8,
+                                                        FOREACH_EXP_TPL_SCH_MODE_UINT8));
 
 ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FOREACH_EXP_TPL_SCH_MODE_FLOAT,
                                                           FOREACH_EXP_TPL_SCH_MODE_FLOAT16,
-                                                          FOREACH_EXP_TPL_SCH_MODE_BF16)));
+                                                          FOREACH_EXP_TPL_SCH_MODE_BF16, FOREACH_EXP_TPL_SCH_MODE_INT16,
+                                                          FOREACH_EXP_TPL_SCH_MODE_INT8,
+                                                          FOREACH_EXP_TPL_SCH_MODE_UINT8)));
 
 #endif // FOREACH_EXP_TILING_KEY_H

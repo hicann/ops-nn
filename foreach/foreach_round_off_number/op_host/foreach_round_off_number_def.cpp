@@ -46,7 +46,7 @@ public:
         this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig aicoreConfig950;
-        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT16};
         std::vector<ge::Format> format_list_950(tensor_dtype_list_950.size(), ge::FORMAT_ND);
         std::vector<ge::DataType> scalarDtypeList950{tensor_dtype_list_950.size(), ge::DT_INT8};
         aicoreConfig950.DynamicCompileStaticFlag(true)

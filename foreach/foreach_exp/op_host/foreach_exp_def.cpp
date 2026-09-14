@@ -42,7 +42,10 @@ public:
         this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig regbaseCfg;
-        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+                                                                 ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
+        std::vector<ge::DataType> output_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+                                                                 ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT};
         std::vector<ge::Format> format_list_ascend950(tensor_dtype_list_ascend950.size(), ge::FORMAT_ND);
         regbaseCfg.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -58,7 +61,7 @@ public:
             .AutoContiguous();
         regbaseCfg.Output("y")
             .ParamType(DYNAMIC)
-            .DataType(tensor_dtype_list_ascend950)
+            .DataType(output_dtype_list_ascend950)
             .Format(format_list_ascend950)
             .UnknownShapeFormat(format_list_ascend950)
             .AutoContiguous();

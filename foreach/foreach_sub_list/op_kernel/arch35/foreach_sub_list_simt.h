@@ -40,13 +40,13 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
     return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
 }
 
-template <typename T>
+template <typename T, typename AlphaT>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSubListSimt(int32_t tensorId, int64_t count,
                                                                                  GM_ADDR x1List, GM_ADDR x2List,
                                                                                  GM_ADDR alpha, GM_ADDR yList)
 {
-    __gm__ T* alphaPtr = reinterpret_cast<__gm__ T*>(alpha);
-    T alphaVal = alphaPtr[0];
+    __gm__ AlphaT* alphaPtr = reinterpret_cast<__gm__ AlphaT*>(alpha);
+    AlphaT alphaVal = alphaPtr[0];
     __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, tensorId);
     __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, tensorId);
     __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
@@ -60,13 +60,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSubListSimt
             float alphaF = static_cast<float>(alphaVal);
             float result = x1Val - alphaF * x2Val;
             yData[idx] = static_cast<T>(result);
+        } else if constexpr (std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
+            int32_t result = static_cast<int32_t>(x1Data[idx]) - alphaVal * static_cast<int32_t>(x2Data[idx]);
+            yData[idx] = static_cast<T>(result);
         } else {
             yData[idx] = x1Data[idx] - alphaVal * x2Data[idx];
         }
     }
 }
 
-template <typename T>
+template <typename T, typename AlphaT>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
                                const ForeachSubListTilingData* tilingGm)
 {
@@ -75,8 +78,8 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
         if (count <= 0) {
             continue;
         }
-        AscendC::Simt::VF_CALL<OpForeachSubListSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x1, x2, alpha,
-                                                        y);
+        AscendC::Simt::VF_CALL<OpForeachSubListSimt<T, AlphaT>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x1,
+                                                                x2, alpha, y);
     }
 }
 

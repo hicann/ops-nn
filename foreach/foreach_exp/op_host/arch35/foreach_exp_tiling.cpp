@@ -105,6 +105,12 @@ static ge::graphStatus ForeachExpTilingFunc(gert::TilingContext* context)
         tilingKey = GET_TPL_TILING_KEY(FOREACH_EXP_TPL_SCH_MODE_FLOAT16);
     } else if (dataType == ge::DT_BF16) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_EXP_TPL_SCH_MODE_BF16);
+    } else if (dataType == ge::DT_INT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXP_TPL_SCH_MODE_INT16);
+    } else if (dataType == ge::DT_INT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXP_TPL_SCH_MODE_INT8);
+    } else if (dataType == ge::DT_UINT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXP_TPL_SCH_MODE_UINT8);
     } else {
         OP_LOGE(context, "unsupported dtype for foreach_exp");
         return ge::GRAPH_FAILED;

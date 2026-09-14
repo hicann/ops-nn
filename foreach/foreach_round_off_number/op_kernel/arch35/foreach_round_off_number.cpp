@@ -25,6 +25,7 @@ enum class ForeachRoundOffNumberTilingKey : uint32_t {
     TILING_KEY_FLOAT = 0,
     TILING_KEY_FLOAT16 = 1,
     TILING_KEY_BF16 = 2,
+    TILING_KEY_INT16 = 3,
 };
 
 template <uint32_t schMode>
@@ -40,5 +41,7 @@ __global__ __aicore__ void foreach_round_off_number(GM_ADDR x, GM_ADDR roundMode
         NsForeachRoundOffNumber::Process<half>(x, roundMode, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachRoundOffNumberTilingKey::TILING_KEY_BF16)) {
         NsForeachRoundOffNumber::Process<bfloat16_t>(x, roundMode, y, &tilingData);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachRoundOffNumberTilingKey::TILING_KEY_INT16)) {
+        NsForeachRoundOffNumber::Process<int16_t>(x, roundMode, y, &tilingData);
     }
 }
