@@ -17,7 +17,8 @@
  *        核内 channel chunk(cLenCap) × R 分片(sliceR) × N 行 tile(rowsPerTile)。
  *        NHWC 路径（含 ND C==1 大规模 / ND R==1 巨 C 的 reroute，布局同构）：
  *        [rows, C] 行主序（C=最后一维）；channelSplit（C 大，零通信零 ws）或
- *        rowSplit（C 小，原子加直写输出 GM，零 ws 零 SyncAll，并行度恒=核数）。
+ *        rowSplit（C 小，0 号核覆盖写 + SyncAll + 其余核原子加直写输出 GM，零 ws，
+ *        并行度恒=核数；SyncAll 依赖 batch mode，见 FillTilingData）。
  *        统计量 batch_mean/batch_variance 恒为 [C] 逻辑布局，元素数=C 校验。
  */
 
@@ -450,9 +451,14 @@ ge::graphStatus BNTrainingUpdateGradTiling::FillTilingData()
 
     context_->SetBlockDim(channelCores_);
     context_->SetTilingKey(0); // key 恒为 0；ND/NHWC 运行时按 isNhwc 分发，dtype 编译期三二进制
+    if (nhwcSplitMode_ == 2) {
+        // kernel 使用 SyncAll（rowSplit 跨核合并：0 号核覆盖写 → 全核栅障 → 其余核原子加），
+        // 需设置为 batch mode，所有核同时启动——否则分波启动下 SyncAll 等不到后波核，死锁
+        context_->SetScheduleMode(1);
+    }
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = static_cast<size_t>(wsBytes_); // rowSplit 部分和；ND/channelSplit 恒 0
+    workspaces[0] = static_cast<size_t>(wsBytes_); // 恒 0：rowSplit 原子加直写零 ws，ND/channelSplit 零通信
 
     if (isNhwc_) {
         OP_LOGI(context_,

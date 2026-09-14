@@ -339,10 +339,12 @@ private:
         }
     }
 
-    // rowSplit：本核行段 [cStart_, cStart_+cRangeLen_)×全部 C（单窗）；部分和原子加直写
-    // 输出 GM（bn_training_reduce 同款已验证形态：SetAtomicAdd + DataCopyPad + SetAtomicNone），
-    // 零 workspace、零 SyncAll、零两段归约——TTK bin 模式实测 ws 段 DataCopyPad 写入触发
-    // VECTOR_CORE_EXCEPTION（ws 段走 HUGE_PAGE_ONLY 分配），原子加直写输出 GM 无此问题。
+    // rowSplit：本核行段 [cStart_, cStart_+cRangeLen_)×全部 C（单窗）；0 号核覆盖写输出 →
+    // SyncAll → 其余核 SetAtomicAdd 原子加直写（bn_training_reduce 同款已验证形态：
+    // SetAtomicAdd + DataCopyPad + SetAtomicNone），零 workspace、零两段归约——TTK bin 模式
+    // 实测 ws 段 DataCopyPad 写入触发 VECTOR_CORE_EXCEPTION（ws 段走 HUGE_PAGE_ONLY 分配），
+    // 原子加直写输出 GM 无此问题。SyncAll 要求所有核同波常驻（tiling 侧 rowSplit 分支已设
+    // SetScheduleMode(1) batch mode）。
     // 输出为各核部分和的浮点原子和：顺序不定但误差 O(eps)（部分和数量 = 核数 ≤64）。
     __aicore__ inline void ProcessNhwcRowSplit()
     {
@@ -350,7 +352,7 @@ private:
         if (GetBlockIdx() == 0) {
             // 0 号核覆盖写（初值无关）→ 全核栅障 → 其余核原子加：总和等价于"清零后全
             // 原子加"，输出对调用方的初始内容零依赖（TTK 输出预填全 1 亦正确）。
-            // SyncAll 裸调用（clipped_swiglu_grad/foreach_norm 同款先例，零 ws 零 flag）。
+            // SyncAll 裸调用（kernel 侧零 ws 零 flag；batch mode 由 tiling 侧 rowSplit 分支设置）。
             WriteAccToGm(diffOffsetGm_, (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr(), tl_->numC);
             WriteAccToGm(diffScaleGm_, (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr(), tl_->numC);
             SyncAll();

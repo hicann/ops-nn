@@ -62,7 +62,7 @@ private:
     bool isNhwc_ = false;
     int64_t nhwcSplitMode_ = 0; // 1=channelSplit；2=rowSplit
     int64_t rows_ = 0;          // NHWC 总行数 = numel/C
-    int64_t wsBytes_ = 0;       // rowSplit workspace 字节数（channelSplit/ND 恒 0）
+    int64_t wsBytes_ = 0;       // 恒 0：rowSplit 原子加直写零 ws；ND/channelSplit 零通信
 
     // 切分结果
     int64_t channelCores_ = 1;
