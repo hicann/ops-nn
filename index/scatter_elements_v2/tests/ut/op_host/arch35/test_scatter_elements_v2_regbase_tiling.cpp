@@ -52,6 +52,17 @@ static string to_string(const std::stringstream& tiling_data)
     return result;
 }
 
+static std::vector<int64_t> ParseTilingData(const std::string& tilingData)
+{
+    std::vector<int64_t> fields;
+    std::stringstream stream(tilingData);
+    int64_t field = 0;
+    while (stream >> field) {
+        fields.push_back(field);
+    }
+    return fields;
+}
+
 template <typename T>
 static string to_string(void* buf, size_t size)
 {
@@ -130,7 +141,7 @@ static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType indices_dtype,
                       .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, updates_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, data_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
+                      .DeterministicInfo(deterministic)
                       .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
                                   {"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)}})
                       .TilingData(param.get())
@@ -156,7 +167,29 @@ static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType indices_dtype,
     auto raw_tiling_data = tiling_context->GetRawTilingData();
     auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    EXPECT_EQ(tiling_data_result, expectTilingData);
+    // The new field is appended; preserve the existing expectations for all
+    // preceding fields, and check the shape flag independently.
+    const auto& indexStorageShape = indices_shape.GetStorageShape();
+    const auto& updateStorageShape = updates_shape.GetStorageShape();
+    bool sameShape = indexStorageShape.GetDimNum() == updateStorageShape.GetDimNum();
+    for (size_t i = 0; sameShape && i < indexStorageShape.GetDimNum(); ++i) {
+        sameShape = indexStorageShape.GetDim(i) == updateStorageShape.GetDim(i);
+    }
+    expectTilingData += sameShape ? "1 " : "0 ";
+    // These legacy cases do not enter adaptive add. Dedicated public-tiling
+    // tests cover the enabled flag; all older tiling fields stay unchanged.
+    expectTilingData += "0 ";
+    auto actualFields = ParseTilingData(tiling_data_result);
+    auto expectedFields = ParseTilingData(expectTilingData);
+    // Slot 34 packs rank/dim in the low 32 bits and the SortLib-owned temporary-buffer size in the high 32 bits.
+    // The latter is allowed to vary between CANN versions, so compare the operator-owned fields only.
+    constexpr size_t rankDimSortTmpSlot = 34;
+    ASSERT_GT(actualFields.size(), rankDimSortTmpSlot);
+    ASSERT_GT(expectedFields.size(), rankDimSortTmpSlot);
+    constexpr int64_t rankDimMask = 0xFFFFFFFFLL;
+    actualFields[rankDimSortTmpSlot] &= rankDimMask;
+    expectedFields[rankDimSortTmpSlot] &= rankDimMask;
+    EXPECT_EQ(actualFields, expectedFields);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_int8_int64_dim1)
@@ -177,7 +210,8 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_int8_int64_dim1_determ)
     gert::StorageShape shape1 = {{10}, {10}};
     gert::StorageShape shape2 = {{10}, {10}};
     gert::StorageShape shape3 = {{10}, {10}};
-    string expectTilingData = "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 65536 10 10 10 1 10 1 1 12 1 10 1 1 1 0 0 0 0 "
+    string expectTilingData = "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 212352 10 10 10 1 10 1 1 12 1 10 4 1 "
+                              "7421703487489 0 0 0 0 "
                               "0 0 0 0 0 0 0 0 ";
     uint64_t tilingKeyValue = 1001001;
 
@@ -255,8 +289,8 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_float_int64_dim5_determ)
     gert::StorageShape shape1 = {{10, 2, 18, 26, 5}, {10, 2, 18, 26, 5}};
     gert::StorageShape shape2 = {{10, 2, 18, 26, 5}, {10, 2, 18, 26, 5}};
     gert::StorageShape shape3 = {{10, 2, 18, 26, 5}, {10, 2, 18, 26, 5}};
-    string expectTilingData = "4680 1 1 1 1 1 1 4680 1 1 1 1 1 1 4680 1 1 1 1 1 1 16384 46800 46800 46800 1 10 4680 64 "
-                              "74 18 10 74 1 2 0 0 0 0 0 0 0 0 0 0 0 0 ";
+    string expectTilingData = "4680 1 1 1 1 1 1 4680 1 1 1 1 1 1 4680 1 1 1 1 1 1 53088 46800 46800 46800 1 10 4680 64 "
+                              "74 18 10 74 1 64871186038786 0 0 0 0 0 0 0 0 0 0 0 0 ";
     uint64_t tilingKeyValue = 1001100;
 
     ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, shape1, shape2, shape3, 0, "add", tilingKeyValue,
@@ -282,7 +316,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_int16_int32_dim6_determ)
     gert::StorageShape shape2 = {{2, 2, 8, 9, 5, 3}, {2, 2, 8, 9, 5, 3}};
     gert::StorageShape shape3 = {{2, 2, 8, 19, 5, 3}, {2, 2, 8, 19, 5, 3}};
     string expectTilingData = "3840 1920 240 15 1 1 1 2160 1080 135 15 1 1 1 4560 2280 285 15 1 1 1 8192 4320 7680 "
-                              "9120 4 8 135 9 15 15 8 60 0 131077 0 0 0 0 0 0 0 0 0 0 0 0 ";
+                              "9120 4 8 135 0 0 0 1 1 0 131077 0 0 0 0 0 0 0 0 0 0 0 0 ";
     uint64_t tilingKeyValue = 1000106;
 
     ExecuteTestCase(ge::DT_INT16, ge::DT_INT32, ge::DT_INT16, shape1, shape2, shape3, 2, "add", tilingKeyValue,

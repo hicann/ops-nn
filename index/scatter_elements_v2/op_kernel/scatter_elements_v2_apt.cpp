@@ -167,6 +167,23 @@ using namespace ScatterElements;
 #define SCAC_ELE_UINT64_IDX64_REDU_MUL_BF16 1011227
 #define SCAC_ELE_UINT64_IDX64_REDU_MUL_INT64 1011209
 
+// Tiling owns adaptive-reduce admission. Instantiate distinct warp and
+// general kernels once here, rather than checking eligibility for every tile.
+template <typename DATA_T, typename IDX_T, typename COMP_T>
+__aicore__ inline void LaunchDeterministicAdd(const ScatterElementsV2AscTilingData* tilingData, TPipe* pipe,
+                                              GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output)
+{
+    if (tilingData->enableAdaptiveReduce != 0) {
+        KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU_ADD, 1, true> op(tilingData, pipe);
+        op.Init(var, indices, updates, output);
+        op.Process();
+    } else {
+        KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU_ADD, 1, false> op(tilingData, pipe);
+        op.Init(var, indices, updates, output);
+        op.Process();
+    }
+}
+
 extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
                                                           GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -536,9 +553,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX32_REDU_ADD_FP32
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<float, int32_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<float, int32_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<float, int32_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -550,9 +565,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX32_REDU_ADD_FP32
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<float, int32_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<float, int32_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<float, int32_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -587,9 +600,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX64_REDU_ADD_FP32
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<float, int64_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<float, int64_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<float, int64_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -601,9 +612,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX64_REDU_ADD_FP32
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<float, int64_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<float, int64_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<float, int64_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -638,9 +647,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX32_REDU_ADD_FP16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<half, int32_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<half, int32_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<half, int32_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -652,9 +659,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX32_REDU_ADD_FP16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<half, int32_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<half, int32_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<half, int32_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -689,9 +694,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX64_REDU_ADD_FP16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<half, int64_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<half, int64_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<half, int64_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -703,9 +706,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX64_REDU_ADD_FP16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<half, int64_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<half, int64_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<half, int64_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -740,9 +741,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX32_REDU_ADD_BF16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<bfloat16_t, int32_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<bfloat16_t, int32_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<bfloat16_t, int32_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -754,9 +753,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX32_REDU_ADD_BF16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<bfloat16_t, int32_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<bfloat16_t, int32_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<bfloat16_t, int32_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -791,9 +788,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #elif TILING_KEY_VAR == SCAC_ELE_UINT32_IDX64_REDU_ADD_BF16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<bfloat16_t, int64_t, uint32_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<bfloat16_t, int64_t, uint32_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<bfloat16_t, int64_t, uint32_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);
@@ -805,9 +800,7 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     op.Process();
 #elif TILING_KEY_VAR == SCAC_ELE_UINT64_IDX64_REDU_ADD_BF16
     if (tilingData.isDeterministic) {
-        KernelScatterElementsDeterm<bfloat16_t, int64_t, uint64_t, REDU_ADD, 1> op(&tilingData, &pipe);
-        op.Init(var, indices, updates, output);
-        op.Process();
+        LaunchDeterministicAdd<bfloat16_t, int64_t, uint64_t>(&tilingData, &pipe, var, indices, updates, output);
     } else {
         KernelScatterElements<bfloat16_t, int64_t, uint64_t, uint32_t, REDU_ADD, 1> op(pipe);
         op.Init(var, indices, updates, output, userWS, &tilingData);

@@ -36,23 +36,28 @@ constexpr uint64_t REDUCTION_MUL = 2;
 constexpr int64_t DB_BUFFER = 1;
 constexpr int64_t ACTIVE_NODES_NUM = 2;
 constexpr int64_t GM_ALIGN = 512;
-constexpr int64_t USE_UB_MAX_SIZE = 65536; // 64K
+constexpr int64_t NON_DETERM_UB_MAX_SIZE = 65536; // 64K
 constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t MAX_INT32_NUM = 2147483647;
 constexpr int64_t MAX_INT16_NUM = 32767;              // int16 key 上限(keySize 分档阈值)
-constexpr int64_t DCACHE_SIZE = 131072;               // 128K
+constexpr int64_t NON_DETERM_DCACHE_SIZE = 131072;    // 128K
+constexpr int64_t DETERM_DCACHE_SIZE = 32768;         // 32K
 constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
 constexpr int64_t DETERM_DB_BUFFER = 2;
-constexpr int64_t DOUBLE_COUNT = 2;
-constexpr int64_t BASE_S_MAX = 256;
-constexpr int64_t UB_MIN_FACTOR = 1024;
+constexpr int64_t BASE_A_MIN_BYTES = 32;
+constexpr int64_t ADAPTIVE_REDUCE_MIN_S = 32;
+constexpr int64_t ADAPTIVE_REDUCE_SMALL_A_FACTOR = 2;
+constexpr uint64_t ADAPTIVE_REDUCE_REPEAT_RATIO = 4;
+constexpr int64_t MIN_DATA_ELEMENTS_PER_CORE = 1024;
+constexpr int64_t MIN_SORT_ELEMENTS_PER_CORE = 1024;
+constexpr int64_t MIN_INDEX_BYTES_PER_CORE = 1024;
 constexpr int64_t SIMT_UB_RES_SIZE = 640;
 constexpr uint32_t MAX_SORT_SPACE = 10240;
-constexpr int64_t PHASE_THREAD_NUM = 1024;  // Phase1/Phase3 每核 stride-loop 粒度（按索引总数切核）
+constexpr int64_t PHASE_THREAD_NUM = 1024; // Phase1/Phase3 每核 stride-loop 粒度（按索引总数切核）
+constexpr int64_t SORT_ADMIT_MID_OUTER_RATIO = 50;
+constexpr int64_t SORT_ADMIT_HALF_CORE_RATIO = 2;
 constexpr int64_t STATIC_UB_ESTIMATE = 512; // WithSorted SIMT strides/参数缓冲（SortLib tiling 预算扣除）
-// 排序模板准入门槛
-constexpr int64_t SORT_ADMIT_MID_OUTER_RATIO = 50; // 索引轴主导门槛：midAxis/RATIO 不小于 outerAxisNum 才准入
-constexpr int64_t SORT_ADMIT_HALF_CORE_RATIO = 2; // float 半核判定：A 轴分核数*RATIO 需小于总核数
+
 // tilingKey 前缀（与 apt.cpp 的 TILING_KEY_IS 宏对表）
 constexpr uint64_t SCAC_ELE_DETERM_KEY_BASE = 1000000; // 确定性模板前缀基值（1xxxxxx）
 constexpr uint64_t SCAC_ELE_SORT_KEY_PREFIX = 1000000; // 排序模板前缀提升步长（1xxxxxx → 2xxxxxx）
@@ -98,16 +103,14 @@ ge::graphStatus ScatterElementsV2AscTiling::GetPlatformInfo()
     auto compileInfo = reinterpret_cast<const ScatterElementsV2CompileInfoArch35*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = compileInfo->totalCoreNum;
-    ubSize_ = compileInfo->ubSizePlatForm;
-    if (ubSize_ <= DCACHE_SIZE) {
+    platformUbSize_ = static_cast<int64_t>(compileInfo->ubSizePlatForm);
+    if (platformUbSize_ <= DETERM_DCACHE_SIZE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "ubSize_, DCACHE_SIZE",
-            (std::to_string(static_cast<int32_t>(ubSize_)) + ", " + std::to_string(static_cast<int32_t>(DCACHE_SIZE)))
-                .c_str(),
-            "ubSize must be less than Dcache Size");
+            context_->GetNodeName(), "platformUbSize_, DETERM_DCACHE_SIZE",
+            (std::to_string(platformUbSize_) + ", " + std::to_string(DETERM_DCACHE_SIZE)).c_str(),
+            "platform UB size must be greater than deterministic DCache size");
         return ge::GRAPH_FAILED;
     }
-    ubSize_ = ubSize_ - DCACHE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -161,14 +164,11 @@ ge::graphStatus ScatterElementsV2AscTiling::GetShapeAttrsInfo()
         isDeterministic_ = 1;
     }
 
-    // 排序模板 dtype 准入（仅决定 isSortDeterministic_，即是否具备进入排序模板的 dtype 资格）：
-    //   add —— FP16/FP32/BF16 + int8/int16/int32（SCAT_ELE_SORT_DETERM_DTYPE）；
-    //   none —— 仅 int 类型。
-    bool isSortDetermDtype = (reduction_ == REDUCTION_ADD &&
-                              SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end()) ||
-                             (reduction_ == REDUCTION_NONE &&
-                              (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
-                               dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
+    // 全局排序模板 dtype/reduction 资格：none 支持所有合法 dtype，add 支持
+    // FP16/FP32/BF16 + int8/int16/int32。实际选择仍由 DoOpTiling 中的生产准入决定。
+    bool isSortDetermDtype = (reduction_ == REDUCTION_NONE) ||
+                             (reduction_ == REDUCTION_ADD &&
+                              SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end());
     if (context_->GetDeterministic() && isSortDetermDtype) {
         isSortDeterministic_ = 1;
     }
@@ -384,6 +384,15 @@ ge::graphStatus ScatterElementsV2AscTiling::CheckInputShape()
         return ge::GRAPH_FAILED;
     }
 
+    // Compare the original shapes before ComputeShape folds trailing axes.
+    indicesUpdatesSameShape_ = true;
+    for (int16_t i = 0; i < indicesDimNum; ++i) {
+        if (indicesShape.GetDim(i) != updatesShape.GetDim(i)) {
+            indicesUpdatesSameShape_ = false;
+            break;
+        }
+    }
+
     ComputeShape(dataShape, indicesShape, updatesShape);
     ComputeStride();
 
@@ -422,65 +431,101 @@ uint32_t ScatterElementsV2AscTiling::GetMaxSortTmpBuf(int64_t sortDim)
     return maxValue;
 }
 
-/**
- * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
- */
-int64_t ScatterElementsV2AscTiling::CalBestBaseSize(int64_t baseXoStart, int64_t baseXoEnd)
+int64_t ScatterElementsV2AscTiling::GetSortTileBufferSize(int64_t sortDim, uint32_t* sortSharedBufSize)
 {
-    int64_t baseXoMid;
-    int64_t tmpTotalSize = 0;
-    baseXoEnd = baseXoEnd + 1;
-    while (baseXoEnd - baseXoStart > 1) {
-        baseXoMid = (baseXoStart + baseXoEnd) / DOUBLE_COUNT;
-        int64_t sortDim = baseS_ * baseXoMid;
-        int64_t sortNeedTmpSize = static_cast<int64_t>(GetMaxSortTmpBuf(sortDim));
-        tmpTotalSize = sortDim * indicesTypeSize_ * DETERM_DB_BUFFER + ubBlockSize_ + // indocesQue
-                       sortDim * indicesTypeSize_ + ubBlockSize_ +                    // sortedkeyBuf
-                       sortDim * sizeof(uint32_t) + ubBlockSize_ +                    // sortedIdxBuf
-                       sortNeedTmpSize + ubBlockSize_;                                // sort shared buf size
-        if (tmpTotalSize <= ubSize_) {
-            baseXoStart = baseXoMid;
-        } else {
-            baseXoEnd = baseXoMid;
-        }
+    if (sortDim <= 0) {
+        return -1;
     }
-    return baseXoStart;
+    uint32_t sortTmpSize = GetMaxSortTmpBuf(sortDim);
+    if (sortSharedBufSize != nullptr) {
+        *sortSharedBufSize = sortTmpSize;
+    }
+    return Ops::Base::CeilAlign(sortDim * indicesTypeSize_, ubBlockSize_) * DETERM_DB_BUFFER + // indicesQue
+           Ops::Base::CeilAlign(sortDim * indicesTypeSize_, ubBlockSize_) +                    // sortedKeyBuf
+           Ops::Base::CeilAlign(sortDim * static_cast<int64_t>(sizeof(uint32_t)), ubBlockSize_) +
+           Ops::Base::CeilAlign(static_cast<int64_t>(sortTmpSize), ubBlockSize_); // sharedTmpBuf
 }
 
-// 排序模板准入 —— 整型分支。
-// int8/uint8：放宽至多维（rank_ <= 8），int16/int32/int64：仍仅一维（rank_ == 1）准入。
+bool ScatterElementsV2AscTiling::CanFitSortDim(int64_t sortDim, uint32_t* sortSharedBufSize)
+{
+    int64_t requiredSize = GetSortTileBufferSize(sortDim, sortSharedBufSize);
+    return requiredSize > 0 && requiredSize <= ubSize_;
+}
+
+bool ScatterElementsV2AscTiling::CanUseAdaptiveReduce(int64_t localADim, int64_t minBaseA)
+{
+    if (!isDeterministic_ || isSortDeterm_ || reduction_ != REDUCTION_ADD ||
+        (dtype_ != ge::DT_FLOAT && dtype_ != ge::DT_FLOAT16 && dtype_ != ge::DT_BF16) ||
+        baseS_ < ADAPTIVE_REDUCE_MIN_S || localADim <= 0) {
+        return false;
+    }
+    const uint64_t axisAndAfter = dim_ == 0 ? static_cast<uint64_t>(dataAxis_) : dataStride_[dim_ - 1];
+    const uint64_t axisStride = dim_ == rank_ - 1 ? 1 : dataStride_[dim_];
+    if (axisStride == 0 || axisAndAfter / axisStride == 0) {
+        return false;
+    }
+    const uint64_t selfAxisSize = axisAndAfter / axisStride;
+    if (baseA_ > ADAPTIVE_REDUCE_SMALL_A_FACTOR * minBaseA &&
+        static_cast<uint64_t>(midAxis_) / selfAxisSize < ADAPTIVE_REDUCE_REPEAT_RATIO) {
+        return false;
+    }
+    // Fitting the complete per-core input in UB does not bound the length of
+    // a duplicate-index chain. Let the runtime sampler choose the group size
+    // for eligible small-A inputs as well; short S blocks retain their fallback.
+    return true;
+}
+
+/**
+ * @brief Find the largest candidate in [baseSizeStart, baseSizeEnd] for which
+ *        candidate * fixedFactor and its radix-sort temporary buffers fit in UB.
+ */
+int64_t ScatterElementsV2AscTiling::FindMaxBaseSize(int64_t baseSizeStart, int64_t baseSizeEnd, int64_t fixedFactor)
+{
+    if (baseSizeStart <= 0 || baseSizeEnd < baseSizeStart || fixedFactor <= 0) {
+        return 0;
+    }
+    int64_t bestBaseSize = 0;
+    while (baseSizeStart <= baseSizeEnd) {
+        int64_t baseSizeMid = baseSizeStart + (baseSizeEnd - baseSizeStart) / 2;
+        int64_t sortDim = baseSizeMid * fixedFactor;
+        if (CanFitSortDim(sortDim)) {
+            bestBaseSize = baseSizeMid;
+            baseSizeStart = baseSizeMid + 1;
+        } else {
+            baseSizeEnd = baseSizeMid - 1;
+        }
+    }
+    return bestBaseSize;
+}
+
+// int8/uint8/bool 支持多维，其他整数类型保持原来的一维准入条件。
 bool ScatterElementsV2AscTiling::IsSortAdmittedInt() const
 {
-    if (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8) {
+    if (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_BOOL) {
         return rank_ <= 8;
     }
     return rank_ == 1;
 }
 
-// 排序模板准入 —— 浮点分支（fp32/fp16/bf16）。
-// 只有当原确定性模板明显吃不满核（A 轴分核数 < 总核数一半）时，排序模板才接管。
+// 浮点类型仅在原局部确定性模板明显吃不满核时进入全局排序。
 bool ScatterElementsV2AscTiling::IsSortAdmittedFloat(int64_t aAxisCoreNum) const
 {
-    return aAxisCoreNum * SORT_ADMIT_HALF_CORE_RATIO < totalCoreNum_; // 乘比例比较避免整除截断
+    return aAxisCoreNum * SORT_ADMIT_HALF_CORE_RATIO < totalCoreNum_;
 }
 
 bool ScatterElementsV2AscTiling::IsSortTemplateAdmitted(int64_t aAxisCoreNum) const
 {
-    // 排序模板 dtype 白名单：add 走 SCAT_ELE_SORT_DETERM_DTYPE（FP + int8/16/32）；none 仅 int 类型。
-    bool sortDtypeOk = SCAT_ELE_SORT_DETERM_DTYPE.find(dtype_) != SCAT_ELE_SORT_DETERM_DTYPE.end() ||
-                       (reduction_ == REDUCTION_NONE &&
-                        (dtype_ == ge::DT_INT8 || dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 ||
-                         dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT64));
-    if (!sortDtypeOk) {
+    if (!isSortDeterministic_) {
         return false;
     }
     int64_t outerAxisNum = preAxis_ * afterAxis_;
     if (midAxis_ / SORT_ADMIT_MID_OUTER_RATIO < outerAxisNum) {
         return false;
     }
-    bool isIntDtype = dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_INT16 ||
-                      dtype_ == ge::DT_INT32 || dtype_ == ge::DT_INT64;
-    bool isFloatDtype = dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16;
+    bool isIntDtype = dtype_ == ge::DT_INT8 || dtype_ == ge::DT_UINT8 || dtype_ == ge::DT_BOOL ||
+                      dtype_ == ge::DT_INT16 || dtype_ == ge::DT_INT32 || dtype_ == ge::DT_INT64;
+    bool isFloatDtype = dtype_ == ge::DT_FLOAT || dtype_ == ge::DT_FLOAT16 || dtype_ == ge::DT_BF16 ||
+                        dtype_ == ge::DT_DOUBLE;
     if (isIntDtype) {
         if (!IsSortAdmittedInt()) {
             return false;
@@ -492,9 +537,8 @@ bool ScatterElementsV2AscTiling::IsSortTemplateAdmitted(int64_t aAxisCoreNum) co
     } else {
         return false;
     }
-    // index-count 切核收益判定：按索引总数切核的核数须多于原确定性模板 A 轴切核的核数
-    int64_t normBlockData = std::max(Ops::Base::CeilDiv(indicesTotalNum_, totalCoreNum_),
-                                     static_cast<int64_t>(UB_MIN_FACTOR));
+
+    int64_t normBlockData = std::max(Ops::Base::CeilDiv(indicesTotalNum_, totalCoreNum_), MIN_SORT_ELEMENTS_PER_CORE);
     int64_t idxNumCoreNum = Ops::Base::CeilDiv(indicesTotalNum_, normBlockData);
     return idxNumCoreNum > aAxisCoreNum;
 }
@@ -505,12 +549,26 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
     usedCoreNumAlignTotal = std::min(usedCoreNumAlignTotal, totalCoreNum_);
 
     int64_t usedCoreNumAlignData = Ops::Base::CeilDiv(dataAxis_, static_cast<int64_t>(totalCoreNum_));
-    usedCoreNumAlignData = std::max(usedCoreNumAlignData, UB_MIN_FACTOR);
+    usedCoreNumAlignData = std::max(usedCoreNumAlignData, MIN_DATA_ELEMENTS_PER_CORE);
     usedCoreNumAlignData = Ops::Base::CeilDiv(dataAxis_, usedCoreNumAlignData);
 
     usedCoreNum_ = usedCoreNumAlignTotal > usedCoreNumAlignData ? usedCoreNumAlignTotal : usedCoreNumAlignData;
 
-    ubSize_ = std::min(ubSize_, USE_UB_MAX_SIZE);
+    const int64_t localDcacheSize = isDeterministic_ ? DETERM_DCACHE_SIZE : NON_DETERM_DCACHE_SIZE;
+    const int64_t localReservedSize = localDcacheSize + SIMT_UB_RES_SIZE;
+    if (platformUbSize_ <= localReservedSize) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "platformUbSize_, localReservedSize",
+            (std::to_string(platformUbSize_) + ", " + std::to_string(localReservedSize)).c_str(),
+            "platform UB size must be greater than DCache plus the reserved local memory size");
+        return ge::GRAPH_FAILED;
+    }
+    // ubSize_ is the tile budget consumed by local queues/buffers. The 640-byte
+    // SIMT reservation is added back only when SetLocalMemorySize is called.
+    ubSize_ = platformUbSize_ - localReservedSize;
+    if (!isDeterministic_) {
+        ubSize_ = std::min(ubSize_, NON_DETERM_UB_MAX_SIZE);
+    }
     GetCastTypeSize();
     int64_t ubLength = 0;
     if (reduction_ == REDUCTION_ADD &&
@@ -533,55 +591,96 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
         }
     }
 
-    // === 原确定性模板：A 轴切核 ===
-    if (isDeterministic_ || isSortDeterministic_) {
+    // === 局部确定性模板：先在 baseA 至少占 32B 的约束下最大化 baseS。===
+    int64_t localADim = 0;
+    int64_t minBaseA = 0;
+    int64_t maxSortDim = 0;
+    if (isDeterministic_) {
         ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
-        baseS_ = std::min(midAxis_, static_cast<int64_t>(BASE_S_MAX / indicesTypeSize_));
-        int64_t aSplitDim = afterAxis_;
-        if (preAxis_ > afterAxis_) {
-            aSplitDim = preAxis_;
-        }
-        indicesNormBlockData_ = Ops::Base::CeilDiv(aSplitDim, usedCoreNum_);
-        int64_t tmpSize = baseS_;
-        bool isPatternASA = afterAxis_ != 1 && preAxis_ != 1;
-        if (isPatternASA) {
+        minBaseA = std::max(Ops::Base::CeilDiv(BASE_A_MIN_BYTES, indicesTypeSize_), static_cast<int64_t>(1));
+        int64_t sortElementSize = indicesTypeSize_ * (DETERM_DB_BUFFER + 1) + sizeof(uint32_t);
+        maxSortDim = ubSize_ / sortElementSize;
+        int64_t maxBaseS = maxSortDim / minBaseA;
+        baseS_ = FindMaxBaseSize(1, std::min(midAxis_, maxBaseS), minBaseA);
+        if (baseS_ > 0) {
+            int64_t aSplitDim = afterAxis_;
             if (preAxis_ > afterAxis_) {
-                tmpSize *= afterAxis_;
-            } else {
-                tmpSize *= preAxis_;
+                aSplitDim = preAxis_;
+            }
+            indicesNormBlockData_ = Ops::Base::CeilDiv(aSplitDim, usedCoreNum_);
+            int64_t tmpSize = baseS_;
+            int64_t otherADim = 1;
+            bool isPatternASA = afterAxis_ != 1 && preAxis_ != 1;
+            if (isPatternASA) {
+                if (preAxis_ > afterAxis_) {
+                    otherADim = afterAxis_;
+                } else {
+                    otherADim = preAxis_;
+                }
+                tmpSize *= otherADim;
+            }
+            // Enforce the minimum valid flattened A before splitting cores,
+            // not only when allocating the UB tile. For ASA, one position on
+            // the split axis contributes otherADim independent A positions.
+            // A globally undersized input and the final core may remain tails.
+            const int64_t minSplitA = Ops::Base::CeilDiv(minBaseA, otherADim);
+            indicesNormBlockData_ = std::max(
+                std::max(indicesNormBlockData_, minSplitA),
+                static_cast<int64_t>(MIN_INDEX_BYTES_PER_CORE / indicesTypeSize_ / tmpSize));
+            indicesUsedCoreNum_ = Ops::Base::CeilDiv(aSplitDim, indicesNormBlockData_);
+            indicesTailBlockData_ = aSplitDim - (indicesUsedCoreNum_ - 1) * indicesNormBlockData_;
+            localADim = indicesUsedCoreNum_ == 1 ? indicesTailBlockData_ : indicesNormBlockData_;
+            if (isPatternASA) {
+                if (preAxis_ > afterAxis_) {
+                    localADim *= afterAxis_;
+                } else {
+                    localADim *= preAxis_;
+                }
             }
         }
-        indicesNormBlockData_ = std::max(indicesNormBlockData_,
-                                         static_cast<int64_t>(UB_MIN_FACTOR / indicesTypeSize_ / tmpSize));
-        indicesUsedCoreNum_ = Ops::Base::CeilDiv(aSplitDim, indicesNormBlockData_);
-        indicesTailBlockData_ = aSplitDim - (indicesUsedCoreNum_ - 1) * indicesNormBlockData_;
-        int64_t aDim = indicesUsedCoreNum_ == 1 ? indicesTailBlockData_ : indicesNormBlockData_;
-        if (isPatternASA) {
-            if (preAxis_ > afterAxis_) {
-                aDim *= afterAxis_;
-            } else {
-                aDim *= preAxis_;
-            }
-        }
-        baseA_ = CalBestBaseSize(1, aDim);
-        int64_t sortDim = baseS_ * baseA_;
-        sortSharedBufSize_ = GetMaxSortTmpBuf(sortDim);
     }
 
-    // === 排序模板：独立、优先准入
-    if (isSortDeterministic_ && IsSortTemplateAdmitted(indicesUsedCoreNum_)) {
+    // 全局排序仅沿用生产准入条件；局部 baseS 是否覆盖完整 scatter 轴不改变模板路由。
+    bool shouldUseGlobalSort = isSortDeterministic_ && IsSortTemplateAdmitted(indicesUsedCoreNum_);
+    if (shouldUseGlobalSort) {
         isSortDeterm_ = true;
+        const int64_t globalSortUbSize = platformUbSize_ - STATIC_UB_ESTIMATE;
         // SortLib 单核/多核自动切换：总元素数小且能塞下则 isSingleCore，否则多核 radix。
-        sortR_ = SortLib::SortTilingCompute(
-            indicesTotalNum_, totalCoreNum_, static_cast<uint64_t>(ubSize_ - STATIC_UB_ESTIMATE),
-            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_), countMode_ == 0, keyDtype_);
+        sortR_ = SortLib::SortTilingCompute(indicesTotalNum_, totalCoreNum_, static_cast<uint64_t>(globalSortUbSize),
+                                            static_cast<uint32_t>(keySize_), static_cast<uint32_t>(permSize_),
+                                            countMode_ == 0, keyDtype_);
         if (sortR_.errCode != SortLib::SORT_TILING_OK) {
             // 库报错（UB 不足最小内核）时回落原确定性模板（1xxxxxx 前缀），
             // 避免无效核数/workspace 泄漏。
             isSortDeterm_ = false;
             sortR_ = SortLib::SortTilingResult{};
+        } else {
+            globalSortLocalMemorySize_ = globalSortUbSize - SortLib::DCACHE_SIZE;
         }
     }
+
+    if (!isSortDeterm_ && isDeterministic_) {
+        if (baseS_ <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "baseS_", std::to_string(baseS_).c_str(),
+                                                  "cannot fit the minimum deterministic sort tile in local memory");
+            return ge::GRAPH_FAILED;
+        }
+        int64_t maxBaseAByCapacity = maxSortDim / baseS_;
+        int64_t maxBaseA = std::min(std::max(localADim, minBaseA), maxBaseAByCapacity);
+        baseA_ = FindMaxBaseSize(minBaseA, maxBaseA, baseS_);
+        if (baseA_ <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "baseA_", std::to_string(baseA_).c_str(),
+                                                  "cannot satisfy the 32-byte minimum baseA in local memory");
+            return ge::GRAPH_FAILED;
+        }
+        int64_t sortDim = baseS_ * baseA_;
+        if (!CanFitSortDim(sortDim, &sortSharedBufSize_)) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "sortDim", std::to_string(sortDim).c_str(),
+                                                  "deterministic sort tile exceeds local memory");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     if (isSortDeterm_) {
         multiSortWsBytes_ = sortR_.workspaceBytes;
         sortUsedCoreNum_ = (sortR_.coreNumNeed > 0) ? static_cast<int64_t>(sortR_.coreNumNeed) : 1;
@@ -600,12 +699,15 @@ ge::graphStatus ScatterElementsV2AscTiling::DoOpTiling()
         }
     }
 
+    enableAdaptiveReduce_ = CanUseAdaptiveReduce(localADim, minBaseA);
+    tilingData_.set_enableAdaptiveReduce(enableAdaptiveReduce_);
     tilingData_.set_dim(dim_);
     tilingData_.set_rank(rank_);
     tilingData_.set_loopLength(loopLength_);
     tilingData_.set_allAxis(allAxis_);
     tilingData_.set_dataAxis(dataAxis_);
     tilingData_.set_updatesAxis(updatesAxis_);
+    tilingData_.set_indicesUpdatesSameShape(indicesUpdatesSameShape_);
     tilingData_.set_dataStride(dataStride_);
     tilingData_.set_indicesStride(indicesStride_);
     tilingData_.set_updatesStride(updatesStride_);
@@ -691,10 +793,12 @@ ge::graphStatus ScatterElementsV2AscTiling::PostTiling()
         context_->SetBlockDim(usedCoreNum_);
     }
     context_->SetScheduleMode(1);
-    auto res = context_->SetLocalMemorySize(ubSize_ + SIMT_UB_RES_SIZE);
+    int64_t localMemorySize = isSortDeterm_ ? globalSortLocalMemorySize_ : ubSize_ + SIMT_UB_RES_SIZE;
+    auto res = context_->SetLocalMemorySize(localMemorySize);
     if (res != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_", std::to_string(ubSize_).c_str(),
-                                              "SetLocalMemorySize failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "localMemorySize",
+                                              std::to_string(localMemorySize).c_str(), "SetLocalMemorySize failed");
+        return res;
     }
     // 仅排序模板启用时写入：sortTiling 只被 _WS 前缀内核读取，非排序案例保持默认全 0，
     // 避免无条件写入无效数据（该嵌套 struct 经 sortTiling{nullptr} 默认初始化，无脏值）。
@@ -735,6 +839,8 @@ void ScatterElementsV2AscTiling::DumpTilingInfo()
     info << ", allAxis: " << tilingData_.get_allAxis();
     info << ", dataAxis: " << tilingData_.get_dataAxis();
     info << ", updatesAxis: " << tilingData_.get_updatesAxis();
+    info << ", indicesUpdatesSameShape: " << tilingData_.get_indicesUpdatesSameShape();
+    info << ", enableAdaptiveReduce: " << tilingData_.get_enableAdaptiveReduce();
     info << ", preAxis: " << tilingData_.get_preAxis();
     info << ", midAxis: " << tilingData_.get_midAxis();
     info << ", afterAxis: " << tilingData_.get_afterAxis();

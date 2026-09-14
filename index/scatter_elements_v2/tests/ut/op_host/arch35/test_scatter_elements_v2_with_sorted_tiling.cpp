@@ -48,6 +48,13 @@ struct WithSortedTilingResult {
     uint32_t blockDim = 0;
     size_t workspaceSize = 0;
     uint64_t indicesTotalNum = 0;
+    int64_t baseS = 0;
+    int64_t baseA = 0;
+    int64_t indicesUsedCoreNum = 0;
+    int64_t indicesNormBlockData = 0;
+    int64_t indicesTailBlockData = 0;
+    int64_t indicesUpdatesSameShape = -1;
+    int64_t adaptiveReduce = -1;
     uint64_t keySize = 0;
     uint64_t permSize = 0;
     int32_t shapeMode = -1;
@@ -171,7 +178,19 @@ static void RunWithSortedTilingCase(ge::DataType inputDtype, ge::DataType indice
         // [39] dimNormalized(low32)|sortUsedCoreNum(high32)
         // [40] numTileData|tileCount, [41] activeCores|tmpUbSize, [42] isSingleCore|padding(4B)
         // [43] wsLinearIdxOff, [44] wsSortedOff, [45] wsPermOff, [46] wsSrcPosOff
+        // [47] indicesUpdatesSameShape (outside the nested sortTiling)
+        // [48] enableAdaptiveReduce (appended, all earlier offsets unchanged)
         // 注：int16/uint32 字段与共享 8 字节字的相邻字段按小端字节序打包，读取时以 8 字节槽为定位单位。
+        result.baseS = p64[31];
+        result.baseA = p64[32];
+        result.indicesUsedCoreNum = p64[28];
+        result.indicesNormBlockData = p64[29];
+        result.indicesTailBlockData = p64[30];
+        ASSERT_GE(raw->GetDataSize(), 48 * sizeof(int64_t));
+        result.indicesUpdatesSameShape = p64[47];
+        if (raw->GetDataSize() >= 49 * sizeof(int64_t)) {
+            result.adaptiveReduce = p64[48];
+        }
         result.indicesTotalNum = static_cast<uint64_t>(p64[35]);
         result.keySize = static_cast<uint64_t>(p64[36]);
         result.permSize = static_cast<uint64_t>(p64[37]);
@@ -195,6 +214,57 @@ static void RunWithSortedTilingCase(ge::DataType inputDtype, ge::DataType indice
         result.tmpUbSize = p32at40[3];
         result.isSingleCore = p32at40[4];
     }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_indices_updates_same_shape)
+{
+    gert::StorageShape dataShape = {{3, 8, 17}, {3, 8, 17}};
+    gert::StorageShape indicesShape = {{2, 67, 13}, {2, 67, 13}};
+    gert::StorageShape updatesShape = {{2, 67, 13}, {2, 67, 13}};
+    for (const std::string reduction : {"add", "none"}) {
+        WithSortedTilingResult r;
+        RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, dataShape, indicesShape, updatesShape, 1,
+                                reduction, 1, r);
+        ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+        EXPECT_EQ(r.indicesUpdatesSameShape, 1);
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_indices_updates_different_inner_shape)
+{
+    gert::StorageShape dataShape = {{3, 8, 17}, {3, 8, 17}};
+    gert::StorageShape indicesShape = {{2, 67, 13}, {2, 67, 13}};
+    gert::StorageShape updatesShape = {{2, 67, 15}, {2, 67, 15}};
+    WithSortedTilingResult r;
+    RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, dataShape, indicesShape, updatesShape, 1, "add",
+                            1, r);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.indicesUpdatesSameShape, 0);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_indices_updates_same_stride_different_shape)
+{
+    // Equal strides alone must not be reported as equal shapes.
+    gert::StorageShape dataShape = {{8, 17}, {8, 17}};
+    gert::StorageShape indicesShape = {{67, 13}, {67, 13}};
+    gert::StorageShape updatesShape = {{69, 13}, {69, 13}};
+    WithSortedTilingResult r;
+    RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, dataShape, indicesShape, updatesShape, 0, "add",
+                            1, r);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.indicesUpdatesSameShape, 0);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_indices_updates_same_shape_folded_axes)
+{
+    gert::StorageShape dataShape = {{8, 3, 5}, {8, 3, 5}};
+    gert::StorageShape indicesShape = {{67, 3, 5}, {67, 3, 5}};
+    gert::StorageShape updatesShape = {{67, 3, 5}, {67, 3, 5}};
+    WithSortedTilingResult r;
+    RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, dataShape, indicesShape, updatesShape, 0, "add",
+                            1, r);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.indicesUpdatesSameShape, 1);
 }
 
 // ============================================================
@@ -285,13 +355,8 @@ TEST_F(ScatterElementsV2WithSortedTiling, test_with_sorted_fp32_dim1_index64)
 //   - ComputeShape：axisSame=0（末维 data(16384)!=indices(8192)），combAxis=max(0, 8)=8
 //     >= rank 而不触达合并分支 -> rank 保持 8（不再是 rank=1 的扁化 1D）
 //   - CombineIndicesAxis：preAxis_=1，midAxis_=8192，afterAxis_=1
-//     aSplitDim = max(pre, after) = 1
-//     indicesTypeSize_=4（int32），baseS_ = min(mid=8192, BASE_S_MAX/indicesTypeSize_=256/4=64) = 64，
-//     isPatternASA=false -> tmpSize=baseS_=64
-//     -> indicesNormBlockData_ = max(CeilDiv(1, usedCoreNum_=64)=1, UB_MIN_FACTOR/indicesTypeSize_/tmpSize=1024/4/64=4)
-//     = 4
-//     -> indicesUsedCoreNum_ = CeilDiv(1, 4) = 1
-//   - 准入：uint8 且 rank_=8 <= 8，none+uint8 在 isDetermType 白名单 -> isDeterministic_=1
+//     aSplitDim = max(pre, after) = 1；局部 baseS/baseA 由实际 UB 容量计算。
+//   - 准入：uint8 且 rank_=8 <= 8，none 支持局部确定性模板。
 //   - 按 index-count 切核：normBlockDataNew = max(CeilDiv(8192, totalCoreNum_=64)=128, 1024) = 1024
 //     idxNumCoreNum = CeilDiv(8192, 1024) = 8 > aAxisCoreNum(1) -> isSortDeterm_ = true
 //     -> key 前缀 +1000000 = 2xxxxxx
@@ -311,6 +376,56 @@ TEST_F(ScatterElementsV2WithSortedTiling, test_with_sorted_uint8_dim8_none)
     EXPECT_EQ(r.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(r.tilingKey, 2000001UL); // UINT8 + NONE + IDX32 + WS 前缀（rank=8）
     EXPECT_GT(r.indicesTotalNum, 0UL);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_with_sorted_none_all_legal_dtypes)
+{
+    const std::vector<std::pair<ge::DataType, uint64_t>> cases = {
+        {ge::DT_FLOAT, 2000004UL},  {ge::DT_FLOAT16, 2000002UL}, {ge::DT_BF16, 2000002UL}, {ge::DT_INT64, 2000008UL},
+        {ge::DT_INT32, 2000004UL},  {ge::DT_INT16, 2000002UL},   {ge::DT_INT8, 2000001UL}, {ge::DT_UINT8, 2000001UL},
+        {ge::DT_DOUBLE, 2000008UL}, {ge::DT_BOOL, 2000001UL},
+    };
+    for (const auto& [dtype, expectedKey] : cases) {
+        SCOPED_TRACE(static_cast<int32_t>(dtype));
+        gert::StorageShape dataShape = {{16384}, {16384}};
+        gert::StorageShape indicesShape = {{8192}, {8192}};
+        gert::StorageShape updatesShape = {{8192}, {8192}};
+        WithSortedTilingResult result;
+        RunWithSortedTilingCase(dtype, ge::DT_INT32, dtype, dataShape, indicesShape, updatesShape, 0, "none", 1,
+                                result);
+        EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+        EXPECT_EQ(result.tilingKey, expectedKey);
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_local_deterministic_base_a_is_at_least_32_bytes)
+{
+    gert::StorageShape dataShape = {{10}, {10}};
+    gert::StorageShape indicesShape = {{10}, {10}};
+    gert::StorageShape updatesShape = {{10}, {10}};
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(ge::DT_INT8, ge::DT_INT64, ge::DT_INT8, dataShape, indicesShape, updatesShape, 0, "none", 1,
+                            result);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1001001UL);
+    EXPECT_EQ(result.baseS, 10);
+    EXPECT_GE(result.baseA * static_cast<int64_t>(sizeof(int64_t)), 32);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, test_keep_local_when_base_s_cannot_cover_and_sort_admission_fails)
+{
+    // outerAxis=200 makes the 50x production admission fail, while midAxis=8192 cannot fit in one local tile
+    // when baseA must occupy at least 32 bytes. baseS coverage alone must not force the global sort template.
+    gert::StorageShape dataShape = {{200, 8192}, {200, 8192}};
+    gert::StorageShape indicesShape = {{200, 8192}, {200, 8192}};
+    gert::StorageShape updatesShape = {{200, 8192}, {200, 8192}};
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, dataShape, indicesShape, updatesShape, 1, "none",
+                            1, result);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1000004UL);
+    EXPECT_LT(result.baseS, 8192);
+    EXPECT_GE(result.baseA * static_cast<int64_t>(sizeof(int32_t)), 32);
 }
 
 TEST_F(ScatterElementsV2WithSortedTiling, test_fallback_not_deterministic)
@@ -337,6 +452,24 @@ TEST_F(ScatterElementsV2WithSortedTiling, test_fallback_reduction_mul)
     EXPECT_EQ(r.tilingKey, 1000200UL); // mul + 确定性，非 add -> 不提升
 }
 
+TEST_F(ScatterElementsV2WithSortedTiling, adaptive_reduce_capacity_limited_add)
+{
+    constexpr int64_t scatterAxis = 8192;
+    gert::StorageShape input({2087, scatterAxis + 8}, {2087, scatterAxis + 8});
+    gert::StorageShape index({2079, scatterAxis}, {2079, scatterAxis});
+    gert::StorageShape updates({2086, scatterAxis}, {2086, scatterAxis});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "add", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1000101UL);
+    // SortLib's temporary-buffer estimate varies between CANN versions. Verify
+    // the capacity-limited behavior without freezing the exact tile sizes.
+    EXPECT_GT(result.baseS, 0);
+    EXPECT_LT(result.baseS, scatterAxis);
+    EXPECT_GE(result.baseA * static_cast<int64_t>(sizeof(int32_t)), 32);
+    EXPECT_EQ(result.adaptiveReduce, 1);
+}
+
 TEST_F(ScatterElementsV2WithSortedTiling, test_fallback_small_index_num)
 {
     // N 小（2048）：1D 时 aAxisCoreNum=indicesUsedCoreNum_=1（indicesNormBlockData_=max(1,1024/4/baseS_=4)=4，
@@ -351,4 +484,141 @@ TEST_F(ScatterElementsV2WithSortedTiling, test_fallback_small_index_num)
                             "add", 1, r);
     EXPECT_EQ(r.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(r.tilingKey, 2000100UL); // 1D 小 N：aAxisCoreNum=1，仍触发方案A -> 前缀 2
+    EXPECT_EQ(r.adaptiveReduce, 0);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, minimum_valid_a_does_not_split_small_input)
+{
+    // Seven int32 A positions cannot form even one 32-byte A block.
+    // Keep them on one core instead of making four undersized A tails.
+    gert::StorageShape input({7, 19}, {7, 19});
+    gert::StorageShape index({7, 257}, {7, 257});
+    gert::StorageShape updates({7, 257}, {7, 257});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "add", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, 1000101UL);
+    EXPECT_EQ(result.indicesUsedCoreNum, 1);
+    EXPECT_EQ(result.indicesTailBlockData, 7);
+    EXPECT_GE(result.baseA, 8);
+    // A shape-limited input may still contain a long duplicate-index chain.
+    EXPECT_EQ(result.adaptiveReduce, 1);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, minimum_valid_a_boundaries)
+{
+    struct Fixture {
+        ge::DataType indexType;
+        int64_t a;
+        int64_t cores;
+        int64_t normal;
+        int64_t tail;
+    };
+    const Fixture fixtures[] = {{DT_INT32, 8, 1, 8, 8},  {DT_INT32, 9, 2, 8, 1}, {DT_INT32, 16, 2, 8, 8},
+                                {DT_INT32, 17, 3, 8, 1}, {DT_INT64, 3, 1, 4, 3}, {DT_INT64, 4, 1, 4, 4},
+                                {DT_INT64, 5, 2, 4, 1},  {DT_INT64, 9, 3, 4, 1}};
+    for (const auto& f : fixtures) {
+        for (const std::string reduction : {"add", "none"}) {
+            for (int64_t axis : {0, 1}) {
+                SCOPED_TRACE(std::to_string(f.a) + "/" + std::to_string(f.indexType) + "/" + reduction + "/" +
+                             std::to_string(axis));
+                gert::StorageShape input = axis == 1 ? gert::StorageShape({f.a, 19}, {f.a, 19}) :
+                                                       gert::StorageShape({19, f.a}, {19, f.a});
+                gert::StorageShape index = axis == 1 ? gert::StorageShape({f.a, 257}, {f.a, 257}) :
+                                                       gert::StorageShape({257, f.a}, {257, f.a});
+                gert::StorageShape updates = index;
+                WithSortedTilingResult result;
+                RunWithSortedTilingCase(DT_FLOAT16, f.indexType, DT_FLOAT16, input, index, updates, axis, reduction, 1,
+                                        result);
+                ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+                EXPECT_EQ(result.indicesUsedCoreNum, f.cores);
+                EXPECT_EQ(result.indicesNormBlockData, f.normal);
+                EXPECT_EQ(result.indicesTailBlockData, f.tail);
+            }
+        }
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, minimum_valid_a_asa_counts_both_outer_axes)
+{
+    for (bool splitPre : {false, true}) {
+        gert::StorageShape input = splitPre ? gert::StorageShape({9, 19, 2}, {9, 19, 2}) :
+                                              gert::StorageShape({2, 19, 9}, {2, 19, 9});
+        gert::StorageShape index = splitPre ? gert::StorageShape({9, 257, 2}, {9, 257, 2}) :
+                                              gert::StorageShape({2, 257, 9}, {2, 257, 9});
+        gert::StorageShape updates = index;
+        WithSortedTilingResult result;
+        RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "add", 1, result);
+        ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+        // Four positions on the split axis times two on the other axis give
+        // eight valid flattened A positions; the last core has one times two.
+        EXPECT_EQ(result.indicesUsedCoreNum, 3);
+        EXPECT_EQ(result.indicesNormBlockData, 4);
+        EXPECT_EQ(result.indicesTailBlockData, 1);
+    }
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, adaptive_reduce_shape_limited_input)
+{
+    gert::StorageShape input({8, 3}, {8, 3});
+    gert::StorageShape index({67, 2}, {67, 2});
+    gert::StorageShape updates({69, 4}, {69, 4});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, input, index, updates, 0, "add", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1000100UL);
+    EXPECT_EQ(result.baseS, 67);
+    EXPECT_EQ(result.baseA, 8);
+    EXPECT_EQ(result.adaptiveReduce, 1);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, adaptive_reduce_widened_int64_small_a)
+{
+    // 512 outer positions split evenly across 64 cores, so local A is eight
+    // elements regardless of the SortLib temporary-buffer estimate.
+    gert::StorageShape input({512, 1816}, {512, 1816});
+    gert::StorageShape index({512, 600}, {512, 600});
+    gert::StorageShape updates({512, 916}, {512, 916});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT64, DT_FLOAT16, input, index, updates, 1, "add", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1001101UL);
+    EXPECT_EQ(result.baseS, 600);
+    EXPECT_GT(result.baseA, 4);
+    EXPECT_LE(result.baseA, 8);
+    EXPECT_EQ(result.adaptiveReduce, 1);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, adaptive_reduce_minimum_a_has_valid_work)
+{
+    gert::StorageShape input({64, 2049}, {64, 2049});
+    gert::StorageShape index({64, 2049}, {64, 2049});
+    gert::StorageShape updates({64, 2049}, {64, 2049});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "add", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingKey, 1000101UL);
+    EXPECT_GT(result.baseS, 0);
+    EXPECT_LT(result.baseS, 2049);
+    EXPECT_EQ(result.baseA, 8);
+    // Core splitting now supplies eight real A positions, not one real A
+    // padded to eight. Full S no longer fits for this valid per-core workload.
+    EXPECT_EQ(result.indicesUsedCoreNum, 8);
+    EXPECT_EQ(result.indicesNormBlockData, 8);
+    EXPECT_EQ(result.indicesTailBlockData, 8);
+    EXPECT_EQ(result.adaptiveReduce, 1);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, adaptive_reduce_none_and_nondeterministic_unchanged)
+{
+    gert::StorageShape input({2087, 1253}, {2087, 1253});
+    gert::StorageShape index({2079, 1249}, {2079, 1249});
+    gert::StorageShape updates({2086, 1253}, {2086, 1253});
+    WithSortedTilingResult result;
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "none", 1, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.adaptiveReduce, 0);
+    RunWithSortedTilingCase(DT_FLOAT16, DT_INT32, DT_FLOAT16, input, index, updates, 1, "add", 0, result);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.adaptiveReduce, 0);
 }
