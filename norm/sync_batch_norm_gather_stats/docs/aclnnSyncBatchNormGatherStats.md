@@ -178,7 +178,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>batchMean（aclTensor*）</td>
       <td>输出</td>
       <td>表示全局批均值，对应公式中的batchMean。</td>
-      <td><ul><li>第一维必须大于0。</li><li>数据类型与batchInvstd的数据类型保持一致。</li></ul></td>
+      <td><ul><li>shape与totalSum的第二维一致。</li><li>数据类型与batchInvstd的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>batchInvstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示标准差倒数，对应公式中的batchInvstd。</td>
-      <td><ul><li>第一维必须大于0。</li><li>数据类型与batchMean的数据类型保持一致。</li></ul></td>
+      <td><ul><li>shape与totalSum的第二维一致。</li><li>数据类型与batchMean的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
