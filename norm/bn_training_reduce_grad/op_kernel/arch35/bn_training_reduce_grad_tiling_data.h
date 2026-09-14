@@ -33,7 +33,7 @@
 #include <cstdint>
 
 struct BNTrainingReduceGradTilingData {
-    int64_t numN;      // N（kernel 不直接消费：units/numC 已含；保留供 host 日志与调试核对）
+    int64_t numN;      // N（kernel 不直接消费：units/numC 已含；保留供 host 日志与问题定位核对）
     int64_t numC;      // C（dim1）
     int64_t innerSize; // R = prod(d2:)
     int64_t units;     // plane 数 = N*C

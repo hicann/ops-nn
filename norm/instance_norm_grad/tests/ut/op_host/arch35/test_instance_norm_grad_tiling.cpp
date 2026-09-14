@@ -271,7 +271,7 @@ TEST_F(InstanceNormGradTiling, coreboundary_n_above_corenum)
     EXPECT_EQ(key, 101U);
 }
 
-// ---------------- 反向：非法输入必须被拦截 ----------------
+// ---------------- 反向：非法输入必须被校验拒绝 ----------------
 
 // dtype 非 fp16/fp32
 TEST_F(InstanceNormGradTiling, reject_invalid_dtype)

@@ -186,7 +186,7 @@ ge::graphStatus BNTrainingUpdateV3Tiling::ParseNhwcShape(const gert::Shape& xSto
         numel *= xStorageShape.GetDim(i);
     }
     rows_ = numel / numC_;
-    numN_ = rows_; // 语义 N*H*W（host 日志与调试核对口径）
+    numN_ = rows_; // 语义 N*H*W（host 日志与问题定位核对口径）
     return SelectNhwcPath();
 }
 

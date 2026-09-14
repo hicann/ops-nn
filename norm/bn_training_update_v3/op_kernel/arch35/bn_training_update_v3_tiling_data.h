@@ -50,7 +50,7 @@
 #include <cstdint>
 
 struct BNTrainingUpdateV3TilingData {
-    int64_t numN;      // N（kernel 不直接消费：units/numC 已含；保留供 host 日志与调试核对）
+    int64_t numN;      // N（kernel 不直接消费：units/numC 已含；保留供 host 日志与问题定位核对）
     int64_t numC;      // C（ND：dim1；NHWC：最后一维）
     int64_t innerSize; // R = prod(d2:)（ND）；NHWC-Flat/Stream=64（向量宽），Rows=1
     int64_t units;     // plane 数（ND：N*C；NHWC：rows 或向量块总数）

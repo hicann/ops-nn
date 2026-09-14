@@ -215,7 +215,7 @@ TEST_F(BNTrainingUpdateV2TilingUT, accept_ncdhw_format)
               ge::GRAPH_SUCCESS);
 }
 
-// ---------------- 反向：非法输入必须被拦截 ----------------
+// ---------------- 反向：非法输入必须被校验拒绝 ----------------
 
 // x dtype 非法（int32）
 TEST_F(BNTrainingUpdateV2TilingUT, reject_invalid_x_dtype)

@@ -54,7 +54,7 @@ void SyncBatchNormBackwardElemtTilingRun(gert::StorageShape grad_output_shape_in
     gert::StorageShape grad_input_shape = grad_output_shape_in;
 
     string compile_info_string = R"({
-        "_pattern":"ElemWise", 
+        "_pattern":"ElemWise",
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -139,7 +139,7 @@ void SyncBatchNormBackwardElemtTilingRun(gert::StorageShape grad_output_shape_in
     }
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_fp16)
 {
     gert::StorageShape grad_output_shape = {{2048}, {2048}};
     gert::StorageShape mean_shape = {{2048}, {2048}};
@@ -147,14 +147,14 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16)
                                         ge::GRAPH_SUCCESS, 0);
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_bf16)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_bf16)
 {
     gert::StorageShape grad_output_shape = {{1000}, {1000}};
     gert::StorageShape mean_shape = {{1000}, {1000}};
     SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_BF16, ge::DT_BF16, ge::GRAPH_SUCCESS, 0);
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp32)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_fp32)
 {
     gert::StorageShape grad_output_shape = {{4096}, {4096}};
     gert::StorageShape mean_shape = {{4096}, {4096}};
@@ -162,7 +162,7 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp32)
                                         0);
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16_fp32)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_fp16_fp32)
 {
     gert::StorageShape grad_output_shape = {{1024}, {1024}};
     gert::StorageShape mean_shape = {{1024}, {1024}};
@@ -170,14 +170,14 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16_fp32)
                                         0);
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_shape_not_equal)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_shape_not_equal)
 {
     gert::StorageShape grad_output_shape = {{2046}, {2046}};
     gert::StorageShape mean_shape = {{2048}, {2048}};
     SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, 0);
 }
 
-TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_dtype_not_equal)
+TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend950_dtype_not_equal)
 {
     gert::StorageShape grad_output_shape = {{1024}, {1024}};
     gert::StorageShape mean_shape = {{1024}, {1024}};

@@ -356,7 +356,7 @@ ge::graphStatus InstanceNormGradRegBaseTiling::GetWorkspaceSize()
     stage2CoreUsed_ = static_cast<uint32_t>(Ops::Base::CeilDiv(C_, cBlockFactor_));
     cTailBlockFactor_ = C_ - cBlockFactor_ * (static_cast<int64_t>(stage2CoreUsed_) - 1);
 
-    // stage2 每次处理的通道数由 UB 决定,不能在内核里硬编码:内核 Stage2Process 先 pipe_->Reset(),
+    // stage2 每次处理的通道数由 UB 决定,不能在内核里使用固定值:内核 Stage2Process 先 pipe_->Reset(),
     // 之后每通道占 STAGE2_BUFFERS_F32 个 float 缓冲(in 双缓冲 2 + accDg/accDb + 两个 Kahan 补偿)
     // 外加 1 份输出 dtype。改动内核缓冲个数时必须同步 STAGE2_BUFFERS_F32,否则 UB 超限。
     const int64_t stage2BytesPerCh = static_cast<int64_t>(STAGE2_BUFFERS_F32) * FLOAT_DTYPE_BYTES +

@@ -191,7 +191,7 @@ TEST_F(INTrainingUpdateGradTiling, accept_fp16_input)
     EXPECT_EQ(key, 100000U);
 }
 
-// ---------------- 反向：非法输入必须被拦截 ----------------
+// ---------------- 反向：非法输入必须被校验拒绝 ----------------
 
 // dy 的 dtype 非 fp16/fp32
 TEST_F(INTrainingUpdateGradTiling, reject_invalid_dy_dtype)
@@ -244,7 +244,7 @@ TEST_F(INTrainingUpdateGradTiling, reject_non_positive_c0)
     EXPECT_EQ(RunTiling6D(2, 2, 2, 8, 8, 0, key), ge::GRAPH_FAILED);
 }
 
-// format 必须是 NDC1HWC0：ND 与之布局不同，当成 NDC1HWC0 计算会出错，须拦截
+// format 必须是 NDC1HWC0：ND 与之布局不同，当成 NDC1HWC0 计算会出错，须校验拒绝
 TEST_F(INTrainingUpdateGradTiling, reject_non_ndc1hwc0_format)
 {
     uint64_t key = 0;

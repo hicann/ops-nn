@@ -23,7 +23,7 @@
  *   + GEIR 兼容：format 元数据不在 tiling 侧拦截
  *   + 负例：dtype、输出描述、grads rank/dim、scale/variance rank 与 C 长度不匹配。
  *
- * TilingKey 由 ASCENDC_TPL_SEL_PARAM(RANK) 生成，数值编码不硬编码；本 UT 通过
+ * TilingKey 由 ASCENDC_TPL_SEL_PARAM(RANK) 生成，数值编码不使用固定值；本 UT 通过
  * "同组一致、跨组相异" 的关系断言验证两档 RANK Key 正确分流：
  *   - grads rank 2~4（有效 rank<=4）→ RANK_4
  *   - grads rank 5（有效 rank 5，映射 R=8）→ RANK_8

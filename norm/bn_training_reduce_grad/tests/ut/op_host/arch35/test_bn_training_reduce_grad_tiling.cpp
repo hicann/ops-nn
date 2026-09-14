@@ -241,7 +241,7 @@ TEST_F(BNTrainingReduceGradTilingUT, accept_missing_epsilon)
               ge::GRAPH_SUCCESS);
 }
 
-// ---------------- 反向：非法输入必须被拦截 ----------------
+// ---------------- 反向：非法输入必须被校验拒绝 ----------------
 
 // grads dtype 非法（int32）
 TEST_F(BNTrainingReduceGradTilingUT, reject_invalid_grads_dtype)

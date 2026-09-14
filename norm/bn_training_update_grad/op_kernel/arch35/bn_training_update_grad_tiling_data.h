@@ -41,7 +41,7 @@
 #include <cstdint>
 
 struct BNTrainingUpdateGradTilingData {
-    int64_t numN; // ND: N（dim0）；NHWC: rows = numel/C（kernel 不直接消费，保留供 host 日志与调试核对）
+    int64_t numN; // ND: N（dim0）；NHWC: rows = numel/C（kernel 不直接消费，保留供 host 日志与问题定位核对）
     int64_t numC;      // ND: C（dim1）；NHWC: C（最后一维）
     int64_t innerSize; // ND: R = prod(d2:)；NHWC: 恒 1
     int64_t channelCores; // ND: channel 切分核数；NHWC: blockDim（kernel 不直接消费：blockDim 已定，保留供核对）
