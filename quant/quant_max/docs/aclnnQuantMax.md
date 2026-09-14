@@ -193,7 +193,7 @@ aclnnStatus aclnnQuantMax(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x、scale、y、amax存在空指针。</td>
+      <td>x、scale、y、amax、roundMode存在空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
@@ -207,7 +207,7 @@ aclnnStatus aclnnQuantMax(
       <td>dstType取值不在{34, 35, 36}范围之内。</td>
     </tr>
     <tr>
-      <td>roundMode为无效值。</td>
+      <td>roundMode为空字符串或非法值。</td>
     </tr>
     <tr>
       <td>x的shape维度不在1-8范围之内，或scale、amax的shape不是[1]。</td>

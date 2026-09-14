@@ -616,7 +616,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_9dim_tensor)
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
-// Test roundMode nullptr -> ACLNN_ERR_PARAM_INVALID
+// Test roundMode nullptr -> ACLNN_ERR_PARAM_NULLPTR
 TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_nullptr)
 {
     auto xDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -634,7 +634,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_nullptr)
     aclOpExecutor* executor = nullptr;
 
     aclnnStatus ret = aclnnQuantMaxGetWorkspaceSize(x, scale, roundMode, dstType, y, amax, &workspaceSize, &executor);
-    EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // Test roundMode empty string -> ACLNN_ERR_PARAM_INVALID
