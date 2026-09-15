@@ -21,20 +21,20 @@
 
 namespace ops {
 namespace {
-constexpr size_t kValuesInputIndex = 1U;
-constexpr size_t kYIndicesOutputIndex = 0U;
-constexpr size_t kYValuesOutputIndex = 1U;
-constexpr size_t kEmptyRowIndicatorOutputIndex = 2U;
-constexpr size_t kReverseIndexMapOutputIndex = 3U;
+constexpr size_t VALUES_INPUT_INDEX = 1U;
+constexpr size_t Y_INDICES_OUTPUT_INDEX = 0U;
+constexpr size_t Y_VALUES_OUTPUT_INDEX = 1U;
+constexpr size_t EMPTY_ROW_INDICATOR_OUTPUT_INDEX = 2U;
+constexpr size_t REVERSE_INDEX_MAP_OUTPUT_INDEX = 3U;
 
 ge::graphStatus InferDataTypeSparseFillEmptyRows(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeSparseFillEmptyRows");
 
-    context->SetOutputDataType(kYIndicesOutputIndex, ge::DT_INT64);
-    context->SetOutputDataType(kYValuesOutputIndex, context->GetInputDataType(kValuesInputIndex));
-    context->SetOutputDataType(kEmptyRowIndicatorOutputIndex, ge::DT_BOOL);
-    context->SetOutputDataType(kReverseIndexMapOutputIndex, ge::DT_INT64);
+    context->SetOutputDataType(Y_INDICES_OUTPUT_INDEX, ge::DT_INT64);
+    context->SetOutputDataType(Y_VALUES_OUTPUT_INDEX, context->GetInputDataType(VALUES_INPUT_INDEX));
+    context->SetOutputDataType(EMPTY_ROW_INDICATOR_OUTPUT_INDEX, ge::DT_BOOL);
+    context->SetOutputDataType(REVERSE_INDEX_MAP_OUTPUT_INDEX, ge::DT_INT64);
 
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeSparseFillEmptyRows");
     return ge::GRAPH_SUCCESS;

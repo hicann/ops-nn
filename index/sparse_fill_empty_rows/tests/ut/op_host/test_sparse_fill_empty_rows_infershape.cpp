@@ -137,8 +137,8 @@ TEST_F(SparseFillEmptyRowsInfershapeTest, InferShapeRangeWithConstDenseShape)
     EXPECT_EQ(context->GetOutputShapeRange(1)->GetMax()->GetDim(0), 12);
     EXPECT_EQ(context->GetOutputShapeRange(2)->GetMin()->GetDim(0), 3);
     EXPECT_EQ(context->GetOutputShapeRange(2)->GetMax()->GetDim(0), 3);
-    EXPECT_EQ(context->GetOutputShapeRange(3)->GetMin()->GetDim(0), 5);
-    EXPECT_EQ(context->GetOutputShapeRange(3)->GetMax()->GetDim(0), 5);
+    EXPECT_EQ(context->GetOutputShapeRange(kReverseIndexMapOutputIdx)->GetMin()->GetDim(0), 2);
+    EXPECT_EQ(context->GetOutputShapeRange(kReverseIndexMapOutputIdx)->GetMax()->GetDim(0), 5);
 }
 
 TEST_F(SparseFillEmptyRowsInfershapeTest, InferShapeRangeFailedWhenIndicesDtypeInvalid)

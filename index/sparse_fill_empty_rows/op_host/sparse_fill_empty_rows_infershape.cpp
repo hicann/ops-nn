@@ -13,7 +13,10 @@
  * \brief
  */
 
+#include <string>
+
 #include "error_util.h"
+#include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
@@ -40,8 +43,9 @@ static ge::graphStatus CheckInputDtype(gert::InferShapeRangeContext* context, si
     const gert::CompileTimeTensorDesc* inputDesc = context->GetInputDesc(index);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     if (inputDesc->GetDataType() != expectType) {
-        OP_LOGE(context->GetNodeName(), "%s data type should be %d, but this is %d", inputName, expectType,
-                inputDesc->GetDataType());
+        const std::string actualType = ge::TypeUtils::DataTypeToSerialString(inputDesc->GetDataType());
+        const std::string expectedType = ge::TypeUtils::DataTypeToSerialString(expectType);
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), inputName, actualType.c_str(), expectedType.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -49,17 +53,22 @@ static ge::graphStatus CheckInputDtype(gert::InferShapeRangeContext* context, si
 
 static ge::graphStatus CheckSparseFillEmptyRowsInputs(gert::InferShapeRangeContext* context)
 {
-    OP_LOGE_IF(CheckInputDtype(context, kIndicesIdx, ge::DT_INT64, "indices") != ge::GRAPH_SUCCESS, ge::GRAPH_FAILED,
-               context->GetNodeName(), "indices dtype check failed");
-    OP_LOGE_IF(CheckInputDtype(context, kDenseShapeIdx, ge::DT_INT64, "dense_shape") != ge::GRAPH_SUCCESS,
-               ge::GRAPH_FAILED, context->GetNodeName(), "dense_shape dtype check failed");
+    if (CheckInputDtype(context, kIndicesIdx, ge::DT_INT64, "indices") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckInputDtype(context, kDenseShapeIdx, ge::DT_INT64, "dense_shape") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     const gert::CompileTimeTensorDesc* valuesDesc = context->GetInputDesc(kValuesIdx);
     const gert::CompileTimeTensorDesc* defaultValueDesc = context->GetInputDesc(kDefaultValueIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, valuesDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, defaultValueDesc);
     if (valuesDesc->GetDataType() != defaultValueDesc->GetDataType()) {
-        OP_LOGE(context->GetNodeName(), "values data_type and default_value data_type should be same");
+        const std::string actualTypes = ge::TypeUtils::DataTypeToSerialString(valuesDesc->GetDataType()) + ", " +
+                                        ge::TypeUtils::DataTypeToSerialString(defaultValueDesc->GetDataType());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "values, default_value", actualTypes.c_str(),
+                                               "values and default_value must have the same dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -68,8 +77,9 @@ static ge::graphStatus CheckSparseFillEmptyRowsInputs(gert::InferShapeRangeConte
 
 static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeContext* context)
 {
-    OP_LOGE_IF(CheckSparseFillEmptyRowsInputs(context) != ge::GRAPH_SUCCESS, ge::GRAPH_FAILED, context->GetNodeName(),
-               "SparseFillEmptyRows input check failed");
+    if (CheckSparseFillEmptyRowsInputs(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     auto indicesShapeRange = context->GetInputShapeRange(kIndicesIdx);
     auto denseShapeTensorRange = context->GetInputTensorRange(kDenseShapeIdx);
     auto yIndicesShapeRange = context->GetOutputShapeRange(kYIndicesIdx);
@@ -81,6 +91,7 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
     OP_CHECK_NULL_WITH_CONTEXT(context, yIndicesShapeRange);
     OP_CHECK_NULL_WITH_CONTEXT(context, yValuesShapeRange);
     OP_CHECK_NULL_WITH_CONTEXT(context, denseShapeTensorRange->GetMax());
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShapeRange->GetMin());
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShapeRange->GetMax());
     OP_CHECK_NULL_WITH_CONTEXT(context, yIndicesShapeRange->GetMax());
     OP_CHECK_NULL_WITH_CONTEXT(context, yIndicesShapeRange->GetMin());
@@ -93,7 +104,8 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
 
     const gert::Shape* indicesMaxShape = indicesShapeRange->GetMax();
     if (indicesMaxShape->GetDimNum() != kIndicesRank) {
-        OP_LOGE(context->GetNodeName(), "indices must be 2D, but got %zuD", indicesMaxShape->GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
+                                     std::to_string(indicesMaxShape->GetDimNum()).c_str(), "2");
         return ge::GRAPH_FAILED;
     }
 
@@ -101,10 +113,16 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
     auto shapeData = denseShapeTensor->GetData<int64_t>();
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeData);
     auto shapeSize = denseShapeTensor->GetShapeSize();
-    if (denseShapeTensor->GetOriginShape().GetDimNum() != kValuesRank || shapeSize <= 0 ||
-        static_cast<size_t>(shapeSize) > gert::Shape::kMaxDimNum) {
-        OP_LOGE(context->GetNodeName(), "dense_shape must be a non-empty 1D tensor with at most %zu elements",
-                gert::Shape::kMaxDimNum);
+    if (denseShapeTensor->GetOriginShape().GetDimNum() != kValuesRank) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "dense_shape",
+                                     std::to_string(denseShapeTensor->GetOriginShape().GetDimNum()).c_str(), "1");
+        return ge::GRAPH_FAILED;
+    }
+    if (shapeSize <= 0 || static_cast<size_t>(shapeSize) > gert::Shape::kMaxDimNum) {
+        const std::string reason = "the number of elements must be in range [1, " +
+                                   std::to_string(gert::Shape::kMaxDimNum) + "]";
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "dense_shape",
+                                                  std::to_string(shapeSize).c_str(), reason.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -112,7 +130,9 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
     denseShape.SetDimNum(static_cast<size_t>(shapeSize));
     for (size_t i = 0U; i < static_cast<size_t>(shapeSize); ++i) {
         if (shapeData[i] < 0) {
-            OP_LOGE(context->GetNodeName(), "dense_shape[%zu] must be non-negative, but got %ld", i, shapeData[i]);
+            const std::string paramName = "dense_shape[" + std::to_string(i) + "]";
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), paramName.c_str(), std::to_string(shapeData[i]).c_str(),
+                                      ">= 0");
             return ge::GRAPH_FAILED;
         }
         denseShape.SetDim(i, shapeData[i]);
@@ -120,11 +140,13 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
 
     auto elementsNum = denseShape.GetShapeSize();
     if (elementsNum == gert::Shape::kInvalidDimValue) {
-        OP_LOGE(context->GetNodeName(), "The product of dense_shape elements overflows int64");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "dense_shape", Shape2String(denseShape).c_str(),
+                                              "the product of its elements overflows int64");
         return ge::GRAPH_FAILED;
     }
     const int64_t minElementsNum = (elementsNum == 0) ? 0 : kMinNonEmptyElements;
-    const int64_t indicesNum = indicesMaxShape->GetDim(0);
+    const int64_t indicesMinNum = indicesShapeRange->GetMin()->GetDim(0);
+    const int64_t indicesMaxNum = indicesMaxShape->GetDim(0);
     const int64_t indicesRankDim = indicesMaxShape->GetDim(1);
 
     yIndicesShapeRange->GetMax()->SetDimNum(kIndicesRank);
@@ -145,9 +167,9 @@ static ge::graphStatus InferShapeRangeSparseFillEmptyRows(gert::InferShapeRangeC
     yEmptyRowIndicatorRange->GetMin()->SetDim(0, denseShape.GetDim(0));
 
     yReverseIndexMapRange->GetMax()->SetDimNum(kValuesRank);
-    yReverseIndexMapRange->GetMax()->SetDim(0, indicesNum);
+    yReverseIndexMapRange->GetMax()->SetDim(0, indicesMaxNum);
     yReverseIndexMapRange->GetMin()->SetDimNum(kValuesRank);
-    yReverseIndexMapRange->GetMin()->SetDim(0, indicesNum);
+    yReverseIndexMapRange->GetMin()->SetDim(0, indicesMinNum);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -154,8 +154,7 @@ public:
                 }
             }
         }
-        const int64_t paralledDataSize = 16 * 1024;
-        if (dimsSize < paralledDataSize) {
+        if (dimsSize < kParallelDataSize) {
             return EigenTensorIndicesValidCheck<T>(dimsSize);
         }
         return EigenTensorIndicesValidParaCheck<T>(ctx, dimsSize);
@@ -226,8 +225,7 @@ public:
         int64_t sparseSize = (ix_->GetTensor()->GetTensorShape()->GetDims() == 0) ?
                                  1 :
                                  ix_->GetTensor()->GetTensorShape()->GetDimSize(0);
-        const int64_t paralledDataSize = 16 * 1024;
-        if (sparseSize >= paralledDataSize) {
+        if (sparseSize >= kParallelDataSize) {
             return ToDenseParallel<IndiceT, ValueT>(ctx, output);
         }
         EigenTensor outputEigenTensor(output, output->GetData());
@@ -309,7 +307,7 @@ uint32_t SparseTensor::CreateSparseTensor(Tensor* ix, Tensor* tensorvals, std::v
     ix_ = std::make_shared<EigenTensor>(ix, ix->GetData());
     vals_ = std::make_shared<EigenTensor>(tensorvals, tensorvals->GetData());
     if (ix_ == nullptr || vals_ == nullptr) {
-        KERNEL_LOG_ERROR("Indices or values creat eigen tensor failed.");
+        KERNEL_LOG_ERROR("Indices or values created eigen tensor failed.");
         return KERNEL_STATUS_INNER_ERROR;
     }
 
@@ -363,7 +361,7 @@ bool SparseTensor::ValidateToDense(const Tensor* out) const
     for (size_t d = 0; d < shape_.size(); ++d) {
         if (shape_[d] > outShape->GetDimSize(static_cast<int32_t>(d))) {
             KERNEL_LOG_ERROR(
-                "Valid output shape dims value falied, index [%zu], shape value [%ld], greater than output shape value "
+                "Valid output shape dims value failed, index [%zu], shape value [%ld], greater than output shape value "
                 "[%ld].",
                 d, shape_[d], outShape->GetDimSize(static_cast<int32_t>(d)));
             return false;
