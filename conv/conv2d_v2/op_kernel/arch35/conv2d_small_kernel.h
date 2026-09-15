@@ -34,6 +34,8 @@ constexpr event_t EVT_MTE2_DONE = static_cast<event_t>(2);
 constexpr event_t EVT_BATCH_BUF0 = static_cast<event_t>(3);
 constexpr event_t EVT_BATCH_BUF1 = static_cast<event_t>(4);
 constexpr event_t EVT_BIAS_DONE = static_cast<event_t>(5);
+constexpr event_t EVT_GROUP_L1_DONE = static_cast<event_t>(6);
+constexpr event_t EVT_GROUP_BIAS_DONE = static_cast<event_t>(7);
 
 template <typename ChannelWiseT>
 __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT>& tensorL1,
@@ -430,6 +432,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             if (tiling_->hasBias) {
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
                 LoadBiasToBT();
+                if constexpr (!IsHwMode) {
+                    SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+                }
             }
             needLoadBias = false;
         }
@@ -967,6 +972,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     GlobalTensor<BiasT> biasGm;
     biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(bias) + bsOff);
     if (tiling_->hasBias && actualCo_ > 0) {
+        WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
         LocalTensor<BiasT> biasL1(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
         LoadChannelWiseL1FullLoad<BiasT>(biasL1, biasGm[0], actualCo_);
         SetFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
@@ -974,6 +980,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0) + bsOff);
         LocalTensor<uint64_t> scale0L1(TPosition::A1, scale0L1OffBytes_, tiling_->singleCoreCo);
+        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         LoadChannelWiseL1FullLoad<uint64_t>(scale0L1, scale0Gm_[0], actualCo_);
     } else if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
         scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0));
@@ -981,6 +989,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
         reluWeight0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight0) + bsOff);
         LocalTensor<float> reluWeight0L1(TPosition::A1, reluWeight0L1OffBytes_, tiling_->singleCoreCo);
+        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         LoadChannelWiseL1FullLoad<float>(reluWeight0L1, reluWeight0Gm_[0], actualCo_);
     } else if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
         reluWeight0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight0));
@@ -989,6 +999,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
             scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1) + bsOff);
             LocalTensor<uint64_t> scale1L1(TPosition::A1, scale1L1OffBytes_, tiling_->singleCoreCo);
+            SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
             LoadChannelWiseL1FullLoad<uint64_t>(scale1L1, scale1Gm_[0], actualCo_);
         } else if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
             scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1));
@@ -996,6 +1008,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
             reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1) + bsOff);
             LocalTensor<float> reluWeight1L1(TPosition::A1, reluWeight1L1OffBytes_, tiling_->singleCoreCo);
+            SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
             LoadChannelWiseL1FullLoad<float>(reluWeight1L1, reluWeight1Gm_[0], actualCo_);
         } else if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
             reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1));
@@ -1377,6 +1391,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     // Each group iteration reloads fmap/weight/bias for one group (ORI) or one
     // packed fweight (OPT) and runs a full M->K->Fixpipe pass.
     bool needLoadBias = true;
+    SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+    SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
     for (uint32_t groupIter = 0; groupIter < singleGroupIter_; groupIter++) {
         uint32_t curActualCo = CalcActualCoForGroupIter(groupIter);
         if (curActualCo == INVALID_GROUP_ITER) {
@@ -1385,7 +1401,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         // Per-iteration output GM offset for this group/fweight.
         curGroupCoutOff_ = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
                            static_cast<uint64_t>(groupCoutStep_);
-
+        WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
         if (singleCoreBatch_ <= 1) {
             // Stage 1: Load fmap/weight for this group iteration.
             LoadFmapL1MModeForGroup(al1, x, groupIter);
@@ -1459,11 +1475,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                 }
             }
         }
-
-        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
-        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         needLoadBias = true;
+        SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
     }
+    WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+    WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,

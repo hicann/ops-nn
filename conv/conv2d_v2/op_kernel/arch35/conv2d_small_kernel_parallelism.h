@@ -382,6 +382,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             if (this->tiling_->hasBias) {
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_BIAS_DONE);
                 this->LoadBiasToBT();
+                SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
             }
             needLoadBias = false;
         }
@@ -830,6 +831,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     // group (ORI) or one packed fweight (OPT) and runs M->cin-split->Fixpipe.
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+    SetFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
     this->l1Pingpong_ = 0;
     bool needLoadBias = true;
     for (uint32_t groupIter = 0; groupIter < this->singleGroupIter_; groupIter++) {
@@ -938,10 +940,8 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         }
         // Per-group bias/scale/relu reload.
         needLoadBias = true;
-
-        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
-        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
+    WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
 }
@@ -1020,6 +1020,11 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         }
         WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
         WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+        // RunKL0Loop signals bias-consumed once when hasBias; HW mode has no group
+        // reload, so drain the event to keep Set/Wait balanced.
+        if (this->tiling_->hasBias) {
+            WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+        }
     } else {
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
         ProcessMMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, x, filter, bias);

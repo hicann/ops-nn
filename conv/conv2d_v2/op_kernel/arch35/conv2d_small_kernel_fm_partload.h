@@ -236,6 +236,11 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     WaitFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+    // RunKL0Loop signals bias-consumed once when hasBias; no group loop reloads it
+    // here, so drain the event to keep Set/Wait balanced.
+    if (this->tiling_->hasBias) {
+        WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_BIAS_DONE);
+    }
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
