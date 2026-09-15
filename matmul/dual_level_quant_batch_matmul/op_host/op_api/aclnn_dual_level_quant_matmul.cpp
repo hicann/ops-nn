@@ -540,7 +540,8 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(
     aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnDualLevelQuantMatmulWeightNz,
-                   DFX_IN(x1, x2, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, optionalBias),
+                   DFX_IN(x1, x2, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, optionalBias, transposeX1,
+                          transposeX2, level0GroupSize, level1GroupSize),
                    DFX_OUT(out));
 
     auto uniqueExecutor = CREATE_EXECUTOR();

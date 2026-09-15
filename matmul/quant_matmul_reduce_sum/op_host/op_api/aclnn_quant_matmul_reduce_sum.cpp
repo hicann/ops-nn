@@ -342,7 +342,10 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize(
     const aclTensor* bias, bool transposeX1, bool transposeX2, int64_t groupSize, const aclIntArray* dims,
     bool keepDims, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnQuantMatmulReduceSumWeightNz, DFX_IN(x1, x2, x1Scale, x2Scale), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnQuantMatmulReduceSumWeightNz,
+                   DFX_IN(x1, x2, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, bias, transposeX1, transposeX2,
+                          groupSize, dims, keepDims),
+                   DFX_OUT(out));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

@@ -363,7 +363,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(const aclTensor* x1, con
     DEPRECATED_API_WARN_ONCE("aclnnWeightQuantBatchMatmulGetWorkspaceSize", "December 2026",
                              "aclnnWeightQuantBatchMatmulV3GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnWeightQuantBatchMatmul,
-                   DFX_IN(x1, x2, bias, addOffset, mulScale, diagonalMatrix, deqOffset, deqScale, transposeX1,
+                   DFX_IN(x1, x2, diagonalMatrix, deqOffset, deqScale, addOffset, mulScale, bias, transposeX1,
                           transposeX2, antiquantScale, antiquantOffset),
                    DFX_OUT(out));
     // 固定写法，创建OpExecutor
