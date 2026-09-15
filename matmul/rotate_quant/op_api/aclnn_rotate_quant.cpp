@@ -507,7 +507,8 @@ aclnnStatus aclnnRotateQuantGetWorkspaceSize(const aclTensor* x, const aclTensor
                                              bool trans, aclTensor* yOut, aclTensor* scaleOut, uint64_t* workspaceSize,
                                              aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnRotateQuant, DFX_IN(x, rotation, alpha), DFX_OUT(yOut, scaleOut));
+    L2_DFX_PHASE_1(aclnnRotateQuant, DFX_IN(x, rotation, alpha, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                   DFX_OUT(yOut, scaleOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 

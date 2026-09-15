@@ -1746,7 +1746,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
 {
     L2_DFX_PHASE_1(aclnnWeightQuantBatchMatmulV2,
                    DFX_IN(x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional,
-                          biasOptional),
+                          biasOptional, antiquantGroupSize),
                    DFX_OUT(y));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -1796,7 +1796,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(
 {
     L2_DFX_PHASE_1(aclnnWeightQuantBatchMatmulV3,
                    DFX_IN(x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional,
-                          biasOptional),
+                          biasOptional, antiquantGroupSize, innerPrecise),
                    DFX_OUT(y));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -1847,7 +1847,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
 {
     L2_DFX_PHASE_1(aclnnWeightQuantBatchMatmulNz,
                    DFX_IN(x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional,
-                          biasOptional),
+                          biasOptional, antiquantGroupSize),
                    DFX_OUT(y));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

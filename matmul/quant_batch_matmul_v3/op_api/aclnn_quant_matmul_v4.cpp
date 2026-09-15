@@ -46,7 +46,7 @@ aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor* x1, const aclTen
 {
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3GetWorkspaceSize", "December 2026",
                              "aclnnQuantMatmulV5GetWorkspaceSize");
-    L2_DFX_PHASE_1(aclnnQuantMatmulV3, DFX_IN(x1, x2, scale, offset, bias), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnQuantMatmulV3, DFX_IN(x1, x2, scale, offset, bias, transposeX1, transposeX2), DFX_OUT(out));
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor* tempPtr = nullptr;
@@ -70,7 +70,8 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor* x1, const aclTen
 {
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4GetWorkspaceSize", "December 2026",
                              "aclnnQuantMatmulV5GetWorkspaceSize");
-    L2_DFX_PHASE_1(aclnnQuantMatmulV4, DFX_IN(x1, x2, scale, offset, pertokenScaleOptional, bias), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnQuantMatmulV4,
+                   DFX_IN(x1, x2, scale, offset, pertokenScaleOptional, bias, transposeX1, transposeX2), DFX_OUT(out));
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor* tempYScalePtr = nullptr;
