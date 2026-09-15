@@ -53,13 +53,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -80,6 +80,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -105,11 +110,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -166,13 +166,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -193,6 +193,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -218,11 +223,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -279,13 +279,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -306,6 +306,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -331,11 +336,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -392,13 +392,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -419,6 +419,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -444,11 +449,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -505,13 +505,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -532,6 +532,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -557,11 +562,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -618,13 +618,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -645,6 +645,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -670,11 +675,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -731,13 +731,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -758,6 +758,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -783,11 +788,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -844,13 +844,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -871,6 +871,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -896,11 +901,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -957,13 +957,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -984,6 +984,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1009,11 +1014,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1070,13 +1070,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1097,6 +1097,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1122,11 +1127,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1183,13 +1183,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1210,6 +1210,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1235,11 +1240,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1296,13 +1296,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1323,6 +1323,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1348,11 +1353,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1409,13 +1409,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1436,6 +1436,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1461,11 +1466,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1522,13 +1522,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1549,6 +1549,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1574,11 +1579,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1635,13 +1635,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1662,6 +1662,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1687,11 +1692,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]
@@ -1748,13 +1748,13 @@
       ],
       "attrs": [
         {
-          "name": "activate_left",
-          "dtype": "bool",
+          "name": "activate_dim",
+          "dtype": "int",
           "value": null
         },
         {
-          "name": "activate_dim",
-          "dtype": "int",
+          "name": "activate_left",
+          "dtype": "bool",
           "value": null
         },
         {
@@ -1775,6 +1775,11 @@
         {
           "name": "glu_bias",
           "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "group_mode",
+          "dtype": "int",
           "value": null
         },
         {
@@ -1800,11 +1805,6 @@
         {
           "name": "max_dtype_value",
           "dtype": "float",
-          "value": null
-        },
-        {
-          "name": "group_mode",
-          "dtype": "int",
           "value": null
         }
       ]

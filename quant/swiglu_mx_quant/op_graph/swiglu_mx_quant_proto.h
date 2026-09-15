@@ -31,16 +31,24 @@ namespace ge {
 * Supports 2-7 dimensional tensors.
 * @li group_index: An optional tensor. Must be one of the following types: int32, int64.
 * If provided, group_index must be 1-dimensional and its shape must be less than or equal to 256.
+* Each element must be a non-negative integer, and the sum of all elements must not exceed the
+* total number of rows of x to be quantized.
 
 * @par Attributes:
-* @li activate_left: An optional bool. Reserved parameter for SwiGLU activation side. Defaults to false.
 * @li activate_dim: An optional int. Dimension along which to split input for SwiGLU.
 * Must be last or second-to-last dimension. Defaults to -1.
-* @li swiglu_mode: An optional int. Reserved parameter for SwiGLU variant mode. Defaults to 0. When swiglu_mode = 1,
-clamp_limit must greater than 0
-* @li clamp_limit: An optional float. Reserved parameter for clamp limit in SwiGLU variant. Defaults to 7.0.
-* @li glu_alpha: An optional float. Reserved parameter for alpha value in SwiGLU variant. Defaults to 1.702.
-* @li glu_bias: An optional float. Reserved parameter for bias value in SwiGLU variant. Defaults to 1.0.
+* @li activate_left: An optional bool. Whether to activate the left half of the split input.
+* When false, the right half is activated. Ignored when swiglu_mode=1. Defaults to false.
+* @li swiglu_mode: An optional int. SwiGLU computation mode: 0=standard SwiGLU, 1=interleaved
+* variant, 2=split-half clamp variant, 3=split-half sigmoid-clamp variant. Defaults to 0.
+* When swiglu_mode is 1, 2 or 3, clamp_limit must be greater than 0. When swiglu_mode is 2 or 3,
+* axis must be -1.
+* @li clamp_limit: An optional float. Clamp limit used by variant SwiGLU (swiglu_mode=1/2/3).
+* Defaults to 7.0.
+* @li glu_alpha: An optional float. Sigmoid scale used by variant SwiGLU (swiglu_mode=1/2).
+* Defaults to 1.702.
+* @li glu_bias: An optional float. Linear-path bias used by variant SwiGLU (swiglu_mode=1/2).
+* Defaults to 1.0.
 * @li group_mode: An optional int. Group index mode. Effective when group_index is provided.
 * 0=count mode, 1=cumsum mode. Defaults to 0.Currently only supports 0.
 * @li axis: An optional int. Axis along which to perform block-wise quantization.
@@ -51,8 +59,8 @@ clamp_limit must greater than 0
 * Supports "rint", "floor", "round". Defaults to "rint". When dst_type = 35 or 36, round_mode must be "rint".
 * @li scale_alg: An optional int. Algorithm for computing scale factors.
 * 0=OCP, 1=cuBLAS, 2=RNE. Defaults to 0.When dst_type = 40 or 41, scale_alg must be 0.
-* @li max_dtype_value: An optional float. Reserved parameter for maximum dtype value. Used when scale_alg=2 and
-dst_type=FP4_E1M2. Defaults to 0.
+* @li max_dtype_value: An optional float. Reserved parameter, not used in current version.
+* Defaults to 0.
 
 * @par Outputs:
 * @li y: Quantized output tensor after SwiGLU activation.
@@ -63,9 +71,10 @@ dst_type=FP4_E1M2. Defaults to 0.
 * - Let act_shape be the shape after SwiGLU (input shape with activate_dim halved) \n
 * - axis_idx = axis if axis >= 0 else axis + rank(act_shape) \n
 * - mxscale.shape = act_shape \n
-* - mxscale.shape[axis_idx] = ceil(act_shape[axis_idx] / 32) \n
-* - mxscale.shape[-1] = (mxscale.shape[-1] + 1) // 2  (packed storage) \n
-* - mxscale.shape = mxscale.shape + [2]  (last dimension expanded to 2 for real/imaginary parts)
+* - mxscale.shape[axis_idx] = ceil(ceil(act_shape[axis_idx] / 32) / 2) (block count padded to even) \n
+* - When group_index is provided and axis is not the last axis,
+* mxscale.shape[axis_idx] = act_shape[axis_idx] / 64 + group_num (integer division) \n
+* - mxscale.shape = mxscale.shape + [2]  (last dimension of 2 holds the scales of two adjacent 32-element blocks)
 
 * @par Constraints:
 * @li Input dimension specified by activate_dim must be divisible by 2.
@@ -75,8 +84,11 @@ dst_type=FP4_E1M2. Defaults to 0.
 * @li When dst_type is FP4_E2M1 (40) or FP4_E1M2 (41), round_mode supports "rint", "floor", "round".
 * @li When activate_dim or axis is not the last axis, if group_index is provided, input x shape must be 2-dimensional.
 * @li If group_index is provided, it must be 1-dimensional and its shape must be less than or equal to 256.
+* Each element must be a non-negative integer, and the sum of all elements must not exceed
+* the total number of rows of x to be quantized.
 * @li When dst_type is FP4 (40 or 41), scale_alg must be 0.
 * @li When activate_dim is not the last axis, swiglu_mode must be 0.
+* @li When swiglu_mode is 2 or 3, axis must be -1.
 
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.

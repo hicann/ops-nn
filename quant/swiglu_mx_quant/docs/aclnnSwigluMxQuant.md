@@ -222,8 +222,8 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>可选参数，支持传空指针。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
-      <td>INT64</td>
+      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，且所有值的和必须小于等于需要量化的x的总行数。</li><li>可选参数，支持传空指针。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
+      <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
@@ -242,7 +242,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>activateLeft（bool）</td>
       <td>输入</td>
       <td>表示是否对输入的左半部分做swiglu激活。</td>
-      <td><ul><li>当值为false时，对输入的右半部分做激活。如果swigluMode为1，默认对x的偶数块做激活。</li></ul></td>
+      <td><ul><li>当值为false时，对输入的右半部分做激活。如果swigluMode为1，对x的偶数索引部分做激活（此参数不生效）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -342,7 +342,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>maxDtypeValue（double）</td>
       <td>输入</td>
       <td>表示DynamicMxQuant过程中指定的目标数据类型最大值。</td>
-      <td><ul><li>maxDtypeValue取值不小于0，仅当scaleAlg=2且y的数据类型为FLOAT4_E2M1/FLOAT4_E1M2才生效。</li></ul></td>
+      <td><ul><li>maxDtypeValue取值不小于0，为预留参数，当前版本未生效。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -362,7 +362,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>mxscaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的mxscale和Sb</td>
-      <td><ul><li>shape在axis轴上为x对应轴的值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td><ul><li>shape在axis轴上为yOut对应轴的值除以blocksize=32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>当axis为非尾轴且groupIndexOptional存在时，shape在axis轴上为yOut对应轴的值整除64再加groupNum。</li><li>当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3-8</td>
@@ -497,11 +497,11 @@ aclnnStatus aclnnSwigluMxQuant(
   - aclnnSwigluMxQuant默认确定性实现。
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
-- activateDim为非last轴，swigluMode必须为0或1。
+- activateDim为非last轴时，swigluMode必须为0。
 - swigluMode为2或3时，axis必须为-1（仅支持尾轴量化）。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
-- groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积，groupIndexOptional的每个元素需要大于0。
+- groupIndexOptional的每个元素必须为大于等于0的整数，且所有元素之和不能大于需要量化的x的总行数（即输入x除尾轴之外的剩余轴的乘积）。
 - 输出yOut和mxscaleOut超出groupIndexOptional所有元素之和的部分未进行清理，该部分内存为垃圾数据。
 - 当activateDim为非last轴，或者axis为非last轴，groupIndexOptional存在时，x的输入必须为2维。
 - 当输出yOut的数据类型为FLOAT8_E4M3FN、FLOAT8_E5M2时，roundModeOptional必须为 rint。
