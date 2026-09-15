@@ -132,7 +132,7 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
         auto npuArchType = ascendcPlatform.GetCurNpuArch();
         useRegbase = (IsRegbaseSocVersion(context) || npuArchType == NpuArch::DAV_5102);
     } else {
-        auto compileInfo = reinterpret_cast<const QuantizeAddLayerNormCompileInfo*>(context->GetCompileInfo());
+        auto compileInfo = context->GetCompileInfo<QuantizeAddLayerNormCompileInfo>();
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
         useRegbase = compileInfo->isRegbase;
     }

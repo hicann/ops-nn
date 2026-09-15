@@ -166,7 +166,6 @@ static aclnnStatus ComputeInstanceNormOutputs(const aclTensor* x, const aclTenso
                                                     yTransposed->GetViewOffset());
         CHECK_RET(yTransposedView != nullptr, ACLNN_ERR_INNER_NULLPTR);
         *yComputeOut = yTransposedView;
-
     } else {
         auto instanceNormOut = l0op::InstanceNormV3(xContiguous, gammaContiguous, betaContiguous, dataFormat, eps,
                                                     executor);

@@ -68,10 +68,9 @@ static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
 }
 
 static ge::graphStatus HandleUnknownRankShapesV2(gert::InferShapeContext* context, const gert::Shape* x1Shape,
-                                                 const gert::Shape* gammaShape, gert::Shape* y1Shape,
-                                                 gert::Shape* y2Shape, gert::Shape* y3Shape, gert::Shape* y4Shape,
-                                                 gert::Shape* outScale1Shape, gert::Shape* outScale2Shape,
-                                                 bool smooth1Exist, bool smooth2Exist,
+                                                 gert::Shape* y1Shape, gert::Shape* y2Shape, gert::Shape* y3Shape,
+                                                 gert::Shape* y4Shape, gert::Shape* outScale1Shape,
+                                                 gert::Shape* outScale2Shape, bool smooth1Exist, bool smooth2Exist,
                                                  const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen)
 {
     if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
@@ -252,9 +251,8 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
 
     // unknown rank
     if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
-        return HandleUnknownRankShapesV2(context, x1Shape, gammaShape, y1Shape, y2Shape, y3Shape, y4Shape,
-                                         outScale1Shape, outScale2Shape, smooth1Exist, smooth2Exist, outputMaskAttr,
-                                         outputMaskLen);
+        return HandleUnknownRankShapesV2(context, x1Shape, y1Shape, y2Shape, y3Shape, y4Shape, outScale1Shape,
+                                         outScale2Shape, smooth1Exist, smooth2Exist, outputMaskAttr, outputMaskLen);
     }
     auto knownRet = FillKnownRankShapesV2(context, x1Shape, outScaleShape, y1Shape, y2Shape, y3Shape, y4Shape,
                                           outScale1Shape, outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist,

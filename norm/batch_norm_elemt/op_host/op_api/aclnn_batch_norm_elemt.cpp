@@ -181,8 +181,11 @@ static aclnnStatus PrepareAndComputeBatchNorm(const aclTensor* input, const aclT
     auto meanContiguous = l0op::Contiguous(mean, executor);
     CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto meanNonConst = const_cast<aclTensor*>(meanContiguous);
-    auto varianceNonConst = const_cast<aclTensor*>(variance);
+    auto meanNonConst = executor->CreateView(meanContiguous, meanContiguous->GetViewShape(),
+                                             meanContiguous->GetViewOffset());
+    CHECK_RET(meanNonConst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto varianceNonConst = executor->CreateView(variance, variance->GetViewShape(), variance->GetViewOffset());
+    CHECK_RET(varianceNonConst != nullptr, ACLNN_ERR_INNER_NULLPTR);
     bnOutput = nullptr;
     auto bnResult = BatchNorm(inputContiguous, weightContiguous, biasContiguous, meanNonConst, varianceNonConst, false,
                               0.0, eps, &bnOutput, nullptr, nullptr, executor);

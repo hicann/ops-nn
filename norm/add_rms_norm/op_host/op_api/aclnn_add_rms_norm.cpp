@@ -65,6 +65,8 @@ static const std::initializer_list<op::DataType> NORMAL_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
                                                                                   op::DataType::DT_FLOAT16};
 
+static const std::initializer_list<op::DataType> FP16_ONLY_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16};
+
 static bool IsSocVersion310P()
 {
     if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND310P) {
@@ -97,7 +99,7 @@ static bool CheckDtypeValid(AddRmsNormInputTensor& inputTensor, AddRmsNormOutput
     if (mode == AddRmsNormACLNN::PRE_RMS_NORM_MODE || mode == AddRmsNormACLNN::POST_RMS_NORM_MODE) {
         DTYPE_SUPPORT_LIST = EXTEND_ATB_DTYPE_SUPPORT_LIST;
         if (IsSocVersion310P()) {
-            DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16};
+            DTYPE_SUPPORT_LIST = FP16_ONLY_DTYPE_SUPPORT_LIST;
         }
     }
 

@@ -74,7 +74,7 @@ bool SameShape(const gert::Shape& lhs, const gert::Shape& rhs)
     return true;
 }
 
-ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum,
+ge::graphStatus GetPlatformInfo(const gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum,
                                 size_t& sysWorkspaceSize)
 {
     auto platformInfo = context->GetPlatformInfo();

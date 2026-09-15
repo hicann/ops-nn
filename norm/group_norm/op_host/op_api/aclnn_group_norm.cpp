@@ -348,11 +348,11 @@ static aclnnStatus ComputeGroupNormResult(const aclTensor* self, const aclTensor
         result = GroupNormOutCastProcess(selfContiguous, yResult, meanResult, varianceResult, executor);
     }
 
-    y = std::get<0>(result);
+    y = std::get<Y_INDEX>(result);
     CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    mean = std::get<1>(result);
+    mean = std::get<MEAN_INDEX>(result);
     CHECK_RET(mean != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    variance = std::get<2>(result);
+    variance = std::get<RSTD_INDEX>(result);
     CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor

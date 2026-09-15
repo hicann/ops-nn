@@ -64,8 +64,7 @@ static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
 }
 
 static ge::graphStatus HandleUnknownRankShapes(gert::InferShapeContext* context, const gert::Shape* x1Shape,
-                                               const gert::Shape* gammaShape, gert::Shape* y1Shape,
-                                               gert::Shape* y2Shape, gert::Shape* outScale1Shape,
+                                               gert::Shape* y1Shape, gert::Shape* y2Shape, gert::Shape* outScale1Shape,
                                                gert::Shape* outScale2Shape, bool smooth1Exist, bool smooth2Exist,
                                                const gert::ContinuousVector* outputMaskAttr, size_t outputMaskLen)
 {
@@ -174,8 +173,8 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
 
     // unknown rank
     if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
-        return HandleUnknownRankShapes(context, x1Shape, gammaShape, y1Shape, y2Shape, outScale1Shape, outScale2Shape,
-                                       smooth1Exist, smooth2Exist, outputMaskAttr, outputMaskLen);
+        return HandleUnknownRankShapes(context, x1Shape, y1Shape, y2Shape, outScale1Shape, outScale2Shape, smooth1Exist,
+                                       smooth2Exist, outputMaskAttr, outputMaskLen);
     }
     auto knownRet = FillKnownRankShapes(context, x1Shape, outScaleShape, y1Shape, y2Shape, outScale1Shape,
                                         outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist, smooth2Exist);

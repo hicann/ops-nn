@@ -19,7 +19,6 @@
 #include <dlfcn.h>
 
 #include <cstdlib>
-#include <cstring>
 #include <set>
 #include <string>
 #include <utility>
@@ -29,6 +28,7 @@
 #include "common/inc/error_util.h"
 #include "graph/operator_factory.h"
 #include "platform/platform_info.h"
+#include "securec.h"
 #include "version/ge-compiler_version.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 
@@ -41,11 +41,14 @@ using GetOptionValueFn = graphStatus (*)(const void*, const AscendString&, Ascen
 // GE 库以 RTLD_GLOBAL 加载，故查全局符号表；
 GetOptionValueFn ResolveGetOptionValue()
 {
-    static GetOptionValueFn fn = []() {
+    static GetOptionValueFn fn = []() -> GetOptionValueFn {
         void* symbol = dlsym(RTLD_DEFAULT, kGetOptionValueSymbol);
         GetOptionValueFn resolved = nullptr;
         if (symbol != nullptr) {
-            std::memcpy(&resolved, &symbol, sizeof(resolved));
+            auto memRet = memcpy_s(&resolved, sizeof(GetOptionValueFn), &symbol, sizeof(GetOptionValueFn));
+            if (memRet != EOK) {
+                return nullptr;
+            }
         }
         return resolved;
     }();

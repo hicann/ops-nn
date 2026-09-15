@@ -30,7 +30,7 @@ namespace ops {
 static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2,
                                                                   DT_FLOAT8_E4M3FN};
 
-static bool HasSecondQuantParam(gert::InferShapeContext* context)
+static bool HasSecondQuantParam(const gert::InferShapeContext* context)
 {
     const gert::Shape* scale2Shape = context->GetOptionalInputShape(INPUT_SCALE2_IDX);
     const gert::Shape* zeroPoints2Shape = context->GetOptionalInputShape(INPUT_ZERO_POINTS2_IDX);
