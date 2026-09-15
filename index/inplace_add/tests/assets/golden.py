@@ -24,17 +24,17 @@ entry remains available and calls the same Torch computation core.
 
 The CPU golden is used only as the precision truth and is never timed as the XPU
 competitor.  It computes in the dtype TTK supplies, so a Promote call that supplies
-float32 or float64 is not cast back down to the original input dtype.  The
-third-party leg may be used by current TTK for both cross-check precision and XPU
-performance.  For non-empty work, both legs therefore express the operator with native
-``torch.index_add`` and remain independent of the C++ kernel; the third-party leg
-is deliberately kept as a real competitor implementation instead of being
-replaced by a slower API merely to make its spelling differ from the golden.
+float32 or float64 is not cast back down to the original input dtype.  The default
+third-party leg uses native ``torch.index_add`` because it covers the complete dtype
+matrix.  The exact TensorFlow counterpart, ``tf.raw_ops.InplaceAdd``, is also
+registered and can be selected through TTK's ``--provider tf`` filter when the
+endpoint supports the testcase dtype.
 
-Both legs share index normalization, wide-unsigned adaptation, and output
-restoration.  In TTK's NumPy path, complex32 is represented by a trailing pair of
-float16 components, so both legs add those components directly.  The explicit
-Torch complex32 path keeps a compatibility promotion in the golden leg only.
+The CPU golden and Torch third-party leg share index normalization, wide-unsigned
+adaptation, and output restoration.  In TTK's NumPy path, complex32 is represented
+by a trailing pair of float16 components, so those two legs add the components
+directly.  The explicit Torch complex32 path keeps a compatibility promotion in the
+golden leg only.
 """
 
 import numpy as np
@@ -50,14 +50,13 @@ __golden__ = {
     "kernel": {"inplace_add": "inplace_add_golden"},
 }
 
-# TTK cross_check currently supports only float16, bfloat16, and float32. The
-# float16/float32 declarations select Promote plus the third-party leg and need a
-# reachable XPU endpoint. BF16 uses binary_equal: this operator performs only one
-# native-dtype addition per output element, while current cross_check calculates
-# RMSE in float32 and overflows on valid full-range finite BF16 values. Complex
-# outputs intentionally have no declaration here: resolve.py maps them to local
-# isclose, or to binary_equal when the CLI explicitly selects `--compare binary`.
-# Integer outputs always resolve to binary_equal.
+# TTK cross_check supports float16, bfloat16, and float32. These declarations
+# select Promote for the CPU golden plus the third-party leg and therefore need a
+# reachable XPU endpoint. Current cross_check detects float32 RMSE overflow and
+# recomputes it in float64, so valid full-range finite BF16 values no longer need a
+# binary_equal workaround. Complex outputs intentionally have no declaration here:
+# resolve.py maps them to local isclose, or to binary_equal when the CLI explicitly
+# selects `--compare binary`. Integer outputs always resolve to binary_equal.
 #
 # binary_equal first compares bytes, then treats output/golden NaNs at the same
 # positions as equivalent if the byte comparison differs. Finite values and Inf
@@ -65,7 +64,7 @@ __golden__ = {
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "binary_equal"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
     "int8": {"standard": "binary_equal"},
     "int16": {"standard": "binary_equal"},
     "int32": {"standard": "binary_equal"},
@@ -78,8 +77,8 @@ _TOL = {
 
 # Compatibility for callers that pass a real torch.complex32 Tensor directly.
 # TTK's NumPy complex32 representation arrives here as float16 components and does
-# not hit this mapping; both TTK reference legs therefore use the same component
-# representation exercised by the binary kernel.
+# not hit this mapping; the CPU and Torch reference legs therefore use the same
+# component representation exercised by the binary kernel.
 _GOLDEN_PROMOTE = {torch.complex32: torch.complex64}
 
 
@@ -198,7 +197,7 @@ def _is_conflict_safety_case(kwargs):
     return "conflict_safety" in kwargs.get("testcase_name", "")
 
 
-class _InplaceAddCompose:
+class _InplaceAddTorchCompose:
     def __call__(self, x, indices, v, **kwargs):
         if _is_conflict_safety_case(kwargs):
             return [None]
@@ -212,7 +211,14 @@ class InplaceAddKernelSpec:
             return [None]
         return [_inplace_add_golden_compute(x, indices, v)]
 
-    third_party = {"torch": _InplaceAddCompose}
+    # Provider order is intentional: TTK uses the first available provider for
+    # cross_check output, and Torch covers every dtype exposed by this operator.
+    # TensorFlow is the exact named competitor and is available for explicit
+    # provider-filtered validation on dtypes implemented by that endpoint.
+    third_party = {
+        "torch": _InplaceAddTorchCompose,
+        "tf": "tf.raw_ops.InplaceAdd",
+    }
     tolerance = _TOL
 
 
@@ -236,7 +242,8 @@ def inplace_add_golden(x, indices, v, *args, **kwargs):
 # 而 aten::index_add 调用 aclnnIndexAdd；两者都不会派发到本算子，当前没有可注册的
 # indexed InplaceAdd torch API。
 # 【不存在】ONNX 通路：framework/ 下只有 TensorFlow parser，无 ONNX parser。
-# 注：TensorFlow parser 与 AInplaceAddFusionPass 是框架/图侧通路，按框架用例验证，
-# 不作为 TestSpec 的 api_name 注册项。
+# 注：TensorFlow parser 与 AInplaceAddFusionPass 是框架/图侧通路，按框架用例验证；
+# 上面的 tf.raw_ops.InplaceAdd 仅作为 TestSpec 的远端 XPU 竞品实现，不代表本算子
+# 新增了 api_name 或 NPU E2E 注册通路。
 # customize_inputs is not declared here: deterministic index generation stays in
 # input.py under its __input__ registration, which the plugin loader falls back to.
