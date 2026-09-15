@@ -1,0 +1,383 @@
+/*
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#include <gtest/gtest.h>
+#include <vector>
+#include "platform/platform_infos_def.h"
+#include "ut_op_util.h"
+#include "platform/platform_info.h"
+#include "ge/es_graph_builder.h"
+#include "es_nn_ops.h"
+#include "compliant_node_builder.h"
+#include "register/register_custom_pass.h"
+#include "../../../op_graph/fusion_pass/tensor_scatter_update_fusion_pass.h"
+
+using namespace ut_util;
+using namespace std;
+using namespace ge;
+using namespace fe;
+using namespace fusion;
+using namespace OPS::NN;
+
+// ---------------------------------------------------------------------------
+// 辅助函数：构建包含指定 op_type 节点的测试图
+// TensorScatterUpdate 无 ES API，使用 CompliantNodeBuilder
+// ---------------------------------------------------------------------------
+static std::shared_ptr<Graph> BuildTestGraph(const std::string& op_type, DataType x_dtype,
+                                             const std::vector<int64_t>& x_dims,
+                                             const std::vector<int64_t>& indices_dims,
+                                             const std::vector<int64_t>& updates_dims)
+{
+    auto graph_builder = es::EsGraphBuilder("test_graph");
+    auto x = graph_builder.CreateInput(0, "x", x_dtype, FORMAT_ND, x_dims);
+    auto indices = graph_builder.CreateInput(1, "indices", DT_INT32, FORMAT_ND, indices_dims);
+    auto updates = graph_builder.CreateInput(2, "updates", x_dtype, FORMAT_ND, updates_dims);
+
+    ge::Graph* graph_ptr = graph_builder.GetCGraphBuilder()->GetGraph();
+
+    GNode op_node = es::CompliantNodeBuilder(graph_ptr)
+                        .OpType(op_type.c_str())
+                        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                      {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                      {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .Build();
+
+    GNode x_node = *x.GetProducer();
+    GNode indices_node = *indices.GetProducer();
+    GNode updates_node = *updates.GetProducer();
+    es::AddEdgeAndUpdatePeerDesc(*graph_ptr, x_node, 0, op_node, 0);
+    es::AddEdgeAndUpdatePeerDesc(*graph_ptr, indices_node, 0, op_node, 1);
+    es::AddEdgeAndUpdatePeerDesc(*graph_ptr, updates_node, 0, op_node, 2);
+
+    // 设置输入节点的 OutputDesc
+    TensorDesc x_out_desc;
+    x_node.GetOutputDesc(0, x_out_desc);
+    x_out_desc.SetDataType(x_dtype);
+    x_out_desc.SetShape(Shape(x_dims));
+    x_node.UpdateOutputDesc(0, x_out_desc);
+
+    TensorDesc indices_out_desc;
+    indices_node.GetOutputDesc(0, indices_out_desc);
+    indices_out_desc.SetDataType(DT_INT32);
+    indices_out_desc.SetShape(Shape(indices_dims));
+    indices_node.UpdateOutputDesc(0, indices_out_desc);
+
+    TensorDesc updates_out_desc;
+    updates_node.GetOutputDesc(0, updates_out_desc);
+    updates_out_desc.SetDataType(x_dtype);
+    updates_out_desc.SetShape(Shape(updates_dims));
+    updates_node.UpdateOutputDesc(0, updates_out_desc);
+
+    // 设置算子节点的输入 TensorDesc
+    TensorDesc op_in0_desc;
+    op_node.GetInputDesc(0, op_in0_desc);
+    op_in0_desc.SetDataType(x_dtype);
+    op_in0_desc.SetShape(Shape(x_dims));
+    op_in0_desc.SetFormat(FORMAT_ND);
+    op_node.UpdateInputDesc(0, op_in0_desc);
+
+    TensorDesc op_in1_desc;
+    op_node.GetInputDesc(1, op_in1_desc);
+    op_in1_desc.SetDataType(DT_INT32);
+    op_in1_desc.SetShape(Shape(indices_dims));
+    op_in1_desc.SetFormat(FORMAT_ND);
+    op_node.UpdateInputDesc(1, op_in1_desc);
+
+    TensorDesc op_in2_desc;
+    op_node.GetInputDesc(2, op_in2_desc);
+    op_in2_desc.SetDataType(x_dtype);
+    op_in2_desc.SetShape(Shape(updates_dims));
+    op_in2_desc.SetFormat(FORMAT_ND);
+    op_node.UpdateInputDesc(2, op_in2_desc);
+
+    // 设置算子节点的输出 TensorDesc
+    TensorDesc op_out_desc;
+    op_node.GetOutputDesc(0, op_out_desc);
+    op_out_desc.SetDataType(x_dtype);
+    op_out_desc.SetShape(Shape(x_dims));
+    op_out_desc.SetFormat(FORMAT_ND);
+    op_node.UpdateOutputDesc(0, op_out_desc);
+
+    es::EsTensorHolder output(graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(op_node, 0));
+    std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({output});
+    return graph;
+}
+
+// ---------------------------------------------------------------------------
+// 辅助函数：在图中查找指定类型的节点
+// ---------------------------------------------------------------------------
+static bool FindNodeByType(const std::shared_ptr<Graph>& graph, const std::string& type_name)
+{
+    for (auto node : graph->GetAllNodes()) {
+        AscendString type;
+        node.GetType(type);
+        if (type == type_name.c_str()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ---------------------------------------------------------------------------
+// 辅助函数：统计图中指定类型节点的数量
+// ---------------------------------------------------------------------------
+static int32_t CountNodeByType(const std::shared_ptr<Graph>& graph, const std::string& type_name)
+{
+    int32_t count = 0;
+    for (auto node : graph->GetAllNodes()) {
+        AscendString type;
+        node.GetType(type);
+        if (type == type_name.c_str()) {
+            count++;
+        }
+    }
+    return count;
+}
+
+// ===========================================================================
+// 测试类
+// ===========================================================================
+class TensorScatterUpdateFusionPassTest : public testing::Test {
+protected:
+    static void SetUpTestCase()
+    {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optiCompilationInfo;
+        platformInfo.soc_info.ai_core_cnt = 64;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    }
+
+    void SetUp() override
+    {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optiCompilationInfo;
+        platformInfo.soc_info.ai_core_cnt = 64;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    }
+};
+
+// ===========================================================================
+// 测试用例
+// ===========================================================================
+
+TEST_F(TensorScatterUpdateFusionPassTest, pattern_test)
+{
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    std::vector<PatternUniqPtr> patterns = pass.Patterns();
+    EXPECT_EQ(patterns.size(), 1);
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, pattern_test_mc62)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "MC62";
+    optiCompilationInfo.soc_version = "MC62";
+    fe::PlatformInfoManager::Instance().platform_info_map_["MC62"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    std::vector<PatternUniqPtr> patterns = pass.Patterns();
+    EXPECT_EQ(patterns.size(), 1);
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_float_success)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorScatterUpdate"));
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_float16_success)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT16, {8, 16}, {4, 1}, {4, 16});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorScatterUpdate"));
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_ascend950_success)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// 全平台融合：Ascend910B 也能融合（无平台限制，由算子注册信息兜底）
+TEST_F(TensorScatterUpdateFusionPassTest, all_platform_fusion_success)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_1d_success)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {8}, {3, 1}, {3});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_high_dim_success)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {2, 3, 4, 5}, {2, 2}, {2, 4, 5});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_int32_success)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_INT32, {4, 4}, {2, 1}, {2, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// 非 Regbase 平台（Ascend910B）：不支持 BOOL，图不改变
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_bool_non_regbase_skip)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_BOOL, {4, 4}, {2, 1}, {2, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorScatterUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// Regbase 平台（Ascend950）：不支持 STRING，图不改变
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_string_regbase_skip)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_STRING, {4, 4}, {2, 1}, {2, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorScatterUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// Regbase 平台（Ascend950）：不支持 COMPLEX128，图不改变
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_complex128_regbase_skip)
+{
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_COMPLEX128, {4, 4}, {2, 1}, {2, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorScatterUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// Regbase 平台（MC62CM12A）：不支持 STRING，图不改变
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_string_mc62cm12a_skip)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "MC62CM12A";
+    optiCompilationInfo.soc_version = "MC62CM12A";
+    fe::PlatformInfoManager::Instance().platform_info_map_["MC62CM12A"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_STRING, {4, 4}, {2, 1}, {2, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorScatterUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdUpdate"));
+}
+
+// Nano 平台：ScatterNdUpdate 输出后额外插入一个 TensorMove
+TEST_F(TensorScatterUpdateFusionPassTest, tensor_scatter_update_nano_extra_tensor_move)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    platformInfo.ai_core_spec.ubblock_size = 16;
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto graph = BuildTestGraph("TensorScatterUpdate", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterUpdateFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdUpdate"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorScatterUpdate"));
+    EXPECT_EQ(CountNodeByType(graph, "TensorMove"), 2);
+}
