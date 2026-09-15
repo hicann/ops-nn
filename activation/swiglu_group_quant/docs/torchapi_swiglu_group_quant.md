@@ -118,7 +118,8 @@ cann_ops_nn.swiglu_group_quant(
 - `clamp_limit`不启用时使用默认占位值`-1.0`；启用时必须大于0。
 - quant_mode=0和quant_mode=1时，output_origin仅支持False。
 - group_index中的元素值须大于等于0。
-- 不支持空Tensor和非连续Tensor。
+- 不支持非连续Tensor。
+- quant_mode为0，1时，x、weight支持为空Tensor，group_index不支持单独为空Tensor。
 
 ## 确定性计算
 

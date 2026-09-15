@@ -405,21 +405,21 @@ $$
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>SwiGLU输入。shape为[...,D]，维度为2-8维（quantMode为1时为2-7维），D必须大于等于256，且能被256整除。不支持空Tensor。quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</td>
+      <td>SwiGLU输入。shape为[...,D]，维度为2-8维（quantMode为1时为2-7维），D必须大于等于256，且能被256整除。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>输入（可选）</td>
-      <td>MOE权重张量，用于SwiGLU输出的加权计算。不支持空Tensor。不为空时，数据类型为FLOAT32，维度为1-8维，元素个数需等于x除最后一维外的元素个数之积。</td>
+      <td>MOE权重张量，用于SwiGLU输出的加权计算。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。不为空时，数据类型为FLOAT32，维度为1-8维，元素个数需等于x除最后一维外的元素个数之积。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>group_index</td>
       <td>输入（可选）</td>
-      <td>count模式的group token数。不支持空Tensor。不为空时，数据类型为INT64，shape为[G]。</td>
+      <td>count模式的group token数。quantMode为0或1时不支持单独为空Tensor；quantMode为2或3不支持空Tensor。不为空时，数据类型为INT64，shape为[G]。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
@@ -482,21 +482,21 @@ $$
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]，其中dstType为40或41（FLOAT4）时，2个元素打包为1字节，实际占用存储为D/4字节。不支持空Tensor。</td>
+      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]，其中dstType为40或41（FLOAT4）时，2个元素打包为1字节，实际占用存储为D/4字节。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
       <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y_scale</td>
       <td>输出</td>
-      <td>量化scale输出。quantMode为0时，shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。quantMode为1时，shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。quantMode为2或3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。不支持空Tensor。</td>
+      <td>量化scale输出。quantMode为0时，shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。quantMode为1时，shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。quantMode为2或3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
       <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y_origin</td>
       <td>输出</td>
-      <td>量化前的SwiGLU结果。shape为[...,D/2]。数据类型需与x一致。不支持空指针。</td>
+      <td>量化前的SwiGLU结果。shape为[...,D/2]。数据类型需与x一致。不支持空指针。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

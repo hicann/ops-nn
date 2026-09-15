@@ -69,7 +69,8 @@ cann_ops_nn.swiglu_group(
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `x`、`weight`、`group_index`均需为NPU Tensor；可选Tensor可以传 `None`。
 - `x`的最后一维必须为偶数。
-- 不支持空Tensor和非连续Tensor。
+- `x`、`weight`支持空Tensor，group_index不支持单独为空Tensor。
+- 不支持非连续Tensor。
 - `group_index`表示每个group的token数，所有元素需大于等于0。
 
 ## 确定性计算

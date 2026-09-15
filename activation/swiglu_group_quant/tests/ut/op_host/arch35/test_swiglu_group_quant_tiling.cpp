@@ -496,18 +496,6 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_error_x_rank_gt_8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_error_empty_x)
-{
-    // Empty tensor is not supported; x outer dim 0 is invalid.
-    TilingCase tc;
-    tc.xShape = {{0, 512}, {0, 512}};
-    tc.yShape = {{0, 256}, {0, 256}};
-    tc.scaleShape = {{0, 2}, {0, 2}};
-    tc.yOriginShape = {{0, 256}, {0, 256}};
-    tc.status = ge::GRAPH_FAILED;
-    ExecuteTilingCase(tc);
-}
-
 TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_group_index_rank)
 {
     // group_index must be 1D; 2D group_index is invalid.

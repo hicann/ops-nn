@@ -219,12 +219,6 @@ ge::graphStatus SwigluGroupQuantTiling::CheckWeightInfo()
                                 MAX_DIM_NUM, weightDimNum),
                         return ge::GRAPH_FAILED);
             auto weightElementNum = ShapeElementNum(weightStorageShape);
-            // Empty tensor is not supported: every dim must be positive.
-            OP_CHECK_IF(
-                (weightElementNum <= 0),
-                OP_LOGE(context_->GetNodeName(),
-                        "input weight is empty tensor, which is not supported, got element num %ld.", weightElementNum),
-                return ge::GRAPH_FAILED);
             OP_CHECK_IF((weightElementNum != bs_),
                         OP_LOGE(context_->GetNodeName(),
                                 "input weight element num should be equal to the product of input x dims except the "

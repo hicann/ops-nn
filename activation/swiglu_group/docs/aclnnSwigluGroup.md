@@ -108,7 +108,7 @@ aclnnStatus aclnnSwigluGroup(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入x，最后一维被均分为A、B两部分。</td>
-      <td>不支持空指针，不支持空Tensor。维度必须大于0，最后一维必须为偶数。</td>
+      <td>不支持空指针，支持空Tensor。维度必须大于0，最后一维必须为偶数。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnSwigluGroup(
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入weightOptional，逐token权重。</td>
-      <td>支持空指针，不支持空Tensor。不为空指针时，元素个数需等于x除最后一维外的维度乘积（bs）。</td>
+      <td>支持空指针。支持空Tensor。不为空指针时，元素个数需等于x除最后一维外的维度乘积（bs）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnSwigluGroup(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入groupIndexOptional，count模式下的分组token数量。</td>
-      <td>支持空指针，不支持空Tensor。不为空指针时，维度要求为1维，元素需大于等于0。第i个元素代表第i组需要处理x的token数量，所有元素之和经截断后为实际处理的token数。</td>
+      <td>支持空指针，不支持单独为空Tensor。不为空指针时，维度要求为1维，元素需大于等于0。第i个元素代表第i组需要处理x的token数量，所有元素之和经截断后为实际处理的token数。</td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -218,7 +218,7 @@ aclnnStatus aclnnSwigluGroup(
       <td>weightOptional的数据类型不是FLOAT32，或weightOptional的元素个数与x除最后一维外的维度乘积不一致。</td>
     </tr>
     <tr>
-      <td>groupIndexOptional的数据类型不是INT64，或groupIndexOptional为空tensor。</td>
+      <td>groupIndexOptional的数据类型不是INT64，或groupIndexOptional单独为空tensor。</td>
     </tr>
     <tr>
       <td>其他的输入tensor的shape和dtype信息、输入属性不在合法取值范围等场景（详见参数及约束说明）。</td>
@@ -271,7 +271,6 @@ aclnnStatus aclnnSwigluGroup(
 
 ## 约束说明
 
-- 不支持空Tensor：输入x、weightOptional、groupIndexOptional均不支持空Tensor（其中weightOptional、groupIndexOptional可传入空指针，但传入时不可为空Tensor）。
 - 不支持非连续Tensor：输入x、weightOptional、groupIndexOptional及输出out均需为连续Tensor。
 - 输入x的最后一维必须为偶数（被均分为A、B两部分，输出最后一维为输入的一半）。
 - 输入x的数据类型仅支持FLOAT16、BFLOAT16、FLOAT32，且out的数据类型需与x一致。
