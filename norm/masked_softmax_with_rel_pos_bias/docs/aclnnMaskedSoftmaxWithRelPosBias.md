@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -86,7 +86,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape为4维(B*W, N, S1, S2)或5维(B, W, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>attenMaskOptional</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape为3维(W, S1, S2)、4维(W, 1, S1, S2)或5维(1, W, 1, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>relativePosBias</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape为3维(N, S1, S2)、4维(1, N, S1, S2)或5维(1, 1, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>scaleValue</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     <tr>
       <td>innerPrecisionMode</td>
       <td>输入</td>
-      <td>精度模式参数。</td>
+      <td>精度模式参数。保留字段，当前仅支持取值0。</td>
       <td>无</td>
       <td>INT64</td>
       <td>ND</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape与x相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -232,6 +232,19 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
 - 确定性计算：
   - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
+
+- 数据类型约束：
+  - x仅支持FLOAT、FLOAT16、BFLOAT16；attenMaskOptional（非空时）、relativePosBias、out的数据类型必须与x一致，不一致时算子报错。
+
+- 数据格式约束：
+  - x、attenMaskOptional、relativePosBias、out仅支持ND格式。
+
+- 属性值域约束：
+  - scaleValue必须为有限值（支持NaN、+Inf、-Inf以外的任意DOUBLE值），传入NaN或±Inf时算子报错。
+  - innerPrecisionMode为保留字段，当前仅支持取值0，传入其他值时算子报错。
+
+- 非连续Tensor支持：
+  - x、attenMaskOptional、relativePosBias、out均支持非连续Tensor（即strides不满足连续存储条件的Tensor），传入后由框架自动转为连续Tensor再参与计算。
 
 <!-- npu="310p" id8 -->
 - <term>Atlas 推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。

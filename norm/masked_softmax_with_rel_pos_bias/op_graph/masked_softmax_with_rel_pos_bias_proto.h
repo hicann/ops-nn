@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file kv_rms_norm_rope_cache_proto.h
+ * \file masked_softmax_with_rel_pos_bias_proto.h
  * \brief
  */
-#ifndef OPS_OP_PROTO_INC_KV_RMS_NORM_ROPE_CACHE_H_
-#define OPS_OP_PROTO_INC_KV_RMS_NORM_ROPE_CACHE_H_
+#ifndef OPS_OP_PROTO_INC_MASKED_SOFTMAX_WITH_REL_POS_BIAS_H_
+#define OPS_OP_PROTO_INC_MASKED_SOFTMAX_WITH_REL_POS_BIAS_H_
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
@@ -53,4 +53,4 @@ REG_OP(MaskedSoftmaxWithRelPosBias)
 #endif
 } // namespace ge
 
-#endif // OPS_OP_PROTO_INC_KV_RMS_NORM_ROPE_CACHE_H_
+#endif // OPS_OP_PROTO_INC_MASKED_SOFTMAX_WITH_REL_POS_BIAS_H_

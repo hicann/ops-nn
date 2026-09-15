@@ -9,29 +9,26 @@
  */
 
 /*!
- * \file masked_softmax_with_rel_pos_bias.cc
- * \brief
+ * \file masked_softmax_with_rel_pos_bias_graph_infer.cpp
+ * \brief masked_softmax_with_rel_pos_bias operator graph infer resource
  */
+
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShapeMaskedSoftmaxWithRelPosBias(gert::InferShapeContext* context)
-{
-    OP_LOGI(context->GetNodeName(), "Enter MaskedSoftmaxWithRelPosBias infershape impl.");
-    // x shape
-    const gert::Shape* x_shape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
 
-    // y shape
-    gert::Shape* y_shape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
-    *y_shape = *x_shape;
-    OP_LOGI(context->GetNodeName(), "MaskedSoftmaxWithRelPosBias infershape end.");
+static ge::graphStatus InferDataTypeMaskedSoftmaxWithRelPosBias(gert::InferDataTypeContext* context)
+{
+    OP_LOGI(context->GetNodeName(), "Enter MaskedSoftmaxWithRelPosBias inferdatatype impl.");
+    auto dtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, dtype);
+    OP_LOGI(context->GetNodeName(), "MaskedSoftmaxWithRelPosBias inferdatatype end.");
+
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MaskedSoftmaxWithRelPosBias).InferShape(InferShapeMaskedSoftmaxWithRelPosBias);
+IMPL_OP(MaskedSoftmaxWithRelPosBias).InferDataType(InferDataTypeMaskedSoftmaxWithRelPosBias);
 
 } // namespace ops

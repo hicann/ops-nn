@@ -144,6 +144,7 @@ protected:
 
 private:
     ge::graphStatus CheckOutShape();
+    ge::graphStatus CheckDtypeAndFormatConsistency();
     ge::graphStatus GetXTensorDims(const gert::StorageShape* x_shape);
     ge::graphStatus GetAttenMaskTensorDims(const gert::StorageShape* attention_shape);
     ge::graphStatus GetTensorDims();
@@ -396,9 +397,80 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetTensorDims()
     return ge::GRAPH_SUCCESS;
 }
 
+// 输入/输出 dtype 合法性与一致性、format 校验：
+// x 仅支持 float16/bfloat16/float32；atten_mask（存在时）/relative_pos_bias/y 的 dtype 须与 x 一致；
+// 全张量 format 仅支持 ND。desc 取值按 IR 索引（GetRequiredInputDesc/GetOptionalInputDesc），
+// GetInputDesc 按实例化位置索引，atten_mask 缺省时 bias 落在位置 1。
+ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::CheckDtypeAndFormatConsistency()
+{
+    if (dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16 && dataType != ge::DT_FLOAT) {
+        OP_LOGE(context_, "Do tiling failed, x dtype not support, x dtype is %d.", static_cast<int32_t>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+    auto xDesc = context_->GetInputDesc(X_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    if (xDesc->GetOriginFormat() != ge::FORMAT_ND || xDesc->GetStorageFormat() != ge::FORMAT_ND) {
+        OP_LOGE(context_, "Do tiling failed, x format only support ND, origin format is %d, storage format is %d.",
+                static_cast<int32_t>(xDesc->GetOriginFormat()), static_cast<int32_t>(xDesc->GetStorageFormat()));
+        return ge::GRAPH_FAILED;
+    }
+    if (existAtten) {
+        auto attDesc = context_->GetOptionalInputDesc(ATTEN_INPUT_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, attDesc);
+        if (attDesc->GetDataType() != dataType) {
+            OP_LOGE(context_,
+                    "Do tiling failed, atten_mask dtype must be same as x dtype, atten dtype is %d, x dtype "
+                    "is %d.",
+                    static_cast<int32_t>(attDesc->GetDataType()), static_cast<int32_t>(dataType));
+            return ge::GRAPH_FAILED;
+        }
+        if (attDesc->GetOriginFormat() != ge::FORMAT_ND || attDesc->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(context_,
+                    "Do tiling failed, atten_mask format only support ND, origin format is %d, storage "
+                    "format is %d.",
+                    static_cast<int32_t>(attDesc->GetOriginFormat()),
+                    static_cast<int32_t>(attDesc->GetStorageFormat()));
+            return ge::GRAPH_FAILED;
+        }
+    }
+    auto biasDesc = context_->GetRequiredInputDesc(BIAS_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, biasDesc);
+    if (biasDesc->GetDataType() != dataType) {
+        OP_LOGE(context_,
+                "Do tiling failed, relative_pos_bias dtype must be same as x dtype, bias dtype is %d, x dtype is %d.",
+                static_cast<int32_t>(biasDesc->GetDataType()), static_cast<int32_t>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+    if (biasDesc->GetOriginFormat() != ge::FORMAT_ND || biasDesc->GetStorageFormat() != ge::FORMAT_ND) {
+        OP_LOGE(context_,
+                "Do tiling failed, relative_pos_bias format only support ND, origin format is %d, storage "
+                "format is %d.",
+                static_cast<int32_t>(biasDesc->GetOriginFormat()), static_cast<int32_t>(biasDesc->GetStorageFormat()));
+        return ge::GRAPH_FAILED;
+    }
+    auto yDesc = context_->GetOutputDesc(Y_OUTPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
+    if (yDesc->GetDataType() != dataType) {
+        OP_LOGE(context_, "Do tiling failed, y dtype must be same as x dtype, y dtype is %d, x dtype is %d.",
+                static_cast<int32_t>(yDesc->GetDataType()), static_cast<int32_t>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+    if (yDesc->GetOriginFormat() != ge::FORMAT_ND || yDesc->GetStorageFormat() != ge::FORMAT_ND) {
+        OP_LOGE(context_, "Do tiling failed, y format only support ND, origin format is %d, storage format is %d.",
+                static_cast<int32_t>(yDesc->GetOriginFormat()), static_cast<int32_t>(yDesc->GetStorageFormat()));
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetShapeAttrsInfo()
 {
     if (GetTensorDims() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // 对输入/输出dtype、format的合法性及一致性校验
+    if (CheckDtypeAndFormatConsistency() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -412,11 +484,24 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetShapeAttrsInfo()
     const float* scaleValueAttr = attrs->GetAttrPointer<float>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleValueAttr);
     OP_LOGD(context_, "scaleValue %f.", *scaleValueAttr);
+    // 属性值域校验：scale_value 仅支持有限值，NaN/Inf 会污染 softmax 结果
+    if (!std::isfinite(*scaleValueAttr)) {
+        OP_LOGE(context_, "Do tiling failed, scale_value must be a finite float, but got %f.", *scaleValueAttr);
+        return ge::GRAPH_FAILED;
+    }
     if (std::fabs(*scaleValueAttr - 1) > FLT_EPSILON) {
         existMuls = true;
         scaleValue = *scaleValueAttr;
     } else {
         existMuls = false;
+    }
+    // 属性值域校验：inner_precision_mode 为保留字段，当前仅支持 0
+    const int64_t* innerPrecisionModeAttr = attrs->GetAttrPointer<int64_t>(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, innerPrecisionModeAttr);
+    if (*innerPrecisionModeAttr != 0) {
+        OP_LOGE(context_, "Do tiling failed, inner_precision_mode only support 0 now, but got %ld.",
+                static_cast<long>(*innerPrecisionModeAttr));
+        return ge::GRAPH_FAILED;
     }
     tilingData.set_w(w_);
     tilingData.set_n(n_);
