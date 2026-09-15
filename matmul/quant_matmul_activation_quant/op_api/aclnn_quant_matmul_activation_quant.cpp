@@ -94,7 +94,9 @@ static aclnnStatus CheckInputOutDims(const QBMMActivationQuant::QuantMatmulActiv
 static aclnnStatus CheckWeightNdParamsDAV3510(const aclTensor* x1, const aclTensor* x2)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        return ACLNN_SUCCESS;
+        SocVersion socVersion = op::GetCurrentPlatformInfo().GetSocVersion();
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+        return ACLNN_ERR_RUNTIME_ERROR;
     }
 
     if (x1 == nullptr) {
@@ -296,11 +298,13 @@ static aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSizeCommon(
 extern "C" {
 #endif
 
-aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
-    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, const char* activationType,
-    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* yOut,
-    aclTensor* yScaleOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                            const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
+                                                            const aclTensor* biasOptional, bool transposeX1,
+                                                            bool transposeX2, int64_t groupSize, char* activationType,
+                                                            char* quantMode, char* roundMode, int64_t scaleAlg,
+                                                            double dstTypeMax, aclTensor* yOut, aclTensor* yScaleOut,
+                                                            uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnQuantMatmulActivationQuant,
                    DFX_IN(x1, x2, x1ScaleOptional, x2Scale, biasOptional, transposeX1, transposeX2, groupSize,

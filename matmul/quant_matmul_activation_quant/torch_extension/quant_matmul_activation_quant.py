@@ -13,6 +13,30 @@ import torch
 from torch.library import impl
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
+DTYPE_FLOAT4_E2M1 = 296
+DTYPE_FLOAT8_E5M2 = 291
+DTYPE_FLOAT8_E4M3FN = 292
+FP4_IN_INT8 = 2
+
+
+def _is_transpose_last_two_dims(tensor: torch.Tensor) -> bool:
+    if tensor.dim() < 2 or tensor.dim() > 6:
+        return False
+    dim1 = tensor.dim() - 1
+    dim2 = tensor.dim() - 2
+    strides = tensor.stride()
+    sizes = tensor.size()
+    if strides[dim2] == 1 and strides[dim1] == sizes[dim2]:
+        tmp_nxd = sizes[dim1] * sizes[dim2]
+        for batch_dim in range(tensor.dim() - 3, -1, -1):
+            if strides[batch_dim] != tmp_nxd:
+                return False
+            tmp_nxd *= sizes[batch_dim]
+        if sizes[dim1] == 1 and sizes[dim2] == 1:
+            return False
+        return True
+    return False
+
 
 class QuantMatmulActivationQuantOpBuilder(OpBuilder):
     """
@@ -61,29 +85,22 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
             x2_dim_num = x2.dim()
 
             x1_a = x1.size(x1_dim_num - 2)
-            x1_b = x1.size(x1_dim_num - 1)
-            x2_a = x2.size(x2_dim_num - 2)
             x2_b = x2.size(x2_dim_num - 1)
 
-            if x1_b == x2_a:
-                m = x1_a
-                n = x2_b
-            elif x1_b == x2_b:
-                m = x1_a
-                n = x2_a
-            elif x1_a == x2_a:
-                m = x1_b
-                n = x2_b
-            elif x1_a == x2_b:
-                m = x1_b
-                n = x2_a
+            x1_dtype_val = x1_dtype if x1_dtype is not None else 0
+            x2_dtype_val = x2_dtype if x2_dtype is not None else 0
+            isMXFP4 = (
+                x1_dtype_val == DTYPE_FLOAT4_E2M1 and x2_dtype_val == DTYPE_FLOAT4_E2M1
+            )
+
+            if isMXFP4:
+                trans_x1 = _is_transpose_last_two_dims(x1)
+                trans_x2 = _is_transpose_last_two_dims(x2)
+                m = x1_a if not trans_x1 else x1_a * FP4_IN_INT8
+                n = x2_b if trans_x2 else x2_b * FP4_IN_INT8
             else:
-                torch._check(
-                    False,
-                    lambda: f"cannot infer m/n: no matching k dimension between "
-                    f"x1 last two dims [{x1_a}, {x1_b}] and "
-                    f"x2 last two dims [{x2_a}, {x2_b}]",
-                )
+                m = x1_a
+                n = x2_b
 
             # 计算 output_size (广播 batch dims + M + N)
             x1_batch = list(x1.shape[:-2])
@@ -107,22 +124,32 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
 
             # 4. 判断特殊输出类型 (FLOAT4)
             output_dtype_val = output_dtype if output_dtype is not None else 0
-            DTYPE_FLOAT4_E2M1 = 30
-            DTYPE_FLOAT4_E1M2 = 31
-            special_output_type = (
-                output_dtype_val == DTYPE_FLOAT4_E2M1
-                or output_dtype_val == DTYPE_FLOAT4_E1M2
-            )
+            special_output_type = output_dtype_val == DTYPE_FLOAT4_E2M1
 
             # 5. 分配 output tensor
             if special_output_type:
                 last_dim_val = output_size[-1]
                 torch._check(
                     last_dim_val % 2 == 0,
-                    lambda: "The last dim output shape must be divisible by 2 if output dtype is FLOAT4_E2M1 or FLOAT4_E1M2",
+                    lambda: "The last dim output shape must be divisible by 2 if "
+                    "output dtype is FLOAT4_E2M1",
                 )
                 output_size[-1] = last_dim_val // 2
                 y = torch.empty(output_size, dtype=torch.uint8, device="meta")
+            elif output_dtype is not None:
+                if output_dtype_val == DTYPE_FLOAT8_E5M2:
+                    y = torch.empty(output_size, dtype=torch.float8_e5m2, device="meta")
+                elif output_dtype_val == DTYPE_FLOAT8_E4M3FN:
+                    y = torch.empty(
+                        output_size, dtype=torch.float8_e4m3fn, device="meta"
+                    )
+                else:
+                    torch._check(
+                        False,
+                        lambda: "unsupport output_dtype, only support output_dtype "
+                        "FLOAT8_E5M2, FLOAT8_E4M3FN or FLOAT4_E2M1",
+                    )
+                    y = torch.empty(output_size, dtype=x1.dtype, device="meta")
             else:
                 y = torch.empty(output_size, dtype=x1.dtype, device="meta")
 

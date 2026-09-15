@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstring>
 #include <fstream>
 #include <vector>
 #include "gtest/gtest.h"
@@ -178,6 +179,12 @@ TEST_P(QuantMatmulActivationQuantNdAclnnTest, CsvTest)
     bool transposeX1 = ParseBool(param.transposeX1Str);
     bool transposeX2 = ParseBool(param.transposeX2Str);
     int64_t groupSize = ParseInt64OrDefault(param.groupSizeStr, 0);
+    char* activationType = new char[param.activationType.size() + 1];
+    strcpy(activationType, param.activationType.c_str());
+    char* quantMode = new char[param.quantMode.size() + 1];
+    strcpy(quantMode, param.quantMode.c_str());
+    char* roundMode = new char[param.roundMode.size() + 1];
+    strcpy(roundMode, param.roundMode.c_str());
     int64_t scaleAlg = ParseInt64OrDefault(param.scaleAlgStr, 0);
     double dstTypeMax = param.dstTypeMaxStr.empty() ? 6.0 : stod(param.dstTypeMaxStr);
     aclnnStatus expectRet = ParseAclnnStatus(param.expectRetStr);
@@ -186,20 +193,21 @@ TEST_P(QuantMatmulActivationQuantNdAclnnTest, CsvTest)
     uint64_t workspaceSize = 0;
 
     if (hasBias) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulActivationQuant,
-            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasDesc, transposeX1, transposeX2, groupSize,
-                  param.activationType.c_str(), param.quantMode.c_str(), param.roundMode.c_str(), scaleAlg, dstTypeMax),
-            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
+        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuant,
+                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasDesc, transposeX1, transposeX2,
+                                  groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax),
+                            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
         aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     } else {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulActivationQuant,
-            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, transposeX1, transposeX2, groupSize,
-                  param.activationType.c_str(), param.quantMode.c_str(), param.roundMode.c_str(), scaleAlg, dstTypeMax),
-            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
+        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuant,
+                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, transposeX1, transposeX2,
+                                  groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax),
+                            OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc()));
         aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     }
+    delete[] activationType;
+    delete[] quantMode;
+    delete[] roundMode;
 
     EXPECT_EQ(aclRet, expectRet) << "caseName=" << param.caseName;
 }

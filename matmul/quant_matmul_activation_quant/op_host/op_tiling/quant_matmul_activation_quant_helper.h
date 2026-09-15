@@ -53,11 +53,11 @@ protected:
 
     bool IsMxQuant() const;
 
-    bool CheckParamsForMxQuant(const gert::Shape& x1Shape, const gert::Shape& x1ScaleShape,
+    bool CheckParamsForMxQuant(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
                                const gert::Shape& x2ScaleShape) const;
     bool CheckShapeValid(const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool InitMatmulSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape);
-    bool ValidateQuantParams(const gert::Shape& x1Shape, const gert::Shape& x1ScaleShape,
+    bool ValidateQuantParams(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
                              const gert::Shape& scaleShape);
     uint64_t GetBatchCoreCnt() const override;
     void SetQuantParams(QMMAQ::QuantMatmulActivationQuantTilingData& tilingData);

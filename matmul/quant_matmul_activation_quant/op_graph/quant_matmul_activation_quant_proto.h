@@ -69,8 +69,7 @@ values in x1 along the k-dimension. \n
 * @li activation_type: A optional string. The gelu approximation algorithm to use: 'gelu_tanh' or 'gelu_erf', default is
 'gelu_tanh'.
 * @li y_dtype: A Int. Declare the output dtype.
-* @li quant_dtype: An optional string. Declare the quant mode.Support mx, pertoken, pertensor and perchannel. Defaults
-to "rint".
+* @li quant_mode: An optional string. Declare the quant mode.Support mx. Defaults to "mx".
 * @li round_mode: An optional string. Defaults to "rint".
 * @li scale_alg: An optional int.The algorithm for the scale in quantization.Default to 0.
 * Support MxFP8(OCP Microscaling Formats (Mx) Specification , count 0) or MxFP8(nvidia-cuBLAS , count 1).
@@ -84,6 +83,7 @@ value.Defaults to 0.
 y_scale: An output tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * - rank(mxscale) = rank(x) + 1.
 * - axis_change = -1.
+* - blocksize is 32.
 * - mxscale.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2.
 * - mxscale.shape[rank(x)] = 2.
 * - Other dimensions match input x.

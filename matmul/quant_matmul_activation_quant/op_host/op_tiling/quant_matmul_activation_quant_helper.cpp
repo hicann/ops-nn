@@ -204,11 +204,12 @@ bool QuantMatmulActivationQuantHelper<BaseT>::InitMatmulSize(const gert::Shape& 
 
 template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::ValidateQuantParams(const gert::Shape& x1Shape,
+                                                                  const gert::Shape& x2Shape,
                                                                   const gert::Shape& x1ScaleShape,
                                                                   const gert::Shape& scaleShape)
 {
     if (this->inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0) {
-        return CheckParamsForMxQuant(x1Shape, x1ScaleShape, scaleShape);
+        return CheckParamsForMxQuant(x1Shape, x2Shape, x1ScaleShape, scaleShape);
     } else {
         return false;
     }
@@ -478,15 +479,20 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckShapeValid(const gert::Shape&
                 return false);
 
     // K 维取最后两维中的对应位置，以跳过 batch 前缀（与 InitMatmulSize 保持一致）
-    auto x2KDimValue = static_cast<uint64_t>(this->inputParams_.transB ?
-                                                 x2Shape.GetDim(x2ShapeLength - LAST_FIRST_DIM_INDEX) :
-                                                 x2Shape.GetDim(x2ShapeLength - LAST_SECOND_DIM_INDEX));
-    auto x1KDimValue = static_cast<uint64_t>(this->inputParams_.transA ?
-                                                 x1Shape.GetDim(x1ShapeLength - LAST_SECOND_DIM_INDEX) :
-                                                 x1Shape.GetDim(x1ShapeLength - LAST_FIRST_DIM_INDEX));
+    constexpr int64_t UNKNOWN_DIM = -1;
+    auto x2KDimValue = this->inputParams_.transB ? x2Shape.GetDim(x2ShapeLength - LAST_FIRST_DIM_INDEX) :
+                                                   x2Shape.GetDim(x2ShapeLength - LAST_SECOND_DIM_INDEX);
+    auto x1KDimValue = this->inputParams_.transA ? x1Shape.GetDim(x1ShapeLength - LAST_SECOND_DIM_INDEX) :
+                                                   x1Shape.GetDim(x1ShapeLength - LAST_FIRST_DIM_INDEX);
+    OP_CHECK_IF(x1KDimValue == UNKNOWN_DIM || x2KDimValue == UNKNOWN_DIM,
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(this->inputParams_.opName, "x1K, x2K",
+                                                       FormatString("%ld, %ld", x1KDimValue, x2KDimValue).c_str(),
+                                                       "dynamic shape is not supported, the K dimension of x1 and x2 "
+                                                       "must not be unknown (-1)"),
+                return false);
     OP_CHECK_IF(x1KDimValue != x2KDimValue,
                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(this->inputParams_.opName, "x1K, x2K",
-                                                       FormatString("%lu, %lu", x1KDimValue, x2KDimValue).c_str(),
+                                                       FormatString("%ld, %ld", x1KDimValue, x2KDimValue).c_str(),
                                                        "the K dimension of x1 must be equal to the K dimension of x2"),
                 return false);
     return true;
@@ -494,49 +500,55 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckShapeValid(const gert::Shape&
 
 template <typename BaseT>
 bool QuantMatmulActivationQuantHelper<BaseT>::CheckParamsForMxQuant(const gert::Shape& x1Shape,
+                                                                    const gert::Shape& x2Shape,
                                                                     const gert::Shape& x1ScaleShape,
                                                                     const gert::Shape& x2ScaleShape) const
 {
-    // scale 由固定 3 维（M/K/2 或 K/N/2）加上与 x1 一致的 batch 维度组成
     auto x1DimNum = x1Shape.GetDimNum();
+    auto x2DimNum = x2Shape.GetDimNum();
     size_t x1BatchDimNum = (x1DimNum > LAST_SECOND_DIM_INDEX) ? (x1DimNum - LAST_SECOND_DIM_INDEX) : 0;
-    size_t expectedScaleDimNum = static_cast<size_t>(MX_X1_SCALE_DIM) + x1BatchDimNum;
+    size_t x2BatchDimNum = (x2DimNum > LAST_SECOND_DIM_INDEX) ? (x2DimNum - LAST_SECOND_DIM_INDEX) : 0;
+    size_t expectedX1ScaleDimNum = static_cast<size_t>(MX_X1_SCALE_DIM) + x1BatchDimNum;
+    size_t expectedX2ScaleDimNum = static_cast<size_t>(MX_X2_SCALE_DIM) + x2BatchDimNum;
 
     auto x1ScaleDimNum = x1ScaleShape.GetDimNum();
     auto x2ScaleDimNum = x2ScaleShape.GetDimNum();
-    OP_CHECK_IF(x1ScaleDimNum != expectedScaleDimNum,
+    OP_CHECK_IF(x1ScaleDimNum != expectedX1ScaleDimNum,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     this->inputParams_.opName, "x1Scale", FormatString("%zuD", x1ScaleDimNum).c_str(),
                     FormatString("when the quant mode is mx, the shape dim of x1Scale must be %zu "
-                                 "(batch dim of x1 %zu + fixed dim %u)",
-                                 expectedScaleDimNum, x1BatchDimNum, MX_X1_SCALE_DIM)
+                                 "(x1 batch dim %zu + fixed dim %u)",
+                                 expectedX1ScaleDimNum, x1BatchDimNum, MX_X1_SCALE_DIM)
                         .c_str()),
                 return false);
-    OP_CHECK_IF(x2ScaleDimNum != expectedScaleDimNum,
+    OP_CHECK_IF(x2ScaleDimNum != expectedX2ScaleDimNum,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     this->inputParams_.opName, "x2Scale", FormatString("%zuD", x2ScaleDimNum).c_str(),
                     FormatString("when the quant mode is mx, the shape dim of x2Scale must be %zu "
-                                 "(batch dim of x1 %zu + fixed dim %u)",
-                                 expectedScaleDimNum, x1BatchDimNum, MX_X2_SCALE_DIM)
+                                 "(x2 batch dim %zu + fixed dim %u)",
+                                 expectedX2ScaleDimNum, x2BatchDimNum, MX_X2_SCALE_DIM)
                         .c_str()),
                 return false);
 
-    // batch 维度值逐一校验，与 x1 保持一致
+    // batch 维度值逐一校验，x1Scale与x1保持一致，x2Scale与x2保持一致
     for (size_t i = 0; i < x1BatchDimNum; ++i) {
         auto x1BatchDim = static_cast<int64_t>(x1Shape.GetDim(i));
         auto x1ScaleBatchDim = static_cast<int64_t>(x1ScaleShape.GetDim(i));
-        auto x2ScaleBatchDim = static_cast<int64_t>(x2ScaleShape.GetDim(i));
         OP_CHECK_IF(x1ScaleBatchDim != x1BatchDim,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         this->inputParams_.opName, "dimIndex, x1Batch, x1ScaleBatch",
                         FormatString("%zu, %ld, %ld", i, x1BatchDim, x1ScaleBatchDim).c_str(),
                         "when the quant mode is mx, the batch dimension of x1Scale must be equal to that of x1"),
                     return false);
-        OP_CHECK_IF(x2ScaleBatchDim != x1BatchDim,
+    }
+    for (size_t i = 0; i < x2BatchDimNum; ++i) {
+        auto x2BatchDim = static_cast<int64_t>(x2Shape.GetDim(i));
+        auto x2ScaleBatchDim = static_cast<int64_t>(x2ScaleShape.GetDim(i));
+        OP_CHECK_IF(x2ScaleBatchDim != x2BatchDim,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                        this->inputParams_.opName, "dimIndex, x1Batch, x2ScaleBatch",
-                        FormatString("%zu, %ld, %ld", i, x1BatchDim, x2ScaleBatchDim).c_str(),
-                        "when the quant mode is mx, the batch dimension of x2Scale must be equal to that of x1"),
+                        this->inputParams_.opName, "dimIndex, x2Batch, x2ScaleBatch",
+                        FormatString("%zu, %ld, %ld", i, x2BatchDim, x2ScaleBatchDim).c_str(),
+                        "when the quant mode is mx, the batch dimension of x2Scale must be equal to that of x2"),
                     return false);
     }
 
@@ -631,8 +643,8 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeInputs()
                     return false);
 
     // 验证量化参数
-    if (!this->SetQuantMode(scaleShape, pertokenShape) || !ValidateQuantParams(x1Shape, x1ScaleShape, scaleShape) ||
-        !CheckShapeValid(x1Shape, x2Shape)) {
+    if (!this->SetQuantMode(scaleShape, pertokenShape) ||
+        !ValidateQuantParams(x1Shape, x2Shape, x1ScaleShape, scaleShape) || !CheckShapeValid(x1Shape, x2Shape)) {
         return false;
     }
     OP_LOGD(this->inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",

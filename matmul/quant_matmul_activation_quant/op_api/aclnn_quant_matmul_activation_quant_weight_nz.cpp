@@ -122,17 +122,6 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTens
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    // NZ情况下，x2的k和n不能为1
-    int64_t dim1 = x2->GetViewShape().GetDimNum() - 1;
-    int64_t dim2 = x2->GetViewShape().GetDimNum() - QuantMatmulActivationQuantAclnnCheck::PENULTIMATE_DIM;
-    if (x2->GetViewShape().GetDim(dim2) == 1 || x2->GetViewShape().GetDim(dim1) == 1) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            API_NAME, "x2 K, x2 N",
-            FormatString("%ld, %ld", x2->GetViewShape().GetDim(dim2), x2->GetViewShape().GetDim(dim1)).c_str(),
-            "when the format of x2 is FRACTAL_NZ, the k dimension and n dimension of x2 can not be 1");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     OP_LOGD("QuantMatmulWeightNz check params success.");
     return ACLNN_SUCCESS;
 }
@@ -143,6 +132,18 @@ static aclnnStatus CheckShape(const QBMMActivationQuant::QuantMatmulActivationQu
     MatmulShapeInfo shapeInfo = GetMatmulShapeInfo(params);
     CHECK_COND(CheckShapeInfoMatch(params, shapeInfo, API_NAME) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
                "CheckShapeInfoMatch failed.");
+
+    // NZ情况下，x2的k和n不能为1
+    int64_t dim1 = params.x2->GetViewShape().GetDimNum() - 1;
+    int64_t dim2 = params.x2->GetViewShape().GetDimNum() - QuantMatmulActivationQuantAclnnCheck::PENULTIMATE_DIM;
+    if (params.x2->GetViewShape().GetDim(dim2) == 1 || params.x2->GetViewShape().GetDim(dim1) == 1) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            API_NAME, params.transposeX2 ? "x2 N, x2 K" : "x2 K, x2 N",
+            FormatString("%ld, %ld", params.x2->GetViewShape().GetDim(dim2), params.x2->GetViewShape().GetDim(dim1))
+                .c_str(),
+            "when the format of x2 is FRACTAL_NZ, the k dimension and n dimension of x2 can not be 1");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     if (!CheckMKN(shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim, API_NAME)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN failed.");
@@ -326,8 +327,8 @@ extern "C" {
 #endif
 aclnnStatus aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1ScaleOptional, const aclTensor* x2Scale,
-    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, const char* activationType,
-    const char* quantMode, const char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* y, aclTensor* yScale,
+    const aclTensor* biasOptional, bool transposeX1, bool transposeX2, int64_t groupSize, char* activationType,
+    char* quantMode, char* roundMode, int64_t scaleAlg, double dstTypeMax, aclTensor* y, aclTensor* yScale,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnQuantMatmulActivationQuantWeightNz,
