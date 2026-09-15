@@ -53,14 +53,14 @@
     - 步骤1：以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上），使用`docker --version`检查Docker版本，若没有，请参考[Docker官方安装指南](https://docs.docker.com/engine/install/)。
     - 步骤2：从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。
 
-    示例如下，请自行替换CANN版本号、芯片系列、操作系统、python版本等信息，各字段支持的取值可在上述昇腾镜像仓库页面查询。
+      示例如下，请自行替换CANN版本号、芯片系列、操作系统、python版本等信息，各字段支持的取值可在上述昇腾镜像仓库页面查询。
 
-        ```bash
-        # 以cann:9.1.0-beta.1版本为例
-        docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-ubuntu22.04-py3.12-devel
-        ```
+      ```bash
+      # 以cann:9.1.0-beta.1版本为例
+      docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-ubuntu22.04-py3.12-devel
+      ```
 
-    > **说明**：镜像标签格式为`<CANN版本>-<芯片系列>-<操作系统>-<Python版本>-devel`。带`-devel`后缀的镜像为算子开发镜像，内含算子开发编译依赖。
+      > **说明**：镜像标签格式为`<CANN版本>-<芯片系列>-<操作系统>-<Python版本>-devel`。带`-devel`后缀的镜像为算子开发镜像，内含算子开发编译依赖。
 
 3. **运行Docker**
 

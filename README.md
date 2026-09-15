@@ -2,7 +2,7 @@
 
 # ops-nn
 
-[![CANNcommunicty](https://img.shields.io/badge/docs-社区全量算子-brightgreen.svg?style=flat)](https://www.hiascend.com/document/redirect/CannCommunityOplist)
+[![CANNcommunity](https://img.shields.io/badge/docs-社区全量算子-brightgreen.svg?style=flat)](https://www.hiascend.com/document/redirect/CannCommunityOplist)
 [![repo](https://img.shields.io/badge/docs-项目文档-green.svg?style=flat)](docs)
 [![license](https://img.shields.io/badge/license-CANN_Open_2.0-blue.svg)](LICENSE)
 [![contributing](https://img.shields.io/badge/贡献指南-teal)](CONTRIBUTING.md)
