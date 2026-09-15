@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：执行Adam优化器的一次参数更新，10输入3输出，支持broadcast。
+- 算子功能：执行Adam优化器的一次参数更新，10输入3输出，支持broadcast。输出端口名 input1、input2、input3 与输入同名（GE inplace别名），框架将输出内存别名到输入内存，实现原地更新；输出shape分别与对应的输入相同。
 
 - 计算公式：
 
@@ -29,7 +29,7 @@ $$
 out\_input3 = input3 - out\_input2 / (sqrt(out\_input1) + add2\_y) × input4
 $$
 
-- 支持broadcast：所有输入shape需满足broadcast关系，输出shape为广播后的最大值shape。
+- 支持broadcast：所有输入shape需满足broadcast关系，广播后的最大值shape须与输入input1、input2、input3的shape相同，输出shape与对应的输入相同。
 
 ## 参数说明
 
@@ -59,21 +59,21 @@ $$
   <tr>
     <td>input1</td>
     <td>输入</td>
-    <td>公式中输入张量input1。</td>
+    <td>公式中输入张量input1。与图输出端口input1共享GM地址（inplace更新）。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>input2</td>
     <td>输入</td>
-    <td>公式中输入张量input2。</td>
+    <td>公式中输入张量input2。与图输出端口input2共享GM地址（inplace更新）。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>input3</td>
     <td>输入</td>
-    <td>公式中输入张量input3。</td>
+    <td>公式中输入张量input3。与图输出端口input3共享GM地址（inplace更新）。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
@@ -122,21 +122,21 @@ $$
   <tr>
     <td>input1</td>
     <td>输出</td>
-    <td>公式中输出张量out_input1。</td>
+    <td>更新后的张量，公式中的out_input1。与输入input1共享Device内存（inplace别名），shape/dtype与输入input1完全相同。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>input2</td>
     <td>输出</td>
-    <td>公式中输出张量out_input2。</td>
+    <td>更新后的张量，公式中的out_input2。与输入input2共享Device内存（inplace别名），shape/dtype与输入input2完全相同。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>input3</td>
     <td>输出</td>
-    <td>公式中输出张量out_input3。</td>
+    <td>更新后的张量，公式中的out_input3。与输入input3共享Device内存（inplace别名），shape/dtype与输入input3完全相同。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
@@ -146,6 +146,7 @@ $$
 
 - 输入shape维度最大为8。
 - 所有输入和输出的数据类型必须一致。
+- 输出input1、input2、input3与输入input1、input2、input3同名（GE同名端口=inplace别名），shape分别与对应的输入相同，调用方必须把这三个输入视为可写。
 
 ## 调用说明
 
