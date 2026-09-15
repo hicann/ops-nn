@@ -14,11 +14,11 @@
 
 ## 使用方法
 
-目前CANN算子的主流调用方式为aclnn API或PyTorch API（torch_extension）。部分算子API默认确定性实现，部分算子API默认非确定性实现。对于非确定性实现的算子，部分可通过手动配置开启确定性计算。
+目前CANN算子的主流调用方式为aclnn API或PyTorch API（torch_extension）。部分算子API默认确定性实现，部分算子API默认非确定性实现。对于非确定性实现的算子，部分可通过手动配置确定性计算。
 
 - **调用aclnn API**
 
-  该场景下，通过[《Runtime运行时API》](https://hiascend.com/document/redirect/CannCommunityRuntimeApi)中“运行时配置>aclrtSetSysParamOpt”接口（进程级）配置开启确定性计算。具体通过设置`ACL_OPT_DETERMINISTIC=1`开启确定性计算。
+  该场景下，通过[《Runtime运行时API》](https://hiascend.com/document/redirect/CannCommunityRuntimeApi)中“运行时配置>aclrtSetSysParamOpt”接口（进程级）开启确定性计算。具体通过设置`ACL_OPT_DETERMINISTIC=1`开启确定性计算。
 
 - **调用PyTorch API**
 
