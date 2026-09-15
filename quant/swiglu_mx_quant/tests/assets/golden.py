@@ -34,6 +34,16 @@ Outputs:
     y       : quantized result (dst_type)
     mxscale : scale factors (FP8_E8M0)
 
+mxscale layout (mirrors kernel/infershape):
+    - one scale per block_size(=32) block along axis
+    - scales are stored in pairs: the axis dim of mxscale is
+      ceil(n_blocks / 2) (i.e. block count padded to even) and a last dim
+      of 2 is appended; slot k of pair p holds the scale of block (2p + k)
+    - all-zero block -> scale byte 0 (2^-127)
+    - with group_index: axis=-2 packs ceil(rows_g/64) pairs per group
+      compactly (allocated axis dim = M // 64 + groupNum); axis=-1 segments
+      rows and each row still owns ceil(N/64) pairs
+
 Reference (mirrors docs/aclnnSwigluMxQuant.md and kernel ComputeVfSwigluV1-V4):
 
     mode 0 (SwiGLU):
@@ -156,7 +166,7 @@ def _swiglu(
 
 
 def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_alg):
-    """Dynamic MX quantization, returns (quantized_y, mxscale)."""
+    """Dynamic MX quantization, returns (quantized_y, mxscale, dst_dtype)."""
     dst_name, dst_dtype, emax = _DST_TYPE_MAP[dst_type]
 
     shape = list(data_fp32.shape)
@@ -166,6 +176,7 @@ def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_al
     flat = data_fp32.reshape(pre_q, q_dim, post_q)
 
     n_blocks = math.ceil(q_dim / block_size)
+    n_pairs = (n_blocks + 1) // 2
     y_flat = np.zeros((pre_q, q_dim, post_q), dtype=np.float32)
     scale_flat = np.zeros((pre_q, n_blocks, post_q), dtype=np.float32)
 
@@ -178,13 +189,16 @@ def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_al
             chunk = np.pad(chunk, ((0, 0), (0, pad_len), (0, 0)), mode="constant")
 
         abs_max = np.max(np.abs(chunk), axis=1, keepdims=True)
-        abs_max = np.where(abs_max == 0, 1.0, abs_max)
 
-        shared_exp = np.floor(np.log2(abs_max)) - emax
-        shared_exp = np.where(shared_exp < 0, 0, shared_exp)
-        mxscale = np.power(2.0, shared_exp.astype(np.int32).astype(np.float32))
+        # OCP scale: shared_exp = floor(log2(amax)) - emax, encoded as E8M0
+        # byte = shared_exp + 127 (clipped); all-zero block -> byte 0
+        safe_amax = np.where(abs_max > 0, abs_max, 1.0)
+        shared_exp = np.floor(np.log2(safe_amax)) - emax
+        scale_byte = np.clip((shared_exp + 127).astype(np.int32), 0, 255)
+        scale_byte = np.where(abs_max <= 0, 0, scale_byte)
+        mxscale = np.power(2.0, scale_byte.astype(np.float32) - 127.0)
 
-        scaled = chunk / np.where(mxscale == 0, 1.0, mxscale)
+        scaled = chunk / np.where(abs_max <= 0, 1.0, mxscale)
 
         if round_mode == "floor":
             scaled_q = np.floor(scaled)
@@ -198,17 +212,18 @@ def _mx_quantize(data_fp32, axis_pos, dst_type, block_size, round_mode, scale_al
         scale_flat[:, b, :] = mxscale[:, 0, :]
 
     y_out = y_flat.reshape(shape)
-    scale_shape = list(shape)
-    scale_shape[axis_pos] = n_blocks
-    scale_shape.append(2)
-    scale_out = np.zeros(scale_shape, dtype=np.float32)
 
-    if post_q == 1:
-        scale_out[:, :, 0, 0] = scale_flat[:, :, 0]
-        scale_out[:, :, 1, 0] = scale_flat[:, :, 0]
-    else:
-        for i in range(2):
-            scale_out[:, :, :, i] = scale_flat[:, :, :]
+    # Pack scales in pairs: axis dim becomes n_pairs, last dim of 2 appended;
+    # slot k of pair p holds the scale of block (2p + k), padding slots are 0.
+    padded = np.zeros((pre_q, n_pairs * 2, post_q), dtype=np.float32)
+    padded[:, :n_blocks, :] = scale_flat
+    pairs = padded.reshape(pre_q, n_pairs, 2, post_q)
+    lead = tuple(shape[:axis_pos])
+    trail = tuple(shape[axis_pos + 1 :])
+    tmp = pairs.reshape(lead + (n_pairs, 2) + trail)
+    k_axis = len(lead) + 1
+    perm = [i for i in range(tmp.ndim) if i != k_axis] + [k_axis]
+    scale_out = np.ascontiguousarray(np.transpose(tmp, perm))
 
     return y_out, scale_out, dst_dtype
 
@@ -261,38 +276,67 @@ def __golden_swiglu_mx_quant(*input_arrays, **kwargs):
 
     if group_index is not None:
         y_shape = list(swiglu_fp32.shape)
-        scale_shape = list(swiglu_fp32.shape)
-        scale_shape[axis_pos] = math.ceil(scale_shape[axis_pos] / block_size)
+        ndim = len(y_shape)
+        scale_shape = list(y_shape)
+        if axis_pos == ndim - 2:
+            # axis=-2 with group_index (x must be 2D):
+            # allocated pairs = M // 64 + groupNum (mirrors infershape)
+            scale_shape[axis_pos] = y_shape[axis_pos] // (block_size * 2) + len(
+                group_index
+            )
+        else:
+            scale_shape[axis_pos] = math.ceil(y_shape[axis_pos] / (block_size * 2))
         scale_shape.append(2)
 
         _, dst_dtype, _ = _DST_TYPE_MAP[dst_type]
-        if dst_dtype is not None:
-            y = np.zeros(y_shape, dtype=dst_dtype)
-        else:
-            y = np.zeros(y_shape, dtype=np.float32)
-        scale = np.zeros(
-            scale_shape, dtype=_fp8_e8m0 if _fp8_e8m0 is not None else np.float32
-        )
+        y_dtype = dst_dtype if dst_dtype is not None else np.float32
+        scale_dtype = _fp8_e8m0 if _fp8_e8m0 is not None else np.float32
+        y = np.zeros(y_shape, dtype=y_dtype)
+        scale = np.zeros(scale_shape, dtype=scale_dtype)
 
-        start = 0
-        for gv in group_index:
-            gv = int(gv)
-            y_part, scale_part, dst_dt = _mx_quantize(
-                swiglu_fp32[start : start + gv],
-                axis_pos,
-                dst_type,
-                block_size,
-                round_mode,
-                scale_alg,
-            )
-            if dst_dtype is not None:
-                y[start : start + gv] = y_part.astype(dst_dtype)
-            else:
-                y[start : start + gv] = y_part
-            scale[start : start + gv] = scale_part.astype(
-                _fp8_e8m0 if _fp8_e8m0 is not None else np.float32
-            )
-            start += gv
+        if axis_pos == ndim - 2:
+            # axis=-2: each group owns ceil(rows_g / 64) scale pairs, packed compactly
+            pair_off = 0
+            start = 0
+            for gv in group_index:
+                gv = int(gv)
+                if gv <= 0:
+                    continue
+                y_part, scale_part, _ = _mx_quantize(
+                    swiglu_fp32[start : start + gv],
+                    axis_pos,
+                    dst_type,
+                    block_size,
+                    round_mode,
+                    scale_alg,
+                )
+                y[start : start + gv] = y_part.astype(y_dtype)
+                npair_g = scale_part.shape[axis_pos]
+                idx = (slice(None),) * axis_pos + (slice(pair_off, pair_off + npair_g),)
+                scale[idx] = scale_part.astype(scale_dtype)
+                pair_off += npair_g
+                start += gv
+        else:
+            # axis=-1: group_index segments the flattened rows of the SwiGLU output
+            rows = swiglu_fp32.reshape(-1, y_shape[-1])
+            y_rows = y.reshape(-1, y_shape[-1])
+            scale_rows = scale.reshape(-1, scale_shape[-2], 2)
+            start = 0
+            for gv in group_index:
+                gv = int(gv)
+                if gv <= 0:
+                    continue
+                y_part, scale_part, _ = _mx_quantize(
+                    rows[start : start + gv],
+                    rows.ndim - 1,
+                    dst_type,
+                    block_size,
+                    round_mode,
+                    scale_alg,
+                )
+                y_rows[start : start + gv] = y_part.astype(y_dtype)
+                scale_rows[start : start + gv] = scale_part.astype(scale_dtype)
+                start += gv
     else:
         y_np, scale_np, dst_dtype = _mx_quantize(
             swiglu_fp32, axis_pos, dst_type, block_size, round_mode, scale_alg
