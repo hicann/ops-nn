@@ -32,5 +32,5 @@ static ge::graphStatus InferDataType4MaskedScatter(gert::InferDataTypeContext* c
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MskedScatter).InferShape(InferShape4MaskedScatter).InferDataType(InferDataType4MaskedScatter);
+IMPL_OP_INFERSHAPE(MaskedScatter).InferShape(InferShape4MaskedScatter).InferDataType(InferDataType4MaskedScatter);
 } // namespace ops
