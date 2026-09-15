@@ -140,7 +140,7 @@ static ge::graphStatus CheckScatterReduceInputs(gert::TilingContext* context)
 // phase-1 的排序缓冲在 pipe_.Reset() 后已释放, phase-3 可用整块 UB; 只需扣掉每个 buffer
 // 各自向上按 block 对齐的损失。列上限由容量反解, 而非先定死再判超限 —— sliceSize 再大
 // 也只是多切几个 chunk, 不存在因某轴过大而不支持。
-static uint64_t ResolveUbChunkMax(gert::TilingContext* context)
+static uint64_t ResolveUbChunkMax(const gert::TilingContext* context)
 {
     constexpr uint64_t BLOCK_BYTES = static_cast<uint64_t>(ScatterReduceCommon::UB_BLOCK_BYTES);
     constexpr uint64_t ACC_BUF_NUM = 2UL;                   // accUb, rowAccUb
@@ -154,9 +154,11 @@ static uint64_t ResolveUbChunkMax(gert::TilingContext* context)
     platform_ascendc::PlatformAscendC(context->GetPlatformInfo())
         .GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     auto varDesc = context->GetInputDesc(0);
-    const uint64_t dtypeBytes = (varDesc == nullptr) ?
-                                    ACC_WIDEN_BYTES :
-                                    static_cast<uint64_t>(ge::GetSizeByDataType(varDesc->GetDataType()));
+    // GetSizeByDataType 返回 int, 未知 dtype 时返回 -1; 直接转 uint64 会回绕成 2^64-1,
+    // 后面按列字节数反解容量会整体失真。非正返回按窄类型兜底(与 varDesc 缺失同一处理),
+    // dtype 合法性本身由 CheckScatterReduceInputs 把关。
+    const int32_t dtypeSize = (varDesc == nullptr) ? -1 : ge::GetSizeByDataType(varDesc->GetDataType());
+    const uint64_t dtypeBytes = (dtypeSize <= 0) ? ACC_WIDEN_BYTES : static_cast<uint64_t>(dtypeSize);
     const uint64_t accBytes = (dtypeBytes <= SUBWORD_BYTES_MAX) ? ACC_WIDEN_BYTES : dtypeBytes;
     const uint64_t colBytes = ACC_BUF_NUM * accBytes + PARAM_BUF_NUM * dtypeBytes + TMP_BUF_BYTES;
     const uint64_t alignReserve = BUF_COUNT * BLOCK_BYTES;

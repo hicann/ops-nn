@@ -87,16 +87,31 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     idx_flat = indices.reshape(-1).astype(np.int64)
     n = idx_flat.shape[0]
 
-    for m in range(n):
-        idv = int(idx_flat[m])
-        if idv < 0 or idv >= var_first:
-            continue  # out-of-bound skip
-        row = work.index_select(0, torch.tensor([idv]))
-        if is_int:
-            res = _int_trunc_div(row, upd[m : m + 1])
-        else:
-            res = torch.div(row, upd[m : m + 1])
-        work.index_copy_(0, torch.tensor([idv]), res)
+    # 分层向量化: 串行依赖只在同一行内部, 按"本行第几次作用"分层后层内可批量相除。
+    # stable 排序保证同行内次序不变, 与逐条相除逐位等价。
+    if n:
+        in_range = (idx_flat >= 0) & (idx_flat < var_first)
+        ix = idx_flat[in_range]
+        src = np.nonzero(in_range)[0]
+        k = ix.shape[0]
+        if k:
+            order = np.argsort(ix, kind="stable")
+            grouped = ix[order]
+            rank = np.arange(k) - np.searchsorted(grouped, grouped, side="left")
+            lay = np.argsort(rank, kind="stable")
+            sel_all = torch.from_numpy(src[order[lay]])
+            row_all = torch.from_numpy(ix[order[lay]])
+            rk = rank[lay]
+            bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
+            for r in range(len(bounds) - 1):
+                a, b = int(bounds[r]), int(bounds[r + 1])
+                if a == b:
+                    continue
+                rows, sel = row_all[a:b], sel_all[a:b]
+                cur = work.index_select(0, rows)
+                den = upd.index_select(0, sel)
+                res = _int_trunc_div(cur, den) if is_int else torch.div(cur, den)
+                work.index_copy_(0, rows, res)
 
     # 浮点出口不 cast —— TTK 负责窄回; 自行 astype 会把 Promote 出来的高精度真值砍回去。
     # 整型没有 Promote, TTK 也不会窄回, 故由本函数复刻内核的 NarrowStore(仅 int8/uint8 需要)。
@@ -510,16 +525,32 @@ class ScatterDivAclnnSpec:
         valid = (idx >= 0) & (idx < work.shape[0])
         idx, upd = idx[valid], upd[valid]
         is_int = work.dtype in (torch.int32, torch.int8, torch.uint8)
-        for k in range(idx.numel()):
-            i = int(idx[k])
-            if is_int:
-                denom = upd[k]
-                nz = denom != 0
-                safe = torch.where(nz, denom, torch.ones_like(denom))
-                q = torch.div(work[i], safe, rounding_mode="trunc")
-                work[i] = torch.where(nz, q, work[i])
-            else:
-                work[i] = torch.div(work[i], upd[k])
+        # 分层向量化, 口径同 kernel 档 golden。
+        n = int(idx.numel())
+        if n:
+            ix = idx.cpu().numpy()
+            order = np.argsort(ix, kind="stable")
+            grouped = ix[order]
+            rank = np.arange(n) - np.searchsorted(grouped, grouped, side="left")
+            lay = np.argsort(rank, kind="stable")
+            sel_all = torch.as_tensor(order[lay], device=idx.device)
+            row_all = torch.as_tensor(ix[order[lay]], device=idx.device).to(torch.int64)
+            rk = rank[lay]
+            bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
+            for r in range(len(bounds) - 1):
+                a, b = int(bounds[r]), int(bounds[r + 1])
+                if a == b:
+                    continue
+                rows, sel = row_all[a:b], sel_all[a:b]
+                cur = work.index_select(0, rows)
+                den = upd.index_select(0, sel)
+                if is_int:
+                    nz = den != 0
+                    safe = torch.where(nz, den, torch.ones_like(den))
+                    q = torch.div(cur, safe, rounding_mode="trunc")
+                    work[rows] = torch.where(nz, q, cur)
+                else:
+                    work[rows] = torch.div(cur, den)
         return _keep_dtype([work], varRef)
 
     class _Compose:
