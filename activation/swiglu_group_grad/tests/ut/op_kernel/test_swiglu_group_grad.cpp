@@ -227,7 +227,8 @@ void RunGroupIndexMaskCase(int64_t hiddenSize, bool splitHidden)
             EXPECT_NEAR(gradX[row * kDim2H + col], expectedGradGate, 1e-5f);
             EXPECT_NEAR(gradX[row * kDim2H + kHiddenSize + col], 0.0f, 1e-5f);
         }
-        EXPECT_NEAR(gradWeight[row], static_cast<float>(kHiddenSize * 2), 1e-5f);
+        const float expectedGradWeight = row < kValidRows ? static_cast<float>(kHiddenSize * 2) : 0.0f;
+        EXPECT_NEAR(gradWeight[row], expectedGradWeight, 1e-5f);
     }
 
     AscendC::GmFree(gradY);
@@ -241,9 +242,9 @@ void RunGroupIndexMaskCase(int64_t hiddenSize, bool splitHidden)
     AscendC::GmFree(tilingBuffer);
 }
 
-TEST_F(SwigluGroupGradKernelTest, group_index_masks_grad_x_not_grad_weight) { RunGroupIndexMaskCase(16, false); }
+TEST_F(SwigluGroupGradKernelTest, group_index_masks_grad_x_and_grad_weight) { RunGroupIndexMaskCase(16, false); }
 
-TEST_F(SwigluGroupGradKernelTest, group_index_masks_grad_x_not_grad_weight_with_split_hidden)
+TEST_F(SwigluGroupGradKernelTest, group_index_masks_grad_x_and_grad_weight_with_split_hidden)
 {
     RunGroupIndexMaskCase(128, true);
 }

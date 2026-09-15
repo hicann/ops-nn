@@ -62,6 +62,7 @@ private:
 
     __aicore__ inline int64_t ComputeValidRowCount();
     __aicore__ inline float GetRowMaskValue(int64_t rowIndex, int64_t validRowCount);
+    __aicore__ inline float MaskGradWeightValue(int64_t rowIndex, int64_t validRowCount, float value);
     __aicore__ inline void ProcessFullRowTiles(int64_t rowCount, int64_t validRowCount);
     __aicore__ inline void ProcessHiddenChunks(int64_t rowCount, int64_t validRowCount);
     __aicore__ inline void ProcessUltraWideFixedTree(int64_t validRowCount);
@@ -1386,6 +1387,20 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
     return 1.0f;
 }
 
+// Rows at or beyond trunc must report an exact +0.0f gradWeight. A conditional
+// select is used instead of a multiply by the row mask so that an invalid row
+// whose reduction produced Inf/NaN cannot turn into NaN through 0.0f * Inf.
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                            HAS_GROUP_INDEX>::MaskGradWeightValue(int64_t rowIndex,
+                                                                                  int64_t validRowCount, float value)
+{
+    if constexpr (HAS_GROUP_INDEX) {
+        return rowIndex < validRowCount ? value : 0.0f;
+    }
+    return value;
+}
+
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
 __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
                                            HAS_GROUP_INDEX>::CopyBf16FastPathInput(int64_t globalRowOffset,
@@ -1517,7 +1532,9 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                 // gradWeight reduction reads products written by the Vector pipeline through Scalar.
                 SynchronizeVectorToScalar();
                 for (int64_t row = 0; row < currentTileRows; row++) {
-                    gradWeightAddress[row] = NumpyPairwiseSum(gradYAddress + row * alignedHiddenSize_, hiddenSize_);
+                    gradWeightAddress[row] = MaskGradWeightValue(
+                        globalRowOffset + row, validRowCount,
+                        NumpyPairwiseSum(gradYAddress + row * alignedHiddenSize_, hiddenSize_));
                 }
             }
             gradYQueue_.FreeTensor(gradYLocal);
@@ -1575,9 +1592,10 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                 SynchronizeVectorToScalar();
                 for (int64_t row = 0; row < currentTileRows; row++) {
                     __ubuf__ float* gradWeightProductAddress = inputAddress + row * alignedDoubleHiddenSize_;
-                    gradWeightAddress[row] = (hiddenSize_ == SIMD_REDUCTION_FAST_PATH_H) ?
-                                                 NumpyPairwiseSumFast(gradWeightProductAddress) :
-                                                 NumpyPairwiseSum(gradWeightProductAddress, hiddenSize_);
+                    float gradWeightValue = (hiddenSize_ == SIMD_REDUCTION_FAST_PATH_H) ?
+                                                NumpyPairwiseSumFast(gradWeightProductAddress) :
+                                                NumpyPairwiseSum(gradWeightProductAddress, hiddenSize_);
+                    gradWeightAddress[row] = MaskGradWeightValue(globalRowOffset + row, validRowCount, gradWeightValue);
                 }
             }
         }
@@ -1682,7 +1700,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
             int64_t scratchFloatOffset = GetScratchFloatOffset(rowIndex);
             DataCopyPad(partialLocal, gradWeightScratchGlobal_[scratchFloatOffset], partialCopyParams, noPadParams);
             PipeBarrier<PIPE_ALL>();
-            partialAddress[0] = MergeUltraWidePartials(partialAddress);
+            partialAddress[0] = MaskGradWeightValue(rowIndex, validRowCount, MergeUltraWidePartials(partialAddress));
             SynchronizeScalarToMte3();
             DataCopyPad(gradWeightGlobal_[rowIndex], partialLocal, gradWeightCopyParams);
             PipeBarrier<PIPE_ALL>();
@@ -2032,7 +2050,8 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                 validChunkCount++;
             }
             float gradWeightValue = NumpyPairwiseSum(gradWeightPartialsAddress, validChunkCount);
-            WriteScalarFloat(gradWeightGlobal_, rowIndex, gradWeightValue);
+            WriteScalarFloat(gradWeightGlobal_, rowIndex,
+                             MaskGradWeightValue(rowIndex, validRowCount, gradWeightValue));
         }
     }
 }
