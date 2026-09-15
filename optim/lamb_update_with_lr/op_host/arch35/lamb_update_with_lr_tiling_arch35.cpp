@@ -108,7 +108,7 @@ ge::graphStatus LambUpdateWithLrTiling::DoOpTiling()
         auto emptyRawTiling = context_->GetRawTilingData();
         if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
             size_t emptyCap = emptyRawTiling->GetCapacity();
-            uint8_t* emptyPtr = reinterpret_cast<uint8_t*>(emptyRawTiling->GetData());
+            uint8_t* emptyPtr = static_cast<uint8_t*>(emptyRawTiling->GetData());
             for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) {
                 emptyPtr[emptyIdx] = 0;
             }
@@ -165,7 +165,7 @@ static ge::graphStatus TilingForLambUpdateWithLr(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    auto compileInfo = reinterpret_cast<const LambUpdateWithLrCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const LambUpdateWithLrCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     OP_LOGD(context, "Enter ascendc LambUpdateWithLrTiling");
