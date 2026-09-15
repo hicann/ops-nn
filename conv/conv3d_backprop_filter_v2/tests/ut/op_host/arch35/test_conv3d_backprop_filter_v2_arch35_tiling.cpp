@@ -156,6 +156,8 @@ static void TestOneParamCase(const Conv3DBpFilterV2TilingTestParam& param)
                                   {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
                                   {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
                                   {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(
+                                                         std::vector<int64_t>{0, 0, 0, 0, 0})},
                                   {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
                       .NodeInputTd(0, param.dtype, param.fmap_ori_format, param.fmap_format)
                       .NodeInputTd(1, ge::DT_INT32, param.filter_ori_format, param.filter_format)
