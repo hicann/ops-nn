@@ -18,25 +18,15 @@
 #include "ge_glu_v2_fp32_align_last_axis_big_without_pad.h"
 #include "ge_glu_v2_fp16_align_last_axis_big_without_pad.h"
 
-#include "tanh/ge_glu_v2_bf16_align.h"
-#include "tanh/ge_glu_v2_bf16_align_last_axis_big.h"
-#include "tanh/ge_glu_v2_bf16_vreduce.h"
-#include "tanh/ge_glu_v2_fp16_align.h"
-#include "tanh/ge_glu_v2_fp16_align_last_axis_big.h"
-#include "tanh/ge_glu_v2_fp16_vreduce.h"
-#include "tanh/ge_glu_v2_fp32_align.h"
-#include "tanh/ge_glu_v2_fp32_vreduce.h"
-#include "tanh/ge_glu_v2_fp32_align_last_axis_big.h"
-
-#include "erf/ge_glu_v2_bf16_align_erf.h"
-#include "erf/ge_glu_v2_bf16_align_last_axis_big_erf.h"
-#include "erf/ge_glu_v2_bf16_vreduce_erf.h"
-#include "erf/ge_glu_v2_fp16_align_erf.h"
-#include "erf/ge_glu_v2_fp16_align_last_axis_big_erf.h"
-#include "erf/ge_glu_v2_fp16_vreduce_erf.h"
-#include "erf/ge_glu_v2_fp32_align_erf.h"
-#include "erf/ge_glu_v2_fp32_vreduce_erf.h"
-#include "erf/ge_glu_v2_fp32_align_last_axis_big_erf.h"
+#include "ge_glu_v2_bf16_align.h"
+#include "ge_glu_v2_bf16_align_last_axis_big.h"
+#include "ge_glu_v2_bf16_vreduce.h"
+#include "ge_glu_v2_fp16_align.h"
+#include "ge_glu_v2_fp16_align_last_axis_big.h"
+#include "ge_glu_v2_fp16_vreduce.h"
+#include "ge_glu_v2_fp32_align.h"
+#include "ge_glu_v2_fp32_vreduce.h"
+#include "ge_glu_v2_fp32_align_last_axis_big.h"
 
 using namespace GeGluV2;
 
@@ -74,79 +64,79 @@ extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR ge
     }
 #else
     if (TILING_KEY_IS(101)) {
-        GeGluV2::GeGluV2Fp16Align<half> op;
+        GeGluV2::GeGluV2Fp16Align<half, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(102)) {
-        GeGluV2::GeGluV2Fp16VReduce<half> op;
+        GeGluV2::GeGluV2Fp16VReduce<half, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(103)) {
-        GeGluV2::GeGluV2Fp16AlignLastAxisBig<half> op;
+        GeGluV2::GeGluV2Fp16AlignLastAxisBig<half, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(201)) {
-        GeGluV2::GeGluV2Bf16Align<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16Align<bfloat16_t, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(202)) {
-        GeGluV2::GeGluV2Bf16VReduce<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16VReduce<bfloat16_t, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(203)) {
-        GeGluV2::GeGluV2Bf16AlignLastAxisBig<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16AlignLastAxisBig<bfloat16_t, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
 #endif
     } else if (TILING_KEY_IS(301)) {
-        GeGluV2::GeGluV2Fp32Align<float> op;
+        GeGluV2::GeGluV2Fp32Align<float, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(302)) {
-        GeGluV2::GeGluV2Fp32VReduce<float> op;
+        GeGluV2::GeGluV2Fp32VReduce<float, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(303)) {
-        GeGluV2::GeGluV2Fp32AlignLastAxisBig<float> op;
+        GeGluV2::GeGluV2Fp32AlignLastAxisBig<float, false> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(111)) {
-        GeGluV2::GeGluV2Fp16AlignErf<half> op;
+        GeGluV2::GeGluV2Fp16Align<half, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(112)) {
-        GeGluV2::GeGluV2Fp16VReduceErf<half> op;
+        GeGluV2::GeGluV2Fp16VReduce<half, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(113)) {
-        GeGluV2::GeGluV2Fp16AlignLastAxisBigErf<half> op;
+        GeGluV2::GeGluV2Fp16AlignLastAxisBig<half, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(211)) {
-        GeGluV2::GeGluV2Bf16AlignErf<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16Align<bfloat16_t, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(212)) {
-        GeGluV2::GeGluV2Bf16VReduceErf<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16VReduce<bfloat16_t, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(213)) {
-        GeGluV2::GeGluV2Bf16AlignLastAxisBigErf<bfloat16_t> op;
+        GeGluV2::GeGluV2Bf16AlignLastAxisBig<bfloat16_t, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
 #endif
     } else if (TILING_KEY_IS(311)) {
-        GeGluV2::GeGluV2Fp32AlignErf<float> op;
+        GeGluV2::GeGluV2Fp32Align<float, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(312)) {
-        GeGluV2::GeGluV2Fp32VReduceErf<float> op;
+        GeGluV2::GeGluV2Fp32VReduce<float, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(313)) {
-        GeGluV2::GeGluV2Fp32AlignLastAxisBigErf<float> op;
+        GeGluV2::GeGluV2Fp32AlignLastAxisBig<float, true> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
     }

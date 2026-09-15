@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,22 +9,21 @@
  */
 
 /*!
- * \file ge_glu_v2_fp16_align_erf.h
+ * \file ge_glu_v2_bf16_align.h
  * \brief
  */
+#ifndef GeGluV2_BFLOAT16_ALIGN_H
+#define GeGluV2_BFLOAT16_ALIGN_H
 
-#ifndef GeGluV2_HALF_ALIGN_ERF_H
-#define GeGluV2_HALF_ALIGN_ERF_H
-
-#include "../ge_glu_v2_base.h"
+#include "ge_glu_v2_base.h"
 
 namespace GeGluV2 {
 using namespace AscendC;
 
-template <typename T>
-class GeGluV2Fp16AlignErf : public GeGluV2Base<T> {
+template <typename T, bool IS_ERF>
+class GeGluV2Bf16Align : public GeGluV2Base<T> {
 public:
-    __aicore__ inline GeGluV2Fp16AlignErf(){};
+    __aicore__ inline GeGluV2Bf16Align(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
                                 const GeGluV2TilingData* tilingData);
     __aicore__ inline void Process();
@@ -33,13 +32,12 @@ public:
     constexpr static int64_t bufferSize = 6144;
 
 private:
+    __aicore__ inline void CopyInX(const int64_t& index, const int64_t& blockCount);
+    __aicore__ inline void ComputeGeluAndMul(const int64_t& ub_num);
+    __aicore__ inline void CopyOutGelu(const int64_t& index, const int64_t& ub_num, const int64_t& group);
+    __aicore__ inline void CopyOutMul(const int64_t& index, const int64_t& ub_num, const int64_t& group);
     __aicore__ inline void ProcessPerCore();
     __aicore__ inline void ProcessLastCore();
-    __aicore__ inline void CopyInX(const int64_t& index, const int64_t& blockCount);
-    __aicore__ inline void ComputeGelu(const int64_t& ub_num);
-    __aicore__ inline void CopyOutGelu(const int64_t& index, const int64_t& ub_num, const int64_t& group);
-    __aicore__ inline void ComputeMul(const int64_t& ub_num);
-    __aicore__ inline void CopyOutMul(const int64_t& index, const int64_t& ub_num, const int64_t& group);
 
 private:
     TPipe pipe;
@@ -54,9 +52,9 @@ private:
     TBuf<QuePosition::VECCALC> resultTempBuf4;
 };
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
-                                                    const GeGluV2TilingData* tilingData)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                                         const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData);
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(T));
@@ -66,12 +64,14 @@ __aicore__ inline void GeGluV2Fp16AlignErf<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADD
 
     pipe.InitBuffer(resultTempBuf1, bufferSize * sizeof(float));
     pipe.InitBuffer(resultTempBuf2, bufferSize * sizeof(float));
-    pipe.InitBuffer(resultTempBuf3, bufferSize * sizeof(float));
-    pipe.InitBuffer(resultTempBuf4, bufferSize * sizeof(float));
+    if constexpr (IS_ERF) {
+        pipe.InitBuffer(resultTempBuf3, bufferSize * sizeof(float));
+        pipe.InitBuffer(resultTempBuf4, bufferSize * sizeof(float));
+    }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::Process()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::Process()
 {
     if (this->blockIdx >= this->m_tilingData.realCoreNum) {
         return;
@@ -84,106 +84,100 @@ __aicore__ inline void GeGluV2Fp16AlignErf<T>::Process()
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::ProcessPerCore()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::ProcessPerCore()
 {
     // process core
     for (int64_t idx = 0; idx < this->m_tilingData.loopNum; idx++) {
         CopyInX(idx, this->m_tilingData.group);
-        ComputeGelu(this->group_ub_num);
+        ComputeGeluAndMul(this->group_ub_num);
         CopyOutGelu(idx, this->group_ub_num, this->m_tilingData.group);
-        ComputeMul(this->group_ub_num);
         CopyOutMul(idx, this->group_ub_num, this->m_tilingData.group);
     }
+
     if (this->m_tilingData.nLastTailGroup > 0) {
         CopyInX(this->m_tilingData.loopNum, this->m_tilingData.nLastTailGroup);
-        ComputeGelu(this->nlast_tail_ub_num);
+        ComputeGeluAndMul(this->nlast_tail_ub_num);
         CopyOutGelu(this->m_tilingData.loopNum, this->nlast_tail_ub_num, this->m_tilingData.nLastTailGroup);
-        ComputeMul(this->nlast_tail_ub_num);
         CopyOutMul(this->m_tilingData.loopNum, this->nlast_tail_ub_num, this->m_tilingData.nLastTailGroup);
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::ProcessLastCore()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::ProcessLastCore()
 {
     for (int64_t idx = 0; idx < this->m_tilingData.tailLoopNum; idx++) {
         CopyInX(idx, this->m_tilingData.group);
-        ComputeGelu(this->group_ub_num);
+        ComputeGeluAndMul(this->group_ub_num);
         CopyOutGelu(idx, this->group_ub_num, this->m_tilingData.group);
-        ComputeMul(this->group_ub_num);
         CopyOutMul(idx, this->group_ub_num, this->m_tilingData.group);
     }
     if (this->m_tilingData.lastTailGroup > 0) {
         CopyInX(this->m_tilingData.tailLoopNum, this->m_tilingData.lastTailGroup);
-        ComputeGelu(this->last_tail_ub_num);
+        ComputeGeluAndMul(this->last_tail_ub_num);
         CopyOutGelu(this->m_tilingData.tailLoopNum, this->last_tail_ub_num, this->m_tilingData.lastTailGroup);
-        ComputeMul(this->last_tail_ub_num);
         CopyOutMul(this->m_tilingData.tailLoopNum, this->last_tail_ub_num, this->m_tilingData.lastTailGroup);
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::CopyInX(const int64_t& index, const int64_t& blockCount)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::CopyInX(const int64_t& index, const int64_t& blockCount)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
-
     this->CopyInXAlign(index, blockCount, ubX1, ubX2);
-
     inQueueX1.EnQue(ubX1);
     inQueueX2.EnQue(ubX2);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::ComputeGelu(const int64_t& ub_num)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::ComputeGeluAndMul(const int64_t& ub_num)
 {
     LocalTensor<T> ubX2 = inQueueX2.DeQue<T>();
-    LocalTensor<float> ubx2_fp32 = resultTempBuf2.Get<float>();
-    Cast(ubx2_fp32, ubX2, RoundMode::CAST_NONE, ub_num);
+    LocalTensor<float> ubx_fp32 = resultTempBuf2.Get<float>();
+    Cast(ubx_fp32, ubX2, RoundMode::CAST_NONE, ub_num);
     inQueueX2.FreeTensor(ubX2);
 
     // after cast to fp32 , input buffer release, to use as tmp buffer wihle do geluv2 compute.
-    LocalTensor<float> tmpBuf = resultTempBuf1.Get<float>();
-    LocalTensor<float> tmpBuf1 = resultTempBuf3.Get<float>();
-    LocalTensor<float> tmpBuf2 = resultTempBuf4.Get<float>();
-    this->ComputeGeluErf(ubx2_fp32, tmpBuf, tmpBuf1, tmpBuf2, ub_num);
+    LocalTensor<float> gelu_result = resultTempBuf1.Get<float>();
+    if constexpr (IS_ERF) {
+        LocalTensor<float> tmp_buf1 = resultTempBuf3.Get<float>();
+        LocalTensor<float> tmp_buf2 = resultTempBuf4.Get<float>();
+        this->ComputeGeluErf(ubx_fp32, gelu_result, tmp_buf1, tmp_buf2, ub_num);
+    } else {
+        this->ComputeGeluBase(ubx_fp32, gelu_result, ub_num);
+    }
+
+    LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
+    LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
+    Cast(ubx_fp32, ubX1, RoundMode::CAST_NONE, ub_num);
+    inQueueX1.FreeTensor(ubX1);
+
+    Mul(ubx_fp32, ubx_fp32, gelu_result, ub_num);
+    Cast(mul_out, ubx_fp32, RoundMode::CAST_RINT, ub_num);
+    outQueueMul.EnQue(mul_out);
 
     LocalTensor<T> gelu_out = outQueueGelu.AllocTensor<T>();
-    Cast(gelu_out, tmpBuf, RoundMode::CAST_RINT, ub_num);
+    Cast(gelu_out, gelu_result, RoundMode::CAST_RINT, ub_num);
     outQueueGelu.EnQue(gelu_out);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::ComputeMul(const int64_t& ub_num)
-{
-    LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
-    LocalTensor<T> gelu_out = outQueueGelu.DeQue<T>();
-    LocalTensor<T> mul_out_5 = outQueueMul.AllocTensor<T>();
-    PipeBarrier<PIPE_V>();
-    Mul(mul_out_5, gelu_out, ubX1, ub_num);
-    outQueueMul.EnQue(mul_out_5);
-
-    outQueueGelu.FreeTensor(gelu_out);
-    inQueueX1.FreeTensor(ubX1);
-}
-
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::CopyOutGelu(const int64_t& index, const int64_t& ub_num,
-                                                           const int64_t& group)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::CopyOutGelu(const int64_t& index, const int64_t& ub_num,
+                                                                const int64_t& group)
 {
     LocalTensor<T> outLocalGelu = outQueueGelu.DeQue<T>();
     this->CopyOutGeluBase(index, ub_num, group, outLocalGelu);
-    outQueueGelu.EnQue(outLocalGelu);
+    outQueueGelu.FreeTensor(outLocalGelu);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16AlignErf<T>::CopyOutMul(const int64_t& index, const int64_t& ub_num,
-                                                          const int64_t& group)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Bf16Align<T, IS_ERF>::CopyOutMul(const int64_t& index, const int64_t& ub_num,
+                                                               const int64_t& group)
 {
     LocalTensor<T> outLocalMul = outQueueMul.DeQue<T>();
     this->CopyOutMulBase(index, ub_num, group, outLocalMul);
     outQueueMul.FreeTensor(outLocalMul);
 }
 } // namespace GeGluV2
-#endif // GeGluV2_HALF_ALIGN_ERF_H
+#endif // GeGluV2_BFLOAT16_ALIGN_H
