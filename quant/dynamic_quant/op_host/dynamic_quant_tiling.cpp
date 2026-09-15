@@ -605,7 +605,6 @@ bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* c
     }
 
     maxUbLen = std::min(maxUbLen, static_cast<uint32_t>(COMPARE_INT * ONE_REPEAT_ELE)); // 限制单个指令repeat的次数
-
     // 仅尾轴8的倍数对齐场景走入分支
     if (rowLen < MIN_ROW_LENGTH_THRESHOLD || rowLen > maxUbLen || rowLen % ALIGEN_EIGHT != 0) {
         return false;
