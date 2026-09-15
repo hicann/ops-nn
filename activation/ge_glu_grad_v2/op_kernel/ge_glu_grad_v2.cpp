@@ -16,12 +16,9 @@
 #include "ge_glu_grad_v2_fp16_310p.h"
 #include "ge_glu_grad_v2_fp32_310p.h"
 #else
-#include "ge_glu_grad_v2_tanh_bfp16.h"
-#include "ge_glu_grad_v2_tanh_fp16.h"
-#include "ge_glu_grad_v2_tanh_fp32.h"
-#include "ge_glu_grad_v2_erf_bfp16.h"
-#include "ge_glu_grad_v2_erf_fp16.h"
-#include "ge_glu_grad_v2_erf_fp32.h"
+#include "ge_glu_grad_v2_bfp16.h"
+#include "ge_glu_grad_v2_fp16.h"
+#include "ge_glu_grad_v2_fp32.h"
 #endif
 
 using namespace AscendC;
@@ -61,55 +58,55 @@ extern "C" __global__ __aicore__ void ge_glu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_A
 #else
     /* Tanh */
     if (TILING_KEY_IS(101)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(102)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(201)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(202)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(301)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(302)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(103)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;
     }
     if (TILING_KEY_IS(203)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;
     }
     if (TILING_KEY_IS(303)) {
-        GeGluGradV2Tanh::GeGluGradV2TanhFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<false> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;
@@ -117,54 +114,54 @@ extern "C" __global__ __aicore__ void ge_glu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_A
 
     /* Erf */
     if (TILING_KEY_IS(701)) {
-        GeGluGradV2Erf::GeGluGradV2ErfBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(702)) {
-        GeGluGradV2Erf::GeGluGradV2ErfBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(801)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(802)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(901)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
         return;
     }
     if (TILING_KEY_IS(902)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process();
     }
     if (TILING_KEY_IS(703)) {
-        GeGluGradV2Erf::GeGluGradV2ErfBFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2BFP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;
     }
     if (TILING_KEY_IS(803)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP16 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP16<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;
     }
     if (TILING_KEY_IS(903)) {
-        GeGluGradV2Erf::GeGluGradV2ErfFP32 op(dy, x, gelu, dx, &tilingData);
+        GeGluGradV2::GeGluGradV2FP32<true> op(dy, x, gelu, dx, &tilingData);
         op.Init();
         op.Process(true);
         return;

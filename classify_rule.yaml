@@ -467,28 +467,31 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/ge_glu_grad_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2.cpp
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_base.h
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_base_310p.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_base.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_bfp16.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_fp16.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_fp32.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_bfp16.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp16.h
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp16_310p.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp32.h
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp32_310p.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_base.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_bfp16.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_fp16.h
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_fp32.h
         - ops/ops-nn/activation/ge_glu_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_v2/op_host/
-        - ops/ops-nn/activation/ge_glu_v2/op_kernel/erf/
-        - ops/ops-nn/activation/ge_glu_v2/op_kernel/tanh/
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2.cpp
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_base.h
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_base_310p.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_bf16_align.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_bf16_align_last_axis_big.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_bf16_vreduce.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_align.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_align_last_axis_big.h
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_align_last_axis_big_without_pad.h
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_stride_310p.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_vreduce.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_align.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_align_last_axis_big.h
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_align_last_axis_big_without_pad.h
         - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_stride_310p.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_vreduce.h
         - ops/ops-nn/activation/gelu/op_api/
         - ops/ops-nn/activation/gelu_grad/op_api/
         - ops/ops-nn/activation/gelu_grad_v2/op_api/

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 #ifndef GeGluV2_HALF_VREDUCE_H
 #define GeGluV2_HALF_VREDUCE_H
 
-#include "../ge_glu_v2_base.h"
+#include "ge_glu_v2_base.h"
 
 namespace GeGluV2 {
 using namespace AscendC;
 
-template <typename T>
+template <typename T, bool IS_ERF>
 class GeGluV2Fp16VReduce : public GeGluV2Base<T> {
 public:
     __aicore__ inline GeGluV2Fp16VReduce(){};
@@ -49,11 +49,13 @@ private:
     TBuf<QuePosition::VECCALC> resultTempBuf2;
     TBuf<QuePosition::VECCALC> resultTempBuf3;
     TBuf<QuePosition::VECCALC> resultTempBuf4;
+    TBuf<QuePosition::VECCALC> resultTempBuf5;
+    TBuf<QuePosition::VECCALC> resultTempBuf6;
 };
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
-                                                   const GeGluV2TilingData* tilingData)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
+                                                           const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData, false, true);
     pipe.InitBuffer(inQueueX, bufferNum, 2 * bufferSize * sizeof(T));
@@ -64,10 +66,14 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR
     pipe.InitBuffer(resultTempBuf2, bufferSize * sizeof(float));
     pipe.InitBuffer(resultTempBuf3, bufferSize * sizeof(T));
     pipe.InitBuffer(resultTempBuf4, bufferSize * sizeof(T));
+    if constexpr (IS_ERF) {
+        pipe.InitBuffer(resultTempBuf5, bufferSize * sizeof(float));
+        pipe.InitBuffer(resultTempBuf6, bufferSize * sizeof(float));
+    }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::Process()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::Process()
 {
     if (this->blockIdx >= this->m_tilingData.realCoreNum) {
         return;
@@ -80,8 +86,8 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::Process()
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::ProcessPerCore()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::ProcessPerCore()
 {
     // process core
     for (int64_t idx_0 = 0; idx_0 < this->m_tilingData.loopNum; idx_0++) {
@@ -99,8 +105,8 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::ProcessPerCore()
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::ProcessLastCore()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::ProcessLastCore()
 {
     for (int64_t idx_0 = 0; idx_0 < this->m_tilingData.tailLoopNum; idx_0++) {
         CopyInX(idx_0, this->m_tilingData.group);
@@ -116,16 +122,16 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::ProcessLastCore()
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::CopyInX(const int64_t& index, const int64_t& blockCount)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::CopyInX(const int64_t& index, const int64_t& blockCount)
 {
     LocalTensor<T> ubX = inQueueX.AllocTensor<T>();
     this->CopyInXVreduce(index, blockCount, ubX);
     inQueueX.EnQue(ubX);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::ComputeGeluAndMul(const int64_t& ub_num)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::ComputeGeluAndMul(const int64_t& ub_num)
 {
     LocalTensor<T> ubX = inQueueX.DeQue<T>();
     LocalTensor<T> ubx1 = resultTempBuf3.Get<T>();
@@ -139,7 +145,13 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::ComputeGeluAndMul(const int64_t& u
 
     // after cast to fp32 , input buffer release, to use as tmp buffer wihle do geluv2 compute.
     LocalTensor<float> tmpBuf = resultTempBuf1.Get<float>();
-    this->ComputeGeluBase(ubx2_fp32, tmpBuf, ub_num);
+    if constexpr (IS_ERF) {
+        LocalTensor<float> tmpBuf1 = resultTempBuf5.Get<float>();
+        LocalTensor<float> tmpBuf2 = resultTempBuf6.Get<float>();
+        this->ComputeGeluErf(ubx2_fp32, tmpBuf, tmpBuf1, tmpBuf2, ub_num);
+    } else {
+        this->ComputeGeluBase(ubx2_fp32, tmpBuf, ub_num);
+    }
 
     LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
     LocalTensor<T> gelu_out = outQueueGelu.AllocTensor<T>();
@@ -150,18 +162,18 @@ __aicore__ inline void GeGluV2Fp16VReduce<T>::ComputeGeluAndMul(const int64_t& u
     outQueueGelu.EnQue(gelu_out);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::CopyOutGelu(const int64_t& index, const int64_t& ub_num,
-                                                          const int64_t& group)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::CopyOutGelu(const int64_t& index, const int64_t& ub_num,
+                                                                  const int64_t& group)
 {
     LocalTensor<T> outLocalGelu = outQueueGelu.DeQue<T>();
     this->CopyOutGeluVreduce(index, ub_num, outLocalGelu);
     outQueueGelu.FreeTensor(outLocalGelu);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Fp16VReduce<T>::CopyOutMul(const int64_t& index, const int64_t& ub_num,
-                                                         const int64_t& group)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16VReduce<T, IS_ERF>::CopyOutMul(const int64_t& index, const int64_t& ub_num,
+                                                                 const int64_t& group)
 {
     LocalTensor<T> outLocalMul = outQueueMul.DeQue<T>();
     this->CopyOutMulVreduce(index, ub_num, outLocalMul);

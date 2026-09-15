@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,18 +8,22 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef GeGluV2_BFLOAT16_LAST_BIG_ERF_H
-#define GeGluV2_BFLOAT16_LAST_BIG_ERF_H
+/*!
+ * \file ge_glu_v2_fp16_align_last_axis_big.h
+ * \brief
+ */
+#ifndef GeGluV2_HALF_ALIGN_LAST_AXIS_BIG_H
+#define GeGluV2_HALF_ALIGN_LAST_AXIS_BIG_H
 
-#include "../ge_glu_v2_base.h"
+#include "ge_glu_v2_base.h"
 
 namespace GeGluV2 {
 using namespace AscendC;
 
-template <typename T>
-class GeGluV2Bf16AlignLastAxisBigErf : public GeGluV2Base<T> {
+template <typename T, bool IS_ERF>
+class GeGluV2Fp16AlignLastAxisBig : public GeGluV2Base<T> {
 public:
-    __aicore__ inline GeGluV2Bf16AlignLastAxisBigErf(){};
+    __aicore__ inline GeGluV2Fp16AlignLastAxisBig(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
                                 const GeGluV2TilingData* tilingData);
     __aicore__ inline void Process();
@@ -29,8 +33,9 @@ public:
 
 private:
     __aicore__ inline void CopyInX(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length);
-    __aicore__ inline void ComputeGeluAndMul(const int64_t& ub_num);
+    __aicore__ inline void ComputeGelu(const int64_t& ub_num);
     __aicore__ inline void CopyOutGelu(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length);
+    __aicore__ inline void ComputeMul(const int64_t& ub_num);
     __aicore__ inline void CopyOutMul(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length);
     __aicore__ inline void ProcessPerCore();
     __aicore__ inline void ProcessLastCore();
@@ -48,9 +53,10 @@ private:
     TBuf<QuePosition::VECCALC> resultTempBuf4;
 };
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace,
-                                                               const GeGluV2TilingData* tilingData)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR gelu,
+                                                                    GM_ADDR workspace,
+                                                                    const GeGluV2TilingData* tilingData)
 {
     this->BaseInit(x, y, gelu, tilingData, true);
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(T));
@@ -60,12 +66,14 @@ __aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::Init(GM_ADDR x, GM_ADD
 
     pipe.InitBuffer(resultTempBuf1, bufferSize * sizeof(float));
     pipe.InitBuffer(resultTempBuf2, bufferSize * sizeof(float));
-    pipe.InitBuffer(resultTempBuf3, bufferSize * sizeof(float));
-    pipe.InitBuffer(resultTempBuf4, bufferSize * sizeof(float));
+    if constexpr (IS_ERF) {
+        pipe.InitBuffer(resultTempBuf3, bufferSize * sizeof(float));
+        pipe.InitBuffer(resultTempBuf4, bufferSize * sizeof(float));
+    }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::Process()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::Process()
 {
     if (this->blockIdx >= this->m_tilingData.realCoreNum) {
         return;
@@ -74,8 +82,8 @@ __aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::Process()
     ProcessPerCore();
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::ProcessPerCore()
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::ProcessPerCore()
 {
     // process core
     int64_t actualLoopNum = (this->m_tilingData.loopNum + this->m_tilingData.realCoreNum - 1) /
@@ -88,30 +96,31 @@ __aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::ProcessPerCore()
                 return;
             }
         }
-        int64_t a = this->m_tilingData.realCoreNum * idx + this->blockIdx;
+        int64_t e = this->m_tilingData.realCoreNum * idx + this->blockIdx;
         int64_t idx_x = 0;
         int64_t idx_y = 0;
         int64_t length = 0;
         if (this->m_tilingData.tailLoopNum != 0) {
-            idx_x = a / (this->m_tilingData.group + 1);
-            idx_y = a % (this->m_tilingData.group + 1);
+            idx_x = e / (this->m_tilingData.group + 1);
+            idx_y = e % (this->m_tilingData.group + 1);
             length = idx_y == this->m_tilingData.group ? this->m_tilingData.tailLoopNum : this->m_tilingData.splitSize;
         } else {
-            idx_x = a / this->m_tilingData.group;
-            idx_y = a % this->m_tilingData.group;
+            idx_x = e / this->m_tilingData.group;
+            idx_y = e % this->m_tilingData.group;
             length = this->m_tilingData.splitSize;
         }
 
         CopyInX(idx_x, idx_y, length);
-        ComputeGeluAndMul(length);
+        ComputeGelu(length);
         CopyOutGelu(idx_x, idx_y, length);
+        ComputeMul(length);
         CopyOutMul(idx_x, idx_y, length);
     }
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::CopyInX(const int64_t& idx_x, const int64_t& idx_y,
-                                                                  const int64_t& length)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::CopyInX(const int64_t& idx_x, const int64_t& idx_y,
+                                                                       const int64_t& length)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
@@ -121,50 +130,60 @@ __aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::CopyInX(const int64_t&
     inQueueX2.EnQue(ubX2);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::ComputeGeluAndMul(const int64_t& ub_num)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::ComputeGelu(const int64_t& ub_num)
 {
     LocalTensor<T> ubX2 = inQueueX2.DeQue<T>();
-    LocalTensor<float> ubx_fp32 = resultTempBuf2.Get<float>();
-    Cast(ubx_fp32, ubX2, RoundMode::CAST_NONE, ub_num);
+    LocalTensor<float> ubx2_fp32 = resultTempBuf2.Get<float>();
+    Cast(ubx2_fp32, ubX2, RoundMode::CAST_NONE, ub_num);
     inQueueX2.FreeTensor(ubX2);
 
     // after cast to fp32 , input buffer release, to use as tmp buffer wihle do geluv2 compute.
-    LocalTensor<float> tmp_buf1 = resultTempBuf3.Get<float>();
-    LocalTensor<float> tmp_buf2 = resultTempBuf4.Get<float>();
-    LocalTensor<float> gelu_result = resultTempBuf1.Get<float>();
-    this->ComputeGeluErf(ubx_fp32, gelu_result, tmp_buf1, tmp_buf2, ub_num);
-
-    LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
-    LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
-    Cast(ubx_fp32, ubX1, RoundMode::CAST_NONE, ub_num);
-    inQueueX1.FreeTensor(ubX1);
-
-    Mul(ubx_fp32, ubx_fp32, gelu_result, ub_num);
-    Cast(mul_out, ubx_fp32, RoundMode::CAST_RINT, ub_num);
-    outQueueMul.EnQue(mul_out);
+    LocalTensor<float> tmpBuf = resultTempBuf1.Get<float>();
+    if constexpr (IS_ERF) {
+        LocalTensor<float> tmpBuf1 = resultTempBuf3.Get<float>();
+        LocalTensor<float> tmpBuf2 = resultTempBuf4.Get<float>();
+        this->ComputeGeluErf(ubx2_fp32, tmpBuf, tmpBuf1, tmpBuf2, ub_num);
+    } else {
+        this->ComputeGeluBase(ubx2_fp32, tmpBuf, ub_num);
+    }
 
     LocalTensor<T> gelu_out = outQueueGelu.AllocTensor<T>();
-    Cast(gelu_out, gelu_result, RoundMode::CAST_RINT, ub_num);
+    Cast(gelu_out, tmpBuf, RoundMode::CAST_RINT, ub_num);
     outQueueGelu.EnQue(gelu_out);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::CopyOutGelu(const int64_t& idx_x, const int64_t& idx_y,
-                                                                      const int64_t& length)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::ComputeMul(const int64_t& ub_num)
+{
+    LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
+    LocalTensor<T> gelu_out = outQueueGelu.DeQue<T>();
+    LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
+    PipeBarrier<PIPE_V>();
+    Mul(mul_out, gelu_out, ubX1, ub_num);
+    PipeBarrier<PIPE_V>();
+    outQueueMul.EnQue(mul_out);
+
+    outQueueGelu.FreeTensor(gelu_out);
+    inQueueX1.FreeTensor(ubX1);
+}
+
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::CopyOutGelu(const int64_t& idx_x, const int64_t& idx_y,
+                                                                           const int64_t& length)
 {
     LocalTensor<T> outLocalGelu = outQueueGelu.DeQue<T>();
     this->CopyOutGeluBaseLastBig(idx_x, idx_y, length, outLocalGelu);
-    outQueueGelu.FreeTensor(outLocalGelu);
+    outQueueGelu.EnQue(outLocalGelu);
 }
 
-template <typename T>
-__aicore__ inline void GeGluV2Bf16AlignLastAxisBigErf<T>::CopyOutMul(const int64_t& idx_x, const int64_t& idx_y,
-                                                                     const int64_t& length)
+template <typename T, bool IS_ERF>
+__aicore__ inline void GeGluV2Fp16AlignLastAxisBig<T, IS_ERF>::CopyOutMul(const int64_t& idx_x, const int64_t& idx_y,
+                                                                          const int64_t& length)
 {
     LocalTensor<T> outLocalMul = outQueueMul.DeQue<T>();
     this->CopyOutMulBaseLastBig(idx_x, idx_y, length, outLocalMul);
     outQueueMul.FreeTensor(outLocalMul);
 }
 } // namespace GeGluV2
-#endif // GeGluV2_BFLOAT16_LAST_BIG_ERF_H
+#endif // GeGluV2_HALF_ALIGN_LAST_AXIS_BIG_H
