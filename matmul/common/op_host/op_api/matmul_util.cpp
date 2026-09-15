@@ -1449,6 +1449,11 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
                          output
   */
 
+    // 2D高精度模式下转置为false true
+    if (IsCapableForMultiMul(self, mat2, bias, cubeMathType)) {
+        CHECK_RET(MultiMulTranspose(self, mat2, transposeX2, executor), nullptr);
+    }
+
     // 左输入矩阵非连续
     bool isSelfSlice = IsSliceNonContiguous(self, mat2, cubeMathType);
     CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
@@ -1581,6 +1586,75 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
     CHECK_RET(mmTransdataOut != nullptr, nullptr);
 
     return mmTransdataOut;
+}
+
+bool IsCapableForMultiMul(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, int8_t cubeMathType)
+{
+    bool enableForceGrpAccForFp32 = cubeMathType == USE_FP32_ADD && IsNpuArch3510Series();
+    if (!enableForceGrpAccForFp32) {
+        return false;
+    }
+    if (bias != nullptr) {
+        return false;
+    }
+    if (self->IsEmpty() || mat2->IsEmpty()) {
+        return false;
+    }
+    if (self->GetViewShape().GetDimNum() != 2 || mat2->GetViewShape().GetDimNum() != 2) {
+        return false;
+    }
+    if (self->GetStorageFormat() != op::Format::FORMAT_ND || mat2->GetStorageFormat() != op::Format::FORMAT_ND) {
+        return false;
+    }
+    if (self->GetDataType() != DataType::DT_FLOAT || mat2->GetDataType() != DataType::DT_FLOAT) {
+        return false;
+    }
+    // m/n=1时tiling按优先级必选TO_MUL, k=1时无需转置规整, 均不进入multi_mul
+    bool isATrans = IsTransposeLastTwoDims(self);
+    bool isBTrans = IsTransposeLastTwoDims(mat2);
+    auto selfShape = self->GetViewShape();
+    auto mat2Shape = mat2->GetViewShape();
+    int64_t mDim = isATrans ? selfShape.GetDim(1) : selfShape.GetDim(0);
+    int64_t kDim = isATrans ? selfShape.GetDim(0) : selfShape.GetDim(1);
+    int64_t nDim = isBTrans ? mat2Shape.GetDim(0) : mat2Shape.GetDim(1);
+    if (mDim == 1 || nDim == 1 || kDim == 1) {
+        return false;
+    }
+    return true;
+}
+
+/*
+true : 转置流程正常完成（包括无需转置的提前退出场景）
+false : 转置过程中 l0op::Contiguous / AllocIntArray / l0op::Transpose 返回了 nullptr，说明算子图构建失败
+transposeX2 : 引用传出, 内部对mat2执行l0op::Transpose时置为true
+*/
+bool MultiMulTranspose(const aclTensor*& self, const aclTensor*& mat2, bool& transposeX2, aclOpExecutor* executor)
+{
+    bool isATrans = IsTransposeLastTwoDims(self);
+    bool isBTrans = IsTransposeLastTwoDims(mat2);
+    if (!isATrans && isBTrans) {
+        return true;
+    }
+
+    if (isATrans) {
+        self = l0op::Contiguous(self, executor);
+        CHECK_RET(self != nullptr, false);
+    }
+
+    if (!isBTrans) {
+        int64_t dimSize = mat2->GetViewShape().GetDimNum();
+        std::vector<int64_t> permVec(dimSize);
+        for (int64_t i = 0; i < dimSize; i++) {
+            permVec[i] = i;
+        }
+        std::swap(permVec[dimSize - 1], permVec[dimSize - 2]);
+        auto perm = executor->AllocIntArray(permVec.data(), dimSize);
+        CHECK_RET(perm != nullptr, false);
+        mat2 = l0op::Transpose(mat2, perm, executor);
+        CHECK_RET(mat2 != nullptr, false);
+        transposeX2 = true;
+    }
+    return true;
 }
 
 /*

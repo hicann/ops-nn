@@ -193,6 +193,10 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
                                      const aclTensor* out, const int8_t cubeMathType, MmOpInfo& mmOpInfo,
                                      aclOpExecutor* executor, bool transposeX2, bool isFusion = false);
 
+bool IsCapableForMultiMul(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, int8_t cubeMathType);
+
+bool MultiMulTranspose(const aclTensor*& self, const aclTensor*& mat2, bool& transposeX2, aclOpExecutor* executor);
+
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
                         MmOpInfo& mmOpInfo, int8_t cubeMathType);
 
