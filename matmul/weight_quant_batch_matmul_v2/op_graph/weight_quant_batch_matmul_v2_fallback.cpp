@@ -61,7 +61,7 @@ aclTensor* ConvertMmType(const gert::Tensor* ge_tensor, bool transpose)
     static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
     OP_CHECK_IF(aclCreateTensor == nullptr, OP_LOGE("aclnnfallback", "aclCreateTensor nullptr"), return nullptr);
 
-    void* device_addr = (void*)ge_tensor->GetAddr();
+    void* device_addr = const_cast<void*>(ge_tensor->GetAddr());
     auto dataType = GetConvertType(ge_tensor);
     std::vector<int64_t> shape;
     for (size_t i = 0; i < gert_shape.GetDimNum(); ++i) {
