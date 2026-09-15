@@ -31,7 +31,7 @@
  * Gradient formulas (open-interval convention, aligned with remote aclnn doc):
  *   dg      = grad_y · silu'(g̃) · ũ · w_t · I(g<c) · m_r
  *   du      = grad_y · f · w_t · I(-c<u<c) · m_r
- *   gradW   = Σ(grad_y · y_origin)  along hidden dim  (NO mask on gradW!)
+ *   gradW   = Σ(grad_y · y_origin)  along hidden dim, then · m_r  (row mask applies)
  *
  * silu' numerical rewrite: silu'(g̃) = s + f − f·s  (avoid ∞·0)
  *
@@ -129,6 +129,14 @@ __simt_callee__ inline float SimtClip(float val, float lo, float hi)
 
 // ── B0: RowMask — m_r = I(r < trunc) ──────────────────────────────────────
 __simt_callee__ inline float SimtRowMask(int64_t r, int64_t trunc) { return (r < trunc) ? 1.0f : 0.0f; }
+
+// Rows at or beyond trunc must report an exact +0.0f gradWeight. A conditional
+// select is used instead of a multiply by the row mask so that an invalid row
+// whose reduction produced Inf/NaN cannot turn into NaN through 0.0f * Inf.
+__simt_callee__ inline float SimtMaskGradWeight(int64_t r, int64_t trunc, float value)
+{
+    return (r < trunc) ? value : 0.0f;
+}
 
 // ── B1: ClampMask — m_g = I(g < c) (open interval) ──────────────────────
 __simt_callee__ inline float SimtClampMask(float g, float c) { return (g < c) ? 1.0f : 0.0f; }
@@ -463,7 +471,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void ComputeGradSimt
                 float product = SimtDwProductAndGradAt<inType, HAS_CLAMP>(
                     dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, 1, 0, wtVal, mrVal, clampValue);
                 float pairwiseResult = SimtFp32Add(-0.0f, product);
-                gradWeightAddr[r] = SimtFp32Add(0.0f, pairwiseResult);
+                float gradWeightValue = SimtFp32Add(0.0f, pairwiseResult);
+                if constexpr (IS_GROUP_INDEX) {
+                    gradWeightValue = SimtMaskGradWeight(static_cast<int64_t>(r), trunc, gradWeightValue);
+                }
+                gradWeightAddr[r] = gradWeightValue;
             } else {
                 (void)SimtComputeGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, 1, 0,
                                                            wtVal, mrVal, clampValue);
@@ -506,8 +518,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void ComputeGradSimt
         int64_t doubleRowBase = static_cast<int64_t>(r) * dim2H;
         if constexpr (IS_WEIGHT && IS_Y_ORIGIN) {
             if (yOriginAddr != nullptr) {
-                gradWeightAddr[r] = SimtDwPairwiseSumFused<inType, HAS_CLAMP>(
+                // The fused reduction also writes gradX, so it must always run;
+                // only the stored gradWeight value is masked.
+                float gradWeightValue = SimtDwPairwiseSumFused<inType, HAS_CLAMP>(
                     dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, H, wtVal, mrVal, clampValue);
+                if constexpr (IS_GROUP_INDEX) {
+                    gradWeightValue = SimtMaskGradWeight(static_cast<int64_t>(r), trunc, gradWeightValue);
+                }
+                gradWeightAddr[r] = gradWeightValue;
             } else {
                 SimtComputeGradRow<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, H, wtVal, mrVal,
                                                       clampValue);

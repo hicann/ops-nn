@@ -27,7 +27,7 @@ Core formula (ClampedSwiGLU backward):
   dg = grad_y * silu' * u_tilde * w * m_g * m_r
   du = grad_y * f * w * m_u * m_r
   grad_x = concat([dg, du], axis=-1)
-  grad_weight = sum(grad_y * y_origin, axis=-1, keepdims)  [if weight given]
+  grad_weight = sum(grad_y * y_origin, axis=-1, keepdims) * m_r  [if weight given]
 """
 
 import numpy
@@ -153,6 +153,10 @@ def _compute_clamped_swiglu_grad(
         grad_weight = numpy.sum(dy_f * y_origin_f, axis=-1, keepdims=True).astype(
             numpy.float32
         )
+        # 无效行(t >= trunc)输出精确 0;用 where 而非乘 m_r,避免 Inf/NaN * 0 => NaN
+        grad_weight = numpy.where(m_r > 0.0, grad_weight, numpy.float32(0.0)).astype(
+            numpy.float32
+        )
 
     return grad_x, grad_weight
 
@@ -194,6 +198,11 @@ class SwigluGroupGradTestSpec:
                     grad_output.astype(numpy.float32) * y_origin.astype(numpy.float32),
                     axis=-1,
                     keepdims=True,
+                ).astype(numpy.float32)
+                # 无效行(t >= trunc)输出精确 0;用 where 而非乘 m_r,避免 Inf/NaN * 0 => NaN
+                m_r = _get_row_mask(grad_output.shape[:-1], group_index)
+                grad_weight = numpy.where(
+                    m_r > 0.0, grad_weight, numpy.float32(0.0)
                 ).astype(numpy.float32)
             else:
                 # def.cpp 约束 weight/y_origin 必须同时提供,此分支不可达
@@ -263,6 +272,11 @@ class AclnnSwigluGroupGradTestSpec:
                         * y_origin_np.astype(numpy.float32),
                         axis=-1,
                         keepdims=True,
+                    ).astype(numpy.float32)
+                    # 无效行(t >= trunc)输出精确 0;用 where 而非乘 m_r,避免 Inf/NaN * 0 => NaN
+                    m_r = _get_row_mask(grad_output_np.shape[:-1], group_index_np)
+                    grad_weight_np = numpy.where(
+                        m_r > 0.0, grad_weight_np, numpy.float32(0.0)
                     ).astype(numpy.float32)
                 else:
                     outer_shape = grad_output_np.shape[:-1]

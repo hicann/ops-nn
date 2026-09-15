@@ -26,7 +26,11 @@
 
   $$grad\_weight = \Sigma(grad\_y \cdot y\_origin) \text{ along hidden dim}$$
 
-  其中I为开区间指示函数（边界值时mask=0），m_r为group_index mask，w_t为weight的broadcast。
+  当提供group_index时，仅前trunc行的权重梯度有效，其余行置0：
+
+  $$grad\_weight[t] = grad\_weight[t] \cdot I(t < trunc)$$
+
+  其中I为开区间指示函数（边界值时mask=0），trunc为group_index各分组token数之和，m_r为group_index mask（即I(t < trunc)），w_t为weight的broadcast。
 
   **约束**：weight和y_origin必须同时提供或同时为空；成对提供时计算grad_weight。
 

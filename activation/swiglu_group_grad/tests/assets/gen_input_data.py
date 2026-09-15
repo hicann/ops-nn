@@ -62,7 +62,7 @@ SwigluGroupGrad 算子输入数据与 golden 输出生成脚本。
 
         dg = gradY * silu'(g_tilde) * u_tilde * w_t * m_g * m_r
         du = gradY * f * w_t * m_u * m_r
-        gradWeight = Σ(gradY · yOrigin, axis=-1)   -- 无 mask!
+        gradWeight = Σ(gradY · yOrigin, axis=-1) * m_r
         gradX[..., :H] = dg;  gradX[..., H:] = du
 """
 
@@ -287,8 +287,10 @@ def compute_golden(
     grad_weight = None
     if weight is not None:
         y_origin_f = cast_to_fp32(y_origin)
-        # grad_weight = Σ(gradY · yOrigin) along hidden dim — NO mask!
+        # grad_weight = Σ(gradY · yOrigin) along hidden dim，再按 m_r 掩码
         grad_weight = np.sum(dy_f * y_origin_f, axis=-1, keepdims=True)
+        # 无效行(t >= trunc)输出精确 0;用 where 而非乘 m_r,避免 Inf/NaN * 0 => NaN
+        grad_weight = np.where(m_r > 0.0, grad_weight, np.float32(0.0))
 
     return grad_x, grad_weight
 
