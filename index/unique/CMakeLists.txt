@@ -6,5 +6,5 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
+add_all_modules_sources(ACLNNTYPE aclnn_exclude
     DEPENDENCIES unique_consecutive scatter_elements_v2 unique_with_counts_and_sorting)
