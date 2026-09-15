@@ -11,7 +11,7 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "../../../op_host/fatrelu_mul_tiling.h"
+#include "../../../../op_host/arch22/fatrelu_mul_tiling.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"

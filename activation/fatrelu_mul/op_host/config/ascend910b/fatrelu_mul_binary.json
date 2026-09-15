@@ -5,7 +5,7 @@
             "bin_filename": "FatreluMul_41aaf1deaff69277f72c0e8e90c3bc6f",
             "inputs": [
               {
-                "name": "input",
+                "name": "x",
                 "index": 0,
                 "dtype": "float16",
                 "format": "ND",
@@ -29,7 +29,7 @@
             ],
             "outputs": [
               {
-                "name": "output",
+                "name": "y",
                 "index": 0,
                 "dtype": "float16",
                 "format": "ND",
@@ -45,7 +45,7 @@
             "bin_filename": "FatreluMul_42979a23f7530abf3db7300f99433011",
             "inputs": [
               {
-                "name": "input",
+                "name": "x",
                 "index": 0,
                 "dtype": "float32",
                 "format": "ND",
@@ -69,7 +69,7 @@
             ],
             "outputs": [
               {
-                "name": "output",
+                "name": "y",
                 "index": 0,
                 "dtype": "float32",
                 "format": "ND",
@@ -85,7 +85,7 @@
             "bin_filename": "FatreluMul_075345ff3200c8d41dee3f553ecdd28f",
             "inputs": [
               {
-                "name": "input",
+                "name": "x",
                 "index": 0,
                 "dtype": "bfloat16",
                 "format": "ND",
@@ -109,7 +109,7 @@
             ],
             "outputs": [
               {
-                "name": "output",
+                "name": "y",
                 "index": 0,
                 "dtype": "bfloat16",
                 "format": "ND",

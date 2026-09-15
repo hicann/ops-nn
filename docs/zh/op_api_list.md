@@ -157,7 +157,7 @@
 | [aclnnFastGelu](../../activation/fast_gelu/docs/aclnnFastGelu.md) | 快速高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFastGeluBackward](../../activation/fast_gelu_grad/docs/aclnnFastGeluBackward.md) | FastGelu的反向计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFastLayerNorm](../../norm/layer_norm_v4/docs/aclnnFastLayerNorm.md) | 对指定层进行均值为0、标准差为1的归一化计算。 | 默认确定性实现 | - |
-| [aclnnFatreluMul](../../activation/fatrelu_mul/docs/aclnnFatreluMul.md) | 将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Threshold计算，将计算结果与x2相乘。 | 默认确定性实现 | - |
+| [aclnnFatreluMul](../../activation/fatrelu_mul/docs/aclnnFatreluMul.md) | 将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Threshold计算，将计算结果与x2相乘。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFlatQuant](../../matmul/flat_quant/docs/aclnnFlatQuant.md) | 融合算子为输入矩阵x一次进行两次小矩阵乘法。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFlatQuantV2](../../matmul/flat_quant/docs/aclnnFlatQuantV2.md) | 融合算子为输入矩阵x一次进行两次小矩阵乘法，支持dstTypeMax参数。 | - | 默认确定性实现 |
 | [aclnnFlatQuantV3](../../matmul/flat_quant/docs/aclnnFlatQuantV3.md) | 融合算子为输入矩阵x一次进行两次小矩阵乘法，支持dstTypeMax、groupListOptional参数。 | 默认确定性实现 | 默认确定性实现 |

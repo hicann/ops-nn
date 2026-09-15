@@ -10,27 +10,26 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 import torch
-import torch.nn as nn
 from atk.configs.dataset_config import InputDataset
 from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.dataset.base_dataset import OpsDataset
-import logging
+
 
 def FatreluMul(input_tensor, threshold):
-    
     last_dim = input_tensor.shape[-1]
     if last_dim % 2 == 1:
         return "~~~~~~~~~~shape error~~~~~~~~~~"
     d = last_dim // 2
-    
+
     x1 = input_tensor[..., :d]
     x2 = input_tensor[..., d:]
 
     x1 = torch.threshold(x1, threshold.item(), 0.0)
 
     return x1 * x2
+
 
 @register("function_fatrelu_mul")
 class MethodTFgather(BaseApi):
@@ -39,9 +38,8 @@ class MethodTFgather(BaseApi):
         OpsDataset.seed_everything()
         self.change_flag = None
 
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-        data = input_data.kwargs["input"]
+        data = input_data.kwargs["x"]
         threshold = input_data.kwargs["threshold"]
         output = FatreluMul(data, threshold)
 

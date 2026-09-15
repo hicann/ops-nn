@@ -35,7 +35,7 @@ const static int32_t LENGTH_LIMIT = 200000;
 
 class FatreluMulTiling {
 public:
-    explicit FatreluMulTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit FatreluMulTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunBigKernelTiling();
 
 private:

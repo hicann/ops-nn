@@ -21,6 +21,8 @@ namespace ops {
 
 static constexpr int64_t IDX_0 = 0;
 static constexpr size_t SIZE_2 = 2;
+static constexpr int64_t UNKNOWN_RANK_DIM = -2;
+static constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
 static ge::graphStatus InferShape4FatreluMul(gert::InferShapeContext* context)
 {
@@ -34,11 +36,21 @@ static ge::graphStatus InferShape4FatreluMul(gert::InferShapeContext* context)
     auto yShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
+    // unknown rank (-2): propagate as-is, output rank depends on input rank
+    if (xShape->GetDimNum() == 1 && xShape->GetDim(0) == UNKNOWN_RANK_DIM) {
+        yShape->SetDimNum(1);
+        yShape->SetDim(IDX_0, UNKNOWN_RANK_DIM);
+        OP_LOGD(context, "End to do InferShape4FatreluMul with unknown rank");
+        return GRAPH_SUCCESS;
+    }
+
     size_t xDimNum = xShape->GetDimNum();
     yShape->SetDimNum(xDimNum);
 
     *yShape = *xShape;
-    yShape->SetDim(xDimNum - 1, xShape->GetDim(xDimNum - 1) / SIZE_2);
+    const int64_t lastDim = xShape->GetDim(xDimNum - 1);
+    // unknown dim (-1) propagates; known dim is halved
+    yShape->SetDim(xDimNum - 1, lastDim < 0 ? lastDim : lastDim / SIZE_2);
 
     OP_LOGD(context, "End to do InferShape4FatreluMul");
     return GRAPH_SUCCESS;
