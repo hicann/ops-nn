@@ -41,54 +41,43 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSubListSimt(int32_t tensorCount,
-                                                                                 __gm__ int64_t* tensorElements,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSubListSimt(int32_t tensorId, int64_t count,
                                                                                  GM_ADDR x1List, GM_ADDR x2List,
                                                                                  GM_ADDR alpha, GM_ADDR yList)
 {
     __gm__ T* alphaPtr = reinterpret_cast<__gm__ T*>(alpha);
     T alphaVal = alphaPtr[0];
-
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, t);
-        __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                             AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
-                float x1Val = static_cast<float>(x1Data[idx]);
-                float x2Val = static_cast<float>(x2Data[idx]);
-                float alphaF = static_cast<float>(alphaVal);
-                float result = x1Val - alphaF * x2Val;
-                yData[idx] = static_cast<T>(result);
-            } else {
-                yData[idx] = x1Data[idx] - alphaVal * x2Data[idx];
-            }
+    __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, tensorId);
+    __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
+            float x1Val = static_cast<float>(x1Data[idx]);
+            float x2Val = static_cast<float>(x2Data[idx]);
+            float alphaF = static_cast<float>(alphaVal);
+            float result = x1Val - alphaF * x2Val;
+            yData[idx] = static_cast<T>(result);
+        } else {
+            yData[idx] = x1Data[idx] - alphaVal * x2Data[idx];
         }
     }
 }
 
 template <typename T>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
-                               const __gm__ ForeachSubListTilingData* tilingGm)
+                               const ForeachSubListTilingData* tilingGm)
 {
-    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachSubListTilingData*>(tilingGm)) +
-        offsetof(ForeachSubListTilingData, tensorElements));
-
-    int32_t tensorCount = tilingGm->tensorCount;
-
-    AscendC::Simt::VF_CALL<OpForeachSubListSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x1, x2,
-                                                    alpha, y);
+    for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
+        int64_t count = tilingGm->tensorElements[tensorId];
+        if (count <= 0) {
+            continue;
+        }
+        AscendC::Simt::VF_CALL<OpForeachSubListSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x1, x2, alpha,
+                                                        y);
+    }
 }
 
 } // namespace NsForeachSubList

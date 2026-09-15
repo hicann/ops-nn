@@ -22,5 +22,5 @@ __global__ __aicore__ void foreach_lerp_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR wei
     REGISTER_TILING_DEFAULT(ForeachLerpListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachLerpListTilingData, tilingData, tiling);
 
-    NsForeachLerpList::Process<DTYPE_X1>(x1, x2, weight, y, workspace, tiling);
+    NsForeachLerpList::Process<DTYPE_X1>(x1, x2, weight, y, workspace, &tilingData);
 }

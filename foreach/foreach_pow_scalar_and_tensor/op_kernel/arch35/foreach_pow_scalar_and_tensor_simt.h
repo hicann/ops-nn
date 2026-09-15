@@ -141,25 +141,18 @@ __simt_callee__ inline int32_t ComputePow<int32_t, int64_t>(int64_t scalarVal, i
  * \brief SIMT VF kernel: compute scalar ^ x for all elements across all tensors.
  */
 template <typename T, typename ST>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarAndTensorSimt(
-    int32_t tensorCount, ST scalarVal, __gm__ int64_t* tensorElements, GM_ADDR xList, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarAndTensorSimt(int32_t tensorId,
+                                                                                            int64_t count, ST scalarVal,
+                                                                                            GM_ADDR xList,
+                                                                                            GM_ADDR yList)
 {
-    for (int32_t t = 0; t < tensorCount; t++) {
-        int64_t count = tensorElements[t];
-        if (count == 0) {
-            continue;
-        }
-
-        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
-        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
-
-        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                             AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-
-        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-            yData[idx] = ComputePow<T, ST>(scalarVal, xData[idx]);
-        }
+    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+        yData[idx] = ComputePow<T, ST>(scalarVal, xData[idx]);
     }
 }
 
@@ -168,18 +161,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarAn
  */
 template <typename T, typename ST>
 __aicore__ inline void Process(GM_ADDR scalar, GM_ADDR x, GM_ADDR y,
-                               const __gm__ ForeachPowScalarAndTensorTilingData* tilingGm)
+                               const ForeachPowScalarAndTensorTilingData* tilingGm)
 {
-    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachPowScalarAndTensorTilingData*>(tilingGm)) +
-        offsetof(ForeachPowScalarAndTensorTilingData, tensorElements));
-
-    int32_t tensorCount = tilingGm->tensorCount;
-
     ST scalarVal = *reinterpret_cast<__gm__ const ST*>(scalar);
-
-    AscendC::Simt::VF_CALL<OpForeachPowScalarAndTensorSimt<T, ST>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount,
-                                                                   scalarVal, elemCounts, x, y);
+    for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
+        int64_t count = tilingGm->tensorElements[tensorId];
+        if (count <= 0) {
+            continue;
+        }
+        AscendC::Simt::VF_CALL<OpForeachPowScalarAndTensorSimt<T, ST>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count,
+                                                                       scalarVal, x, y);
+    }
 }
 
 } // namespace NsForeachPowScalarAndTensor

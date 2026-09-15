@@ -34,14 +34,14 @@ __global__ __aicore__ void foreach_log1p(GM_ADDR x, GM_ADDR y, GM_ADDR workspace
     GET_TILING_DATA_WITH_STRUCT(ForeachLog1pTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachLog1pTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachLog1p::Process<half>(x, y, workspace, tiling);
+        NsForeachLog1p::Process<half>(x, y, workspace, &tilingData);
     }
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachLog1pTilingKey::TILING_KEY_FLOAT32)) {
-        NsForeachLog1p::Process<float>(x, y, workspace, tiling);
+        NsForeachLog1p::Process<float>(x, y, workspace, &tilingData);
     }
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachLog1pTilingKey::TILING_KEY_BF16)) {
-        NsForeachLog1p::Process<bfloat16_t>(x, y, workspace, tiling);
+        NsForeachLog1p::Process<bfloat16_t>(x, y, workspace, &tilingData);
     }
 }

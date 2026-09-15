@@ -31,8 +31,7 @@ __global__ __aicore__ void foreach_maximum_scalar(GM_ADDR x, GM_ADDR scalar, GM_
     REGISTER_TILING_DEFAULT(ForeachMaximumScalarTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachMaximumScalarTilingData, tilingData, tiling);
 
-    const __gm__ ForeachMaximumScalarTilingData*
-        tilingGm = reinterpret_cast<const __gm__ ForeachMaximumScalarTilingData*>(tiling);
+    const ForeachMaximumScalarTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachMaximumScalarTilingKey::TILING_KEY_FLOAT)) {
         NsForeachMaximumScalar::Process<float, float>(x, scalar, y, tilingGm);

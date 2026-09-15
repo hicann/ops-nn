@@ -29,12 +29,12 @@ __global__ __aicore__ void foreach_pow_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, G
     GET_TILING_DATA_WITH_STRUCT(ForeachPowListTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachPowListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachPowList::Process<half>(x1, x2, y, workspace, tiling);
+        NsForeachPowList::Process<half>(x1, x2, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachPowListTilingKey::TILING_KEY_FLOAT32)) {
-        NsForeachPowList::Process<float>(x1, x2, y, workspace, tiling);
+        NsForeachPowList::Process<float>(x1, x2, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachPowListTilingKey::TILING_KEY_INT32)) {
-        NsForeachPowList::Process<int32_t>(x1, x2, y, workspace, tiling);
+        NsForeachPowList::Process<int32_t>(x1, x2, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachPowListTilingKey::TILING_KEY_BFLOAT16)) {
-        NsForeachPowList::Process<bfloat16_t>(x1, x2, y, workspace, tiling);
+        NsForeachPowList::Process<bfloat16_t>(x1, x2, y, workspace, &tilingData);
     }
 }

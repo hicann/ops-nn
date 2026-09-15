@@ -26,8 +26,7 @@ __global__ __aicore__ void foreach_pow_scalar_list(GM_ADDR x, GM_ADDR scalars, G
     REGISTER_TILING_DEFAULT(ForeachPowScalarListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachPowScalarListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachPowScalarListTilingData*
-        tilingGm = reinterpret_cast<const __gm__ ForeachPowScalarListTilingData*>(tiling);
+    const ForeachPowScalarListTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachPowScalarListTilingKey::TILING_KEY_FLOAT)) {
         NsForeachPowScalarList::Process<float, float>(x, scalars, y, tilingGm);

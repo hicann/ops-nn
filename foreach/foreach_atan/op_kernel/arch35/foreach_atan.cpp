@@ -27,8 +27,7 @@ __global__ __aicore__ void foreach_atan(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     REGISTER_TILING_DEFAULT(ForeachAtanTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachAtanTilingData, tilingData, tiling);
 
-    // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachAtanTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachAtanTilingData*>(tiling);
+    const ForeachAtanTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachAtanTilingKey::TILING_KEY_FLOAT)) {
         NsForeachAtan::Process<float>(x, y, tilingGm);

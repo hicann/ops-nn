@@ -34,10 +34,10 @@ __global__ __aicore__ void foreach_addcdiv_scalar_list(GM_ADDR x1, GM_ADDR x2, G
     GET_TILING_DATA_WITH_STRUCT(ForeachAddcdivScalarListTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachAddcdivScalarListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachAddcdivScalarList::ProcessFp16(x1, x2, x3, scalars, y, workspace, tiling);
+        NsForeachAddcdivScalarList::ProcessFp16(x1, x2, x3, scalars, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAddcdivScalarListTilingKey::TILING_KEY_FLOAT32)) {
-        NsForeachAddcdivScalarList::Process<float, float>(x1, x2, x3, scalars, y, workspace, tiling);
+        NsForeachAddcdivScalarList::Process<float, float>(x1, x2, x3, scalars, y, workspace, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachAddcdivScalarListTilingKey::TILING_KEY_BFLOAT16)) {
-        NsForeachAddcdivScalarList::ProcessBf16(x1, x2, x3, scalars, y, workspace, tiling);
+        NsForeachAddcdivScalarList::ProcessBf16(x1, x2, x3, scalars, y, workspace, &tilingData);
     }
 }

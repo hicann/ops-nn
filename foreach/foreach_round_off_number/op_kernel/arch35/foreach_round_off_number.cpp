@@ -35,10 +35,10 @@ __global__ __aicore__ void foreach_round_off_number(GM_ADDR x, GM_ADDR roundMode
     GET_TILING_DATA_WITH_STRUCT(ForeachRoundOffNumberTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachRoundOffNumberTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachRoundOffNumber::Process<float>(x, roundMode, y, tiling);
+        NsForeachRoundOffNumber::Process<float>(x, roundMode, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachRoundOffNumberTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachRoundOffNumber::Process<half>(x, roundMode, y, tiling);
+        NsForeachRoundOffNumber::Process<half>(x, roundMode, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachRoundOffNumberTilingKey::TILING_KEY_BF16)) {
-        NsForeachRoundOffNumber::Process<bfloat16_t>(x, roundMode, y, tiling);
+        NsForeachRoundOffNumber::Process<bfloat16_t>(x, roundMode, y, &tilingData);
     }
 }

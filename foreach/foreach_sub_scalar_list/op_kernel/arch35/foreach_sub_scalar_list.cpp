@@ -25,8 +25,7 @@ __global__ __aicore__ void foreach_sub_scalar_list(GM_ADDR x, GM_ADDR scalars, G
     REGISTER_TILING_DEFAULT(ForeachSubScalarListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSubScalarListTilingData, tilingData, tiling);
 
-    const __gm__ ForeachSubScalarListTilingData*
-        tilingGm = reinterpret_cast<const __gm__ ForeachSubScalarListTilingData*>(tiling);
+    const ForeachSubScalarListTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachSubScalarListTilingKey::TILING_KEY_FLOAT)) {
         NsForeachSubScalarList::Process<float, float>(x, scalars, y, tilingGm);

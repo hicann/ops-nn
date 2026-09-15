@@ -98,36 +98,16 @@ __simt_callee__ inline int32_t PrefixSumUpperBound(__gm__ const int64_t* prefixS
 // ========== SIMT VF kernel: per-core continuous acos on tensor list (MDE Section 5.2) ==========
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachAcosSimtKernel(
-    int32_t needCoreNum, int32_t tensorNum, int64_t totalElements, int64_t perCoreElements,
-    __gm__ const int64_t* prefixSums, GM_ADDR xList, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachAcosSimtKernel(int64_t elementCount,
+                                                                                  int32_t tensorIdx, GM_ADDR xList,
+                                                                                  GM_ADDR yList)
 {
-    // Early return for empty list (MDE Section 5.2)
-    if (totalElements == 0) {
-        return;
-    }
-
-    // Per-core continuous allocation (MDE Section 2.1, 6.1):
-    // flatIdx = coreIdx * perCoreElements + threadIdx + k * THREAD_NUM
-    int32_t coreIdx = static_cast<int32_t>(blockIdx.x);
-    int64_t coreStart = static_cast<int64_t>(coreIdx) * perCoreElements;
-    int64_t coreEnd = (coreStart + perCoreElements > totalElements) ? totalElements : (coreStart + perCoreElements);
-
-    for (int64_t flatIdx = coreStart + static_cast<int64_t>(threadIdx.x); flatIdx < coreEnd;
-         flatIdx += static_cast<int64_t>(blockDim.x)) {
-        // Step 1: flat index → tensor index + local offset via binary search (MDE Section 5.4)
-        int32_t tensorIdx = PrefixSumUpperBound(prefixSums, tensorNum, flatIdx);
-        int64_t localIdx = flatIdx - prefixSums[tensorIdx];
-
-        // Step 2: load element from GM via tensor list descriptor
-        __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorIdx);
+    __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorIdx);
+    __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorIdx);
+    for (int64_t localIdx = static_cast<int64_t>(blockIdx.x * blockDim.x + threadIdx.x); localIdx < elementCount;
+         localIdx += static_cast<int64_t>(blockDim.x * gridDim.x)) {
         T val = inputPtr[localIdx];
-
-        // Step 3: compute acos with type promotion (MDE Section 5.3)
         T result = AcosCompute<T>::Compute(val);
-
-        // Step 4: write result back (in-place semantics)
-        __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorIdx);
         outputPtr[localIdx] = result;
     }
 }
@@ -135,25 +115,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachAcosSimtKerne
 // ========== Process entry function (MDE Section 5.6) ==========
 
 template <typename T>
-__aicore__ inline void Process(GM_ADDR workspace, GM_ADDR tiling, GM_ADDR inputList, GM_ADDR outputList)
+__aicore__ inline void Process(GM_ADDR workspace, const ForeachAcosTilingData* tilingData, GM_ADDR inputList,
+                               GM_ADDR outputList)
 {
-    // 1. Read tiling data from GM
-    __gm__ const ForeachAcosTilingData* tilingData = reinterpret_cast<__gm__ const ForeachAcosTilingData*>(tiling);
-
-    int32_t needCoreNum = tilingData->needCoreNum;
-    int32_t tensorNum = tilingData->tensorNum;
-    int64_t totalElements = tilingData->totalElements;
-    int64_t perCoreElements = tilingData->perCoreElements;
-    __gm__ const int64_t* prefixSums = tilingData->prefixSums;
-
-    // 2. Early return for empty list
-    if (totalElements == 0) {
-        return;
+    for (int32_t tensorIdx = 0; tensorIdx < tilingData->tensorNum; tensorIdx++) {
+        int64_t elementCount = tilingData->prefixSums[tensorIdx + 1] - tilingData->prefixSums[tensorIdx];
+        if (elementCount <= 0) {
+            continue;
+        }
+        asc_vf_call<ForeachAcosSimtKernel<T>>(dim3(THREAD_NUM), elementCount, tensorIdx, inputList, outputList);
     }
-
-    // 3. Launch SIMT kernel (MDE Section 5.2)
-    asc_vf_call<ForeachAcosSimtKernel<T>>(dim3(THREAD_NUM), needCoreNum, tensorNum, totalElements, perCoreElements,
-                                          prefixSums, inputList, outputList);
 }
 
 } // namespace NsForeachAcos

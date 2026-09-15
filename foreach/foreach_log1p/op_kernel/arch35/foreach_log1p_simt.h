@@ -50,45 +50,35 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachLog1pSimtKernel(int64_t totalElements,
-                                                                                     int32_t tensorCount,
-                                                                                     __gm__ const int64_t* cumOffsets,
-                                                                                     GM_ADDR xList, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachLog1pSimtKernel(int64_t elementCount,
+                                                                                     int32_t tensorId, GM_ADDR xList,
+                                                                                     GM_ADDR yList)
 {
-    for (int64_t flatIdx = static_cast<int64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                                AscendC::Simt::GetThreadIdx());
-         flatIdx < totalElements;
-         flatIdx += static_cast<int64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
-        int32_t tensorId = tensorCount - 1;
-        int64_t prevCumSum = 0;
-        for (int32_t t = 0; t < tensorCount; t++) {
-            if (flatIdx < cumOffsets[t]) {
-                tensorId = t;
-                prevCumSum = (t > 0) ? cumOffsets[t - 1] : 0;
-                break;
-            }
-        }
-        int64_t localIdx = flatIdx - prevCumSum;
-
-        __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorId);
-        __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorId);
-
+    __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorId);
+    __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorId);
+    for (int64_t localIdx = static_cast<int64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                                 AscendC::Simt::GetThreadIdx());
+         localIdx < elementCount;
+         localIdx += static_cast<int64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         T val = inputPtr[localIdx];
         outputPtr[localIdx] = Log1pCompute<T>::Compute(val);
     }
 }
 
 template <typename T>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const ForeachLog1pTilingData* tilingData)
 {
-    __gm__ const ForeachLog1pTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachLog1pTilingData*>(tiling);
-
-    int64_t totalElements = tilingGM->totalElements;
-    int32_t tensorCount = tilingGM->tensorCount;
-    __gm__ const int64_t* cumOffsets = tilingGM->cumulativeOffsets;
-
-    AscendC::Simt::VF_CALL<OpForeachLog1pSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM), totalElements, tensorCount,
-                                                        cumOffsets, x, y);
+    int64_t previousOffset = 0;
+    for (int32_t tensorId = 0; tensorId < tilingData->tensorCount; tensorId++) {
+        int64_t currentOffset = tilingData->cumulativeOffsets[tensorId];
+        int64_t elementCount = currentOffset - previousOffset;
+        previousOffset = currentOffset;
+        if (elementCount <= 0) {
+            continue;
+        }
+        AscendC::Simt::VF_CALL<OpForeachLog1pSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM), elementCount, tensorId, x,
+                                                            y);
+    }
 }
 
 } // namespace NsForeachLog1p
