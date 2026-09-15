@@ -50,6 +50,7 @@ public:
             .ExtendCfgInfo("opFile.value", "nan_median")
             .ExtendCfgInfo("opInterface.value", "nan_median");
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend350", config);
     }
 };
 

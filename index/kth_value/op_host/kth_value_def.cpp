@@ -50,6 +50,7 @@ public:
             .ExtendCfgInfo("opFile.value", "kth_value")
             .ExtendCfgInfo("opInterface.value", "kth_value");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

@@ -8,7 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_kernel_sources(COMPUTE_UNITS ascend950
+add_kernel_sources(COMPUTE_UNITS ascend950 ascend350
     KERNEL_SRC arch35/median.cpp
     AUTO_SYNC false
     OPTIONS "-mllvm -cce-aicore-dcci-before-kernel-end=false")

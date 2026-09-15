@@ -47,6 +47,7 @@ public:
             .ExtendCfgInfo("opFile.value", "median")
             .ExtendCfgInfo("opInterface.value", "median");
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend350", config);
     }
 };
 
