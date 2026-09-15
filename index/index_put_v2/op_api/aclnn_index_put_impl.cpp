@@ -779,12 +779,19 @@ static const aclTensor* valuesToBroadcastArch3510(const aclTensor* selfCast, FVe
     }
     if (valueDimNum != static_cast<int64_t>(valueShape.GetDimNum())) {
         valueBroadcast = AdaptValueforBroadcast(valueDimNum, valueShape, valueBroadcast, executor);
+        valueShape = valueBroadcast->GetViewShape();
         needBroadcast = true;
     }
     needBroadcast = CheckTensorValueSameShape(needBroadcast, tensorShape, valueShape, valueDimNum);
     auto valueShapeBroad = executor->AllocIntArray(tensorShape.data(), valueDimNum);
     if (needBroadcast) {
+        valueBroadcast = l0op::Contiguous(valueBroadcast, executor);
         valueBroadcast = l0op::BroadcastTo(valueBroadcast, valueShapeBroad, executor);
+    }
+    if (!IsContiguous(valueBroadcast)) {
+        valueBroadcast = executor->CreateView(valueBroadcast, valueBroadcast->GetViewShape(),
+                                              valueBroadcast->GetStorageShape(), valueBroadcast->GetViewStrides(),
+                                              valueBroadcast->GetViewOffset());
     }
     return valueBroadcast;
 }
@@ -970,14 +977,10 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
         }
         auto ret = IndicesBroadcastUndeter(broadcastIndices, executor);
         CHECK_RET(ret, nullptr);
-        if (valuesCast->GetViewShape().IsScalar()) {
-            bool iscontiguousIdx = CheckIfContiguous(indices, definedIndices, allIndices, executor);
-            valueBroadcast = valuesToBroadcastArch3510(selfCast, broadcastIndices, valuesCast, masks, iscontiguousIdx,
-                                                       executor);
-        } else {
-            valueBroadcast = executor->CreateView(valuesCast, valuesCast->GetViewShape(), valuesCast->GetStorageShape(),
-                                                  valuesCast->GetViewStrides(), valuesCast->GetViewOffset());
-        }
+        bool iscontiguousIdx = CheckIfContiguous(indices, definedIndices, allIndices, executor);
+        valueBroadcast = valuesToBroadcastArch3510(selfCast, broadcastIndices, valuesCast, masks, iscontiguousIdx,
+                                                   executor);
+        CHECK_RET(valueBroadcast != nullptr, nullptr);
         allIndicesTensorList = executor->AllocTensorList(broadcastIndices.data(), broadcastIndices.size());
         selfCast = executor->CreateView(tmp, tmp->GetViewShape(), tmp->GetStorageShape(), tmp->GetViewStrides(),
                                         tmp->GetViewOffset());
