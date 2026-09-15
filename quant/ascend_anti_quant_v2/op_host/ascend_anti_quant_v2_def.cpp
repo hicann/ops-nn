@@ -58,6 +58,7 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "ascend_anti_quant_v2_apt");
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend350", config);
     }
 };
 

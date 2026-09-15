@@ -102,6 +102,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "dynamic_quant_apt");
         this->AICore().AddConfig("ascend950", config950);
+        this->AICore().AddConfig("ascend350", config950);
 
         OpAICoreConfig config_310p_910;
         config_310p_910.Input("x")

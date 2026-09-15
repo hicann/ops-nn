@@ -144,8 +144,9 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     OP_CHECK_IF(fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
                     ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "Cannot get platform info!"), return ge::GRAPH_FAILED;);
-    if (platformInfo.str_info.short_soc_version == "Ascend950") {
-        // 950不支持NC1HWC0
+    if (platformInfo.str_info.short_soc_version == "Ascend950" ||
+        platformInfo.str_info.short_soc_version == "Ascend350") {
+        // 950/350不支持NC1HWC0
         *mask_shape = *x_shape;
         return GRAPH_SUCCESS;
     }
@@ -168,7 +169,7 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static std::list<std::string> gUint1List = {"Ascend910B", "Ascend910_93", "Ascend950",
+static std::list<std::string> gUint1List = {"Ascend910B", "Ascend910_93", "Ascend950", "Ascend350",
                                             "AS31XM1",    "Ascend031",    "Ascend310B"};
 
 static ge::graphStatus InferDataType4ReluV2(gert::InferDataTypeContext* context)
