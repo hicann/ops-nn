@@ -79,7 +79,7 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
 
     OP_CHECK_SHAPE_NOT_EQUAL(gradInput, self, return false);
 
-    // 检查weight的元素个数是否等于1或者self的通道数
+    // 检查weight的元素个数是否为1, 或shape是否满足self的通道数约束
     int64_t weightNum = weight->Numel();
     int64_t selfDimNum = self->GetViewShape().GetDimNum();
     if (weightNum != 1) {
@@ -87,16 +87,30 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
         OP_CHECK_MIN_DIM(self, 1, return false);
         // self为1维时, 视为1通道
         int64_t channelSize = (selfDimNum > 1) ? self->GetViewShape().GetDim(1) : 1;
-        if (weightNum != channelSize) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the number of weight elements must be 1 or self channel size");
-            return false;
+        const auto& weightShape = weight->GetViewShape();
+        if (weightShape.GetDimNum() == 1) {
+            // weight为1维时, 元素个数必须等于self的通道数
+            if (weightNum != channelSize) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the number of weight elements must be 1 or self channel size");
+                return false;
+            }
+        } else {
+            // weight为多维时, 维数必须与self相同, 第2维必须等于self的通道数, 其余维度必须为1
+            bool weightShapeValid = (weightShape.GetDimNum() == selfDimNum) && (weightShape.GetDim(1) == channelSize);
+            for (size_t i = 0; weightShapeValid && (i < weightShape.GetDimNum()); i++) {
+                weightShapeValid = (i == 1) || (weightShape.GetDim(i) == 1);
+            }
+            if (!weightShapeValid) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "when weight is multi-dim, its dim num must be same as self, the 2nd dim must be "
+                        "self channel size and other dims must be 1.");
+                return false;
+            }
         }
-
-        op::Shape expectGradWeightShape = {channelSize};
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(gradWeight, expectGradWeightShape, return false);
-    } else {
-        OP_CHECK_SHAPE_NOT_EQUAL(weight, gradWeight, return false);
     }
+
+    // gradWeight的shape必须与weight的shape保持一致
+    OP_CHECK_SHAPE_NOT_EQUAL(weight, gradWeight, return false);
 
     // check the shape for gradOutput and self
     op::Shape broadcastShape;
