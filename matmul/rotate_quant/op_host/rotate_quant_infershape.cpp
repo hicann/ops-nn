@@ -241,6 +241,9 @@ static ge::graphStatus InferShape4Mx(gert::InferShapeContext* context)
 
 static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "Begin to do InferShape RotateQuant");
     if (InferShapeCheck(context) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;

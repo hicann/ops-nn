@@ -192,6 +192,7 @@ ge::graphStatus RotateQuantAptTiling::CheckContext()
 ge::graphStatus RotateQuantAptTiling::ParseAttrValues()
 {
     const gert::RuntimeAttrs* attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const int64_t* yDtypePtr = attrs->GetAttrPointer<int64_t>(YDTYPE_ATTR_INDEX);
     if (yDtypePtr != nullptr) {
         inputParams_.yDtype = static_cast<ge::DataType>(*yDtypePtr);
@@ -249,6 +250,13 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeAttrs()
     OP_TILING_CHECK(inputParams_.trans == true, OP_LOGE(inputParams_.opName, "The trans only support false."),
                     return ge::GRAPH_FAILED);
 
+    const auto& xShapeForAxis = context_->GetInputShape(X_INDEX)->GetStorageShape();
+    OP_TILING_CHECK(
+        inputParams_.axis != DEFAULT_AXIS && inputParams_.axis != static_cast<int32_t>(xShapeForAxis.GetDimNum() - 1),
+        OP_LOGE(inputParams_.opName, "axis should be %d or %d, got %d.", DEFAULT_AXIS,
+                static_cast<int32_t>(xShapeForAxis.GetDimNum() - 1), inputParams_.axis),
+        return ge::GRAPH_FAILED);
+
     OP_LOGD(inputParams_.opName, "Attrs: yDtype=%d, axis=%d, roundMode=%d, scaleAlg=%d, dstTypeMax=%f, trans=%d",
             inputParams_.yDtype, inputParams_.axis, inputParams_.roundMode, inputParams_.scaleAlg,
             inputParams_.dstTypeMax, inputParams_.trans);
@@ -258,15 +266,20 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeAttrs()
 
 ge::graphStatus RotateQuantAptTiling::CheckAlphaInput()
 {
-    if (context_->GetComputeNodeInfo()->GetInputsNum() > ALPHA_INDEX) {
+    auto computeNodeInfo = context_->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, computeNodeInfo);
+    if (computeNodeInfo->GetInputsNum() > ALPHA_INDEX) {
         auto alphaDesc = context_->GetInputDesc(ALPHA_INDEX);
         if (alphaDesc != nullptr) {
             auto alphaDtype = alphaDesc->GetDataType();
             OP_TILING_CHECK(alphaDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "alpha dtype should be bf16."),
                             return ge::GRAPH_FAILED);
-            auto alphaShape = context_->GetInputShape(ALPHA_INDEX)->GetStorageShape();
-            OP_TILING_CHECK(alphaShape.GetDimNum() != ALPHA_DIM_NUM || alphaShape.GetDim(0) != ALPHA_DIM_SIZE,
-                            OP_LOGE(inputParams_.opName, "alpha shape should be (1,)."), return ge::GRAPH_FAILED);
+            auto alphaShape = context_->GetInputShape(ALPHA_INDEX);
+            OPS_CHECK_NULL_WITH_CONTEXT(context_, alphaShape);
+            auto alphaStorageShape = alphaShape->GetStorageShape();
+            OP_TILING_CHECK(
+                alphaStorageShape.GetDimNum() != ALPHA_DIM_NUM || alphaStorageShape.GetDim(0) != ALPHA_DIM_SIZE,
+                OP_LOGE(inputParams_.opName, "alpha shape should be (1,)."), return ge::GRAPH_FAILED);
             inputParams_.hasAlpha = true;
             OP_LOGD(inputParams_.opName, "hasAlpha detected");
         }
@@ -371,10 +384,14 @@ ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotSha
 
 ge::graphStatus RotateQuantAptTiling::ValidateScaleShape(const gert::Shape& mxscaleShape, const gert::Shape& scaleShape)
 {
+    // kernel按扁平偏移写scale输出，仅要求总元素数一致，允许调用方传入扁平等总量的view（如一维[M*CeilDiv(N,64)*2]）
     OP_CHECK_IF(
-        mxscaleShape != scaleShape,
-        OP_LOGE(inputParams_.opName, "The shape of output mxscale %s is incorrect, correct shape is %s, please check.",
-                Shape2String(scaleShape).c_str(), Shape2String(mxscaleShape).c_str()),
+        mxscaleShape.GetShapeSize() != scaleShape.GetShapeSize(),
+        OP_LOGE(inputParams_.opName,
+                "The element size of output mxscale %s is %ld, expected element size is %ld (derived shape %s), "
+                "please check.",
+                Shape2String(scaleShape).c_str(), scaleShape.GetShapeSize(), mxscaleShape.GetShapeSize(),
+                Shape2String(mxscaleShape).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -389,20 +406,26 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
                             MIN_X_DIM_NUM, MAX_X_DIM_NUM),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        inputParams_.axis != DEFAULT_AXIS && inputParams_.axis != static_cast<int32_t>(xShape.GetDimNum() - 1),
-        OP_LOGE(inputParams_.opName, "axis should be %d or %d.", DEFAULT_AXIS,
-                static_cast<int32_t>(xShape.GetDimNum() - 1)),
-        return ge::GRAPH_FAILED);
-
     inputParams_.M = INIT_ACCUMULATE_VALUE;
     for (size_t i = 0; i < xShape.GetDimNum() - 1; i++) {
         inputParams_.M *= xShape.GetDim(i);
     }
     inputParams_.N = xShape.GetDim(xShape.GetDimNum() - 1);
 
+    OP_TILING_CHECK(inputParams_.M <= 0 || inputParams_.N <= 0,
+                    OP_LOGE(inputParams_.opName, "M[%ld] and N[%ld] must be positive.", inputParams_.M, inputParams_.N),
+                    return ge::GRAPH_FAILED);
+
     OP_TILING_CHECK(ValidateRotShape(rotShape) != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid rot shape."),
                     return ge::GRAPH_FAILED);
+
+    // 校验输出scale总元素数与推导结果一致（允许扁平等总量view）：M*CeilDiv(N,64)*2
+    const auto& scaleShape = context_->GetOutputShape(SCALE_INDEX)->GetStorageShape();
+    gert::Shape mxScaleShape = xShape;
+    mxScaleShape.SetDim(mxScaleShape.GetDimNum() - 1, Ops::Base::CeilDiv(inputParams_.N, MX_SCALE_CEIL_NUM));
+    mxScaleShape.AppendDim(MX_SCALE_LAST_SIZE);
+    OP_TILING_CHECK(ValidateScaleShape(mxScaleShape, scaleShape) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(inputParams_.opName, "Invalid scale shape."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -531,6 +554,7 @@ ge::graphStatus RotateQuantAptTiling::PostTiling()
     }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(WORKSPACE_NUM);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
 }

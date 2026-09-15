@@ -47,9 +47,15 @@ const std::tuple<aclTensor*, aclTensor*> RotateQuant(const aclTensor* x, const a
                                                      aclTensor* yOut, aclTensor* scaleOut, aclOpExecutor* executor)
 {
     if (scaleOut->GetDataType() != DataType::DT_FLOAT8_E8M0) {
-        yOut = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND);
+        auto yAlloc = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND);
         int64_t M = x->GetViewShape().GetDim(0);
-        scaleOut = executor->AllocTensor(op::Shape({M}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
+        auto scaleAlloc = executor->AllocTensor(op::Shape({M}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
+        if (yAlloc == nullptr || scaleAlloc == nullptr) {
+            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocTensor failed for yOut or scaleOut.");
+            return std::tuple(nullptr, nullptr);
+        }
+        yOut = yAlloc;
+        scaleOut = scaleAlloc;
     }
     return RotateQuantAICore(x, rotation, alpha, axis, roundMode, scaleAlg, dstTypeMax, trans, dstType, yOut, scaleOut,
                              executor);
