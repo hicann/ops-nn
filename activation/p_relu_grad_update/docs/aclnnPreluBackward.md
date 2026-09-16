@@ -120,7 +120,7 @@ aclnnStatus aclnnPreluBackward(
       <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>prelu的权重，公式中的weight。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>当self的shape维度大于1维时，weight的shape维度可以与self的shape维度相同且第2维度的值保持一致，同时weight的shape其他维度的值为1；或者weight是1维Tensor，元素个数为self的shape的第2维度。</li><li></li>否则，weight元素个数为1。</ul></td>
+      <td><ul><li>支持空Tensor。</li><li>dtype需要与self相同。</li><li>当self的shape维度大于1维时，weight的shape维度可以与self的shape维度相同且第2维度的值保持一致，同时weight的shape其他维度的值为1；或者weight是1维Tensor，元素个数为self的shape的第2维度。</li><li>否则，weight元素个数为1。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

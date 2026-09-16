@@ -334,6 +334,7 @@ aclnnStatus aclnnDynamicQuantV2(
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
   - `yOut`的数据类型为INT4时，需满足`x`和`yOut`的最后一维能被2整除。
   - `yOut`的数据类型为INT32时，需满足`x`的最后一维能被8整除。
+  - 当有groupIndexOptional时，专家数不超过x剔除最后一维的各个维度乘积。groupIndexOptional的值需要是一组不小于零且非递减的数组，且最后一个值和x剔除最后一维的各个维度乘积相等。若不满足该条件，结果无实际意义。
 <!-- end id9 -->
 <!-- npu="910,310p" id10 -->
 - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：输入x的最后一维需满足被32整除，暂时只支持对称量化，不支持BFLOAT16数据类型。

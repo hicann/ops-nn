@@ -480,8 +480,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_024_weight_one_element_mu
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// CheckShape
-TEST_F(l2_prelu_backward_test, prelu_backward_testcase_025_weight_shape_multi_dim)
+// CheckShape, weight为多维但维数与self不同, 报错
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_025_exception_weight_shape_multi_dim)
 {
     auto gradOutputDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto selfDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -494,10 +494,7 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_025_weight_shape_multi_di
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // not contiguous
@@ -639,4 +636,95 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_033_value_range)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// CheckShape, weight为多维时, gradWeight的shape与weight的shape保持一致
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_034_weight_multi_dim_grad_weight_same_shape)
+{
+    auto gradOutputDesc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 45000}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto weightDesc = TensorDesc({1, 45000}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc({1, 45000}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradWeightDesc = TensorDesc({1, 45000}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+// CheckShape, weight为多维且维数与self相同、第2维等于self通道数、其余维度为1
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_035_weight_multi_dim_match_self_channel)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto weightDesc = TensorDesc({1, 2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradWeightDesc = TensorDesc({1, 2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+// CheckShape, weight为1维且元素个数等于self通道数, gradWeight与weight同shape
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_036_weight_one_dim_match_self_channel)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+// CheckShape, weight为多维但维数与self不同, 报错
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_037_exception_weight_multi_dim_dim_num_not_match)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto weightDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradWeightDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// CheckShape, weight为多维时, gradWeight的shape与weight不同, 报错
+TEST_F(l2_prelu_backward_test, prelu_backward_testcase_038_exception_weight_multi_dim_grad_weight_shape_not_match)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto weightDesc = TensorDesc({1, 2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
