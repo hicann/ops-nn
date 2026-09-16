@@ -38,7 +38,7 @@ static Status parse_params_lp_normalization(const Message* op_src, ge::Operator&
     int p = 2;
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "axis" && attr.type() == ge::onnx::AttributeProto::INT) {
-            axis = static_cast<float>(attr.i());
+            axis = static_cast<int>(attr.i());
         } else if (attr.name() == "p" && attr.type() == ge::onnx::AttributeProto::INT) {
             p = static_cast<int>(attr.i());
         }
