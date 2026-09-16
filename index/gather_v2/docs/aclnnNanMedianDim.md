@@ -392,7 +392,7 @@ int main() {
   aclTensor* self = nullptr;
   aclTensor* valuesOut = nullptr;
   aclTensor* indicesOut = nullptr;
-  std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7, NAN};
+  std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, NAN};
   std::vector<float> valuesOutHostData = {0, 0};
   std::vector<int64_t> indicesOutHostData = {0, 0};
   int64_t dim = 0;
@@ -417,7 +417,7 @@ int main() {
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnNanMedianDim第二段接口
   ret = aclnnNanMedianDim(workspaceAddr, workspaceSize, executor, stream);
