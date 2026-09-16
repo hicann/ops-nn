@@ -82,7 +82,7 @@
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>表示归一化后的标准差，对应公式中的`Rms(x)`。</td>
+      <td>表示归一化后的标准差的倒数，对应公式中`Rms(x)`的倒数。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
