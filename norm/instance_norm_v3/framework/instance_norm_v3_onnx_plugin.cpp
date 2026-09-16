@@ -15,7 +15,7 @@ static const float EPSILON_DEFAULT = 1e-05;
 
 static Status ParseParamsInstanceNormalization(const Message* op_src, ge::Operator& op_dest)
 {
-    const ge::onnx::NodeProto* node = reinterpret_cast<const ge::onnx::NodeProto*>(op_src);
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
     if (node == nullptr) {
         OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
         return FAILED;

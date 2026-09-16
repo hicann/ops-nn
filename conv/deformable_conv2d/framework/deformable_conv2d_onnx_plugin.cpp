@@ -15,9 +15,11 @@ using namespace ge;
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
+static const int OFFSET_INPUT_INDEX = 2;
+
 static Status ParseParamsNPUDeformableConv2D(const Message* op_src, ge::Operator& op_dest)
 {
-    const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
     if (node == nullptr) {
         OP_LOGE("DeformableConv2D", "Dynamic cast op_src to NodeProto failed");
         return FAILED;
@@ -159,7 +161,7 @@ static Status ParseOpToGraphDeformableConv2D(const ge::Operator& op, ge::Graph& 
         OP_LOGE(GetOpName(op).c_str(), "update weight format failed.");
         return FAILED;
     }
-    if (ChangeFormatFromOnnx(DeformableConv2D, 2, ge::FORMAT_NCHW, true) != SUCCESS) {
+    if (ChangeFormatFromOnnx(DeformableConv2D, OFFSET_INPUT_INDEX, ge::FORMAT_NCHW, true) != SUCCESS) {
         OP_LOGE(GetOpName(op).c_str(), "update offset format failed.");
         return FAILED;
     }

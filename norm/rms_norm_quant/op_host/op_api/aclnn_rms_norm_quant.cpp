@@ -334,6 +334,7 @@ static aclnnStatus RunRmsNormQuantKernel(const aclTensor* xCont, const aclTensor
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4 && y->GetDataType() == op::DataType::DT_INT32) {
             ret = Int42Int32PackedTensor(resultTensor, outTensor, executor);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
             auto viewCopyY = l0op::ViewCopy(outTensor, y, executor);
             CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
@@ -350,6 +351,7 @@ static aclnnStatus RunRmsNormQuantKernel(const aclTensor* xCont, const aclTensor
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4) {
             ret = Int42Int32PackedTensor(resultTensor, outTensor, executor);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
             auto viewCopyY = l0op::ViewCopy(outTensor, y, executor);
             CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
