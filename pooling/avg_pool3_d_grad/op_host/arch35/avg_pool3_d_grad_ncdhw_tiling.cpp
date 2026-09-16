@@ -460,6 +460,7 @@ ge::graphStatus AvgPool3DGradNCDHWTiling::SetTilingData()
     tilingData->wProBatchSize = baseData.wProBatchSize;
     tilingData->divisorOverride = inputData.divisorOverride;
     tilingData->countIncludePad = inputData.countIncludePad;
+    tilingData->isOverLap = baseData.isOverlap;
     return ge::GRAPH_SUCCESS;
 }
 

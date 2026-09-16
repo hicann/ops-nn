@@ -387,7 +387,7 @@ __aicore__ inline void AvgPool3DGradNCDHW<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint32_t wConcurrentCount = wGradActual_ / curWProBatchSize_;
     uint32_t hConcurrentCount = hGradActual_ / curHProBatchSize_;
     uint32_t dConcurrentCount = dGradActual_ / curDProBatchSize_;
-    if (wConcurrentCount * DOUBLE * sizeof(float) > V_REG_SIZE) {
+    if (wConcurrentCount * DOUBLE * sizeof(float) > V_REG_SIZE || tilingData_->isOverLap == 1) {
         if constexpr (std::is_same<T3, int64_t>::value) {
             SingleLineProcessVF<AscendC::MicroAPI::RegTraitNumTwo>(yAddr, gradAddr);
         } else {

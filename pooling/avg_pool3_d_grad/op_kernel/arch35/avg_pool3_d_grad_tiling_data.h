@@ -65,6 +65,7 @@ public:
     int64_t wProBatchSize = 0;
     int64_t divisorOverride = 1;
     int64_t countIncludePad = 0;
+    int64_t isOverLap = 0;
 };
 
 class AvgPool3DGradNDHWCTilingData {
