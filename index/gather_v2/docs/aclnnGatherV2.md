@@ -329,7 +329,7 @@ int main() {
   aclTensor* index = nullptr;
   aclTensor* out = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3};
-  std::vector<int64_t> indexHostData = {-2, -1, 0, 1};
+  std::vector<int64_t> indexHostData = {0, 1, 0, 1};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   int64_t dim = 0;
   // 创建self aclTensor

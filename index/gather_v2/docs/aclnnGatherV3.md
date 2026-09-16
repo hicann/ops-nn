@@ -147,7 +147,7 @@ aclnnStatus aclnnGatherV3(
         <td>out</td>
         <td>输出</td>
         <td>输出aclTensor。</td>
-        <td>batchdim = N，N == 0时，维数等于self维数与index维数之和减一，除dim维扩展为跟index的shape一样外，其他维长度与self相应维一致; <br> N != 0时，output的维度为self[:dim]+index[N+1:]+self[dim+1:]</td>
+        <td>batchDims = N，N == 0时，维数等于self维数与index维数之和减一，除dim维扩展为跟index的shape一样外，其他维长度与self相应维一致; <br> N != 0时，output的维度为self[:dim]+index[N+1:]+self[dim+1:]</td>
         <td>与self一致</td>
         <td>ND</td>
         <td>1-8</td>

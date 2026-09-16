@@ -420,41 +420,94 @@ __aicore__ inline void StoreDhPrev()
     }
 }
 
+__aicore__ inline int64_t FindReduceCutPoint(int64_t num)
+{
+    int64_t point = 1;
+    while (point < num) {
+        point <<= 1;
+    }
+    return point >> 1;
+}
+
+__aicore__ inline void BinaryReduceBiasInPlace(LocalTensor<float>& cache, int64_t rows, int64_t cols, int64_t alignA)
+{
+    if (rows <= 1) {
+        return;
+    }
+    int64_t reduceNum = rows;
+    while (reduceNum > 2) {
+        int64_t point = FindReduceCutPoint(reduceNum);
+        int64_t remain = reduceNum - point;
+        for (int64_t i = 0; i < remain; i++) {
+            Add(cache[i * alignA], cache[i * alignA], cache[(point + i) * alignA], alignA);
+        }
+        reduceNum = point;
+    }
+    Add(cache[0], cache[0], cache[alignA], alignA);
+}
+
+__aicore__ inline void CopyInBiasBatch(GlobalTensor<DTYPE>& srcGm, LocalTensor<float>& cache, int64_t gmOff,
+                                       int64_t batchRows, int64_t cCnt, int64_t cols, int64_t cAligned)
+{
+    uint8_t padNum = static_cast<uint8_t>(cAligned - cCnt);
+    if constexpr (sizeof(DTYPE) == 2) {
+        auto tmpUb = this->ubTmp2.template ReinterpretCast<DTYPE>();
+        for (int64_t r = 0; r < batchRows; r++) {
+            DataCopyExtParams cp(1, static_cast<uint32_t>(cCnt * sizeof(DTYPE)), 0, 0, 0);
+            DataCopyPadExtParams<DTYPE> pp(true, 0, padNum, 0);
+            DataCopyPad(tmpUb[r * cAligned], srcGm[gmOff + r * cols], cp, pp);
+        }
+        SyncM2toV();
+        for (int64_t r = 0; r < batchRows; r++) {
+            Cast(cache[r * cAligned], tmpUb[r * cAligned], RoundMode::CAST_NONE, cAligned);
+        }
+        PipeBarrier<PIPE_V>();
+    } else {
+        DataCopyExtParams cp(static_cast<uint16_t>(batchRows), static_cast<uint32_t>(cCnt * sizeof(DTYPE)),
+                             static_cast<uint32_t>((cols - cCnt) * sizeof(DTYPE)), 0, 0);
+        DataCopyPadExtParams<DTYPE> pp(true, 0, padNum, 0);
+        DataCopyPad(cache, srcGm[gmOff], cp, pp);
+        SyncM2toV();
+    }
+}
+
 __aicore__ inline void ProcessBiasReduce(GlobalTensor<DTYPE>& srcGm, GlobalTensor<DTYPE>& dstGm, int64_t rows,
                                          int64_t cols)
 {
+    if (g_coreType == AIC) {
+        return;
+    }
     SyncM3toV();
     int64_t nReduceCnt = this->tiling->nReduceCnt;
     int64_t singleCoreReduceN = this->tiling->singleCoreReduceN;
-    if (nReduceCnt <= 0)
+    int64_t aivIdx = GetBlockIdx();
+    if (nReduceCnt <= 0 || aivIdx < 0 || aivIdx >= nReduceCnt) {
         return;
-    if (GetBlockIdx() >= nReduceCnt)
-        return;
-    int64_t nIdx = GetBlockIdx();
+    }
+    int64_t nIdx = aivIdx;
     int64_t nStart = nIdx * singleCoreReduceN;
     int64_t nCnt = (nIdx == nReduceCnt - 1) ? this->tiling->singleCoreReduceNTail : singleCoreReduceN;
-    if (nStart >= cols || nCnt <= 0)
+    if (nStart >= cols || nCnt <= 0) {
         return;
-    if (nStart + nCnt > cols)
-        nCnt = cols - nStart;
-
-    int64_t maxNOnce = allocLength;
-
-    for (int64_t cStart = 0; cStart < nCnt; cStart += maxNOnce) {
-        int64_t cCnt = (cStart + maxNOnce > nCnt) ? (nCnt - cStart) : maxNOnce;
-        int64_t cAligned = ((cCnt + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-        int64_t cGlobalOff = nStart + cStart;
-
-        Duplicate(this->ubTmp, 0.0f, cAligned);
-        SyncVtoM2();
-        for (int64_t r = 0; r < rows; ++r) {
-            CopyInRow(srcGm, this->ubTmp2, r * cols + cGlobalOff, 0, 1, cCnt, cAligned, 0);
-            SyncM2toV();
-            Add(this->ubTmp, this->ubTmp, this->ubTmp2, cAligned);
-            SyncVtoM2();
-        }
-        SyncVtoM3();
-        CopyOutRow(dstGm, this->ubTmp, cGlobalOff, 0, 1, cCnt, 0, cAligned);
-        SyncM3toV();
     }
+    if (nStart + nCnt > cols) {
+        nCnt = cols - nStart;
+    }
+    int64_t alignMask = (sizeof(DTYPE) == 2) ? 127 : 7;
+    int64_t cAligned = ((nCnt + alignMask) / (alignMask + 1)) * (alignMask + 1);
+    int64_t maxRowsInCache = allocLength / cAligned;
+    if (maxRowsInCache < 1) {
+        maxRowsInCache = 1;
+    }
+    Duplicate(this->ubTmp3, 0.0f, cAligned);
+    for (int64_t rStart = 0; rStart < rows; rStart += maxRowsInCache) {
+        int64_t batchRows = (rStart + maxRowsInCache > rows) ? (rows - rStart) : maxRowsInCache;
+        CopyInBiasBatch(srcGm, this->ubTmp, rStart * cols + nStart, batchRows, nCnt, cols, cAligned);
+        BinaryReduceBiasInPlace(this->ubTmp, batchRows, nCnt, cAligned);
+        Add(this->ubTmp3, this->ubTmp3, this->ubTmp, cAligned);
+        SyncVtoM2();
+    }
+    SyncVtoM3();
+    CopyOutRow(dstGm, this->ubTmp3, nStart, 0, 1, nCnt, 0, cAligned);
+    SyncM3toV();
 }

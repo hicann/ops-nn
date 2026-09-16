@@ -30,6 +30,7 @@
 - 示例：
 
   ```python
+  >>> import torch
   >>> a = torch.tensor([1, float('nan'), 3, 2])
   >>> a.nanmedian()
   tensor(2.)
@@ -298,7 +299,7 @@ int main() {
   void* valuesOutDeviceAddr = nullptr;
   aclTensor* self = nullptr;
   aclTensor* valuesOut = nullptr;
-  std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7, NAN};
+  std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, NAN};
   std::vector<float> valuesOutHostData = {0};
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
