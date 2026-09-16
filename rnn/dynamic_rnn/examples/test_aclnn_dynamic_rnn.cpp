@@ -44,7 +44,7 @@ void PrintOutResult(const std::vector<int64_t>& shape, void** deviceAddr)
     std::vector<float> resultData(size, 0);
     auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
                            size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
@@ -224,7 +224,7 @@ int main()
                                      0.0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
@@ -254,7 +254,7 @@ int main()
 
     PrintOutResult(outputShape, &outputDeviceAddr);
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+    // 6. 释放aclTensor和aclTensorList，需要根据具体API的接口定义修改
     aclDestroyTensor(input);
     aclDestroyTensorList(params);
     aclDestroyTensor(output);
