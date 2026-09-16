@@ -85,6 +85,8 @@ static const std::initializer_list<op::DataType> FP8_OUT_TYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> L0C2UB_PERTOKEN_BIAS_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                                      op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST = {op::DataType::DT_BF16,
                                                                                            op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_BF16_OUT_BIAS_SUPPORT_LIST = {
@@ -1866,7 +1868,17 @@ bool QuantMatmulChecker::CheckOnlyL0c2ubPertoken() const
     if (outType_ == op::DataType::DT_FLOAT16) {
         CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_),
                   false);
-        CHECK_RET(CheckFloat16OutBiasAndOffset(), false);
+        if (bias_ != nullptr) {
+            CHECK_RET(
+                OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, L0C2UB_PERTOKEN_BIAS_SUPPORT_LIST, apiName_),
+                false);
+        }
+        if (x2Offset_ != nullptr) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                apiName_, GetX2OffsetName().c_str(), "not null",
+                FormatString("when the dtype of out is FLOAT16, %s must be null", GetX2OffsetName().c_str()).c_str());
+            return false;
+        }
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(apiName_, GetInputName(OUT_NAME, interfaceType_).c_str(),
                                               RemoveDtInDtype(op::ToString(outType_).GetString()).c_str(),

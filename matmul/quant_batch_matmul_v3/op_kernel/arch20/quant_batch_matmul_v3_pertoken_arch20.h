@@ -42,11 +42,21 @@ constexpr uint32_t UB_PERTOKEN_SCALE_CALC_OFFSET = 214 * 1024;
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 
+template <typename T, typename U>
+struct Arch20IsSame {
+    static constexpr bool VALUE = false;
+};
+template <typename T>
+struct Arch20IsSame<T, T> {
+    static constexpr bool VALUE = true;
+};
+
 template <uint32_t SwizzleDir, bool BiasFlag, CubeFormat FormatA = CubeFormat::NZ, CubeFormat FormatB = CubeFormat::NZ,
           CubeFormat FormatY = CubeFormat::NZ, typename IN_DTYPE = int8_t, typename DESCALE_TYPE = float,
           typename BIAS_TYPE = int32_t, typename OUT_TYPE = half>
 class QuantBatchMatMulPertokenArch20 {
 public:
+    static constexpr bool IS_FP32_BIAS = Arch20IsSame<BIAS_TYPE, float>::VALUE;
     __aicore__ explicit QuantBatchMatMulPertokenArch20()
     {
         SetPadding<uint64_t>((uint64_t)0x0);
@@ -226,9 +236,9 @@ public:
                 l1_b, gm_b[offset_b], n_actual, n_round, n_org_up, k_actual, k_round, k_org_up);
             SET_FLAG(MTE2, MTE1, l1_b_event);
 
-            if constexpr (BiasFlag) {
+            if constexpr (BiasFlag && !IS_FP32_BIAS) {
                 WAIT_FLAG(V, MTE2, EVENT_ID0);
-                uint32_t bias_offset = BiasWithBatch ? b_idx * n_ + n_idx * n0_ : n_idx * n0_;
+                uint64_t bias_offset = BiasWithBatch ? b_idx * n_ + n_idx * n0_ : n_idx * n0_;
                 gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[bias_offset],
                                                            0,                 // sid
                                                            1,                 // nBurst
@@ -330,7 +340,7 @@ public:
                     bool init_c = (k_idx == 0 && k_part_idx == 0);
 
                     if (init_c) {
-                        if constexpr (BiasFlag) {
+                        if constexpr (BiasFlag && !IS_FP32_BIAS) {
                             WAIT_FLAG(MTE2, V, EVENT_ID0);
                             for (uint32_t i = 0; i < n_round / BLOCK_SIZE_16; i++) {
                                 for (uint32_t j = 0; j < m_round / BLOCK_SIZE_16; j++) {
@@ -374,6 +384,16 @@ public:
                                                    0,                             // srcStride
                                                    0                              // dstStride
             );
+            if constexpr (BiasFlag && IS_FP32_BIAS) {
+                uint64_t bias_offset = BiasWithBatch ? b_idx * n_ + n_idx * n0_ : n_idx * n0_;
+                gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[bias_offset],
+                                                           0,                 // sid
+                                                           1,                 // nBurst
+                                                           n_round / CONST_8, // lenBurst
+                                                           0,                 // srcStride
+                                                           0                  // dstStride
+                );
+            }
             SET_FLAG(MTE2, V, EVENT_ID0);
             WAIT_FLAG(MTE2, V, EVENT_ID0);
 
@@ -472,6 +492,39 @@ public:
             }
 
             AscendC::PipeBarrier<PIPE_V>();
+
+            // add fp32 bias after dequant, reuse ub_bias; same per-N broadcast as x2Scale Mul
+            if constexpr (BiasFlag && IS_FP32_BIAS) {
+                SetVectorMask<int8_t>((uint64_t)0x0, (uint64_t)0xffff);
+                for (uint32_t i = 0; i < count; ++i) {
+                    if (m_repeat_count > 0) {
+                        AscendC::Add<float, false>(ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
+                                                   ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
+                                                   ub_bias[i * BLOCK_SIZE_16],             // src1
+                                                   (uint64_t)0,                            // count(unuse)
+                                                   MAX_REPEAT_TIMES,                       // repeatTime
+                                                   AscendC::BinaryRepeatParams(1,          // dstBlockStride
+                                                                               1,          // src0BlockStride
+                                                                               1,          // src1BlockStride
+                                                                               CONST_2,    // dstRepeatStride
+                                                                               CONST_2,    // src0RepeatStride
+                                                                               0));        // src1RepeatStride
+                    }
+                    AscendC::Add<float, false>(
+                        ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16],
+                        ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16],
+                        ub_bias[i * BLOCK_SIZE_16],
+                        (uint64_t)0,                         // count(unuse)
+                        m_repeat_remainder,                  // repeatTime
+                        AscendC::BinaryRepeatParams(1,       // dstBlockStride
+                                                    1,       // src0BlockStride
+                                                    1,       // src1BlockStride
+                                                    CONST_2, // dstRepeatStride
+                                                    CONST_2, // src0RepeatStride
+                                                    0));     // src1RepeatStride
+                }
+                AscendC::PipeBarrier<PIPE_V>();
+            }
 
             // cast fp32->fp16
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);

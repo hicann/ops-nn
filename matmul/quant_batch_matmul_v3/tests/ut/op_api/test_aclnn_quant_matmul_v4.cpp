@@ -462,3 +462,36 @@ TEST_F(l2_QuantBatchMatmulV4_test_950, ascend950_multi_thread)
     const auto& params950 = GetParams950Cache();
     TestMultiThread(params950.data(), params950.size(), 3);
 }
+
+static aclnnStatus Run310PPertokenBiasCase(aclDataType biasType)
+{
+    TensorDesc x1Desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 32}).ValueRange(-1, 1);
+    TensorDesc scaleDesc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc pertokenDesc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc biasDesc = TensorDesc({16}, biasType, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc outDesc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    uint64_t workspaceSize = 0;
+    auto ut = OP_API_UT(aclnnQuantMatmulV4,
+                        INPUT(x1Desc, x2Desc, scaleDesc, nullptr, pertokenDesc, biasDesc, false, true),
+                        OUTPUT(outDesc));
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
+TEST(l2_QuantBatchMatmulV4_310P_pertoken, bias_fp32_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    EXPECT_EQ(Run310PPertokenBiasCase(ACL_FLOAT), ACLNN_SUCCESS);
+}
+
+TEST(l2_QuantBatchMatmulV4_310P_pertoken, bias_int32_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    EXPECT_EQ(Run310PPertokenBiasCase(ACL_INT32), ACLNN_SUCCESS);
+}
+
+TEST(l2_QuantBatchMatmulV4_310P_pertoken, bias_bf16_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    EXPECT_EQ(Run310PPertokenBiasCase(ACL_BF16), ACLNN_ERR_PARAM_INVALID);
+}

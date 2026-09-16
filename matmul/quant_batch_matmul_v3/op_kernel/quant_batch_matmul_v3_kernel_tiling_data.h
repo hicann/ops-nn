@@ -106,6 +106,7 @@ struct QuantMatmulPertokenTilingDataArch20 {
     uint32_t blockDim;
     uint32_t swizzleDirect;
     uint32_t swizzleCount;
+    uint32_t biasDtype;
     bool withBias;
     bool biasWithBatch;
 };

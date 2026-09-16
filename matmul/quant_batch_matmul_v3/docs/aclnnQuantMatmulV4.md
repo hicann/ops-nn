@@ -93,6 +93,12 @@
       out = (x1@x2 + bias) * scale * pertokenScaleOptional
       $$
 
+    - 有pertokenScaleOptional、bias FLOAT32
+
+      $$
+      out = x1@x2 * scale * pertokenScaleOptional + bias
+      $$
+
   <!-- end id8 -->
 
 ## 函数原型
@@ -314,7 +320,7 @@ aclnnStatus aclnnQuantMatmulV4(
     - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
     - x1数据类型支持INT8。
     - x2数据类型支持INT8，为NZ格式时，不支持transposeX2为false的场景。当pertokenScaleOptional不为空tensor时，必须调用aclnnTransMatmulWeight对format为ND的x2处理得到AI处理器亲和数据排布格式。
-    - bias数据类型支持INT32。
+    - bias数据类型支持INT32。当pertokenScaleOptional不为空tensor时，bias数据类型还支持FLOAT32。
     - 当pertokenScaleOptional不为空tensor时，scale的数据类型支持FLOAT32；当pertokenScaleOptional为空tensor时，scale数据类型支持UINT64、INT64。
     - out数据类型支持FLOAT16、INT8，当pertokenScaleOptional不为空tensor时，out数据类型只支持FLOAT16。
 
@@ -453,6 +459,7 @@ aclnnStatus aclnnQuantMatmulV4(
   | ------- | ------- | ------ | ------ | ------- | ------- | ------- |
   | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | null | FLOAT16 |
   | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | null | INT8 |
+  | INT8 | INT8 | FLOAT32 | null | null/INT32/FLOAT32 | FLOAT32 | FLOAT16 |
 
 <!-- end id16 -->
 <!-- npu="A3,910b" id17 -->

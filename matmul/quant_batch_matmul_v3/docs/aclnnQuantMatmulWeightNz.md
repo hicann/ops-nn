@@ -55,6 +55,12 @@
     out = (x1@x2 + bias) * x2Scale * x1Scale
     $$
 
+    - 有x1Scale，bias FLOAT32
+
+    $$
+    out = x1@x2 * x2Scale * x1Scale + bias
+    $$
+
     </details>
     <!-- end id7 -->
 
@@ -530,11 +536,11 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
   - 输入和输出支持以下数据类型组合：
 
-    | x1   | x2   | x1Scale | x2Scale      | x2Offset      | bias       | out     |
-    | ---- | ---- | ------- | ------------ | ------------- | ---------- | ------- |
-    | INT8 | INT8 | null    | UINT64/INT64 | null          | null/INT32 | FLOAT16 |
-    | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32 | INT8    |
-    | INT8 | INT8 | FLOAT   | FLOAT        | null          | null/INT32 | FLOAT16 |
+    | x1   | x2   | x1Scale | x2Scale      | x2Offset      | bias               | out     |
+    | ---- | ---- | ------- | ------------ | ------------- | ------------------ | ------- |
+    | INT8 | INT8 | null    | UINT64/INT64 | null          | null/INT32         | FLOAT16 |
+    | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32         | INT8    |
+    | INT8 | INT8 | FLOAT   | FLOAT        | null          | null/INT32/FLOAT32 | FLOAT16 |
 
   - 当x1Scale不为null时，只支持K-C量化。
 
