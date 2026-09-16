@@ -636,8 +636,8 @@ TEST_F(RmsNormQuantV2Tiling, rms_norm_quant_v2_tiling_scales2_zeropoints_mismatc
                       .SetOpType(op_type)
                       .NodeIoNum(7, 2)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&input_shape_x, &gamma_shape, &scales_shape, &scales_shape, &scales_shape,
-                                    &scales_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x, &gamma_shape, &scales_shape, nullptr, &scales_shape, &scales_shape,
+                                    &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
