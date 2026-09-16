@@ -17,6 +17,12 @@
 #include <cstdint>
 #include <vector>
 
+#include "exe_graph/runtime/shape.h"
+#include "exe_graph/runtime/storage_shape.h"
+#include "exe_graph/runtime/tiling_context.h"
+#include "graph/types.h"
+#include "platform/soc_spec.h"
+
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"

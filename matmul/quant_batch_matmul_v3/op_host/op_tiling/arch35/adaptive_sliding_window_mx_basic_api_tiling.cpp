@@ -13,13 +13,14 @@
  * \brief
  */
 
+#include "adaptive_sliding_window_mx_basic_api_tiling.h"
+
 #include <algorithm>
 
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "error_util.h"
 #include "op_host/tiling_templates_registry.h"
-#include "adaptive_sliding_window_mx_basic_api_tiling.h"
 #include "base_block_calculator.h"
 #include "l1_tiling_data_calculator.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
