@@ -919,6 +919,16 @@
     <td>清除NPU浮点溢出状态寄存器，输出固定8个float32零值。</td>
   </tr>
   <tr>
+    <td>control</td>
+    <td><a href="../../control/update_tensor_desc/README.md">update_tensor_desc</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>更新输出Tensor的描述信息（tensor_desc）：将目标维度个数及各维大小写入128×int64描述缓冲区的固定槽位，其余槽位保留原值，用于动态shape场景下的TensorDesc更新。</td>
+  </tr>
+  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>

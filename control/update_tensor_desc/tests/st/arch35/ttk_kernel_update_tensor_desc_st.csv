@@ -1,0 +1,6 @@
+testcase_name,op_name,input_shapes,input_dtypes,input_formats,output_shapes,output_dtypes,output_formats,attributes,input_data_ranges,precision_tolerances,absolute_precision
+update_tensor_desc_L1_047,update_tensor_desc,"((17759,),)","('int16',)","('ND',)","((128,),)","('int64',)","('ND',)","{""shape"":[128]}","((32767, 32767),)","((0, 0),)",0
+update_tensor_desc_L1_064,update_tensor_desc,"((),)","('int64',)","('ND',)","((61613, 1, 1, 14),)","('int64',)","('ND',)","{""shape"":[61613,1,1,14]}","((-1, 1),)","((0, 0),)",0
+update_tensor_desc_L1_bound_137,update_tensor_desc,"((6, 18222597),)","('float32',)","('ND',)","((129,),)","('int64',)","('ND',)","{""shape"":[129]}","((-1, 1),)","((0, 0),)",0
+update_tensor_desc_L1_177,update_tensor_desc,"((12, 31, 20, 29),)","('float32',)","('ND',)","((128,),)","('int64',)","('ND',)","{""shape"":[128]}","((-3.0517578125e-05, 3.0517578125e-05),)","((0, 0),)",0
+update_tensor_desc_L1_196,update_tensor_desc,"((6, 3, 7, 2, 3, 7, 5, 196),)","('float64',)","('ND',)","((1, 1412, 116),)","('int64',)","('ND',)","{""shape"":[1,1412,116]}","((-3.4028235e+38, 3.4028235e+38),)","((0, 0),)",0
