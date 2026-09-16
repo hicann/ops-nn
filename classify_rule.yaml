@@ -1178,6 +1178,7 @@ matmul@ops-nn:
       - ops/ops-nn/matmul/fused_mat_mul/torch_extension/
       - ops/ops-nn/matmul/matmul_emu_split_weight/torch_extension/
       - ops/ops-nn/matmul/flat_quant/torch_extension/
+      - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/torch_extension/
       - ops/ops-nn/common/src/framework/matmul_onnx_plugin.cpp
 
 matmul-quant@ops-nn:
