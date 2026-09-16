@@ -25,7 +25,8 @@ public:
     explicit SwigluGroupQuantTiling(gert::TilingContext* tilingContext) : context_(tilingContext) {}
     ~SwigluGroupQuantTiling() = default;
 
-    static ge::graphStatus GetPlatformInfoCommon(gert::TilingContext* context, uint64_t& coreNum, uint64_t& ubSize);
+    static ge::graphStatus GetPlatformInfoCommon(const gert::TilingContext* context, uint64_t& coreNum,
+                                                 uint64_t& ubSize);
 
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus DoOpTiling();
@@ -86,7 +87,7 @@ private:
     int64_t roundScale_ = 0;
     double clampLimit_ = 0.0;
     int64_t hasClampLimit_ = 0;
-    int64_t outputOrigin_ = 0;
+    bool outputOrigin_ = false;
     bool isMxFp4Quant_ = false;
     bool hasWeight_ = false;
     int64_t g_ = 0;

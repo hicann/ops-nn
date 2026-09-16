@@ -47,8 +47,7 @@ constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16 * 1024 * 1024;
 ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4InitEmbeddingHashTable begins");
-    const InitEmbeddingHashTableCompileInfo* compileInfo = reinterpret_cast<const InitEmbeddingHashTableCompileInfo*>(
-        context->GetCompileInfo());
+    const InitEmbeddingHashTableCompileInfo* compileInfo = context->GetCompileInfo<InitEmbeddingHashTableCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     InitEmbeddingHashTableTilingData tiling;
 

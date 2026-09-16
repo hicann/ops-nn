@@ -29,9 +29,8 @@ constexpr int64_t DYNAMIC_HIFP8_QUANT = 3;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
 } // namespace
 
-ge::graphStatus TilingPrepareForSwigluGroupQuant(gert::TilingParseContext* context)
+ge::graphStatus TilingPrepareForSwigluGroupQuant([[maybe_unused]] gert::TilingParseContext* context)
 {
-    (void)context;
     return ge::GRAPH_SUCCESS;
 }
 
