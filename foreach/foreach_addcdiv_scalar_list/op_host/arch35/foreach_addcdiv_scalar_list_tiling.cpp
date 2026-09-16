@@ -12,7 +12,8 @@
 /*!
  * \file foreach_addcdiv_scalar_list_tiling.cpp
  * \brief Tiling implementation for foreach_addcdiv_scalar_list operator.
- *        Computes core split and per-tensor element counts.
+ *        Splits cores by total element count of the whole tensor list and assigns
+ *        each core a contiguous [tensorStart, tensorEnd] + offset range.
  */
 
 #include <vector>
@@ -29,6 +30,7 @@ namespace optiling {
 
 constexpr int64_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t SINGLE_CORE_MIN_ELEMENTS = 1024;
+constexpr int64_t ALIGN_SIZE = 32;
 constexpr int64_t INPUT_IDX_X1 = 0;
 
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
@@ -71,6 +73,62 @@ static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int
     return ge::GRAPH_FAILED;
 }
 
+// Assigns the [start, end] tensor/offset range for each core, 32-byte block aligned.
+static void AssignDataToEachCore(ForeachAddcdivScalarListTilingData& tilingData, int64_t needCoreNum,
+                                 int64_t dataTypeSize)
+{
+    int64_t elementsPerBlock = ALIGN_SIZE / dataTypeSize;
+    int64_t totalDataCount = tilingData.totalDataCount;
+    int64_t blockCount = (totalDataCount + elementsPerBlock - 1) / elementsPerBlock;
+    if (blockCount == 0) {
+        blockCount = 1;
+    }
+
+    int64_t perCoreBlockCount = blockCount / needCoreNum;
+    int64_t remainder = blockCount % needCoreNum;
+
+    uint16_t coreIndex = 0;
+    int64_t cursorPosition = 0;
+    int64_t dataCount = 0;
+    tilingData.tensorStartList[coreIndex] = 0;
+    tilingData.tensorStartOffsetList[coreIndex] = 0;
+
+    for (uint16_t i = 0; i < static_cast<uint16_t>(tilingData.tensorCount); i++) {
+        int64_t curCmpCount = perCoreBlockCount * elementsPerBlock;
+        if (remainder > 0 && coreIndex < static_cast<uint16_t>(remainder)) {
+            curCmpCount += elementsPerBlock;
+        }
+        int64_t tempCount = tilingData.tensorDataCountList[i] - cursorPosition;
+
+        if (dataCount + tempCount < curCmpCount) {
+            dataCount += tempCount;
+            cursorPosition = 0;
+            continue;
+        }
+
+        tilingData.tensorEndList[coreIndex] = i;
+        cursorPosition = cursorPosition + curCmpCount - dataCount;
+        tilingData.tensorEndOffsetList[coreIndex] = cursorPosition - 1;
+        dataCount = 0;
+        coreIndex++;
+
+        if (cursorPosition < tilingData.tensorDataCountList[i]) {
+            tilingData.tensorStartList[coreIndex] = i;
+            tilingData.tensorStartOffsetList[coreIndex] = cursorPosition;
+            --i;
+        } else if (coreIndex != static_cast<uint16_t>(needCoreNum)) {
+            tilingData.tensorStartList[coreIndex] = i + 1;
+            tilingData.tensorStartOffsetList[coreIndex] = 0;
+            cursorPosition = 0;
+        }
+    }
+
+    if (dataCount > 0) {
+        tilingData.tensorEndList[coreIndex] = static_cast<uint16_t>(tilingData.tensorCount - 1);
+        tilingData.tensorEndOffsetList[coreIndex] = tilingData.tensorDataCountList[tilingData.tensorCount - 1] - 1;
+    }
+}
+
 static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* context)
 {
     int64_t coreNum = 0;
@@ -91,17 +149,19 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
                 OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM_FOREACH_ADDCDIV),
                 return ge::GRAPH_FAILED);
 
-    int64_t maxTensorElements = 0;
+    ForeachAddcdivScalarListTilingData tilingDataHost = {};
+    tilingDataHost.tensorCount = static_cast<int32_t>(tensorNum);
+
+    int64_t totalDataCount = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    ForeachAddcdivScalarListTilingData* tilingData = context->GetTilingData<ForeachAddcdivScalarListTilingData>();
 
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX_X1, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
         int64_t numel = idxTensorShape.GetShapeSize();
-        tilingData->perTensorElementNum[i] = numel;
-        maxTensorElements = std::max(maxTensorElements, numel);
+        tilingDataHost.tensorDataCountList[i] = numel;
+        totalDataCount += numel;
 
         if (i == 0) {
             auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX_X1, i);
@@ -109,15 +169,42 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
             dataType = idxTensorDtypePtr->GetDataType();
         }
     }
+    tilingDataHost.totalDataCount = totalDataCount;
 
-    int64_t needCoreNum = std::max(static_cast<int64_t>(1),
-                                   (maxTensorElements + SINGLE_CORE_MIN_ELEMENTS - 1) / SINGLE_CORE_MIN_ELEMENTS);
-    needCoreNum = std::min(needCoreNum, coreNum);
+    int64_t dataTypeSize = 0;
+    switch (dataType) {
+        case ge::DT_FLOAT16:
+            dataTypeSize = 2;
+            break;
+        case ge::DT_FLOAT:
+            dataTypeSize = 4;
+            break;
+        case ge::DT_BF16:
+            dataTypeSize = 2;
+            break;
+        default:
+            OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dataType));
+            return ge::GRAPH_FAILED;
+    }
 
-    tilingData->tensorNum = static_cast<int32_t>(tensorNum);
-    tilingData->needCoreNum = static_cast<int32_t>(needCoreNum);
+    int64_t needCoreNum = 0;
+    if (totalDataCount > 0) {
+        needCoreNum = (totalDataCount + SINGLE_CORE_MIN_ELEMENTS - 1) / SINGLE_CORE_MIN_ELEMENTS;
+        needCoreNum = std::min(needCoreNum, coreNum);
+        needCoreNum = std::min(needCoreNum, static_cast<int64_t>(MAX_CORE_NUM_FOREACH_ADDCDIV));
+        needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
+    }
+    tilingDataHost.needCoreNum = static_cast<int32_t>(needCoreNum);
 
-    context->SetBlockDim(needCoreNum);
+    if (needCoreNum > 0) {
+        AssignDataToEachCore(tilingDataHost, needCoreNum, dataTypeSize);
+    }
+
+    ForeachAddcdivScalarListTilingData* tilingData = context->GetTilingData<ForeachAddcdivScalarListTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+    *tilingData = tilingDataHost;
+
+    context->SetBlockDim(needCoreNum > 0 ? needCoreNum : 1);
     uint64_t tilingKey = 0;
     if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

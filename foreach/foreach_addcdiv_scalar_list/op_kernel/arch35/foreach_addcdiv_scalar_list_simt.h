@@ -13,6 +13,8 @@
  * \file foreach_addcdiv_scalar_list_simt.h
  * \brief SIMT kernel implementation for foreach_addcdiv_scalar_list operator.
  *        Computes y_i = x1_i + scalars_i * (x2_i / x3_i) for each tensor.
+ *        Each core processes only its own contiguous [tensorStart, tensorEnd] + offset
+ *        range assigned by tiling, so the VF kernels stride over threads only.
  */
 
 #ifndef FOREACH_ADDCDIV_SCALAR_LIST_SIMT_H
@@ -45,15 +47,16 @@ __aicore__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx
 
 template <typename T, typename MidT = T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListSimtKernel(
-    int64_t perTensorElementNum, __gm__ MidT* x1_i_gm, __gm__ MidT* x2_i_gm, __gm__ MidT* x3_i_gm,
-    __gm__ MidT* scalars_gm, __gm__ MidT* y_i_gm, int32_t tensorIdx)
+    int64_t dataCount, __gm__ MidT* x1_i_gm, __gm__ MidT* x2_i_gm, __gm__ MidT* x3_i_gm, __gm__ MidT* scalars_gm,
+    __gm__ MidT* y_i_gm, int32_t tensorIdx)
 {
     MidT scalar_val = scalars_gm[tensorIdx];
 
-    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                                AscendC::Simt::GetThreadIdx());
-         index < static_cast<uint64_t>(perTensorElementNum);
-         index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+    // Process already splits data per-core, so the VF kernel strides over threads
+    // only (GetThreadIdx/GetThreadNum). Using GetBlockIdx/GetBlockNum here would
+    // make each core skip the data assigned to the other cores.
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
+         index < static_cast<uint64_t>(dataCount); index += static_cast<uint64_t>(AscendC::Simt::GetThreadNum())) {
         MidT x1_val = x1_i_gm[index];
         MidT x2_val = x2_i_gm[index];
         MidT x3_val = x3_i_gm[index];
@@ -68,16 +71,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScal
 // ========== float16 VF kernel (float32 intermediate compute) ==========
 
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListFp16SimtKernel(
-    int64_t perTensorElementNum, __gm__ half* x1_i_gm, __gm__ half* x2_i_gm, __gm__ half* x3_i_gm,
-    __gm__ half* scalars_gm, __gm__ half* y_i_gm, int32_t tensorIdx)
+    int64_t dataCount, __gm__ half* x1_i_gm, __gm__ half* x2_i_gm, __gm__ half* x3_i_gm, __gm__ half* scalars_gm,
+    __gm__ half* y_i_gm, int32_t tensorIdx)
 {
     half scalarFp16 = scalars_gm[tensorIdx];
     float scalar_val = static_cast<float>(scalarFp16);
 
-    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                                AscendC::Simt::GetThreadIdx());
-         index < static_cast<uint64_t>(perTensorElementNum);
-         index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
+         index < static_cast<uint64_t>(dataCount); index += static_cast<uint64_t>(AscendC::Simt::GetThreadNum())) {
         // Read half inputs, promote to float32 for intermediate computation
         float x1_val = static_cast<float>(x1_i_gm[index]);
         float x2_val = static_cast<float>(x2_i_gm[index]);
@@ -95,16 +96,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScal
 // ========== bfloat16 VF kernel (float32 intermediate compute) ==========
 
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListBf16SimtKernel(
-    int64_t perTensorElementNum, __gm__ bfloat16_t* x1_i_gm, __gm__ bfloat16_t* x2_i_gm, __gm__ bfloat16_t* x3_i_gm,
+    int64_t dataCount, __gm__ bfloat16_t* x1_i_gm, __gm__ bfloat16_t* x2_i_gm, __gm__ bfloat16_t* x3_i_gm,
     __gm__ bfloat16_t* scalars_gm, __gm__ bfloat16_t* y_i_gm, int32_t tensorIdx)
 {
     bfloat16_t scalarBf16 = scalars_gm[tensorIdx];
     float scalar_val = static_cast<float>(scalarBf16);
 
-    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                                AscendC::Simt::GetThreadIdx());
-         index < static_cast<uint64_t>(perTensorElementNum);
-         index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
+         index < static_cast<uint64_t>(dataCount); index += static_cast<uint64_t>(AscendC::Simt::GetThreadNum())) {
         float x1_val = static_cast<float>(x1_i_gm[index]);
         float x2_val = static_cast<float>(x2_i_gm[index]);
         float x3_val = static_cast<float>(x3_i_gm[index]);
@@ -123,21 +122,35 @@ template <typename T, typename MidT = T>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
                                const ForeachAddcdivScalarListTilingData* tilingData)
 {
+    if (tilingData->totalDataCount <= 0) {
+        return; // Empty TensorList
+    }
+
+    int32_t coreId = static_cast<int32_t>(GetBlockIdx());
+    uint16_t tensorStart = tilingData->tensorStartList[coreId];
+    uint16_t tensorEnd = tilingData->tensorEndList[coreId];
+    int64_t tensorStartOffset = tilingData->tensorStartOffsetList[coreId];
+    int64_t tensorEndOffset = tilingData->tensorEndOffsetList[coreId];
+
     __gm__ MidT* scalars_gm = reinterpret_cast<__gm__ MidT*>(scalars);
 
-    for (int32_t i = 0; i < tilingData->tensorNum; i++) {
-        int64_t elementNum = tilingData->perTensorElementNum[i];
-        if (elementNum == 0) {
+    for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
+        int64_t cursorStart = (i == tensorStart) ? tensorStartOffset : 0;
+        int64_t cursorEnd = (i == tensorEnd) ? tensorEndOffset : (tilingData->tensorDataCountList[i] - 1);
+        int64_t dataCount = cursorEnd - cursorStart + 1;
+
+        if (dataCount <= 0) {
             continue;
         }
 
-        __gm__ MidT* x1_i_gm = SimtGetTensorAddr<MidT>(x1, i);
-        __gm__ MidT* x2_i_gm = SimtGetTensorAddr<MidT>(x2, i);
-        __gm__ MidT* x3_i_gm = SimtGetTensorAddr<MidT>(x3, i);
-        __gm__ MidT* y_i_gm = SimtGetTensorAddr<MidT>(y, i);
+        __gm__ MidT* x1_i_gm = SimtGetTensorAddr<MidT>(x1, i) + cursorStart;
+        __gm__ MidT* x2_i_gm = SimtGetTensorAddr<MidT>(x2, i) + cursorStart;
+        __gm__ MidT* x3_i_gm = SimtGetTensorAddr<MidT>(x3, i) + cursorStart;
+        __gm__ MidT* y_i_gm = SimtGetTensorAddr<MidT>(y, i) + cursorStart;
 
         AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListSimtKernel<T, MidT>>(
-            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+            AscendC::Simt::Dim3(THREAD_NUM), dataCount, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm,
+            static_cast<int32_t>(i));
     }
 }
 
@@ -146,21 +159,35 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scala
 __aicore__ inline void ProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
                                    const ForeachAddcdivScalarListTilingData* tilingData)
 {
+    if (tilingData->totalDataCount <= 0) {
+        return; // Empty TensorList
+    }
+
+    int32_t coreId = static_cast<int32_t>(GetBlockIdx());
+    uint16_t tensorStart = tilingData->tensorStartList[coreId];
+    uint16_t tensorEnd = tilingData->tensorEndList[coreId];
+    int64_t tensorStartOffset = tilingData->tensorStartOffsetList[coreId];
+    int64_t tensorEndOffset = tilingData->tensorEndOffsetList[coreId];
+
     __gm__ half* scalars_gm = reinterpret_cast<__gm__ half*>(scalars);
 
-    for (int32_t i = 0; i < tilingData->tensorNum; i++) {
-        int64_t elementNum = tilingData->perTensorElementNum[i];
-        if (elementNum == 0) {
+    for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
+        int64_t cursorStart = (i == tensorStart) ? tensorStartOffset : 0;
+        int64_t cursorEnd = (i == tensorEnd) ? tensorEndOffset : (tilingData->tensorDataCountList[i] - 1);
+        int64_t dataCount = cursorEnd - cursorStart + 1;
+
+        if (dataCount <= 0) {
             continue;
         }
 
-        __gm__ half* x1_i_gm = SimtGetTensorAddr<half>(x1, i);
-        __gm__ half* x2_i_gm = SimtGetTensorAddr<half>(x2, i);
-        __gm__ half* x3_i_gm = SimtGetTensorAddr<half>(x3, i);
-        __gm__ half* y_i_gm = SimtGetTensorAddr<half>(y, i);
+        __gm__ half* x1_i_gm = SimtGetTensorAddr<half>(x1, i) + cursorStart;
+        __gm__ half* x2_i_gm = SimtGetTensorAddr<half>(x2, i) + cursorStart;
+        __gm__ half* x3_i_gm = SimtGetTensorAddr<half>(x3, i) + cursorStart;
+        __gm__ half* y_i_gm = SimtGetTensorAddr<half>(y, i) + cursorStart;
 
-        AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListFp16SimtKernel>(
-            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+        AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListFp16SimtKernel>(AscendC::Simt::Dim3(THREAD_NUM), dataCount,
+                                                                         x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm,
+                                                                         static_cast<int32_t>(i));
     }
 }
 
@@ -169,21 +196,35 @@ __aicore__ inline void ProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR s
 __aicore__ inline void ProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
                                    const ForeachAddcdivScalarListTilingData* tilingData)
 {
+    if (tilingData->totalDataCount <= 0) {
+        return; // Empty TensorList
+    }
+
+    int32_t coreId = static_cast<int32_t>(GetBlockIdx());
+    uint16_t tensorStart = tilingData->tensorStartList[coreId];
+    uint16_t tensorEnd = tilingData->tensorEndList[coreId];
+    int64_t tensorStartOffset = tilingData->tensorStartOffsetList[coreId];
+    int64_t tensorEndOffset = tilingData->tensorEndOffsetList[coreId];
+
     __gm__ bfloat16_t* scalars_gm = reinterpret_cast<__gm__ bfloat16_t*>(scalars);
 
-    for (int32_t i = 0; i < tilingData->tensorNum; i++) {
-        int64_t elementNum = tilingData->perTensorElementNum[i];
-        if (elementNum == 0) {
+    for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
+        int64_t cursorStart = (i == tensorStart) ? tensorStartOffset : 0;
+        int64_t cursorEnd = (i == tensorEnd) ? tensorEndOffset : (tilingData->tensorDataCountList[i] - 1);
+        int64_t dataCount = cursorEnd - cursorStart + 1;
+
+        if (dataCount <= 0) {
             continue;
         }
 
-        __gm__ bfloat16_t* x1_i_gm = SimtGetTensorAddr<bfloat16_t>(x1, i);
-        __gm__ bfloat16_t* x2_i_gm = SimtGetTensorAddr<bfloat16_t>(x2, i);
-        __gm__ bfloat16_t* x3_i_gm = SimtGetTensorAddr<bfloat16_t>(x3, i);
-        __gm__ bfloat16_t* y_i_gm = SimtGetTensorAddr<bfloat16_t>(y, i);
+        __gm__ bfloat16_t* x1_i_gm = SimtGetTensorAddr<bfloat16_t>(x1, i) + cursorStart;
+        __gm__ bfloat16_t* x2_i_gm = SimtGetTensorAddr<bfloat16_t>(x2, i) + cursorStart;
+        __gm__ bfloat16_t* x3_i_gm = SimtGetTensorAddr<bfloat16_t>(x3, i) + cursorStart;
+        __gm__ bfloat16_t* y_i_gm = SimtGetTensorAddr<bfloat16_t>(y, i) + cursorStart;
 
-        AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListBf16SimtKernel>(
-            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+        AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListBf16SimtKernel>(AscendC::Simt::Dim3(THREAD_NUM), dataCount,
+                                                                         x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm,
+                                                                         static_cast<int32_t>(i));
     }
 }
 
