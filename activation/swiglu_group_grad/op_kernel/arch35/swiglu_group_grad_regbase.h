@@ -101,6 +101,10 @@ private:
     static __aicore__ inline void SynchronizeVectorToScalar() { Synchronize<HardEvent::V_S>(); }
     static __aicore__ inline void SynchronizeScalarToVector() { Synchronize<HardEvent::S_V>(); }
     static __aicore__ inline void SynchronizeScalarToMte3() { Synchronize<HardEvent::S_MTE3>(); }
+    static __aicore__ inline void SynchronizeScalarToMte2() { Synchronize<HardEvent::S_MTE2>(); }
+    static __aicore__ inline void SynchronizeMte3ToScalar() { Synchronize<HardEvent::MTE3_S>(); }
+    static __aicore__ inline void SynchronizeMte2ToScalar() { Synchronize<HardEvent::MTE2_S>(); }
+    static __aicore__ inline void SynchronizeMte3ToMte2() { Synchronize<HardEvent::MTE3_MTE2>(); }
     __aicore__ inline int64_t ComputeChunkElementCount(int64_t chunkOffset) const;
     __aicore__ inline int64_t GetScratchFloatOffset(int64_t rowIndex) const;
     __aicore__ inline void CopyWeightScalarIn(LocalTensor<float>& weightLocal, int64_t rowIndex);
@@ -661,6 +665,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                                                                               int64_t floatOffset, float value)
 {
     LocalTensor<float> local = gradXQueue_.AllocTensor<float>();
+    SynchronizeMte3ToScalar();
     __ubuf__ float* address = (__ubuf__ float*)local.GetPhyAddr();
     address[0] = value;
     SynchronizeScalarToMte3();
@@ -1500,6 +1505,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         __ubuf__ float* gradWeightAddress = nullptr;
         if constexpr (HAS_WEIGHT) {
             gradWeightLocal = gradWeightQueue_.AllocTensor<float>();
+            SynchronizeMte3ToScalar();
             gradWeightAddress = (__ubuf__ float*)gradWeightLocal.GetPhyAddr();
         }
 
@@ -1536,6 +1542,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                         globalRowOffset + row, validRowCount,
                         NumpyPairwiseSum(gradYAddress + row * alignedHiddenSize_, hiddenSize_));
                 }
+                SynchronizeScalarToMte2();
             }
             gradYQueue_.FreeTensor(gradYLocal);
             inputQueue_.FreeTensor(inputLocal);
@@ -1597,6 +1604,8 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                                                 NumpyPairwiseSum(gradWeightProductAddress, hiddenSize_);
                     gradWeightAddress[row] = MaskGradWeightValue(globalRowOffset + row, validRowCount, gradWeightValue);
                 }
+                // Products live in inputFloatBuffer_, rewritten by the next tile's CastTileToFloat.
+                SynchronizeScalarToVector();
             }
         }
         gradXQueue_.EnQue(gradXLocal);
@@ -1681,9 +1690,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         ProcessUltraWideTask(rowIndex, taskIndex, taskOffset, taskElementCount, reservedHidden, validRowCount);
     }
 
-    // Every subtree partial was written by MTE3, not by Scalar/DCache. Finish
-    // all outstanding DMA writes before any core starts loading the scratch.
-    PipeBarrier<PIPE_ALL>();
+    // SyncAll opens with PipeBarrier<PIPE_ALL> internally, so no extra barrier is needed here.
     AscendC::SyncAll();
 
     // One core owns the short output row vector. This avoids different cores
@@ -1699,11 +1706,11 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         for (int64_t rowIndex = 0; rowIndex < tilingData_->totalRows; ++rowIndex) {
             int64_t scratchFloatOffset = GetScratchFloatOffset(rowIndex);
             DataCopyPad(partialLocal, gradWeightScratchGlobal_[scratchFloatOffset], partialCopyParams, noPadParams);
-            PipeBarrier<PIPE_ALL>();
+            SynchronizeMte2ToScalar();
             partialAddress[0] = MaskGradWeightValue(rowIndex, validRowCount, MergeUltraWidePartials(partialAddress));
             SynchronizeScalarToMte3();
             DataCopyPad(gradWeightGlobal_[rowIndex], partialLocal, gradWeightCopyParams);
-            PipeBarrier<PIPE_ALL>();
+            SynchronizeMte3ToMte2();
         }
     }
     AscendC::SyncAll();
@@ -1746,6 +1753,7 @@ SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_IND
                      taskElementCountU32);
         SynchronizeVectorToScalar();
         partialValue = NumpyPairwiseSum(gradYAddress, taskElementCount);
+        SynchronizeScalarToMte2();
         gradYQueue_.FreeTensor(gradYLocal);
         inputQueue_.FreeTensor(inputLocal);
         yOriginQueue_.FreeTensor(yOriginLocal);
@@ -1774,6 +1782,8 @@ SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_IND
                      taskElementCountU32);
         SynchronizeVectorToScalar();
         partialValue = NumpyPairwiseSum(gradYAddress, taskElementCount);
+        // gradYFloatBuffer_ is rewritten by the next task's CastChunkToFloat.
+        SynchronizeScalarToVector();
         gradXQueue_.EnQue(gradXLocal);
     }
 
@@ -1991,6 +2001,8 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                                                clampLimit_, static_cast<uint32_t>(chunkElementCount));
                     SynchronizeVectorToScalar();
                     gradWeightPartialsAddress[validChunkCount] = NumpyPairwiseSum(gradYAddress, chunkElementCount);
+                    // FreeTensor only raises V_MTE2; fence against the next CopyGradWeightChunkIn.
+                    SynchronizeScalarToMte2();
                     gradYQueue_.FreeTensor(gradYLocal);
                     if constexpr (!HAS_Y_ORIGIN) {
                         inputQueue_.FreeTensor(inputLocal);
@@ -2046,8 +2058,15 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                                                                      NumpyPairwiseSumFast(gradWeightProductAddress) :
                                                                      NumpyPairwiseSum(gradWeightProductAddress,
                                                                                       chunkElementCount);
+                    // Products live in the float TBufs, rewritten by the next chunk's Cast.
+                    SynchronizeScalarToVector();
                 }
                 validChunkCount++;
+            }
+            // The Scalar-written partial array is reduced on Vector by the count == 2048 fast path,
+            // which does not fence itself (NumpyPairwiseSumVectorized does).
+            if (validChunkCount == SIMD_REDUCTION_FAST_PATH_H) {
+                SynchronizeScalarToVector();
             }
             float gradWeightValue = NumpyPairwiseSum(gradWeightPartialsAddress, validChunkCount);
             WriteScalarFloat(gradWeightGlobal_, rowIndex,
