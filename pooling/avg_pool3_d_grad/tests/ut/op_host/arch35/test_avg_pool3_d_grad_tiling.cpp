@@ -259,12 +259,12 @@ TEST_F(AvgPool3DGradTiling, base_mixed_rank_invalid_grad)
 
 TEST_F(AvgPool3DGradTiling, base_mixed_rank_5d_out_ndhwc)
 {
-    // Runtime aclnn NDHWC branch: 4D orig [C,D,H,W], 5D NDHWC grads [1,D,H,W,C] and
-    // the op output is 5D NDHWC [1,D,H,W,C] as well (transposed back by the caller).
+    // 混秩声明（4D orig_input_shape 值 + 5D NDHWC output）违反
+    // "output.shape 需与 orig_input_shape 的值一致" 约束，tiling 必须拒绝。
     gert::StorageShape gradsShape = {{1, 3, 9, 9, 1}, {1, 3, 9, 9, 1}};
     gert::StorageShape outputShape = {{1, 5, 15, 9, 1}, {1, 5, 15, 9, 1}};
     RunMixedRankBaseCheck({1, 5, 15, 9}, gradsShape, outputShape, {5, 4, 1}, {2, 2, 1}, {2, 2, 0}, true, "NDHWC",
-                          ge::GRAPH_SUCCESS);
+                          ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPool3DGradTiling, base_mixed_rank_5d_out_ncdhw_fmt_ndhwc)
@@ -288,12 +288,12 @@ TEST_F(AvgPool3DGradTiling, base_mixed_rank_out_inconsistent)
 
 TEST_F(AvgPool3DGradTiling, base_5d_merged_ndhwc_out)
 {
-    // aclnn merges N*C into the trailing channel for 5D inputs, so the op output may be
-    // declared as [1, D, H, W, N*C] while orig_input_shape keeps [N,C,D,H,W].
+    // NC 合并声明（output [1,D,H,W,N*C] 与 orig_input_shape [N,C,D,H,W] 逐维不一致）违反
+    // "output.shape 需与 orig_input_shape 的值一致" 约束，tiling 必须拒绝。
     gert::StorageShape gradsShape = {{1, 1, 5, 1, 3321}, {1, 1, 5, 1, 3321}};
     gert::StorageShape outputShape = {{1, 1, 17, 1, 3321}, {1, 1, 17, 1, 3321}};
     RunMixedRankBaseCheck({3321, 1, 1, 17, 1}, gradsShape, outputShape, {1, 4, 1}, {1, 4, 1}, {0, 0, 2, 2, 0, 0}, true,
-                          "NDHWC", ge::GRAPH_SUCCESS);
+                          "NDHWC", ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPool3DGradTiling, base_5d_merged_out_h_mismatch)

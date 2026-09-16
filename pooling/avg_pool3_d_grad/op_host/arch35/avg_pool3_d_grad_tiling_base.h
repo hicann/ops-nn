@@ -82,7 +82,7 @@ private:
     // Helpers operating on the member inputData (parsed attrs/shapes).
     bool IsGreaterThanInt32Max() const;
     void SetBatchChannelInfo(const ge::Format format, const bool is5d, const int32_t* shapeValue,
-                             const AvgPool3DCommon& origDims, const gert::Shape& gradShape);
+                             const AvgPool3DCommon& origDims);
     void SetKernelSizeInfo(const gert::RuntimeAttrs* runtimeAttrs, const AvgPool3DCommon& commInfo);
     void SetStrideInfo(const gert::RuntimeAttrs* runtimeAttrs, const AvgPool3DCommon& commInfo);
     void SetPadInfo(const gert::RuntimeAttrs* runtimeAttrs);

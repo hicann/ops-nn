@@ -420,7 +420,7 @@ aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, 
     bool enableBlock = CheckEnableBlock(gradOutput);
 
     const aclTensor* gradTrans = gradCDHW;
-    if (!isOnlyT && !enableBlock) {
+    if (!isOnlyT && !enableBlock && !Ops::NN::AclnnUtil::IsRegbase()) {
         // transdata to dhwnc
         std::vector<int64_t> transPreDim = {0, 2, 3, 4, 1};
         auto permPre = uniqueExecutor.get()->AllocIntArray(transPreDim.data(), transPreDim.size());
@@ -432,12 +432,12 @@ aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, 
     const aclTensor* shapeOrigInput = CopyShape2OneDim(selfContiguous, uniqueExecutor.get());
     CHECK_RET(shapeOrigInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 调用l0op
-    std::string dataFormat = (isOnlyT || enableBlock) ? NCDHW_FORMAT : NDHWC_FORMAT;
+    std::string dataFormat = (isOnlyT || enableBlock || Ops::NN::AclnnUtil::IsRegbase()) ? NCDHW_FORMAT : NDHWC_FORMAT;
     auto avgPool3dBackwardResult = l0op::AvgPool3DGrad(selfContiguous, shapeOrigInput, gradTrans, ksizeFill,
                                                        stridesFill, padsFill, ceilMode, countIncludePad,
                                                        divisorOverride, dataFormat, uniqueExecutor.get());
     CHECK_RET(avgPool3dBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (!isOnlyT && !enableBlock) {
+    if (!isOnlyT && !enableBlock && !Ops::NN::AclnnUtil::IsRegbase()) {
         // transdata to ncdhw
         std::vector<int64_t> transAfterDim = {0, 4, 1, 2, 3};
         auto permAfter = uniqueExecutor.get()->AllocIntArray(transAfterDim.data(), transAfterDim.size());

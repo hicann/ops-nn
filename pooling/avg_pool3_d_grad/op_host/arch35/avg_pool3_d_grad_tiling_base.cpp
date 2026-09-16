@@ -202,60 +202,21 @@ static bool OutShapeMatches(const int32_t* shapeValue, const AvgPool3DCommon& or
            shapeValue[origDims.dDim] == outShape.GetDim(outDims.dDim) &&
            shapeValue[origDims.hDim] == outShape.GetDim(outDims.hDim) &&
            shapeValue[origDims.wDim] == outShape.GetDim(outDims.wDim) &&
-           (!is5d || outShape.GetDimNum() != NCDHW_DIMS_ || shapeValue[origDims.nDim] == outShape.GetDim(outDims.nDim));
+           (!is5d || shapeValue[origDims.nDim] == outShape.GetDim(outDims.nDim));
 }
 
-// The aclnn layer merges N and C into a single trailing channel for 5D inputs, so the
-// output may be declared as [1, ..., N*C] instead of the separate [N,C,...] size list.
-// Accept that merged representation when it aligns with the grads' leading dim (physical
-// batch) and D/H/W still match.
-static bool OutShapeMergedMatches(const int32_t* shapeValue, const AvgPool3DCommon& origDims, const bool is5d,
-                                  const gert::Shape& outShape, const AvgPool3DCommon& outDims,
-                                  const gert::Shape& gradShape)
-{
-    if (!is5d || outShape.GetDimNum() != NCDHW_DIMS_) {
-        return false;
-    }
-    const int64_t outN = outShape.GetDim(outDims.nDim);
-    const int64_t outC = outShape.GetDim(outDims.cDim);
-    return outN == gradShape.GetDim(0) &&
-           outC * outN == static_cast<int64_t>(shapeValue[origDims.nDim]) * shapeValue[origDims.cDim] &&
-           shapeValue[origDims.dDim] == outShape.GetDim(outDims.dDim) &&
-           shapeValue[origDims.hDim] == outShape.GetDim(outDims.hDim) &&
-           shapeValue[origDims.wDim] == outShape.GetDim(outDims.wDim);
-}
-
-// orig_input_shape is a channel-first size list (4D [C,D,H,W], 5D [N,C,D,H,W]), i.e. its
-// D/H/W are the trailing three entries. The kernel front-end feeds native data_format-ordered
-// lists for 5D NDHWC ([N,D,H,W,C]), so decide by comparing orig against the grads' NDHWC
-// layout (C is the trailing channel element).
-static AvgPool3DCommon ResolveOrigDims(const ge::Format format, const int32_t* shapeValue, const int32_t shapeDim,
-                                       const gert::Shape& gradShape)
-{
-    if (shapeDim == NCDHW_DIMS_ && format == ge::Format::FORMAT_NDHWC && gradShape.GetDimNum() == NCDHW_DIMS_) {
-        AvgPool3DCommon ndhwc5;
-        SetGradDims(ge::Format::FORMAT_NDHWC, NCDHW_DIMS_, ndhwc5);
-        if (shapeValue[ndhwc5.nDim] == gradShape.GetDim(ndhwc5.nDim) &&
-            shapeValue[ndhwc5.cDim] == gradShape.GetDim(ndhwc5.cDim)) {
-            return ndhwc5;
-        }
-    }
-    AvgPool3DCommon origDims;
-    SetGradDims(ge::Format::FORMAT_NCDHW, shapeDim, origDims);
-    return origDims;
-}
+// orig_input_shape 值序恒随 data_format（NCDHW: 5D [N,C,D,H,W] / 4D [C,D,H,W]；
+// NDHWC: 5D [N,D,H,W,C] / 4D [D,H,W,C]），由调用方保证与 grads/output 匹配。
 
 void AvgPool3DGradTilingBase::SetBatchChannelInfo(const ge::Format format, const bool is5d, const int32_t* shapeValue,
-                                                  const AvgPool3DCommon& origDims, const gert::Shape& gradShape)
+                                                  const AvgPool3DCommon& origDims)
 {
     if (format == ge::Format::FORMAT_NCDHW) {
         inputData.batches = is5d ? shapeValue[origDims.nDim] * shapeValue[origDims.cDim] : shapeValue[origDims.cDim];
         inputData.channels = ONE;
     } else {
-        // NDHWC: physical leading dim comes from the grads (N*C may be merged into the
-        // trailing channel for 5D inputs), C from the grads' trailing channel element.
-        inputData.batches = is5d ? gradShape.GetDim(0) : ONE;
-        inputData.channels = gradShape.GetDim(gradShape.GetDimNum() - 1);
+        inputData.batches = is5d ? shapeValue[origDims.nDim] : ONE;
+        inputData.channels = shapeValue[origDims.cDim];
     }
 }
 
@@ -273,26 +234,32 @@ ge::graphStatus AvgPool3DGradTilingBase::SetInputParams()
     auto gradShape = context_->GetInputShape(GRAD_INDEX)->GetStorageShape();
     auto outShape = context_->GetOutputShape(OUTPUT_INDEX)->GetStorageShape();
 
-    const AvgPool3DCommon origDims = ResolveOrigDims(inputData.inputFormat, shapeValue, shapeDim, gradShape);
+    // backward 的输出即输入梯度：output 秩必须与 orig_input_shape 描述的原始输入秩一致
+    if (shapeDim != outShape.GetDimNum()) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "orig_input_shape and output", "rank mismatch",
+                                               "output rank should be the same as orig_input_shape dim count");
+        return ge::GRAPH_FAILED;
+    }
+
+    // orig_input_shape 值序恒随 data_format，确定性解析维度映射
+    AvgPool3DCommon origDims;
+    SetGradDims(inputData.inputFormat, shapeDim, origDims);
 
     // The grads storage shape follows the runtime data_format for its own rank, so it may
     // have a different rank than the size list (e.g. 4D input vs 5D NDHWC transposed grads).
     AvgPool3DCommon gradDims;
     SetGradDims(inputData.inputFormat, gradShape.GetDimNum(), gradDims);
 
-    // The output may be declared in the runtime layout or with N*C merged into a single
-    // trailing channel; accept whichever mapping reproduces orig_input_shape.
     AvgPool3DCommon outDimsFmt;
     SetGradDims(inputData.inputFormat, outShape.GetDimNum(), outDimsFmt);
     AvgPool3DCommon outDims = outDimsFmt;
-    if (!OutShapeMatches(shapeValue, origDims, is5d, outShape, outDimsFmt) &&
-        !OutShapeMergedMatches(shapeValue, origDims, is5d, outShape, outDimsFmt, gradShape)) {
+    if (!OutShapeMatches(shapeValue, origDims, is5d, outShape, outDimsFmt)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "orig_input_shape and output", "shape mismatch",
                                                "orig_input_shape should be the same as output shape");
         return ge::GRAPH_FAILED;
     }
 
-    SetBatchChannelInfo(inputData.inputFormat, is5d, shapeValue, origDims, gradShape);
+    SetBatchChannelInfo(inputData.inputFormat, is5d, shapeValue, origDims);
 
     inputData.inputShape = {shapeValue[origDims.dDim], shapeValue[origDims.hDim], shapeValue[origDims.wDim]};
     inputData.gradShape = {gradShape.GetDim(gradDims.dDim), gradShape.GetDim(gradDims.hDim),
