@@ -32,6 +32,8 @@ constexpr uint64_t HP_INDEX_TILE_MAX = 4096;
 constexpr uint64_t HP_INDEX_TILE_ALIGN = 32;
 constexpr uint64_t HP_UPDATE_UB_RATIO = 2;
 constexpr uint64_t HP_DOUBLE_BUFFER = 2;
+constexpr uint64_t HP_MIN_ROWS_PER_CORE = 16;
+constexpr uint64_t HP_LARGE_ROW_BYTES = 8192;
 constexpr uint64_t HP_ROWS_PER_BATCH_MAX = 256;
 constexpr uint64_t INDEX_TYPE_INT32 = 1;
 constexpr uint64_t INDEX_TYPE_INT64 = 2;
@@ -216,6 +218,10 @@ inline void ScatterNdUpdateArch22Tiling::Tiling4HpCorePartition(uint64_t indexRo
     if (hpCoreNum_ == 0) {
         hpCoreNum_ = 1;
     }
+    uint64_t rowBytes = scatterLength_ * dataTypeSize_;
+    if (rowBytes < HP_LARGE_ROW_BYTES) {
+        hpCoreNum_ = std::max(uint64_t(1), std::min(hpCoreNum_, indexRow / HP_MIN_ROWS_PER_CORE));
+    }
     hpTailIndexNum_ = indexRow / hpCoreNum_;
     hpFrontIndexNum_ = hpTailIndexNum_ + 1;
     hpFrontCoreNum_ = indexRow % hpCoreNum_;
@@ -306,7 +312,7 @@ inline void ScatterNdUpdateArch22Tiling::GetDtypeSize()
 
 ge::graphStatus ScatterNdUpdateArch22Tiling::SetKernelTiling()
 {
-    tilingContext_->SetBlockDim(coreNum_);
+    tilingContext_->SetBlockDim(hpCoreNum_);
     tilingData_.linearIndexTiling.set_indexDim(indexDim_);
     tilingData_.linearIndexTiling.set_ubSize(ubSize_);
     tilingData_.linearIndexTiling.set_indicesMask(indicesMask_);
