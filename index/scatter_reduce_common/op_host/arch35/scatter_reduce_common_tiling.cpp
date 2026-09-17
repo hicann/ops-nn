@@ -19,6 +19,11 @@
 #include "log/log.h"
 
 namespace optiling {
+// 排序 key 的低位宽度。取 30 而非 31: 归并树用 INT32_MAX(2^31-1) 作补齐哨兵, 若 lo 取 31 位则 lo 的
+// 最大合法值恰好等于哨兵, 段边界判定会把真实数据当成填充。30 位下哨兵稳稳高于所有 lo。
+constexpr uint64_t INDEX_LO_BITS = 30UL;
+constexpr uint64_t INDEX_LO_SPAN = 1UL << INDEX_LO_BITS;
+
 constexpr size_t VAR_IDX = 0;
 constexpr size_t INDICES_IDX = 1;
 constexpr size_t UPDATES_IDX = 2;
@@ -180,15 +185,20 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     auto& indicesShape = indicesShapePtr->GetStorageShape();
 
     uint64_t varFirstDim = (varShape.GetDimNum() == 0) ? 1 : varShape.GetDim(0);
-    // Sort-based reduce keys on int32 (hardware Sort uses 32-bit keys); an in-bound index (< varFirstDim)
-    // must fit int32. Reject var.dim0 > INT32_MAX rather than silently truncating the key. A2 (910B) uses
-    // int32 indices only and can never reach here; A5's int64 indices are still bounded by var.dim0, so this
-    // keeps A5's value range aligned with A2.
-    constexpr uint64_t INT32_MAX_BOUND = 2147483647UL; // INT32_MAX
-    if (varFirstDim > INT32_MAX_BOUND) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "var", std::to_string(varFirstDim).c_str(),
-                                                  "var first axis exceeds INT32_MAX; in-bound index values must fit "
-                                                  "the int32 sort key");
+    // 硬件 AscendC::Sort 的排序 key 只能是 32 位(官方 API: T = half/float/bf16/int16/uint16/int32/uint32),
+    // 而 in-bound 的 index 值域是 [0, varFirstDim)。varFirstDim 超过 2^30 时单趟 32 位 key 装不下, 改走
+    // 两趟基数排序: 第 1 趟用现有流水按 lo(低 30 位)排, 第 2 趟按 hi 做稳定分区, 结果即按 (hi, lo) 全序。
+    // 不再拒收大 shape —— A2(910B) 的 TIK 实现对 var 首维没有任何上限, 拒收会让 A5 支持面窄于 A2。
+    const bool wideIndex = (varFirstDim > INDEX_LO_SPAN);
+    const uint64_t bucketNum = wideIndex ? ((varFirstDim + INDEX_LO_SPAN - 1UL) / INDEX_LO_SPAN) : 1UL;
+    // 桶数上限与 kernel 侧 StablePartitionByHi 的 MAX_BUCKETS 必须一致: 该函数用固定长度的局部数组做
+    // 计数/前缀, 桶数超出会越界写栈。64 个桶 = 首维 2^36 行, 即便 int8+sliceSize=1 的最小体积配置也要
+    // 68.7GB var, 超出当前任何硬件的显存, 故这是**不可达分支**; 但仍显式拒收而不是静默踩内存。
+    constexpr uint64_t MAX_BUCKETS_HOST = 64UL;
+    if (bucketNum > MAX_BUCKETS_HOST) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "var", std::to_string(varFirstDim).c_str(),
+            "var first axis exceeds the wide-index sort capacity (64 buckets of 2^30 rows)");
         return ge::GRAPH_FAILED;
     }
     uint64_t varTotal = varShape.GetShapeSize();
@@ -214,6 +224,8 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     td->sliceSize = sliceSize;
     td->varFirstDim = varFirstDim;
     td->ubChunkMax = ResolveUbChunkMax(context);
+    td->wideIndex = wideIndex ? 1UL : 0UL;
+    td->bucketNum = bucketNum;
 
     context->SetBlockDim(blockNum);
     context->SetTilingKey(0);

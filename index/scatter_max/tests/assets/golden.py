@@ -79,22 +79,36 @@ def __golden_scatter_max(*input_arrays, **kwargs):
     acc_dtype = np.int32 if sub_int else (np.float32 if narrow_fp else var.dtype)
     need_narrow = acc_dtype != var.dtype
     work_dtype = acc_dtype
-    work = torch.from_numpy(out.astype(work_dtype, copy=False))
-    upd_w = torch.from_numpy(upd.astype(work_dtype, copy=False))
 
-    # 越界索引先剔除（与 kernel 的 skip 一致），剩下的交给 torch 竞品算子；
-    # include_self=True 即 max(var 原值, 命中该行的所有 updates)，重复索引顺序无关。
-    idx_t = torch.from_numpy(idx_flat.astype(np.int64))
-    valid = (idx_t >= 0) & (idx_t < var_first_dim)
-    idx_t = idx_t[valid]
-    if idx_t.numel() > 0:
-        work.index_reduce_(0, idx_t, upd_w[valid], "amax", include_self=True)
+    # 越界索引先剔除（与 kernel 的 skip 一致），再把命中的行压缩成小张量交给 torch 竞品
+    # 算子；include_self=True 即 max(var 原值, 命中该行的所有 updates)，重复索引顺序无关。
+    # 只对被索引命中的行做归约: 未命中行按 scatter 语义原值输出。为整个 var 开 acc 缓冲时,
+    # var 首维 2^30(int8 入参、int32 acc)要 4.3GB、2^32 要 17GB —— golden 会先于算子 OOM,
+    # 宽档用例一例也验不了。逐元素结果与全量计算相同。
+    idx64 = idx_flat.astype(np.int64)
+    valid = (idx64 >= 0) & (idx64 < var_first_dim)
+    pos = np.nonzero(valid)[0]
+    if pos.size == 0:
+        return [out]  # 全部越界：与 kernel 一致，var 原值输出
+    # touched 为去重后的真实行号（有序），inverse 是各条目在 touched 中的下标；
+    # 行号重标号不改变 amax 结果。
+    touched, inverse = np.unique(idx64[pos], return_inverse=True)
+    work = torch.from_numpy(
+        np.ascontiguousarray(out[touched]).astype(work_dtype, copy=False)
+    )
+    upd_w = torch.from_numpy(
+        np.ascontiguousarray(upd[pos]).astype(work_dtype, copy=False)
+    )
+    work.index_reduce_(
+        0, torch.from_numpy(inverse.astype(np.int64)), upd_w, "amax", include_self=True
+    )
 
     # 浮点出口不 cast(TTK 负责); 整型无 Promote, 由此处复刻 NarrowStore。
-    out_arr = work.numpy()
+    res = work.numpy()
     if need_narrow:
-        out_arr = out_arr.astype(var.dtype)
-    return [out_arr]
+        res = res.astype(var.dtype)
+    out[touched] = res
+    return [out]
 
 
 def __golden_scatter_max_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -112,9 +126,11 @@ __golden__ = {
 }
 
 # ----------------------------------------------------------------------------
-# TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
-# third_party 用 torch 竞品算子在设备侧跑，供 cross_check 比对；
-# customize_inputs 即原 input.py 的合法索引重采样（原文件保留，不影响旧机制）。
+# TTK 新版 spec 注册: 保留原 golden，补三方标杆。
+# third_party 用 torch / tf 竞品算子在设备侧跑，供 cross_check 比对。
+# 不注册 customize_inputs —— 索引取值(含跨桶同低位、超 int32、INT64_MAX 等)直接写在
+# 用例集的 input_data_ranges 多元组里，由 TTK 保证这些值必然出现在生成数据中。
+# golden 只负责算参照值，不承担输入构造。
 # ----------------------------------------------------------------------------
 # 浮点走 cross_check: 本算子挂了 third_party, 而 TTK 仅在 standard == cross_check 时
 # 才取用三方腿 —— 写成 binary_equal 会让三方腿永不被调用, golden 成为唯一裁判。
@@ -168,40 +184,6 @@ def _tp_t(x):
     # Promote(fp32) 的 golden 逐位相等, cross_check 分母塌到 safe_div 的 small_value 地板,
     # 判据退化成"NPU 与 fp32 参照的绝对误差", 随输出量级线性放大而必红。
     return t.clone()
-
-
-def scatter_max_input(var, indices, updates, **kwargs):
-    """
-    Input function for scatter_max.
-    All the parameters (names and order) follow scatter_max_def.cpp without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    Default random indices may fall out of [0, var.shape[0]); resample them into
-    the legal first-dim range so var[indices[i]] is always addressable (kernel
-    silently skips out-of-range indices, but golden/kernel agree only on legal ones).
-
-    Args:
-        **kwargs: input_dtypes, full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        Input tensors
-    """
-    shape_indices, dtype_indices, size_indices = (
-        indices.shape,
-        indices.dtype,
-        indices.size,
-    )
-    max_indices = var.shape[0]
-
-    if var.size * indices.size * updates.size == 0:
-        return [var, indices, updates]
-
-    replace = size_indices > max_indices
-    indices = np.random.choice(max_indices, size_indices, replace=replace).astype(
-        dtype_indices
-    )
-    indices = np.reshape(indices, shape_indices)
-    return [var, indices, updates]
 
 
 class _ScatterMaxCompose:
@@ -334,7 +316,6 @@ _GOLDEN_FN = __golden_scatter_max
 class ScatterMaxKernelSpec:
     golden = _GOLDEN_FN
     third_party = {"torch": _TpKernelFaithful, "tf": _ScatterMaxTfCompose}
-    customize_inputs = scatter_max_input
     tolerance = _TOL_KERNEL
 
 
@@ -372,77 +353,51 @@ class ScatterMaxE2eSpec:
     tolerance = _TOL_E2E
 
 
-__spec__ = {
-    "scatter_max": "ScatterMaxKernelSpec",
-    "tf.compat.v1.scatter_max": "ScatterMaxE2eSpec",
-    "aclnnScatterMax": "ScatterMaxAclnnSpec",
-}
-
-
-def _tp_one(t):
-    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它。
-
-    三方腿的输入 dtype 与 NPU 一致, torch 算完自然就是同一 dtype, 无需人为抬档或回 cast;
-    是否在内部抬到 fp32 由 torch 的算子实现自行决定。此前无条件把 fp16/bf16 抬到 fp32,
-    会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
-    §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
-
-    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
-    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
-    """
-    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
-
-
-def _keep_dtype(res, ref):
-    """golden 输出 dtype 必须与算子输出一致: 比对按 dtype 判定, fp16/bf16 提到 fp32
-    算完必须还原, 否则 binary_equal 直接判 "dtype 不可比"(实测 GOLD 0%)。
-    golden_mode=Promote 时入参本身已是 fp32, 此处是恒等操作。"""
-    refs = ref if isinstance(ref, (list, tuple)) else [ref] * len(res)
-    return [
-        t.to(r.dtype)
-        if isinstance(t, torch.Tensor) and isinstance(r, torch.Tensor)
-        else t
-        for t, r in zip(res, refs)
-    ]
-
-
 class ScatterMaxAclnnSpec:
-    """aclnn 通路 spec。golden 由 TTK 按 aclnn 头文件形参**位置**下发
-    (AclnnParamPlan.build_args), 故签名逐项对齐 aclnnScatterMaxGetWorkspaceSize 的
-    形参 varRef/indices/updates/useLocking;
-    third_party 走按名绑定(pool 的 key 取自头文件形参名), 用适配类把头文件的
-    varRef 接到 kernel 通路竞品类的 def 注册名 var 上。"""
+    """aclnn 通路 spec。
+
+    golden 由 TTK 按 aclnn 头文件形参**位置**下发(AclnnParamPlan.build_args),
+    故签名对齐 aclnnScatterMaxGetWorkspaceSize 的 varRef/indices/updates/useLocking;
+    third_party 按**形参名**绑定, 用适配类把头文件的 varRef 接到竞品类的 def 注册名 var。
+    """
 
     @staticmethod
     def golden(varRef, indices, updates, useLocking=None, **kwargs):
-        work = _tp_one(varRef).clone()
-        if _scatter_noop(work, updates):
-            return _keep_dtype([work], varRef)
-        upd = _tp_one(updates).reshape((-1,) + tuple(work.shape[1:]))
-        it = indices if isinstance(indices, torch.Tensor) else torch.as_tensor(indices)
-        idx = it.reshape(-1).to(torch.int64)
-        valid = (idx >= 0) & (idx < work.shape[0])
-        idx = idx[valid]
-        if idx.numel() > 0:
-            work = work.index_reduce(0, idx, upd[valid], "amax", include_self=True)
-        return _keep_dtype([work], varRef)
+        """入参为 torch 张量/numpy 视图, 还原成 numpy 后转接 kernel 档 golden(单一真源)。
+
+        类体内不能直接写 __golden_xxx —— 会被改写成 _ScatterMaxAclnnSpec__golden_xxx, 故用 _GOLDEN_FN。
+        """
+
+        def _np(x):
+            if hasattr(x, "detach"):
+                return x.detach().cpu().numpy()
+            return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+        return _GOLDEN_FN(_np(varRef), _np(indices), _np(updates), **kwargs)
 
     class _Compose:
         def __call__(self, varRef, indices, updates, **kwargs):
             return _ScatterMaxCompose()(varRef, indices, updates, **kwargs)
 
-    third_party = {"torch": _Compose}
+    class _TfCompose:
+        def __call__(self, varRef, indices, updates, **kwargs):
+            return _ScatterMaxTfCompose()(varRef, indices, updates, **kwargs)
+
+    third_party = {"torch": _Compose, "tf": _TfCompose}
     tolerance = _TOL_KERNEL
 
 
 # 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# TensorFlow: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterMax")。
-#   三方标杆(精度/性能)已补: third_party["tf"] = _ScatterMaxTfCompose, 跑 --provider tf。
-#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
-#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
-#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
-#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
-#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
-# e2e / ONNX / 融合 pass: 均未交付。
+# __spec__ 已注册: kernel + GEIR(复用 kernel spec) + aclnn + e2e(TF 前端);
+#   三个 spec 的 third_party 均为 {"torch", "tf"}, tf 腿跑 --provider tf。
+# TF 通路连通性: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterMax"), 但 NPU 侧要把
+#   TF 图下沉到本算子需要 Ascend TF adapter(npu_device/tfplugin); 该组件未装时按
+#   预生成 .pb + aclgrphParseTensorFlow 验证连通性。
+# ONNX / 融合 pass: 均未交付。
+
+
+__spec__ = {
+    "scatter_max": "ScatterMaxKernelSpec",
+    "tf.compat.v1.scatter_max": "ScatterMaxE2eSpec",
+    "aclnnScatterMax": "ScatterMaxAclnnSpec",
+}
