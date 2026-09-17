@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  对输入`x`执行SwiGLU激活后进行分组低比特量化，支持Block FP8、MX FP8、MX FP4、HiFloat8静态量化和HiFloat8动态量化。底层封装 `aclnnSwigluGroupQuant`。
+  对输入`x`执行SwiGLU激活后进行分组低比特量化，支持Block FP8、MX FP8、HiFloat8静态量化和HiFloat8动态量化。底层封装 `aclnnSwigluGroupQuant`。
 
 - 计算流程：
 
@@ -74,7 +74,7 @@ cann_ops_nn.swiglu_group_quant(
 | `quant_mode` | 含义 | `dst_type` 支持值 | `y` 的 torch dtype | `y_scale` 的 torch dtype |
 | --- | --- | --- | --- | --- |
 | `0` | Block FP8 | `23`/`291`表示`float8_e5m2`；`24`/`292`表示`float8_e4m3fn` | `torch.float8_e5m2`或`torch.float8_e4m3fn` | `torch.float32` |
-| `1` | MX FP8 / MX FP4 | `23`、`24`、`291`、`292`、`296`、`297` | FP8使用torch FP8 dtype；FP4在eager/图模式（aclgraph）路径使用`torch.uint8`打包存储。TorchAir GE图模式中`296`输出类型为`torch.float4_e2m1fn_x2`，`297`输出类型为`torch.uint8` | `torch.float8_e8m0fnu` |
+| `1` | MX FP8 | `23`、`24`、`291`、`292` | `torch.float8_e5m2`或`torch.float8_e4m3fn` | `torch.float8_e8m0fnu` |
 | `2` | HiFloat8 静态量化 | `290`表示HiFloat8 | `torch.uint8` | `torch.float32`，shape为`[0]` |
 | `3` | HiFloat8 动态量化 |  `290`表示HiFloat8 | `torch.uint8` | `torch.float32` |
 
@@ -87,8 +87,6 @@ cann_ops_nn.swiglu_group_quant(
 | `291` | `torch_npu.float8_e5m2`，语义同`torch.float8_e5m2` | torch_npu扩展dtype编码 | `DT_FLOAT8_E5M2` / `ACL_FLOAT8_E5M2` | `0`、`1` |
 | `292` | `torch_npu.float8_e4m3fn`，语义同`torch.float8_e4m3fn` | torch_npu扩展dtype编码 | `DT_FLOAT8_E4M3FN` / `ACL_FLOAT8_E4M3FN` | `0`、`1` |
 | `290` | `torch_npu.hifloat8` | torch_npu扩展dtype编码 | `DT_HIFLOAT8` / `ACL_HIFLOAT8` | `2`、`3` |
-| `296` | `torch_npu.float4_e2m1fn_x2` | torch_npu扩展dtype编码 | `DT_FLOAT4_E2M1` / `ACL_FLOAT4_E2M1` | `1` |
-| `297` | `torch_npu.float4_e1m2fn_x2` | torch_npu扩展dtype编码 | `DT_FLOAT4_E1M2` / `ACL_FLOAT4_E1M2` | `1` |
 
 说明：`quant_mode=2/3`为HiFloat8模式，实际下发为`DT_HIFLOAT8`/`ACL_HIFLOAT8`。graph_convert会把上表中的torch dtype编码转换为GE dtype attr，ACLNN路径会把对应编码转换为`aclDataType`后调用底层接口。
 
@@ -96,7 +94,7 @@ cann_ops_nn.swiglu_group_quant(
 
 | 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
-| `y` | Tensor | 量化输出。 | 参见`quant_mode 与 dst_type` | FP8/HiFloat8为`x.shape[:-1] + [D/2]`；FP4为`x.shape[:-1] + [D/4]`（torch侧以`torch.uint8`打包存储，2个FP4值占1字节） |
+| `y` | Tensor | 量化输出。 | 参见`quant_mode 与 dst_type` | `x.shape[:-1] + [D/2]` |
 | `y_scale` | Tensor | 量化scale输出。 | 参见`quant_mode 与 dst_type` | `quant_mode=0`为`x.shape[:-1] + [ceil((D/2)/128)]`；`quant_mode=1`为`x.shape[:-1] + [ceil(ceil((D/2)/32)/2), 2]`；`quant_mode=2`为`[0]`；`quant_mode=3`为`group_index.shape`或`[1]` |
 | `y_origin` | Tensor | 量化前SwiGLU结果或占位Tensor。 | 与`x`相同 | `output_origin=True`时为`x.shape[:-1] + [D/2]`，否则为`[0]` |
 
@@ -107,12 +105,11 @@ cann_ops_nn.swiglu_group_quant(
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `x`、`weight`、`group_index`、`scale`均需为NPU Tensor；可选Tensor可以传 `None`。
 - 输入`x`为2-8维（quant_mode为1时为2-7维），最后一维`D`必须大于等于256且能被256整除。
-- `dst_type`支持FP8、FP4和HiFloat8对应的torch dtype编码，详见`dst_type 编码说明`。
+- `dst_type`支持FP8和HiFloat8对应的torch dtype编码，详见`dst_type 编码说明`。
 - `quant_mode=0`时仅支持FP8输出，`dst_type`支持`23`、`24`、`291`、`292`，`block_size`支持`0`或`128`。
-- `quant_mode=1`时支持FP8/FP4 输出，`dst_type`支持`23`、`24`、`291`、`292`、`296`、`297`，`block_size`支持`0`或`32`，`round_scale`必须为`True`。
+- `quant_mode=1`时支持FP8输出，`dst_type`支持`23`、`24`、`291`、`292`，`block_size`支持`0`或`32`，`round_scale`必须为`True`。
 - `quant_mode=2`时支持HiFloat8静态量化输出，需传入`scale`，`dst_type`、`block_size`和`round_scale`不生效，实际下发HiFloat8。
 - `quant_mode=3`时支持HiFloat8动态量化输出，不使用`scale`，`dst_type`、`block_size`和`round_scale`不生效，实际下发 HiFloat8。
-- `dst_type`为`296`或`297`，即`FLOAT4_E2M1`或`FLOAT4_E1M2`时，必须使用`quant_mode=1`。
 - `y_scale`的数据类型必须与`quant_mode`匹配：Block FP8为`torch.float32`，MX为`torch.float8_e8m0fnu`，HiFloat8为`torch.float32`。
 - `quant_mode=3`时，`group_index`可用于MoE场景的分组动态量化；`y_scale`的shape为`group_index.shape`，未传`group_index`时为`[1]`。
 - `clamp_limit`不启用时使用默认占位值`-1.0`；启用时必须大于0。
@@ -140,18 +137,6 @@ cann_ops_nn.swiglu_group_quant(
       dst_type=291,
       quant_mode=0,
       block_size=128,
-  )
-  ```
-
-  MX FP4 模式：
-
-  ```python
-  y, y_scale, y_origin = torch.ops.cann_ops_nn.swiglu_group_quant(
-      x,
-      dst_type=296,
-      quant_mode=1,
-      block_size=32,
-      round_scale=True,
   )
   ```
 

@@ -433,7 +433,7 @@ $$
     <tr>
       <td>dst_type</td>
       <td>属性</td>
-      <td>目标量化类型。仅quantMode为0或1时，该参数生效。支持取值35、36、40、41，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。dstType为40或41时，quantMode必须为1。</td>
+      <td>目标量化类型。仅quantMode为0或1时，该参数生效。支持取值35、36，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -482,8 +482,8 @@ $$
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]，其中dstType为40或41（FLOAT4）时，2个元素打包为1字节，实际占用存储为D/4字节。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
-      <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
+      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]。quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</td>
+      <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -506,7 +506,7 @@ $$
 
 - 确定性计算：aclnnSwigluGroupQuant默认确定性实现。
 - quantMode为0时，仅支持FP8输出，blockSize支持0或128。
-- quantMode为1时，支持FP8/FP4输出，blockSize支持0或32，roundScale必须为true。
+- quantMode为1时，支持FP8输出，blockSize支持0或32，roundScale必须为true。
 - quantMode为2或3时，支持HIFP8量化输出，dstType, blockSize和roundScale不生效。输入x的维度为[T, D]或[B, S, D]，需满足以下规格约束：
 
   | 规格项 | 规格 | 规格说明 |
@@ -516,7 +516,6 @@ $$
   | D/2 | 512, 768, 1024, 1536, 1792, 2048, 2560, 4096 | - |
   | dstTypeMax | 15, 56, 224, 32768 | - |
 
-- dstType为FLOAT4_E2M1或FLOAT4_E1M2时，必须使用quantMode=1。
 - yScale的数据类型必须与quantMode匹配：Block FP8为FLOAT32，MX为FLOAT8_E8M0，HIFP8为FLOAT32。
 - groupIndex中的元素值须大于等于0。
 
