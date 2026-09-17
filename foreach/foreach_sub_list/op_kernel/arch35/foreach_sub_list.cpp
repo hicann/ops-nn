@@ -22,6 +22,9 @@ enum class ForeachSubListTilingKey : uint32_t {
     TILING_KEY_FLOAT16 = 1,
     TILING_KEY_INT32 = 2,
     TILING_KEY_BF16 = 3,
+    TILING_KEY_INT16 = 4,
+    TILING_KEY_INT8 = 5,
+    TILING_KEY_UINT8 = 6,
 };
 
 template <uint32_t schMode>
@@ -34,12 +37,18 @@ __global__ __aicore__ void foreach_sub_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR alph
     const ForeachSubListTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachSubList::Process<float>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<float, float>(x1, x2, alpha, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachSubList::Process<half>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<half, half>(x1, x2, alpha, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT32)) {
-        NsForeachSubList::Process<int32_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<int32_t, int32_t>(x1, x2, alpha, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_BF16)) {
-        NsForeachSubList::Process<bfloat16_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<bfloat16_t, float>(x1, x2, alpha, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT16)) {
+        NsForeachSubList::Process<int16_t, int32_t>(x1, x2, alpha, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT8)) {
+        NsForeachSubList::Process<int8_t, int32_t>(x1, x2, alpha, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_UINT8)) {
+        NsForeachSubList::Process<uint8_t, int32_t>(x1, x2, alpha, y, tilingGm);
     }
 }

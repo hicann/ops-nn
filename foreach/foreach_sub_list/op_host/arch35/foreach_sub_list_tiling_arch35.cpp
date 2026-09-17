@@ -35,6 +35,74 @@ constexpr int32_t MAX_TENSOR_NUM = 256;
 
 struct ForeachSubListCompileInfo {};
 
+static ge::DataType GetExpectedAlphaDtype(ge::DataType inputDtype)
+{
+    switch (inputDtype) {
+        case ge::DT_FLOAT16:
+            return ge::DT_FLOAT16;
+        case ge::DT_FLOAT:
+        case ge::DT_BF16:
+            return ge::DT_FLOAT;
+        case ge::DT_INT32:
+        case ge::DT_INT16:
+        case ge::DT_INT8:
+        case ge::DT_UINT8:
+            return ge::DT_INT32;
+        default:
+            return ge::DT_UNDEFINED;
+    }
+}
+
+static ge::graphStatus CheckInputCompatibility(gert::TilingContext* context, uint64_t tensorNum,
+                                               ge::DataType inputDtype)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+    auto x2InstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_X2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x2InstanceInfoPtr);
+    OP_CHECK_IF(x2InstanceInfoPtr->GetInstanceNum() != tensorNum,
+                OP_LOGE(context, "x1 and x2 must contain the same number of tensors, but got %lu and %lu", tensorNum,
+                        x2InstanceInfoPtr->GetInstanceNum()),
+                return ge::GRAPH_FAILED);
+
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto x1Desc = context->GetDynamicInputDesc(INPUT_IDX_X1, i);
+        auto x2Desc = context->GetDynamicInputDesc(INPUT_IDX_X2, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1Desc);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x2Desc);
+        OP_CHECK_IF(x1Desc->GetDataType() != inputDtype || x2Desc->GetDataType() != inputDtype,
+                    OP_LOGE(context, "x1[%lu] and x2[%lu] must have dtype %d, but got %d and %d", i, i,
+                            static_cast<int32_t>(inputDtype), static_cast<int32_t>(x1Desc->GetDataType()),
+                            static_cast<int32_t>(x2Desc->GetDataType())),
+                    return ge::GRAPH_FAILED);
+
+        auto x1Shape = context->GetDynamicInputShape(INPUT_IDX_X1, i);
+        auto x2Shape = context->GetDynamicInputShape(INPUT_IDX_X2, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x2Shape);
+        OP_CHECK_IF(x1Shape->GetStorageShape() != x2Shape->GetStorageShape(),
+                    OP_LOGE(context, "x1[%lu] and x2[%lu] must have the same storage shape", i, i),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto alphaDesc = context->GetRequiredInputDesc(INPUT_IDX_ALPHA);
+    OP_CHECK_NULL_WITH_CONTEXT(context, alphaDesc);
+    ge::DataType expectedAlphaDtype = GetExpectedAlphaDtype(inputDtype);
+    OP_CHECK_IF(alphaDesc->GetDataType() != expectedAlphaDtype,
+                OP_LOGE(context, "alpha dtype must be %d when x1/x2 dtype is %d, but got %d",
+                        static_cast<int32_t>(expectedAlphaDtype), static_cast<int32_t>(inputDtype),
+                        static_cast<int32_t>(alphaDesc->GetDataType())),
+                return ge::GRAPH_FAILED);
+
+    auto alphaShape = context->GetRequiredInputShape(INPUT_IDX_ALPHA);
+    OP_CHECK_NULL_WITH_CONTEXT(context, alphaShape);
+    OP_CHECK_IF(alphaShape->GetStorageShape().GetShapeSize() != 1,
+                OP_LOGE(context, "alpha must contain exactly one element, but got %ld",
+                        alphaShape->GetStorageShape().GetShapeSize()),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
@@ -63,6 +131,8 @@ static ge::graphStatus ForeachSubListTilingFunc(gert::TilingContext* context)
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_X1, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dataType = inputDesc->GetDataType();
+    OP_CHECK_IF(CheckInputCompatibility(context, tensorNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "input compatibility check failed"), return ge::GRAPH_FAILED);
 
     ForeachSubListTilingData* tiling = context->GetTilingData<ForeachSubListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -109,6 +179,12 @@ static ge::graphStatus ForeachSubListTilingFunc(gert::TilingContext* context)
         tilingKey = GET_TPL_TILING_KEY(FOREACH_SUB_LIST_TPL_SCH_MODE_INT32);
     } else if (dataType == ge::DT_BF16) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_SUB_LIST_TPL_SCH_MODE_BF16);
+    } else if (dataType == ge::DT_INT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_SUB_LIST_TPL_SCH_MODE_INT16);
+    } else if (dataType == ge::DT_INT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_SUB_LIST_TPL_SCH_MODE_INT8);
+    } else if (dataType == ge::DT_UINT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_SUB_LIST_TPL_SCH_MODE_UINT8);
     } else {
         OP_LOGE(context, "unsupported dtype for foreach_sub_list");
         return ge::GRAPH_FAILED;

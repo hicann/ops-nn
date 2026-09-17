@@ -19,6 +19,9 @@ enum class ForeachExpTilingKey : uint32_t {
     TILING_KEY_FLOAT = 0,
     TILING_KEY_FLOAT16 = 1,
     TILING_KEY_BF16 = 2,
+    TILING_KEY_INT16 = 3,
+    TILING_KEY_INT8 = 4,
+    TILING_KEY_UINT8 = 5,
 };
 
 template <uint32_t schMode>
@@ -30,10 +33,16 @@ __global__ __aicore__ void foreach_exp(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     const ForeachExpTilingData* tilingGm = &tilingData;
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachExp::Process<float>(x, y, tilingGm);
+        NsForeachExp::Process<float, float>(x, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachExp::Process<half>(x, y, tilingGm);
+        NsForeachExp::Process<half, half>(x, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_BF16)) {
-        NsForeachExp::Process<bfloat16_t>(x, y, tilingGm);
+        NsForeachExp::Process<bfloat16_t, bfloat16_t>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_INT16)) {
+        NsForeachExp::Process<int16_t, float>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_INT8)) {
+        NsForeachExp::Process<int8_t, float>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_UINT8)) {
+        NsForeachExp::Process<uint8_t, float>(x, y, tilingGm);
     }
 }

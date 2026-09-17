@@ -50,7 +50,10 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
  * \brief Promote half/bf16 to float32 for precision
  */
 template <typename T>
-__simt_callee__ inline float PromoteToFloat(T val);
+__simt_callee__ inline float PromoteToFloat(T val)
+{
+    return static_cast<float>(val);
+}
 
 template <>
 __simt_callee__ inline float PromoteToFloat<half>(half val)
@@ -71,53 +74,29 @@ __simt_callee__ inline float PromoteToFloat<float>(float val)
 }
 
 /**
- * \brief Cast float32 back to half/bf16
- */
-template <typename T>
-__simt_callee__ inline T CastFromFloat(float val);
-
-template <>
-__simt_callee__ inline half CastFromFloat<half>(float val)
-{
-    return static_cast<half>(val);
-}
-
-template <>
-__simt_callee__ inline bfloat16_t CastFromFloat<bfloat16_t>(float val)
-{
-    return static_cast<bfloat16_t>(val);
-}
-
-template <>
-__simt_callee__ inline float CastFromFloat<float>(float val)
-{
-    return val;
-}
-
-/**
  * \brief SIMT VF kernel: compute exp for all elements across all tensors
  */
-template <typename T>
+template <typename X_T, typename Y_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachExpSimt(int32_t tensorId, int64_t count,
                                                                              GM_ADDR xList, GM_ADDR yList)
 {
-    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
-    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    __gm__ X_T* xData = SimtGetTensorAddr<X_T>(xList, tensorId);
+    __gm__ Y_T* yData = SimtGetTensorAddr<Y_T>(yList, tensorId);
     uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
                                          AscendC::Simt::GetThreadIdx());
     uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
     for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-        T xVal = xData[idx];
-        float xFloat = PromoteToFloat<T>(xVal);
+        X_T xVal = xData[idx];
+        float xFloat = PromoteToFloat<X_T>(xVal);
         float yFloat = expf(xFloat);
-        yData[idx] = CastFromFloat<T>(yFloat);
+        yData[idx] = static_cast<Y_T>(yFloat);
     }
 }
 
 /**
  * \brief Process entry: launch SIMT VF for foreach_exp
  */
-template <typename T>
+template <typename X_T, typename Y_T>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachExpTilingData* tilingGm)
 {
     for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
@@ -125,7 +104,7 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachExpTilingData*
         if (count <= 0) {
             continue;
         }
-        AscendC::Simt::VF_CALL<OpForeachExpSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y);
+        AscendC::Simt::VF_CALL<OpForeachExpSimt<X_T, Y_T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y);
     }
 }
 

@@ -65,7 +65,8 @@ private:
     OpAICoreConfig GetA5CoreConfig() const
     {
         OpAICoreConfig config_950;
-        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16,
+                                                           ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
         std::vector<ge::Format> format_list_950(tensor_dtype_list_950.size(), ge::FORMAT_ND);
         std::vector<ge::DataType> scalar_tensor_dtype_list_950;
         std::for_each(tensor_dtype_list_950.cbegin(), tensor_dtype_list_950.cend(),

@@ -62,8 +62,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachRoundOffNum
             yData[idx] = rintf(xVal);
         } else if constexpr (std::is_same_v<T, half>) {
             yData[idx] = hrint(xVal);
-        } else {
+        } else if constexpr (std::is_same_v<T, bfloat16_t>) {
             yData[idx] = static_cast<bfloat16_t>(rintf(static_cast<float>(xVal)));
+        } else {
+            // Rounding an integer is an identity operation.
+            yData[idx] = xVal;
         }
     }
 }

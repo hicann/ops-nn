@@ -48,48 +48,37 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 /**
- * \brief Compute expm1 with type promotion for half/bfloat16
- * \note half/bfloat16 are promoted to float32 for computation, then cast back
+ * \brief Compute expm1 in float32 and cast to the registered output type
  */
-template <typename T>
-__simt_callee__ inline T ComputeExpm1(T x)
+template <typename X_T, typename Y_T>
+__simt_callee__ inline Y_T ComputeExpm1(X_T x)
 {
-    // Generic path: cast to float, compute expm1f, cast back
     float xFloat = static_cast<float>(x);
     float resultFloat = expm1f(xFloat);
-    return static_cast<T>(resultFloat);
-}
-
-/**
- * \brief Specialization for float: direct expm1f call
- */
-template <>
-__simt_callee__ inline float ComputeExpm1<float>(float x)
-{
-    return expm1f(x);
+    return static_cast<Y_T>(resultFloat);
 }
 
 /**
  * \brief SIMT VF kernel: compute expm1 for all elements across all tensors
  */
-template <typename T>
+template <typename X_T, typename Y_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachExpm1Simt(int32_t tensorId, int64_t count,
                                                                                GM_ADDR xList, GM_ADDR yList)
 {
-    __gm__ T* xData = SimtGetTensorAddr<T>(xList, tensorId);
-    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    __gm__ X_T* xData = SimtGetTensorAddr<X_T>(xList, tensorId);
+    __gm__ Y_T* yData = SimtGetTensorAddr<Y_T>(yList, tensorId);
     uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
                                          AscendC::Simt::GetThreadIdx());
     uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
     for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
-        yData[idx] = ComputeExpm1<T>(xData[idx]);
+        yData[idx] = ComputeExpm1<X_T, Y_T>(xData[idx]);
     }
 }
 
 /**
  * \brief Process entry: launch SIMT VF for foreach_expm1
  */
-template <typename T>
+template <typename X_T, typename Y_T>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachExpm1TilingData* tilingGm)
 {
     for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
@@ -97,7 +86,7 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachExpm1TilingDat
         if (count <= 0) {
             continue;
         }
-        AscendC::Simt::VF_CALL<OpForeachExpm1Simt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y);
+        AscendC::Simt::VF_CALL<OpForeachExpm1Simt<X_T, Y_T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x, y);
     }
 }
 
