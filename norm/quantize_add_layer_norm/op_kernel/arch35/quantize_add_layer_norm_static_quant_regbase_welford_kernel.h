@@ -20,7 +20,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "quantize_add_layer_norm_regbase_helper.h"
+#include "quantize_add_layer_norm_regbase_stats.h"
 
 namespace QuantizeAddLayerNormRegbase {
 template <typename X1_TYPE, typename SCALE_TYPE, int32_t TILING_KEY, int32_t OPT_CODE, int32_t BUFFER_NUM = 1>
@@ -83,30 +83,7 @@ public:
         yGm_.SetGlobalBuffer((__gm__ int8_t*)(y) + gmOffset);
         xGm_.SetGlobalBuffer((__gm__ X1_TYPE*)(x) + gmOffset);
 
-        colsPerLoopAlign_ = BLOCK_ALIGN(colsPerLoop_ * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-
-        pipe_->InitBuffer(x1Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(x2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(biasQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(xQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(yQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(int8_t)));
-        pipe_->InitBuffer(betaQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(gammaQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
-        pipe_->InitBuffer(scaleQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE)));
-
-        CONST_CONDITIONAL_EXPR(
-            IS_OFFSET_EXIST, pipe_->InitBuffer(zeroOffsetQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
-
-        pipe_->InitBuffer(meanBuf_, colsPerLoopAlign_ * sizeof(float));
-        pipe_->InitBuffer(varBuf_, colsPerLoopAlign_ * sizeof(float));
-
-        pipe_->InitBuffer(meanTmpBuf_, blockSize_);
-        pipe_->InitBuffer(rstdTmpBuf_, blockSize_);
-
-        int64_t binaryAddBufSize = BLOCK_ALIGN((binaryAddNum_ / vlFp32_) * sizeof(float), blockSize_);
-        if (binaryAddBufSize > 0) {
-            pipe_->InitBuffer(binaryAddBuf_, binaryAddBufSize);
-        }
+        InitQueues();
     }
 
     __aicore__ inline void CopyInputsToUB(LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local,
@@ -220,24 +197,8 @@ public:
                     CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, LoadQuantParams(offsetAddr, offset, pregLoop, i * vlFp32));
                 }
 
-                Adds(x, x, mean, pregLoop);
-                Muls(y, x, rstd, pregLoop);
-                Mul(y, y, gamma, pregLoop);
-                Add(y, y, beta, pregLoop); // LayerNorm result
-
-                // quant: y = round(norm / scales + zero_points)  (per_channel, div mode)
-                //        y = round(norm * scales + zero_points)  (mul_mode / per_tensor)
-                if constexpr (IS_DIV_SCALE) {
-                    Div(x, y, scale, pregLoop);
-                } else {
-                    Mul(x, y, scale, pregLoop);
-                }
-                CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, Add(x, x, offset, pregLoop));
-
-                Round2Int8(quantOut, x, pregLoop);
-
-                StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)quantOutAddr + i * vlFp32, quantOut,
-                                                              pregLoop);
+                YQuantMathChunk(x, y, gamma, beta, scale, offset, quantOut, pregLoop, mean, rstd, i, vlFp32,
+                                quantOutAddr);
             }
         }
     }
@@ -254,81 +215,10 @@ public:
         LocalTensor<float> binaryAddLocal = binaryAddBuf_.Get<float>();
 
         for (int64_t i = 0; i < rowsPerCore_; i++) {
-            int64_t count = 0;
-            int64_t inputOffsetTemp = inputOffset;
-            int64_t outputOffsetTemp = outputOffset;
-            int64_t biasOffset = 0;
-            if constexpr (IS_BIAS_ELEWISE) {
-                biasOffset = inputOffsetTemp;
-            }
-
             LocalTensor<float> meanLocal = meanTmpBuf_.Get<float>();
             LocalTensor<float> rstdLocal = rstdTmpBuf_.Get<float>();
 
-            for (int64_t j = 0; j < colsLoopCount_; j++) {
-                int32_t copyLen = (j == colsLoopCount_ - 1) ? colsTail_ : colsPerLoop_;
-
-                LocalTensor<X1_TYPE> x1Local = x1Queue_.template AllocTensor<X1_TYPE>();
-                LocalTensor<X1_TYPE> x2Local = x2Queue_.template AllocTensor<X1_TYPE>();
-                LocalTensor<X1_TYPE> biasLocal;
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasLocal = biasQueue_.template AllocTensor<X1_TYPE>();
-                }
-                // copy in x1, x2, bias
-                CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
-
-                x1Local = x1Queue_.template DeQue<X1_TYPE>();
-                x2Local = x2Queue_.template DeQue<X1_TYPE>();
-
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasLocal = biasQueue_.template DeQue<X1_TYPE>();
-                }
-
-                LocalTensor<X1_TYPE> xLocal = xQueue_.template AllocTensor<X1_TYPE>();
-
-                count += 1;
-                uint16_t loopCount = CEIL_DIV(copyLen, vlFp32_);
-                float scale = static_cast<float>(1.0) / static_cast<float>(count);
-
-                if (j == 0) {
-                    VFWelfordParallelUpdateCommon<true, X1_TYPE, TILING_KEY>(
-                        x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
-                } else {
-                    VFWelfordParallelUpdateCommon<false, X1_TYPE, TILING_KEY>(
-                        x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
-                }
-
-                // copy out x
-                if (outputX_) {
-                    xQueue_.EnQue(xLocal);
-                    xLocal = xQueue_.template DeQue<X1_TYPE>();
-                    CopyXToGm(xLocal, outputOffsetTemp, copyLen);
-                }
-
-                xQueue_.FreeTensor(xLocal);
-                x1Queue_.FreeTensor(x1Local);
-                x2Queue_.FreeTensor(x2Local);
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasQueue_.FreeTensor(biasLocal);
-                }
-
-                inputOffsetTemp += copyLen;
-                outputOffsetTemp = inputOffsetTemp;
-                biasOffset += copyLen;
-            }
-
-            if (colsTail_ != colsPerLoop_) {
-                VFWelfordParallelFinalizeNonAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
-                                                  colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
-                                                  colsTail_, reduceScale_, reduceScaleCorrection_, count - 1, eps_);
-            } else {
-                float scale = 1.0f / static_cast<float>(powerOfTwo_);
-                float scaleCorrection = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
-                VFWelfordParallelFinalizeAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
-                                               colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
-                                               reduceScale_, reduceScaleCorrection_, scale, scaleCorrection, count,
-                                               eps_);
-            }
+            ProcessWelfordStats(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal, inputOffset);
 
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(eventId);
@@ -336,73 +226,36 @@ public:
             float mean = meanLocal(0) * float(-1.0);
             float rstd = rstdLocal(0);
 
-            // calc y with VF
-            inputOffsetTemp = inputOffset;
-            outputOffsetTemp = outputOffset;
-            biasOffset = 0;
+            // calc y with VF (bisect cut3: the quant chunk is split at the MTE/VF boundary —
+            // alloc/load in QuantChunkPre, VF math via VFCalcYQuant called here in the loop,
+            // store/release in QuantChunkPost; a whole-iteration chunk function hung the device,
+            // see the MR #10498 real-card bisect log)
+            int64_t inputOffsetTemp = inputOffset;
+            int64_t outputOffsetTemp = outputOffset;
+            int64_t biasOffset = 0;
             if constexpr (IS_BIAS_ELEWISE) {
                 biasOffset = inputOffsetTemp;
             }
             int64_t inputOffsetGamma = 0;
             for (int64_t j = 0; j < colsLoopCount_; j++) {
                 int32_t copyLen = (j == colsLoopCount_ - 1) ? colsTail_ : colsPerLoop_;
-                LocalTensor<X1_TYPE> x1Local = x1Queue_.template AllocTensor<X1_TYPE>();
-                LocalTensor<X1_TYPE> x2Local = x2Queue_.template AllocTensor<X1_TYPE>();
+
+                LocalTensor<X1_TYPE> x1Local;
+                LocalTensor<X1_TYPE> x2Local;
                 LocalTensor<X1_TYPE> biasLocal;
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasLocal = biasQueue_.template AllocTensor<X1_TYPE>();
-                }
-                LocalTensor<X1_TYPE> gammaLocal = gammaQueue_.template AllocTensor<X1_TYPE>();
-                LocalTensor<X1_TYPE> betaLocal = betaQueue_.template AllocTensor<X1_TYPE>();
-
-                LocalTensor<SCALE_TYPE> scaleLocal = scaleQueue_.template AllocTensor<SCALE_TYPE>();
+                LocalTensor<X1_TYPE> gammaLocal;
+                LocalTensor<X1_TYPE> betaLocal;
+                LocalTensor<SCALE_TYPE> scaleLocal;
                 LocalTensor<SCALE_TYPE> offsetLocal;
-                CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetLocal,
-                                         zeroOffsetQueue_.template AllocTensor<SCALE_TYPE>());
-
-                // copy in x1, x2, bias
-                CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
-                // copy in gamma, beta
-                CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_,
-                                           inputOffsetGamma, copyLen, blockSize_);
-                // copy in scale/offset
-                CopyQuantParams2UB(scaleLocal, offsetLocal, inputOffsetGamma, copyLen);
-
-                x1Local = x1Queue_.template DeQue<X1_TYPE>();
-                x2Local = x2Queue_.template DeQue<X1_TYPE>();
-
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasLocal = biasQueue_.template DeQue<X1_TYPE>();
-                }
-
-                gammaLocal = gammaQueue_.template DeQue<X1_TYPE>();
-                betaLocal = betaQueue_.template DeQue<X1_TYPE>();
-
-                scaleLocal = scaleQueue_.template DeQue<SCALE_TYPE>();
-                CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetLocal, zeroOffsetQueue_.template DeQue<SCALE_TYPE>());
+                QuantChunkPre(x1Local, x2Local, biasLocal, gammaLocal, betaLocal, scaleLocal, offsetLocal,
+                              inputOffsetTemp, biasOffset, inputOffsetGamma, copyLen);
 
                 LocalTensor<int8_t> yLocal = yQueue_.template AllocTensor<int8_t>();
-
                 VFCalcYQuant(x1Local, x2Local, biasLocal, betaLocal, gammaLocal, scaleLocal, offsetLocal, mean, rstd,
                              yLocal, copyLen, vlFp32_);
 
-                // copy out y
-                yQueue_.EnQue(yLocal);
-                yLocal = yQueue_.template DeQue<int8_t>();
-                CopyYToGm(yLocal, outputOffsetTemp, copyLen);
-                yQueue_.FreeTensor(yLocal);
-
-                x1Queue_.FreeTensor(x1Local);
-                x2Queue_.FreeTensor(x2Local);
-                if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-                    biasQueue_.FreeTensor(biasLocal);
-                }
-
-                betaQueue_.FreeTensor(betaLocal);
-                gammaQueue_.FreeTensor(gammaLocal);
-
-                scaleQueue_.FreeTensor(scaleLocal);
-                CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, zeroOffsetQueue_.FreeTensor(offsetLocal));
+                QuantChunkPost(yLocal, x1Local, x2Local, biasLocal, gammaLocal, betaLocal, scaleLocal, offsetLocal,
+                               outputOffsetTemp, copyLen);
 
                 inputOffsetTemp += copyLen;
                 outputOffsetTemp = inputOffsetTemp;
@@ -415,6 +268,208 @@ public:
     }
 
 private:
+    __aicore__ inline void InitQueues()
+    {
+        colsPerLoopAlign_ = BLOCK_ALIGN(colsPerLoop_ * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
+
+        pipe_->InitBuffer(x1Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(x2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(biasQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(xQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(yQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(int8_t)));
+        pipe_->InitBuffer(betaQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(gammaQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
+        pipe_->InitBuffer(scaleQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE)));
+
+        CONST_CONDITIONAL_EXPR(
+            IS_OFFSET_EXIST, pipe_->InitBuffer(zeroOffsetQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
+
+        pipe_->InitBuffer(meanBuf_, colsPerLoopAlign_ * sizeof(float));
+        pipe_->InitBuffer(varBuf_, colsPerLoopAlign_ * sizeof(float));
+
+        pipe_->InitBuffer(meanTmpBuf_, blockSize_);
+        pipe_->InitBuffer(rstdTmpBuf_, blockSize_);
+
+        int64_t binaryAddBufSize = BLOCK_ALIGN((binaryAddNum_ / vlFp32_) * sizeof(float), blockSize_);
+        if (binaryAddBufSize > 0) {
+            pipe_->InitBuffer(binaryAddBuf_, binaryAddBufSize);
+        }
+    }
+
+    // Norm + quant math tail of one VFCalcYQuant cols iteration. Static like its caller;
+    // scope-less, called from inside VFCalcYQuant's __VEC_SCOPE__.
+    static __aicore__ inline void YQuantMathChunk(RegTensor<float>& x, RegTensor<float>& y, RegTensor<float>& gamma,
+                                                  RegTensor<float>& beta, RegTensor<float>& scale,
+                                                  RegTensor<float>& offset, RegTensor<int8_t>& quantOut,
+                                                  MaskReg& pregLoop, float mean, float rstd, uint16_t i,
+                                                  uint32_t vlFp32, __ubuf__ int8_t* quantOutAddr)
+    {
+        Adds(x, x, mean, pregLoop);
+        Muls(y, x, rstd, pregLoop);
+        Mul(y, y, gamma, pregLoop);
+        Add(y, y, beta, pregLoop); // LayerNorm result
+
+        // quant: y = round(norm / scales + zero_points)  (per_channel, div mode)
+        //        y = round(norm * scales + zero_points)  (mul_mode / per_tensor)
+        if constexpr (IS_DIV_SCALE) {
+            Div(x, y, scale, pregLoop);
+        } else {
+            Mul(x, y, scale, pregLoop);
+        }
+        CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, Add(x, x, offset, pregLoop));
+
+        Round2Int8(quantOut, x, pregLoop);
+
+        StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)quantOutAddr + i * vlFp32, quantOut, pregLoop);
+    }
+
+    // One Welford stats iteration: copy in, parallel update, copy out x. biasOffset is by
+    // reference and advanced per chunk so each chunk reads its own bias slice (master semantics).
+    __aicore__ inline void WelfordStatsChunk(LocalTensor<float>& tmpMeanLocal, LocalTensor<float>& tmpVarLocal,
+                                             int64_t j, int64_t& count, int64_t& inputOffsetTemp, int64_t& biasOffset)
+    {
+        int32_t copyLen = (j == colsLoopCount_ - 1) ? colsTail_ : colsPerLoop_;
+
+        LocalTensor<X1_TYPE> x1Local = x1Queue_.template AllocTensor<X1_TYPE>();
+        LocalTensor<X1_TYPE> x2Local = x2Queue_.template AllocTensor<X1_TYPE>();
+        LocalTensor<X1_TYPE> biasLocal;
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasLocal = biasQueue_.template AllocTensor<X1_TYPE>();
+        }
+        // copy in x1, x2, bias
+        CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
+
+        x1Local = x1Queue_.template DeQue<X1_TYPE>();
+        x2Local = x2Queue_.template DeQue<X1_TYPE>();
+
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasLocal = biasQueue_.template DeQue<X1_TYPE>();
+        }
+
+        LocalTensor<X1_TYPE> xLocal = xQueue_.template AllocTensor<X1_TYPE>();
+
+        count += 1;
+        uint16_t loopCount = CEIL_DIV(copyLen, vlFp32_);
+        float scale = static_cast<float>(1.0) / static_cast<float>(count);
+
+        if (j == 0) {
+            VFWelfordParallelUpdateCommon<true, X1_TYPE, TILING_KEY>(x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal,
+                                                                     tmpVarLocal, copyLen, loopCount, scale);
+        } else {
+            VFWelfordParallelUpdateCommon<false, X1_TYPE, TILING_KEY>(x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal,
+                                                                      tmpVarLocal, copyLen, loopCount, scale);
+        }
+
+        // copy out x
+        if (outputX_) {
+            xQueue_.EnQue(xLocal);
+            xLocal = xQueue_.template DeQue<X1_TYPE>();
+            CopyXToGm(xLocal, inputOffsetTemp, copyLen);
+        }
+
+        xQueue_.FreeTensor(xLocal);
+        x1Queue_.FreeTensor(x1Local);
+        x2Queue_.FreeTensor(x2Local);
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasQueue_.FreeTensor(biasLocal);
+        }
+        inputOffsetTemp += copyLen;
+        biasOffset += copyLen;
+    }
+
+    // Per-row Welford statistics pass + finalize.
+    __aicore__ inline void ProcessWelfordStats(LocalTensor<float>& meanLocal, LocalTensor<float>& rstdLocal,
+                                               LocalTensor<float>& tmpMeanLocal, LocalTensor<float>& tmpVarLocal,
+                                               LocalTensor<float>& binaryAddLocal, int64_t inputOffset)
+    {
+        int64_t count = 0;
+        int64_t inputOffsetTemp = inputOffset;
+        int64_t outputOffsetTemp = inputOffsetTemp;
+        int64_t biasOffset = 0;
+        if constexpr (IS_BIAS_ELEWISE) {
+            biasOffset = inputOffsetTemp;
+        }
+
+        for (int64_t j = 0; j < colsLoopCount_; j++) {
+            WelfordStatsChunk(tmpMeanLocal, tmpVarLocal, j, count, inputOffsetTemp, biasOffset);
+        }
+
+        if (colsTail_ != colsPerLoop_) {
+            VFWelfordParallelFinalizeNonAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
+                                              colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0, colsTail_,
+                                              reduceScale_, reduceScaleCorrection_, count - 1, eps_);
+        } else {
+            float scale = 1.0f / static_cast<float>(powerOfTwo_);
+            float scaleCorrection = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
+            VFWelfordParallelFinalizeAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
+                                           colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0, reduceScale_,
+                                           reduceScaleCorrection_, scale, scaleCorrection, count, eps_);
+        }
+    }
+
+    // Allocate and load every quant-pass tile of one cols chunk (x1/x2/bias re-loaded, plus
+    // gamma/beta/scales/zero_points), leaving all tiles DeQueued and ready for VFCalcYQuant.
+    __aicore__ inline void QuantChunkPre(LocalTensor<X1_TYPE>& x1Local, LocalTensor<X1_TYPE>& x2Local,
+                                         LocalTensor<X1_TYPE>& biasLocal, LocalTensor<X1_TYPE>& gammaLocal,
+                                         LocalTensor<X1_TYPE>& betaLocal, LocalTensor<SCALE_TYPE>& scaleLocal,
+                                         LocalTensor<SCALE_TYPE>& offsetLocal, int64_t inputOffsetTemp,
+                                         int64_t biasOffset, int64_t inputOffsetGamma, int32_t copyLen)
+    {
+        x1Local = x1Queue_.template AllocTensor<X1_TYPE>();
+        x2Local = x2Queue_.template AllocTensor<X1_TYPE>();
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasLocal = biasQueue_.template AllocTensor<X1_TYPE>();
+        }
+        gammaLocal = gammaQueue_.template AllocTensor<X1_TYPE>();
+        betaLocal = betaQueue_.template AllocTensor<X1_TYPE>();
+        scaleLocal = scaleQueue_.template AllocTensor<SCALE_TYPE>();
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetLocal, zeroOffsetQueue_.template AllocTensor<SCALE_TYPE>());
+
+        // copy in x1, x2, bias
+        CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
+        // copy in gamma, beta
+        CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, inputOffsetGamma,
+                                   copyLen, blockSize_);
+        // copy in scale/offset
+        CopyQuantParams2UB(scaleLocal, offsetLocal, inputOffsetGamma, copyLen);
+
+        x1Local = x1Queue_.template DeQue<X1_TYPE>();
+        x2Local = x2Queue_.template DeQue<X1_TYPE>();
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasLocal = biasQueue_.template DeQue<X1_TYPE>();
+        }
+        gammaLocal = gammaQueue_.template DeQue<X1_TYPE>();
+        betaLocal = betaQueue_.template DeQue<X1_TYPE>();
+        scaleLocal = scaleQueue_.template DeQue<SCALE_TYPE>();
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetLocal, zeroOffsetQueue_.template DeQue<SCALE_TYPE>());
+    }
+
+    // Store the quantized y chunk back to GM and release every quant-pass tile.
+    __aicore__ inline void QuantChunkPost(LocalTensor<int8_t>& yLocal, LocalTensor<X1_TYPE>& x1Local,
+                                          LocalTensor<X1_TYPE>& x2Local, LocalTensor<X1_TYPE>& biasLocal,
+                                          LocalTensor<X1_TYPE>& gammaLocal, LocalTensor<X1_TYPE>& betaLocal,
+                                          LocalTensor<SCALE_TYPE>& scaleLocal, LocalTensor<SCALE_TYPE>& offsetLocal,
+                                          int64_t outputOffsetTemp, int32_t copyLen)
+    {
+        // copy out y
+        yQueue_.EnQue(yLocal);
+        yLocal = yQueue_.template DeQue<int8_t>();
+        CopyYToGm(yLocal, outputOffsetTemp, copyLen);
+        yQueue_.FreeTensor(yLocal);
+
+        x1Queue_.FreeTensor(x1Local);
+        x2Queue_.FreeTensor(x2Local);
+        if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
+            biasQueue_.FreeTensor(biasLocal);
+        }
+
+        betaQueue_.FreeTensor(betaLocal);
+        gammaQueue_.FreeTensor(gammaLocal);
+
+        scaleQueue_.FreeTensor(scaleLocal);
+        CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, zeroOffsetQueue_.FreeTensor(offsetLocal));
+    }
+
     TQue<QuePosition::VECIN, BUFFER_NUM> x1Queue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> x2Queue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> biasQueue_;
