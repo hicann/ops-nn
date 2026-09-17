@@ -196,12 +196,33 @@ TEST_F(ScatterMaxTiling, test_tiling_updates_shape_mismatch)
 }
 
 // var first dim > INT32_MAX -> in-bound index would overflow the int32 sort key -> reject
+// var 首维 > INT32_MAX: 曾因"32 位排序 key 装不下 in-bound index"被 tiling 拒收, 使 A5 支持面窄于
+// A2(910B 的 TIK 实现对首维无任何上限)。现改为接受并走两趟基数排序(lo 排序 + hi 稳定分区), 故断言
+// 由 GRAPH_FAILED 改为 GRAPH_SUCCESS —— 改的是这条断言固化下来的旧行为, 不是为迎合测试改实现。
 TEST_F(ScatterMaxTiling, test_tiling_var_dim0_over_int32max)
 {
     uint64_t key = 0xFFFF;
     auto st = RunScatterMaxTiling({{2147483648L}, {2147483648L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
                                   ge::DT_FLOAT, true, key);
-    EXPECT_EQ(st, ge::GRAPH_FAILED);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+// 分档边界: 首维恰为 2^30 仍走窄档(wideIndex=0), 超过一个元素即进宽档(wideIndex=1)。
+// 这两条守住"正常 case 一律不进新路径"这个前提 —— 分档一旦漂移, 常规用例的性能与产物就会被牵连。
+TEST_F(ScatterMaxTiling, test_tiling_narrow_path_at_lo_span)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{1073741824L}, {1073741824L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterMaxTiling, test_tiling_wide_path_over_lo_span)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{1073741825L}, {1073741825L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
 
 // var first dim == INT32_MAX -> largest in-bound index still fits int32 -> accept
@@ -212,4 +233,23 @@ TEST_F(ScatterMaxTiling, test_tiling_var_dim0_at_int32max)
                                   ge::DT_FLOAT, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
+}
+
+// 桶数上限: 宽档按 2^30 一桶分区, kernel 侧计数数组只有 64 桶(+1 溢出桶), 故 host 必须在
+// 桶数 > 64 时拒收, 否则 kernel 里会越界写计数数组。这两条只能在 host UT 覆盖 ——
+// 64 桶对应 var 首维 2^36, 真机上 var 本身就要 68GB, 物理上无法造用例。
+TEST_F(ScatterMaxTiling, test_tiling_wide_buckets_at_cap)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{68719476736L}, {68719476736L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterMaxTiling, test_tiling_wide_buckets_over_cap)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{69793218560L}, {69793218560L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_FAILED);
 }

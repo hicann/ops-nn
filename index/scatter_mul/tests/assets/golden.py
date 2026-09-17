@@ -25,14 +25,6 @@ numpy 仅保留 I/O 与 dtype 转换。语义（重复索引连乘、越界跳�
 import numpy as np
 import torch
 
-_NP_DTYPE = {
-    "float16": np.float16,
-    "float32": np.float32,
-    "int32": np.int32,
-    "int8": np.int8,
-    "uint8": np.uint8,
-}
-
 
 def __golden_scatter_mul(*input_arrays, **kwargs):
     # input order matches CSV input_shapes: var, indices, updates
@@ -57,33 +49,45 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
     acc_dtype = np.int32 if sub_int else (np.float32 if narrow_fp else var.dtype)
     need_narrow = acc_dtype != var.dtype
 
-    result = var.astype(acc_dtype, copy=True)
-    upd = updates.astype(acc_dtype, copy=False)
-
-    var_first = result.shape[0] if result.ndim >= 1 else 1
+    # 只对被索引命中的行做归约: 未命中行按 scatter 语义原值输出。为整个 var 开 acc 缓冲时,
+    # var 首维 2^30(int8 入参、int32 acc)要 4.3GB、2^32 要 17GB —— golden 会先于算子 OOM,
+    # 宽档用例一例也验不了。逐元素结果与全量计算相同。
+    out = var.copy()
+    var_first = var.shape[0] if var.ndim >= 1 else 1
     idx_flat = indices.reshape(-1).astype(np.int64)
-    # updates leading dims correspond to indices entries; trailing = var.shape[1:]
     n_idx = idx_flat.shape[0]
-    slice_shape = result.shape[1:]
-    upd_slices = (
-        upd.reshape((n_idx,) + tuple(slice_shape))
-        if n_idx > 0
-        else upd.reshape((0,) + tuple(slice_shape))
-    )
+    slice_shape = tuple(var.shape[1:])
+    if n_idx == 0 or var_first == 0 or updates.size == 0:
+        return [out]
 
     # out-of-bound indices dropped first (scatter_reduce_common_simt.h:112), the rest
     # go through the torch reference op; include_self=True == var * all matching updates.
-    result_t = torch.from_numpy(result)
-    idx_t = torch.from_numpy(idx_flat)
-    valid = (idx_t >= 0) & (idx_t < var_first)
-    if int(valid.sum()) > 0:
-        upd_t = torch.from_numpy(upd_slices)
-        result_t.index_reduce_(0, idx_t[valid], upd_t[valid], "prod", include_self=True)
+    valid = (idx_flat >= 0) & (idx_flat < var_first)
+    pos = np.nonzero(valid)[0]
+    if pos.size == 0:
+        return [out]
+    # touched 为去重后的真实行号(有序), inverse 是各条目在 touched 中的下标。
+    # 行号重标号不改变归约结果 —— prod 对重复索引顺序无关。
+    touched, inverse = np.unique(idx_flat[pos], return_inverse=True)
+    sub = np.ascontiguousarray(var[touched]).astype(acc_dtype, copy=False)
+    upd_sel = np.ascontiguousarray(updates.reshape((n_idx,) + slice_shape)[pos]).astype(
+        acc_dtype, copy=False
+    )
+
+    sub_t = torch.from_numpy(sub)
+    sub_t.index_reduce_(
+        0,
+        torch.from_numpy(inverse.astype(np.int64)),
+        torch.from_numpy(upd_sel),
+        "prod",
+        include_self=True,
+    )
 
     # 出口不 cast —— TTK 负责窄回。自行 astype 会把 Promote 出来的高精度真值砍回去。
-    out = result_t.numpy()
+    res = sub_t.numpy()
     if need_narrow:
-        out = out.astype(var.dtype)  # 复刻 NarrowStore
+        res = res.astype(var.dtype)  # 复刻 NarrowStore
+    out[touched] = res
     return [out]
 
 
@@ -102,9 +106,11 @@ __golden__ = {
 }
 
 # ----------------------------------------------------------------------------
-# TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
-# third_party 用 torch 竞品算子在设备侧跑，供 cross_check 比对；
-# customize_inputs 即原 input.py 的合法索引重采样（原文件保留，不影响旧机制）。
+# TTK 新版 spec 注册: 保留原 golden，补三方标杆。
+# third_party 用 torch / tf 竞品算子在设备侧跑，供 cross_check 比对。
+# 不注册 customize_inputs —— 索引取值(含跨桶同低位、超 int32、INT64_MAX 等)直接写在
+# 用例集的 input_data_ranges 多元组里，由 TTK 保证这些值必然出现在生成数据中。
+# golden 只负责算参照值，不承担输入构造。
 # ----------------------------------------------------------------------------
 _TOL_KERNEL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -183,40 +189,6 @@ def _tp_narrow(outs, dt):
     return [o.to(dt) for o in outs]
 
 
-def scatter_mul_input(var, indices, updates, **kwargs):
-    """
-    Input function for scatter_mul.
-    All the parameters (names and order) follow scatter_mul_def.cpp without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    Default random indices may fall out of [0, var.shape[0]); resample them into
-    the legal first-dim range so var[indices[i]] is always addressable (kernel
-    silently skips out-of-range indices, but golden/kernel agree only on legal ones).
-
-    Args:
-        **kwargs: input_dtypes, full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        Input tensors
-    """
-    shape_indices, dtype_indices, size_indices = (
-        indices.shape,
-        indices.dtype,
-        indices.size,
-    )
-    max_indices = var.shape[0]
-
-    if var.size * indices.size * updates.size == 0:
-        return [var, indices, updates]
-
-    replace = size_indices > max_indices
-    indices = np.random.choice(max_indices, size_indices, replace=replace).astype(
-        dtype_indices
-    )
-    indices = np.reshape(indices, shape_indices)
-    return [var, indices, updates]
-
-
 class _ScatterMulCompose:
     def __call__(self, var, indices, updates, **kwargs):
         work0 = _tp_t(var)
@@ -283,7 +255,6 @@ _GOLDEN_FN = __golden_scatter_mul
 class ScatterMulKernelSpec:
     golden = _GOLDEN_FN
     third_party = {"torch": _ScatterMulCompose, "tf": _ScatterMulTfCompose}
-    customize_inputs = scatter_mul_input
     tolerance = _TOL_KERNEL
 
 
@@ -324,77 +295,51 @@ class ScatterMulE2eSpec:
     tolerance = _TOL_E2E
 
 
-__spec__ = {
-    "scatter_mul": "ScatterMulKernelSpec",
-    "tf.compat.v1.scatter_mul": "ScatterMulE2eSpec",
-    "aclnnScatterMul": "ScatterMulAclnnSpec",
-}
-
-
-def _tp_one(t):
-    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它。
-
-    三方腿的输入 dtype 与 NPU 一致, torch 算完自然就是同一 dtype, 无需人为抬档或回 cast;
-    是否在内部抬到 fp32 由 torch 的算子实现自行决定。此前无条件把 fp16/bf16 抬到 fp32,
-    会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
-    §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
-
-    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
-    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
-    """
-    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
-
-
-def _keep_dtype(res, ref):
-    """golden 输出 dtype 必须与算子输出一致: 比对按 dtype 判定, fp16/bf16 提到 fp32
-    算完必须还原, 否则 binary_equal 直接判 "dtype 不可比"(实测 GOLD 0%)。
-    golden_mode=Promote 时入参本身已是 fp32, 此处是恒等操作。"""
-    refs = ref if isinstance(ref, (list, tuple)) else [ref] * len(res)
-    return [
-        t.to(r.dtype)
-        if isinstance(t, torch.Tensor) and isinstance(r, torch.Tensor)
-        else t
-        for t, r in zip(res, refs)
-    ]
-
-
 class ScatterMulAclnnSpec:
-    """aclnn 通路 spec。golden 由 TTK 按 aclnn 头文件形参**位置**下发
-    (AclnnParamPlan.build_args), 故签名逐项对齐 aclnnScatterMulGetWorkspaceSize 的
-    形参 varRef/indices/updates/useLocking;
-    third_party 走按名绑定(pool 的 key 取自头文件形参名), 用适配类把头文件的
-    varRef 接到 kernel 通路竞品类的 def 注册名 var 上。"""
+    """aclnn 通路 spec。
+
+    golden 由 TTK 按 aclnn 头文件形参**位置**下发(AclnnParamPlan.build_args),
+    故签名对齐 aclnnScatterMulGetWorkspaceSize 的 varRef/indices/updates/useLocking;
+    third_party 按**形参名**绑定, 用适配类把头文件的 varRef 接到竞品类的 def 注册名 var。
+    """
 
     @staticmethod
     def golden(varRef, indices, updates, useLocking=None, **kwargs):
-        work = _tp_one(varRef).clone()
-        if _scatter_noop(work, updates):
-            return _keep_dtype([work], varRef)
-        upd = _tp_one(updates).reshape((-1,) + tuple(work.shape[1:]))
-        it = indices if isinstance(indices, torch.Tensor) else torch.as_tensor(indices)
-        idx = it.reshape(-1).to(torch.int64)
-        valid = (idx >= 0) & (idx < work.shape[0])
-        idx = idx[valid]
-        if idx.numel() > 0:
-            work = work.index_reduce(0, idx, upd[valid], "prod", include_self=True)
-        return _keep_dtype([work], varRef)
+        """入参为 torch 张量/numpy 视图, 还原成 numpy 后转接 kernel 档 golden(单一真源)。
+
+        类体内不能直接写 __golden_xxx —— 会被改写成 _ScatterMulAclnnSpec__golden_xxx, 故用 _GOLDEN_FN。
+        """
+
+        def _np(x):
+            if hasattr(x, "detach"):
+                return x.detach().cpu().numpy()
+            return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+        return _GOLDEN_FN(_np(varRef), _np(indices), _np(updates), **kwargs)
 
     class _Compose:
         def __call__(self, varRef, indices, updates, **kwargs):
             return _ScatterMulCompose()(varRef, indices, updates, **kwargs)
 
-    third_party = {"torch": _Compose}
+    class _TfCompose:
+        def __call__(self, varRef, indices, updates, **kwargs):
+            return _ScatterMulTfCompose()(varRef, indices, updates, **kwargs)
+
+    third_party = {"torch": _Compose, "tf": _TfCompose}
     tolerance = _TOL_KERNEL
 
 
 # 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# TensorFlow: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterMul")。
-#   三方标杆(精度/性能)已补: third_party["tf"] = _ScatterMulTfCompose, 跑 --provider tf。
-#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
-#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
-#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
-#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
-#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
-# e2e / ONNX / 融合 pass: 均未交付。
+# __spec__ 已注册: kernel + GEIR(复用 kernel spec) + aclnn + e2e(TF 前端);
+#   三个 spec 的 third_party 均为 {"torch", "tf"}, tf 腿跑 --provider tf。
+# TF 通路连通性: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterMul"), 但 NPU 侧要把
+#   TF 图下沉到本算子需要 Ascend TF adapter(npu_device/tfplugin); 该组件未装时按
+#   预生成 .pb + aclgrphParseTensorFlow 验证连通性。
+# ONNX / 融合 pass: 均未交付。
+
+
+__spec__ = {
+    "scatter_mul": "ScatterMulKernelSpec",
+    "tf.compat.v1.scatter_mul": "ScatterMulE2eSpec",
+    "aclnnScatterMul": "ScatterMulAclnnSpec",
+}

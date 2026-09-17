@@ -66,6 +66,11 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     var_first = var.shape[0]
     slice_shape = var.shape[1:]
     slice_size = int(np.prod(slice_shape)) if slice_shape else 1
+    if slice_size == 0:
+        # var 尾维为 0(空切片): 无元素可作用, 原值输出。与 scatter_min 的同名守护一致。
+        # 少了这条, updates.reshape(-1, 0) 会因 numpy 无法推断 -1 而抛
+        # "cannot reshape array of size 0 into shape (0)" —— golden 先于算子挂掉。
+        return [var]  # 出口不 cast, TTK 负责
 
     # 计算 dtype 一律**跟随 NPU 的 AccT**, 唯一例外是"浮点 + 三方": 那时 TTK 已按
     # golden_mode=Promote 把入参抬档下发(fp16/bf16->fp32、fp32->fp64), golden 零 cast 直接算
@@ -79,28 +84,40 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     need_narrow = sub_int or narrow_fp
     acc = torch.int32 if sub_int else (torch.float32 if narrow_fp else None)
 
-    work = torch.from_numpy(var.reshape(var_first, slice_size).copy())
-    upd = torch.from_numpy(updates.reshape(-1, slice_size))
-    if acc is not None:
-        work, upd = work.to(acc), upd.to(acc)
-
+    # 只把"被索引命中的行"搬进 work: scatter 语义下未命中的行原值输出, 故无需为整个 var
+    # 开 acc 缓冲。var 首维支持到 2^30 以上(两趟基数排序), 全尺寸 work 在 dim0=2^30、
+    # int8 入参时(acc=int32)就要 4.3GB + 原拷贝 1GB, dim0=2^32 时 17GB —— golden 会先于
+    # 算子 OOM, 宽档用例一例也验不了。
+    # numpy 在此只做索引转换与行号重标号(规范: numpy 仅作输入输出辅助), 除法仍在 torch。
+    out = var.copy()
     idx_flat = indices.reshape(-1).astype(np.int64)
     n = idx_flat.shape[0]
+    upd_2d = updates.reshape(-1, slice_size)
 
     # 分层向量化: 串行依赖只在同一行内部, 按"本行第几次作用"分层后层内可批量相除。
     # stable 排序保证同行内次序不变, 与逐条相除逐位等价。
-    if n:
+    if n and var_first:
         in_range = (idx_flat >= 0) & (idx_flat < var_first)
         ix = idx_flat[in_range]
         src = np.nonzero(in_range)[0]
         k = ix.shape[0]
         if k:
-            order = np.argsort(ix, kind="stable")
-            grouped = ix[order]
+            # touched 为去重后的真实行号(有序), cix 是压缩后的行号。np.unique 的 inverse 是
+            # ix 的单调重标号, 故 stable 排序与分层结果与用真实行号时逐位相同。
+            touched, cix = np.unique(ix, return_inverse=True)
+            work = torch.from_numpy(
+                np.ascontiguousarray(var.reshape(var_first, slice_size)[touched])
+            )
+            upd = torch.from_numpy(np.ascontiguousarray(upd_2d[src]))
+            if acc is not None:
+                work, upd = work.to(acc), upd.to(acc)
+            order = np.argsort(cix, kind="stable")
+            grouped = cix[order]
             rank = np.arange(k) - np.searchsorted(grouped, grouped, side="left")
             lay = np.argsort(rank, kind="stable")
-            sel_all = torch.from_numpy(src[order[lay]])
-            row_all = torch.from_numpy(ix[order[lay]])
+            # upd 已按 src 压缩过, 故这里索引的是压缩后的下标(0..k-1)而非原始条目号
+            sel_all = torch.from_numpy(np.arange(k)[order[lay]])
+            row_all = torch.from_numpy(cix[order[lay]])
             rk = rank[lay]
             bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
             for r in range(len(bounds) - 1):
@@ -113,12 +130,14 @@ def __golden_scatter_div(*input_arrays, **kwargs):
                 res = _int_trunc_div(cur, den) if is_int else torch.div(cur, den)
                 work.index_copy_(0, rows, res)
 
-    # 浮点出口不 cast —— TTK 负责窄回; 自行 astype 会把 Promote 出来的高精度真值砍回去。
-    # 整型没有 Promote, TTK 也不会窄回, 故由本函数复刻内核的 NarrowStore(仅 int8/uint8 需要)。
-    out = work.numpy()
-    if need_narrow:
-        out = out.astype(var.dtype)  # 复刻 NarrowStore
-    return [out.reshape(var.shape)]
+            # 浮点出口不 cast —— TTK 负责窄回; 自行 astype 会把 Promote 出来的高精度真值砍回去。
+            # 整型没有 Promote, TTK 也不会窄回, 故由本函数复刻内核的 NarrowStore(仅 int8/uint8)。
+            res_np = work.numpy()
+            if need_narrow:
+                res_np = res_np.astype(var.dtype)  # 复刻 NarrowStore
+            out.reshape(var_first, slice_size)[touched] = res_np
+
+    return [out]
 
 
 def __golden_scatter_div_e2e(var, indices, updates, use_locking=None, **kwargs):
@@ -134,9 +153,11 @@ __golden__ = {
 }
 
 # ----------------------------------------------------------------------------
-# TTK 新版 spec 注册（kernel 通路）: 保留原 golden，补三方标杆与自定义输入。
-# third_party 用 torch 竞品算子在设备侧跑，供 cross_check 比对；
-# customize_inputs 即原 input.py 的合法索引重采样（原文件保留，不影响旧机制）。
+# TTK 新版 spec 注册: 保留原 golden，补三方标杆。
+# third_party 用 torch / tf 竞品算子在设备侧跑，供 cross_check 比对。
+# 不注册 customize_inputs —— 索引取值(含跨桶同低位、超 int32、INT64_MAX 等)直接写在
+# 用例集的 input_data_ranges 多元组里，由 TTK 保证这些值必然出现在生成数据中。
+# golden 只负责算参照值，不承担输入构造。
 # ----------------------------------------------------------------------------
 _TOL_KERNEL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -193,40 +214,6 @@ def _tp_t(x):
         return x.clone()
     t = torch.as_tensor(np.asarray(x))  # 仅本地自测兜底: 框架侧不会走到
     return t.to(torch.float32) if t.dtype == torch.bfloat16 else t.clone()
-
-
-def scatter_div_input(var, indices, updates, **kwargs):
-    """
-    Input function for scatter_div.
-    All the parameters (names and order) follow scatter_div_def.cpp without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    Default random indices may fall out of [0, var.shape[0]); resample them into
-    the legal first-dim range so var[indices[i]] is always addressable (kernel
-    silently skips out-of-range indices, but golden/kernel agree only on legal ones).
-
-    Args:
-        **kwargs: input_dtypes, full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        Input tensors
-    """
-    shape_indices, dtype_indices, size_indices = (
-        indices.shape,
-        indices.dtype,
-        indices.size,
-    )
-    max_indices = var.shape[0]
-
-    if var.size * indices.size * updates.size == 0:
-        return [var, indices, updates]
-
-    replace = size_indices > max_indices
-    indices = np.random.choice(max_indices, size_indices, replace=replace).astype(
-        dtype_indices
-    )
-    indices = np.reshape(indices, shape_indices)
-    return [var, indices, updates]
 
 
 def _tp_widen(t):
@@ -435,7 +422,6 @@ _GOLDEN_FN = __golden_scatter_div
 class ScatterDivKernelSpec:
     golden = _GOLDEN_FN
     third_party = {"torch": _TpKernelFaithful, "tf": _ScatterDivTfCompose}
-    customize_inputs = scatter_div_input
     tolerance = _TOL_KERNEL
 
 
@@ -473,102 +459,51 @@ class ScatterDivE2eSpec:
     tolerance = _TOL_E2E
 
 
-__spec__ = {
-    "scatter_div": "ScatterDivKernelSpec",
-    "tf.compat.v1.scatter_div": "ScatterDivE2eSpec",
-    "aclnnScatterDiv": "ScatterDivAclnnSpec",
-}
-
-
-def _tp_one(t):
-    """aclnn 通路三方腿入参: **不替 torch 决定精度**, 原样交给它。
-
-    三方腿的输入 dtype 与 NPU 一致, torch 算完自然就是同一 dtype, 无需人为抬档或回 cast;
-    是否在内部抬到 fp32 由 torch 的算子实现自行决定。此前无条件把 fp16/bf16 抬到 fp32,
-    会让三方与走 Promote(fp32) 的 golden 逐位相等 —— 双标杆塌成单标杆, 三比值分母夹到
-    §4.5.1 的 err, 有量纲的 RMSE 比值随输出量级线性放大而假红。
-
-    【预留】TTK 的 aclnn 通路当前不取用 third_party(仅 kernel/GEIR 取用), 此处写法不生效
-    也无副作用; 待该通路支持三方后自动接上, 口径与 kernel/GEIR 腿保持一致。
-    """
-    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
-
-
-def _keep_dtype(res, ref):
-    """golden 输出 dtype 必须与算子输出一致: 比对按 dtype 判定, fp16/bf16 提到 fp32
-    算完必须还原, 否则 binary_equal 直接判 "dtype 不可比"(实测 GOLD 0%)。
-    golden_mode=Promote 时入参本身已是 fp32, 此处是恒等操作。"""
-    refs = ref if isinstance(ref, (list, tuple)) else [ref] * len(res)
-    return [
-        t.to(r.dtype)
-        if isinstance(t, torch.Tensor) and isinstance(r, torch.Tensor)
-        else t
-        for t, r in zip(res, refs)
-    ]
-
-
 class ScatterDivAclnnSpec:
-    """aclnn 通路 spec。golden 由 TTK 按 aclnn 头文件形参**位置**下发
-    (AclnnParamPlan.build_args), 故签名逐项对齐 aclnnScatterDivGetWorkspaceSize 的
-    形参 varRef/indices/updates/useLocking;
-    third_party 走按名绑定(pool 的 key 取自头文件形参名), 用适配类把头文件的
-    varRef 接到 kernel 通路竞品类的 def 注册名 var 上。"""
+    """aclnn 通路 spec。
+
+    golden 由 TTK 按 aclnn 头文件形参**位置**下发(AclnnParamPlan.build_args),
+    故签名对齐 aclnnScatterDivGetWorkspaceSize 的 varRef/indices/updates/useLocking;
+    third_party 按**形参名**绑定, 用适配类把头文件的 varRef 接到竞品类的 def 注册名 var。
+    """
 
     @staticmethod
     def golden(varRef, indices, updates, useLocking=None, **kwargs):
-        work = _tp_one(varRef).clone()
-        if _scatter_noop(work, updates):
-            return _keep_dtype([work], varRef)
-        upd = _tp_one(updates).reshape((-1,) + tuple(work.shape[1:]))
-        it = indices if isinstance(indices, torch.Tensor) else torch.as_tensor(indices)
-        idx = it.reshape(-1).to(torch.int64)
-        valid = (idx >= 0) & (idx < work.shape[0])
-        idx, upd = idx[valid], upd[valid]
-        is_int = work.dtype in (torch.int32, torch.int8, torch.uint8)
-        # 分层向量化, 口径同 kernel 档 golden。
-        n = int(idx.numel())
-        if n:
-            ix = idx.cpu().numpy()
-            order = np.argsort(ix, kind="stable")
-            grouped = ix[order]
-            rank = np.arange(n) - np.searchsorted(grouped, grouped, side="left")
-            lay = np.argsort(rank, kind="stable")
-            sel_all = torch.as_tensor(order[lay], device=idx.device)
-            row_all = torch.as_tensor(ix[order[lay]], device=idx.device).to(torch.int64)
-            rk = rank[lay]
-            bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
-            for r in range(len(bounds) - 1):
-                a, b = int(bounds[r]), int(bounds[r + 1])
-                if a == b:
-                    continue
-                rows, sel = row_all[a:b], sel_all[a:b]
-                cur = work.index_select(0, rows)
-                den = upd.index_select(0, sel)
-                if is_int:
-                    nz = den != 0
-                    safe = torch.where(nz, den, torch.ones_like(den))
-                    q = torch.div(cur, safe, rounding_mode="trunc")
-                    work[rows] = torch.where(nz, q, cur)
-                else:
-                    work[rows] = torch.div(cur, den)
-        return _keep_dtype([work], varRef)
+        """入参为 torch 张量/numpy 视图, 还原成 numpy 后转接 kernel 档 golden(单一真源)。
+
+        类体内不能直接写 __golden_xxx —— 会被改写成 _ScatterDivAclnnSpec__golden_xxx, 故用 _GOLDEN_FN。
+        """
+
+        def _np(x):
+            if hasattr(x, "detach"):
+                return x.detach().cpu().numpy()
+            return x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+
+        return _GOLDEN_FN(_np(varRef), _np(indices), _np(updates), **kwargs)
 
     class _Compose:
         def __call__(self, varRef, indices, updates, **kwargs):
             return _ScatterDivCompose()(varRef, indices, updates, **kwargs)
 
-    third_party = {"torch": _Compose}
+    class _TfCompose:
+        def __call__(self, varRef, indices, updates, **kwargs):
+            return _ScatterDivTfCompose()(varRef, indices, updates, **kwargs)
+
+    third_party = {"torch": _Compose, "tf": _TfCompose}
     tolerance = _TOL_KERNEL
 
 
 # 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + aclnn
-# 未在 __spec__ 中注册:
-# TensorFlow: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterDiv")。
-#   三方标杆(精度/性能)已补: third_party["tf"] = _ScatterDivTfCompose, 跑 --provider tf。
-#   通路连通(ⓐ)未注册: TTK 的 tf 通路是 e2e 前端(api_name 写 TF API), NPU 侧需要
-#   Ascend TF adapter(npu_device/tfplugin)才能把 TF 图下沉到本算子; 当前环境
-#   (cann-9.2.0)未装该组件, 装不上就跑不出 invoke_path 证据, 故不注册空壳键
-#   (规范: __spec__ 注册集合必须等于 01 §3.3 的 ✅ 集合与 invoke_path 的通路取值)。
-#   该组件到位前, tf 通路连通性仍按预生成 .pb + aclgrphParseTensorFlow 验证。
-# e2e / ONNX / 融合 pass: 均未交付。
+# __spec__ 已注册: kernel + GEIR(复用 kernel spec) + aclnn + e2e(TF 前端);
+#   三个 spec 的 third_party 均为 {"torch", "tf"}, tf 腿跑 --provider tf。
+# TF 通路连通性: 算子目录下有 framework 的 tf_plugin(OriginOpType "ScatterDiv"), 但 NPU 侧要把
+#   TF 图下沉到本算子需要 Ascend TF adapter(npu_device/tfplugin); 该组件未装时按
+#   预生成 .pb + aclgrphParseTensorFlow 验证连通性。
+# ONNX / 融合 pass: 均未交付。
+
+
+__spec__ = {
+    "scatter_div": "ScatterDivKernelSpec",
+    "tf.compat.v1.scatter_div": "ScatterDivE2eSpec",
+    "aclnnScatterDiv": "ScatterDivAclnnSpec",
+}

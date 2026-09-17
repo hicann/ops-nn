@@ -190,10 +190,31 @@ TEST_F(ScatterMinTiling, test_tiling_var_dim0_eq_int32max)
 
 // var first axis == INT32_MAX + 1 -> rejected. An in-bound index may then equal INT32_MAX, which is
 // indistinguishable from the sort padding key. Matches the declared constraint in README.
+// 见 scatter_max 同名用例的说明: 首维 > INT32_MAX 由拒收改为走两趟基数排序, 断言随之反转。
+// 共享 tiling 的四个算子(div/max/min/mul)各有独立 UT 上下文, 故每个算子都要单独核对。
 TEST_F(ScatterMinTiling, test_tiling_var_dim0_over_int32max)
 {
     uint64_t key = 0xFFFF;
     auto st = RunScatterMinTiling({{2147483648L}, {2147483648L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_INT32, ge::DT_INT32,
+                                  true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+// 桶数上限: 宽档按 2^30 一桶分区, kernel 侧计数数组只有 64 桶(+1 溢出桶), 故 host 必须在
+// 桶数 > 64 时拒收, 否则 kernel 里会越界写计数数组。这两条只能在 host UT 覆盖 ——
+// 64 桶对应 var 首维 2^36, 真机上 var 本身就要 68GB, 物理上无法造用例。
+TEST_F(ScatterMinTiling, test_tiling_wide_buckets_at_cap)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{68719476736L}, {68719476736L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterMinTiling, test_tiling_wide_buckets_over_cap)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{69793218560L}, {69793218560L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
                                   true, key);
     EXPECT_EQ(st, ge::GRAPH_FAILED);
 }

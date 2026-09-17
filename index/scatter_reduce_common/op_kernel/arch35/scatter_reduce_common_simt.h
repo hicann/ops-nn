@@ -124,9 +124,9 @@ public:
                                            TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0,
                                            event_t evVM3, event_t evM3M2, const DataCopyExtParams& cp,
                                            const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad,
-                                           int32_t& ownerSplitRow, ADDR_T& ownerSplitEnd);
+                                           ADDR_T& ownerSplitRow, ADDR_T& ownerSplitEnd);
     __aicore__ inline void SortPhase3bCombine(ADDR_T M, ADDR_T sliceSize, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
-                                              int32_t ownerSplitRow, ADDR_T ownerSplitEnd, LocalTensor<AccT>& accUb,
+                                              ADDR_T ownerSplitRow, ADDR_T ownerSplitEnd, LocalTensor<AccT>& accUb,
                                               LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb,
                                               LocalTensor<int32_t>& tmp, event_t evMV0, event_t evVM3, event_t evM3M2,
                                               event_t evVM2, const DataCopyExtParams& cp,
@@ -145,6 +145,13 @@ public:
     __aicore__ inline void SortScalarSliceSize1(ADDR_T M, ADDR_T varFirstDim);
     // Phase 1 of both sort reducers: core 0 sorts indices into sortedIdx/originPos workspace, then SyncAll.
     __aicore__ inline void SortIndices(ADDR_T M);
+    // 宽索引档(tiling_.wideIndex=1)第 2 趟基数: 对已按 lo 排好的数组按 hi 做**稳定**分区, 使全局按
+    // (hi, lo) 有序。稳定性由"计数->前缀->按序 scatter"保证, 因此第 1 趟的 lo 序在桶内不被打乱。
+    __aicore__ inline void StablePartitionByHi(ADDR_T M);
+    // 取排序槽 k 对应的**完整**行号。窄档直接读 sortedIdx(它就是完整 index); 宽档 sortedIdx 只存
+    // lo(低 30 位), 完整值由 originPos 回读原始 int64 索引得到 —— 这样消费者无需桶边界表, 也天然
+    // 避免"跨桶 lo 相同被误判为同一行"的坑。
+    __aicore__ inline ADDR_T RowOf(ADDR_T k);
     // SortIndices sub-phases (pure code-motion split of SortIndices; same execution order, same sync pairing):
     //   SortIndicesSmallM  : M<=SORT_TILE fast path -- core 0 single AscendC::Sort + collective DCCI + SyncAll.
     //   SortLocalRuns      : large-M phase 2 -- each core sorts its runLen0-wide chunks (pad tail with SENT),
