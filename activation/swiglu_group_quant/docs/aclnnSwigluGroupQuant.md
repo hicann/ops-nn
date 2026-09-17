@@ -1,4 +1,4 @@
-﻿# aclnnSwigluGroupQuant
+# aclnnSwigluGroupQuant
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/swiglu_group_quant)
 
@@ -456,7 +456,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>SwiGLU输入。</td>
-      <td><ul><li>shape为[...,D]。</li><li>D必须大于等于256，且能被256整除。</li><li>维度需为2-8维，其中quantMode为1时为2-7维。</li><li>quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>shape为[...,D]。</li><li>D必须大于等于256，且能被256整除。</li><li>维度需为2-8维，其中quantMode为1时为2-7维。</li><li>quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -466,7 +466,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>weightOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>MOE权重张量，用于SwiGLU输出的加权计算。</td>
-      <td><ul><li>可选参数，不支持空Tensor。</li><li>不为空时，数据类型为FLOAT32，元素个数需等于x除最后一维外的元素个数之积。</li></ul></td>
+      <td><ul><li>可选参数，quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li><li>不为空时，数据类型为FLOAT32，元素个数需等于x除最后一维外的元素个数之积。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -476,7 +476,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>count模式的group token数。</td>
-      <td><ul><li>可选参数，不支持空Tensor。</li><li>不为空时，数据类型为INT64，shape为[G]。</li></ul></td>
+      <td><ul><li>可选参数，quantMode为0或1时不支持单独为空Tensor；quantMode为2或3不支持空Tensor。</li><li>不为空时，数据类型为INT64，shape为[G]。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -496,7 +496,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>目标量化类型。</td>
-      <td><ul><li>仅quantMode为0或1时，该参数生效。</li><li>支持取值35、36、40、41，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</li><li>dstType为40或41时，quantMode必须为1。</li></ul></td>
+      <td><ul><li>仅quantMode为0或1时，该参数生效。</li><li>支持取值35、36，分别表示FLOAT8_E5M2、FLOAT8_E4M3FN。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -566,8 +566,8 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化输出。</td>
-      <td><ul><li>quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。</li><li>shape均为[...,D/2]，其中dstType为40或41（FLOAT4）时，2个元素打包为1字节，实际占用存储为D/4字节。</li><li>不支持空Tensor。</li></ul></td>
-      <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
+      <td><ul><li>quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。</li><li>shape均为[...,D/2]。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
+      <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
       <td>×</td>
@@ -576,7 +576,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>yScaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化scale输出。</td>
-      <td><ul><li>quantMode为0时，shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。</li><li>quantMode为1时，shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。</li><li>quantMode为3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>quantMode为0时，shape为[...,ceil((D/2)/128)]，数据类型为FLOAT32。</li><li>quantMode为1时，shape为[...,ceil(ceil((D/2)/32)/2),2]，数据类型为FLOAT8_E8M0。</li><li>quantMode为3时，无groupIndex时shape为[1]，有groupIndex时shape为[G]，数据类型为FLOAT32。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
       <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
       <td>1-8</td>
@@ -586,7 +586,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>yOriginOut（aclTensor*）</td>
       <td>输出</td>
       <td>量化前的SwiGLU结果。</td>
-      <td><ul><li>shape为[...,D/2]。</li><li>数据类型需与x一致。</li><li>不支持空指针。</li></ul></td>
+      <td><ul><li>shape为[...,D/2]。</li><li>数据类型需与x一致。</li><li>不支持空指针。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -708,7 +708,7 @@ aclnnStatus aclnnSwigluGroupQuant(
 
 - 确定性计算：aclnnSwigluGroupQuant默认确定性实现。
 - quantMode为0时，仅支持FP8输出，blockSize支持0或128。
-- quantMode为1时，支持FP8/FP4输出，blockSize支持0或32，roundScale必须为true。
+- quantMode为1时，支持FP8输出，blockSize支持0或32，roundScale必须为true。
 - quantMode为2或3时，支持HIFP8量化输出，dstType, blockSize和roundScale不生效。输入x的维度为[T, D]或[B, S, D]，需满足以下规格约束：
 
   | 规格项 | 规格 | 规格说明 |
@@ -718,7 +718,6 @@ aclnnStatus aclnnSwigluGroupQuant(
   | D/2 | 512, 768, 1024, 1536, 1792, 2048, 2560, 4096 | - |
   | dstTypeMax | 15, 56, 224, 32768 | - |
 
-- dstType为FLOAT4_E2M1或FLOAT4_E1M2时，必须使用quantMode=1。
 - yScale的数据类型必须与quantMode匹配：quantMode=0或3时数据类型为FLOAT32，quantMode=1时数据类型为FLOAT8_E8M0。
 - groupIndex中的元素值须大于等于0。
 

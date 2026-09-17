@@ -805,7 +805,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>在SwiGlu激活函数后执行分组低比特量化，实现输入x的SwigluGroupQuant计算，支持FP8和FP4量化输出。</td>
+    <td>在SwiGlu激活函数后执行分组低比特量化，实现输入x的SwigluGroupQuant计算，支持FP8量化输出。</td>
   </tr>
   <tr>
     <td>activation</td>

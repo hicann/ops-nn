@@ -25,14 +25,15 @@ namespace ge {
  *
  * @par Inputs:
  * @li x: Required tensor. float16 or bfloat16 for quant_mode 0/1; float16, bfloat16 or float32 for
- * quant_mode 2/3. The rank must be in [2, 8] ([2, 7] for quant_mode 1), empty tensors are not
- * supported, and the last dimension is split into two equal parts for SwiGLU and must be greater than
- * or equal to 256 and divisible by 256.
+ * quant_mode 2/3. The rank must be in [2, 8] ([2, 7] for quant_mode 1), empty tensors are supported for
+ * quant_mode 0/1 and not supported for quant_mode 2/3, and the last dimension is split into two equal parts
+ * for SwiGLU and must be greater than or equal to 256 and divisible by 256.
  * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result before
- * quantization. The rank must be in [1, 8], empty tensors are not supported, and the element count must
- * equal the product of all x dims except the last one.
+ * quantization. The rank must be in [1, 8], empty tensors are supported for quant_mode 0/1 and not supported
+ * for quant_mode 2/3, and the element count must equal the product of all x dims except the last one.
  * @li group_index: Optional int64 tensor. Count-mode group token numbers. It must be 1D, its element
- * values must be greater than or equal to 0, and empty tensors are not supported.
+ * values must be greater than or equal to 0, group_index cannot be an empty tensor on its own for
+ * quant_mode 0/1, and empty tensors are not supported for quant_mode 2/3.
  * @li scale: Optional float32 tensor. Static quantization input (invScale) used by quant_mode 2. Its
  * shape must be [G] when group_index is present and [1] otherwise, and empty tensors are not supported.
  *
@@ -56,10 +57,12 @@ namespace ge {
  * @par Outputs:
  * @li y: Quantized output tensor. The shape is the input x shape with the last dimension halved for all
  * quant modes. FP4 physical storage packs two values in one byte via its dtype, so it occupies D/4 bytes.
+ * Empty tensors are supported for quant_mode 0/1 and not supported for quant_mode 2/3.
  * @li y_scale: Scale tensor. float32 for Block FP8, HiFloat8 static and HiFloat8 dynamic quantization,
- * float8_e8m0 for MX.
+ * float8_e8m0 for MX. Empty tensors are supported for quant_mode 0/1 and not supported for quant_mode 2/3.
  * @li y_origin: SwiGLU result before quantization, with the same dtype and rank as x, the same dims as x
- * except that the last dimension is halved.
+ * except that the last dimension is halved. Empty tensors are supported for quant_mode 0/1 and not supported
+ * for quant_mode 2/3.
  *
  * @par Third-party framework compatibility
  * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.

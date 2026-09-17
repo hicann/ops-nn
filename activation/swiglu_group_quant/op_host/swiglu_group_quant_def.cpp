@@ -110,8 +110,6 @@ public:
         this->Attr("dst_type_max").AttrType(OPTIONAL).Float(DEFAULT_DST_TYPE_MAX);
         this->Attr("output_origin").AttrType(OPTIONAL).Bool(false);
 
-        this->AICore().LaunchWithZeroEleOutputTensors(true);
-
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
