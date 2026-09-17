@@ -21,6 +21,7 @@
 namespace l0op {
 constexpr size_t RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM = 3;
 
+// roundMode不支持空指针，调用方必须显式传入支持的字符串。
 const std::array<aclTensor*, RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM> RmsNormDynamicMxQuant(
     const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon, int64_t scaleAlg,
     char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
