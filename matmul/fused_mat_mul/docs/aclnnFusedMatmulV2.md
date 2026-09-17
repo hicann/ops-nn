@@ -249,7 +249,7 @@ aclnnStatus aclnnFusedMatmulV2(
 
   <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=1，当输入数据类型为FLOAT32时不支持该选项；当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
     - cubeMathType=4，仅当以下条件全部满足时使用高精度方式：
@@ -296,7 +296,7 @@ aclnnStatus aclnnFusedMatmulV2(
         <td>x1、x2或y的数据格式不在支持的范围内。</td>
       </tr>
       <tr>
-        <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维；fusedOpType为"add"、"mul"时支持2-3维；其他取值支持二维。</td>
+        <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维；fusedOpType为"add"、"mul"时支持2-3维；fusedOpType为"16cast32"时支持二维，或batch轴为1的三维；其他取值支持二维。</td>
       </tr>
       <tr>
         <td>x1与x2用于矩阵乘的K轴长度不一致。</td>
@@ -368,11 +368,12 @@ aclnnStatus aclnnFusedMatmulV2(
 
   <!-- end id8 -->
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为""、"relu"时，x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时，x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
-- 当fusedOpType取值为""、"relu"、"add"、"mul"、"gelu_tanh"、"gelu_erf"、"16cast32"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16，且x1、x2、y仅支持二维；当fusedOpType为""、"relu"时，x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16，且x1、x2、y支持二维，或batch轴为1的三维；当fusedOpType为"add"、"mul"时，x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为""、"relu"、"add"、"mul"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
-- aclnnFusedMatmulV2传入非默认alphaOptional或betaOptional时，仅支持fusedOpType为"add"的三维非转置场景，不支持bias和batch轴广播，x1、x2、x3和y必须为相同的FLOAT16或BFLOAT16数据类型。
+- 当x1或x2为空Tensor时，fusedOpType取值为""、"relu"、"gelu_erf"、"gelu_tanh"、"add"、"mul"时支持，取值为"16cast32"时不支持。
+- aclnnFusedMatmulV2中，alphaOptional或betaOptional不等于1时，仅支持B、M、N、K均大于0的三维"add"场景。该场景不支持bias、转置和batch轴广播，x1、x2、x3和y的数据类型必须同为FLOAT16或BFLOAT16。
 
 ## 调用示例
 
