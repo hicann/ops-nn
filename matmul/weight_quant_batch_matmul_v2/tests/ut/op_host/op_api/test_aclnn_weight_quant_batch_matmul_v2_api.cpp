@@ -2605,6 +2605,62 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
+    {"Ascend950_case_a16mxf4_nd_weight_fp4_uint8_scale",
+     {2, 64},
+     {64, 128},
+     {2, 128},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     32,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT4_E2M1,
+     ACL_UINT8,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_SUCCESS,
+     CONTIGUOUS,
+     CONTIGUOUS,
+     CONTIGUOUS},
+    {"Ascend950_case_a16mxf4_nd_weight_fp32_uint8_scale",
+     {2, 64},
+     {64, 16}, // weight N=16 is packed (8 FP4 in 1 FP32), host unpacks to logical N=128
+     {2, 128},
+     {2, 128},
+     {1, 128},
+     {1, 128},
+     {1, 128},
+     32,
+     {2, 128},
+     ACL_FLOAT16,
+     ACL_FLOAT,
+     ACL_UINT8,
+     ACL_FLOAT16,
+     ACL_UINT64,
+     ACL_FLOAT,
+     ACL_FLOAT16,
+     ACL_FLOAT16,
+     ACL_FORMAT_ND,
+     ACL_FORMAT_ND,
+     false,
+     false,
+     false,
+     false,
+     ACLNN_SUCCESS,
+     CONTIGUOUS,
+     CONTIGUOUS,
+     CONTIGUOUS},
     {"Ascend950_case_a16mxf4_nd_invalid_group_size",
      {2, 64},
      {64, 128},
@@ -3076,6 +3132,21 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_fp4PerChannel)
     auto ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 0, y,
                                                              &ws, &exe);
     EXPECT_NE(ret, ACLNN_SUCCESS);
+}
+
+// 950: MX A16F4 ND——uint8 承载 E8M0 antiquantScale 的 dtype 修正在 V3 入口同样生效
+// （与参数化用例 Ascend950_case_a16mxf4_nd_weight_fp4_uint8_scale 同组合，走 V3 入口）
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_a16mxf4Fp4Uint8ScaleV3)
+{
+    auto x = CreateTensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    auto weight = CreateTensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, CONTIGUOUS);
+    auto scale = CreateTensorDesc({2, 128}, ACL_UINT8, ACL_FORMAT_ND, CONTIGUOUS);
+    auto y = CreateTensorDesc({2, 128}, ACL_FLOAT16, ACL_FORMAT_ND, CONTIGUOUS);
+    uint64_t ws = 0;
+    aclOpExecutor* exe = nullptr;
+    auto ret = aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(x, weight, scale, nullptr, nullptr, nullptr, nullptr, 32,
+                                                             0, y, &ws, &exe);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
 }
 
 // 950: FP8 weight with MX mode (antiquantScale=FLOAT8_E8M0)

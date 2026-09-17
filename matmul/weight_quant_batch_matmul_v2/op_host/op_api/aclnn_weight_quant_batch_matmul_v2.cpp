@@ -1587,8 +1587,10 @@ static aclnnStatus TensorPreProcess(TupleTensor mandatoryTensors, TupleTensor op
     }
 
     // microscaling场景，采用uint8承载float8_e8m0数据，此处需修正antiquantScale dtype
+    // weight为float32承载float4_e2m1或直接为float4_e2m1时均支持
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
-        weight->GetDataType() == DataType::DT_FLOAT && antiquantScaleRef->GetDataType() == DataType::DT_UINT8) {
+        (weight->GetDataType() == DataType::DT_FLOAT || weight->GetDataType() == DataType::DT_FLOAT4_E2M1) &&
+        antiquantScaleRef->GetDataType() == DataType::DT_UINT8) {
         CHECK_RET(ModifyTensorDtype(antiquantScaleRef, nullptr, DataType::DT_FLOAT8_E8M0, executor) == ACLNN_SUCCESS,
                   ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("The conversion of antiquantScale from uint8 to fp8 is completed.");
