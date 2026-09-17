@@ -117,7 +117,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应计算公式中的`gradOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
+      <td><ul><li>与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应公式中的`input`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入gradOut的数据类型相同。</li><li>shape与gradOut的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
+      <td><ul><li>与输入gradOut的数据类型相同。</li><li>shape与gradOut的shape相等，为[A1,...,Ai,R1,...,Rj], shape长度大于等于normalizedShape的长度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第二个输出，表示input的均值，对应计算公式中的mean。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入rstd的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与rstd的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>与输入rstd的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与rstd的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示input的标准差的倒数，对应计算公式中的rstd。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与mean的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>与输入mean的数据类型相同且位宽不低于输入input的数据类型位宽。</li><li>shape与mean的shape相等，为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示权重，对应计算公式中的weightOptional。</td>
-      <td><ul><li>不支持空Tensor。</li><li>weightOptional非空时，数据类型与输入input一致或为FLOAT类型，且当biasOptional存在时与biasOptional的数据类型相同。</li><li>weightOptional为空时，需要构造一个shape为[R1,...,Rj]，数据类型与输入input相同，数据全为1的Tensor。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>weightOptional非空时，数据类型与输入input一致或为FLOAT类型，且当biasOptional存在时与biasOptional的数据类型相同。</li><li>weightOptional为空时，需要构造一个shape为[R1,...,Rj]，数据类型与输入input相同，数据全为1的Tensor。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选参数，表示偏置。</td>
-      <td><ul><li>不支持空Tensor。</li><li>biasOptional非空时，数据类型与输入input一致或为FLOAT类型，且当weightOptional存在时与weightOptional的数据类型相同。</li><li>biasOptional为空时，不做任何处理。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>biasOptional非空时，数据类型与输入input一致或为FLOAT类型，且当weightOptional存在时与weightOptional的数据类型相同。</li><li>biasOptional为空时，不做任何处理。</li><li>shape与normalizedShape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -197,7 +197,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>gradInputOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>由outputMask的第0个元素控制是否输出，outputMask第0个元素为True时会进行输出，与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>由outputMask的第0个元素控制是否输出，outputMask第0个元素为True时会进行输出，与输入input的数据类型相同。</li><li>shape与input的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -207,7 +207,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>gradWeightOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播权重的梯度，对应计算公式中的`gradWeightOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>由outputMask的第1个元素控制是否输出，outputMask第1个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradBiasOut的shape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>由outputMask的第1个元素控制是否输出，outputMask第1个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradBiasOut的shape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -217,7 +217,7 @@ aclnnStatus aclnnLayerNormBackward(
       <td>gradBiasOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播偏置的梯度，对应计算公式中的`gradBiasOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>由outputMask的第2个元素控制是否输出，outputMask第2个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradWeightOut的shape相等，为[R1,...,Rj]。</li></ul></td>
+      <td><ul><li>由outputMask的第2个元素控制是否输出，outputMask第2个元素为True时会进行输出，与输入weightOptional的数据类型相同。</li><li>shape与gradWeightOut的shape相等，为[R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -370,6 +370,10 @@ aclnnStatus aclnnLayerNormBackward(
 - shape约束：
 
   gradOut，input，mean，rstd，weightOptional（非空时），biasOptional（非空时），gradInputOut（非空时），gradWeightOut（非空时），gradBiasOut（非空时），shape支持1-8维。
+
+- 空Tensor支持：
+
+  input支持空Tensor。
 
 - 确定性计算：
 
