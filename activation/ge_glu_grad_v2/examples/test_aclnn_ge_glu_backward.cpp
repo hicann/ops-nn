@@ -91,12 +91,13 @@ int main()
     aclTensor* self = nullptr;
     aclTensor* gelu = nullptr;
     aclTensor* gradInput = nullptr;
-    std::vector<float> gradOutputHostData = {-2, -1};
-    std::vector<float> selfHostData = {-2, -1, 0, 1};
-    std::vector<float> geluHostData = {-2, -1};
+    std::vector<aclFloat16> gradOutputHostData = {aclFloatToFloat16(-2), aclFloatToFloat16(-1)};
+    std::vector<aclFloat16> selfHostData = {aclFloatToFloat16(-2), aclFloatToFloat16(-1), aclFloatToFloat16(0),
+                                            aclFloatToFloat16(1)};
+    std::vector<aclFloat16> geluHostData = {aclFloatToFloat16(-2), aclFloatToFloat16(-1)};
     int64_t dim = -1;
     int64_t approximate = 1;
-    std::vector<float> gradInputHostData = {0, 0, 0, 0};
+    std::vector<aclFloat16> gradInputHostData(4, aclFloatToFloat16(0));
     // 创建gradOutput aclTensor
     ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT16,
                           &gradOutput);
