@@ -29,13 +29,25 @@
   norm\_out = (x-\bar{x}) * rstd * gamma + beta
   $$
 
-  $$
-  out1 = round((norm\_out/scales1)+zero\_points1)
-  $$
+  - 当axis=-65535时：
 
-  $$
-  out2 = round((norm\_out/scales2)+zero\_points2)
-  $$
+    $$
+    out1 = round((norm\_out * scales1)+zero\_points1)
+    $$
+
+    $$
+    out2 = round((norm\_out * scales2)+zero\_points2)
+    $$
+
+  - 当axis≠-65535时：
+
+    $$
+    out1 = round((norm\_out/scales1)+zero\_points1)
+    $$
+
+    $$
+    out2 = round((norm\_out/scales2)+zero\_points2)
+    $$
 
 ## 参数说明
 
@@ -94,14 +106,14 @@
       <td>scales1</td>
       <td>可选输入</td>
       <td>用于量化第一个输入张量的缩放因子，对应公式中的`scales1`。</td>
-      <td>BFLOAT16、FLOAT32</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales2</td>
       <td>可选输入</td>
       <td>用于量化第二个输入张量的缩放因子，对应公式中的`scales2`。</td>
-      <td>BFLOAT16、FLOAT32</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -128,7 +140,7 @@
     <tr>
       <td>axis</td>
       <td>可选属性</td>
-      <td><ul><li>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入x的维度数。当前仅支持-1，传其他值均不生效。</li><li>默认值为-1。</li></ul></td>
+      <td><ul><li>表示静态量化处理scale的方法是乘法或除法。当axis为-65535时使用乘法，axis取其他值时使用除法。</li><li>默认值为-1。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
