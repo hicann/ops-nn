@@ -100,7 +100,7 @@ int main()
     aclTensor* attnWeight = nullptr;
     aclTensor* output = nullptr;
     std::vector<float> valueHostData = {static_cast<float>(GetShapeSize(locationShape)), 1};
-    std::vector<float> spatialShapeHostData = {1, 1};
+    std::vector<int32_t> spatialShapeHostData = {1, 1};
     std::vector<float> levelStartIndexHostData = {0};
     std::vector<float> locationHostData(static_cast<float>(GetShapeSize(locationShape)), 0);
     std::vector<float> attnWeightHostData = {static_cast<float>(GetShapeSize(attnWeightShape)), 1};

@@ -439,7 +439,7 @@ int main() {
     aclTensor* gradLocation = nullptr;
     aclTensor* gradAttnWeight = nullptr;
     std::vector<float> valueHostData = {1, 1, 1, 1, 1, 1, 1, 1};
-    std::vector<float> spatialShapeHostData = {1, 1};
+    std::vector<int32_t> spatialShapeHostData = {1, 1};
     std::vector<float> levelStartIndexHostData = {0};
     std::vector<float> gradValueHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     std::vector<float> gradLocationHostData(GetShapeSize(gradLocationShape), 0);

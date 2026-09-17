@@ -22,6 +22,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -366,17 +367,31 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(
     auto attnWeightTrans = l0op::Transpose(attnWeightContiguous, attnAxes, uniqueExecutor.get());
     CHECK_RET(attnWeightTrans != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 输入如果是float16/bfloat16，需要cast为float32
-    auto valueCasted = l0op::Cast(valueContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+    // Per-parameter cast strategy:
+    // - If all FP tensors share the same dtype as value, skip all FP casts — the kernel
+    //   handles dtype conversion internally via per-param macros (selected by tiling key).
+    // - If any FP tensor differs from value's dtype, fall back to FP32 for all (old behavior).
+    auto valueDtype = value->GetDataType();
+    bool allMatchValue = (location->GetDataType() == valueDtype) && (attnWeight->GetDataType() == valueDtype) &&
+                         (gradOutput->GetDataType() == valueDtype) && (gradValue->GetDataType() == valueDtype) &&
+                         (gradLocation->GetDataType() == valueDtype) && (gradAttnWeight->GetDataType() == valueDtype) &&
+                         Ops::NN::AclnnUtil::IsRegbase();
+
+    auto valueCasted = allMatchValue ? valueContiguous :
+                                       l0op::Cast(valueContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
     CHECK_RET(valueCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto locationCasted = l0op::Cast(locationTrans, op::DataType::DT_FLOAT, uniqueExecutor.get());
+    auto locationCasted = allMatchValue ? locationTrans :
+                                          l0op::Cast(locationTrans, op::DataType::DT_FLOAT, uniqueExecutor.get());
     CHECK_RET(locationCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto attnWeightCasted = l0op::Cast(attnWeightTrans, op::DataType::DT_FLOAT, uniqueExecutor.get());
+    auto attnWeightCasted = allMatchValue ? attnWeightTrans :
+                                            l0op::Cast(attnWeightTrans, op::DataType::DT_FLOAT, uniqueExecutor.get());
     CHECK_RET(attnWeightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradOutputCasted = l0op::Cast(gradOutputContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+    auto gradOutputCasted = allMatchValue ?
+                                gradOutputContiguous :
+                                l0op::Cast(gradOutputContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
     CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 索引和spatialShape如果非int32类型，需要强转
@@ -411,12 +426,18 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(
     auto gradAttnWeightOut = l0op::Transpose(gradAttnWeightNoTrans, attnResAxes, uniqueExecutor.get());
     CHECK_RET(gradAttnWeightOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 固定写法，将计算结果转换成输出out的数据类型
-    auto gradValueCastOut = l0op::Cast(gradValueOut, gradValue->GetDataType(), uniqueExecutor.get());
+    // Output cast: when allMatchValue, kernel already outputs in valueDtype — skip cast.
+    // Otherwise kernel outputs FP32, cast to each output's expected dtype.
+    auto gradValueCastOut = allMatchValue ? gradValueOut :
+                                            l0op::Cast(gradValueOut, gradValue->GetDataType(), uniqueExecutor.get());
     CHECK_RET(gradValueCastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gradLocationCastOut = l0op::Cast(gradLocationOut, gradLocation->GetDataType(), uniqueExecutor.get());
+    auto gradLocationCastOut = allMatchValue ?
+                                   gradLocationOut :
+                                   l0op::Cast(gradLocationOut, gradLocation->GetDataType(), uniqueExecutor.get());
     CHECK_RET(gradLocationCastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gradAttnWeightCastOut = l0op::Cast(gradAttnWeightOut, gradAttnWeight->GetDataType(), uniqueExecutor.get());
+    auto gradAttnWeightCastOut = allMatchValue ?
+                                     gradAttnWeightOut :
+                                     l0op::Cast(gradAttnWeightOut, gradAttnWeight->GetDataType(), uniqueExecutor.get());
     CHECK_RET(gradAttnWeightCastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
