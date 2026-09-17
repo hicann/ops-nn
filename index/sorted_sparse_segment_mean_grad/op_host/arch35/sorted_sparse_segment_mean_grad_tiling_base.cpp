@@ -45,8 +45,7 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const SortedSparseSegmentMeanGradCompileInfo*>(
-            context_->GetCompileInfo());
+        auto compileInfoPtr = context_->GetCompileInfo<SortedSparseSegmentMeanGradCompileInfo>();
         OP_TILING_CHECK(compileInfoPtr == nullptr,
                         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "compile info is null"),
                         return ge::GRAPH_FAILED);
