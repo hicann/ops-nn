@@ -39,7 +39,8 @@ protected:
     void CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params) override;
 
-    void AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt, uint64_t& nCnt);
+    void AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt, uint64_t& nCnt,
+                              uint64_t baseM);
 };
 
 } // namespace Conv

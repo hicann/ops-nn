@@ -178,13 +178,19 @@ void Conv3DDXV2FullLoadTiling::CalStepK(L1TilingParams& l1Params, const L0Tiling
 }
 
 void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthGroupCnt,
-                                                    uint64_t& nCnt)
+                                                    uint64_t& nCnt, uint64_t baseM)
 {
     coreParams.singleCoreDin = ONE_U32;
 
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t maxMCnt = Ops::Base::CeilDiv(hwI, coreParams.singleCoreM);
-    uint64_t bestTotalCnt = Ops::Base::CeilAlign(batchDepthGroupCnt * maxMCnt * nCnt, static_cast<uint64_t>(coreNum_));
+    // 最重核开销 = 轮数 + 基本块数(等权)
+    auto calcCoreCost = [this, &batchDepthGroupCnt, &nCnt, hwI, baseM](uint64_t taskM) -> uint64_t {
+        uint64_t worstTasks = Ops::Base::CeilDiv(batchDepthGroupCnt * Ops::Base::CeilDiv(hwI, taskM) * nCnt,
+                                                 static_cast<uint64_t>(coreNum_));
+        return worstTasks * (1 + Ops::Base::CeilDiv(taskM, baseM));
+    };
+    uint64_t bestCoreCost = calcCoreCost(coreParams.singleCoreM);
     // 从最大切块往小找，直到找到符合负载均衡的分核
     for (uint64_t i = 1; i <= maxMCnt; ++i) {
         uint64_t tmpSingleCoreHWI = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_h), i) * runInfo_.dedx_w;
@@ -195,13 +201,10 @@ void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams
         if (tmpTotalCnt * static_cast<uint32_t>(5) < realTotalCnt * static_cast<uint32_t>(4)) {
             continue;
         }
-
-        // 找到底线解后，在总等效任务伦次不增加的情况下，找更均衡的解法，比如17*9比17*8更均衡，总任务量都为32*5
-        if (realTotalCnt <= bestTotalCnt) {
-            bestTotalCnt = realTotalCnt;
+        uint64_t tmpCoreCost = calcCoreCost(tmpSingleCoreHWI);
+        if (tmpCoreCost < bestCoreCost) {
+            bestCoreCost = tmpCoreCost;
             coreParams.singleCoreM = tmpSingleCoreHWI;
-        } else {
-            break;
         }
     }
 }
@@ -228,8 +231,7 @@ void Conv3DDXV2FullLoadTiling::SetSingleCoreInfo(CoreTilingParams& coreParams, L
         coreParams.singleCoreDin = runInfo_.dedx_d / depthFactor;
         coreParams.singleCoreM = static_cast<uint64_t>(runInfo_.dedx_h) * depthFactor / remainFactor * runInfo_.dedx_w;
     } else {
-        // 无法均匀分核时仍然采取batch为1的策略
-        AdjustSingleCoreInfo(coreParams, batchDepthGroupCnt, nCnt);
+        AdjustSingleCoreInfo(coreParams, batchDepthGroupCnt, nCnt, static_cast<uint64_t>(l0Params.baseM));
     }
     if (coreParams.singleCoreM < l0Params.baseM) {
         l0Params.baseM = Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
