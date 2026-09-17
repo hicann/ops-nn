@@ -28,6 +28,7 @@
 #include <cstdint>
 
 struct INInferV2TilingData {
+    // Keep the original tiling-key-0 layout stable for rolling Host/Kernel upgrades.
     int64_t numN;          // N
     int64_t numC;          // C（dim1）
     int64_t innerSize;     // R = prod(d2:)

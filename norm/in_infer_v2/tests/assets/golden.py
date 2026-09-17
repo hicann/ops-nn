@@ -19,11 +19,11 @@ When ``gamma`` and ``beta`` are both absent, the scale/add branch is omitted and
 ``y = (x - mean) / sqrt(variance + epsilon)``.  ``batch_mean`` and
 ``batch_variance`` are copies of the corresponding inputs.
 
-The CPU true-value path is a Torch competitor composition.  It lifts fp16 to at
+The CPU true-value path follows the mathematical contract.  It lifts fp16 to at
 least fp32 and preserves fp64 inputs supplied by TTK Promote; promoted values are
-never narrowed.  The independent third-party composition mirrors the arch35
-kernel's float32 arithmetic and operation order before casting ``y`` back to the
-input dtype.
+never narrowed.  The remote third-party paths deliberately use framework-level
+normalization operators and do not reproduce the arch35 tiling or reduction
+order.
 """
 
 import numpy as np
@@ -174,6 +174,18 @@ def _numpy_outputs(outputs, output_dtypes):
     return result
 
 
+def _select_declared_outputs(outputs, output_shapes):
+    """Keep IR output slots while suppressing optional outputs not connected."""
+    if not isinstance(output_shapes, (list, tuple)) or len(output_shapes) != len(
+        outputs
+    ):
+        return outputs
+    return [
+        output if shape is not None else None
+        for output, shape in zip(outputs, output_shapes)
+    ]
+
+
 def _kernel_golden(
     x,
     gamma,
@@ -193,11 +205,12 @@ def _kernel_golden(
             _input_dtype_name(mean),
             _input_dtype_name(variance),
         )
-    return _numpy_outputs(outputs, output_dtypes)
+    numpy_outputs = _numpy_outputs(outputs, output_dtypes)
+    return _select_declared_outputs(numpy_outputs, kwargs.get("output_ori_shapes"))
 
 
-class _INInferV2Compose:
-    """Independent Torch composition matching the arch35 device arithmetic."""
+class _INInferV2TorchCompose:
+    """Independent Torch reference built from ``functional.batch_norm``."""
 
     def __init__(self, epsilon=1e-5, **kwargs):
         epsilon_value = _resolve_epsilon(epsilon, kwargs)
@@ -205,7 +218,6 @@ class _INInferV2Compose:
         self.epsilon = float(torch.tensor(epsilon_value, dtype=torch.float32).item())
 
     def __call__(self, x, gamma, beta, mean, variance, **kwargs):
-        del kwargs
         if mean is None or variance is None:
             raise ValueError("mean and variance are required by INInferV2 tiling")
         if (gamma is None) != (beta is None):
@@ -213,39 +225,112 @@ class _INInferV2Compose:
         if x.dtype not in (torch.float16, torch.float32):
             raise TypeError(f"INInferV2 supports only float16/float32 x, got {x.dtype}")
 
+        import torch.nn.functional as functional
+
         n, c = x.shape[:2]
-        broadcast_shape = (n, c) + (1,) * (x.ndim - 2)
-
-        # INInferV2Kernel::Process converts every arithmetic operand to fp32.
-        x_f32 = x.to(dtype=torch.float32)
-        mean_f32 = _stat_matrix(mean.to(dtype=torch.float32), n, c, "mean")
-        variance_f32 = _stat_matrix(variance.to(dtype=torch.float32), n, c, "variance")
-        epsilon_f32 = variance_f32.new_tensor(self.epsilon)
-        sqrt_variance = torch.sqrt(torch.add(variance_f32, epsilon_f32))
-        centered = torch.sub(x_f32, torch.reshape(mean_f32, broadcast_shape))
-
-        if gamma is None:
-            y_f32 = torch.div(centered, torch.reshape(sqrt_variance, broadcast_shape))
-        else:
-            gamma_f32 = _stat_matrix(gamma.to(dtype=torch.float32), n, c, "gamma")
-            beta_f32 = _stat_matrix(beta.to(dtype=torch.float32), n, c, "beta")
-            scale = torch.div(gamma_f32, sqrt_variance)
-            scaled = torch.mul(centered, torch.reshape(scale, broadcast_shape))
-            y_f32 = torch.add(scaled, torch.reshape(beta_f32, broadcast_shape))
+        spatial = 1
+        for dim in x.shape[2:]:
+            spatial *= int(dim)
+        # Treat each (N,C) plane as an independent channel.  This maps the
+        # per-instance statistics to a standard inference BatchNorm call while
+        # retaining all trailing dimensions when the result is reshaped back.
+        x_f32 = x.to(dtype=torch.float32).reshape(1, n * c, spatial)
+        running_mean = _stat_matrix(mean.to(dtype=torch.float32), n, c, "mean").reshape(
+            -1
+        )
+        running_variance = _stat_matrix(
+            variance.to(dtype=torch.float32), n, c, "variance"
+        ).reshape(-1)
+        weight = (
+            None
+            if gamma is None
+            else _stat_matrix(gamma.to(dtype=torch.float32), n, c, "gamma").reshape(-1)
+        )
+        bias = (
+            None
+            if beta is None
+            else _stat_matrix(beta.to(dtype=torch.float32), n, c, "beta").reshape(-1)
+        )
+        y_f32 = functional.batch_norm(
+            x_f32,
+            running_mean,
+            running_variance,
+            weight=weight,
+            bias=bias,
+            training=False,
+            momentum=0.0,
+            eps=self.epsilon,
+        ).reshape(x.shape)
 
         # The first output is stored in x dtype; the two copy outputs are fp32.
-        return [
+        outputs = [
             y_f32.to(dtype=x.dtype),
             mean.to(dtype=torch.float32).clone(),
             variance.to(dtype=torch.float32).clone(),
         ]
+        return _select_declared_outputs(outputs, kwargs.get("output_shapes"))
+
+
+class _INInferV2TensorFlowCompose:
+    """Independent TensorFlow reference built from ``tf.nn.batch_normalization``."""
+
+    def __init__(self, epsilon=1e-5, **kwargs):
+        self.epsilon = float(np.float32(_resolve_epsilon(epsilon, kwargs)))
+
+    def __call__(self, x, gamma, beta, mean, variance, **kwargs):
+        import tensorflow as tf
+
+        if mean is None or variance is None:
+            raise ValueError("mean and variance are required by INInferV2 tiling")
+        if (gamma is None) != (beta is None):
+            raise ValueError("gamma and beta must be both present or both absent")
+        if x.dtype not in (tf.float16, tf.float32):
+            raise TypeError(f"INInferV2 supports only float16/float32 x, got {x.dtype}")
+
+        rank = x.shape.rank
+        if rank is None or rank < 2:
+            raise ValueError(f"x rank must be at least 2, got {rank}")
+        n, c = int(x.shape[0]), int(x.shape[1])
+        stat_shape = (n, c)
+        broadcast_shape = stat_shape + (1,) * (rank - 2)
+
+        x_f32 = tf.cast(x, tf.float32)
+        mean_f32 = tf.reshape(tf.cast(mean, tf.float32), stat_shape)
+        variance_f32 = tf.reshape(tf.cast(variance, tf.float32), stat_shape)
+        scale = (
+            None
+            if gamma is None
+            else tf.reshape(tf.cast(gamma, tf.float32), broadcast_shape)
+        )
+        offset = (
+            None
+            if beta is None
+            else tf.reshape(tf.cast(beta, tf.float32), broadcast_shape)
+        )
+        y_f32 = tf.nn.batch_normalization(
+            x_f32,
+            tf.reshape(mean_f32, broadcast_shape),
+            tf.reshape(variance_f32, broadcast_shape),
+            offset=offset,
+            scale=scale,
+            variance_epsilon=self.epsilon,
+        )
+        outputs = [
+            tf.cast(y_f32, x.dtype),
+            tf.identity(tf.cast(mean, tf.float32)),
+            tf.identity(tf.cast(variance, tf.float32)),
+        ]
+        return _select_declared_outputs(outputs, kwargs.get("output_shapes"))
 
 
 class INInferV2KernelSpec:
     """Shared kernel/GEIR TestSpec; parameters follow in_infer_v2_def.cpp."""
 
     golden = _kernel_golden
-    third_party = {"torch": _INInferV2Compose}
+    third_party = {
+        "torch": _INInferV2TorchCompose,
+        "tf": _INInferV2TensorFlowCompose,
+    }
     tolerance = _TOL
 
 

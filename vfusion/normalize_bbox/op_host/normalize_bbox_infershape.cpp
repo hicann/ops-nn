@@ -16,6 +16,7 @@
 #include "runtime/infer_shape_context.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -30,7 +31,11 @@ static ge::graphStatus NormalizeBBoxInferShape(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, boxesShape);
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
-    *yShape = *boxesShape;
+    if (Ops::Base::IsUnknownRank(*boxesShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+    } else {
+        *yShape = *boxesShape;
+    }
 
     OP_LOGD(context, "End to do NormalizeBBoxInferShape");
     return ge::GRAPH_SUCCESS;

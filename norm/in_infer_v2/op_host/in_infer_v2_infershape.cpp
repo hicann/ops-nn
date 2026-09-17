@@ -18,6 +18,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 namespace ops {
 
@@ -42,16 +43,59 @@ static ge::graphStatus INInferV2InferShape(gert::InferShapeContext* context)
     const gert::Shape* varShape = context->GetOptionalInputShape(INPUT_VAR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
 
-    gert::Shape* yShape = context->GetOutputShape(OUTPUT_Y_INDEX);
+    const auto* yInstanceInfo = context->GetIrOutputInstanceInfo(OUTPUT_Y_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yInstanceInfo);
+    OP_CHECK_IF(yInstanceInfo->GetInstanceNum() != 1,
+                OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "y", yInstanceInfo->GetInstanceNum(), "1"),
+                return ge::GRAPH_FAILED);
+    gert::Shape* yShape = context->GetOutputShape(yInstanceInfo->GetInstanceStart());
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
-    gert::Shape* batchMeanShape = context->GetOutputShape(OUTPUT_BATCH_MEAN_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, batchMeanShape);
-    gert::Shape* batchVarShape = context->GetOutputShape(OUTPUT_BATCH_VAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, batchVarShape);
 
-    *yShape = *xShape;
-    *batchMeanShape = *meanShape;
-    *batchVarShape = *varShape;
+    const auto* batchMeanInstanceInfo = context->GetIrOutputInstanceInfo(OUTPUT_BATCH_MEAN_INDEX);
+    gert::Shape* batchMeanShape = nullptr;
+    if (batchMeanInstanceInfo != nullptr) {
+        OP_CHECK_IF(batchMeanInstanceInfo->GetInstanceNum() > 1,
+                    OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "batch_mean",
+                                                  batchMeanInstanceInfo->GetInstanceNum(), "0 or 1"),
+                    return ge::GRAPH_FAILED);
+    }
+    if (batchMeanInstanceInfo != nullptr && batchMeanInstanceInfo->GetInstanceNum() == 1) {
+        batchMeanShape = context->GetOutputShape(batchMeanInstanceInfo->GetInstanceStart());
+        OP_CHECK_NULL_WITH_CONTEXT(context, batchMeanShape);
+    }
+
+    const auto* batchVarInstanceInfo = context->GetIrOutputInstanceInfo(OUTPUT_BATCH_VAR_INDEX);
+    gert::Shape* batchVarShape = nullptr;
+    if (batchVarInstanceInfo != nullptr) {
+        OP_CHECK_IF(batchVarInstanceInfo->GetInstanceNum() > 1,
+                    OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "batch_variance",
+                                                  batchVarInstanceInfo->GetInstanceNum(), "0 or 1"),
+                    return ge::GRAPH_FAILED);
+    }
+    if (batchVarInstanceInfo != nullptr && batchVarInstanceInfo->GetInstanceNum() == 1) {
+        batchVarShape = context->GetOutputShape(batchVarInstanceInfo->GetInstanceStart());
+        OP_CHECK_NULL_WITH_CONTEXT(context, batchVarShape);
+    }
+
+    if (Ops::Base::IsUnknownRank(*xShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+    } else {
+        *yShape = *xShape;
+    }
+    if (batchMeanShape != nullptr) {
+        if (Ops::Base::IsUnknownRank(*meanShape)) {
+            Ops::Base::SetUnknownRank(*batchMeanShape);
+        } else {
+            *batchMeanShape = *meanShape;
+        }
+    }
+    if (batchVarShape != nullptr) {
+        if (Ops::Base::IsUnknownRank(*varShape)) {
+            Ops::Base::SetUnknownRank(*batchVarShape);
+        } else {
+            *batchVarShape = *varShape;
+        }
+    }
 
     OP_LOGD(context->GetNodeName(), "End to do INInferV2InferShape");
     return ge::GRAPH_SUCCESS;

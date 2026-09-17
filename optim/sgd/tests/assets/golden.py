@@ -214,10 +214,9 @@ def _torch_to_numpy(tensor, target_dtype=None, reference=None):
     if target_name == "bfloat16":
         bits = result.to(torch.bfloat16).view(torch.uint16).numpy().copy()
         if _NP_BFLOAT16 is None:
-            # Loader/import remains usable without ml_dtypes; TTK installations
-            # that execute bf16 cases provide it and therefore take the branch
-            # above with the semantic bfloat16 dtype.
-            return result.to(torch.float32).numpy()
+            raise RuntimeError(
+                "ml_dtypes is required to emit a semantic bfloat16 golden"
+            )
         return bits.view(_NP_BFLOAT16)
 
     # Legacy raw-bf16 input representation.  A masked writeback tensor is still
@@ -386,6 +385,71 @@ class _SgdCompose:
         return [parameters_out, accum_out, stat_out]
 
 
+class _SgdTensorFlowCompose:
+    """Independent TensorFlow composition matching the arch35 DAG order."""
+
+    def __init__(
+        self,
+        dampening=0.0,
+        weight_decay=0.0,
+        nesterov=False,
+        **kwargs,
+    ):
+        attrs = {
+            "dampening": dampening,
+            "weight_decay": weight_decay,
+            "nesterov": nesterov,
+            **kwargs,
+        }
+        self.dampening = float(np.float32(_attr(attrs, "dampening", 0.0)))
+        self.weight_decay = float(np.float32(_attr(attrs, "weight_decay", 0.0)))
+        self.nesterov = bool(_attr(attrs, "nesterov", False))
+
+    def __call__(
+        self,
+        parameters,
+        gradient,
+        learning_rate,
+        accum,
+        momentum,
+        stat,
+        **kwargs,
+    ):
+        del kwargs
+        import tensorflow as tf
+
+        output_dtype = parameters.dtype
+        p = tf.cast(parameters, tf.float32)
+        g = tf.cast(gradient, tf.float32)
+        a = tf.cast(accum, tf.float32)
+        s = tf.cast(stat, tf.float32)
+        learning_rate_value = tf.reshape(tf.cast(learning_rate, tf.float32), (-1,))[0]
+        momentum_value = tf.reshape(tf.cast(momentum, tf.float32), (-1,))[0]
+
+        grad = g + p * self.weight_decay if self.weight_decay != 0.0 else g
+        accum_t = a * momentum_value + grad
+        if self.dampening != 0.0:
+            stat_active = s * -1.0 + 1.0
+            accum_t = accum_t - grad * (stat_active * self.dampening)
+        if self.nesterov:
+            update = (grad + accum_t * momentum_value) * learning_rate_value
+        else:
+            update = accum_t * learning_rate_value
+        parameters_out = tf.cast(p - update, output_dtype)
+
+        # Keep the provider implementation graph-compatible: the endpoint may
+        # wrap the callable in ``tf.function``, where Tensor.numpy() is invalid.
+        accum_out, stat_out = tf.cond(
+            tf.not_equal(momentum_value, 0.0),
+            lambda: (
+                tf.cast(accum_t, output_dtype),
+                tf.cast(tf.zeros_like(s), output_dtype),
+            ),
+            lambda: (tf.identity(accum), tf.identity(stat)),
+        )
+        return [parameters_out, accum_out, stat_out]
+
+
 class SgdKernelSpec:
     """Kernel and GEIR share the snake_case ``sgd`` registration."""
 
@@ -414,7 +478,10 @@ class SgdKernelSpec:
             **kwargs,
         )
 
-    third_party = {"torch": _SgdCompose}
+    third_party = {
+        "torch": _SgdCompose,
+        "tf": _SgdTensorFlowCompose,
+    }
     tolerance = _TOL
 
 

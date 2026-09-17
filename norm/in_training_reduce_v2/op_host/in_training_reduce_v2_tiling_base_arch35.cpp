@@ -14,6 +14,7 @@
  */
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "in_training_reduce_v2_tiling.h"
 
 using namespace ge;
@@ -28,17 +29,24 @@ constexpr int64_t ND_MAX_DIM_NUM = 8;
 constexpr int64_t DIM_0 = 0;
 constexpr int64_t DIM_1 = 1;
 constexpr int64_t DIM_2 = 2;
-constexpr int64_t DIM_3 = 3;
-constexpr int64_t DIM_4 = 4;
 
 const std::vector<ge::DataType> DTYPE_LIST = {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT};
+
+bool CheckedMulNonNegative(int64_t lhs, int64_t rhs, int64_t& result)
+{
+    if (lhs < 0 || rhs < 0 || (lhs != 0 && rhs > std::numeric_limits<int64_t>::max() / lhs)) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
+}
 } // namespace
 
 namespace optiling {
 ge::graphStatus INTrainingReduceV2RegbaseTilingBase::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
-    auto compileInfoPtr = reinterpret_cast<const INTrainingReduceV2CompileInfo*>(context_->GetCompileInfo());
+    auto compileInfoPtr = context_->GetCompileInfo<INTrainingReduceV2CompileInfo>();
     OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                 return ge::GRAPH_FAILED);
     vlfp32 = compileInfoPtr->vectorLength / sizeof(float);
@@ -55,6 +63,11 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::GetPlatformInfo()
         aicoreParams_.blockDim = compileInfoPtr->coreNum;
         aicoreParams_.ubSize = compileInfoPtr->ubSize;
     }
+    OP_CHECK_IF(vlfp32 <= 0 || ubBlockSize <= 0 || aicoreParams_.blockDim == 0 || aicoreParams_.ubSize == 0,
+                OP_LOGE(context_->GetNodeName(),
+                        "invalid platform info: vectorLength=%ld, ubBlockSize=%ld, blockDim=%lu, ubSize=%lu",
+                        vectorLength, ubBlockSize, aicoreParams_.blockDim, aicoreParams_.ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -113,7 +126,6 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
         if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
-        r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(xDimNum != NCDHW_DIM_NUM,
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
@@ -123,7 +135,6 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
         if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
-        r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else if (format == FORMAT_ND) {
         OP_CHECK_IF(xDimNum < ND_MIN_DIM_NUM || xDimNum > ND_MAX_DIM_NUM,
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
@@ -133,11 +144,30 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
         if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
-        r = xStorageShape.GetShapeSize() / a1 / a0;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ToString(format).c_str(), "NCHW, NCDHW or ND");
         return ge::GRAPH_FAILED;
     }
+
+    r = 1;
+    for (int64_t i = DIM_2; i < xDimNum; ++i) {
+        int64_t nextR = 0;
+        OP_CHECK_IF(
+            !CheckedMulNonNegative(r, xStorageShape.GetDim(i), nextR),
+            OP_LOGE(context_->GetNodeName(), "product of x spatial dimensions exceeds int64 range at dim %ld", i),
+            return ge::GRAPH_FAILED);
+        r = nextR;
+    }
+    int64_t totalRows = 0;
+    int64_t totalElements = 0;
+    OP_CHECK_IF(!CheckedMulNonNegative(a1, a0, totalRows),
+                OP_LOGE(context_->GetNodeName(), "N*C exceeds int64 range, N=%ld, C=%ld", a1, a0),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckedMulNonNegative(totalRows, r, totalElements),
+                OP_LOGE(context_->GetNodeName(), "x element count exceeds int64 range, N*C=%ld, R=%ld", totalRows, r),
+                return ge::GRAPH_FAILED);
+    totalRows_ = static_cast<uint64_t>(totalRows);
+    totalElements_ = static_cast<uint64_t>(totalElements);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -166,7 +196,7 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::CheckDtypeValid()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus INTrainingReduceV2RegbaseTilingBase::CheckShapeAllNotNegative(gert::Shape& shape)
+ge::graphStatus INTrainingReduceV2RegbaseTilingBase::CheckShapeAllNotNegative(const gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(shape.GetDim(i) < 0,

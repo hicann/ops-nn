@@ -62,6 +62,8 @@ public:
         vlfp32 = 0;
         vectorLength = 0;
         ubBlockSize = 0;
+        totalRows_ = 0;
+        totalElements_ = 0;
     }
 
 protected:
@@ -70,7 +72,7 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus CheckDtypeValid();
-    ge::graphStatus CheckShapeAllNotNegative(gert::Shape& shape);
+    ge::graphStatus CheckShapeAllNotNegative(const gert::Shape& shape);
     ge::graphStatus ParseShapeByFormat();
     // N / C 轴取值 + 正数校验，NCHW / NCDHW / ND 三个分支共用
     ge::graphStatus ParseAndCheckNC();
@@ -82,6 +84,8 @@ protected:
     int64_t vlfp32{0};
     int64_t vectorLength{0};
     int64_t ubBlockSize{0}; // 用于在 UB 上进行 32B 的字节对齐
+    uint64_t totalRows_{0};
+    uint64_t totalElements_{0};
 
     int64_t blockNum_{1};
 
@@ -102,6 +106,7 @@ public:
         INTrainingReduceV2RegbaseTilingBase::Reset(context);
         blockNum_ = 0;
         binaryAddQuotient = 0;
+        td_ = {};
     }
 
 protected:
@@ -115,12 +120,9 @@ private:
     bool DoSubRTiling(uint64_t rAlign, uint64_t binAddQuotient, int64_t elemSize);
     // sub-R 路径 Kernel 侧 UB 精确占用（须与 op_kernel/arch35 的 InitSubR() 逐项一致）
     uint64_t CalcSubRUbBytes(uint64_t rFactor, uint64_t chunksPerGroup, uint64_t numGroups, int64_t elemSize) const;
-    // sub-R 路径 Kernel 侧把 numN / numC / perCoreCnt 收窄成 uint32_t，Host 须先证明可收窄
-    // （numR 不在此列：分组折叠落地后 numR 全程 uint64）
-    bool CheckSubRNarrowable() const;
 
-    int64_t binaryAddQuotient;
-    INTrainingReduceV2ARFullReduceTilingData td_;
+    int64_t binaryAddQuotient{0};
+    INTrainingReduceV2ARFullReduceTilingData td_{};
 };
 
 } // namespace optiling

@@ -112,19 +112,18 @@ public:
             planeStart_ = tl_->formerCoreNum * tl_->formerUnits + (ncIdx - tl_->formerCoreNum) * tl_->latterUnits;
         }
         rStart_ = rIdx_ * tl_->innerPerCore;
-        int64_t rEnd = rStart_ + tl_->innerPerCore;
-        if (rEnd > tl_->innerSize) {
-            rEnd = tl_->innerSize;
-        }
-        myR_ = (rEnd > rStart_) ? (rEnd - rStart_) : 0;
+        // 用剩余量截断，避免 innerSize 接近 INT64_MAX 时 rStart+innerPerCore
+        // 在最后一个 R 分片发生有符号加法溢出。
+        int64_t remainingR = (rStart_ < tl_->innerSize) ? (tl_->innerSize - rStart_) : 0;
+        myR_ = (remainingR < tl_->innerPerCore) ? remainingR : tl_->innerPerCore;
         // batch_mean/batch_variance 透传拷贝：仅 plane 归属核（rIdx==0）执行，全程恰好一次
         copyBatchMean_ = (rIdx_ == 0 && tl_->hasBatchMean != 0);
         copyBatchVar_ = (rIdx_ == 0 && tl_->hasBatchVar != 0);
         epsilon_ = tl_->epsilon;
 
-        int64_t gmLen = tl_->units * tl_->innerSize;
-        xGm_.SetGlobalBuffer((__gm__ T*)x, gmLen);
-        yGm_.SetGlobalBuffer((__gm__ T*)y, gmLen);
+        int64_t totalElements = tl_->units * tl_->innerSize;
+        xGm_.SetGlobalBuffer((__gm__ T*)x, totalElements);
+        yGm_.SetGlobalBuffer((__gm__ T*)y, totalElements);
         meanGm_.SetGlobalBuffer((__gm__ float*)mean, tl_->units);
         varGm_.SetGlobalBuffer((__gm__ float*)variance, tl_->units);
         batchMeanGm_.SetGlobalBuffer((__gm__ float*)batchMean, tl_->units);
@@ -157,7 +156,7 @@ public:
             BulkCopyStats(varGm_, batchVarGm_, planeStart_, planeStart_ + planeNum_);
         }
 
-        for (int64_t p0 = 0; p0 < planeNum_; p0 += CHUNK_PLANES) {
+        for (int64_t p0 = 0; p0 < planeNum_;) {
             int64_t cnt = (planeNum_ - p0) < CHUNK_PLANES ? (planeNum_ - p0) : CHUNK_PLANES;
             // 统计量 staging：本 chunk 全部 plane 的 mean/var(/gamma/beta) 一次 MTE2 搬入
             LocalTensor<float> meanUb = StageStat(meanQue_, meanGm_, p0, cnt);
@@ -191,6 +190,7 @@ public:
                 gammaQue_.FreeTensor(gammaUb);
                 betaQue_.FreeTensor(betaUb);
             }
+            p0 += cnt; // 恰好推进到 planeNum_，不让尾轮固定步长越过 INT64_MAX
         }
     }
 
@@ -214,7 +214,8 @@ private:
         __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleBuf_.Get<float>().GetPhyAddr();
         __VEC_SCOPE__
         {
-            RegTensor<float> vReg, sReg;
+            RegTensor<float> vReg;
+            RegTensor<float> sReg;
             // 尾 chunk（cnt<64）staging 尾段 [cnt,64) 无有效数据：DIST_NORM 无掩码 load
             // 会带进无效 lane，全程 UpdateMask 屏蔽（计算与写回均不参与），
             // 与主循环尾块同一契约（规则 3/4）；scaleBuf_ 尾段永远不会被 bcast 读取（j<cnt）
@@ -245,7 +246,7 @@ private:
         // fp16 下 bulkChunk = ubTileSize/2，tiling 保证 ubTileSize ≥ 2*VL，故 bulkChunk ≥ VL 不为 0
         int64_t bulkChunk = tl_->ubTileSize * static_cast<int64_t>(sizeof(T)) / static_cast<int64_t>(sizeof(float));
         bulkChunk = bulkChunk / static_cast<int64_t>(VL_FP32) * static_cast<int64_t>(VL_FP32);
-        for (int64_t off = elemStart; off < elemEnd; off += bulkChunk) {
+        for (int64_t off = elemStart; off < elemEnd;) {
             int64_t cnt = (elemEnd - off) < bulkChunk ? (elemEnd - off) : bulkChunk;
             LocalTensor<float> inUb = xQue_.AllocTensor<float>();
             DataCopyExtParams cpIn{1, static_cast<uint32_t>(cnt * sizeof(float)), 0, 0, 0};
@@ -261,6 +262,7 @@ private:
             DataCopyPad(dstGm[off], outUb, cpIn);
             yQue_.FreeTensor(outUb);
             xQue_.FreeTensor(inUb);
+            off += cnt; // 尾轮恰好到 elemEnd，避免固定步长越界
         }
     }
 
@@ -296,7 +298,7 @@ private:
     {
         int64_t gmBase = p * tl_->innerSize + rStart_;
         int64_t ubTile = tl_->ubTileSize;
-        for (int64_t off = 0; off < myR_; off += ubTile) {
+        for (int64_t off = 0; off < myR_;) {
             int64_t remain = myR_ - off;
             int64_t extent = remain < ubTile ? remain : ubTile;
             LocalTensor<T> xUb = xQue_.AllocTensor<T>();
@@ -314,6 +316,7 @@ private:
             DataCopyPad(yGm_[gmBase + off], yUb, cpIn);
             yQue_.FreeTensor(yUb);
             xQue_.FreeTensor(xUb);
+            off += extent; // 尾轮恰好到 myR_，避免固定步长越界
         }
     }
 
@@ -328,7 +331,11 @@ private:
         uint32_t tailCount = static_cast<uint32_t>(extent) - fullLoops * VL_FP32;
         __VEC_SCOPE__
         {
-            RegTensor<float> meanReg, sqrtReg, betaReg, xReg, yReg;
+            RegTensor<float> meanReg;
+            RegTensor<float> sqrtReg;
+            RegTensor<float> betaReg;
+            RegTensor<float> xReg;
+            RegTensor<float> yReg;
             MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
             __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleBuf_.Get<float>().GetPhyAddr();
             // tile 前导：mean 与预计算的 scale（gb）/ sqrt（nogb）广播进寄存器

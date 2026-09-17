@@ -29,6 +29,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 #include "../../../../op_host/arch35/sgd_tiling.h"
@@ -75,7 +76,8 @@ struct SgdUtCompileInfo {};
 ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape& gradShape, gert::StorageShape& lrShape,
                              gert::StorageShape& accumShape, gert::StorageShape& momentumShape,
                              gert::StorageShape& statShape, ge::DataType paramDtype, ge::DataType otherDtype,
-                             float dampening, float weightDecay, bool nesterov, uint64_t* outTilingKey)
+                             float dampening, float weightDecay, bool nesterov, bool provideAttrs,
+                             uint64_t* outTilingKey)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -101,6 +103,12 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
     SgdUtCompileInfo compileInfo;
     auto inFormat = ge::FORMAT_ND;
 
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs;
+    if (provideAttrs) {
+        attrs = {{"dampening", Ops::NN::AnyValue::CreateFrom<float>(dampening)},
+                 {"weight_decay", Ops::NN::AnyValue::CreateFrom<float>(weightDecay)},
+                 {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(nesterov)}};
+    }
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)
                       .NodeIoNum(SGD_INPUT_NUM, SGD_OUTPUT_NUM)
@@ -116,9 +124,7 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
                       .NodeInputTd(4, otherDtype, inFormat, inFormat)
                       .NodeInputTd(5, otherDtype, inFormat, inFormat)
                       .NodeOutputTd(0, paramDtype, inFormat, inFormat)
-                      .NodeAttrs({{"dampening", Ops::NN::AnyValue::CreateFrom<float>(dampening)},
-                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom<float>(weightDecay)},
-                                  {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(nesterov)}})
+                      .NodeAttrs(attrs)
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -138,6 +144,15 @@ ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape&
         *outTilingKey = tiling_context->GetTilingKey();
     }
     return ret;
+}
+
+ge::graphStatus RunSgdTiling(gert::StorageShape& paramShape, gert::StorageShape& gradShape, gert::StorageShape& lrShape,
+                             gert::StorageShape& accumShape, gert::StorageShape& momentumShape,
+                             gert::StorageShape& statShape, ge::DataType paramDtype, ge::DataType otherDtype,
+                             float dampening, float weightDecay, bool nesterov, uint64_t* outTilingKey)
+{
+    return RunSgdTiling(paramShape, gradShape, lrShape, accumShape, momentumShape, statShape, paramDtype, otherDtype,
+                        dampening, weightDecay, nesterov, true, outTilingKey);
 }
 
 // 正常路径便捷封装：6 路同形同 dtype
@@ -164,6 +179,20 @@ TEST_F(TestSgdTiling, sgd_tiling_K0_no_branch_fp32)
     uint64_t key = 0;
     ASSERT_EQ(RunSgdTilingNormal({16, 26, 16, 19}, ge::DT_FLOAT, 0.0f, 0.0f, false, &key), ge::GRAPH_SUCCESS);
     EXPECT_EQ(BizBits(key), BizExpect(false, false, false));
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_optional_attrs_all_omitted_use_defaults)
+{
+    gert::StorageShape big = {{16, 16}, {16, 16}};
+    gert::StorageShape one = {{1}, {1}};
+    uint64_t implicitKey = 0;
+    uint64_t explicitKey = 0;
+    ASSERT_EQ(RunSgdTiling(big, big, one, big, one, big, ge::DT_FLOAT, ge::DT_FLOAT, 123.0f, 456.0f, true, false,
+                           &implicitKey),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunSgdTilingNormal({16, 16}, ge::DT_FLOAT, 0.0f, 0.0f, false, &explicitKey), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(BizBits(implicitKey), BizExpect(false, false, false));
+    EXPECT_EQ(BizBits(implicitKey), BizBits(explicitKey));
 }
 
 TEST_F(TestSgdTiling, sgd_tiling_K1_dampening_only_fp32)
@@ -232,6 +261,13 @@ TEST_F(TestSgdTiling, sgd_tiling_illegal_negative_weight_decay)
 {
     uint64_t key = 0;
     ASSERT_EQ(RunSgdTilingNormal({256, 256}, ge::DT_FLOAT, 0.0f, -0.01f, false, &key), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestSgdTiling, sgd_tiling_rejects_nan_weight_decay)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunSgdTilingNormal({16}, ge::DT_FLOAT, 0.0f, std::numeric_limits<float>::quiet_NaN(), false, &key),
+              ge::GRAPH_FAILED);
 }
 
 // ───────────── 本算子相对 910B/910C 补齐的校验（canndev 仅校验 parameters 的 rank）─────────────

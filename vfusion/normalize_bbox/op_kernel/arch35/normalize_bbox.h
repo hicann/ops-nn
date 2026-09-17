@@ -33,6 +33,10 @@ constexpr int64_t NB_VREPEAT_SIZE = 256;
 constexpr int64_t NB_DOUBLE_BUFFER = 2;
 constexpr uint64_t NB_ODD_LANE_MASK = 0xAAAAAAAAAAAAAAAAULL; // odd lanes (x-system coords) -> w
 constexpr int64_t NB_MASK_ELEM_WIDTH = 128;                  // mask Duplicate covers 128 CompT elements per repeat
+constexpr size_t NB_MASK_WORD_COUNT = 2;
+constexpr uint8_t NB_DUPLICATE_REPEAT_COUNT = 1;
+constexpr uint8_t NB_DUPLICATE_BLOCK_STRIDE = 1;
+constexpr uint8_t NB_DUPLICATE_REPEAT_STRIDE = 8;
 
 // Compute type: boxes dtype is half or float, Div runs in-place (CompT == T).
 template <typename T>
@@ -51,12 +55,12 @@ public:
     using CompT = typename DivCompute<T>::Type;
 
 private:
-    __aicore__ inline void LoadHW(uint64_t b, CompT& h, CompT& w);
+    __aicore__ inline void LoadHW(int64_t b, CompT& h, CompT& w);
     __aicore__ inline void BuildDivisorNormal(const CompT& h, const CompT& w, int32_t divWidth);
     __aicore__ inline void BuildConstBlock(const LocalTensor<CompT>& dst, const CompT& v, int32_t width);
-    __aicore__ inline void ProcessBatchNormal(uint64_t b, uint64_t elemStart, uint64_t elemCount);
-    __aicore__ inline void ProcessBatchReversed(uint64_t b, uint64_t frameStart, uint64_t frameCount);
-    __aicore__ inline void CopyDivide(uint64_t gmOffset, uint64_t processLen, const LocalTensor<CompT>& divisor);
+    __aicore__ inline void ProcessBatchNormal(int64_t b, int64_t elemStart, int64_t elemCount);
+    __aicore__ inline void ProcessBatchReversed(int64_t b, int64_t frameStart, int64_t frameCount);
+    __aicore__ inline void CopyDivide(int64_t gmOffset, int64_t processLen, const LocalTensor<CompT>& divisor);
 
     __aicore__ inline int64_t CeilAlign(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b * b; }
 
@@ -64,16 +68,16 @@ private:
     const NormalizeBBoxTilingData& tiling_;
 
     // basic params
-    uint64_t blockIdx_ = 0;
-    uint64_t batch_ = 0;
-    uint64_t num_ = 0;
-    uint64_t coordNum_ = 0;
-    uint64_t splitMode_ = 0;
-    uint64_t tileLen_ = 0;
+    int64_t blockIdx_ = 0;
+    int64_t batch_ = 0;
+    int64_t num_ = 0;
+    int64_t coordNum_ = 0;
+    int64_t splitMode_ = 0;
+    int64_t tileLen_ = 0;
 
     // this core's batch range (splitMode==1)
-    uint64_t batchStart_ = 0;
-    uint64_t batchCount_ = 0;
+    int64_t batchStart_ = 0;
+    int64_t batchCount_ = 0;
 
     TQue<QuePosition::VECIN, NB_DOUBLE_BUFFER> boxesInQue_;
     TQue<QuePosition::VECOUT, NB_DOUBLE_BUFFER> boxesOutQue_;
@@ -89,7 +93,7 @@ private:
 template <typename T, bool reversedBox>
 __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Init(GM_ADDR boxes, GM_ADDR shape_hw, GM_ADDR y)
 {
-    blockIdx_ = GetBlockIdx();
+    blockIdx_ = static_cast<int64_t>(GetBlockIdx());
     batch_ = tiling_.batch;
     num_ = tiling_.num;
     coordNum_ = tiling_.coordNum;
@@ -99,14 +103,15 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Init(GM_ADDR boxes, 
     // determine this core's work range
     if (splitMode_ == 1) {
         // split by batch: front bigCoreNum cores handle batchPerCore, rest handle (batchPerCore-1)
-        uint64_t bigCoreNum = tiling_.bigCoreNum;
-        uint64_t batchPerCore = tiling_.batchPerCore;
+        int64_t bigCoreNum = static_cast<int64_t>(tiling_.bigCoreNum);
+        int64_t batchPerCore = static_cast<int64_t>(tiling_.batchPerCore);
+        int64_t tailBatchNum = static_cast<int64_t>(tiling_.tailBatchNum);
         if (blockIdx_ < bigCoreNum) {
             batchStart_ = blockIdx_ * batchPerCore;
             batchCount_ = batchPerCore;
         } else {
-            batchStart_ = bigCoreNum * batchPerCore + (blockIdx_ - bigCoreNum) * tiling_.tailBatchNum;
-            batchCount_ = tiling_.tailBatchNum;
+            batchStart_ = bigCoreNum * batchPerCore + (blockIdx_ - bigCoreNum) * tailBatchNum;
+            batchCount_ = tailBatchNum;
         }
     } else {
         // split by num (batch == 1): handled inside Process via per-core num range
@@ -114,23 +119,23 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Init(GM_ADDR boxes, 
         batchCount_ = (blockIdx_ == 0 || batch_ == 1) ? batch_ : 0;
     }
 
-    boxesGm_.SetGlobalBuffer((__gm__ T*)boxes);
-    yGm_.SetGlobalBuffer((__gm__ T*)y);
-    shapeGm_.SetGlobalBuffer((__gm__ int32_t*)shape_hw);
+    boxesGm_.SetGlobalBuffer((__gm__ T*)boxes, tiling_.totalElements);
+    yGm_.SetGlobalBuffer((__gm__ T*)y, tiling_.totalElements);
+    shapeGm_.SetGlobalBuffer((__gm__ int32_t*)shape_hw, tiling_.shapeElements);
 
-    tpipe_.InitBuffer(boxesInQue_, NB_DOUBLE_BUFFER, tileLen_ * sizeof(T));
-    tpipe_.InitBuffer(boxesOutQue_, NB_DOUBLE_BUFFER, tileLen_ * sizeof(T));
-    tpipe_.InitBuffer(shapeInQue_, 1, NB_BLOCK_SIZE); // 3 int32 fits in one 32B block
-    tpipe_.InitBuffer(hwCastBuf_, NB_BLOCK_SIZE * 2); // f32 + half scratch
+    tpipe_.InitBuffer(boxesInQue_, NB_DOUBLE_BUFFER, tiling_.boxesBufferBytes);
+    tpipe_.InitBuffer(boxesOutQue_, NB_DOUBLE_BUFFER, tiling_.boxesBufferBytes);
+    tpipe_.InitBuffer(shapeInQue_, 1, tiling_.shapeBufferBytes); // 3 int32 fits in one 32B block
+    tpipe_.InitBuffer(hwCastBuf_, tiling_.hwCastBufferBytes);    // f32 + half scratch
     // divisor is in CompT: normal needs 1 full-width block; reversed needs divH + divW (2 blocks)
-    tpipe_.InitBuffer(divisorBuf_, tileLen_ * sizeof(CompT) * (reversedBox ? 2 : 1));
+    tpipe_.InitBuffer(divisorBuf_, tiling_.divisorBufferBytes);
 }
 
 // Load shape_hw[b] = [h, w, *] (int32) -> Cast to CompT scalars h, w.
 // CompT is float for float and half for half. The divisor is built in CompT, so
-// the whole divide runs in CompT (matching the golden cast chain: int32->f32->divide).
+// the whole divide runs in CompT (cast chain: int32->f32->[f16 for half boxes]->divide).
 template <typename T, bool reversedBox>
-__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::LoadHW(uint64_t b, CompT& h, CompT& w)
+__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::LoadHW(int64_t b, CompT& h, CompT& w)
 {
     LocalTensor<int32_t> shapeLocal = shapeInQue_.AllocTensor<int32_t>();
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(3 * sizeof(int32_t)), 0, 0, 0};
@@ -175,10 +180,11 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::BuildDivisorNormal(c
     // mask[2] has 128 bits, but only the first 64 are effective for 4-byte CompT on 3510,
     // so elements 64+ would keep h instead of w if we used a single 128-element repeat.
     // Process in chunks of 256/sizeof(CompT) elements (64 for float, 128 for half) to cover all dtypes.
-    constexpr int32_t maskElemWidth = 256 / static_cast<int32_t>(sizeof(CompT));
-    uint64_t mask[2] = {NB_ODD_LANE_MASK, NB_ODD_LANE_MASK};
+    constexpr int32_t maskElemWidth = NB_VREPEAT_SIZE / static_cast<int32_t>(sizeof(CompT));
+    uint64_t mask[NB_MASK_WORD_COUNT] = {NB_ODD_LANE_MASK, NB_ODD_LANE_MASK};
     for (int32_t off = 0; off < divWidth; off += maskElemWidth) {
-        Duplicate(divisor[off], w, mask, static_cast<uint8_t>(1), 1, 8);
+        Duplicate(divisor[off], w, mask, NB_DUPLICATE_REPEAT_COUNT, NB_DUPLICATE_BLOCK_STRIDE,
+                  NB_DUPLICATE_REPEAT_STRIDE);
         PipeBarrier<PIPE_V>();
     }
 }
@@ -194,7 +200,7 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::BuildConstBlock(cons
 // CopyIn one tile -> Div by divisor -> CopyOut.
 // half/float: Div runs directly in T (CompT == T).
 template <typename T, bool reversedBox>
-__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::CopyDivide(uint64_t gmOffset, uint64_t processLen,
+__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::CopyDivide(int64_t gmOffset, int64_t processLen,
                                                                        const LocalTensor<CompT>& divisor)
 {
     LocalTensor<T> boxesIn = boxesInQue_.template AllocTensor<T>();
@@ -217,8 +223,8 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::CopyDivide(uint64_t 
 
 // normal layout: process elemCount elements of batch b starting at elemStart (elements within batch)
 template <typename T, bool reversedBox>
-__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchNormal(uint64_t b, uint64_t elemStart,
-                                                                               uint64_t elemCount)
+__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchNormal(int64_t b, int64_t elemStart,
+                                                                               int64_t elemCount)
 {
     if (elemCount == 0) {
         return;
@@ -230,15 +236,17 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchNormal(u
                            static_cast<int64_t>(tileLen_);
     int32_t divWidth = static_cast<int32_t>(CeilAlign(coverLen, NB_MASK_ELEM_WIDTH));
     if (divWidth > static_cast<int32_t>(tileLen_)) {
-        divWidth = static_cast<int32_t>(tileLen_) / static_cast<int32_t>(NB_MASK_ELEM_WIDTH) *
-                   static_cast<int32_t>(NB_MASK_ELEM_WIDTH);
+        // FP32 的最小 tile 为 64 元素，小于 128-bit mask 表示范围；直接截到 tile
+        // 仍满足 dtype 对应的 256B repeat 对齐，不能向下按 128 元素取整成 0。
+        divWidth = static_cast<int32_t>(tileLen_);
     }
     BuildDivisorNormal(h, w, divWidth);
     LocalTensor<CompT> divisor = divisorBuf_.Get<CompT>();
-    uint64_t base = b * num_ * coordNum_ + elemStart;
-    for (uint64_t off = 0; off < elemCount; off += tileLen_) {
-        uint64_t processLen = (elemCount - off) < tileLen_ ? (elemCount - off) : tileLen_;
+    int64_t base = b * num_ * coordNum_ + elemStart;
+    for (int64_t off = 0; off < elemCount;) {
+        int64_t processLen = (elemCount - off) < tileLen_ ? (elemCount - off) : tileLen_;
         CopyDivide(base + off, processLen, divisor);
+        off += processLen;
     }
 }
 
@@ -254,8 +262,8 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchNormal(u
 // cross-core misaligned DataCopyPad write mechanism: normal (205,269,4) fp32 (batch-stride 4304B, mod 32 = 16,
 // 220580/220580 correct) and reversed (2,4,7) fp32 (batch-stride 112B, mod 32 = 16, 56/56 correct).
 template <typename T, bool reversedBox>
-__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchReversed(uint64_t b, uint64_t frameStart,
-                                                                                 uint64_t frameCount)
+__aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchReversed(int64_t b, int64_t frameStart,
+                                                                                 int64_t frameCount)
 {
     if (frameCount == 0) {
         return;
@@ -267,20 +275,20 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchReversed
                            static_cast<int64_t>(tileLen_);
     int32_t divWidth = static_cast<int32_t>(CeilAlign(coverLen, NB_MASK_ELEM_WIDTH));
     if (divWidth > static_cast<int32_t>(tileLen_)) {
-        divWidth = static_cast<int32_t>(tileLen_) / static_cast<int32_t>(NB_MASK_ELEM_WIDTH) *
-                   static_cast<int32_t>(NB_MASK_ELEM_WIDTH);
+        divWidth = static_cast<int32_t>(tileLen_);
     }
     LocalTensor<CompT> divH = divisorBuf_.Get<CompT>();
     LocalTensor<CompT> divW = divisorBuf_.Get<CompT>()[tileLen_];
     BuildConstBlock(divH, h, divWidth);
     BuildConstBlock(divW, w, divWidth);
     PipeBarrier<PIPE_V>();
-    for (uint64_t row = 0; row < coordNum_; row++) {
+    for (int64_t row = 0; row < coordNum_; row++) {
         LocalTensor<CompT> divisor = (row % 2 == 0) ? divH : divW;
-        uint64_t rowBase = b * coordNum_ * num_ + row * num_ + frameStart;
-        for (uint64_t off = 0; off < frameCount; off += tileLen_) {
-            uint64_t processLen = (frameCount - off) < tileLen_ ? (frameCount - off) : tileLen_;
+        int64_t rowBase = b * coordNum_ * num_ + row * num_ + frameStart;
+        for (int64_t off = 0; off < frameCount;) {
+            int64_t processLen = (frameCount - off) < tileLen_ ? (frameCount - off) : tileLen_;
             CopyDivide(rowBase + off, processLen, divisor);
+            off += processLen;
         }
     }
 }
@@ -288,10 +296,13 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::ProcessBatchReversed
 template <typename T, bool reversedBox>
 __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Process()
 {
+    if (blockIdx_ >= static_cast<int64_t>(tiling_.usedCoreNum)) {
+        return;
+    }
     if (splitMode_ == 1) {
         // split by batch (batch > 1)
-        for (uint64_t i = 0; i < batchCount_; i++) {
-            uint64_t b = batchStart_ + i;
+        for (int64_t i = 0; i < batchCount_; i++) {
+            int64_t b = batchStart_ + i;
             if constexpr (!reversedBox) {
                 ProcessBatchNormal(b, 0, num_ * coordNum_);
             } else {
@@ -300,11 +311,11 @@ __aicore__ inline void NormalizeBBoxKernel<T, reversedBox>::Process()
         }
     } else {
         // split by num (batch == 1): each core handles a num range
-        uint64_t numBigCore = tiling_.numBigCore;
-        uint64_t numPerCore = tiling_.numPerCore;
-        uint64_t tailNumCore = tiling_.tailNumCore;
-        uint64_t numStart;
-        uint64_t numCnt;
+        int64_t numBigCore = static_cast<int64_t>(tiling_.numBigCore);
+        int64_t numPerCore = static_cast<int64_t>(tiling_.numPerCore);
+        int64_t tailNumCore = static_cast<int64_t>(tiling_.tailNumCore);
+        int64_t numStart;
+        int64_t numCnt;
         if (blockIdx_ < numBigCore) {
             numStart = blockIdx_ * numPerCore;
             numCnt = numPerCore;

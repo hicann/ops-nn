@@ -41,9 +41,9 @@ public:
                                 TBuf<TPosition::VECCALC>& sqPartialBuf, TQue<QuePosition::VECIN, 1>& inQueueX,
                                 TQue<QuePosition::VECOUT, 1>& outQueueSum, TQue<QuePosition::VECOUT, 1>& outQueueSq,
                                 GlobalTensor<T_X>& xGm, GlobalTensor<T_SUM>& sumGm, GlobalTensor<T_SUM>& sqGm,
-                                uint64_t numN, uint64_t numC, uint64_t numR, uint32_t rFactor, uint64_t numChunks,
-                                uint32_t tailLen, uint64_t perCoreCnt, uint32_t chunksPerGroup, uint64_t numGroups,
-                                uint32_t tailChunks, int64_t blockIdx)
+                                int64_t totalRows, int64_t numR, uint32_t rFactor, int64_t numChunks, uint32_t tailLen,
+                                int64_t perCoreCnt, uint32_t chunksPerGroup, int64_t numGroups, uint32_t tailChunks,
+                                int64_t blockIdx)
     {
         pipe_ = &pipe;
         sumPartialBuf_ = &sumPartialBuf;
@@ -54,8 +54,7 @@ public:
         xGm_ = &xGm;
         sumGm_ = &sumGm;
         sqGm_ = &sqGm;
-        numN_ = numN;
-        numC_ = numC;
+        totalRows_ = totalRows;
         numR_ = numR;
         rFactor_ = rFactor;
         numChunks_ = numChunks;
@@ -69,27 +68,26 @@ public:
 
     __aicore__ inline void Process()
     {
-        // 先各自提升到 64 位再相乘：numN_ * numC_ 若用 32 位乘法，回绕后再 cast 已经晚了。
-        uint64_t totalRows = numN_ * numC_;
-        uint64_t startRow = static_cast<uint64_t>(blockIdx_) * perCoreCnt_;
-        uint64_t endRow = static_cast<uint64_t>(blockIdx_ + 1) * perCoreCnt_;
-        if (endRow > totalRows) {
-            endRow = totalRows;
+        int64_t startRow = blockIdx_ * perCoreCnt_;
+        if (startRow >= totalRows_) {
+            return;
         }
+        int64_t remaining = totalRows_ - startRow;
+        int64_t endRow = startRow + (perCoreCnt_ < remaining ? perCoreCnt_ : remaining);
 
         LocalTensor<float> sumPartial = sumPartialBuf_->Get<float>();
         LocalTensor<float> sqPartial = sqPartialBuf_->Get<float>();
         __local_mem__ float* sumPartUb = (__local_mem__ float*)sumPartial.GetPhyAddr();
         __local_mem__ float* sqPartUb = (__local_mem__ float*)sqPartial.GetPhyAddr();
 
-        for (uint64_t row = startRow; row < endRow; ++row) {
-            uint64_t rowBase = row * numR_;
-            uint64_t chunkBase = 0;
-            for (uint64_t g = 0; g < numGroups_; ++g) {
+        for (int64_t row = startRow; row < endRow; ++row) {
+            int64_t rowBase = row * numR_;
+            int64_t chunkBase = 0;
+            for (int64_t g = 0; g < numGroups_; ++g) {
                 bool isLastGroup = (g + 1 == numGroups_);
                 uint32_t chunksInGroup = isLastGroup ? tailChunks_ : chunksPerGroup_;
                 for (uint32_t c = 0; c < chunksInGroup; ++c) {
-                    uint64_t chunkIdx = chunkBase + c;
+                    int64_t chunkIdx = chunkBase + static_cast<int64_t>(c);
                     uint32_t count = (chunkIdx + 1 == numChunks_) ? tailLen_ : rFactor_;
                     CopyInChunkSubR(rowBase + chunkIdx * rFactor_, count);
                     LocalTensor<T_X> xLocal = inQueueX_->DeQue<T_X>();
@@ -112,13 +110,13 @@ public:
                     uint32_t chunksNext = (g + 2 == numGroups_) ? tailChunks_ : chunksPerGroup_;
                     FoldGroupSubR(sumPartUb, sqPartUb, sumPartUb + chunksNext, sqPartUb + chunksNext, foldCnt);
                 }
-                chunkBase += chunksInGroup;
+                chunkBase += static_cast<int64_t>(chunksInGroup);
             }
         }
     }
 
 private:
-    __aicore__ inline void CopyInChunkSubR(uint64_t gmOffset, uint32_t count)
+    __aicore__ inline void CopyInChunkSubR(int64_t gmOffset, uint32_t count)
     {
         LocalTensor<T_X> xLocal = inQueueX_->AllocTensor<T_X>();
         DataCopyExtParams extParams{
@@ -213,7 +211,7 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOutRowSubR(uint64_t row)
+    __aicore__ inline void CopyOutRowSubR(int64_t row)
     {
         LocalTensor<T_SUM> sumLocal = outQueueSum_->DeQue<T_SUM>();
         LocalTensor<T_SUM> sqLocal = outQueueSq_->DeQue<T_SUM>();
@@ -235,15 +233,14 @@ private:
     GlobalTensor<T_X>* xGm_{nullptr};
     GlobalTensor<T_SUM>* sumGm_{nullptr};
     GlobalTensor<T_SUM>* sqGm_{nullptr};
-    uint64_t numN_{0};
-    uint64_t numC_{0};
-    uint64_t numR_{0};
+    int64_t totalRows_{0};
+    int64_t numR_{0};
     uint32_t rFactor_{0};
-    uint64_t numChunks_{0};
+    int64_t numChunks_{0};
     uint32_t tailLen_{0};
-    uint64_t perCoreCnt_{0};
+    int64_t perCoreCnt_{0};
     uint32_t chunksPerGroup_{0};
-    uint64_t numGroups_{0};
+    int64_t numGroups_{0};
     uint32_t tailChunks_{0};
     int64_t blockIdx_{0};
 };

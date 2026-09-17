@@ -22,6 +22,8 @@
 #include "normalize_bbox_tiling.h"
 #include "normalize_bbox_regbase_tiling.h"
 
+#include <limits>
+
 namespace optiling {
 static constexpr uint64_t BLOCK_SIZE = 32;
 static constexpr uint64_t VREPEAT_SIZE = 256;
@@ -35,6 +37,8 @@ static constexpr uint64_t BOXES_RANK_MAX = 8; // ND 上限
 static constexpr uint64_t SHAPE_HW_RANK = 2;
 static constexpr int64_t SHAPE_HW_DIM1 = 3;
 static constexpr int64_t COORD_NUM = 4;
+static constexpr uint64_t SHAPE_HW_ELEMENTS_PER_BATCH = 3;
+static constexpr uint64_t MAX_TENSOR_ELEMENTS = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
 
 bool NormalizeBBoxTilingForRegbase::IsCapable() { return true; }
 
@@ -46,7 +50,7 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::GetPlatformInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = static_cast<uint64_t>(compileInfo->totalCoreNum);
     ubSize_ = compileInfo->ubSizePlatForm;
-    OP_CHECK_IF((totalCoreNum_ == 0 || ubSize_ == 0),
+    OP_CHECK_IF((totalCoreNum_ == 0 || totalCoreNum_ > std::numeric_limits<uint32_t>::max() || ubSize_ == 0),
                 OP_LOGE(opName_, "invalid platform info: coreNum=%lu ubSize=%lu.", totalCoreNum_, ubSize_),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -63,6 +67,17 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::GetDtypeAndAttr()
                                                       "only fp16/fp32 supported"),
                 return ge::GRAPH_FAILED);
     boxesDtypeSize_ = ge::GetSizeByDataType(boxesDType_);
+    OP_CHECK_IF(boxesDtypeSize_ == 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "boxes", Ops::Base::ToString(boxesDType_),
+                                                      "failed to resolve element size"),
+                return ge::GRAPH_FAILED);
+
+    auto shapeHwDesc = context_->GetInputDesc(INPUT_SHAPE_HW);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, shapeHwDesc);
+    OP_CHECK_IF(shapeHwDesc->GetDataType() != ge::DT_INT32,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    opName_, "shape_hw", Ops::Base::ToString(shapeHwDesc->GetDataType()), "only int32 supported"),
+                return ge::GRAPH_FAILED);
 
     auto attrs = context_->GetAttrs();
     reversedBox_ = false;
@@ -83,12 +98,16 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::ValidateShapes(const gert::Shape&
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "boxes", std::to_string(boxesRank) + "D",
                                                          "rank must be in [2, 8]"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((shapeHwGeShape.GetDimNum() != SHAPE_HW_RANK || shapeHwGeShape.GetDim(1) != SHAPE_HW_DIM1),
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                    opName_, "shape_hw",
-                    std::to_string(shapeHwGeShape.GetDimNum()) + "D, dim1=" + std::to_string(shapeHwGeShape.GetDim(1)),
-                    "shape_hw must be 2-D and dim1 must be 3"),
+    const size_t shapeHwRank = shapeHwGeShape.GetDimNum();
+    OP_CHECK_IF(shapeHwRank != SHAPE_HW_RANK,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "shape_hw", std::to_string(shapeHwRank) + "D",
+                                                         "shape_hw rank must be 2"),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        shapeHwGeShape.GetDim(1) != SHAPE_HW_DIM1,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "shape_hw", "dim1=" + std::to_string(shapeHwGeShape.GetDim(1)),
+                                              "shape_hw must be 2-D and dim1 must be 3"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (boxesGeShape.GetDim(0) != shapeHwGeShape.GetDim(0)),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "boxes, shape_hw",
@@ -124,7 +143,13 @@ uint64_t NormalizeBBoxTilingForRegbase::ComputeNum(const gert::Shape& boxesGeSha
                 fail("dim[" + std::to_string(i) + "]=" + std::to_string(dimVal), "boxes dims must be non-negative");
                 return 0;
             }
-            num *= static_cast<uint64_t>(dimVal);
+            const uint64_t dimValue = static_cast<uint64_t>(dimVal);
+            if (dimValue != 0 && num > MAX_TENSOR_ELEMENTS / dimValue) {
+                fail("dim[" + std::to_string(i) + "]=" + std::to_string(dimVal),
+                     "boxes frame count exceeds int64 range");
+                return 0;
+            }
+            num *= dimValue;
         }
     } else {
         if (boxesGeShape.GetDim(boxesRank - 1) != COORD_NUM) {
@@ -137,7 +162,13 @@ uint64_t NormalizeBBoxTilingForRegbase::ComputeNum(const gert::Shape& boxesGeSha
                 fail("dim[" + std::to_string(i) + "]=" + std::to_string(dimVal), "boxes dims must be non-negative");
                 return 0;
             }
-            num *= static_cast<uint64_t>(dimVal);
+            const uint64_t dimValue = static_cast<uint64_t>(dimVal);
+            if (dimValue != 0 && num > MAX_TENSOR_ELEMENTS / dimValue) {
+                fail("dim[" + std::to_string(i) + "]=" + std::to_string(dimVal),
+                     "boxes frame count exceeds int64 range");
+                return 0;
+            }
+            num *= dimValue;
         }
     }
     return num;
@@ -170,13 +201,27 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::GetShapeAttrsInfo()
         return numStatus;
     }
 
-    tilingData_.batch = static_cast<uint64_t>(boxesGeShape.GetDim(0));
+    const uint64_t batch = static_cast<uint64_t>(boxesGeShape.GetDim(0));
+    OP_CHECK_IF(num != 0 && batch > MAX_TENSOR_ELEMENTS / num,
+                OP_LOGE(opName_, "batch*num exceeds int64 range, batch=%lu num=%lu.", batch, num),
+                return ge::GRAPH_FAILED);
+    const uint64_t batchFrames = batch * num;
+    OP_CHECK_IF(batchFrames > MAX_TENSOR_ELEMENTS / static_cast<uint64_t>(COORD_NUM),
+                OP_LOGE(opName_, "boxes element count exceeds int64 range, batch=%lu num=%lu.", batch, num),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(batch > MAX_TENSOR_ELEMENTS / SHAPE_HW_ELEMENTS_PER_BATCH,
+                OP_LOGE(opName_, "shape_hw element count exceeds int64 range, batch=%lu.", batch),
+                return ge::GRAPH_FAILED);
+
+    tilingData_.batch = static_cast<int64_t>(batch);
     tilingData_.coordNum = COORD_NUM;
-    tilingData_.num = num;
+    tilingData_.num = static_cast<int64_t>(num);
+    tilingData_.totalElements = static_cast<int64_t>(batchFrames * static_cast<uint64_t>(COORD_NUM));
+    tilingData_.shapeElements = static_cast<int64_t>(batch * SHAPE_HW_ELEMENTS_PER_BATCH);
     return ge::GRAPH_SUCCESS;
 }
 
-void NormalizeBBoxTilingForRegbase::ComputeTileLen()
+ge::graphStatus NormalizeBBoxTilingForRegbase::ComputeTileLen()
 {
     uint64_t divisorBlocks = reversedBox_ ? 2 : 1;
     uint64_t ubBufFactor = 2 + 2 + divisorBlocks;
@@ -193,6 +238,16 @@ void NormalizeBBoxTilingForRegbase::ComputeTileLen()
         tileLen = blockAlignElems;
     }
     tilingData_.tileLen = tileLen;
+    tilingData_.boxesBufferBytes = tileLen * boxesDtypeSize_;
+    tilingData_.shapeBufferBytes = BLOCK_SIZE;
+    tilingData_.hwCastBufferBytes = BLOCK_SIZE * 2;
+    tilingData_.divisorBufferBytes = tileLen * boxesDtypeSize_ * divisorBlocks;
+    const uint64_t requiredUb = UB_RESERVE + tilingData_.boxesBufferBytes * 2 * 2 + tilingData_.shapeBufferBytes +
+                                tilingData_.hwCastBufferBytes + tilingData_.divisorBufferBytes;
+    OP_CHECK_IF(requiredUb > ubSize_,
+                OP_LOGE(opName_, "UB is too small: required=%luB available=%luB.", requiredUb, ubSize_),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 void NormalizeBBoxTilingForRegbase::SplitByBatch(uint64_t batch)
@@ -229,10 +284,13 @@ void NormalizeBBoxTilingForRegbase::SplitByNum(uint64_t num)
 ge::graphStatus NormalizeBBoxTilingForRegbase::DoOpTiling()
 {
     OP_LOGD(opName_, "NormalizeBBoxTilingForRegbase DoOpTiling.");
-    uint64_t batch = tilingData_.batch;
-    uint64_t num = tilingData_.num;
+    uint64_t batch = static_cast<uint64_t>(tilingData_.batch);
+    uint64_t num = static_cast<uint64_t>(tilingData_.num);
 
-    ComputeTileLen();
+    auto ret = ComputeTileLen();
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     tilingData_.splitMode = 0;
     tilingData_.usedCoreNum = 1;
@@ -299,7 +357,7 @@ ge::graphStatus NormalizeBBoxTilingForRegbase::PostTiling()
 
 void NormalizeBBoxTilingForRegbase::PrintTilingData()
 {
-    OP_LOGD(opName_, "batch=%lu num=%lu coordNum=%lu splitMode=%lu usedCoreNum=%lu.", tilingData_.batch,
+    OP_LOGD(opName_, "batch=%ld num=%ld coordNum=%ld splitMode=%lu usedCoreNum=%lu.", tilingData_.batch,
             tilingData_.num, tilingData_.coordNum, tilingData_.splitMode, tilingData_.usedCoreNum);
     OP_LOGD(opName_, "batchPerCore=%lu tailBatchNum=%lu bigCoreNum=%lu.", tilingData_.batchPerCore,
             tilingData_.tailBatchNum, tilingData_.bigCoreNum);

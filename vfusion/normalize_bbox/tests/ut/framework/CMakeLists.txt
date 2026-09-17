@@ -8,6 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# 显式声明子目录，避免 file(GLOB) 对新增目录不敏感导致静默跳过编译
-add_subdirectory(op_host)
-add_subdirectory(framework)
+file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
+if(UT_TEST_ALL OR OP_HOST_UT)
+    add_modules_ut_sources(HOSTNAME ${OP_FRAMEWORK_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()

@@ -50,6 +50,7 @@ private:
     int64_t numC_ = 0;      // C（dim1）
     int64_t innerSize_ = 0; // R = prod(d2:)
     int64_t units_ = 0;
+    int64_t totalElements_ = 0;
     int64_t xDtypeSize_ = 4;
     float epsilon_ = 1e-5f;
     int64_t hasGammaBeta_ = 0;

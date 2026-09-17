@@ -19,11 +19,9 @@
  *       storage format，约束不到 origin format —— 后者由用户网络决定（TF 来源
  *       天然是 NHWC），GE 会插 TransData 转排布，但 InferShape 跑在其之前。
  *
- *   InferDataType（输出恒 DT_FLOAT）已按交付件划分挪到
- *   op_graph/in_training_reduce_v2_graph_infer.cpp。op_graph UT 模块只链
- *   graph_plugin_obj，不含 tests/ut/common 的 infershape 公共对象，暂无法调
- *   InferDataTypeTest；与仓内其他把 InferDataType 放 op_graph 的算子
- *   （bn_infer_grad / lp_norm_update / in_infer_v2）保持一致，此处不再覆盖。
+ *   InferDataType（输出恒 DT_FLOAT）和静态图 legacy V1 bridge 位于
+ *   op_graph/in_training_reduce_v2_graph_infer.cpp，由 op_graph UT 与安装后的
+ *   GEIR 用例验证；本文件只验证 runtime2.0 InferShape。
  */
 
 #include <gtest/gtest.h>
@@ -127,6 +125,8 @@ TEST_F(INTrainingReduceV2InferTest, infer_shape_dynamic_minus1_004)
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(1), -1);
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(2), 1);
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(3), 1);
+    auto output_square_sum_desc = test_op.GetOutputDesc(1);
+    EXPECT_EQ(output_square_sum_desc.GetShape().GetDims(), output_sum_desc.GetShape().GetDims());
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +143,11 @@ TEST_F(INTrainingReduceV2InferTest, infer_shape_dynamic_minus2_005)
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_ND, shape_range_x);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
+    const std::vector<int64_t> expected_output_shape = {-2};
+    auto output_sum_desc = test_op.GetOutputDesc(0);
+    auto output_square_sum_desc = test_op.GetOutputDesc(1);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDims(), expected_output_shape);
+    EXPECT_EQ(output_square_sum_desc.GetShape().GetDims(), expected_output_shape);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,4 +215,53 @@ TEST_F(INTrainingReduceV2InferTest, infer_shape_nhwc_dynamic_minus1_008)
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(1), 1);
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(2), 1);
     EXPECT_EQ(output_sum_desc.GetShape().GetDim(3), -1);
+}
+
+// ---------------------------------------------------------------------------
+// Runtime2.0 InferShape：ND 是本仓显式支持的 channel-first 布局，不能落入
+// built-in 历史实现的“非 NCHW/NCDHW 即 channel-last”兜底分支。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2InferTest, infer_shape_nd_channel_first_009)
+{
+    using namespace ge;
+    const std::vector<int64_t> inputShape = {2, 3, 5, 7};
+    const std::vector<std::pair<int64_t, int64_t>> shapeRange(inputShape.size(), {-1, -1});
+    const std::vector<int64_t> expectedOutputShape = {2, 3, 1, 1};
+
+    auto testOp = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(testOp, x, inputShape, DT_FLOAT, FORMAT_ND, shapeRange);
+
+    ASSERT_EQ(InferShapeTest(testOp), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(testOp.GetOutputDesc(0).GetShape().GetDims(), expectedOutputShape);
+    EXPECT_EQ(testOp.GetOutputDesc(1).GetShape().GetDims(), expectedOutputShape);
+}
+
+TEST_F(INTrainingReduceV2InferTest, infer_shape_rejects_nd_rank_below_two_010)
+{
+    using namespace ge;
+    const std::vector<int64_t> inputShape = {8};
+    const std::vector<std::pair<int64_t, int64_t>> shapeRange(inputShape.size(), {-1, -1});
+    auto testOp = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(testOp, x, inputShape, DT_FLOAT, FORMAT_ND, shapeRange);
+    EXPECT_EQ(InferShapeTest(testOp), ge::GRAPH_FAILED);
+}
+
+TEST_F(INTrainingReduceV2InferTest, infer_shape_rejects_nd_rank_above_eight_011)
+{
+    using namespace ge;
+    const std::vector<int64_t> inputShape(9, 1);
+    const std::vector<std::pair<int64_t, int64_t>> shapeRange(inputShape.size(), {-1, -1});
+    auto testOp = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(testOp, x, inputShape, DT_FLOAT16, FORMAT_ND, shapeRange);
+    EXPECT_EQ(InferShapeTest(testOp), ge::GRAPH_FAILED);
+}
+
+TEST_F(INTrainingReduceV2InferTest, infer_shape_rejects_nchw_non_four_dimensional_012)
+{
+    using namespace ge;
+    const std::vector<int64_t> inputShape = {2, 3, 5};
+    const std::vector<std::pair<int64_t, int64_t>> shapeRange(inputShape.size(), {-1, -1});
+    auto testOp = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(testOp, x, inputShape, DT_FLOAT, FORMAT_NCHW, shapeRange);
+    EXPECT_EQ(InferShapeTest(testOp), ge::GRAPH_FAILED);
 }

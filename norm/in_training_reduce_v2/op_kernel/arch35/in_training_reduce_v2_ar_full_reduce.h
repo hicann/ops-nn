@@ -37,12 +37,12 @@ constexpr uint32_t ALIGN_32_FACTOR = 32;
 template <typename T_X>
 class INTrainingReduceV2ARFullReduce {
 public:
-    using T_SUM = float; // 输出恒 fp32
+    using TSum = float; // 输出恒 fp32
 
-    __aicore__ inline INTrainingReduceV2ARFullReduce(const INTrainingReduceV2ARFullReduceTilingData* tilingData)
+    __aicore__ inline explicit INTrainingReduceV2ARFullReduce(
+        const INTrainingReduceV2ARFullReduceTilingData* tilingData)
     {
-        blockIdx_ = GetBlockIdx();
-        blockNum_ = GetBlockNum();
+        blockIdx_ = static_cast<int64_t>(GetBlockIdx());
 
         cInner_ = tilingData->cInner;
         cOuter_ = tilingData->cOuter;
@@ -56,36 +56,34 @@ public:
         // sub-R 参数
         isSubRTiling_ = tilingData->isSubRTiling;
         rFactor_ = static_cast<uint32_t>(tilingData->rFactor);
-        numChunks_ = tilingData->numChunks;
+        numChunks_ = static_cast<int64_t>(tilingData->numChunks);
         tailLen_ = static_cast<uint32_t>(tilingData->tailLen);
         chunksPerGroup_ = static_cast<uint32_t>(tilingData->chunksPerGroup);
-        numGroups_ = tilingData->numGroups;
+        numGroups_ = static_cast<int64_t>(tilingData->numGroups);
         tailChunks_ = static_cast<uint32_t>(tilingData->tailChunks);
+        totalRows_ = tilingData->totalRows;
+        totalElements_ = tilingData->totalElements;
+        totalTiles_ = tilingData->totalTiles;
+        inputBufferBytes_ = tilingData->inputBufferBytes;
+        outputBufferBytes_ = tilingData->outputBufferBytes;
+        scratchBufferBytes_ = tilingData->scratchBufferBytes;
+        partialBufferBytes_ = tilingData->partialBufferBytes;
     }
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum)
     {
-        uint64_t gmLen = numN_ * numC_ * numR_;
-        uint64_t outLen = numN_ * numC_;
-        xGm_.SetGlobalBuffer((__gm__ T_X*)x, gmLen);
-        sumGm_.SetGlobalBuffer((__gm__ T_SUM*)sum, outLen);
-        squareSumGm_.SetGlobalBuffer((__gm__ T_SUM*)squareSum, outLen);
+        xGm_.SetGlobalBuffer((__gm__ T_X*)x, totalElements_);
+        sumGm_.SetGlobalBuffer((__gm__ TSum*)sum, totalRows_);
+        squareSumGm_.SetGlobalBuffer((__gm__ TSum*)squareSum, totalRows_);
 
         if (isSubRTiling_ != 0) {
             InitSubR();
             return;
         }
-        uint16_t binaryAddQuotientLoop = (binaryAddQuotient_ + VL_FP32 - 1) / VL_FP32;
-        uint32_t binaryAddBufLen = (binaryAddQuotientLoop + BLK_B32 - 1) / BLK_B32 * BLK_B32 * sizeof(float) * cInner_;
-        binaryAddBufLen += VL_FP32 * sizeof(float);
-
-        pipe_.InitBuffer(inQueueX_, DOUBLE_BUFFER_NUM,
-                         ops::CeilAlign(rAlign_ * cInner_ * sizeof(T_X), static_cast<uint64_t>(BLOCK_SIZE)));
-        pipe_.InitBuffer(outQueueSum_, DOUBLE_BUFFER_NUM,
-                         ops::CeilAlign(cInner_ * sizeof(T_SUM), static_cast<uint64_t>(BLOCK_SIZE)));
-        pipe_.InitBuffer(outQueueSquareSum_, DOUBLE_BUFFER_NUM,
-                         ops::CeilAlign(cInner_ * sizeof(T_SUM), static_cast<uint64_t>(BLOCK_SIZE)));
-        pipe_.InitBuffer(binaryAddBuf_, binaryAddBufLen);
-        pipe_.InitBuffer(squareBinaryAddBuf_, binaryAddBufLen);
+        pipe_.InitBuffer(inQueueX_, DOUBLE_BUFFER_NUM, inputBufferBytes_);
+        pipe_.InitBuffer(outQueueSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
+        pipe_.InitBuffer(outQueueSquareSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
+        pipe_.InitBuffer(binaryAddBuf_, scratchBufferBytes_);
+        pipe_.InitBuffer(squareBinaryAddBuf_, scratchBufferBytes_);
     }
 
     // sub-R 分块路径 buffer 规划（DESIGN §6.3 路 A）。
@@ -93,17 +91,11 @@ public:
     {
         // 部分和槽位只与 chunksPerGroup 有关，与 R 无关；分组时多留 1 格给组间 carry。
         // 须与 Host 的 CalcSubRUbBytes() 逐项一致。
-        uint32_t slots = chunksPerGroup_ + ((numGroups_ > 1) ? 1U : 0U);
-        uint32_t partialSlots = (slots + VL_FP32 - 1) / VL_FP32 * VL_FP32;
-        pipe_.InitBuffer(
-            inQueueX_, DOUBLE_BUFFER_NUM,
-            ops::CeilAlign(static_cast<uint64_t>(rFactor_) * sizeof(T_X), static_cast<uint64_t>(BLOCK_SIZE)));
-        pipe_.InitBuffer(sumPartialBuf_, partialSlots * sizeof(float));
-        pipe_.InitBuffer(sqPartialBuf_, partialSlots * sizeof(float));
-        pipe_.InitBuffer(outQueueSum_, DOUBLE_BUFFER_NUM,
-                         ops::CeilAlign(sizeof(T_SUM), static_cast<uint64_t>(BLOCK_SIZE)));
-        pipe_.InitBuffer(outQueueSquareSum_, DOUBLE_BUFFER_NUM,
-                         ops::CeilAlign(sizeof(T_SUM), static_cast<uint64_t>(BLOCK_SIZE)));
+        pipe_.InitBuffer(inQueueX_, DOUBLE_BUFFER_NUM, inputBufferBytes_);
+        pipe_.InitBuffer(sumPartialBuf_, partialBufferBytes_);
+        pipe_.InitBuffer(sqPartialBuf_, partialBufferBytes_);
+        pipe_.InitBuffer(outQueueSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
+        pipe_.InitBuffer(outQueueSquareSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
     }
     __aicore__ inline void Process()
     {
@@ -111,33 +103,36 @@ public:
             ProcessSubR();
             return;
         }
-        int64_t totalCnt = numN_ * cOuter_;
-        // perCoreCnt_ 为 uint64_t，先显式降回 int64_t，避免与 totalCnt 做有符号/无符号混合比较
-        int64_t perCoreCnt = static_cast<int64_t>(perCoreCnt_);
-        int64_t startIndex = blockIdx_ * perCoreCnt;
-        int64_t endIndex = ((blockIdx_ + 1) * perCoreCnt > totalCnt) ? totalCnt : (blockIdx_ + 1) * perCoreCnt;
+        const int64_t totalCnt = totalTiles_;
+        const int64_t startIndex = blockIdx_ * perCoreCnt_;
+        if (startIndex >= totalCnt) {
+            return;
+        }
+        const int64_t remaining = totalCnt - startIndex;
+        const int64_t endIndex = startIndex + (perCoreCnt_ < remaining ? perCoreCnt_ : remaining);
         for (int64_t i = startIndex; i < endIndex; ++i) {
-            uint64_t nIdx = i % numN_;
-            uint64_t cIdx = i / numN_;
-            uint64_t cOffset = cIdx * cInner_;
-            uint32_t curCLen = (cIdx == cOuter_ - 1) ? cTail_ : cInner_;
+            int64_t nIdx = i % numN_;
+            int64_t cIdx = i / numN_;
+            int64_t cOffset = cIdx * cInner_;
+            uint32_t curCLen = static_cast<uint32_t>((cIdx == cOuter_ - 1) ? cTail_ : cInner_);
 
-            uint64_t offset = numC_ * nIdx + cOffset;
-            CopyInX(offset * numR_, curCLen, numR_, rAlign_);
+            int64_t offset = numC_ * nIdx + cOffset;
+            CopyInX(offset * numR_, curCLen, static_cast<uint32_t>(numR_), static_cast<uint32_t>(rAlign_));
 
             LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
-            LocalTensor<T_SUM> sumLocal = outQueueSum_.AllocTensor<T_SUM>();
-            LocalTensor<T_SUM> squareSumLocal = outQueueSquareSum_.AllocTensor<T_SUM>();
-            CalculateSumSquareSum(xLocal, sumLocal, squareSumLocal, curCLen, rAlign_, numR_);
+            LocalTensor<TSum> sumLocal = outQueueSum_.AllocTensor<TSum>();
+            LocalTensor<TSum> squareSumLocal = outQueueSquareSum_.AllocTensor<TSum>();
+            CalculateSumSquareSum(xLocal, sumLocal, squareSumLocal, curCLen, static_cast<uint32_t>(rAlign_),
+                                  static_cast<uint32_t>(numR_));
             inQueueX_.FreeTensor(xLocal);
-            outQueueSum_.EnQue<T_SUM>(sumLocal);
-            outQueueSquareSum_.EnQue<T_SUM>(squareSumLocal);
+            outQueueSum_.EnQue<TSum>(sumLocal);
+            outQueueSquareSum_.EnQue<TSum>(squareSumLocal);
             CopyOutSumSquareSum(offset, curCLen);
         }
     }
 
 private:
-    __aicore__ inline void CopyInX(uint64_t offset, uint32_t cnt, uint32_t r, uint32_t rAlign)
+    __aicore__ inline void CopyInX(int64_t offset, uint32_t cnt, uint32_t r, uint32_t rAlign)
     {
         LocalTensor<T_X> xLocal = inQueueX_.AllocTensor<T_X>();
         DataCopyExtParams extParams{
@@ -157,16 +152,16 @@ private:
         inQueueX_.EnQue(xLocal);
     }
 
-    __aicore__ inline void CopyOutSumSquareSum(uint64_t offset, uint32_t cnt)
+    __aicore__ inline void CopyOutSumSquareSum(int64_t offset, uint32_t cnt)
     {
-        LocalTensor<T_SUM> sumLocal = outQueueSum_.DeQue<T_SUM>();
-        LocalTensor<T_SUM> squareSumLocal = outQueueSquareSum_.DeQue<T_SUM>();
+        LocalTensor<TSum> sumLocal = outQueueSum_.DeQue<TSum>();
+        LocalTensor<TSum> squareSumLocal = outQueueSquareSum_.DeQue<TSum>();
         DataCopyExtParams copyParams{
-            static_cast<uint16_t>(1),                   // blockCount
-            static_cast<uint32_t>(cnt * sizeof(T_SUM)), // blockLen
-            static_cast<uint32_t>(0),                   // srcStride
-            static_cast<uint32_t>(0),                   // dstStride
-            0                                           // rsv
+            static_cast<uint16_t>(1),                  // blockCount
+            static_cast<uint32_t>(cnt * sizeof(TSum)), // blockLen
+            static_cast<uint32_t>(0),                  // srcStride
+            static_cast<uint32_t>(0),                  // dstStride
+            0                                          // rsv
         };
         DataCopyPad(sumGm_[offset], sumLocal, copyParams);
         DataCopyPad(squareSumGm_[offset], squareSumLocal, copyParams);
@@ -177,23 +172,22 @@ private:
     // ==================== sub-R 分块路径 ====================
     __aicore__ inline void ProcessSubR()
     {
-        INTrainingReduceV2SubR<T_X, T_SUM> subR;
+        INTrainingReduceV2SubR<T_X, TSum> subR;
         subR.Init(pipe_, sumPartialBuf_, sqPartialBuf_, inQueueX_, outQueueSum_, outQueueSquareSum_, xGm_, sumGm_,
-                  squareSumGm_, static_cast<uint64_t>(numN_), static_cast<uint64_t>(numC_),
-                  static_cast<uint64_t>(numR_), rFactor_, numChunks_, tailLen_, perCoreCnt_, chunksPerGroup_,
+                  squareSumGm_, totalRows_, numR_, rFactor_, numChunks_, tailLen_, perCoreCnt_, chunksPerGroup_,
                   numGroups_, tailChunks_, blockIdx_);
         subR.Process();
     }
 
-    __aicore__ inline void CalculateSumSquareSum(LocalTensor<T_X>& xLocal, LocalTensor<T_SUM>& sumLocal,
-                                                 LocalTensor<T_SUM>& squareSumLocal, uint32_t curRows,
+    __aicore__ inline void CalculateSumSquareSum(LocalTensor<T_X>& xLocal, LocalTensor<TSum>& sumLocal,
+                                                 LocalTensor<TSum>& squareSumLocal, uint32_t curRows,
                                                  uint32_t numColAlign, uint32_t reduceNum)
     {
         LocalTensor<float> binaryAddBuffTmp = binaryAddBuf_.Get<float>();
         LocalTensor<float> squareBinaryAddBuffTmp = squareBinaryAddBuf_.Get<float>();
         __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ T_SUM* sumUb = (__local_mem__ T_SUM*)sumLocal.GetPhyAddr();
-        __local_mem__ T_SUM* squareSumUb = (__local_mem__ T_SUM*)squareSumLocal.GetPhyAddr();
+        __local_mem__ TSum* sumUb = (__local_mem__ TSum*)sumLocal.GetPhyAddr();
+        __local_mem__ TSum* squareSumUb = (__local_mem__ TSum*)squareSumLocal.GetPhyAddr();
         __local_mem__ float* tmpUb = (__local_mem__ float*)binaryAddBuffTmp.GetPhyAddr();
         __local_mem__ float* sqTmpUb = (__local_mem__ float*)squareBinaryAddBuffTmp.GetPhyAddr();
 
@@ -210,8 +204,8 @@ private:
     }
 
     // ---------- reduceNum <= VL ----------
-    __aicore__ inline void CalculateSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* sumUb,
-                                                  uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
+    __aicore__ inline void CalculateSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb, uint16_t curRows,
+                                                  uint32_t numColAlign, uint32_t reduceNum)
     {
         __VEC_SCOPE__
         {
@@ -225,12 +219,12 @@ private:
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
                 ReduceSum(sum, x, pregLoop); // Σx：对原始 x 规约
-                StoreOneElementForDtypeTOut<T_SUM>(sumUb, sum, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* squareSumUb,
+    __aicore__ inline void CalculateSquareSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
                                                         uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         __VEC_SCOPE__
@@ -246,13 +240,13 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
                 Mul(x, x, x, pregLoop);      // 先逐元素平方
                 ReduceSum(vsq, x, pregLoop); // Σx²：对平方值规约
-                StoreOneElementForDtypeTOut<T_SUM>(squareSumUb, vsq, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(squareSumUb, vsq, pregOne, i);
             }
         }
     }
 
     // ---------- VL < reduceNum <= 2VL ----------
-    __aicore__ inline void CalculateSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* sumUb,
+    __aicore__ inline void CalculateSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb,
                                                      uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
@@ -271,12 +265,12 @@ private:
                 ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
                 Add(x, x, xFold, pregFull); // 折叠原始 x
                 ReduceSum(sum, x, pregFull);
-                StoreOneElementForDtypeTOut<T_SUM>(sumUb, sum, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(sumUb, sum, pregOne, i);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* squareSumUb,
+    __aicore__ inline void CalculateSquareSumLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
                                                            uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
@@ -297,13 +291,13 @@ private:
                 Mul(xFold, xFold, xFold, pregTail); // 先平方（尾半）
                 Add(x, x, xFold, pregFull);         // 再折叠
                 ReduceSum(vsq, x, pregFull);
-                StoreOneElementForDtypeTOut<T_SUM>(squareSumUb, vsq, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(squareSumUb, vsq, pregOne, i);
             }
         }
     }
 
     // ---------- reduceNum > 2VL：pairwise 二分折叠（Σx） ----------
-    __aicore__ inline void CalculateSumCommon(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* sumUb,
+    __aicore__ inline void CalculateSumCommon(__local_mem__ T_X* xInUb, __local_mem__ TSum* sumUb,
                                               __local_mem__ float* tmpUb, uint16_t curRows, uint32_t numColAlign,
                                               uint32_t reduceNum)
     {
@@ -383,13 +377,13 @@ private:
                     Add(acc, acc, x, pregFull);
                 }
                 ReduceSum(vSum, acc, pregFull);
-                StoreOneElementForDtypeTOut<T_SUM>(sumUb, vSum, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(sumUb, vSum, pregOne, i);
             }
         }
     }
 
     // ---------- reduceNum > 2VL：pairwise 二分折叠（Σx²，HIGH-1） ----------
-    __aicore__ inline void CalculateSquareSumCommon(__local_mem__ T_X* xInUb, __local_mem__ T_SUM* squareSumUb,
+    __aicore__ inline void CalculateSquareSumCommon(__local_mem__ T_X* xInUb, __local_mem__ TSum* squareSumUb,
                                                     __local_mem__ float* tmpUb, uint16_t curRows, uint32_t numColAlign,
                                                     uint32_t reduceNum)
     {
@@ -474,7 +468,7 @@ private:
                     Add(acc, acc, x, pregFull);
                 }
                 ReduceSum(vSq, acc, pregFull);
-                StoreOneElementForDtypeTOut<T_SUM>(squareSumUb, vSq, pregOne, i);
+                StoreOneElementForDtypeTOut<TSum>(squareSumUb, vSq, pregOne, i);
             }
         }
     }
@@ -482,30 +476,36 @@ private:
 private:
     TPipe pipe_;
     GlobalTensor<T_X> xGm_;
-    GlobalTensor<T_SUM> sumGm_, squareSumGm_;
+    GlobalTensor<TSum> sumGm_, squareSumGm_;
     TQue<QuePosition::VECIN, 1> inQueueX_;
     TQue<QuePosition::VECOUT, 1> outQueueSum_, outQueueSquareSum_;
     TBuf<TPosition::VECCALC> binaryAddBuf_, squareBinaryAddBuf_;
     TBuf<TPosition::VECCALC> sumPartialBuf_, sqPartialBuf_;
 
     int64_t blockIdx_{0};
-    uint64_t blockNum_{0};
-    int64_t cInner_;
-    int64_t cOuter_;
-    int64_t cTail_;
-    int64_t numN_;
-    int64_t numC_;
-    int64_t numR_;
+    int64_t cInner_{0};
+    int64_t cOuter_{0};
+    int64_t cTail_{0};
+    int64_t numN_{0};
+    int64_t numC_{0};
+    int64_t numR_{0};
     uint64_t rAlign_;
     uint32_t binaryAddQuotient_;
-    uint64_t perCoreCnt_;
+    int64_t perCoreCnt_;
     uint64_t isSubRTiling_{0};
     uint32_t rFactor_{0};
-    uint64_t numChunks_{0};
+    int64_t numChunks_{0};
     uint32_t tailLen_{0};
     uint32_t chunksPerGroup_{0};
-    uint64_t numGroups_{0};
+    int64_t numGroups_{0};
     uint32_t tailChunks_{0};
+    int64_t totalRows_{0};
+    int64_t totalElements_{0};
+    int64_t totalTiles_{0};
+    uint64_t inputBufferBytes_{0};
+    uint64_t outputBufferBytes_{0};
+    uint64_t scratchBufferBytes_{0};
+    uint64_t partialBufferBytes_{0};
 };
 } // namespace INTrainingReduceV2Ops
 #endif // IN_TRAINING_REDUCE_V2_AR_FULL_REDUCE_H_

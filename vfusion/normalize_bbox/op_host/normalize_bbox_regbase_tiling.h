@@ -48,7 +48,7 @@ private:
                                    uint64_t& boxesRank);
     static uint64_t ComputeNum(const gert::Shape& boxesGeShape, uint64_t boxesRank, bool reversedBox,
                                const std::string& opName, ge::graphStatus& status);
-    void ComputeTileLen();
+    ge::graphStatus ComputeTileLen();
     void SplitByBatch(uint64_t batch);
     void SplitByNum(uint64_t num);
 
@@ -58,7 +58,7 @@ private:
     ge::DataType boxesDType_{ge::DT_FLOAT16};
     uint32_t boxesDtypeSize_{0};
     bool reversedBox_{false};
-    ::NormalizeBBoxTilingData tilingData_;
+    ::NormalizeBBoxTilingData tilingData_{};
 };
 
 } // namespace optiling

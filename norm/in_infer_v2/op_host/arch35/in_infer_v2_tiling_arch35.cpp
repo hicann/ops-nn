@@ -20,6 +20,8 @@
 #include "in_infer_v2_tiling_arch35.h"
 #include "log/log.h"
 
+#include <limits>
+
 using namespace optiling;
 
 // asc_opc 编译需要注册 tiling 结构体（字段与 op_kernel 侧 plain struct 二进制一致）
@@ -50,6 +52,8 @@ namespace optiling {
 static constexpr int64_t VL = 64;           // fp32 向量寄存器宽度
 static constexpr int64_t CHUNK_PLANES = 64; // 统计量 staging 粒度（每份 64 × 4B = 256B）
 static constexpr int64_t FLOAT_BYTES = 4;
+static constexpr size_t MIN_RANK = 2;
+static constexpr size_t MAX_RANK = 8;
 
 // UB 预留分量（不可用于 x/y tile 的部分），RESERVED_UB 为各项之和
 static constexpr int64_t PIPE_META_RESERVE = 8512;                            // TPipe/TQue 元数据与事件表
@@ -67,11 +71,20 @@ static constexpr size_t OUTPUT_BATCH_MEAN_INDEX = 1;
 static constexpr size_t OUTPUT_BATCH_VAR_INDEX = 2;
 static constexpr size_t ATTR_EPSILON_INDEX = 0;
 
+static bool CheckedMulNonNegative(int64_t lhs, int64_t rhs, int64_t& result)
+{
+    if (lhs < 0 || rhs < 0 || (lhs != 0 && rhs > std::numeric_limits<int64_t>::max() / lhs)) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
+}
+
 ge::graphStatus INInferV2Tiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfo = reinterpret_cast<const INInferV2CompileInfo*>(context_->GetCompileInfo());
+        auto compileInfo = static_cast<const INInferV2CompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfo == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum_ = compileInfo->coreNum;
         ubSize_ = compileInfo->ubSize;
@@ -91,21 +104,41 @@ ge::graphStatus INInferV2Tiling::GetShapeAndDtype()
 {
     // attr epsilon（可选，缺省 1e-5，与 proto 一致）
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    const float* epsilonPtr = attrs->GetFloat(ATTR_EPSILON_INDEX);
+    const float* epsilonPtr = (attrs == nullptr) ? nullptr : attrs->GetFloat(ATTR_EPSILON_INDEX);
     epsilon_ = (epsilonPtr == nullptr) ? 1e-5f : *epsilonPtr;
+    hasGammaBeta_ = 0;
 
     if (CheckXDescAndShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    int64_t ncPlanes = numN_ * numC_;
-    if (CheckOptionalInputs(ncPlanes) != ge::GRAPH_SUCCESS) {
+    if (CheckOptionalInputs(units_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
-    // batch_mean/batch_variance：optional 输出，防御式检测
-    hasBatchMean_ = (context_->GetOutputShape(OUTPUT_BATCH_MEAN_INDEX) != nullptr) ? 1 : 0;
-    hasBatchVar_ = (context_->GetOutputShape(OUTPUT_BATCH_VAR_INDEX) != nullptr) ? 1 : 0;
+    // Optional output 会在节点实例中压实存储，不能把 IR index 当作物理 output index。
+    const auto* batchMeanInstanceInfo = context_->GetIrOutputInstanceInfo(OUTPUT_BATCH_MEAN_INDEX);
+    if (batchMeanInstanceInfo != nullptr) {
+        OP_CHECK_IF(batchMeanInstanceInfo->GetInstanceNum() > 1,
+                    OP_LOGE_FOR_INVALID_TENSORNUM(context_->GetNodeName(), "batch_mean",
+                                                  batchMeanInstanceInfo->GetInstanceNum(), "0 or 1"),
+                    return ge::GRAPH_FAILED);
+    }
+    hasBatchMean_ = (batchMeanInstanceInfo != nullptr && batchMeanInstanceInfo->GetInstanceNum() == 1) ? 1 : 0;
+    if (hasBatchMean_ != 0) {
+        OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputShape(batchMeanInstanceInfo->GetInstanceStart()));
+    }
+
+    const auto* batchVarInstanceInfo = context_->GetIrOutputInstanceInfo(OUTPUT_BATCH_VAR_INDEX);
+    if (batchVarInstanceInfo != nullptr) {
+        OP_CHECK_IF(batchVarInstanceInfo->GetInstanceNum() > 1,
+                    OP_LOGE_FOR_INVALID_TENSORNUM(context_->GetNodeName(), "batch_variance",
+                                                  batchVarInstanceInfo->GetInstanceNum(), "0 or 1"),
+                    return ge::GRAPH_FAILED);
+    }
+    hasBatchVar_ = (batchVarInstanceInfo != nullptr && batchVarInstanceInfo->GetInstanceNum() == 1) ? 1 : 0;
+    if (hasBatchVar_ != 0) {
+        OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputShape(batchVarInstanceInfo->GetInstanceStart()));
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -116,7 +149,12 @@ ge::graphStatus INInferV2Tiling::CheckXDescAndShape()
     auto xDesc = context_->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xFormat = xDesc->GetOriginFormat();
-    xDtypeSize_ = (xDesc->GetDataType() == ge::DT_FLOAT16) ? 2 : 4;
+    auto xDtype = xDesc->GetDataType();
+    OP_CHECK_IF(xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype).c_str(),
+                                          "FLOAT16 or FLOAT"),
+                return ge::GRAPH_FAILED);
+    xDtypeSize_ = (xDtype == ge::DT_FLOAT16) ? 2 : 4;
 
     // x shape（optional 输入缺席时框架压实存储，必须用 def 声明序访问器）
     auto xShape = context_->GetRequiredInputShape(INPUT_X_INDEX);
@@ -128,9 +166,9 @@ ge::graphStatus INInferV2Tiling::CheckXDescAndShape()
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", Ops::Base::ToString(xFormat).c_str(), "ND or NCHW"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        dimNum < 2,
+        dimNum < MIN_RANK || dimNum > MAX_RANK,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
-                                              "dim num must be no less than 2"),
+                                              "dim num must be in [2, 8]"),
         return ge::GRAPH_FAILED);
     for (size_t i = 0; i < dimNum; i++) {
         OP_CHECK_IF(xStorageShape.GetDim(i) < 0,
@@ -142,11 +180,19 @@ ge::graphStatus INInferV2Tiling::CheckXDescAndShape()
 
     numN_ = xStorageShape.GetDim(0);
     numC_ = xStorageShape.GetDim(1);
+    OP_CHECK_IF(!CheckedMulNonNegative(numN_, numC_, units_),
+                OP_LOGE(context_, "N*C exceeds int64 range, N=%ld, C=%ld", numN_, numC_), return ge::GRAPH_FAILED);
     innerSize_ = 1;
     for (size_t i = 2; i < dimNum; i++) {
-        innerSize_ *= xStorageShape.GetDim(i);
+        int64_t nextInnerSize = 0;
+        OP_CHECK_IF(!CheckedMulNonNegative(innerSize_, xStorageShape.GetDim(i), nextInnerSize),
+                    OP_LOGE(context_, "product of x trailing dimensions exceeds int64 range at dim %zu", i),
+                    return ge::GRAPH_FAILED);
+        innerSize_ = nextInnerSize;
     }
-    units_ = numN_ * numC_;
+    OP_CHECK_IF(!CheckedMulNonNegative(units_, innerSize_, totalElements_),
+                OP_LOGE(context_, "x element count exceeds int64 range, units=%ld, inner=%ld", units_, innerSize_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -212,7 +258,7 @@ ge::graphStatus INInferV2Tiling::CalcCoreSplit()
             innerCores_ = 1;
         }
     }
-    innerPerCore_ = (innerSize_ + innerCores_ - 1) / innerCores_;
+    innerPerCore_ = innerSize_ / innerCores_ + ((innerSize_ % innerCores_) != 0 ? 1 : 0);
 
     // 单元前多后少均分：前 formerCoreNum 核每核 formerUnits 个，其余每核 latterUnits 个
     int64_t base = units_ / unitCores_;
@@ -235,7 +281,7 @@ ge::graphStatus INInferV2Tiling::CalcCoreSplit()
 
 ge::graphStatus INInferV2Tiling::FillTilingData()
 {
-    auto* tilingData = reinterpret_cast<INInferV2TilingData*>(context_->GetRawTilingData()->GetData());
+    auto* tilingData = context_->GetTilingData<INInferV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
     tilingData->numN = numN_;
     tilingData->numC = numC_;
@@ -252,11 +298,12 @@ ge::graphStatus INInferV2Tiling::FillTilingData()
     tilingData->hasGammaBeta = hasGammaBeta_;
     tilingData->hasBatchMean = hasBatchMean_;
     tilingData->hasBatchVar = hasBatchVar_;
-    context_->GetRawTilingData()->SetDataSize(sizeof(INInferV2TilingData));
 
     int64_t usedCores = unitCores_ * innerCores_;
-    context_->SetBlockDim(usedCores);
-    context_->SetTilingKey(0); // key 恒为 0（ND 单路径）；dtype 编译期双二进制，hasGammaBeta 运行时分发
+    OP_CHECK_IF(context_->SetBlockDim(static_cast<uint32_t>(usedCores)) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_, "Set blockDim failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->SetTilingKey(0) != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Set tiling key failed"),
+                return ge::GRAPH_FAILED); // key 恒为 0；dtype 是编译轴，hasGammaBeta 运行时分发
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = 0; // 无 workspace

@@ -8,14 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file in_training_reduce_v2_infershape.cpp
- * \brief
- */
+#include <gtest/gtest.h>
 
-#include "../in_training_reduce_v2_infer_common.h"
-#include "register/op_impl_registry.h"
+#include "../../../framework/normalize_bbox_tf_plugin.cpp"
 
-namespace ops {
-IMPL_OP_INFERSHAPE(INTrainingReduceV2).InferShape(InferShape4INTrainingReduceV2);
-} // namespace ops
+TEST(NormalizeBBoxTfPluginTest, NoAttributeFusionParserReturnsSuccess)
+{
+    const std::vector<const google::protobuf::Message*> insideNodes;
+    const ge::Operator op("normalize_bbox", "NormalizeBBox");
+
+    EXPECT_EQ(domi::NormalizeBBoxParserParams(insideNodes, op), domi::SUCCESS);
+}

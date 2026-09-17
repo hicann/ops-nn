@@ -47,7 +47,7 @@ _TOL = {
 
 
 def _kernel_compute_input(x):
-    """Match the kernel input arithmetic without lowering a diagnostic FP64 input."""
+    """Apply the operator precision contract without lowering a diagnostic FP64 input."""
     if x.dtype in (torch.float16, torch.bfloat16):
         return x.to(torch.float32)
     return x
@@ -114,7 +114,7 @@ def _kernel_golden(x, **kwargs):
 
 
 class _INTrainingReduceV2Compose:
-    """Independent GPU competitor composition aligned with the arch35 kernel.
+    """Independent GPU competitor composition aligned with the operator contract.
 
     Operation order follows the implementation, rather than replacing the two
     outputs with a variance/mean identity:
@@ -159,13 +159,44 @@ class _INTrainingReduceV2Compose:
         ]
 
 
+class _INTrainingReduceV2TensorFlowCompose:
+    """Independent TensorFlow reduction used by the remote TF endpoint."""
+
+    def __init__(self, **kwargs):
+        del kwargs
+
+    def __call__(self, x, **kwargs):
+        del kwargs
+        import tensorflow as tf
+
+        x_compute = (
+            tf.cast(x, tf.float32) if x.dtype in (tf.float16, tf.bfloat16) else x
+        )
+        rank = x_compute.shape.rank
+        if rank is None:
+            raise ValueError("INTrainingReduceV2 requires a statically known rank")
+        if rank > 2:
+            reduce_axes = tuple(range(2, rank))
+            sum_out = tf.reduce_sum(x_compute, axis=reduce_axes, keepdims=True)
+            square_sum_out = tf.reduce_sum(
+                tf.square(x_compute), axis=reduce_axes, keepdims=True
+            )
+        else:
+            sum_out = tf.identity(x_compute)
+            square_sum_out = tf.square(x_compute)
+        return [tf.cast(sum_out, tf.float32), tf.cast(square_sum_out, tf.float32)]
+
+
 class INTrainingReduceV2KernelSpec:
     """Shared kernel/GEIR TestSpec; parameters follow def.cpp (``x`` only)."""
 
     def golden(x, **kwargs):
         return _kernel_golden(x, **kwargs)
 
-    third_party = {"torch": _INTrainingReduceV2Compose}
+    third_party = {
+        "torch": _INTrainingReduceV2Compose,
+        "tf": _INTrainingReduceV2TensorFlowCompose,
+    }
     tolerance = _TOL
 
 

@@ -51,13 +51,11 @@ const std::map<int32_t, std::string> SCALAR_INDEX_LIST = {{IDX_LEARNING_RATE, "l
 ge::graphStatus SgdRegbaseTiling::GetAttr()
 {
     auto attrs = tilingContext_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, attrs);
-
-    const float* dampeningAttr = attrs->GetAttrPointer<float>(ATTR_IDX_DAMPENING);
+    const float* dampeningAttr = (attrs == nullptr) ? nullptr : attrs->GetAttrPointer<float>(ATTR_IDX_DAMPENING);
     dampening_ = (dampeningAttr != nullptr) ? *dampeningAttr : 0.0f;
-    const float* weightDecayAttr = attrs->GetAttrPointer<float>(ATTR_IDX_WEIGHT_DECAY);
+    const float* weightDecayAttr = (attrs == nullptr) ? nullptr : attrs->GetAttrPointer<float>(ATTR_IDX_WEIGHT_DECAY);
     weightDecay_ = (weightDecayAttr != nullptr) ? *weightDecayAttr : 0.0f;
-    const bool* nesterovAttr = attrs->GetAttrPointer<bool>(ATTR_IDX_NESTEROV);
+    const bool* nesterovAttr = (attrs == nullptr) ? nullptr : attrs->GetAttrPointer<bool>(ATTR_IDX_NESTEROV);
     nesterov_ = (nesterovAttr != nullptr) ? *nesterovAttr : false;
 
     // 对齐 ascend910b 的两条属性语义校验（canndev nn_training_ops.cc:1932-1955）。
@@ -67,7 +65,7 @@ ge::graphStatus SgdRegbaseTiling::GetAttr()
                                                       std::to_string(dampening_).c_str(),
                                                       "attr dampening must be 0 when attr nesterov is true"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(weightDecay_ < 0.0f,
+    OP_CHECK_IF(!(weightDecay_ >= 0.0f),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "weight_decay",
                                                       std::to_string(weightDecay_).c_str(),
                                                       "attr weight_decay must be more than or equal to 0"),
@@ -162,33 +160,38 @@ ge::graphStatus SgdRegbaseTiling::CheckShapeAndType()
         OP_CHECK_IF(CheckScalarShape(pair.first) != ge::GRAPH_SUCCESS,
                     OP_LOGD(tilingContext_, "scalar shape check failed for %s", pair.second.c_str()),
                     return ge::GRAPH_FAILED);
+        const auto* scalarDesc = tilingContext_->GetInputDesc(pair.first);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, scalarDesc);
         OP_CHECK_IF(
-            CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
+            scalarDesc->GetDataType() != inputDtype,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), (std::string("parameters and ") + pair.second).c_str(),
                 (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " +
-                 ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType()))
+                 ge::TypeUtils::DataTypeToSerialString(scalarDesc->GetDataType()))
                     .c_str(),
                 (std::string("the dtypes of input ") + pair.second + " and input parameters must be the same").c_str()),
             return ge::GRAPH_FAILED);
     }
 
     for (const auto& pair : TENSOR_INDEX_LIST) {
+        const auto* tensorShape = tilingContext_->GetInputShape(pair.first);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, tensorShape);
         OP_CHECK_IF(
-            CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
+            tensorShape->GetStorageShape() != inputStorageShape,
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 tilingContext_->GetNodeName(), (std::string("parameters and ") + pair.second).c_str(),
-                (Ops::Base::ToString(inputStorageShape) + " and " +
-                 Ops::Base::ToString(tilingContext_->GetInputShape(pair.first)->GetStorageShape()))
+                (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(tensorShape->GetStorageShape()))
                     .c_str(),
                 (std::string("the shapes of input ") + pair.second + " and input parameters must be the same").c_str()),
             return ge::GRAPH_FAILED);
+        const auto* tensorDesc = tilingContext_->GetInputDesc(pair.first);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, tensorDesc);
         OP_CHECK_IF(
-            CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
+            tensorDesc->GetDataType() != inputDtype,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), (std::string("parameters and ") + pair.second).c_str(),
                 (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " +
-                 ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType()))
+                 ge::TypeUtils::DataTypeToSerialString(tensorDesc->GetDataType()))
                     .c_str(),
                 (std::string("the dtypes of input ") + pair.second + " and input parameters must be the same").c_str()),
             return ge::GRAPH_FAILED);
@@ -266,13 +269,15 @@ ge::graphStatus SgdRegbaseTiling::SetTilingData()
     tilingKey_ = GET_TPL_TILING_KEY(tiling_->elewiseTiling.scheMode, useNesterovKey_, hasWeightDecayKey_,
                                     hasDampeningKey_);
     OP_LOGI(tilingContext_->GetNodeName(),
-            "scheMode=%ld, useNesterov=%ld, hasWeightDecay=%ld, hasDampening=%ld, tilingKey=%lu",
+            "scheMode=%lu, useNesterov=%lu, hasWeightDecay=%lu, hasDampening=%lu, tilingKey=%lu",
             tiling_->elewiseTiling.scheMode, useNesterovKey_, hasWeightDecayKey_, hasDampeningKey_, tilingKey_);
-    tilingContext_->SetTilingKey(tilingKey_);
+    OP_CHECK_IF(tilingContext_->SetTilingKey(tilingKey_) != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext_, "Set tiling key failed"), return ge::GRAPH_FAILED);
 
     uint32_t blockDim = static_cast<uint32_t>(tiling_->elewiseTiling.blockNum);
-    OP_CHECK_IF(blockDim <= 0, OP_LOGE(tilingContext_, "Get blockDim failed"), return ge::GRAPH_FAILED);
-    tilingContext_->SetBlockDim(blockDim);
+    OP_CHECK_IF(blockDim == 0, OP_LOGE(tilingContext_, "Get blockDim failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingContext_->SetBlockDim(blockDim) != ge::GRAPH_SUCCESS,
+                OP_LOGE(tilingContext_, "Set blockDim failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
