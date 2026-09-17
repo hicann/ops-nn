@@ -30,6 +30,9 @@
 namespace optiling {
 namespace PoolGradTiling {
 
+// 二分搜索上界计算时的除数，表示取轴尺寸的一半作为搜索范围
+constexpr int64_t SPLIT_SEARCH_HALF_DIVISOR = 2;
+
 // NCHW 切分所需维度 (hX/wX 为输出 H/W; highAxis 为 NC 合并轴)
 struct PoolGradNchwDims {
     int64_t hX;
@@ -147,7 +150,7 @@ bool TrySplitAlignH(SplitInfo& splitData, const PoolGradNchwDims& d, TilingClass
 
     if (tiling.IsMeetUBSize() && tiling.IsMeetTargetCoreNum()) {
         splitData.hOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::hOutputInner, d.hStride,
-                                                Ops::Base::CeilDiv(d.hX / 2, d.hStride));
+                                                Ops::Base::CeilDiv(d.hX / SPLIT_SEARCH_HALF_DIVISOR, d.hStride));
         return true;
     } else {
         return false;
@@ -165,7 +168,7 @@ bool TrySplitAlignW(SplitInfo& splitData, const PoolGradNchwDims& d, TilingClass
 
     if (tiling.IsMeetUBSize() && tiling.IsMeetTargetCoreNum()) {
         splitData.wOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::wOutputInner, d.wStride,
-                                                Ops::Base::CeilDiv(d.wX / 2, d.wStride));
+                                                Ops::Base::CeilDiv(d.wX / SPLIT_SEARCH_HALF_DIVISOR, d.wStride));
         return true;
     } else {
         return false;
@@ -264,7 +267,7 @@ bool TrySplitAlignH(SplitInfo& splitData, const PoolGradNhwcDims& d, TilingClass
     splitData.hOutputInner = d.hStride;
     if (tiling.IsMeetUBSize() && tiling.IsMeetTargetCoreNum()) {
         splitData.hOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::hOutputInner, d.hStride,
-                                                Ops::Base::CeilDiv(d.hX / 2, d.hStride));
+                                                Ops::Base::CeilDiv(d.hX / SPLIT_SEARCH_HALF_DIVISOR, d.hStride));
         return true;
     } else {
         return false;
@@ -284,7 +287,7 @@ bool TrySplitAlignW(SplitInfo& splitData, const PoolGradNhwcDims& d, TilingClass
     splitData.wOutputInner = d.wStride;
     if (tiling.IsMeetUBSize() && tiling.IsMeetTargetCoreNum()) {
         splitData.wOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::wOutputInner, d.wStride,
-                                                Ops::Base::CeilDiv(d.wX / 2, d.wStride));
+                                                Ops::Base::CeilDiv(d.wX / SPLIT_SEARCH_HALF_DIVISOR, d.wStride));
         return true;
     } else {
         return false;
@@ -304,8 +307,9 @@ bool TrySplitAlignC(SplitInfo& splitData, const PoolGradNhwcDims& d, int64_t mov
     int64_t tmpCAligned = d.cX < moveDataNumCacheLine ? d.cX : moveDataNumCacheLine;
     splitData.cOutputInner = tmpCAligned;
     if (tiling.IsMeetUBSize() && tiling.IsMeetTargetCoreNum()) {
-        splitData.cOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::cOutputInner, moveDataNumCacheLine,
-                                                Ops::Base::CeilDiv(d.cX / 2, moveDataNumCacheLine));
+        splitData.cOutputInner = SearchMaxSplit(
+            tiling, splitData, &SplitInfo::cOutputInner, moveDataNumCacheLine,
+            Ops::Base::CeilDiv(d.cX / SPLIT_SEARCH_HALF_DIVISOR, moveDataNumCacheLine));
         return true;
     } else {
         // hw stride 较大场景 或者 nhwc超小场景  ---> 应该对hw做更小的切分
@@ -350,8 +354,9 @@ void SplitUnalignHwc(SplitInfo& splitData, const PoolGradNhwcDims& d, int64_t is
         splitData.cOutputInner = proDataNumInOneBeat;
         return;
     } else {
-        splitData.cOutputInner = SearchMaxSplit(tiling, splitData, &SplitInfo::cOutputInner, proDataNumInOneBeat,
-                                                Ops::Base::CeilDiv(d.cX / 2, proDataNumInOneBeat), false);
+        splitData.cOutputInner = SearchMaxSplit(
+            tiling, splitData, &SplitInfo::cOutputInner, proDataNumInOneBeat,
+            Ops::Base::CeilDiv(d.cX / SPLIT_SEARCH_HALF_DIVISOR, proDataNumInOneBeat), false);
         return;
     }
 }

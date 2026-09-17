@@ -80,7 +80,6 @@ public:
             registry_map_[soc_version] = op_type_map;
         } else {
             if (soc_iter->second.find(op_type) == soc_iter->second.end()) {
-                soc_iter->second[op_type] = std::shared_ptr<TilingCases>(new (std::nothrow) TilingCases(op_type));
                 soc_iter->second[op_type] = std::make_shared<TilingCases>(op_type);
             }
         }

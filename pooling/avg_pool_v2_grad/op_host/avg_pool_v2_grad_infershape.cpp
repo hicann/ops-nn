@@ -59,7 +59,7 @@ inline bool IsConstTensor(const gert::Tensor* inputTensor)
 }
 
 // 校验 ksize/strides 列表中 batch 维与 channel 维必须为 1 (NCHW 检查 [0][1], NHWC 检查 [0][3])
-static ge::graphStatus CheckNonSpatialDimIsOne(gert::InferShapeContext* context, const int64_t* attrData,
+static ge::graphStatus CheckNonSpatialDimIsOne(const gert::InferShapeContext* context, const int64_t* attrData,
                                                const char* attrName, size_t batchDimIdx, size_t channelDimIdx)
 {
     const size_t dimIdxs[2] = {batchDimIdx, channelDimIdx};
