@@ -295,9 +295,9 @@ aclnnStatus aclnnGroupNormSilu(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
+#include <cinttypes>
 #include <iostream>
-#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_group_norm_silu.h"
@@ -397,33 +397,21 @@ int main() {
   double eps = 0.00001;
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> selfTensorPtr(self, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建gamma aclTensor
   ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT, &gamma);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gammaTensorPtr(gamma, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> gammaDeviceAddrPtr(gammaDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建beta aclTensor
   ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT, &beta);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> betaTensorPtr(beta, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> betaDeviceAddrPtr(betaDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> outTensorPtr(out, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建meanOut aclTensor
   ret = CreateAclTensor(meanOutHostData, meanOutShape, &meanOutDeviceAddr, aclDataType::ACL_FLOAT, &meanOut);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> meanOutTensorPtr(meanOut, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> meanOutDeviceAddrPtr(meanOutDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建rstdOut aclTensor
   ret = CreateAclTensor(rstdOutHostData, rstdOutShape, &rstdOutDeviceAddr, aclDataType::ACL_FLOAT, &rstdOut);
-  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> rstdOutTensorPtr(rstdOut, aclDestroyTensor);
-  std::unique_ptr<void, aclError (*)(void *)> rstdOutDeviceAddrPtr(rstdOutDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的API
@@ -436,7 +424,7 @@ int main() {
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnGroupNormSilu第二段接口
   ret = aclnnGroupNormSilu(workspaceAddr, workspaceSize, executor, stream);
@@ -451,7 +439,7 @@ int main() {
                     ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("outResultData[%ld] is: %f\n", i, outResultData[i]);
+    LOG_PRINT("outResultData[%" PRId64 "] is: %f\n", i, outResultData[i]);
   }
 
   size = GetShapeSize(meanOutShape);
@@ -460,7 +448,7 @@ int main() {
                     ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("meanResultData[%ld] is: %f\n", i, meanResultData[i]);
+    LOG_PRINT("meanResultData[%" PRId64 "] is: %f\n", i, meanResultData[i]);
   }
 
   size = GetShapeSize(rstdOutShape);
@@ -469,7 +457,7 @@ int main() {
                     ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("rstdResultData[%ld] is: %f\n", i, rstdResultData[i]);
+    LOG_PRINT("rstdResultData[%" PRId64 "] is: %f\n", i, rstdResultData[i]);
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
