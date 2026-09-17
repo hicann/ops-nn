@@ -16,6 +16,8 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static const std::vector<ge::DataType> valueDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::Format> valueFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 class MultiScaleDeformableAttentionGrad : public OpDef {
 public:
     explicit MultiScaleDeformableAttentionGrad(const char* name) : OpDef(name)
@@ -72,7 +74,67 @@ public:
             .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
-        this->AICore().AddConfig("ascend950", aicore_config);
+
+        OpAICoreConfig config950;
+        config950.Input("value")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Input("value_spatial_shapes")
+            .ParamType(REQUIRED)
+            .DataTypeList({ge::DT_INT32})
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Input("value_level_start_index")
+            .ParamType(REQUIRED)
+            .DataTypeList({ge::DT_INT32})
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Input("sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Input("attention_weights")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Input("grad_output")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat)
+            .AutoContiguous();
+        config950.Output("grad_value")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat);
+        config950.Output("grad_sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat);
+        config950.Output("grad_attention_weights")
+            .ParamType(REQUIRED)
+            .DataType(valueDtype)
+            .Format(valueFormat)
+            .UnknownShapeFormat(valueFormat);
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "multi_scale_deformable_attention_grad");
+        this->AICore().AddConfig("ascend950", config950);
     }
 };
 

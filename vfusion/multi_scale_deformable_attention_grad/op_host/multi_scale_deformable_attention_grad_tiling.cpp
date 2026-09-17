@@ -29,10 +29,13 @@ constexpr uint32_t WORKSPACE_16MBYTE_SIZE = 16 * 1024 * 1024;
 namespace optiling {
 constexpr static int64_t FP32_MODE = 0;
 constexpr static int64_t FP16_MODE = 1;
-static uint64_t RESERVE_SAPCE = 1024;
+constexpr static int64_t BF16_MODE = 2;
+static uint64_t RESERVE_SAPCE = 8192;
 constexpr static int64_t NUM_LEVEL_BUFFER = 3;
-constexpr static int64_t NUM_EMEBDDIM_BUFFER = 8;
+constexpr static int64_t NUM_EMBEDDIM_BUFFER = 8;
+constexpr static int64_t NUM_EMBEDDIM_BUFFER_REGBASE = 6;
 constexpr static int64_t NUM_QUERIE_BUFFER = 15;
+constexpr static int64_t NUM_HALF_TWO_BUFFER = 6;
 constexpr static int64_t NUM_CHANNEL_BUFFER = 13;
 class MultiScaleDeformableAttentionGradTiling {
 public:
@@ -55,6 +58,7 @@ private:
     uint64_t core_used = 48;     // 1024 size
     uint64_t block_bytes = 32;
     uint64_t dtype_size = 4;
+    ge::DataType valueDtype = ge::DT_FLOAT;
     uint64_t max_ub_num = 0;
     uint64_t ub_size = 192 * 1024; // 192 * 1024 size
     uint64_t deterministicFlag = 0;
@@ -62,24 +66,28 @@ private:
 
 void MultiScaleDeformableAttentionGradTiling::SetTilingKeyMode(ge::DataType dType_str)
 {
-    switch (dType_str) {
-        case ge::DT_FLOAT:
-            TilingContext->SetTilingKey(FP32_MODE);
-            break;
-        case ge::DT_FLOAT16:
-            TilingContext->SetTilingKey(FP16_MODE);
-            break;
-        default:
-            TilingContext->SetTilingKey(FP32_MODE);
-            break;
-    }
+    (void)dType_str;
+    TilingContext->SetTilingKey(FP32_MODE);
 }
 
 ge::graphStatus MultiScaleDeformableAttentionGradTiling::Init()
 {
     OP_LOGD(TilingContext, "Tiling initing.");
-    auto value_shape = TilingContext->GetInputShape(0)->GetStorageShape();
-    auto sampling_loc_shape = TilingContext->GetInputShape(3)->GetStorageShape();
+    auto value_shape_ptr = TilingContext->GetInputShape(0);
+    auto spatial_shapes_ptr = TilingContext->GetInputShape(1);
+    auto level_start_index_ptr = TilingContext->GetInputShape(2);
+    auto sampling_loc_shape_ptr = TilingContext->GetInputShape(3);
+    auto attn_weight_shape_ptr = TilingContext->GetInputShape(4);
+    if (value_shape_ptr == nullptr || spatial_shapes_ptr == nullptr || level_start_index_ptr == nullptr ||
+        sampling_loc_shape_ptr == nullptr || attn_weight_shape_ptr == nullptr) {
+        OP_LOGE(TilingContext->GetNodeName(), "input shape ptr is nullptr");
+        return ge::GRAPH_FAILED;
+    }
+    auto value_shape = value_shape_ptr->GetStorageShape();
+    auto spatial_shapes = spatial_shapes_ptr->GetStorageShape();
+    auto level_start_index_shape = level_start_index_ptr->GetStorageShape();
+    auto sampling_loc_shape = sampling_loc_shape_ptr->GetStorageShape();
+    auto attn_weight_shape = attn_weight_shape_ptr->GetStorageShape();
     auto compileInfo = reinterpret_cast<const MultiScaleDeformableAttentionGradCompileInfo*>(
         TilingContext->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(TilingContext, compileInfo);
@@ -108,13 +116,42 @@ ge::graphStatus MultiScaleDeformableAttentionGradTiling::Init()
     num_point = sampling_loc_shape.GetDim(sample_idx);
     sample_idx += sample_step;
     num_query = sampling_loc_shape.GetDim(sample_idx);
+
+    uint64_t spatial_num_levels = spatial_shapes.GetDim(0);
+    uint64_t level_start_index_num_levels = level_start_index_shape.GetDim(0);
+    uint64_t attn_weight_num_levels = attn_weight_shape.GetDim(2);
+    if (num_levels != spatial_num_levels || num_levels != level_start_index_num_levels ||
+        num_levels != attn_weight_num_levels) {
+        OP_LOGE(TilingContext->GetNodeName(),
+                "numLevels dimensions must be equal: samplingLocLevels=%lu, spatialShapeLevels=%lu, "
+                "levelStartIndexLevels=%lu, attnWeightLevels=%lu",
+                num_levels, spatial_num_levels, level_start_index_num_levels, attn_weight_num_levels);
+        return ge::GRAPH_FAILED;
+    }
+
     auto dtype_str = TilingContext->GetInputDesc(0)->GetDataType(); // 0 value idex
+    valueDtype = dtype_str;
     SetTilingKeyMode(dtype_str);
 
     uint64_t data_align = block_bytes / dtype_size;
+    if (dtype_str != ge::DT_FLOAT) {
+        data_align = block_bytes / 2; // FP16/BF16: align Q to 16 elements for overlap cast 32B alignment
+    }
     uint64_t num_levels_align = (num_levels + data_align - 1) / data_align * data_align;
-    max_ub_num = (ub_size / dtype_size - NUM_LEVEL_BUFFER * num_levels_align - NUM_EMEBDDIM_BUFFER * channels) /
-                 (NUM_QUERIE_BUFFER + NUM_CHANNEL_BUFFER * channels);
+    uint64_t staging_cost = 0;
+    if (dtype_str != ge::DT_FLOAT) {
+        uint64_t input_dtype_size = 2; // half or bfloat16_t
+        uint64_t staging_stride = std::max(channels, block_bytes / input_dtype_size);
+        staging_cost = 4 * staging_stride * sizeof(float); // 1 input staging buf x 4 slots, allocated as float
+    }
+    uint64_t num_query_buffer = NUM_QUERIE_BUFFER;
+    if (dtype_str != ge::DT_FLOAT) {
+        num_query_buffer += NUM_HALF_TWO_BUFFER;
+    }
+    uint64_t num_embeddim_buffer = compileInfo->isRegBase ? NUM_EMBEDDIM_BUFFER_REGBASE : NUM_EMBEDDIM_BUFFER;
+    max_ub_num = (ub_size / dtype_size - NUM_LEVEL_BUFFER * num_levels_align - num_embeddim_buffer * channels -
+                  staging_cost / dtype_size) /
+                 (num_query_buffer + NUM_CHANNEL_BUFFER * channels);
     max_ub_num = max_ub_num / data_align * data_align;
     uint64_t taskNum = ((num_query + max_ub_num - 1) / max_ub_num) * batch_size * num_heads * num_levels * num_point;
     core_used = std::min(core_num, taskNum);
@@ -146,6 +183,9 @@ ge::graphStatus MultiScaleDeformableAttentionGradTiling::RunKernelTiling()
     TilingData.set_coreNum(core_used);
     TilingData.set_isDeterministic(deterministicFlag);
     size_t sysWorkspaceSize = WORKSPACE_16MBYTE_SIZE;
+    if (valueDtype != ge::DT_FLOAT) {
+        sysWorkspaceSize += batch_size * spatial_size * num_heads * channels * sizeof(float);
+    }
     size_t* currentWorkspace = TilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
     TilingData.SaveToBuffer(TilingContext->GetRawTilingData()->GetData(),

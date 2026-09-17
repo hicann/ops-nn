@@ -9,5 +9,9 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend910b ascend910_93 ascend950
+    COMPUTE_UNITS ascend910b ascend910_93
+)
+add_kernel_sources(
+    KERNEL_SRC arch35/multi_scale_deformable_attention_grad.cpp
+    COMPUTE_UNITS ascend950
 )

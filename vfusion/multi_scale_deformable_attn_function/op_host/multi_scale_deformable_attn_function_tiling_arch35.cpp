@@ -160,7 +160,12 @@ ge::graphStatus Tiling4MultiScaleDeformableAttnArch35(gert::TilingContext* conte
         OP_LOGE(context->GetNodeName(), "currentWorkspace is null");
         return ge::GRAPH_FAILED;
     }
-    currentWorkspace[0] = sysWorkspaceSize;
+    size_t wsSize = sysWorkspaceSize;
+    auto valueDtype = valueTensorPtr->GetDataType();
+    if (schMode == MSDA_MODE_GENERIC && valueDtype != ge::DT_FLOAT) {
+        wsSize += dims.batchSize * dims.numQueries * dims.numHeads * dims.embedDims * sizeof(float);
+    }
+    currentWorkspace[0] = wsSize;
 
     OP_LOGD(OP_NAME, "Tiling4MultiScaleDeformableAttnArch35 end.");
     return ge::GRAPH_SUCCESS;

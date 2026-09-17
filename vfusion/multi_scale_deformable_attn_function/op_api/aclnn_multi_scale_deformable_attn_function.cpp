@@ -283,18 +283,12 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(const aclTenso
     //   - channels (embedDims) >= 64 -> SIMD (Generic kernel)
     //   - channels < 64             -> SIMT (SIMT kernel 原生支持 fp16/bf16/fp32)
     // 950 Cast 策略：
-    //   - channels >= 64 且非 fp32 -> Cast 到 fp32（Generic kernel 硬编码 DTYPE_VALUE=float，
-    //     bisheng 不支持 Cast<int32, half/bfloat16_t>）
-    //   - channels >= 64 且 fp32   -> 不 Cast
-    //   - channels < 64            -> 不 Cast，走 SIMT
+    //   - 950 kernel 内部处理 cast（SIMD path: fp32 workspace + 尾遍历 Cast；SIMT path: 原生支持）
+    //   - 950 不再在 API 层 Cast
     // 950 SIMD path: channels (embedDims) >= 64
     if (is950SocVersion) {
         is950SimdShape = (embedDims >= 64);
     }
-    auto inputValueDtype = valueContiguous->GetDataType();
-    // 950 上需要 Cast 到 fp32 的场景：channels >= 64 且输入非 fp32（走 Generic/SIMD）。
-    bool needCastOn950 = is950SocVersion && is950SimdShape &&
-                         (inputValueDtype == op::DataType::DT_FLOAT16 || inputValueDtype == op::DataType::DT_BF16);
 
     if (is310PSocVersion) {
         // value transpose
@@ -351,13 +345,13 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(const aclTenso
     const aclTensor* valueInput = nullptr;
     const aclTensor* locationInput = nullptr;
     const aclTensor* attnWeightInput = nullptr;
-    if (is950SocVersion && !needCastOn950) {
-        // 950 不需要 Cast 的场景：channels < 64（走 SIMT），或 channels >= 64 且 fp32（走 SIMD）
+    if (is950SocVersion) {
+        // 950: kernel 内部处理 cast，API 层不 Cast
         valueInput = valueContiguous;
         locationInput = locationContiguous;
         attnWeightInput = attnWeightContiguous;
     } else {
-        // 910b/310p: always cast to fp32 或 950 channels >= 64
+        // 910b/310p: cast to fp32
         valueInput = l0op::Cast(valueContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(valueInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -390,13 +384,15 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(const aclTenso
         CHECK_RET(outAxes != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto resOut = l0op::Transpose(outputTensor, outAxes, uniqueExecutor.get());
         CHECK_RET(resOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // 固定写法，将计算结果转换成输出out的数据类型
         auto outputCast = l0op::Cast(resOut, output->GetDataType(), uniqueExecutor.get());
         CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         msdaOutTensor = outputCast;
     } else {
-        // 固定写法，将计算结果转换成输出out的数据类型
-        msdaOutTensor = l0op::Cast(outputTensor, output->GetDataType(), uniqueExecutor.get());
+        if (is950SocVersion) {
+            msdaOutTensor = outputTensor;
+        } else {
+            msdaOutTensor = l0op::Cast(outputTensor, output->GetDataType(), uniqueExecutor.get());
+        }
         CHECK_RET(msdaOutTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 

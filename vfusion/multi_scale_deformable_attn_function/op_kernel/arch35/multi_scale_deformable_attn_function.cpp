@@ -17,9 +17,8 @@
  *   - channels < 64  -> SIMT path (schMode = MSDA_MODE_SIMT)
  */
 
-#include <type_traits>
 #include "kernel_tiling/kernel_tiling.h"
-#include "../ms_deform_attn_generic.h"
+#include "ms_deform_attn_generic.h"
 #include "ms_deform_attn_simt.h"
 #include "multi_scale_deformable_attn_function_tiling_key.h"
 #include "multi_scale_deformable_attn_function_tiling_data.h"
@@ -39,16 +38,14 @@ __global__ __aicore__ void multi_scale_deformable_attn_function(GM_ADDR value, G
         op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output);
         op.Process();
     } else if constexpr (schMode == MSDA_MODE_GENERIC) {
-        if constexpr (std::is_same_v<DTYPE_VALUE, float>) {
-            TPipe pipe;
-            KernelMultiScaleDeformableAttn<MsdaRegBaseTilingData> op;
-            op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output,
-                    &tilingData, &pipe);
-            op.InitBuffer();
-            op.GetLocalTensor();
-            op.ClearOutput();
-            op.Process();
-            op.ReleaseEventID();
-        }
+        TPipe pipe;
+        KernelMultiScaleDeformableAttn<MsdaRegBaseTilingData, DTYPE_VALUE> op;
+        op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output, workspace,
+                &tilingData, &pipe);
+        op.InitBuffer();
+        op.GetLocalTensor();
+        op.ClearOutput();
+        op.Process();
+        op.ReleaseEventID();
     }
 }
