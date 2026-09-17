@@ -495,3 +495,25 @@ TEST(l2_QuantBatchMatmulV4_310P_pertoken, bias_bf16_invalid)
     SocVersionManager versionManager(SocVersion::ASCEND310P);
     EXPECT_EQ(Run310PPertokenBiasCase(ACL_BF16), ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST(l2_QuantBatchMatmulV4_310P_pertoken, soc_version_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910);
+    EXPECT_EQ(Run310PPertokenBiasCase(ACL_BF16), ACLNN_ERR_RUNTIME_ERROR);
+}
+
+TEST(l2_QuantBatchMatmulV4_310P_pertoken, pp_matmul)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc x1Desc = TensorDesc({1024, 32}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 32}).ValueRange(-1, 1);
+    TensorDesc scaleDesc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc pertokenDesc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    TensorDesc biasDesc = TensorDesc({16}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc outDesc = TensorDesc({1024, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    uint64_t workspaceSize = 0;
+    auto ut = OP_API_UT(aclnnQuantMatmulV4,
+                        INPUT(x1Desc, x2Desc, scaleDesc, nullptr, pertokenDesc, biasDesc, false, true),
+                        OUTPUT(outDesc));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}

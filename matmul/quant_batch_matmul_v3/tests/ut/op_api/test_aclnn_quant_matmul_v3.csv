@@ -16,7 +16,7 @@ general,ascend910B2_test_quant_bmm_v3_A8W8C8_bias_second_dim_error,1 16 32,2 32 
 general,ascend910B2_test_quant_bmm_v3_A8W8C8_input_batch_dim_error,3 16 32,2 32 16,16,16,16,2 16 16,1 32 1,1 16 1,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
 general,ascend910B2_test_quant_bmm_v3_A8W8C8_bias_third_dim_error,1 16 32,2 32 16,16,16,2 1 10,2 16 16,1 32 1,1 16 1,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
 general,ascend910B2_test_quant_bmm_v3_A8W8C8_output_shape_m_dim_error,16 32,32 16,16,16,16,10 16,32 1,16 1,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
-general,ascend910B2_test_quant_bmm_v3_A8W8C8_output_shape_n_dim_error,16 32,32 16,16,16,16 10,32 1,16 1,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,,
+general,ascend910B2_test_quant_bmm_v3_A8W8C8_output_shape_n_dim_error,16 32,32 16,16,16,16 10,32 1,16 1,,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,,
 general,ascend910B2_test_quant_bmm_v3_A8W8C8_output_batch_dim_error,1 16 32,2 32 16,16,16,16,3 16 16,1 32 1,1 16 1,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
 general,ascend910B2_test_quant_bmm_v3_A8W8FP16_outpu_dim_error,16 32,32 16,16,,16,16 16 1,32 1,16 1,ACL_UINT64,ACL_FLOAT16,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
 general,ascend910B2_test_quant_bmm_v3_A8W8BF16_wrong_scale_dtype_false_false_error,16 32,32 16,16,,16,16 16,32 1,16 1,ACL_UINT64,ACL_BF16,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,
@@ -47,3 +47,8 @@ special,ascend910B2_test_quant_bmm_v3_transpose_x1_true_success,32 16,32 16,16,,
 special,ascend910B2_test_quant_bmm_v3_out_int32_success,16 32,32 16,16,,16,16 16,,,ACL_FLOAT,ACL_INT32,ACLNN_SUCCESS,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,false,ACL_FLOAT,ACL_INT32,false,false,true
 special,ascend910B2_test_quant_bmm_v3_out_int32_bias_bf16_invalid,16 32,32 16,16,,16,16 16,,,ACL_FLOAT,ACL_INT32,ACLNN_ERR_PARAM_INVALID,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,false,ACL_FLOAT,ACL_BF16,false,false,true
 special,ascend910B2_test_quant_bmm_v3_scale_null_all_optional_nullptr,16 32,32 16,,,,16 16,,,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_NULLPTR,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,true,ACL_FLOAT,ACL_INT32,false,false,true
+special,ascend910B2_test_check_empty_x1,0 32,32 16,16,,,0 16,,,ACL_UINT64,ACL_FLOAT16,ACLNN_ERR_PARAM_NULLPTR,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,true,ACL_FLOAT,ACL_INT32,false,false,true
+special,ascend910B2_test_check_empty_x2,16 32,0 16,16,,,16 0,,,ACL_UINT64,ACL_FLOAT16,ACLNN_ERR_PARAM_NULLPTR,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,true,ACL_FLOAT,ACL_INT32,false,false,true
+special,ascend910B2_test_mx_groupsize_invalid,16 32,32 16,16,,,16 16,,,ACL_FLOAT,ACL_FLOAT16,ACLNN_ERR_PARAM_INVALID,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,false,8,ACL_FLOAT8_E8M0,false,8,true
+special,ascend910B2_test_offset_dim_not_1,16 32,32 16,16,2 16,,16 16,,,ACL_UINT64,ACL_INT8,ACLNN_ERR_PARAM_INVALID,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,false,ACL_FLOAT,ACL_INT32,false,false,true
+special,ascend910B2_test_offset_non_fp16_out,16 32,32 16,16,16,,16 16,,,ACL_UINT64,ACL_FLOAT16,ACLNN_ERR_PARAM_INVALID,ACL_INT8,ACL_FORMAT_ND,,ACL_INT8,ACL_FORMAT_ND,,false,ACL_FLOAT,ACL_INT32,false,false,true

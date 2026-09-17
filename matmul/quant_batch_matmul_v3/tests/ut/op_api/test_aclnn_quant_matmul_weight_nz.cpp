@@ -299,6 +299,20 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
                                 OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
+        case 127U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, x2Desc, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                      param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 159U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, nullptr, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                      nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
         case 223U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
                                 INPUT(x1Desc, nullptr, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
@@ -374,6 +388,40 @@ TEST(QuantBatchMatmulWeightNzCompatibility, KeepsLegacyTwoDimensionalX2ScaleOuts
 
     workspaceSize = 0;
     EXPECT_EQ(RunInt8WeightNzScaleShapeCase({}, {1, 256}, workspaceSize, true), ACLNN_SUCCESS);
+}
+
+TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeNormal)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1Desc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2Desc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
+    TensorDesc x1ScaleDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {2});
+    TensorDesc x2ScaleDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {256});
+    TensorDesc outDesc({1, 128}, ACL_BF16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulWeightNz,
+        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 32),
+        OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST(QuantBatchMatmulWeightNzScaleStorage, ModifyScaleStorageShapeIllegal)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    TensorDesc x1Desc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2Desc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
+    TensorDesc x1ScaleDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {2});
+    TensorDesc x2ScaleDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {}, 0, {255});
+    TensorDesc outDesc({1, 128}, ACL_BF16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulWeightNz,
+        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 32),
+        OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
 
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulWeightNz, l2_QuantBatchMatmulWeightNz_test, testing::ValuesIn(GetParams()));

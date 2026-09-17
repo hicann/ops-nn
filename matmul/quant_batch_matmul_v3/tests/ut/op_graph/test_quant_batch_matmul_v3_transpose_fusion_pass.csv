@@ -11,3 +11,22 @@ quant_bmm_v3_with_reshape_transpose_mx,QuantBatchMatmulV3TransposeFusionPass,12 
 quant_bmm_V3_with_x1_dtype_invalid,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT16,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_FLOAT16,0,0,0,0,0,,,DT_FLOAT16,0,GRAPH_NOT_CHANGED,0,0,0,0
 quant_bmm_V3_with_x2_dtype_invalid,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_FLOAT16,-1,DT_UINT64,,, -1 -1,DT_FLOAT16,0,0,0,0,0,,,DT_FLOAT16,0,GRAPH_NOT_CHANGED,0,0,0,0
 quant_bmm_V3_with_out_dtype_invalid,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_FLOAT8_E5M2,0,0,0,0,0,,,DT_FLOAT8_E5M2,0,GRAPH_NOT_CHANGED,0,0,0,0
+quant_bmm_v3_with_reshape_known_shape,QuantBatchMatmulV3TransposeFusionPass,16 32,DT_INT8,32 16,DT_INT8,16,DT_UINT64,,,16 16,DT_INT8,0,1,0,0,1,1 16,scale,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_with_x1_transpose_3d,QuantBatchMatmulV3TransposeFusionPass,2 16 32,DT_INT8,2 32 16,DT_INT8,16,DT_UINT64,,,2 16 16,DT_INT8,1,0,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,1,0
+quant_bmm_v3_with_both_transpose_3d,QuantBatchMatmulV3TransposeFusionPass,2 16 32,DT_INT8,2 32 16,DT_INT8,16,DT_UINT64,,,2 16 16,DT_INT8,1,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,1,1
+quant_bmm_v3_with_reshape_transpose_fp8,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT8_E4M3FN,-1 -1,DT_FLOAT8_E4M3FN,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT16,0,1,0,0,1,1 128,x2,DT_FLOAT16,549764202624,SUCCESS,0,0,0,1
+quant_bmm_v3_with_x2_transpose_fp4,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT4_E2M1,-1 -1,DT_FLOAT4_E2M1,-1 -1 -1,DT_FLOAT8_E8M0,,, -1 -1,DT_FLOAT16,0,1,0,0,0,,,DT_FLOAT16,32,SUCCESS,0,0,0,1
+quant_bmm_v3_limit_inner_gt65535,QuantBatchMatmulV3TransposeLimitFusionPass,128 70000,DT_INT8,70000 128,DT_INT8,128,DT_UINT64,,,128 128,DT_INT8,0,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_limit_no_transpose_no_change,QuantBatchMatmulV3TransposeLimitFusionPass,16 32,DT_INT8,32 16,DT_INT8,16,DT_UINT64,,,16 16,DT_INT8,0,0,0,0,0,,,DT_INT8,-1,GRAPH_NOT_CHANGED,0,0,0,0
+quant_bmm_v3_with_reshape_mx_scale_3d,QuantBatchMatmulV3TransposeFusionPass,4 16,DT_FLOAT8_E5M2,120 16,DT_FLOAT8_E5M2,1 120 2,DT_FLOAT8_E8M0,4 1 2,DT_FLOAT8_E8M0,4 120,DT_FLOAT16,0,1,0,0,1,1 120 2,scale,DT_FLOAT16,32,SUCCESS,0,1,0,1
+quant_bmm_v3_with_bitcast_reshape_scale,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,0,1,0,1,0,,,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_mx_reshape_dim0_eq_1,QuantBatchMatmulV3TransposeFusionPass,4 64,DT_FLOAT8_E5M2,128 64,DT_FLOAT8_E5M2,1 128 2,DT_FLOAT8_E8M0,4 1 2,DT_FLOAT8_E8M0,4 128,DT_FLOAT16,0,1,0,0,1,1 128 2,scale,DT_FLOAT16,32,SUCCESS,0,1,0,1
+quant_bmm_v3_reshape_last_dim_1,QuantBatchMatmulV3TransposeFusionPass,16 1,DT_INT8,1 16,DT_INT8,1,DT_UINT64,,,16 16,DT_INT8,0,1,0,0,1,1 16,scale,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_x1_1d_shape,QuantBatchMatmulV3TransposeFusionPass,16,DT_INT8,16 16,DT_INT8,16,DT_UINT64,,,16 16,DT_INT8,0,0,0,0,0,,,DT_INT8,-1,GRAPH_NOT_CHANGED,0,0,0,0
+quant_bmm_v3_x1_dtype_bf16,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_BF16,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_BF16,1,0,0,0,0,,,DT_BF16,-1,GRAPH_NOT_CHANGED,1,0,0,0
+quant_bmm_v3_out_dtype_hifloat8,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_HIFLOAT8,0,0,0,0,0,,,DT_HIFLOAT8,-1,GRAPH_NOT_CHANGED,0,0,0,0
+quant_bmm_v3_limit_outer_gt_65535,QuantBatchMatmulV3TransposeLimitFusionPass,70000 128,DT_INT8,128 70000,DT_INT8,128,DT_UINT64,,,70000 70000,DT_INT8,0,1,0,0,0,,,DT_INT8,-1,GRAPH_NOT_CHANGED,1,0,0,0
+quant_bmm_v3_x2_nz_format,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,0,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_no_transpose_no_change,QuantBatchMatmulV3TransposeFusionPass,16 32,DT_INT8,32 16,DT_INT8,16,DT_UINT64,,,16 16,DT_INT8,0,0,0,0,0,,,DT_INT8,-1,GRAPH_NOT_CHANGED,0,0,0,0
+quant_bmm_v3_bitcast_scale_reshape,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT16,1,0,1,0,1,-1 -1,x2,DT_FLOAT16,549764202624,SUCCESS,0,1,1,0
+quant_bmm_v3_reshape_scale_from_x2,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT16,1,0,0,0,1,-1 -1,x2,DT_FLOAT16,549764202624,SUCCESS,0,1,1,0

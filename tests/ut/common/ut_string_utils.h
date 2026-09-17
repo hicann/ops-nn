@@ -44,6 +44,9 @@
 #ifndef ACLNN_ERR_PARAM_INVALID
 #define ACLNN_ERR_PARAM_INVALID static_cast<aclnnStatus>(161002)
 #endif
+#ifndef ACLNN_ERR_RUNTIME_ERROR
+#define ACLNN_ERR_RUNTIME_ERROR static_cast<aclnnStatus>(361001)
+#endif
 #endif
 
 #if __has_include("exe_graph/runtime/shape.h") && __has_include("exe_graph/runtime/storage_shape.h") && \
@@ -305,6 +308,7 @@ inline aclnnStatus ParseAclnnStatus(const std::string& value)
         {"ACLNN_SUCCESS", ACLNN_SUCCESS},
         {"ACLNN_ERR_PARAM_INVALID", ACLNN_ERR_PARAM_INVALID},
         {"ACLNN_ERR_PARAM_NULLPTR", ACLNN_ERR_PARAM_NULLPTR},
+        {"ACLNN_ERR_RUNTIME_ERROR", ACLNN_ERR_RUNTIME_ERROR},
     };
     const auto it = kStatusMap.find(Trim(value));
     if (it != kStatusMap.end()) {
