@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "../../median/op_api/aclnn_median.h"
+#include "aclnn_nan_median.h"
 #include "../../median/op_api/median_common.h"
 
 #include "nan_median.h"
@@ -198,7 +198,7 @@ static aclnnStatus ExecZeroDimNum(const aclTensor* self, int64_t dim, aclTensor*
 
     // 标量的索引直接返回0
     auto indicesOutZero = l0op::ZerosLike(indicesOut, executor);
-    CHECK_RET(indicesOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(indicesOutZero != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto indicesCopyResult = l0op::ViewCopy(indicesOutZero, indicesOut, executor);
     CHECK_RET(indicesCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

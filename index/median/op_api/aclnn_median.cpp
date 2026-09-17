@@ -85,7 +85,7 @@ aclnnStatus aclnnMedianGetWorkspaceSize(const aclTensor* self, aclTensor* values
 
         result = selectResult;
         auto FLOAT_DTYPE_LIST = GetFloatList();
-        if (CheckType(self->GetDataType(), FLOAT_DTYPE_LIST)) {
+        if (op::CheckType(self->GetDataType(), FLOAT_DTYPE_LIST)) {
             auto nanMask = GetNanMask(sortValues, 0, uniqueExecutor.get());
             CHECK_RET(nanMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
             // 生成nan的Tensor
@@ -158,7 +158,7 @@ aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor* self, int64_t dim, b
         CHECK_RET(lastValueResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         lastIndicesResult = std::get<1>(result);
         CHECK_RET(lastIndicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002 && dimSize > 1 &&
+    } else if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002 && dimSize > 1 &&
                self->GetDataType() == op::DataType::DT_FLOAT && sortDimSize <= SMALLSORTLIMIT) {
         // small rank dim
         // Transpose

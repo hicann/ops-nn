@@ -30,7 +30,8 @@ constexpr uint32_t DEFAULT_OUTPUT_ROWS = 1024;
 constexpr uint32_t MEDIAN_RADIX_COUNT_STORAGE_WORDS = 8;
 constexpr int64_t LOWER_MEDIAN_DIVISOR = 2;
 
-static ge::graphStatus CheckKthValueDtypes(gert::TilingContext* context, ge::DataType dataType, uint32_t& dtypeSize)
+static ge::graphStatus CheckKthValueDtypes(const gert::TilingContext* context, ge::DataType dataType,
+                                           uint32_t& dtypeSize)
 {
     if (!ge::TypeUtils::GetDataTypeLength(dataType, dtypeSize)) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", Ops::Base::ToString(dataType).c_str(),
@@ -54,7 +55,7 @@ static ge::graphStatus CheckKthValueDtypes(gert::TilingContext* context, ge::Dat
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateKthValueShapes(gert::TilingContext* context, const gert::Shape*& xStorageShape)
+static ge::graphStatus ValidateKthValueShapes(const gert::TilingContext* context, const gert::Shape*& xStorageShape)
 {
     auto xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -116,7 +117,7 @@ static ge::graphStatus ParseKthValueShapeInfo(gert::TilingContext* context, cons
 // =============================================================================
 // UB computation and base tiling init
 // =============================================================================
-static ge::graphStatus ComputeKthValueUbInfo(gert::TilingContext* context,
+static ge::graphStatus ComputeKthValueUbInfo(const gert::TilingContext* context,
                                              const platform_ascendc::PlatformAscendC& ascendcPlatform,
                                              SortKthTileInfo& info, bool& oneCoreUbValid)
 {
@@ -272,7 +273,7 @@ static bool ComputeKthNonLastSmallAxisPeakUb(const SortKthTileInfo& info, uint32
 // =============================================================================
 // Individual strategy Set functions
 // =============================================================================
-static ge::graphStatus SetRadixOneCoreTiling(gert::TilingContext* context, const SortKthTileInfo& info,
+static ge::graphStatus SetRadixOneCoreTiling(const gert::TilingContext* context, const SortKthTileInfo& info,
                                              KthValueTilingData* tilingData)
 {
     uint64_t sourceOrderBytes = NeedsSignedZeroSourceOrder(info.dataType) ? info.idxUbSize : 0U;

@@ -1,4 +1,3 @@
-#pragma once
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
@@ -8,6 +7,9 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
+#ifndef OP_API_INC_MEDIAN_COMMON_H_
+#define OP_API_INC_MEDIAN_COMMON_H_
 
 #include "index/common/op_api/median_dim.h"
 #include "level0/add.h"
@@ -31,7 +33,6 @@
 #include "aclnn_kernels/transpose.h"
 #include "opdev/common_types.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -41,8 +42,6 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "util/math_util.h"
-using namespace op;
-
 namespace Ops::NN::MedianCommon {
 static const int32_t MAX_INT32 = 2147483647;
 static const int32_t MIN_INT32 = -2147483648;
@@ -115,3 +114,5 @@ aclnnStatus DealMedianEmptyTensor(const aclTensor* self, aclTensor* out, aclOpEx
 void CheckFormat(const aclTensor* self);
 
 } // namespace Ops::NN::MedianCommon
+
+#endif // OP_API_INC_MEDIAN_COMMON_H_

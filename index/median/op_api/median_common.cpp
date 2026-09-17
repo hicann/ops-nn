@@ -9,8 +9,12 @@
  */
 
 #include "median_common.h"
+#include "op_api/op_api_def_nn.h"
 
 namespace Ops::NN::MedianCommon {
+using op::CheckType;
+using op::MAX_SUPPORT_DIMS_NUMS;
+
 namespace {
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,  op::DataType::DT_UINT8,
@@ -30,7 +34,7 @@ static const std::initializer_list<op::DataType> FLOAT_DTYPE_LIST_910 = {op::Dat
 
 const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16;
     }
     return DTYPE_SUPPORT_LIST_WITH_INT;
@@ -38,7 +42,7 @@ const std::initializer_list<op::DataType>& GetDtypeSupportList()
 
 const std::initializer_list<op::DataType>& GetFloatList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return FLOAT_DTYPE_LIST_910B;
     }
     return FLOAT_DTYPE_LIST_910;
@@ -189,14 +193,17 @@ aclnnStatus CheckParamsDim(const aclTensor* self, int64_t dim, bool keepDim, acl
 // 将dim与最后一个dim进行对换
 aclIntArray* GetPermResult(int64_t dim, int64_t dimSize, aclOpExecutor* executor)
 {
-    std::vector<int64_t> valuePerm(dimSize, 0);
+    CHECK_RET(dimSize > 0 && dim >= 0 && dim < dimSize, nullptr);
+    const size_t dimCount = static_cast<size_t>(dimSize);
+    const size_t lastDim = static_cast<size_t>(dimSize - 1);
+    std::vector<int64_t> valuePerm(dimCount, 0);
     for (int64_t i = 0; i < dimSize; i++) {
-        valuePerm[i] = i;
+        valuePerm[static_cast<size_t>(i)] = i;
     }
 
-    std::swap(valuePerm[dim], valuePerm[dimSize - 1]);
+    std::swap(valuePerm[static_cast<size_t>(dim)], valuePerm[lastDim]);
 
-    return executor->AllocIntArray(valuePerm.data(), dimSize);
+    return executor->AllocIntArray(valuePerm.data(), dimCount);
 }
 
 const aclTensor* MedianAdaptInputZeroDimTensor(const aclTensor* self, int64_t dimNum, aclOpExecutor* executor)
@@ -226,16 +233,18 @@ const aclTensor* ReduceOneDim(const aclTensor* self, int64_t selfShapeDim, aclOp
 aclIntArray* GetReduceShape(const aclTensor* self, const int64_t dim, aclOpExecutor* executor)
 {
     int64_t dimSize = GetTensorDim(self);
-    int64_t selfShapeValue[dimSize - 1];
+    CHECK_RET(dimSize > 0 && dim >= 0 && dim < dimSize, nullptr);
+    const size_t reducedDimCount = static_cast<size_t>(dimSize - 1);
+    std::vector<int64_t> selfShapeValue(reducedDimCount);
     int64_t idx = 0;
     for (int64_t i = 0; i < dimSize; i++) {
         if (i == dim) {
             continue;
         }
-        selfShapeValue[idx] = self->GetViewShape().GetDim(i);
+        selfShapeValue[static_cast<size_t>(idx)] = self->GetViewShape().GetDim(i);
         idx++;
     }
-    aclIntArray* selfShape = executor->AllocIntArray(selfShapeValue, dimSize - 1);
+    aclIntArray* selfShape = executor->AllocIntArray(selfShapeValue.data(), reducedDimCount);
     CHECK_RET(selfShape != nullptr, nullptr);
     return selfShape;
 }
@@ -286,7 +295,7 @@ const aclTensor* GetLast(const aclTensor* sortValues, int64_t dim, aclOpExecutor
 
 const aclTensor* CreateNanTensor(const aclTensor* self, aclOpExecutor* executor)
 {
-    FVector<float> valVector = {NAN};
+    op::FVector<float> valVector = {NAN};
     auto nanTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), self->GetDataType());
     return nanTensor;
 }
@@ -431,7 +440,7 @@ bool CanMedianNonLastAxisDirectly(const aclTensor* self, int64_t realDim)
     }
 
     int64_t dtypeSize = static_cast<int64_t>(op::TypeSize(self->GetDataType()));
-    int64_t blockBytes = GetCurrentPlatformInfo().GetBlockSize();
+    int64_t blockBytes = op::GetCurrentPlatformInfo().GetBlockSize();
     int64_t blockElems = Ops::Base::CeilDiv(blockBytes, dtypeSize);
     constexpr int64_t smallRowLargeOuterThreshold = 1024;
     // Small inner rows incur padding/gather overhead on the non-transpose path. With many outer slices,

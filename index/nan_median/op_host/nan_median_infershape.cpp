@@ -34,7 +34,7 @@ static ge::graphStatus GetNanMedianOutputShapes(gert::InferShapeContext* context
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ResolveNanMedianDim(gert::InferShapeContext* context, int64_t rank, int64_t& normalizedDim)
+static ge::graphStatus ResolveNanMedianDim(const gert::InferShapeContext* context, int64_t rank, int64_t& normalizedDim)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);

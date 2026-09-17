@@ -13,7 +13,7 @@
 #include <math.h>
 #include "gtest/gtest.h"
 
-#include "../../../../median/op_api/aclnn_median.h"
+#include "../../../op_api/aclnn_nan_median.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"

@@ -317,7 +317,7 @@
 #include <vector>
 #include <cmath>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_median.h"
+#include "aclnnop/aclnn_nan_median.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \
