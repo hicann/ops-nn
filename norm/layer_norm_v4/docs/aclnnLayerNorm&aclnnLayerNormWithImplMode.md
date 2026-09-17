@@ -172,7 +172,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果。对应公式中的`out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>meanOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的均值。对应公式中的`meanOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`rstdOutOptional`存在时与`rstdOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`rstdOutOptional`存在时与`rstdOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>rstdOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`rstdOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`meanOutOptional`存在时与`meanOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`meanOutOptional`存在时与`meanOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -400,7 +400,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果。对应公式中的`out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -410,7 +410,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>meanOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的均值。对应公式中的`meanOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -420,7 +420,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>rstdOutOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`rstdOutOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
