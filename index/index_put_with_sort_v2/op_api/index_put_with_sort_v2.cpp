@@ -61,21 +61,21 @@ static bool CheckIndicesWithSelf(const aclTensor* selfRef, const aclTensorList* 
     int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
     int64_t valuesSize = values->GetViewShape().GetDimNum();
     if (indicesSize < 1 || selfRefSize < 1 || valuesSize < 1 || (*indices)[0]->GetViewShape().GetDimNum() < 1) {
-        OP_LOGD("IndexPutWithSortV2 Op not support no indices, not support 0 dims of selfRef or values!");
+        OP_LOGD("IndexPutWithSortV2 Op does not support empty indices, or 0 dims of selfRef or values!");
         return false;
     }
     if (indicesSize > selfRefSize) {
-        OP_LOGD("IndexPutWithSortV2 Op not support nums of indices greater than dims of selfRef!");
+        OP_LOGD("IndexPutWithSortV2 Op does not support the number of indices greater than dims of selfRef!");
         return false;
     }
     for (int64_t i = 0; i < indicesSize; i++) {
         if ((*indices)[i]) {
             if ((*indices)[i]->GetViewShape().GetShapeSize() == 0) {
-                OP_LOGD("IndexPutWithSortV2 Op not support none data of indices!");
+                OP_LOGD("IndexPutWithSortV2 Op does not support indices with no data!");
                 return false;
             }
         } else {
-            OP_LOGD("IndexPutWithSortV2 Op not support nullptr of indices!");
+            OP_LOGD("IndexPutWithSortV2 Op does not support nullptr in indices!");
             return false;
         }
     }
@@ -86,13 +86,13 @@ static bool CheckValuesShape(const aclTensorList* indices, const aclTensor* valu
 {
     auto valuesSize = values->GetViewShape().GetDimNum();
     if (valuesSize < (*indices)[0]->GetViewShape().GetDimNum()) {
-        OP_LOGD("IndexPutWithSortV2 Op not support dims of values smaller than dims of indices!");
+        OP_LOGD("IndexPutWithSortV2 Op does not support dims of values smaller than dims of indices!");
         return false;
     }
     for (size_t i = 0; i < (*indices)[0]->GetViewShape().GetDimNum(); i++) {
         if (values->GetViewShape().GetDim(i) != (*indices)[0]->GetViewShape().GetDim(i) &&
             values->GetViewShape().GetDim(i) != 1) {
-            OP_LOGD("IndexPutWithSortV2 Op not support values need broadcast!");
+            OP_LOGD("IndexPutWithSortV2 Op does not support values that need broadcast!");
             return false;
         }
     }
@@ -107,7 +107,7 @@ static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indice
     auto indexDimNum = (*indices)[0]->GetViewShape().GetDimNum();
     auto valuesDimNum = values->GetViewShape().GetDimNum();
     if (valuesDimNum < indexDimNum + numTailDims) {
-        OP_LOGD("IndexPutWithSortV2 Op not support values dims less than required!");
+        OP_LOGD("IndexPutWithSortV2 Op does not support values dims less than required!");
         return false;
     }
     for (int64_t i = 0; i < numTailDims; i++) {
@@ -130,7 +130,7 @@ static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices
         shapeProd *= selfRef->GetViewShape().GetDim(i);
     }
     if (shapeProd > INT32_MAX_LIMIT) {
-        OP_LOGD("IndexPutWithSortV2 Op not support nums of indexed data greater than %ld!", INT32_MAX_LIMIT);
+        OP_LOGD("IndexPutWithSortV2 Op does not support the number of indexed data greater than %ld!", INT32_MAX_LIMIT);
         return false;
     }
     return true;
@@ -142,22 +142,22 @@ static bool CheckIndicesDtypeAndShape(const aclTensorList* indices)
     for (int64_t i = 0; i < indicesSize; i++) {
         if (i == 0) {
             if ((*indices)[0]->GetDataType() == op::DataType::DT_BOOL) {
-                OP_LOGD("IndexPutWithSortV2 Op not support bool dtype of indices!");
+                OP_LOGD("IndexPutWithSortV2 Op does not support bool dtype of indices!");
                 return false;
             }
         } else {
             if ((*indices)[i]->GetDataType() != (*indices)[0]->GetDataType()) {
-                OP_LOGD("IndexPutWithSortV2 Op only support one dtype of indices!");
+                OP_LOGD("IndexPutWithSortV2 Op only supports one dtype of indices!");
                 return false;
             }
             // 索引之间需要广播不支持
             if ((*indices)[i]->GetViewShape().GetDimNum() != (*indices)[0]->GetViewShape().GetDimNum()) {
-                OP_LOGD("IndexPutWithSortV2 Op only support same dims of indices!");
+                OP_LOGD("IndexPutWithSortV2 Op only supports the same dims of indices!");
                 return false;
             }
             for (size_t j = 0; j < (*indices)[0]->GetViewShape().GetDimNum(); j++) {
                 if ((*indices)[0]->GetViewShape().GetDim(j) != (*indices)[i]->GetViewShape().GetDim(j)) {
-                    OP_LOGD("IndexPutWithSortV2 Op only support same shape of indices!");
+                    OP_LOGD("IndexPutWithSortV2 Op only supports the same shape of indices!");
                     return false;
                 }
             }
@@ -286,7 +286,7 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const
     }
 
     if (selfSize < MEMORY_LIMIT_BYTES || selfShapeSize / indexNums < REPEAT_DEGREE) {
-        OP_LOGD("IndexPutWithSortV2 Opt skip: selfSize is too small or Too much index");
+        OP_LOGD("IndexPutWithSortV2 Opt skip: selfSize is too small or too many indexes");
         return false;
     }
 

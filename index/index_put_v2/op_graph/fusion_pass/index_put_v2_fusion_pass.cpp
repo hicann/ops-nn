@@ -195,7 +195,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     }
     DataType xDtype = xDesc.GetDataType();
     if (!CheckDtype(xDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "x dtype not support, actual: %d", static_cast<int>(xDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype does not support, actual: %d", static_cast<int>(xDtype));
         return false;
     }
 
@@ -206,13 +206,13 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     }
     DataType valueDtype = valueDesc.GetDataType();
     if (!CheckDtype(valueDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "value dtype not support, actual: %d", static_cast<int>(valueDtype));
+        OP_LOGI(kPassName.c_str(), "value dtype does not support, actual: %d", static_cast<int>(valueDtype));
         return false;
     }
 
     if (xDtype != valueDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with value dtype, x: %d, value: %d", static_cast<int>(xDtype),
-                static_cast<int>(valueDtype));
+        OP_LOGI(kPassName.c_str(), "x dtype should be the same as value dtype, x: %d, value: %d",
+                static_cast<int>(xDtype), static_cast<int>(valueDtype));
         return false;
     }
 
@@ -223,12 +223,12 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     }
     DataType yDtype = yDesc.GetDataType();
     if (!CheckDtype(yDtype, dtypes)) {
-        OP_LOGI(kPassName.c_str(), "y dtype not support, actual: %d", static_cast<int>(yDtype));
+        OP_LOGI(kPassName.c_str(), "y dtype does not support, actual: %d", static_cast<int>(yDtype));
         return false;
     }
 
     if (xDtype != yDtype) {
-        OP_LOGI(kPassName.c_str(), "x dtype should same with y dtype, x: %d, y: %d", static_cast<int>(xDtype),
+        OP_LOGI(kPassName.c_str(), "x dtype should be the same as y dtype, x: %d, y: %d", static_cast<int>(xDtype),
                 static_cast<int>(yDtype));
         return false;
     }
@@ -241,7 +241,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
         }
         DataType indicesDtype = indicesDesc.GetDataType();
         if (!CheckDtype(indicesDtype, {DT_INT32, DT_INT64})) {
-            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only support int32/int64, actual: %d", i,
+            OP_LOGI(kPassName.c_str(), "indices[%ld] dtype only supports int32/int64, actual: %d", i,
                     static_cast<int>(indicesDtype));
             return false;
         }
@@ -251,7 +251,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode& node, int64_t indicesNum) co
     node.GetAttr("accumulate", accumulate);
     if (accumulate) {
         if (!CheckDtype(xDtype, deterministicDtypes)) {
-            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype do not support Deterministic , actual: %d",
+            OP_LOGI(kPassName.c_str(), "accumulate is true, x dtype does not support Deterministic, actual: %d",
                     static_cast<int>(xDtype));
             return false;
         }
@@ -397,7 +397,7 @@ GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode& node)
         std::string name = "indices" + std::to_string(i);
         rIndices.emplace_back(
             builder.CreateInput(newIdx++, name.c_str(), info.indicesDtypes[i], info.indicesFmt, info.indicesDims[i]));
-        if (info.indicesShape[i].GetShapeSize() != 0) { //索引不为空，则置1
+        if (info.indicesShape[i].GetShapeSize() != 0) { // 索引不为空，则置1
             indexedSizes[i] = 1;
         }
     }

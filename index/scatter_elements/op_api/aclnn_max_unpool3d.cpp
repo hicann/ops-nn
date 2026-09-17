@@ -147,7 +147,7 @@ static inline aclnnStatus CheckParams(const aclTensor* self, const aclTensor* in
     CHECK_RET(CheckShape(self, indices), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 校验输入self的元素值是否小于0
-    CHECK_RET(CheckInpuNullTensorMaxUnPool3D(self), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckInputNullTensorMaxUnPool3D(self), ACLNN_ERR_PARAM_INVALID);
 
     // 6. 检查输入的outputSize, stride, padding的size大小及元素值大小
     CHECK_RET(CheckIntArrayShapeMaxUnPool3D(self, outputSize, stride, padding), ACLNN_ERR_PARAM_INVALID);

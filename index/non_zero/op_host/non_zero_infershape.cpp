@@ -56,7 +56,7 @@ graphStatus InferShape4NonZero(gert::InferShapeContext* context)
 
 ge::graphStatus InferShapeRange4NonZero(gert::InferShapeRangeContext* context)
 {
-    OP_LOGI(context->GetNodeName(), "InferShapeRange4NonZero running begin");
+    OP_LOGI(context->GetNodeName(), "InferShapeRange4NonZero started");
     auto in_range = context->GetInputShapeRange(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_range);
     auto out_range = context->GetOutputShapeRange(0);

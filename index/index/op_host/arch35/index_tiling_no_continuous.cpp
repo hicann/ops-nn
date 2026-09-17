@@ -267,7 +267,7 @@ void IndexNonContinuousTiling::CoalesceIndex()
     if (!canMerge) {
         isCoalesced_ = false;
         OP_LOGW(context_->GetNodeName(),
-                "CoalesceIndex failed: All index tensors' stride are inconsistent, skip merge.");
+                "CoalesceIndex failed: All index tensors' strides are inconsistent, skip merge.");
         return;
     }
     mergeIndexAxis(tempIndexShape, tempIndexStride);
@@ -346,9 +346,9 @@ void IndexNonContinuousTiling::PrintTilingData()
 {
     // m_tilingData_ 已经在 GetShapeAttrsInfo 中初始化
     OP_LOGI(context_->GetNodeName(),
-            "indexSize = %ld, indexedDimNum = %ld, indexedSizesNum = %ld, "
-            "inputDimNum = %ld, inputLength = %ld, outputLength = %ld, "
-            "accumulateMode = %ld, valueDimNum=%ld",
+            "indexSize = %lu, indexedDimNum = %u, indexedSizesNum = %u, "
+            "inputDimNum = %u, inputLength = %lu, outputLength = %lu, "
+            "accumulateMode = %u, valueDimNum = %lu",
             m_tilingData_->indexSize, m_tilingData_->indexedDimNum, m_tilingData_->indexedSizesNum,
             m_tilingData_->inputDimNum, m_tilingData_->inputLength, m_tilingData_->outputLength,
             m_tilingData_->accumulateMode, m_tilingData_->valueDimNum);
@@ -383,18 +383,19 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo()
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_),
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                    context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
-                    "should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT32, DT_INT64]"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ParamTypeIsInvalid(xDtype_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
+                                              "should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, "
+                                              "DT_UINT8, DT_INT32, DT_INT64, DT_COMPLEX64]"),
+        return ge::GRAPH_FAILED);
     const std::set<ge::DataType> supportedIndexDtypes = {ge::DT_INT32, ge::DT_INT64};
     auto computeNodeInfo = context_->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, computeNodeInfo);
     auto indiceInstanceInfo = computeNodeInfo->GetInputInstanceInfo(paramIndicesIdx_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indiceInstanceInfo);
     tensorNum_ = indiceInstanceInfo->GetInstanceNum();
-    OP_LOGI("IndexNonContinuous", "tensor Num: %u", tensorNum_);
+    OP_LOGI("IndexNonContinuous", "tensor Num: %ld", tensorNum_);
     for (int64_t i = 0; i < tensorNum_ && i < MAX_SUPPORT_DIM_NUM; ++i) {
         auto indexDesc = context_->GetDynamicInputDesc(paramIndicesIdx_, i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
@@ -422,7 +423,7 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inShape);
     auto const inShapeVal = inShape->GetShape();
     inputLength_ = inShapeVal.GetShapeSize();
-    OP_LOGI("IndexNonContinuous", "input length: %ld", inputLength_);
+    OP_LOGI("IndexNonContinuous", "input length: %lu", inputLength_);
     auto const indexedSizes = context_->GetInputShape(paramIndexedSizesIdx_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexedSizes);
     auto const indexedSizesShape = indexedSizes->GetShape();
@@ -443,7 +444,7 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo()
     if (isIndexPut_ == false) {
         GetTensorInfo(yShape_, yStride_, OUT_Y_IDX, true);
         auto yDimNum = yShape_.GetDimNum();
-        OP_LOGI("IndexNonContinuous", "y dim Num: %u", yDimNum);
+        OP_LOGI("IndexNonContinuous", "y dim Num: %zu", yDimNum);
         auto const outputSize = context_->GetOutputShape(0);
         OP_CHECK_NULL_WITH_CONTEXT(context_, outputSize);
         auto const outputSizeSal = outputSize->GetStorageShape();
@@ -458,7 +459,7 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo()
         }
         GetTensorInfo(valueShape_, valueStride_, INDEXPUT_VALUE_IDX, false);
         valueDimNum_ = valueShape_.GetDimNum();
-        OP_LOGI("IndexNonContinuous", "value dim Num: %u", valueDimNum_);
+        OP_LOGI("IndexNonContinuous", "value dim Num: %ld", valueDimNum_);
         auto const valueShape = context_->GetInputShape(INDEXPUT_VALUE_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, valueShape);
         auto const valueShapeVal = valueShape->GetShape();

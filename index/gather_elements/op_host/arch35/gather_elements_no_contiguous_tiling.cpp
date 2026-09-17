@@ -169,7 +169,7 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
 
     OP_CHECK_IF(dimSize_ > MAX_DIM_LEN_EIGHT,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index", std::to_string(dimSize_).c_str(),
-                                                         "dimSize should not larger than 8"),
+                                                         "dimSize should not be larger than 8"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -245,7 +245,7 @@ inline ge::graphStatus GatherElementsNoContiguousTiling::GetAttrInfo()
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                         opName_, "x, index",
                         (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
-                        "x should larger than or equal to index of each dim value, except axis"),
+                        "x should be larger than or equal to index of each dim value, except axis"),
                     return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

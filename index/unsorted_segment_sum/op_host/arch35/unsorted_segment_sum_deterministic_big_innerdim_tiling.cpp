@@ -109,7 +109,8 @@ ge::graphStatus UnsortedSegmentSumDeterministicBigInnerDimTiling::DoOpTiling()
     baseS_ = std::min(DEFAULT_HANDLE_ROWS, inputOuterDim_);
     int64_t colsNumInUB = FindMaxColsInUb();
     if (colsNumInUB <= 0) {
-        OP_LOGE(context_->GetNodeName(), "One column data size is too large, current module does not support !!!");
+        OP_LOGE(context_->GetNodeName(),
+                "One column data size is too large (innerDim is %lu), current module does not support.", innerDim_);
         return ge::GRAPH_PARAM_INVALID;
     }
     baseA_ = colsNumInUB / HALF_UB_ALIGN * HALF_UB_ALIGN;

@@ -60,7 +60,7 @@ protected:
     int64_t nonIdxedStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
     int64_t nonIdxedSelfStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
     int64_t nonIdxedValueStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
-    bool isContinous_{false};
+    bool isContinuous_{false};
     bool accumulate_{false};
     bool indexedBlockMode_{false};
     int64_t idxedValueStride_{0};
@@ -72,7 +72,7 @@ protected:
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtypeAndFormat();
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
-    bool IsIndexedContinous(const int64_t* arr, int64_t size);
+    bool IsIndexedContinuous(const int64_t* arr, int64_t size);
     void CalcSelfAndValueStride(int64_t* selfStride, int64_t* valueStride);
     void CalcNonIndexedStride(int64_t* selfStride, int64_t* valueStride);
     void CalcThreadNum();

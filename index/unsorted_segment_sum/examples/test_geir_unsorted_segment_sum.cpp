@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
         string input_file = "./tc_ge_irrun_test_0008_npu_input_" + std::to_string(i) + ".bin";
         uint8_t* input_data_i = input[i].GetData();
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
-        std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
+        std::cout << "this is input " << i << ", input shape size =" << input_shape << std::endl;
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
         WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
     }
@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
         string output_file = "./tc_ge_irrun_test_0008_npu_output_" + std::to_string(i) + ".bin";
         uint8_t* output_data_i = output[i].GetData();
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
+        std::cout << "this is output " << i << ", output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
         WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
         float* resultData = (float*)output_data_i;

@@ -105,11 +105,12 @@ int64_t UnsortedSegmentSumDetermTiling::GetSortTmpSize(int64_t rowsNum)
 
 ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
 {
-    OP_LOGI(context_->GetNodeName(), "Deterministic Mode tiling is begin");
+    OP_LOGI(context_->GetNodeName(), "Deterministic Mode tiling begins");
     ubSize_ -= DCACHE_SIZE;
     int64_t rowsNumInUB = FindMaxRowsInUb();
     if (rowsNumInUB <= 0) {
-        OP_LOGW(context_->GetNodeName(), "InnerDim is too large, current module does not support !!!");
+        OP_LOGW(context_->GetNodeName(), "InnerDim is too large (ubSize is %lu), current module does not support.",
+                ubSize_);
         return ge::GRAPH_PARAM_INVALID;
     }
 
@@ -140,7 +141,7 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::PostTiling()
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

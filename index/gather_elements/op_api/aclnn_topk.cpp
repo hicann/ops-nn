@@ -136,7 +136,7 @@ static bool CheckParamValid(const aclTensor* self, int64_t k, int64_t dim)
         return false;
     } else if (tmpDim > 0 && (dim < -tmpDim || dim >= tmpDim)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dimension out of range (expected to be in range of [-%ld, %ld],"
+                "Dimension out of range (expected to be in range of [-%ld, %ld], "
                 "but got %ld)",
                 tmpDim, tmpDim - 1, dim);
         return false;
@@ -147,7 +147,7 @@ static bool CheckParamValid(const aclTensor* self, int64_t k, int64_t dim)
     int64_t tmpK = (tmpDim > 0) ? inputShape.GetDim(positiveDim) : 1;
     if (k < 0 || k > tmpK) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Selected index k out of range (max num of self.size(%ld) is %ld,"
+                "Selected index k out of range (max num of self.size(%ld) is %ld, "
                 "but k is %ld)",
                 tmpDim, tmpK, k);
         return false;
@@ -477,14 +477,14 @@ static bool CheckFloatTypeCondition(op::DataType xDataType, int64_t sortDimValue
     bool isBf16OrFp16Type = xDataType == op::DataType::DT_BF16 || xDataType == op::DataType::DT_FLOAT16;
     bool isInRange = sortDimValue > SINGLE_BLOCK_MAX_LAST_AXIS_BF16_NUM && FLOAT16_MAX_LAST_AXIS_NUM >= sortDimValue;
     if (isBf16OrFp16Type && k >= FLOAT_SORT_AND_TOP_K_THRESHOLD * sortDimValue && isInRange) {
-        OP_LOGD("float16 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("float16 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 
     // 1. 对于float32类型, k值和尾轴都比较大的情况，SortAndTopk的性能实测较好
     if (k >= FLOAT_SORT_AND_TOP_K_THRESHOLD * sortDimValue && xDataType == op::DataType::DT_FLOAT &&
         sortDimValue <= SORD_AND_TOPK_FP32_MAX_LAST_AXIS_NUM && k >= SORD_AND_TOPK_FP32_MIN_K) {
-        OP_LOGD("float32 type sat branch, sortDimValue=%d, dataType=%d.", sortDimValue, static_cast<int>(xDataType));
+        OP_LOGD("float32 type sat branch, sortDimValue=%ld, dataType=%d.", sortDimValue, static_cast<int>(xDataType));
         return true;
     }
     return false;
@@ -498,7 +498,7 @@ static bool CheckIntTypeCondition(op::DataType xDataType, int64_t sortDimValue)
     // 3. 其它情况下若UB能装下数据, singleBlock的性能比较好
     if ((xDataType == op::DataType::DT_INT64 || xDataType == op::DataType::DT_UINT64) &&
         sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
-        OP_LOGD("int64 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("int64 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 
@@ -506,21 +506,21 @@ static bool CheckIntTypeCondition(op::DataType xDataType, int64_t sortDimValue)
     // 2. 其它情况下若UB能装下数据, singleBlock的性能比较好
     if ((xDataType == op::DataType::DT_INT32 || xDataType == op::DataType::DT_UINT32) &&
         sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
-        OP_LOGD("int32 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("int32 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 
     // int16数据类型，1. sortAndTopk在小于192的情况下性能较优
     if ((xDataType == op::DataType::DT_INT16 || xDataType == op::DataType::DT_UINT16) &&
         sortDimValue <= SORT_AND_TOP_LAST_AXIS_INT16_THRESHOLD) {
-        OP_LOGD("int16/uint16 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("int16/uint16 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 
     // int8数据类型，sortAndTopk在小于128的情况下性能较优
     if ((xDataType == op::DataType::DT_UINT8 || xDataType == op::DataType::DT_INT8) &&
         sortDimValue <= SORT_AND_TOP_LAST_AXIS_INT8_THRESHOLD) {
-        OP_LOGD("int8/uint8 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("int8/uint8 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
     return false;
@@ -541,12 +541,12 @@ static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue, op::Data
     }
 
     if (CheckIntTypeCondition(xDataType, sortDimValue)) {
-        OP_LOGD("int type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("int type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 
     if (CheckFloatTypeCondition(xDataType, sortDimValue, k)) {
-        OP_LOGD("float32 type sat branch, sortDimValue=%d.", sortDimValue);
+        OP_LOGD("float32 type sat branch, sortDimValue=%ld.", sortDimValue);
         return true;
     }
 

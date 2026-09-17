@@ -106,10 +106,9 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     OP_CHECK_SHAPE_NOT_EQUAL(self, indices, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
 
-    OP_CHECK(
-        outputSize->Size() == 2,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected size of outputSize must be 2, but got: %lu", outputSize->Size()),
-        return false);
+    OP_CHECK(outputSize->Size() == 2,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected size of outputSize to be 2, but got: %lu", outputSize->Size()),
+             return false);
 
     int64_t dimh = selfDimNum == CHW_DIM_NUM ? 1 : 2;
     int64_t dimw = selfDimNum == CHW_DIM_NUM ? 2 : 3;
@@ -131,13 +130,15 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
 {
     // 1. 检查参数是否为空指针
     CHECK_COND(CheckNotNull(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_NULLPTR,
-               "CheckNotNull failed!");
+               "CheckNotNull failed for gradOutput/self/indices/outputSize/out!");
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_COND(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
+    CHECK_COND(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID,
+               "CheckDtypeValid failed for gradOutput/self/indices/out!");
 
     // 3. 检查输出输出shape
-    CHECK_COND(CheckShape(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_INVALID, "CheckShape failed!");
+    CHECK_COND(CheckShape(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_INVALID,
+               "CheckShape failed for gradOutput/self/indices/outputSize/out!");
     return ACLNN_SUCCESS;
 }
 

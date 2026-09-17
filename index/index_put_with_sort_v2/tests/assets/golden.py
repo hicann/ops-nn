@@ -37,7 +37,7 @@ def unique_multidimensional(tensors):
 
     # 验证所有张量长度相同
     for t in tensors:
-        assert t.numel() == n, "所有张量长度必须相同"
+        assert t.numel() == n, "All tensors must have the same length"
 
     # 将张量转换为 NumPy 数组
     numpy_arrays = [t.cpu().numpy() for t in tensors]

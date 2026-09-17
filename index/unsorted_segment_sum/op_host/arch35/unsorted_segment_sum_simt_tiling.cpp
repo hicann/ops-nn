@@ -64,7 +64,7 @@ ge::graphStatus UnsortedSegmentSumSimtTiling::PostTiling()
     ubSize_ = ubSize_ - DCACHE_SIZE - SIMD_RESERVED_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

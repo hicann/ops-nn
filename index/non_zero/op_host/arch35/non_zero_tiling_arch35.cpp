@@ -101,7 +101,7 @@ constexpr int64_t FULL_LOAD_DIM_4_HRESHOLD = 4096;  // 4维进入全载模板的
 
 class NonZeroAscendCTilingImpl {
 public:
-    explicit NonZeroAscendCTilingImpl(gert::TilingContext* context) : context_(context){};
+    explicit NonZeroAscendCTilingImpl(gert::TilingContext* context) : context_(context) {};
 
     ge::graphStatus Init(const NonZeroCompileInfo* compileInfo);
     ge::graphStatus DoTiling();
@@ -154,7 +154,7 @@ private:
     int64_t coreNum_ = 0;
     int64_t inputUbSize_ = 0;
     int64_t maskUbSize_ = 0;
-    int64_t intputDtypeSize_ = 0;
+    int64_t inputDtypeSize_ = 0;
     int64_t outputDtypeSize_ = 0;
 
     int64_t dimSize_ = 0;
@@ -203,11 +203,11 @@ ge::graphStatus NonZeroAscendCTilingImpl::Init(const NonZeroCompileInfo* compile
     inputDtype_ = inputXDesc->GetDataType();
     outputDtype_ = outputYDesc->GetDataType();
 
-    intputDtypeSize_ = GetSizeByDataType(inputDtype_);
+    inputDtypeSize_ = GetSizeByDataType(inputDtype_);
     outputDtypeSize_ = GetSizeByDataType(outputDtype_);
-    OP_CHECK_IF(intputDtypeSize_ <= 0,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "intputDtypeSize",
-                                                      std::to_string(intputDtypeSize_).c_str(),
+    OP_CHECK_IF(inputDtypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "inputDtypeSize",
+                                                      std::to_string(inputDtypeSize_).c_str(),
                                                       "dtype size must be greater than 0"),
                 return ge::GRAPH_FAILED);
 
@@ -223,7 +223,7 @@ void NonZeroAscendCTilingImpl::CalcMaskUbSize(int64_t inputDtypeSize)
 void NonZeroAscendCTilingImpl::MatchTilingStrategyAndCalcUbSizeInfo(int64_t inputDataSize)
 {
     numPerCore_ = CeilDiv(inputDataSize, coreNum_);
-    CalcMaskUbSize(intputDtypeSize_);
+    CalcMaskUbSize(inputDtypeSize_);
     if (maskUbSize_ < maskUbSizeThres_) {
         if (inputDims_ == SHAPE_DIM_1) {
             tilingKey_ = 1;
@@ -266,7 +266,7 @@ void NonZeroAscendCTilingImpl::MatchTilingStrategyForFullLoad(int64_t inputDataS
     realCoreNum_ = 1;
     numPerCore_ = inputDataSize;
     tilingKey_ = TILING_KEY_FULL_LOAD_BASE + inputDims_;
-    CalcMaskUbSize(intputDtypeSize_);
+    CalcMaskUbSize(inputDtypeSize_);
     CalcUbSizeInfoSmallMask();
 }
 
@@ -378,8 +378,8 @@ static std::vector<int64_t> GetXShape(const gert::Shape& shape)
 
 void NonZeroAscendCTilingImpl::CalcMaskLoopNum(int64_t numInput)
 {
-    ubFactorNum_ = FloorDiv(numInput, (vRegSize_ / intputDtypeSize_)) * (vRegSize_ / intputDtypeSize_);
-    maskLoopNum_ = (ubFactorNum_ / (vRegSize_ / intputDtypeSize_) * (UNPACK_NUM / intputDtypeSize_) * UB_REG_SIZE) /
+    ubFactorNum_ = FloorDiv(numInput, (vRegSize_ / inputDtypeSize_)) * (vRegSize_ / inputDtypeSize_);
+    maskLoopNum_ = (ubFactorNum_ / (vRegSize_ / inputDtypeSize_) * (UNPACK_NUM / inputDtypeSize_) * UB_REG_SIZE) /
                    UNPACK_NUM;
 }
 
@@ -387,13 +387,13 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
 {
     inputUbSize_ = FloorDiv(((ubSize_ - TMP_UB_SIZE_BIG - maskUbSize_) / DIV_NUM), static_cast<uint64_t>(ALIGN_UB_32)) *
                    ALIGN_UB_32;
-    int64_t numInput = inputUbSize_ / intputDtypeSize_;
+    int64_t numInput = inputUbSize_ / inputDtypeSize_;
 
     CalcMaskLoopNum(numInput);
     loopNumPerCore_ = numPerCore_ / ubFactorNum_;
     if (numPerCore_ % ubFactorNum_ == 0) {
         loopNumPerCore_ = loopNumPerCore_ - 1;
-        CalcMaskUbSize(intputDtypeSize_);
+        CalcMaskUbSize(inputDtypeSize_);
     }
     loopTailPerCore_ = numPerCore_ - loopNumPerCore_ * ubFactorNum_;
     loopNumTailCore_ = numTailCore_ / ubFactorNum_;
@@ -443,9 +443,9 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
 void NonZeroAscendCTilingImpl::CalcUbSizeInfoBigMask()
 {
     ubFactorNum_ = (ubSize_ - TMP_UB_SIZE_BIGMASK) / static_cast<int64_t>(DIV_NUM) /
-                   (intputDtypeSize_ + VSQZ_UB_SIZE + inputDims_ * outputDtypeSize_);
+                   (inputDtypeSize_ + VSQZ_UB_SIZE + inputDims_ * outputDtypeSize_);
     // 按照256Byte向下对齐
-    ubAlignNum_ = ALIGN_UB_SIZE / intputDtypeSize_;
+    ubAlignNum_ = ALIGN_UB_SIZE / inputDtypeSize_;
     ubFactorNum_ = FloorDiv(ubFactorNum_, ubAlignNum_) * ubAlignNum_;
 
     loopNumPerCore_ = numPerCore_ / ubFactorNum_;

@@ -816,14 +816,15 @@ static void ComputeInitOutputUbParams(const int32_t& ids_ele_num, const int32_t&
     int32_t e_size_align = tiling_params->input_last_axis_align_floor_ele_num_input_scalar;
     int32_t repeat_times = UssCeilDiv(ids_ele_num * output_ub_ele_num_one_row, MASK_FP32);
     int32_t repeat_pad = ids_ele_num / 128;
-    int32_t sheng = ComputeDivRemainders(ids_ele_num, 128, repeat_pad);
-    int32_t col_sub_block = UssCeilDiv(sheng * e_size_align, 8);
+    int32_t remainder = ComputeDivRemainders(ids_ele_num, 128, repeat_pad);
+    int32_t col_sub_block = UssCeilDiv(remainder * e_size_align, 8);
 
     int32_t output_ub_init_times = 0;
     int32_t output_ub_init_last_repeat_time = 0;
-    OP_LOGD("UnsortedSegmentSum",
-            "#e_size_align is %d, ids_ele_num is %d, repeat_pad is %d, sheng is %d, col_sub_block is %d, mode is %d",
-            e_size_align, ids_ele_num, repeat_pad, sheng, col_sub_block, mode);
+    OP_LOGD(
+        "UnsortedSegmentSum",
+        "#e_size_align is %d, ids_ele_num is %d, repeat_pad is %d, remainder is %d, col_sub_block is %d, mode is %d",
+        e_size_align, ids_ele_num, repeat_pad, remainder, col_sub_block, mode);
     if (repeat_times % MAX_REPEAT_TIME == 0) {
         output_ub_init_times = repeat_times / MAX_REPEAT_TIME;
         output_ub_init_last_repeat_time = MAX_REPEAT_TIME;
@@ -2344,7 +2345,8 @@ ge::graphStatus Tiling4SegmentSumComm(gert::TilingContext* context, const int32_
     OP_LOGI(context->GetNodeName(), "input_size=%d, ids_size=%d", input_size, ids_size);
     OP_CHECK_IF(
         input_size < ids_size,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "input, segment_ids", "input_size, ids_size",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "input, segment_ids",
+                                               (std::to_string(input_size) + ", " + std::to_string(ids_size)).c_str(),
                                                "input shape size must be >= segment_ids shape size"),
         return ge::GRAPH_FAILED);
 
@@ -2353,7 +2355,9 @@ ge::graphStatus Tiling4SegmentSumComm(gert::TilingContext* context, const int32_
                 input_segment_ids_shape_sizes.GetDim(i));
         OP_CHECK_IF(input_data_shape_sizes.GetDim(i) != input_segment_ids_shape_sizes.GetDim(i),
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "input, segment_ids",
-                                                           "input_shape[i], ids_shape[i]",
+                                                           (std::to_string(input_data_shape_sizes.GetDim(i)) + ", " +
+                                                            std::to_string(input_segment_ids_shape_sizes.GetDim(i)))
+                                                               .c_str(),
                                                            "front shape of input must match segment_ids shape"),
                     return ge::GRAPH_FAILED);
     }
@@ -2409,7 +2413,7 @@ ge::graphStatus Tiling4SegmentSumComm(gert::TilingContext* context, const int32_
     } else if (input_dtype == ge::DT_INT32 || input_dtype == ge::DT_FLOAT16) {
         if (CalcTiling4Int(context, input_dtype, output_ub_ele_num_one_row, num_segments, e_size, input_size, ids_size,
                            input_ele_byte, ids_ele_byte) != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context->GetNodeName(), "exec CalcTilingForInt failed.");
+            OP_LOGE(context->GetNodeName(), "exec CalcTiling4Int failed.");
 
             return ge::GRAPH_FAILED;
         }
@@ -2425,7 +2429,7 @@ ge::graphStatus SegmentTIKTiling(gert::TilingContext* context)
 {
     int32_t num_segments;
     OP_CHECK_IF(!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments),
-                OP_LOGE(context->GetNodeName(), "num_segments not exists."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "num_segments does not exist."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         num_segments <= 0,
         OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "num_segments", std::to_string(num_segments).c_str(), "> 0"),
@@ -2444,7 +2448,7 @@ ge::graphStatus Tiling4UnsortedSegmentSum(gert::TilingContext* context)
     OP_CHECK_IF(Tiling4UnsortedSegmentSumForAscendC(context) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "call SimtTiling failed"), return ge::GRAPH_FAILED);
 
-    OP_LOGD(context->GetNodeName(), "Tiling4UnsortedSegmentSum running end");
+    OP_LOGD(context->GetNodeName(), "Tiling4UnsortedSegmentSum finished");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -2457,7 +2461,7 @@ ge::graphStatus TilingPrepare4SegmentSumComm(gert::TilingParseContext* context)
     std::unique_ptr<nlohmann::json> parsed_object_cinfo = GetCompileInfoJson(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, parsed_object_cinfo);
 
-    OP_LOGD(context->GetNodeName(), "Ascend C Tiling starting GRAPH_SUCCESS");
+    OP_LOGD(context->GetNodeName(), "Ascend C tiling starts, status is GRAPH_SUCCESS");
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);

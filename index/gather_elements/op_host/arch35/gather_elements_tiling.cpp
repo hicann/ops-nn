@@ -74,7 +74,7 @@ const std::string OP_NAME = "GatherElements";
 namespace optiling {
 static ge::graphStatus Tiling4GatherElements(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4GatherElements running begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4GatherElements started");
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 

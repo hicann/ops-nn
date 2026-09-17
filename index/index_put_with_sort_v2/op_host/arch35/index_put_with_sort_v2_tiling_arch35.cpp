@@ -75,6 +75,28 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckShapesEqual(gert::Shape& shape0, 
     return ge::GRAPH_SUCCESS;
 }
 
+static std::string ShapeToString(const gert::Shape& shape)
+{
+    std::string str = "[";
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
+        if (i > 0) {
+            str += ", ";
+        }
+        str += std::to_string(shape.GetDim(i));
+    }
+    return str + "]";
+}
+
+static std::string GetFirstNonPositiveDim(const gert::Shape& shape)
+{
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
+        if (shape.GetDim(i) <= 0) {
+            return "dim[" + std::to_string(i) + "]=" + std::to_string(shape.GetDim(i));
+        }
+    }
+    return "dim not found";
+}
+
 ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
 {
     // check self
@@ -82,7 +104,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "self", "0",
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "self",
+                                                  GetFirstNonPositiveDim(storageShape0).c_str(),
                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
@@ -96,7 +119,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "linear_index", "0",
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "linear_index",
+                                                  GetFirstNonPositiveDim(storageShape1).c_str(),
                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
@@ -111,16 +135,18 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "pos_idx", "0",
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "pos_idx",
+                                                  GetFirstNonPositiveDim(storageShape2).c_str(),
                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input1 and input2 are equal
     if (CheckShapesEqual(storageShape1, storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "linear_index, pos_idx",
-                                               "linear_index_shape, pos_idx_shape",
-                                               "shapes of both parameters must be equal");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "linear_index, pos_idx",
+            (ShapeToString(storageShape1) + ", " + ShapeToString(storageShape2)).c_str(),
+            "shapes of both parameters must be equal");
         return ge::GRAPH_FAILED;
     }
 
@@ -129,7 +155,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "values", "0",
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "values",
+                                                  GetFirstNonPositiveDim(storageShape3).c_str(),
                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
@@ -141,7 +168,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     return ge::GRAPH_SUCCESS;
 }
 
-bool IndexPutWithSortV2Tiling::IsIndexedContinous(const int64_t* arr, int64_t size)
+bool IndexPutWithSortV2Tiling::IsIndexedContinuous(const int64_t* arr, int64_t size)
 {
     int64_t prevIndex = static_cast<int64_t>(-1);
     for (int64_t i = 0; i < size; i++) {
@@ -167,8 +194,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
 
     // check inputs shape
     if (CheckInputsShape() != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "inputs", "inputs_shape",
-                                              "input shape is invalid");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "inputs", "self/linear_index/pos_idx/values",
+                                              "input shape is invalid, details in previous logs");
         return ge::GRAPH_FAILED;
     }
     auto attrs = context_->GetAttrs();
@@ -178,7 +205,7 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
     for (int64_t i = 0; i < indexedSizesDimNum; i++) {
         indexedSizes_[i] = indexedSizesPtr->GetData()[i];
     }
-    isContinous_ = IsIndexedContinous(indexedSizes_, indexedSizesDimNum);
+    isContinuous_ = IsIndexedContinuous(indexedSizes_, indexedSizesDimNum);
     indexed0_ = indexedSizes_[0];
     accumulate_ = *attrs->GetBool(1);
 
@@ -254,7 +281,7 @@ void IndexPutWithSortV2Tiling::CalcSelfAndValueStride(int64_t* selfStride, int64
         valueReshapeDims[k] = 0L;
     }
 
-    if (isContinous_) {
+    if (isContinuous_) {
         size_t j = 0; // value
         bool noWriteIndexd = true;
         for (size_t i = 0; i < selfDimNum_; i++) {
@@ -304,7 +331,7 @@ void IndexPutWithSortV2Tiling::CalcNonIndexedStride(int64_t* selfStride, int64_t
         indexedValueSizes[k] = 0L;
     }
 
-    if (isContinous_) {
+    if (isContinuous_) {
         for (size_t i = 0; i < selfDimNum_; i++) {
             if (indexedSizes_[i] == 1) {
                 indexedValueSizes[i] = 1;
@@ -333,7 +360,7 @@ void IndexPutWithSortV2Tiling::CalcNonIndexedStride(int64_t* selfStride, int64_t
         }
     }
     // 计算idxedValueStride_，非连续场景就是nonIndexedDimSize，连续场景是索引轴后所有非索引轴的乘积
-    if (isContinous_) {
+    if (isContinuous_) {
         for (size_t i = 0; i < static_cast<size_t>(nonIndexedDimNum_ + 1U); i++) {
             if (indexedValueSizes[i] == 1) {
                 idxedValueStride_ = valueStride[i]; // 相当于索引轴的stride
