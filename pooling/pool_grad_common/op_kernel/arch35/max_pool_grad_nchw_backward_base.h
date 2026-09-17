@@ -114,7 +114,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::ParseTil
     hProBatchSize_ = tilingData.hProBatchSize;
     wProBatchSize_ = tilingData.wProBatchSize;
     argmaxPlaneSize_ = hArgmax_ * wArgmax_;
-    isOverlap_ = (kernelH_ > strideH_) || (kernelW_ > strideW_);
+    isOverlap_ = ((kernelH_ - 1) * dilationH_ + 1 > strideH_) || ((kernelW_ - 1) * dilationW_ + 1 > strideW_);
 }
 
 template <typename T1, const uint32_t IS_CHECK_RANGE>
@@ -642,7 +642,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                     int32_t indexOffset = (wBatchIdx + hProBatchIdx * wArgmaxActual + highIndexOffset);
                     AscendC::Reg::Adds(parallelRegGrad, initial3DRegGrad, offset, allMaskU32);
                     AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, indexOffset, allMaskU32);
-                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask0, wOutputConstReg,
                         curHIndex, curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg,
                         highOutputPlaneActual, whFullBatchCount);
@@ -655,7 +655,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                            highIndexOffset);
                     AscendC::Reg::Adds(parallelRegGrad, initial3DRegGradOne, offset, allMaskU32);
                     AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, indexOffset, allMaskU32);
-                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask1, wOutputConstReg,
                         curHIndex, curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg,
                         highOutputPlaneActual, hFullBatchCount);
@@ -704,7 +704,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                            highIndexOffset);
                     AscendC::Reg::Adds(parallelRegGrad, initial2DRegGrad, offset, allMaskU32);
                     AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, indexOffset, allMaskU32);
-                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask2, wOutputConstReg,
                         curHIndex, curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg,
                         highOutputPlaneActual, wFullBatchCount);
@@ -719,7 +719,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                            highIndexOffset);
                     AscendC::Reg::Adds(parallelRegGrad, initial2DRegGradOne, offset, allMaskU32);
                     AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, indexOffset, allMaskU32);
-                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                    DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask3, wOutputConstReg,
                         curHIndex, curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg,
                         highOutputPlaneActual, 1);
@@ -764,7 +764,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                 int32_t indexOffset = (wBatchIdx + hProBatchIdx * wArgmaxActual + highIndexOffset);
                 AscendC::Reg::Adds(parallelRegGrad, initial3DRegGrad, offset, allMaskU32);
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndex, indexOffset, allMaskU32);
-                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                     yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask4, wOutputConstReg, curHIndex,
                     curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, highOutputPlaneActual,
                     whFullBatchCount);
@@ -777,7 +777,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                        highIndexOffset);
                 AscendC::Reg::Adds(parallelRegGrad, initial3DRegGradOne, offset, allMaskU32);
                 AscendC::Reg::Adds(parallelRegIndex, initial3DRegIndexOne, indexOffset, allMaskU32);
-                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                     yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask5, wOutputConstReg, curHIndex,
                     curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, highOutputPlaneActual,
                     hFullBatchCount);
@@ -823,7 +823,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                        highIndexOffset);
                 AscendC::Reg::Adds(parallelRegGrad, initial2DRegGrad, offset, allMaskU32);
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndex, indexOffset, allMaskU32);
-                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                     yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask6, wOutputConstReg, curHIndex,
                     curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, highOutputPlaneActual,
                     wFullBatchCount);
@@ -837,7 +837,7 @@ __aicore__ inline void MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>::multiple
                                        highIndexOffset);
                 AscendC::Reg::Adds(parallelRegGrad, initial2DRegGradOne, offset, allMaskU32);
                 AscendC::Reg::Adds(parallelRegIndex, initial2DRegIndexOne, indexOffset, allMaskU32);
-                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE>(
+                DoMulNCNchw<T1, int32_t, int32_t, IS_CHECK_RANGE, IS_OVERLAP>(
                     yAddr, gradAddr, argmaxAddr, parallelRegIndex, parallelRegGrad, mask7, wOutputConstReg, curHIndex,
                     curWIndex, wOutputAligned, highOutputOffset, zeroConstReg, wMaxReg, hMaxReg, highOutputPlaneActual,
                     1);

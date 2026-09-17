@@ -44,7 +44,7 @@ public:
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
     // 公共生命周期流程 (CRTP 模板方法): 派生类通过继承获得 Compute/ProcessPerLoop/Process,
-    // 并提供同签名入口 ConCProcVF(yAddr, gradAddr, argmaxAddr, helpAddr)。
+    // 并提供同签名入口 ConCProcVF<IS_OVERLAP>(yAddr, gradAddr, argmaxAddr, helpAddr)。
     // Compute 内经 static_cast<DerivedT*> 编译期派发到派生类实现, 无虚函数开销。
     __aicore__ inline void Compute();
     __aicore__ inline void ProcessPerLoop();
@@ -129,6 +129,9 @@ public:
     int64_t wProBatchSize_ = 1;
     int64_t curHProBatchSize_ = 1;
     int64_t curWProBatchSize_ = 1;
+
+    bool isOverlap_ = false;
+
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
 
@@ -186,6 +189,7 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     wProBatchSize_ = tilingData.wProBatchSize;
     curHProBatchSize_ = hProBatchSize_;
     curWProBatchSize_ = wProBatchSize_;
+    isOverlap_ = ((kernelH_ - 1) * dilationH_ + 1 > strideH_) || ((kernelW_ - 1) * dilationW_ + 1 > strideW_);
 }
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER, typename DerivedT>
@@ -357,7 +361,11 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     LocalTensor<uint32_t> helpTensor = helpBuf_.Get<uint32_t>();
     __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
 
-    static_cast<DerivedT*>(this)->ConCProcVF(yAddr, gradAddr, argmaxAddr, helpAddr);
+    if (isOverlap_) {
+        static_cast<DerivedT*>(this)->template ConCProcVF<true>(yAddr, gradAddr, argmaxAddr, helpAddr);
+    } else {
+        static_cast<DerivedT*>(this)->template ConCProcVF<false>(yAddr, gradAddr, argmaxAddr, helpAddr);
+    }
 
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
         Cast(yLocal.ReinterpretCast<T1>(), yLocal, RoundMode::CAST_RINT, calCount);
