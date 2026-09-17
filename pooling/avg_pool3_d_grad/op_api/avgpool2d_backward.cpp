@@ -28,7 +28,7 @@ OP_TYPE_REGISTER(AvgPoolV2Grad);
 const aclTensor* AvgPoolV2Grad(const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* grad,
                                const aclIntArray* ksize, const aclIntArray* strides, const std::string& paddingMode,
                                const aclIntArray* pads, const std::string& dataFormat, const bool globalPooling,
-                               bool ceilMode, bool exclusive, int divisorOverride, aclOpExecutor* executor)
+                               bool ceilMode, bool exclusive, int64_t divisorOverride, aclOpExecutor* executor)
 {
     L0_DFX(AvgPoolV2Grad, shapeOrigInput, grad, ksize, strides, paddingMode, pads, dataFormat, globalPooling, ceilMode,
            exclusive, divisorOverride);
