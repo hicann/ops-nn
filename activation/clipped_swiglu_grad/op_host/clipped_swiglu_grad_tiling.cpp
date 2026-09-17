@@ -34,6 +34,7 @@ constexpr int64_t SWI_FACTOR = 2;
 constexpr int64_t UB_RESERVE = 8192;
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t SIZE_OF_FP32 = sizeof(float);
+constexpr int64_t BATCH_MODE = 1;
 
 static int64_t AlignUp(int64_t value, int64_t align) { return (value + align - 1) / align * align; }
 
@@ -108,6 +109,9 @@ ge::graphStatus ClippedSwigluGradTiling::PostTiling()
 {
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(coreNumAll_);
+    uint32_t batchMode = static_cast<uint32_t>(BATCH_MODE);
+    auto scheduleRet = context_->SetScheduleMode(batchMode); // kernel 使用 SyncAll，核间同步算子需设置为 batch mode
+    OP_CHECK_IF(scheduleRet != ge::GRAPH_SUCCESS, OP_LOGE(context_, "SetScheduleMode error"), return ge::GRAPH_FAILED);
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
