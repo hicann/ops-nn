@@ -21,6 +21,8 @@
 #ifndef SPARSE_APPLY_FTRL_V2_TILING_DATA_H_
 #define SPARSE_APPLY_FTRL_V2_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SparseApplyFtrlV2TilingData {
     int32_t needCoreNum;   // Number of cores to launch (SetBlockDim)
     int64_t totalElements; // Total work = M * innerSize
