@@ -37,6 +37,8 @@ directly.  The explicit Torch complex32 path keeps a compatibility promotion in 
 golden leg only.
 """
 
+from math import gcd
+
 import numpy as np
 import torch
 
@@ -192,7 +194,8 @@ def _is_conflict_safety_case(kwargs):
     kernel executes safely, not to pin a value. Returning None for the output
     makes TTK record SUPPRESSED and count the case as passed, so the "golden
     disabled" intent is enforced by the plugin instead of relying on the caller
-    remembering a golden-disable switch. Mirrors the selector in input.py.
+    remembering a golden-disable switch. The same selector is used by the input
+    customization below.
     """
     return "conflict_safety" in kwargs.get("testcase_name", "")
 
@@ -210,6 +213,91 @@ class InplaceAddKernelSpec:
         if _is_conflict_safety_case(kwargs):
             return [None]
         return [_inplace_add_golden_compute(x, indices, v)]
+
+    @staticmethod
+    def customize_inputs(x, indices, v, **kwargs):
+        """Generate unique numerical indices or explicit safety-only conflicts."""
+        testcase_name = kwargs.get("testcase_name", "")
+        if indices.size == 0 or x.shape[0] == 0:
+            return (x, indices, v)
+
+        n = x.shape[0]
+        conflict_safety_only = "conflict_safety" in testcase_name
+        if "explicit_duplicate" in testcase_name:
+            values = np.zeros(indices.size, dtype=indices.dtype)
+        elif "mod_collision" in testcase_name:
+            values = np.arange(indices.size, dtype=np.int64)
+            values[1::2] += n
+            values = values.astype(indices.dtype, copy=False)
+        elif "k_gt_n" in testcase_name:
+            values = np.arange(indices.size, dtype=indices.dtype)
+        elif "integer_endpoints" in testcase_name:
+            values = np.array([0, 1], dtype=indices.dtype)
+        elif "int32_limits" in testcase_name:
+            values = np.array(
+                [np.iinfo(np.int32).min, np.iinfo(np.int32).max],
+                dtype=indices.dtype,
+            )
+        elif "modulo" in testcase_name:
+            values = np.array([-1, n + 1], dtype=indices.dtype)
+        elif "negative" in testcase_name:
+            values = np.array([-1, -n], dtype=indices.dtype)
+        elif "wrapped" in testcase_name:
+            values = np.array([n, 2 * n + 1], dtype=indices.dtype)
+        elif "reverse" in testcase_name:
+            values = np.arange(indices.size - 1, -1, -1, dtype=indices.dtype)
+        elif "first_last" in testcase_name:
+            values = np.array([0, n - 1], dtype=indices.dtype)
+        elif "spread" in testcase_name:
+            step = 2
+            while step < n and gcd(step, n) != 1:
+                step += 1
+            if step >= n:
+                step = 1
+            values = (np.arange(indices.size, dtype=np.int64) * step) % n
+            values = values.astype(indices.dtype, copy=False)
+        else:
+            if indices.size > n:
+                raise ValueError(
+                    "InplaceAdd numerical cases require K <= N so normalized rows "
+                    "stay unique."
+                )
+            values = np.arange(indices.size, dtype=indices.dtype)
+
+        indices = np.resize(values, indices.size).astype(indices.dtype, copy=False)
+        indices_i64 = indices.astype(np.int64, copy=False)
+        normalized = ((indices_i64 % n) + n) % n
+        if not conflict_safety_only and np.unique(normalized).size != indices.size:
+            raise ValueError(
+                f"{testcase_name}: normalized indices must be unique for numerical "
+                "validation."
+            )
+
+        if "integer_endpoints" in testcase_name:
+            dtype_info = np.iinfo(x.dtype)
+            x = np.zeros_like(x)
+            v = np.zeros_like(v)
+            x.reshape(x.shape[0], -1)[0] = dtype_info.min
+            v.reshape(v.shape[0], -1)[1] = dtype_info.max
+        elif "x_zero" in testcase_name:
+            x = np.zeros_like(x)
+        if "v_zero" in testcase_name:
+            v = np.zeros_like(v)
+        elif "nan" in testcase_name:
+            v = np.zeros_like(v)
+            v.reshape(-1)[0] = complex(np.nan, np.nan) if np.iscomplexobj(v) else np.nan
+        elif "pos_inf" in testcase_name:
+            v = np.zeros_like(v)
+            v.reshape(-1)[0] = complex(np.inf, np.inf) if np.iscomplexobj(v) else np.inf
+        elif "neg_inf" in testcase_name:
+            v = np.zeros_like(v)
+            v.reshape(-1)[0] = (
+                complex(-np.inf, -np.inf) if np.iscomplexobj(v) else -np.inf
+            )
+        elif "fp16_overflow" in testcase_name:
+            x = np.full_like(x, 60000.0)
+            v = np.full_like(v, 60000.0)
+        return (x, indices.reshape(indices.shape), v)
 
     # Provider order is intentional: TTK uses the first available provider for
     # cross_check output, and Torch covers every dtype exposed by this operator.
@@ -245,5 +333,3 @@ def inplace_add_golden(x, indices, v, *args, **kwargs):
 # 注：TensorFlow parser 与 AInplaceAddFusionPass 是框架/图侧通路，按框架用例验证；
 # 上面的 tf.raw_ops.InplaceAdd 仅作为 TestSpec 的远端 XPU 竞品实现，不代表本算子
 # 新增了 api_name 或 NPU E2E 注册通路。
-# customize_inputs is not declared here: deterministic index generation stays in
-# input.py under its __input__ registration, which the plugin loader falls back to.
