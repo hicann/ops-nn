@@ -28,6 +28,7 @@
 namespace aicpu {
 const char* const SPARSETODENSE = "SparseToDense";
 constexpr int64_t kParallelDataSize = 16 * 1024;
+constexpr int32_t kMaxIndexDims = 2;
 constexpr int64_t kCopyDataSize = 1024;
 constexpr uint32_t kInput0 = 0;
 constexpr uint32_t kInput1 = 1;
@@ -282,7 +283,7 @@ uint32_t SparseTensor::CreateSparseTensor(Tensor* ix, Tensor* tensorvals, std::v
         return KERNEL_STATUS_INNER_ERROR;
     }
 
-    if (ix->GetTensorShape()->GetDims() > 2) {
+    if (ix->GetTensorShape()->GetDims() > kMaxIndexDims) {
         KERNEL_LOG_ERROR("Index tensor dim size less than 2 or equal to 2, got size [%d] ",
                          ix->GetTensorShape()->GetDims());
         return KERNEL_STATUS_INNER_ERROR;
@@ -295,7 +296,7 @@ uint32_t SparseTensor::CreateSparseTensor(Tensor* ix, Tensor* tensorvals, std::v
         KERNEL_LOG_ERROR("Ix dim_size_0 [%ld] != tensorvals dim_size_0 [%ld]", dims, valsDim0);
         return KERNEL_STATUS_INNER_ERROR;
     }
-    dims = ix->GetTensorShape()->GetDims() == 2 ? ix->GetTensorShape()->GetDimSize(1) : 1;
+    dims = ix->GetTensorShape()->GetDims() == kMaxIndexDims ? ix->GetTensorShape()->GetDimSize(1) : 1;
     int64_t orderSize = static_cast<int64_t>(order.size());
     int64_t shapeSize = static_cast<int64_t>(shape.size());
     if (orderSize != dims) {
