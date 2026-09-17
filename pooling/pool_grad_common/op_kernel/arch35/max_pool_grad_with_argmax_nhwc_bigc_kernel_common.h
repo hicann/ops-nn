@@ -24,6 +24,7 @@ class MaxPoolGradWithArgmaxKernelNHWCBigcBase
     : public MaxPoolGradWithArgmaxKernelNHWCBase<
           T1, T2, T3, IS_CHECK_RANGE, VER, MaxPoolGradWithArgmaxKernelNHWCBigcBase<T1, T2, T3, IS_CHECK_RANGE, VER>> {
 public:
+    template <const bool IS_OVERLAP>
     __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
                                       __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t*)
     {
@@ -69,7 +70,7 @@ public:
                             uint32_t argmaxOffset = ((nIdx * hArgmaxActual + hIdx) * wArgmaxActual + wIdx) *
                                                         cOutputAligned +
                                                     cOffset;
-                            DoSingleCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(
+                            DoSingleCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, argmaxOffset, computeSizeT2, curHIndex, curWIndex,
                                 wOutputActual, cOutputAligned, cOffset, nOffset, cOutputActual, cOutput, zeroConstReg,
                                 wMaxReg, hMaxReg, wOutputConstReg);
@@ -103,7 +104,7 @@ public:
                             uint32_t argmaxOffset = ((nIdx * hArgmaxActual + hIdx) * wArgmaxActual + wIdx) *
                                                         cOutputAligned +
                                                     cOffset;
-                            DoSingleCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(
+                            DoSingleCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, argmaxOffset, cRemain, curHIndex, curWIndex, wOutputActual,
                                 cOutputAligned, cOffset, nOffset, cOutputActual, cOutput, zeroConstReg, wMaxReg,
                                 hMaxReg, wOutputConstReg);

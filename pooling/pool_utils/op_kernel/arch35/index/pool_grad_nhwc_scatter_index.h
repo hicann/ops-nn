@@ -136,7 +136,8 @@ __aicore__ inline void Gen3DIndexOneNhwc(AscendC::Reg::RegTensor<T>& indexReg, i
     AscendC::Reg::Add(indexReg, segmentScalarReg, segmentIncReg, preg);
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER,
+          const bool IS_OVERLAP = false>
 __aicore__ inline void DoSingleCNhwc(__local_mem__ PoolUtils::Compute::computeType* yAddr, __local_mem__ T1* gradAddr,
                                      __local_mem__ T2* argmaxAddr, uint32_t argmaxOffset, uint32_t argmaxMaskCount,
                                      int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual,
@@ -162,11 +163,15 @@ __aicore__ inline void DoSingleCNhwc(__local_mem__ PoolUtils::Compute::computeTy
     if constexpr (IS_CHECK_RANGE == 1) {
         PoolUtils::Compute::FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
     }
+    if constexpr (IS_OVERLAP) {
+        AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
+    }
 
     PoolUtils::Compute::GradientAcc<T3>(yAddr, gradReg, argmaxReg, pregArgmax);
 }
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
+template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER,
+          const bool IS_OVERLAP = false>
 __aicore__ inline void DoMulCNhwc(__local_mem__ PoolUtils::Compute::computeType* yAddr, __local_mem__ T1* gradAddr,
                                   __local_mem__ T2* argmaxAddr, AscendC::Reg::RegTensor<uint32_t>& parallelRegIndex,
                                   uint32_t argmaxMaskCount, int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual,
@@ -200,6 +205,9 @@ __aicore__ inline void DoMulCNhwc(__local_mem__ PoolUtils::Compute::computeType*
         AscendC::Reg::Duplicate(wMaxReg, int32_t(wOutputActual));
         AscendC::Reg::Duplicate(hMaxReg, int32_t(hOutputActual));
         PoolUtils::Compute::FilterMask(pregArgmax, hIndexReg, wIndexReg, zeroConstReg, wMaxReg, hMaxReg);
+    }
+    if constexpr (IS_OVERLAP) {
+        AscendC::Reg::LocalMemBar<AscendC::Reg::MemType::VEC_STORE, AscendC::Reg::MemType::VEC_LOAD>();
     }
 
     PoolUtils::Compute::GradientAcc<T3>(yAddr, gradReg, argmaxReg, pregArgmax);

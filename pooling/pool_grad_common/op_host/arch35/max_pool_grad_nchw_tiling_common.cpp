@@ -40,7 +40,8 @@ void MaxPoolGradNCHWTilingCommon::InitializationVars(gert::TilingContext* contex
         baseData.isPad = 1;
     }
 
-    InitOverlapBatchInfo(inputData->hKernel, inputData->wKernel, inputData->hStride, inputData->wStride);
+    InitOverlapBatchInfo(inputData->hKernel, inputData->wKernel, inputData->hStride, inputData->wStride,
+                         inputData->hDilation, inputData->wDilation);
 }
 
 bool MaxPoolGradNCHWTilingCommon::CheckUBSize()

@@ -33,7 +33,8 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::InitializationVars(gert::TilingConte
         baseData.isPad = 1;
     }
 
-    InitOverlapBatchInfo(inputData->hKernel, inputData->wKernel, inputData->hStride, inputData->wStride);
+    InitOverlapBatchInfo(inputData->hKernel, inputData->wKernel, inputData->hStride, inputData->wStride,
+                         inputData->hDilation, inputData->wDilation);
 }
 void MaxPoolGradWithArgmaxNHWCTilingCommon::DoBufferCalculate()
 {

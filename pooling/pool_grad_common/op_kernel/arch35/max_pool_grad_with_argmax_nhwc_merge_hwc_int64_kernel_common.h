@@ -25,6 +25,7 @@ class MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base
           T1, T2, int64_t, IS_CHECK_RANGE, VER,
           MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base<T1, T2, IS_CHECK_RANGE, VER>> {
 public:
+    template <const bool IS_OVERLAP>
     __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
                                       __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
     {
@@ -109,7 +110,7 @@ public:
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                             T2 offset = (wBatchIdx + hOffset) * cOutputAligned + nArgmaxOffset;
                             AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                            DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                            DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0, curHIndex, curWIndex,
                                 wOutputActual, hOutputActual, cOutputAligned, 0, nOffset, cOutputActual,
                                 wOutputConstReg);
@@ -140,7 +141,7 @@ public:
                             T2 offset = (wBatchIdx + wSize + hBatch + hIdx * wOffset) * cOutputAligned + nArgmaxOffset;
 
                             AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                            DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                            DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1, curHIndex, curWIndex,
                                 wOutputActual, hOutputActual, cOutputAligned, 0, nOffset, cOutputActual,
                                 wOutputConstReg);
@@ -169,7 +170,7 @@ public:
                         T2 offset = (wBatchIdx + hBatch) * cOutputAligned + nArgmaxOffset;
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -196,7 +197,7 @@ public:
                         T2 offset = (wBatchIdx + wSize + hBatch) * cOutputAligned + nArgmaxOffset;
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -220,7 +221,7 @@ public:
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
                         T2 offset = (wBatchIdx + hOffset + hProSize) * cOutputAligned + nArgmaxOffset;
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -246,7 +247,7 @@ public:
                         T2 offset = (wBatchIdx + hOffset + hRemainOffset + hProBlockSize) * cOutputAligned +
                                     nArgmaxOffset;
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int64_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }

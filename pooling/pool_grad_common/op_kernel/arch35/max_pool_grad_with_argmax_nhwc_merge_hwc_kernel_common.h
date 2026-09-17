@@ -25,6 +25,7 @@ class MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase
           T1, T2, int32_t, IS_CHECK_RANGE, VER,
           MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<T1, T2, IS_CHECK_RANGE, VER>> {
 public:
+    template <const bool IS_OVERLAP>
     __aicore__ inline void ConCProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
                                       __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
     {
@@ -106,7 +107,7 @@ public:
                                             cOutputAligned +
                                         nArgmaxOffset;
                             AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                            DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                            DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0, curHIndex, curWIndex,
                                 wOutputActual, hOutputActual, cOutputAligned, 0, nOffset, cOutputActual,
                                 wOutputConstReg);
@@ -119,7 +120,7 @@ public:
                                         nArgmaxOffset;
 
                             AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                            DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                            DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1, curHIndex, curWIndex,
                                 wOutputActual, hOutputActual, cOutputAligned, 0, nOffset, cOutputActual,
                                 wOutputConstReg);
@@ -155,7 +156,7 @@ public:
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
 
-                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -168,7 +169,7 @@ public:
                                     nArgmaxOffset;
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -183,7 +184,7 @@ public:
                                     nArgmaxOffset;
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }
@@ -197,7 +198,7 @@ public:
                                     nArgmaxOffset;
 
                         AscendC::Reg::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
-                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER>(
+                        DoMulCNhwc<T1, T2, int32_t, IS_CHECK_RANGE, VER, IS_OVERLAP>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5, curHIndex, curWIndex, wOutputActual,
                             hOutputActual, cOutputAligned, 0, nOffset, cOutputActual, wOutputConstReg);
                     }

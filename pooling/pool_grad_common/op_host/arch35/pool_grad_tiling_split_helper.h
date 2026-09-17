@@ -63,12 +63,15 @@ inline void CalcAxisOuterTail(int64_t totalSize, int64_t innerSize, int64_t& out
 }
 
 /*!
- * \brief 计算池化窗口重叠时的批处理大小: kernel > stride 时为 CeilDiv(kernel, stride), 否则为 1。
+ * \brief 计算池化窗口重叠时的批处理大小: 窗口实际跨度 (kernel-1)*dilation+1 大于 stride 时为
+ *        CeilDiv((kernel-1)*dilation+1, stride), 否则为 1。
+ *        批间隔内的窗口在输入上互不重叠，保证同一向量 scatter 调用内各 lane 不会写同一输出地址。
  */
-inline int64_t CalcProBatchSize(int64_t kernelSize, int64_t strideSize)
+inline int64_t CalcProBatchSize(int64_t kernelSize, int64_t strideSize, int64_t dilationSize = 1)
 {
-    if (kernelSize > strideSize) {
-        return Ops::Base::CeilDiv(kernelSize, strideSize);
+    int64_t kernelSpan = (kernelSize - 1) * dilationSize + 1;
+    if (kernelSpan > strideSize) {
+        return Ops::Base::CeilDiv(kernelSpan, strideSize);
     }
     return 1;
 }

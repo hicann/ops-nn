@@ -81,10 +81,11 @@ protected:
     }
 
     // 窗口重叠时的批处理大小与 overlap 标记 (NCHW 与 NHWC 公共部分)
-    void InitOverlapBatchInfo(int64_t hKernel, int64_t wKernel, int64_t hStride, int64_t wStride)
+    void InitOverlapBatchInfo(int64_t hKernel, int64_t wKernel, int64_t hStride, int64_t wStride, int64_t hDilation = 1,
+                              int64_t wDilation = 1)
     {
-        baseData.hProBatchSize = PoolGradTiling::CalcProBatchSize(hKernel, hStride);
-        baseData.wProBatchSize = PoolGradTiling::CalcProBatchSize(wKernel, wStride);
+        baseData.hProBatchSize = PoolGradTiling::CalcProBatchSize(hKernel, hStride, hDilation);
+        baseData.wProBatchSize = PoolGradTiling::CalcProBatchSize(wKernel, wStride, wDilation);
         baseData.isOverlap = (baseData.hProBatchSize != 1 || baseData.wProBatchSize != 1) ? 1 : 0;
     }
 
