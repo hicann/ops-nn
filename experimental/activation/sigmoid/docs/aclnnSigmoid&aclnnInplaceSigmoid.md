@@ -373,6 +373,7 @@ aclnnStatus aclnnInplaceSigmoid(
 **aclnnSigmoid接口调用示例：**
 
 ```Cpp
+#include <cinttypes>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -483,7 +484,7 @@ int main() {
                     size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+    LOG_PRINT("result[%" PRId64 "] is: %f\n", i, resultData[i]);
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
@@ -505,6 +506,7 @@ int main() {
 **aclnnInplaceSigmoid接口调用示例：**
 
 ```Cpp
+#include <cinttypes>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -598,7 +600,7 @@ int main() {
   void* inplaceWorkspaceAddr = nullptr;
   if (inplaceWorkspaceSize > 0) {
     ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnInplaceSigmoid第二段接口
   ret = aclnnInplaceSigmoid(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
@@ -614,7 +616,7 @@ int main() {
   ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]),             selfDeviceAddr, inplaceSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < inplaceSize; i++) {
-    LOG_PRINT("inplaceResult[%ld] is: %f\n", i, inplaceResultData[i]);
+    LOG_PRINT("inplaceResult[%" PRId64 "] is: %f\n", i, inplaceResultData[i]);
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改

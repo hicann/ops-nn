@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cinttypes>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -140,7 +141,7 @@ int main()
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnGroupNormSilu第二段接口
     ret = aclnnGroupNormSilu(workspaceAddr, workspaceSize, executor, stream);
@@ -155,7 +156,7 @@ int main()
                       size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("outResultData[%ld] is: %f\n", i, outResultData[i]);
+        LOG_PRINT("outResultData[%" PRId64 "] is: %f\n", i, outResultData[i]);
     }
 
     size = GetShapeSize(meanOutShape);
@@ -164,7 +165,7 @@ int main()
                       size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("meanResultData[%ld] is: %f\n", i, meanResultData[i]);
+        LOG_PRINT("meanResultData[%" PRId64 "] is: %f\n", i, meanResultData[i]);
     }
 
     size = GetShapeSize(rstdOutShape);
@@ -173,7 +174,7 @@ int main()
                       size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("rstdResultData[%ld] is: %f\n", i, rstdResultData[i]);
+        LOG_PRINT("rstdResultData[%" PRId64 "] is: %f\n", i, rstdResultData[i]);
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
