@@ -183,7 +183,8 @@ bool CheckAttrRange(gert::TilingContext* context, const int64_t* strides, const 
                     const int64_t* groups);
 bool CheckTransposeAttr(gert::TilingContext* context, OtherParams& otherParams);
 template <typename T>
-void GetNCDHWShape(const T& origin_shape, Shape& ncdhw_shape, const ge::Format& origin_format);
+void GetNCDHWShape(const T& origin_shape, Shape& ncdhw_shape, const ge::Format& origin_format,
+                   const bool isCnhwSemantics = false, const int64_t oriGroups = 1);
 bool CheckTransposeOutputdingRange(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
                                    const OtherParams& otherParams);
 bool UpdateDtypeParams(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2,
@@ -197,11 +198,6 @@ bool UpdateShapeParams(const gert::TilingContext* context, const Conv3dBpInputV2
 void ExtractStorageShapeInfo(const gert::TilingContext* context, size_t filter_input_index,
                              size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo& runInfoV2,
                              OtherParams& otherParams);
-bool ValidateOriginShapeDims(const gert::TilingContext* context, const gert::Shape& out_backprop_ori_shape,
-                             const gert::Shape& filter_ori_shape, const gert::Shape& y_ori_shape);
-bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filter_input_index,
-                          size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo& runInfoV2,
-                          OtherParams& otherParams);
 bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 op_type,
                     bool isV2Impl, OtherParams& otherParams);
 void ReCalDilation(const gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2,
@@ -220,7 +216,6 @@ int32_t CalFmapH(const gert::TilingContext* context, const Conv3dBpInputV2RunInf
                  const OtherParams& otherParams);
 bool IsNeedTilingHkWk(gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
                       const OtherParams& otherParams);
-bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams);
 int32_t CalBackpropPadBefore(int32_t filter, int32_t dilation, int32_t pad);
 int64_t CalBackpropPadAfter(int64_t inputDim, int64_t outputDim, int32_t stride, int32_t pad);
 bool IsOverflowInt32(int64_t value);

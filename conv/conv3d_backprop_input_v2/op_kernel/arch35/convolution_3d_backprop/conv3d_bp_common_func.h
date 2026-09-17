@@ -224,7 +224,7 @@ static __aicore__ inline void ComputeL0B(Intf* self, uint32_t l0bKIdx, uint64_t 
         UpdateLoadToB2ParamsK<Intf>(self, l0bKIdx);
     }
 
-    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
+    if (!EnableVecGroupEnlarge(self) && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }

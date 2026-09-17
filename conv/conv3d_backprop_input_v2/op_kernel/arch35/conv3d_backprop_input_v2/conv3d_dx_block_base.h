@@ -145,6 +145,7 @@ protected:
         } else {
             batchStrideA_ = static_cast<uint64_t>(tiling->dout) * tiling->ho * tiling->wo * tiling->cout;
         }
+        // FZ 直搬与通用 FRACTALZ 的 cinStrideB_ 同为 c0，统一走格式分支。
         if (this->enableVecTrans_) {
             cinStrideB_ = 1;
         } else {
@@ -168,7 +169,11 @@ protected:
 
         if (unlikely(tiling->group > 1)) {
             groupStrideA_ = coutStrideA_ * tiling->coutG;
-            if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
+            if (tiling->loadB1FractalZ == 1) {
+                const uint64_t cinFractalZG = Convolution3DBackpropFunc::AlignUp16(tiling->cinG);
+                const uint64_t coutFractalZG = AlignUp(tiling->coutG, tiling->c0);
+                groupStrideB_ = coutFractalZG * tiling->hk * tiling->wk * cinFractalZG;
+            } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
                 if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
                     groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->cinG / tiling->enlarge * cinStrideB_;
                 } else {
@@ -215,9 +220,10 @@ protected:
 
     __aicore__ inline void CalcBlockOffsetB()
     {
-        if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
+        if (Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, tiling_)) {
             offsetB_ = 0;
         } else {
+            // A16W8 fractal_z 保留 N 方向核内偏移。
             offsetB_ = cinStrideB_ * nCoreIdx_ * tiling_->singleCoreCin;
         }
     }

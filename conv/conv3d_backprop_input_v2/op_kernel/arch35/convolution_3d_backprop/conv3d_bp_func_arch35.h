@@ -213,8 +213,10 @@ __aicore__ inline void InitParamsPart3(Intf* self)
     self->ctx.tailWi_ = 0;
     self->ctx.curBackPropPadUp_ = 0;
 #endif
-    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+    if (EnableVecGroupEnlarge(self)) {
         self->ctx.groupIterIdx_ = 0;
+    }
+    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
         self->ctx.curEnlarge = 0;
     }
 }
@@ -425,7 +427,7 @@ __aicore__ inline void InitTque(Intf* self, const bool hasBias)
     ascendc_assert((usedBufferSize <= TOTAL_L1_SIZE), "l1 size exceeds limit");
 #endif
 
-    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
+    if (!EnableVecGroupEnlarge(self) && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIC_SCALAR {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, self->ctx.tiling_->bl1Pbuffer, bMatrixByteSize);
         }
@@ -484,7 +486,7 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf* self, LocalTensor<type
     const bool strideDgtOne = strideD > 1;
     for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_;
          curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
-        if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+        if (EnableVecGroupEnlarge(self)) {
             self->ctx.groupIterIdx_ = 0;
         }
 
@@ -958,7 +960,8 @@ struct SetBatchCoreIdx {
 template <class Intf>
 static __aicore__ inline void InitFirstIterState(Intf* self)
 {
-    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+    if (EnableVecGroupEnlarge(self)) {
+        // 初始化 AIV transdata 迭代器。
         self->ctx.groupIterIdx_ = 0;
     }
     self->ctx.needComputeFlag_ = true;

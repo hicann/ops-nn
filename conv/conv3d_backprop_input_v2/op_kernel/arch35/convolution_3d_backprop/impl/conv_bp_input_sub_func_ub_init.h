@@ -46,7 +46,7 @@ __aicore__ inline void InitUbByteSize(Intf* self)
         } else {
             self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, UB_SIZE);
         }
-    } else if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+    } else if (EnableVecGroupEnlarge(self)) {
         if ASCEND_IS_AIV_SCALAR {
             constexpr uint32_t GROUP_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH) / HALF_FACTOR;
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, GROUP_UB_BUF_SIZE);

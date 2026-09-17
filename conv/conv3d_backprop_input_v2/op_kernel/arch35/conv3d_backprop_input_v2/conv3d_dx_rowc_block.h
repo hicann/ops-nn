@@ -43,7 +43,8 @@ public:
     {
         InitTilingData(tilingData);
 
-        if (!enableC04Flag && !groupMode && !this->useUbAccumForSplitK_) {
+        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, this->tiling_) &&
+            !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
@@ -101,7 +102,8 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (!enableC04Flag && !groupMode && !this->useUbAccumForSplitK_) {
+        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, this->tiling_) &&
+            !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
@@ -171,7 +173,12 @@ protected:
         this->nCnt_ = DivCeil(n, this->singleShapeN_);
         this->nTailCnt_ = DivCeil(tailN, this->singleShapeN_);
         this->nCoreTail_ = n - (this->nCnt_ - 1) * this->singleShapeN_;
-        this->nGroupCoreTail_ = tailN % this->singleShapeN_;
+        if (tiling->loadB1FractalZ == 1) {
+            // 尾块按照完整块搬运
+            this->nGroupCoreTail_ = tailN - (this->nTailCnt_ - 1) * this->singleShapeN_;
+        } else {
+            this->nGroupCoreTail_ = tailN % this->singleShapeN_;
+        }
 
         uint64_t k = static_cast<uint64_t>(tiling->cout) * tiling->hk * tiling->wk;
         if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {

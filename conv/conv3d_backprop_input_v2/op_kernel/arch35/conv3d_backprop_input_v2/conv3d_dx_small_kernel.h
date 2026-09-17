@@ -46,6 +46,11 @@ class Conv3dDxSmallKernel {
 public:
     using L0cT = typename Convolution3DBackprop::GetDstType<dedyType>::Type;
 
+    // A16W8 fractal_z（dedy 2B + filter 1B + FZ）：B1 整 FZG 直搬，nIdx 为物理段号；
+    // 其余组合保持原有实现（nIdx 恒 0，按 singleCoreCin 全量驻留）。
+    static constexpr bool IS_A16W8_FZ = filterFormat == FORMAT_FRACTAL_Z && sizeof(dedyType) == sizeof(half) &&
+                                        sizeof(filterType) == sizeof(int8_t);
+
     __aicore__ inline Conv3dDxSmallKernel() {}
 
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
@@ -117,6 +122,9 @@ private:
     uint32_t coutAlign_ = 0;
     uint32_t kTotal_ = 0;
     uint32_t kIter_ = 0;
+    uint32_t segCout_ = 0;
+    uint32_t segCin_ = 0;
+    uint32_t segElemCount_ = 0;
     uint32_t a1ElemCount_ = 0;
     uint32_t a1BufBytes_ = 0;
     uint32_t a1Pbuffer_ = 1;
@@ -135,13 +143,20 @@ private:
         hoExpand_ = (static_cast<uint64_t>(tiling_->ho) - 1) * tiling_->strideH + 1;
         woExpand_ = (static_cast<uint64_t>(tiling_->wo) - 1) * tiling_->strideW + 1;
         hkWk_ = static_cast<uint64_t>(tiling_->hk) * tiling_->wk;
-        coutAlign_ = static_cast<uint32_t>(
-            DivCeil(static_cast<uint64_t>(tiling_->cout), static_cast<uint64_t>(tiling_->c0)) * tiling_->c0);
-        uint32_t smallCinAlign = Convolution3DBackpropFunc::AlignUp16(tiling_->singleCoreCin);
-
-        kTotal_ = static_cast<uint32_t>(static_cast<uint64_t>(coutAlign_) * tiling_->hk * tiling_->wk);
+        if constexpr (IS_A16W8_FZ) {
+            segCout_ = static_cast<uint32_t>(AlignUp(tiling_->coutG, tiling_->c0));
+            segCin_ = Convolution3DBackpropFunc::AlignUp16(tiling_->cinG);
+            segElemCount_ = static_cast<uint32_t>(static_cast<uint64_t>(segCout_) * hkWk_ * segCin_);
+            coutAlign_ = segCout_;
+            kTotal_ = static_cast<uint32_t>(static_cast<uint64_t>(segCout_) * tiling_->hk * tiling_->wk);
+        } else {
+            coutAlign_ = static_cast<uint32_t>(
+                DivCeil(static_cast<uint64_t>(tiling_->cout), static_cast<uint64_t>(tiling_->c0)) * tiling_->c0);
+            kTotal_ = static_cast<uint32_t>(static_cast<uint64_t>(coutAlign_) * tiling_->hk * tiling_->wk);
+        }
         kIter_ = static_cast<uint32_t>(DivCeil(static_cast<uint64_t>(kTotal_), static_cast<uint64_t>(tiling_->baseK)));
         mCnt_ = DivCeil(hiWi_, tiling_->singleCoreM);
+        // A16W8 fractal_z 多组时 singleCoreCin 为段宽，nCnt_ 即 Gopt；其余恒 1。
         nCnt_ = DivCeil(static_cast<uint64_t>(tiling_->cin), static_cast<uint64_t>(tiling_->singleCoreCin));
         uint64_t smallTotalCnt = static_cast<uint64_t>(tiling_->batch) * mCnt_ * nCnt_;
         usedCoreNum_ = min(smallTotalCnt, tiling_->coreNum);
@@ -153,7 +168,12 @@ private:
         a1Pbuffer_ = tiling_->al1Pbuffer == 0 ? 1 : tiling_->al1Pbuffer;
         a1BufBytes_ = a1ElemCount_ * sizeof(dedyType);
         b1OffBytes_ = a1Pbuffer_ * a1BufBytes_;
-        b1ElemCount_ = static_cast<uint32_t>(hkWk_ * coutAlign_ * smallCinAlign);
+        if constexpr (IS_A16W8_FZ) {
+            b1ElemCount_ = static_cast<uint32_t>(static_cast<uint64_t>(tiling_->group) * segElemCount_);
+        } else {
+            b1ElemCount_ = static_cast<uint32_t>(hkWk_ * coutAlign_ *
+                                                 Convolution3DBackpropFunc::AlignUp16(tiling_->singleCoreCin));
+        }
         l0Pbuffer_ = min(tiling_->al0Pbuffer, tiling_->bl0Pbuffer);
         if (l0Pbuffer_ == 0) {
             l0Pbuffer_ = 1;
@@ -179,6 +199,10 @@ private:
     __aicore__ inline uint32_t GetBiasL1SizeBytes() const
     {
         // bias 区按 64B 对齐，保证后续 scale 起始地址 64B 对齐，避免 AIC error。
+        if constexpr (IS_A16W8_FZ) {
+            return DivCeil(tiling_->cin * sizeof(biasType), SMALL_KERNEL_BIAS_L1_ALIGN_BYTES) *
+                   SMALL_KERNEL_BIAS_L1_ALIGN_BYTES;
+        }
         return DivCeil(tiling_->singleCoreCin * sizeof(biasType), SMALL_KERNEL_BIAS_L1_ALIGN_BYTES) *
                SMALL_KERNEL_BIAS_L1_ALIGN_BYTES;
     }
@@ -197,7 +221,7 @@ private:
         uint32_t afterScale0 = GetScale0L1OffBytes();
         if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             if (tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                afterScale0 += tiling_->singleCoreCin * sizeof(scale0Type);
+                afterScale0 += (IS_A16W8_FZ ? tiling_->cin : tiling_->singleCoreCin) * sizeof(scale0Type);
             }
         }
         return (afterScale0 + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
@@ -205,18 +229,24 @@ private:
 
     __aicore__ inline void InitStaticL1(uint32_t nIdx)
     {
-        uint32_t nStart = nIdx * tiling_->singleCoreCin;
-        uint32_t curN = tiling_->singleCoreCin;
-        if (nStart + curN > tiling_->cin) {
-            curN = tiling_->cin - nStart;
+        if constexpr (IS_A16W8_FZ) {
+            // Load B1 fractal_z full load + bias/scale full load cin
+            LocalTensor<filterType> b1(TPosition::B1, b1OffBytes_, b1ElemCount_);
+            LoadWeightL1(b1, 0, tiling_->cin, Convolution3DBackpropFunc::AlignUp16(tiling_->cin));
+            LoadBiasScaleL1(0, tiling_->cin);
+        } else {
+            uint32_t nStart = nIdx * tiling_->singleCoreCin;
+            uint32_t curN = tiling_->singleCoreCin;
+            if (nStart + curN > tiling_->cin) {
+                curN = tiling_->cin - nStart;
+            }
+            LocalTensor<filterType> b1(TPosition::B1, b1OffBytes_, b1ElemCount_);
+            LoadWeightL1(b1, nStart, curN, Convolution3DBackpropFunc::AlignUp16(curN));
+            LoadBiasScaleL1(nStart, curN);
         }
-        uint32_t curNAlign = Convolution3DBackpropFunc::AlignUp16(curN);
-        LocalTensor<filterType> b1(TPosition::B1, b1OffBytes_, b1ElemCount_);
-        LoadWeightL1(b1, nStart, curN, curNAlign);
-        LoadBiasScaleL1(nStart, curN);
     }
 
-    __aicore__ inline void PreloadSmallBlockA1(uint32_t batchIdx, uint32_t mIdx, uint32_t a1Buf)
+    __aicore__ inline void PreloadSmallBlockA1(uint32_t batchIdx, uint32_t mIdx, uint32_t nIdx, uint32_t a1Buf)
     {
         uint32_t mStart = mIdx * tiling_->singleCoreM;
         uint32_t curM = tiling_->singleCoreM;
@@ -230,7 +260,7 @@ private:
         uint32_t localMStart = 0;
         CalcLocalA1Params(mStart, curMAlign, localHoStart, localHoSize, localPadUp, localMStart);
         LocalTensor<dedyType> a1(TPosition::A1, a1Buf * a1BufBytes_, a1ElemCount_);
-        LoadDedyL1(a1, batchIdx, localHoStart, localHoSize);
+        LoadDedyL1(a1, batchIdx, nIdx, localHoStart, localHoSize);
     }
 
     __aicore__ inline event_t GetA1EventId(uint32_t a1Buf) const
@@ -244,7 +274,7 @@ private:
         for (uint64_t roundIdx = 0; roundIdx < curRound; ++roundIdx) {
             bool needReuseA1 = roundIdx + 1 < curRound;
             WaitFlag<HardEvent::MTE1_MTE2>(EVENT_ID_A1_PING);
-            PreloadSmallBlockA1(batchIdx, mIdx, 0);
+            PreloadSmallBlockA1(batchIdx, mIdx, nIdx, 0);
             SetFlag<HardEvent::MTE2_MTE1>(EVENT_ID_A1_PING);
             CalSmallBlockCore(batchIdx, mIdx, nIdx, 0, needReuseA1);
             if (needReuseA1) {
@@ -258,7 +288,7 @@ private:
                                                      uint32_t mIdx, uint32_t nIdx)
     {
         WaitFlag<HardEvent::MTE1_MTE2>(EVENT_ID_A1_PING);
-        PreloadSmallBlockA1(batchIdx, mIdx, 0);
+        PreloadSmallBlockA1(batchIdx, mIdx, nIdx, 0);
         SetFlag<HardEvent::MTE2_MTE1>(EVENT_ID_A1_PING);
         for (uint64_t roundIdx = 0; roundIdx < curRound; ++roundIdx) {
             uint32_t curA1Buf = static_cast<uint32_t>(roundIdx & 1U);
@@ -272,7 +302,7 @@ private:
                 CalSmallBlockIdx(basicIdx, nextBatchIdx, nextMIdx, nextNIdx);
                 event_t nextA1EventId = GetA1EventId(curA1Buf ^ 1U);
                 WaitFlag<HardEvent::MTE1_MTE2>(nextA1EventId);
-                PreloadSmallBlockA1(nextBatchIdx, nextMIdx, curA1Buf ^ 1U);
+                PreloadSmallBlockA1(nextBatchIdx, nextMIdx, nextNIdx, curA1Buf ^ 1U);
                 SetFlag<HardEvent::MTE2_MTE1>(nextA1EventId);
             }
             CalSmallBlockCore(batchIdx, mIdx, nIdx, curA1Buf, needReuseA1);
@@ -335,10 +365,10 @@ private:
         return true;
     }
 
-    __aicore__ inline void PrepareSmallBlockChannelWise(uint32_t curN)
+    __aicore__ inline void PrepareSmallBlockChannelWise(uint32_t curN, uint32_t nStart)
     {
         if (hasBias_) {
-            LoadBiasToBT(curN);
+            LoadBiasToBT(curN, nStart);
         }
         bool hasVectorScale = tiling_->quantMode0 ==
                                   static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT) ||
@@ -353,8 +383,9 @@ private:
     __aicore__ inline void CalSmallBlockMmad(const LocalTensor<dedyType>& a1, const LocalTensor<filterType>& b1,
                                              LocalTensor<L0cT>& c0, uint32_t localHoSize, uint32_t localPadUp,
                                              uint32_t localMStart, uint32_t curMAlign, uint32_t curNAlign,
-                                             uint32_t curN, event_t a1EventId, bool needReuseA1)
+                                             uint32_t curN, uint32_t nIdx, event_t a1EventId, bool needReuseA1)
     {
+        const LocalTensor<filterType> b1Seg = b1[IS_A16W8_FZ ? static_cast<uint32_t>(nIdx) * segElemCount_ : 0];
         MmadParams mmCommand;
         mmCommand.m = curMAlign;
         mmCommand.n = curNAlign;
@@ -373,7 +404,7 @@ private:
             LocalTensor<filterType> b0(TPosition::B2, buf * bl0BufBytes_, bl0BufBytes_ / sizeof(filterType));
             WaitFlag<HardEvent::M_MTE1>(eventId);
             LoadAL0(a0, a1, localHoSize, localPadUp, localMStart, curMAlign, kOff, curK);
-            LoadBL0(b0, b1, kOff, curK, curNAlign);
+            LoadBL0(b0, b1Seg, kOff, curK, curNAlign);
             SetFlag<HardEvent::MTE1_M>(eventId);
             WaitFlag<HardEvent::MTE1_M>(eventId);
             if (kIter + 1 == kIter_ && needReuseA1) {
@@ -422,11 +453,11 @@ private:
         uint32_t localMStart = 0;
         CalcLocalA1Params(mStart, curMAlign, localHoStart, localHoSize, localPadUp, localMStart);
         WaitFlag<HardEvent::MTE2_MTE1>(a1EventId);
-        PrepareSmallBlockChannelWise(curN);
+        PrepareSmallBlockChannelWise(curN, nStart);
 
         WaitFlag<HardEvent::FIX_M>(EVENT_ID_FIX_M);
 
-        CalSmallBlockMmad(a1, b1, c0, localHoSize, localPadUp, localMStart, curMAlign, curNAlign, curN, a1EventId,
+        CalSmallBlockMmad(a1, b1, c0, localHoSize, localPadUp, localMStart, curMAlign, curNAlign, curN, nIdx, a1EventId,
                           needReuseA1);
 
         WaitFlag<HardEvent::M_MTE1>(EVENT_ID_M_MTE1_0);

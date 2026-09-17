@@ -12,6 +12,7 @@
  * \file test_extend_conv_transpose_tilling_runtime.cpp
  * \brief
  */
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -36,6 +37,15 @@ using namespace ge;
 namespace {
 extern std::string GetTestSuiteName();
 extern std::string GetTestCaseName();
+
+struct DirectFzGroupExpect {
+    bool enabled = false;
+    uint8_t enlarge = 0;
+    uint32_t group = 0;
+    uint32_t ori_group = 0;
+    uint32_t cin_g = 0;
+    uint32_t cout_g = 0;
+};
 
 struct ExtendConvTransposeTilingTestParam {
     string case_name;
@@ -83,6 +93,8 @@ struct ExtendConvTransposeTilingTestParam {
     uint64_t tiling_key;
     std::string tiling_data;
     std::string tiling_data_in_repo;
+    bool check_exact_output = true;
+    DirectFzGroupExpect direct_fz_expect;
 };
 
 class ExtendConvTransposeTilingRunTime : public testing::TestWithParam<ExtendConvTransposeTilingTestParam> {
@@ -200,6 +212,14 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
+template <typename T>
+T ReadTilingField(const gert::TilingData* tiling_data, size_t offset)
+{
+    T value{};
+    std::memcpy(&value, static_cast<const uint8_t*>(tiling_data->GetData()) + offset, sizeof(T));
+    return value;
+}
+
 TEST_P(ExtendConvTransposeTilingRunTime, general_cases)
 {
     ExtendConvTransposeTilingTestParam param = GetParam();
@@ -263,23 +283,18 @@ TEST_P(ExtendConvTransposeTilingRunTime, general_cases)
 
     auto tiling_data = gert::TilingData::CreateCap(2048);
     auto bias_dtype = ge::DT_FLOAT16;
-    if (param.x_dtype == ge::DT_INT8) {
+    if (param.filter_dtype == ge::DT_INT8) {
         bias_dtype = ge::DT_INT32;
     }
     auto scale_dtype = ge::DT_UINT64;
-    int64_t nodeNum = 5;
-    // 此处不能使用auto(推导为std::initializer_list，重新赋值后底层临时数组在语句结束时销毁，
-    // 导致后续InputShapes读取悬垂内存触发ASAN stack-use-after-scope)
-    std::vector<gert::StorageShape*> inputShape = {&input_size, &out_backprop_shape, &filter_shape, &bias_shape,
-                                                   &scale_shape};
-    if (param.scale_shape.size() == 0) {
-        nodeNum--;
-        inputShape = {&input_size, &out_backprop_shape, &filter_shape, &bias_shape};
+    std::vector<void*> inputShape = {&input_size, &out_backprop_shape, &filter_shape};
+    if (param.bias_shape.size() != 0) {
+        inputShape.push_back(&bias_shape);
     }
-    if (param.bias_shape.size() == 0) {
-        nodeNum--;
-        inputShape = {&input_size, &out_backprop_shape, &filter_shape};
+    if (param.scale_shape.size() != 0) {
+        inputShape.push_back(&scale_shape);
     }
+    const int64_t nodeNum = static_cast<int64_t>(inputShape.size());
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(nodeNum, 1)
@@ -318,9 +333,30 @@ TEST_P(ExtendConvTransposeTilingRunTime, general_cases)
     }
     auto tiling_key = tiling_context->GetOutputPointer<uint64_t>(0);
     auto block_dim = tiling_context->GetOutputPointer<uint32_t>(1);
+    ASSERT_EQ(*tiling_key, param.tiling_key);
+    if (!param.check_exact_output) {
+        ASSERT_GT(*block_dim, 0U);
+        if (param.direct_fz_expect.enabled) {
+            constexpr size_t kFlagsOffset = 6 * sizeof(uint32_t) + sizeof(uint64_t);
+            constexpr size_t kEnlargeOffset = kFlagsOffset + 9;
+            constexpr size_t kU32FieldsOffset = kFlagsOffset + 16;
+            constexpr size_t kCinGOffset = kU32FieldsOffset + 3 * sizeof(uint32_t);
+            constexpr size_t kCoutGOffset = kU32FieldsOffset + 4 * sizeof(uint32_t);
+            constexpr size_t kGroupOffset = kU32FieldsOffset + 18 * sizeof(uint32_t);
+            constexpr size_t kOriGroupOffset = kU32FieldsOffset + 19 * sizeof(uint32_t);
+            auto raw_tiling_data = tiling_context->GetRawTilingData();
+            ASSERT_NE(raw_tiling_data, nullptr);
+            ASSERT_GE(raw_tiling_data->GetDataSize(), kOriGroupOffset + sizeof(uint32_t));
+            EXPECT_EQ(ReadTilingField<uint8_t>(raw_tiling_data, kEnlargeOffset), param.direct_fz_expect.enlarge);
+            EXPECT_EQ(ReadTilingField<uint32_t>(raw_tiling_data, kCinGOffset), param.direct_fz_expect.cin_g);
+            EXPECT_EQ(ReadTilingField<uint32_t>(raw_tiling_data, kCoutGOffset), param.direct_fz_expect.cout_g);
+            EXPECT_EQ(ReadTilingField<uint32_t>(raw_tiling_data, kGroupOffset), param.direct_fz_expect.group);
+            EXPECT_EQ(ReadTilingField<uint32_t>(raw_tiling_data, kOriGroupOffset), param.direct_fz_expect.ori_group);
+        }
+        return;
+    }
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << "transpose>>>>>>>>>>>>>>>>>>" << tiling_data_result << std::endl;
-    ASSERT_EQ(*tiling_key, param.tiling_key);
     ASSERT_EQ(*block_dim, param.block_dim);
     ASSERT_EQ(tiling_data_result, param.tiling_data);
 }
@@ -1001,6 +1037,422 @@ ExtendConvTransposeTilingTestParam cases_params_fuse[] = {
      150994946,
      "1 1 1 1 1 1 8 2 2 1 2 1 1 32 4 5 1 0 0 1 0 0 2 4 64 256 64 256 8 4 8 4 1 40 32 1 80 64 1 2 2 1 1 1 2 2 0 0 0 0 0 "
      "0 0 1 1 1 1 1 1 1 1 256 64 1 512 32 64 1 1 1 1 512 0 0 0 0 0 0 0 0 0 2 2 79 63 4 4 13 "},
+
+    // A16W8 fractal_z E=1（Gopt=groups，每组一物理段）走 small kernel 段循环路由。
+    // 注：DAV_3510 预编译 binary 暂不含 half x int8 组合（工具链 mad intrinsic 限制），
+    // 上板走 JIT/仿真编译，此处仅校验 Host Tiling 路由与段切分字段。
+    {"direct_fz_a16w8_origin_axis",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {32, 32, 1, 1},
+     {2, 1, 16, 32},
+     {1, 64, 1, 5, 5},
+     {1, 64, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     2,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {true, 1, 2, 2, 16, 32}},
+
+    // A16W8 fractal_z 走 small kernel 路由：前置已转置布局 + SMALL_KERNEL/NO_TRANSPOSE 直搬。
+    {"direct_fz_a16w8_small_kernel",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {16, 16, 1, 1},
+     {1, 1, 16, 32},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {}},
+
+    // A16W8 fractal_z 多组走 small kernel：FZG 单物理段对角块整块直搬（enlarge==groups）。
+    {"direct_fz_a16w8_small_kernel_groups2",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {32, 16, 1, 1},
+     {1, 2, 16, 32},
+     {1, 32, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     2,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {true, 2, 1, 2, 32, 32}},
+
+    // A16W8 fractal_z 多组 1<E<groups（E=2, groups=4, Gopt=2）走 small kernel 段循环。
+    {"direct_fz_a16w8_small_kernel_enlarge2_groups4",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {32, 32, 1, 1},
+     {4, 1, 16, 32},
+     {1, 128, 1, 5, 5},
+     {1, 128, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {1, 32, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     4,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {true, 2, 2, 4, 16, 64}},
+
+    // A16W8 fractal_z 多组 E∤groups 尾段（E=4, groups=6, Gopt=2，尾段有效通道 < 段物理宽）。
+    {"direct_fz_a16w8_small_kernel_tail_group",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {96, 8, 1, 1},
+     {2, 4, 16, 32},
+     {1, 48, 1, 5, 5},
+     {1, 48, 1, 5, 5},
+     {1, 96, 1, 5, 5},
+     {1, 96, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     6,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {true, 4, 2, 6, 64, 32}},
+
+    // A16W8 fractal_z capped E==groups（Gopt=1 单段含 N/K 双向对齐 padding，段宽 > 有效通道）。
+    {"direct_fz_a16w8_small_kernel_capped_padding",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {24, 8, 1, 1},
+     {1, 2, 16, 32},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     3,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {true, 3, 1, 3, 24, 24}},
+
+    // A16W8 fractal_z 全量 Cin 超 bias/scale 全量驻留上限（cin*8B > 65535）时回退主路径。
+    {"direct_fz_a16w8_inner_product_cin_overflow",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {8192, 32, 1, 1},
+     {512, 1, 16, 32},
+     {1, 16384, 1, 5, 5},
+     {1, 16384, 1, 5, 5},
+     {1, 8192, 1, 5, 5},
+     {1, 8192, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     512,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x1000000ULL,
+     "",
+     "",
+     false,
+     {true, 1, 512, 512, 16, 32}},
+
+    // A16W8 fractal_z 子格式（FRACTAL_Z_SUB）：primary format 归一化后走 small kernel 直搬路由。
+    {"direct_fz_a16w8_group1_subformat",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {16, 16, 1, 1},
+     {1, 1, 16, 32},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     static_cast<ge::Format>(ge::GetFormatFromSub(ge::FORMAT_FRACTAL_Z, 1)),
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     true,
+     0,
+     0x09000000ULL,
+     "",
+     "",
+     false,
+     {}},
+
+    // A16W8 fractal_z 的 filter storage 必须为 4D [Gopt*C1*D*H*W, N1, N0, C0]，8D 展开拒绝。
+    {"direct_fz_rejects_expanded_8d_storage",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {24, 8, 1, 1},
+     {2, 1, 1, 1, 1, 1, 16, 32},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {1, 24, 1, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     3,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     false,
+     0,
+     0,
+     ""},
+
+    // A16W8 fractal_z 仅支持 kernel_d == 1。
+    {"direct_fz_rejects_kernel_depth_greater_than_one",
+     "SOC_L1_1024",
+     "SOC_L1_1024",
+     COMPILE_INFO_STR_FUSE,
+     ge::DT_FLOAT16,
+     ge::DT_INT8,
+     ge::DT_FLOAT16,
+     {5},
+     {16, 16, 2, 1, 1},
+     {2, 1, 16, 32},
+     {1, 16, 1, 5, 5},
+     {1, 16, 1, 5, 5},
+     {1, 16, 2, 5, 5},
+     {1, 16, 2, 5, 5},
+     {},
+     {},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_FRACTAL_Z,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     true,
+     false,
+     0,
+     0,
+     ""},
 };
 
 INSTANTIATE_TEST_CASE_P(Conv3DDX_cases_params_fuse, ExtendConvTransposeTilingRunTime,

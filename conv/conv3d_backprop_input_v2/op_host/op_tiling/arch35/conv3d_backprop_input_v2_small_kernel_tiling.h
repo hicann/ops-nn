@@ -64,6 +64,8 @@ private:
     uint64_t CalcSmallKernelA1Size(uint64_t baseM) const;
     uint64_t CalcSmallKernelL1FixedSize() const;
     uint64_t CalcMaxSingleCoreMByL1(uint64_t maxM, uint32_t a1Pbuffer) const;
+    // B1 整 FZG 一次直搬（全载 Cin，blockCount=1）：校验单块 blockLen 上限。
+    bool ValidateLoadB1Copy() const;
     bool CheckSmallKernelEnable();
 
     bool enableA1Db_ = false;

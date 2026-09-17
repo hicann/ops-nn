@@ -52,7 +52,14 @@ ASCENDC_TPL_ARGS_DECL(Conv3dBackPropInputV2Arch35,
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
+    // 普通 ENLARGE 路由。
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_REVERSE_ONLY),
+                         ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ENLARGE),
+                         ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
+                         ASCENDC_TPL_UINT_SEL(loadB1Condition, ASCENDC_TPL_UI_LIST, TPL_GM_TO_L1)),
+    // A16W8 fractal_z ENLARGE 复用 GM_TO_L1 路由（loadB1FractalZ 标志区分）。
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_NO_TRANSPOSE_NO_REVERSE),
                          ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ENLARGE),
                          ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
@@ -62,6 +69,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),
                          ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
                          ASCENDC_TPL_UINT_SEL(loadB1Condition, ASCENDC_TPL_UI_LIST, TPL_GM_TO_L1)),
+    // 普通 ORIGIN reverse-only 路由。
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_REVERSE_ONLY),
                          ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),
@@ -87,6 +95,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),
                          ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
                          ASCENDC_TPL_UINT_SEL(loadB1Condition, ASCENDC_TPL_UI_LIST, TPL_VEC_TO_L1_C04)),
+    // 普通 ORIGIN no-transpose-no-reverse 路由。
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_NO_TRANSPOSE_NO_REVERSE),
                          ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),

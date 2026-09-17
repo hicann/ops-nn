@@ -229,7 +229,8 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelCandidateM(uint64_t hwI, ui
     uint64_t candidate = Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, mCnt), m0);
     candidate = std::min({candidate, hwI, static_cast<uint64_t>(MAX_BASE_MN), maxMByBuffer});
     uint64_t alignedWi = std::max(candidate / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
-    if (Ops::Base::CeilDiv(hwI, alignedWi) == Ops::Base::CeilDiv(hwI, candidate)) {
+    // wi 对齐不得低于 m0 下限，否则 FloorAlign 会归零导致下游除零。
+    if (alignedWi >= m0 && Ops::Base::CeilDiv(hwI, alignedWi) == Ops::Base::CeilDiv(hwI, candidate)) {
         candidate = alignedWi;
     }
     return Ops::Base::FloorAlign(std::min(candidate, maxMByBuffer), m0);
@@ -283,7 +284,9 @@ void Conv3DDXV2SmallKernelTiling::SetTilingCondition(const CoreTilingParams& cor
                                                      const L0TilingParams& l0Params)
 {
     loadB1Condition_ = ENABLE_SMALL_KERNEL;
-    loadB2Condition_ = (runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z) ? B2_NO_TRANSPOSE_NO_REVERSE : REVERSE_ONLY;
+    loadB2Condition_ = (static_cast<ge::Format>(ge::GetPrimaryFormat(runInfo_.filterFormat)) == ge::FORMAT_FRACTAL_Z) ?
+                           B2_NO_TRANSPOSE_NO_REVERSE :
+                           REVERSE_ONLY;
     kernelSplitMode_ = NO_SPLIT_KERNEL;
     groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     tilingRunInfo_.enableVecTransFlag = false;
@@ -311,12 +314,14 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelA1Size(uint64_t baseM) cons
 
 uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelL1FixedSize() const
 {
+    // A16W8 fractal_z：B1 整 FZG 驻留、bias/scale 全量 Cin 驻留；其余场景维持原有口径。
     uint64_t coutAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedy_cout_g),
                                               static_cast<uint64_t>(tilingRunInfo_.k0));
     uint64_t cinAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_cin_g),
                                              static_cast<uint64_t>(tilingRunInfo_.n0));
-    uint64_t b1Size = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * coutAlign * cinAlign *
-                      dtypeByteL0b_;
+    uint64_t gCnt = IsLoadB1FractalZ() ? static_cast<uint64_t>(runInfo_.real_g) : 1;
+    uint64_t cinResident = IsLoadB1FractalZ() ? static_cast<uint64_t>(runInfo_.dedx_cin) : cinAlign;
+    uint64_t b1Size = gCnt * runInfo_.kernel_h * runInfo_.kernel_w * coutAlign * cinAlign * dtypeByteL0b_;
     uint64_t biasSize = 0;
     if (hasBiasFlag_) {
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
@@ -324,12 +329,12 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelL1FixedSize() const
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
         // bias L1 区按 64B 对齐，与 kernel 侧 GetBiasL1SizeBytes 保持一致（scale 起始地址需 64B 对齐，否则 AIC
         // error）。
-        biasSize = Ops::Base::CeilAlign(cinAlign * dtypeByteBtBuffer, BYTE_64);
+        biasSize = Ops::Base::CeilAlign(cinResident * dtypeByteBtBuffer, BYTE_64);
     }
     uint64_t scaleSize = 0;
     const uint32_t vectorScaleCount = GetVectorScaleCount();
     if (vectorScaleCount != 0U) {
-        scaleSize = cinAlign * ge::GetSizeByDataType(ge::DT_INT64) * vectorScaleCount;
+        scaleSize = cinResident * ge::GetSizeByDataType(ge::DT_INT64) * vectorScaleCount;
     }
     return b1Size + biasSize + scaleSize;
 }
@@ -359,13 +364,23 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcMaxSingleCoreMByL1(uint64_t maxM, uint
 
 bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelDimensions() const
 {
-    return runInfo_.kernel_d == 1 && runInfo_.dedx_d == 1 && runInfo_.dedy_d == 1 && runInfo_.groups == 1;
+    if (runInfo_.kernel_d != 1 || runInfo_.dedx_d != 1 || runInfo_.dedy_d != 1) {
+        return false;
+    }
+
+    if (runInfo_.groups == 1) {
+        return true;
+    }
+
+    return IsLoadB1FractalZ() &&
+           static_cast<uint64_t>(runInfo_.dedx_cin) * ge::GetSizeByDataType(ge::DT_INT64) <= 65535U;
 }
 
 bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelFormats() const
 {
     return runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.yFormat == ge::FORMAT_NCDHW &&
-           (runInfo_.filterFormat == ge::FORMAT_NDHWC || runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z);
+           (runInfo_.filterFormat == ge::FORMAT_NDHWC ||
+            static_cast<ge::Format>(ge::GetPrimaryFormat(runInfo_.filterFormat)) == ge::FORMAT_FRACTAL_Z);
 }
 
 bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelPadding() const
@@ -378,8 +393,17 @@ bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelPadding() const
 
 bool Conv3DDXV2SmallKernelTiling::HasSmallKernelComputationBudget() const
 {
+    uint64_t coutCnt = static_cast<uint64_t>(runInfo_.dedy_cout_g);
+    uint64_t cinCnt = static_cast<uint64_t>(runInfo_.dedx_cin_g);
+    uint64_t gCnt = 1;
+    if (IsLoadB1FractalZ()) {
+        // A16W8 fractal_z 按full load B1计算
+        coutCnt = Ops::Base::CeilAlign(coutCnt, static_cast<uint64_t>(tilingRunInfo_.k0));
+        cinCnt = Ops::Base::CeilAlign(cinCnt, static_cast<uint64_t>(tilingRunInfo_.n0));
+        gCnt = static_cast<uint64_t>(runInfo_.real_g);
+    }
     uint64_t computation = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w * runInfo_.kernel_h *
-                           runInfo_.kernel_w * runInfo_.dedy_cout_g * runInfo_.dedx_cin_g;
+                           runInfo_.kernel_w * gCnt * coutCnt * cinCnt;
     bool isFp16Fp16 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
                       static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_FLOAT16);
     if (isFp16Fp16) {
@@ -464,21 +488,35 @@ bool Conv3DDXV2SmallKernelTiling::Has1CoreKernelSplitAlternative() const
     return false;
 }
 
+bool Conv3DDXV2SmallKernelTiling::ValidateLoadB1Copy() const
+{
+    // B1 Fractal_Z 全载 L1，需要校验单块 blockLen 上限
+    // 理论配置: blockCount=1 srcStride=0
+    const uint64_t coutPhys = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedy_cout_g),
+                                                   static_cast<uint64_t>(tilingRunInfo_.k0));
+    const uint64_t cinPhys = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_cin_g),
+                                                  static_cast<uint64_t>(tilingRunInfo_.n0));
+    const uint64_t blockLen = static_cast<uint64_t>(runInfo_.real_g) * runInfo_.kernel_h * runInfo_.kernel_w *
+                              coutPhys * cinPhys * dtypeByteL0b_;
+    return blockLen <= MAX_DATA_COPY_BLOCK_LEN;
+}
+
 bool Conv3DDXV2SmallKernelTiling::CheckSmallKernelEnable()
 {
     if (!IsSocVersionFuse(context_)) {
         return false;
     }
-    // 维度要求: D=1, group=1
-    // format要求: outBackprop/y=NCDHW, filter=NDHWC
+
     if (!HasSupportedSmallKernelDimensions() || !HasSupportedSmallKernelFormats() ||
         !HasSupportedSmallKernelPadding() || !HasSmallKernelComputationBudget()) {
         return false;
     }
+
     // 单核场景优化: kernel_split 硬准入可接手时退出, 避免抢占 kernel_split 适用算子
     if (Has1CoreKernelSplitAlternative()) {
         return false;
     }
+
     return HasSmallKernelBufferBudget();
 }
 

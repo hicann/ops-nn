@@ -13,6 +13,7 @@
  * \brief
  */
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -27,6 +28,7 @@
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "../../../../../common/op_host/op_tiling/conv_platform_util.h"
+#include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_inner_product_tiling.h"
 #include "test_cube_util.h"
 
 #define SUCCESS 0
@@ -195,7 +197,12 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param)
+using TilingContextHook = std::function<void(gert::TilingContext*)>;
+using TilingResultHook = std::function<void(gert::TilingContext*)>;
+
+static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param, const TilingContextHook& contextHook = {},
+                             bool runTilingAfterHook = false, bool checkTilingOutput = true,
+                             const TilingResultHook& tilingResultHook = {})
 {
     std::cout << "run case " << param.case_name << std::endl;
 
@@ -293,10 +300,27 @@ static void TestOneParamCase(const Conv3DBpInputV2TilingTestParam& param)
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
 
+    // 白盒测试复用完整 TilingContext。
+    if (contextHook) {
+        // 同步 Fuse SoC 属性。
+        std::map<std::string, std::string> fuseSocInfo = {{"cube_vector_combine", "fuse"}};
+        tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", fuseSocInfo);
+        contextHook(tiling_context);
+        if (!runTilingAfterHook) {
+            return;
+        }
+    }
+
     if (param.tiling_result) {
         ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     } else {
         ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+        return;
+    }
+    if (tilingResultHook) {
+        tilingResultHook(tiling_context);
+    }
+    if (!checkTilingOutput) {
         return;
     }
     auto tiling_key = tiling_context->GetOutputPointer<uint64_t>(0);
@@ -2474,6 +2498,120 @@ static void TestMultiThread(const Conv3DBpInputV2TilingTestParam* params, size_t
 TEST_F(Conv3DBackpropInputV2TilingRunTime3, general_cases_params_multi_thread)
 {
     TestMultiThread(cases_params_950, sizeof(cases_params_950) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, direct_fz_b1_full_k_capacity_need_not_divide_hkw)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        tiling.runInfo_.dedx_cin = 16;
+        tiling.runInfo_.dedx_cin_g = 16;
+        tiling.runInfo_.dedy_cout = 32;
+        tiling.runInfo_.dedy_cout_g = 32;
+        tiling.runInfo_.real_g = 1;
+        tiling.runInfo_.kernel_h = 3;
+        tiling.runInfo_.kernel_w = 3;
+        tiling.blockSize_ = 32;
+        tiling.dtypeByteL0a_ = 2;
+        tiling.dtypeByteL0b_ = 1;
+
+        Ops::NN::Conv::L0TilingParams l0Params;
+        l0Params.baseN = 16;
+        l0Params.baseK = 160;
+        Ops::NN::Conv::L1TilingParams l1Params;
+        l1Params.stepKb = 2;
+        uint64_t bMatrixByteSize = 0;
+
+        // A16W8（int8 filter，c0=32）：L1 容量 320 可覆盖实际 K=288（CeilAlign(32,32)*9）。
+        EXPECT_TRUE(tiling.ValidateLoadB1Copy(l1Params, l0Params, bMatrixByteSize));
+        EXPECT_EQ(bMatrixByteSize, 5120);
+    });
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, direct_fz_b1_enumerates_last_physical_group)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        tiling.runInfo_.dedx_cin = 80;
+        tiling.runInfo_.dedx_cin_g = 64;
+        tiling.runInfo_.dedy_cout = 32;
+        tiling.runInfo_.dedy_cout_g = 16;
+        tiling.runInfo_.real_g = 2;
+        tiling.runInfo_.kernel_h = 1;
+        tiling.runInfo_.kernel_w = 1;
+        tiling.blockSize_ = 32;
+        tiling.dtypeByteL0a_ = 2;
+        tiling.dtypeByteL0b_ = 1;
+
+        Ops::NN::Conv::L0TilingParams l0Params;
+        l0Params.baseN = 32;
+        l0Params.baseK = 32;
+        Ops::NN::Conv::L1TilingParams l1Params;
+        l1Params.stepKb = 1;
+        uint64_t bMatrixByteSize = 0;
+
+        // 覆盖普通组 Cin=32 和尾组 Cin=16。
+        EXPECT_TRUE(tiling.ValidateLoadB1Copy(l1Params, l0Params, bMatrixByteSize));
+        EXPECT_EQ(bMatrixByteSize, 1024);
+    });
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, group_load_route_keys_normal)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        constexpr uint32_t gmToL1 = 0;
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        tiling.opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+        Ops::NN::Conv::L0TilingParams l0Params;
+        Ops::NN::Conv::L1TilingParams l1Params;
+
+        // 普通 ENLARGE 路由。
+        tiling.runInfo_.filterFormat = ge::FORMAT_NCDHW;
+        tiling.groupConvMode_ = Ops::NN::Conv::TILING_GROUP_MODE_ENLARGE;
+        tiling.loadB1Condition_ = tiling.GetLoadB1Condition();
+        tiling.loadB2Condition_ = tiling.GetLoadB2Condition(l1Params, l0Params);
+        EXPECT_EQ(tiling.loadB1Condition_, gmToL1);
+        EXPECT_EQ(tiling.loadB2Condition_, Ops::NN::Conv::B2_REVERSE_ONLY);
+        EXPECT_EQ(tiling.GetTilingKey(), 0x01010002ULL);
+
+        // 普通 ORIGIN reverse-only 路由。
+        tiling.groupConvMode_ = Ops::NN::Conv::TILING_GROUP_MODE_ORIGIN;
+        tiling.loadB1Condition_ = gmToL1;
+        tiling.loadB2Condition_ = Ops::NN::Conv::B2_REVERSE_ONLY;
+        EXPECT_EQ(tiling.GetTilingKey(), 0x01000002ULL);
+
+        // 普通 ORIGIN no-transpose-no-reverse 路由。
+        tiling.loadB2Condition_ = Ops::NN::Conv::B2_NO_TRANSPOSE_NO_REVERSE;
+        EXPECT_EQ(tiling.GetTilingKey(), 0x01000000ULL);
+    });
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, group_load_route_keys_a16w8)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        // A16W8 fractal_z 复用 GM_TO_L1 既有 tilingKey 路由（不新增选择子），kernel 侧由 loadB1FractalZ 区分。
+        constexpr uint32_t gmToL1 = 0;
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        tiling.opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+        Ops::NN::Conv::L0TilingParams l0Params;
+        Ops::NN::Conv::L1TilingParams l1Params;
+        tiling.runInfo_.filterFormat = ge::FORMAT_FRACTAL_Z;
+        tiling.dtypeByteL0a_ = 2;
+        tiling.dtypeByteL0b_ = 1;
+
+        // A16W8 fractal_z 路由（ORIGIN/ENLARGE，均为 NO_TRANSPOSE_NO_REVERSE）。
+        for (const auto& route :
+             {std::pair<uint8_t, uint64_t>{Ops::NN::Conv::TILING_GROUP_MODE_ORIGIN, 0x1000000ULL},
+              std::pair<uint8_t, uint64_t>{Ops::NN::Conv::TILING_GROUP_MODE_ENLARGE, 0x1010000ULL}}) {
+            tiling.groupConvMode_ = route.first;
+            tiling.loadB1Condition_ = tiling.GetLoadB1Condition();
+            tiling.loadB2Condition_ = tiling.GetLoadB2Condition(l1Params, l0Params);
+            EXPECT_EQ(tiling.loadB1Condition_, gmToL1);
+            EXPECT_EQ(tiling.loadB2Condition_, Ops::NN::Conv::B2_NO_TRANSPOSE_NO_REVERSE);
+            EXPECT_EQ(tiling.groupConvMode_, route.first);
+            EXPECT_EQ(tiling.GetTilingKey(), route.second);
+        }
+    });
 }
 
 TEST_P(Conv3DBackpropInputV2TilingRunTime3, general_cases) { TestOneParamCase(GetParam()); }

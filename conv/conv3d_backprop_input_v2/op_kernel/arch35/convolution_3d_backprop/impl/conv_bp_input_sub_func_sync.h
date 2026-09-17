@@ -85,7 +85,7 @@ __aicore__ inline void CrossCoreSetHead(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if ASCEND_IS_AIC_SCALAR {
-        if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+        if (EnableVecGroupEnlarge(self)) {
             CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
 #if __CUBE_VECTOR_FUSION_ONLY__
             if (self->ctx.tiling_->bl1Pbuffer > 1) {
@@ -102,7 +102,7 @@ __aicore__ inline void CrossCoreWaitTail(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if ASCEND_IS_AIV_SCALAR {
-        if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+        if (EnableVecGroupEnlarge(self)) {
             if (GetSubBlockIdx() == 0) {
                 CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
 #if __CUBE_VECTOR_FUSION_ONLY__

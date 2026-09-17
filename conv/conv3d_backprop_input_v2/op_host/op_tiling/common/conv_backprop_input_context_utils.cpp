@@ -30,6 +30,12 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 
+constexpr size_t kDirectFzgDim = 4;
+constexpr size_t kGoptC1DhwDirectFzgIdx = 0;
+constexpr size_t kN1DirectFzgIdx = 1;
+constexpr size_t kN0DirectFzgIdx = 2;
+constexpr size_t kC0DirectFzgIdx = 3;
+
 bool CheckRangeInt64(int64_t value, int32_t value_low, int32_t value_up)
 {
     if (value < value_low || value > value_up) {
@@ -47,6 +53,15 @@ static bool IsFilterDxStorageNcdhw(const gert::TilingContext* context)
 {
     return ge::GetPrimaryFormat(context->GetInputDesc(static_cast<size_t>(FILTER_INDEX))->GetStorageFormat()) ==
            ge::FORMAT_NCDHW;
+}
+
+static bool EnableLoadB1FractalZ(const gert::TilingContext* context, const ge::Format filterFormat,
+                                 const ge::DataType xDtype, const ge::DataType wDtype)
+{
+    const bool isA16W8 = xDtype == ge::DT_FLOAT16 && wDtype == ge::DT_INT8;
+    // FZ 子格式（GetFormatFromSub）按 primary format 归一化后识别。
+    return IsSocVersionFuse(context) && isA16W8 &&
+           static_cast<ge::Format>(ge::GetPrimaryFormat(filterFormat)) == ge::FORMAT_FRACTAL_Z;
 }
 
 bool IsSupportedDtypeForOutputPadding(const ge::DataType dtype)
@@ -359,7 +374,8 @@ bool CheckTransposeAttr(gert::TilingContext* context, OtherParams& otherParams)
 }
 
 template <typename T>
-void GetNCDHWShape(const T& origin_shape, Shape& ncdhw_shape, const ge::Format& origin_format)
+void GetNCDHWShape(const T& origin_shape, Shape& ncdhw_shape, const ge::Format& origin_format,
+                   const bool isCnhwSemantics, const int64_t oriGroups)
 {
     // caller already checked buffer size
     if (origin_format == ge::FORMAT_NDHWC) {
@@ -381,12 +397,18 @@ void GetNCDHWShape(const T& origin_shape, Shape& ncdhw_shape, const ge::Format& 
         ncdhw_shape.h = origin_shape[1];     // 1: H
         ncdhw_shape.w = origin_shape[2];     // 2: W
     } else if (origin_format == ge::FORMAT_NCHW) {
-        // test
-        ncdhw_shape.batch = origin_shape[1]; // 1: N
-        ncdhw_shape.c = origin_shape[0];     // 0: C
-        ncdhw_shape.d = 1;                   // 0: D
-        ncdhw_shape.h = origin_shape[2];     // 2: H
-        ncdhw_shape.w = origin_shape[3];     // 3: W
+        if (isCnhwSemantics) {
+            // A16W8 fractal_z
+            // 前置 TransData 已完成组内 C/N 转置，origin shape 为 [C_total, N_per_group, H, W]
+            ncdhw_shape.batch = origin_shape[1] * oriGroups; // 1: N(每组)
+            ncdhw_shape.c = origin_shape[0] / oriGroups;     // 0: C(总数)
+        } else {
+            ncdhw_shape.batch = origin_shape[0]; // 0: N
+            ncdhw_shape.c = origin_shape[1];     // 1: C
+        }
+        ncdhw_shape.d = 1;
+        ncdhw_shape.h = origin_shape[2]; // 2: H
+        ncdhw_shape.w = origin_shape[3]; // 3: W
     }
 }
 
@@ -531,6 +553,8 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
     auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
     const auto op_name = context->GetNodeName();
+    const bool enableFractalZ = EnableLoadB1FractalZ(context, filter_desc->GetStorageFormat(),
+                                                     out_backprop_desc->GetDataType(), filter_desc->GetDataType());
 
     std::unordered_set<ge::Format> valid_out_bp_format;
     if ((IsArchAfter35(context) || IsSocVersionFuse(context)) &&
@@ -549,6 +573,9 @@ bool CheckStorageFormat(const gert::TilingContext* context, size_t filter_input_
         valid_filter_format = {ge::FORMAT_NCDHW};
     } else {
         valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
+    }
+    if (enableFractalZ) {
+        valid_filter_format.insert(ge::FORMAT_FRACTAL_Z);
     }
 
     std::unordered_set<ge::Format> valid_y_format;
@@ -646,15 +673,13 @@ void ExtractStorageShapeInfo(const gert::TilingContext* context, size_t filter_i
         otherParams.filter_ci0 = filter_shape->GetStorageShape().GetDim(kCin0FRACTALZ3DIdx);
     } else {
         otherParams.filter_co0 = BYTE_BLOCK / runInfoV2.b_dtype_bytes;
-        otherParams.co1g = Ops::Base::CeilDiv(
-            otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
         otherParams.filter_ci0 = kBlockSize;
     }
-    otherParams.co1g_reduce = otherParams.co1g;
 }
 
-bool ValidateOriginShapeDims(const gert::TilingContext* context, const gert::Shape& out_backprop_ori_shape,
-                             const gert::Shape& filter_ori_shape, const gert::Shape& y_ori_shape)
+static bool ValidateOriginShapeDims(const gert::TilingContext* context, const gert::Shape& out_backprop_ori_shape,
+                                    const gert::Shape& filter_ori_shape, const gert::Shape& y_ori_shape,
+                                    const ge::Format filterOriFormat, const bool enableFractalZ)
 {
     const auto op_name = context->GetNodeName();
     OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
@@ -662,20 +687,12 @@ bool ValidateOriginShapeDims(const gert::TilingContext* context, const gert::Sha
                                              std::to_string(out_backprop_ori_shape.GetDimNum()).c_str(),
                                              std::to_string(K_ORI_SHAPE_DIM_3D).c_str()),
                 return false);
-    if (IsSocVersionFuse(context)) {
-        OP_CHECK_IF(
-            filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D && filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_2D,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(op_name, "filter",
-                                                     std::to_string(filter_ori_shape.GetDimNum()).c_str(),
-                                                     "The shape dim of filter must be within the range {4, 5}"),
-            return false);
-    } else {
-        OP_CHECK_IF(
-            filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "filter", std::to_string(filter_ori_shape.GetDimNum()).c_str(),
-                                         std::to_string(K_ORI_SHAPE_DIM_3D).c_str()),
-            return false);
-    }
+    const bool enableFractalZ4D = enableFractalZ && filterOriFormat == ge::FORMAT_NCHW;
+    const size_t expectedFilterDim = enableFractalZ4D ? K_ORI_SHAPE_DIM_2D : K_ORI_SHAPE_DIM_3D;
+    OP_CHECK_IF(filter_ori_shape.GetDimNum() != expectedFilterDim,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "filter", std::to_string(filter_ori_shape.GetDimNum()).c_str(),
+                                             std::to_string(expectedFilterDim).c_str()),
+                return false);
     OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "y", std::to_string(y_ori_shape.GetDimNum()).c_str(),
                                              std::to_string(K_ORI_SHAPE_DIM_3D).c_str()),
@@ -683,9 +700,9 @@ bool ValidateOriginShapeDims(const gert::TilingContext* context, const gert::Sha
     return true;
 }
 
-bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filter_input_index,
-                          size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo& runInfoV2,
-                          OtherParams& otherParams)
+static bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filter_input_index,
+                                 size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                 const optiling::OpTypeV2 opType, OtherParams& otherParams)
 {
     auto filter_desc = context->GetInputDesc(filter_input_index);
     auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
@@ -706,15 +723,21 @@ bool CalShapeInfoFromDesc(const gert::TilingContext* context, size_t filter_inpu
     const auto& y_ori_shape = y_shape->GetOriginShape();
     const auto op_name = context->GetNodeName();
 
-    if (!ValidateOriginShapeDims(context, out_backprop_ori_shape, filter_ori_shape, y_ori_shape)) {
+    const bool enableFractalZ = EnableLoadB1FractalZ(context, filter_desc->GetStorageFormat(),
+                                                     out_backprop_desc->GetDataType(), filter_desc->GetDataType());
+    if (!ValidateOriginShapeDims(context, out_backprop_ori_shape, filter_ori_shape, y_ori_shape, filter_ori_format,
+                                 enableFractalZ)) {
         return false;
     }
+    // A16W8 的前置 TransData 已完成组内 C/N 转置，origin shape 语义为 [C, N, H, W]。
+    const bool isA16W8 = enableFractalZ && filter_desc->GetDataType() == ge::DT_INT8 &&
+                         out_backprop_desc->GetDataType() == ge::DT_FLOAT16;
 
     Shape out_backprop_shape_ncdhw;
     Shape filter_shape_ncdhw;
     Shape y_shape_ncdhw;
     GetNCDHWShape(out_backprop_ori_shape, out_backprop_shape_ncdhw, out_backprop_ori_format);
-    GetNCDHWShape(filter_ori_shape, filter_shape_ncdhw, filter_ori_format);
+    GetNCDHWShape(filter_ori_shape, filter_shape_ncdhw, filter_ori_format, isA16W8, runInfoV2.groups);
     GetNCDHWShape(y_ori_shape, y_shape_ncdhw, y_ori_format);
 
     OP_CHECK_IF(!UpdateShapeParams(context, runInfoV2, out_backprop_shape_ncdhw, filter_shape_ncdhw, y_shape_ncdhw,
@@ -753,6 +776,8 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
     auto filter_ori_format = filter_desc->GetOriginFormat();
     auto y_ori_format = y_desc->GetOriginFormat();
+    const bool enableFractalZ = EnableLoadB1FractalZ(context, filter_desc->GetStorageFormat(),
+                                                     out_backprop_desc->GetDataType(), filter_desc->GetDataType());
     if (!IsSocVersionFuse(context)) {
         OP_CHECK_IF(
             out_backprop_ori_format != y_ori_format,
@@ -769,12 +794,13 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
                                            "NDHWC or NCDHW"),
                 return false);
     if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-        OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
-                        filter_ori_format != ge::FORMAT_DHWCN && filter_ori_format != ge::FORMAT_NCHW,
-                    OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter",
-                                               ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
-                                               "NDHWC or NCDHW or DHWCN or NCHW"),
-                    return false);
+        OP_CHECK_IF(
+            filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW &&
+                filter_ori_format != ge::FORMAT_DHWCN && !(enableFractalZ && filter_ori_format == ge::FORMAT_NCHW),
+            OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter",
+                                       ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(),
+                                       enableFractalZ ? "NDHWC or NCDHW or DHWCN or NCHW" : "NDHWC or NCDHW or DHWCN"),
+            return false);
         OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index, op_type),
                     OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
     } else {
@@ -811,8 +837,9 @@ bool GetShapeParams(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
         }
     }
 
-    OP_CHECK_IF(!CalShapeInfoFromDesc(context, filter_input_index, out_backprop_input_index, runInfoV2, otherParams),
-                OP_LOGE(op_name, "Cal Shape Info From Desc fail."), return false);
+    OP_CHECK_IF(
+        !CalShapeInfoFromDesc(context, filter_input_index, out_backprop_input_index, runInfoV2, op_type, otherParams),
+        OP_LOGE(op_name, "Cal Shape Info From Desc fail."), return false);
     return true;
 }
 
@@ -867,10 +894,10 @@ bool CalGroups(gert::TilingContext* context, OtherParams& otherParams, Conv3dBpI
         return false);
 
     if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-        bool invalidFilterFormat = runInfoV2.filterFormat != ge::FORMAT_NCDHW &&
-                                   runInfoV2.filterFormat != ge::FORMAT_NDHWC &&
-                                   runInfoV2.filterFormat != ge::FORMAT_DHWCN &&
-                                   runInfoV2.filterFormat != ge::FORMAT_FRACTAL_Z;
+        const auto filterPrimaryFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(runInfoV2.filterFormat));
+        bool invalidFilterFormat = filterPrimaryFormat != ge::FORMAT_NCDHW && filterPrimaryFormat != ge::FORMAT_NDHWC &&
+                                   filterPrimaryFormat != ge::FORMAT_DHWCN &&
+                                   filterPrimaryFormat != ge::FORMAT_FRACTAL_Z;
         bool invalidOutBackpropFormat = runInfoV2.outBackpropFormat != ge::FORMAT_NCDHW &&
                                         runInfoV2.outBackpropFormat != ge::FORMAT_NDHWC;
         bool invalidYFormat = runInfoV2.yFormat != ge::FORMAT_NCDHW && runInfoV2.yFormat != ge::FORMAT_NDHWC;
@@ -879,7 +906,7 @@ bool CalGroups(gert::TilingContext* context, OtherParams& otherParams, Conv3dBpI
                     CUBE_INNER_ERR_REPORT(context->GetNodeName(),
                                           "When groups(%d) > 1, out_backprop_format[%s] is limited to NCDHW/NDHWC, "
                                           "y_format[%s] is limited to NCDHW/NDHWC, "
-                                          "filter_format[%s] are limited to NCDHW/NDHWC/DHWCN.",
+                                          "filter_format[%s] are limited to NCDHW/NDHWC/DHWCN/FRACTAL_Z.",
                                           runInfoV2.groups,
                                           ge::TypeUtils::FormatToSerialString(runInfoV2.outBackpropFormat).c_str(),
                                           ge::TypeUtils::FormatToSerialString(runInfoV2.yFormat).c_str(),
@@ -1145,8 +1172,48 @@ static bool CheckFilterFractalShape(const gert::TilingContext* context, const Co
     return true;
 }
 
-bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams)
+static bool ValidateFractalZStorageShape(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
+                                         const OtherParams& otherParams, const optiling::OpTypeV2 opType)
 {
+    if (!EnableLoadB1FractalZ(context, runInfoV2.filterFormat, otherParams.a_dtype, otherParams.b_dtype)) {
+        return true;
+    }
+
+    size_t filterInputIndex = FILTER_INDEX;
+    if (opType == optiling::OpTypeV2::kExtendConvTranspose) {
+        filterInputIndex = OUT_BACKPROP_INDEX;
+    }
+    const auto filterShape = context->GetInputShape(filterInputIndex);
+    OP_CHECK_IF(filterShape == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "filter shape is null"),
+                return false);
+
+    const auto& storageShape = filterShape->GetStorageShape();
+    OP_CHECK_IF(storageShape.GetDimNum() != kDirectFzgDim,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "filter storage shape",
+                                                         std::to_string(storageShape.GetDimNum()).c_str(),
+                                                         "Direct FRACTAL_Z filter storage shape must be 4D: "
+                                                         "[Gopt*C1*D*H*W, N1, N0, C0]"),
+                return false);
+    return true;
+}
+
+static bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams,
+                     const optiling::OpTypeV2 opType)
+{
+    const bool enableFractalZ = EnableLoadB1FractalZ(context, runInfoV2.filterFormat, otherParams.a_dtype,
+                                                     otherParams.b_dtype);
+    const bool enableFractalZGroup = enableFractalZ && runInfoV2.groups > 1;
+    // A16W8 fractal_z 当前仅支持 filter 的逻辑 D=1。
+    OP_CHECK_IF(enableFractalZ && otherParams.b_shape.d != 1,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(),
+                                      "FRACTAL_Z filter only supports kernel_d == 1, but got kernel_d = %ld.",
+                                      otherParams.b_shape.d),
+                return false);
+    // A16W8 fractal_z 仅支持完整加载 Hk/Wk。
+    OP_CHECK_IF(enableFractalZ && IsNeedTilingHkWk(context, runInfoV2, otherParams),
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "FRACTAL_Z filter does not support tiling Hk/Wk."),
+                return false);
+
     // calc real g and check shape
     int32_t dy_c_ori = otherParams.a_shape.c / runInfoV2.groups;
     OP_CHECK_IF(
@@ -1156,13 +1223,16 @@ bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, O
             (std::to_string(otherParams.a_shape.c) + " and " + std::to_string(runInfoV2.groups)).c_str(),
             FormatString("The value of out_backporp of C must be at least group(%d)", runInfoV2.groups).c_str()),
         return false);
-    int32_t dx_c_extend = MathUtil::Lcm(otherParams.b_shape.c, otherParams.c_shape.c0) / otherParams.b_shape.c;
-    int32_t dy_c_extend = MathUtil::Lcm(dy_c_ori, kBlockSize) / dy_c_ori;
+    // A16W8 fractal_z 的 N 轴（output-per-group）按 N0=16 对齐，K 轴（input-per-group）按 filter C0 对齐。
+    const int64_t dxAlign = enableFractalZ ? kBlockSize : otherParams.c_shape.c0;
+    const int64_t dyAlign = enableFractalZ ? otherParams.b_shape.c0 : kBlockSize;
+    int32_t dx_c_extend = MathUtil::Lcm(otherParams.b_shape.c, dxAlign) / otherParams.b_shape.c;
+    int32_t dy_c_extend = MathUtil::Lcm(static_cast<int64_t>(dy_c_ori), dyAlign) / dy_c_ori;
     otherParams.multiple_extend = std::min(MathUtil::Lcm(dx_c_extend, dy_c_extend),
                                            static_cast<int64_t>(runInfoV2.groups));
     runInfoV2.real_g = (static_cast<int64_t>(runInfoV2.groups) + otherParams.multiple_extend - 1) /
                        otherParams.multiple_extend;
-    otherParams.ci1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.c, otherParams.c_shape.c0);
+    otherParams.ci1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.c, dxAlign);
     int32_t co1g = (otherParams.multiple_extend * dy_c_ori + kBlockSize - 1) / kBlockSize;
     if (context->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_FLOAT && runInfoV2.groups > 1) {
         co1g *= 2; // 2: BLOCK_NUM / FP32_C0
@@ -1174,31 +1244,34 @@ bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, O
         otherParams.co1g = Ops::Base::CeilDiv(
             otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
 
-        size_t filter_input_idx = static_cast<size_t>(FILTER_INDEX);
-        size_t out_backprop_input_idx = static_cast<size_t>(OUT_BACKPROP_INDEX);
-        const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_idx);
-        const auto filter_desc = context->GetInputDesc(filter_input_idx);
+        if (!enableFractalZGroup) {
+            size_t filter_input_idx = static_cast<size_t>(FILTER_INDEX);
+            size_t out_backprop_input_idx = static_cast<size_t>(OUT_BACKPROP_INDEX);
+            const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_idx);
+            const auto filter_desc = context->GetInputDesc(filter_input_idx);
 
-        constexpr uint32_t ENLARGE_BUFFER_NUM = 2;
-        constexpr uint32_t REG_SIZE = 256;
-        bool disableGroupEnlarge = static_cast<uint64_t>(ENLARGE_BUFFER_NUM) *
-                                           (otherParams.co1g * otherParams.b_shape.h * otherParams.b_shape.w *
-                                            otherParams.ci1g * kBlockSize * otherParams.b_shape.c0) *
-                                           runInfoV2.b_dtype_bytes +
-                                       REG_SIZE >
-                                   context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
+            constexpr uint32_t ENLARGE_BUFFER_NUM = 2;
+            constexpr uint32_t REG_SIZE = 256;
+            bool disableGroupEnlarge = static_cast<uint64_t>(ENLARGE_BUFFER_NUM) *
+                                               (otherParams.co1g * otherParams.b_shape.h * otherParams.b_shape.w *
+                                                otherParams.ci1g * kBlockSize * otherParams.b_shape.c0) *
+                                               runInfoV2.b_dtype_bytes +
+                                           REG_SIZE >
+                                       context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
 
-        bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
-                                 filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
-                                 filter_desc->GetDataType() == ge::DT_INT8) ||
-                                (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
-                                 out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 ||
-                                 out_backprop_desc->GetDataType() == ge::DT_INT8);
-        if (disableGroupEnlarge || nonExtendedDtype || IsNeedTilingHkWk(context, runInfoV2, otherParams)) {
-            otherParams.multiple_extend = 1;
-            runInfoV2.real_g = runInfoV2.groups;
-            otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
-            otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
+            bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
+                                     filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
+                                     filter_desc->GetDataType() == ge::DT_INT8) ||
+                                    (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
+                                     out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 ||
+                                     out_backprop_desc->GetDataType() == ge::DT_INT8);
+            if (disableGroupEnlarge || nonExtendedDtype || IsNeedTilingHkWk(context, runInfoV2, otherParams)) {
+                otherParams.multiple_extend = 1;
+                runInfoV2.real_g = runInfoV2.groups;
+                otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
+                otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups,
+                                                      otherParams.b_shape.c0);
+            }
         }
     }
 
@@ -1207,6 +1280,8 @@ bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, O
         !CheckFilterFractalShape(context, runInfoV2, otherParams, co1g)) {
         return false;
     }
+    OP_CHECK_IF(!ValidateFractalZStorageShape(context, runInfoV2, otherParams, opType),
+                OP_LOGW(context->GetNodeName(), "Validate Direct FRACTAL_Z storage shape failed."), return false);
     return true;
 }
 
@@ -1688,7 +1763,8 @@ bool Conv3DBackpropInputParseFunc(gert::TilingContext* context, optiling::OpType
     OP_CHECK_IF(!CalGroups(context, otherParams, runInfoV2), OP_LOGW(op_name, "Calc groups failed."), return false);
     OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGW(op_name, "Calc pads failed."), return false);
     OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGW(op_name, "Modify pad failed."), return false);
-    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGW(op_name, "Calc real_g failed."), return false);
+    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams, opType), OP_LOGW(op_name, "Calc real_g failed."),
+                return false);
     OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGW(op_name, "Scale size too big, not support."),
                 return false);
     return true;

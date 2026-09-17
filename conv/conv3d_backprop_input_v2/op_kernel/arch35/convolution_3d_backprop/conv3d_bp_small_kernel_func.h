@@ -67,10 +67,20 @@ __aicore__ inline void CalcLocalA1Params(uint32_t mStart, uint32_t curM, uint32_
     localPadUp = receptiveStart < 0 ? static_cast<uint32_t>(-receptiveStart) : 0;
 }
 
-__aicore__ inline void LoadDedyL1(const LocalTensor<dedyType>& a1, uint32_t batchIdx, uint32_t localHoStart,
-                                  uint32_t localHoSize)
+__aicore__ inline void LoadDedyL1(const LocalTensor<dedyType>& a1, uint32_t batchIdx, uint32_t nIdx,
+                                  uint32_t localHoStart, uint32_t localHoSize)
 {
     InitL1ZeroDedy(a1);
+    uint32_t coutStart = 0;
+    uint32_t curCout = tiling_->cout;
+    if constexpr (IS_A16W8_FZ) {
+        // A16W8 fractal_z：按物理段加载本段有效 Cout 通道，padding 保持零初始化。
+        coutStart = nIdx * tiling_->coutG;
+        curCout = tiling_->coutG;
+        if (coutStart + curCout > tiling_->cout) {
+            curCout = tiling_->cout - coutStart;
+        }
+    }
     uint32_t srcHoStart = DivCeil(localHoStart, tiling_->strideH);
     uint32_t srcHoEnd = DivCeil(localHoStart + localHoSize, tiling_->strideH);
     srcHoStart = srcHoStart > tiling_->ho ? tiling_->ho : srcHoStart;
@@ -82,14 +92,14 @@ __aicore__ inline void LoadDedyL1(const LocalTensor<dedyType>& a1, uint32_t batc
     Dn2NzParams params;
     params.dnNum = srcHoEnd - srcHoStart;
     params.nValue = tiling_->wo;
-    params.dValue = tiling_->cout;
+    params.dValue = curCout;
     params.srcDnMatrixStride = tiling_->wo;
     params.srcDValue = static_cast<uint32_t>(doHoWo_);
     params.dstNzC0Stride = localHoSize * static_cast<uint32_t>(woExpand_);
     params.dstNzNStride = tiling_->strideW;
     params.dstNzMatrixStride = static_cast<uint32_t>(tiling_->strideH * woExpand_) << tiling_->c0BitsA;
     uint64_t srcOffset = static_cast<uint64_t>(batchIdx) * tiling_->cout * doHoWo_ +
-                         static_cast<uint64_t>(srcHoStart) * tiling_->wo;
+                         static_cast<uint64_t>(coutStart) * doHoWo_ + static_cast<uint64_t>(srcHoStart) * tiling_->wo;
     uint32_t dstHoStart = srcHoStart * tiling_->strideH - localHoStart;
     uint64_t dstOffset = (static_cast<uint64_t>(dstHoStart) * woExpand_) << tiling_->c0BitsA;
     DataCopy(a1[dstOffset], dedyGm_[srcOffset], params);
@@ -104,8 +114,13 @@ __aicore__ inline void LoadWeightL1(const LocalTensor<filterType>& b1, uint32_t 
         DataCopyPadExtParams<filterType> padParams;
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = static_cast<uint64_t>(Convolution3DBackpropFunc::AlignUp16(tiling_->cin)) *
-                                  AlignUp(tiling_->cout, tiling_->c0) * hkWk_ * sizeof(filterType);
+        if constexpr (IS_A16W8_FZ) {
+            // A16W8 fractal_z：整 FZG 一次直搬，段寻址由 LoadBL0 完成。
+            dataCopyParams.blockLen = static_cast<uint64_t>(b1ElemCount_) * sizeof(filterType);
+        } else {
+            dataCopyParams.blockLen = static_cast<uint64_t>(Convolution3DBackpropFunc::AlignUp16(tiling_->cin)) *
+                                      AlignUp(tiling_->cout, tiling_->c0) * hkWk_ * sizeof(filterType);
+        }
         dataCopyParams.srcStride = 0;
         DataCopyPad<filterType>(b1, filterGm_[srcOffset], dataCopyParams, padParams);
     } else {
@@ -145,20 +160,22 @@ __aicore__ inline void LoadBiasScaleL1(uint32_t nStart, uint32_t curN)
     }
     if constexpr (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(), tiling_->singleCoreCin);
+            LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(),
+                                            IS_A16W8_FZ ? tiling_->cin : tiling_->singleCoreCin);
             LoadChannelWiseL1<scale0Type>(scaleL1, scale0Gm_[nStart], curN);
         }
     }
     if constexpr (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (hasSecondOutput_ &&
             tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(), tiling_->singleCoreCin);
+            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(),
+                                             IS_A16W8_FZ ? tiling_->cin : tiling_->singleCoreCin);
             LoadChannelWiseL1<scale1Type>(scale1L1, scale1Gm_[nStart], curN);
         }
     }
 }
 
-__aicore__ inline void LoadBiasToBT(uint32_t curN)
+__aicore__ inline void LoadBiasToBT(uint32_t curN, uint32_t nStart)
 {
     LocalTensor<L0cT> biasBT(TPosition::C2, 0, Convolution3DBackpropFunc::AlignUp16(curN));
     LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), GetBiasL1ElemCount());
@@ -169,7 +186,7 @@ __aicore__ inline void LoadBiasToBT(uint32_t curN)
         dataCopyParams.fixShiftVal = SHIFT_VALUE_LEN - static_cast<uint8_t>(tiling_->fixedShiftVal);
     }
 #endif
-    DataCopy(biasBT, biasL1, dataCopyParams);
+    DataCopy(biasBT, biasL1[nStart], dataCopyParams);
 }
 
 __aicore__ inline void LoadAL0(LocalTensor<dedyType>& a0, const LocalTensor<dedyType>& a1, uint32_t localHoSize,
@@ -222,11 +239,18 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
     params.ifTranspose = 0;
     params.mStep = blockBaseN;
     params.dstStride = blockBaseN;
+
+    uint32_t srcBlockBaseN = blockBaseN;
     if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
-        params.srcStride = static_cast<int32_t>(blockBaseN);
+        if constexpr (IS_A16W8_FZ) {
+            // 源侧按物理宽 CinPhys/16 寻址，读取量按尾段有效宽 curNAlign。
+            srcBlockBaseN = segCin_ >> 4;
+        }
+        params.srcStride = static_cast<int32_t>(srcBlockBaseN);
     } else {
         params.srcStride = -static_cast<int32_t>(blockBaseN);
     }
+
     uint32_t hkWk = static_cast<uint32_t>(hkWk_);
     uint32_t kStartPos = kOff >> tiling_->c0BitsB;
     uint32_t kEndPos = kStartPos + DivCeil(curK, tiling_->c0);
@@ -241,7 +265,7 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
         params.kStep = kStepEnd - kStepStart;
         params.kStartPosition = curHWkStart;
         if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
-            params.mStartPosition = (kStepStart - curHWkStart) * blockBaseN;
+            params.mStartPosition = (kStepStart - curHWkStart) * srcBlockBaseN;
         } else {
             params.mStartPosition = (curHWkEnd - 1 - kStepStart) * blockBaseN;
         }
@@ -315,8 +339,10 @@ __aicore__ inline void CopyOut(const LocalTensor<L0cT>& c0, uint32_t batchIdx, u
     uint64_t dstOffset = batchOffset + static_cast<uint64_t>(nStart) * diHiWi_ + mStart;
     if (GetScaleFormat(scale0Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         tiling_->quantMode0 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(), tiling_->singleCoreCin);
-        Fixpipe<yType, L0cT, CFG_COLUMN_MAJOR>(yGm_[dstOffset], c0, scaleL1, params);
+        // A16W8 fractal_z：scale 全量 Cin 驻留，按段 nStart 切片。
+        LocalTensor<scale0Type> scaleL1(TPosition::A1, GetScale0L1OffBytes(),
+                                        IS_A16W8_FZ ? tiling_->cin : tiling_->singleCoreCin);
+        Fixpipe<yType, L0cT, CFG_COLUMN_MAJOR>(yGm_[dstOffset], c0, scaleL1[nStart], params);
     } else {
         Fixpipe<yType, L0cT, CFG_COLUMN_MAJOR>(yGm_[dstOffset], c0, params);
     }
@@ -329,8 +355,9 @@ __aicore__ inline void CopyOut(const LocalTensor<L0cT>& c0, uint32_t batchIdx, u
 #endif
         if (GetScaleFormat(scale1Format) != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
             tiling_->quantMode1 == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(), tiling_->singleCoreCin);
-            Fixpipe<y1Type, L0cT, CFG_COLUMN_MAJOR>(y1Gm_[dstOffset], c0, scale1L1, params1);
+            LocalTensor<scale1Type> scale1L1(TPosition::A1, GetScale1L1OffBytes(),
+                                             IS_A16W8_FZ ? tiling_->cin : tiling_->singleCoreCin);
+            Fixpipe<y1Type, L0cT, CFG_COLUMN_MAJOR>(y1Gm_[dstOffset], c0, scale1L1[nStart], params1);
         } else {
             Fixpipe<y1Type, L0cT, CFG_COLUMN_MAJOR>(y1Gm_[dstOffset], c0, params1);
         }

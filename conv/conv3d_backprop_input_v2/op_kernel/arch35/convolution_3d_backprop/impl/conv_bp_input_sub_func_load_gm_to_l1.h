@@ -379,19 +379,20 @@ __aicore__ inline void LoadGmDataToB1ForFz(Intf* self, uint32_t curCinSize, uint
                                            uint64_t out2B1SrcAddrOffset,
                                            const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
-    DataCopyPadExtParams<typename Intf::SrcBT> padParams;
-    DataCopyExtParams dataCopyParams;
+    // Normal 模式连续写入 B1，其余搬运参数保持为 0。
+    DataCopyPadExtParams<typename Intf::SrcBT> padParams{};
+    DataCopyExtParams dataCopyParams{};
+    const uint64_t physicalCinG = AlignUp16(self->ctx.tiling_->cinG);
+    const uint64_t alignedCout = AlignUp(curCoutSize, self->ctx.tiling_->c0);
     if (self->ctx.tiling_->cinG == curCinSize) {
         dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = AlignUp16(curCinSize) * AlignUp(curCoutSize, self->ctx.tiling_->c0) *
-                                  self->ctx.tiling_->hkWk * sizeof(typename Intf::SrcBT);
+        dataCopyParams.blockLen = physicalCinG * alignedCout * self->ctx.tiling_->hkWk * sizeof(typename Intf::SrcBT);
         dataCopyParams.srcStride = 0;
     } else {
-        dataCopyParams.blockCount = DivCeil(AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.tiling_->hkWk,
-                                            self->ctx.tiling_->c0);
+        dataCopyParams.blockCount = DivCeil(alignedCout * self->ctx.tiling_->hkWk, self->ctx.tiling_->c0);
         dataCopyParams.blockLen = static_cast<uint64_t>(AlignUp16(curCinSize)) * self->ctx.tiling_->c0 *
                                   sizeof(typename Intf::SrcBT);
-        dataCopyParams.srcStride = (self->ctx.tiling_->cinG - AlignUp16(curCinSize)) * self->ctx.tiling_->c0 *
+        dataCopyParams.srcStride = (physicalCinG - AlignUp16(curCinSize)) * self->ctx.tiling_->c0 *
                                    sizeof(typename Intf::SrcBT);
     }
     DataCopyPad<typename Intf::SrcBT>(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dataCopyParams,
@@ -440,6 +441,21 @@ __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkI
     // 1982 kernel gm shape: (cout, cin, dk, hk, wk)
     // because l1 not cut hk and wk, so,
     // srcAddrOffset = coutIdx * coutStride + cinIdx * cinStride + dkIdx *  dkStride
+    // A16W8 fractal_z: only INT8 filter instantiations compile the DataCopyPad branch.
+    if constexpr (std::is_same<typename Intf::SrcBT, int8_t>::value) {
+        if (self->ctx.tiling_->loadB1FractalZ == 1) {
+            // A16W8: the preceding TransData has already transposed C/N in-group,
+            // GM format [N1][DHW][C1][C0][N0]
+            const uint64_t physicalCinG = AlignUp16(self->ctx.tiling_->cinG);
+            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->hkWk * physicalCinG +
+                                           (self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
+                                               physicalCinG * self->ctx.tiling_->c0 +
+                                           curCinIdx * self->ctx.tiling_->c0;
+            LoadGmDataToB1ForFz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
+            self->ctx.inQueL1B_.EnQue(useB1Buf);
+            return;
+        }
+    }
     if (self->ctx.tiling_->enableVecTrans) {
         uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * AlignUp16(self->ctx.tiling_->cinG) *
                                            self->ctx.tiling_->dkHkWk +
@@ -491,7 +507,7 @@ __aicore__ inline void LoadToB1(Intf* self, uint64_t kIdx, uint32_t curDkIdx, bo
         return;
     }
 
-    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+    if (EnableVecGroupEnlarge(self)) {
         if ASCEND_IS_AIV_SCALAR {
             GroupTransdataWeight<Intf>(self, kIdx, curDkIdx);
         }

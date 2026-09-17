@@ -41,6 +41,12 @@ constexpr uint32_t FP32_DATA_SIZE = 4;
 constexpr int32_t FMAP_H_NUM = 2;
 constexpr int32_t BUFFER_NUM_DB = 2;
 
+// DataCopyPad 硬件约束
+// 详情见：https://asc.gitcode.com/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_load/DataCopyPad_GMToL1.html
+constexpr uint64_t MAX_DATA_COPY_BLOCK_COUNT = 4095;  // blockCount: 2^12 - 1
+constexpr uint64_t MAX_DATA_COPY_BLOCK_LEN = 2097151; // blockLen(bytes): 2^21 - 1
+constexpr uint64_t MAX_DATA_COPY_SRC_STRIDE = (1ULL << 40) - 1;
+
 const size_t Y_INDEX = 0;
 const size_t INPUT_SIZE_INDEX = 0;
 const size_t FILTER_INDEX = 1;
@@ -109,6 +115,7 @@ protected:
     ge::graphStatus GetShapeAttrsInfoBase();
     ge::graphStatus SetCoreMemSizeInfo();
     bool GetShapeFormatInfo();
+    bool IsLoadB1FractalZ() const;
     bool AnalyzeDtype() const;
     ge::graphStatus GetPublicShapeAttrsInfo();
     void SetFuseTilingRunInfo();
@@ -224,6 +231,8 @@ private:
     uint32_t GetLoadB1Condition();
     uint32_t GetLoadB2Condition(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     uint32_t GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params);
+    bool ValidateLoadB1Copy(const L1TilingParams& l1Params, const L0TilingParams& l0Params,
+                            uint64_t& bMatrixByteSize) const;
     bool AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
                           const ge::DataType filterDtype, const ge::DataType yDtype) const;
     DtypeFlags ComputeDtypeFlags(const ge::DataType outputBackpropDtype, const ge::DataType filterDtype,

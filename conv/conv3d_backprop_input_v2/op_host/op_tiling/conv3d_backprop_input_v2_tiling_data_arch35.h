@@ -110,7 +110,9 @@ TILING_DATA_FIELD_DEF(uint8_t, fixedShiftVal);
 TILING_DATA_FIELD_DEF(uint8_t, dualOutput);
 TILING_DATA_FIELD_DEF(uint8_t, enRelu1);
 TILING_DATA_FIELD_DEF(uint8_t, quantMode1);
-TILING_DATA_FIELD_DEF_ARR(uint8_t, 5, reserved);
+// Load B1 fractal_z flag
+TILING_DATA_FIELD_DEF(uint8_t, loadB1FractalZ);
+TILING_DATA_FIELD_DEF_ARR(uint8_t, 4, reserved);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Conv3DBackpropInputV2, Conv3DBackpropInputArch35TilingData);

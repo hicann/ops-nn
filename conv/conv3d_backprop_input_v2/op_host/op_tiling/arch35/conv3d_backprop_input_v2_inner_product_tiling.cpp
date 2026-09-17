@@ -393,6 +393,15 @@ bool Conv3DDXV2InnerProductTiling::GetShapeFormatInfo()
     return true;
 }
 
+bool Conv3DDXV2InnerProductTiling::IsLoadB1FractalZ() const
+{
+    // A16W8 fractal_z
+    const bool isA16W8 = dtypeByteL0a_ == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
+                         dtypeByteL0b_ == ge::GetSizeByDataType(ge::DT_INT8);
+    return IsSocVersionFuse(context_) && isA16W8 &&
+           static_cast<ge::Format>(ge::GetPrimaryFormat(runInfo_.filterFormat)) == ge::FORMAT_FRACTAL_Z;
+}
+
 bool Conv3DDXV2InnerProductTiling::AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
                                                     const ge::DataType filterDtype, const ge::DataType yDtype) const
 {
@@ -789,8 +798,10 @@ uint32_t Conv3DDXV2InnerProductTiling::GetLoadB1Condition()
 uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2Condition(const L1TilingParams& l1Params,
                                                           const L0TilingParams& l0Params)
 {
-    if (IsSocVersionFuse(context_) && runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z && runInfo_.groups == 1) {
-        return B2_NO_TRANSPOSE_NO_REVERSE; // fractal_z格式不转置不逆序，通过fussion pass做
+    if (IsSocVersionFuse(context_) &&
+        static_cast<ge::Format>(ge::GetPrimaryFormat(runInfo_.filterFormat)) == ge::FORMAT_FRACTAL_Z) {
+        // A16W8场景支持前置转置逆序(fussion pass)，格式为fractal_z
+        return B2_NO_TRANSPOSE_NO_REVERSE;
     }
 
     a1DbFlag_ = l1Params.al1Pbuffer == DB_ON;
@@ -866,6 +877,7 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(const CoreTilingParams& c
     dxt.set_iterateOrder(l1Params.iterateOrder);
     dxt.set_enableVecTrans(tilingRunInfo_.enableVecTransFlag);
     dxt.set_enableFullLoad(tilingRunInfo_.enableFullLoadTiling);
+    dxt.set_loadB1FractalZ(IsLoadB1FractalZ());
     if (tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK || runInfo_.stride_d > runInfo_.kernel_d) {
         dxt.set_initOutputFlag(runInfo_.initOutputFlag);
     }
@@ -902,6 +914,10 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(const CoreTilingParams& corePar
 
 bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
 {
+    if (IsLoadB1FractalZ()) {
+        OP_LOGD(context_->GetNodeName(), "Load B1 FRACTAL_Z skip knowledge tiling.");
+        return false;
+    }
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = GetKnowledgeTiling();
     if (tuningTiling == nullptr) {
         return false;
@@ -915,6 +931,8 @@ bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
     TranslateRunInfoData();
     TranslateTilingData(tunerTiling);
     TranslateTilingRunInfo(tunerTiling);
+    // repo 不含 fractal_z 直搬场景，标志清零防残留。
+    tilingData_.set_loadB1FractalZ(0);
     if (tilingData_.get_enlarge() == 1) {
         groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     } else {
@@ -1265,6 +1283,42 @@ void Conv3DDXV2InnerProductTiling::CalcBL1Size(const L1TilingParams& l1Params, c
     bL1Size = l1Params.bl1Pbuffer * dtypeByteL0b_ * l0Params.baseN * copyLine * tilingRunInfo_.lenHkWkC0;
 }
 
+bool Conv3DDXV2InnerProductTiling::ValidateLoadB1Copy(const L1TilingParams& l1Params, const L0TilingParams& l0Params,
+                                                      uint64_t& bMatrixByteSize) const
+{
+    constexpr uint64_t dataCopyAlignBytes = ONE_BLOCK_SIZE;
+
+    const uint64_t cinG = static_cast<uint64_t>(runInfo_.dedx_cin_g);
+    const uint64_t c0 = static_cast<uint64_t>(blockSize_);
+    const uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
+    const uint64_t plannedKbL1Size = static_cast<uint64_t>(l1Params.stepKb) * l0Params.baseK;
+
+    bMatrixByteSize = static_cast<uint64_t>(l0Params.baseN) * plannedKbL1Size * dtypeByteL0b_;
+    if (bMatrixByteSize > UINT32_MAX) {
+        return false;
+    }
+
+    const uint64_t cinFractalZG = Ops::Base::CeilAlign(cinG, static_cast<uint64_t>(BLOCK_CUBE));
+    const uint64_t coutFractalZG = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedy_cout_g), c0);
+    const uint64_t maxCout = std::min(plannedKbL1Size / kernelHW, coutFractalZG);
+    const uint64_t alignedMaxCout = Ops::Base::CeilAlign(maxCout, c0);
+    const uint64_t blockCount = Ops::Base::CeilDiv(alignedMaxCout * kernelHW, c0);
+    const uint64_t blockLen = Ops::Base::CeilAlign(std::min(static_cast<uint64_t>(l0Params.baseN), cinG),
+                                                   static_cast<uint64_t>(BLOCK_CUBE)) *
+                              c0 * dtypeByteL0b_;
+    const uint64_t srcStride = (cinFractalZG - static_cast<uint64_t>(BLOCK_CUBE)) * c0 * dtypeByteL0b_;
+    const uint64_t copyDstBytes = blockCount * Ops::Base::CeilAlign(blockLen, dataCopyAlignBytes);
+    if (blockCount > MAX_DATA_COPY_BLOCK_COUNT || blockLen > MAX_DATA_COPY_BLOCK_LEN ||
+        srcStride > MAX_DATA_COPY_SRC_STRIDE || copyDstBytes > bMatrixByteSize) {
+        OP_LOGD(context_->GetNodeName(),
+                "LoadB1FractalZ DataCopyPad invalid: blockCount=%lu, blockLen=%lu, srcStride=%lu, "
+                "copyDstBytes=%lu, bMatrixByteSize=%lu",
+                blockCount, blockLen, srcStride, copyDstBytes, bMatrixByteSize);
+        return false;
+    }
+    return true;
+}
+
 bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     if (!IsHkWkAligned(l1Params, l0Params)) {
@@ -1272,7 +1326,15 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     }
 
     uint64_t bL1Size = 0;
-    CalcBL1Size(l1Params, l0Params, bL1Size);
+    if (IsLoadB1FractalZ()) {
+        uint64_t bMatrixByteSize = 0;
+        if (!ValidateLoadB1Copy(l1Params, l0Params, bMatrixByteSize)) {
+            return false;
+        }
+        bL1Size = bMatrixByteSize * l1Params.bl1Pbuffer;
+    } else {
+        CalcBL1Size(l1Params, l0Params, bL1Size);
+    }
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
     if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
         kernelHW = runInfo_.kernel_w;
@@ -1280,12 +1342,12 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
         kernelHW = ONE_U64;
     }
     bool isL1SplitHk = tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK;
-    uint64_t coutNum = std::max(l1Params.stepKa * l0Params.baseK / kernelHW, ONE_U64);
+    const uint64_t coutNum = std::max(static_cast<uint64_t>(l1Params.stepKa) * l0Params.baseK / kernelHW, ONE_U64);
     uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l0Params.baseM, isL1SplitHk)) * runInfo_.dedy_w *
                           runInfo_.stride_w * coutNum;
     if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
-        a1PixelNum = BASIC_BLOCK_SIZE_256 *
-                     coutNum; // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
+        // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
+        a1PixelNum = BASIC_BLOCK_SIZE_256 * coutNum;
     }
     uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
 
@@ -1293,14 +1355,15 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     uint64_t scaleSize = 0;
     const uint32_t vectorScaleCount = GetVectorScaleCount();
     if (vectorScaleCount != 0U) {
-        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * l0Params.baseN * vectorScaleCount;
+        scaleSize = Ops::Base::CeilAlign(static_cast<uint64_t>(ge::GetSizeByDataType(ge::DT_INT64)) * l0Params.baseN,
+                                         static_cast<uint64_t>(ONE_BLOCK_SIZE)) *
+                    vectorScaleCount;
     }
     if (hasBiasFlag_) {
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
-        // biasL1 size 需按 64B 对齐：kernel 侧 InitBiasTque 按 64B 分配（L1→BT DataCopy 按 64B 粒度）。
-        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, BYTE_64);
+        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, static_cast<uint64_t>(BYTE_64));
     }
     // 移除 IsSocVersionFuse 条件，统一在所有场景下计算
     return aL1Size + bL1Size + biasSize + scaleSize < platformInfo_.l1_size;
