@@ -226,12 +226,14 @@ int TestSmallCase(int32_t deviceId, aclrtStream& stream, int64_t M, int64_t N, i
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
+    constexpr int64_t kMaxPrintedElements = 10;
     LOG_PRINT("Result: ");
-    for (int64_t i = 0; i < size && i < 10; i++) {
+    for (int64_t i = 0; i < size && i < kMaxPrintedElements; i++) {
         LOG_PRINT("[%ld]=%u ", i, resultData[i]);
     }
-    if (size > 10)
+    if (size > kMaxPrintedElements) {
         LOG_PRINT("...");
+    }
     LOG_PRINT("\nTest PASSED!\n");
 
     return ACL_SUCCESS;

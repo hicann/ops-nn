@@ -12,10 +12,11 @@
  * \file adaptive_sliding_window_tiling.cpp
  * \brief
  */
+#include "adaptive_sliding_window_tiling.h"
+
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "error_util.h"
-#include "adaptive_sliding_window_tiling.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_apt_tiling_key.h"
 #include "base_block_calculator.h"

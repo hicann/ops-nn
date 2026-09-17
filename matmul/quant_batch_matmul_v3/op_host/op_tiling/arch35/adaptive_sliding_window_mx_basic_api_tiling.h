@@ -16,6 +16,10 @@
 
 #include <cstdint>
 
+#include "exe_graph/runtime/tiling_context.h"
+#include "graph/types.h"
+#include "platform/soc_spec.h"
+
 #include "adaptive_sliding_window_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 

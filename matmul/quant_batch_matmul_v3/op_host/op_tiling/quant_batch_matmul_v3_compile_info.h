@@ -14,6 +14,10 @@
  */
 #ifndef __OP_HOST_QUANT_BATCH_MATMUL_V3_COMPILE_INFO_H__
 #define __OP_HOST_QUANT_BATCH_MATMUL_V3_COMPILE_INFO_H__
+
+#include <cstdint>
+#include <string>
+
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/soc_spec.h"
 
