@@ -55,6 +55,7 @@ public:
             .ExtendCfgInfo("opFile.value", "inplace_index_fill_apt");
 
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
     }
 };
 

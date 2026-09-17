@@ -1,0 +1,405 @@
+{
+    "op_type": "GatherNd",
+    "op_list": [
+      {
+        "bin_filename": "GatherNd_d4318983c2360da53c65e8063eabe824",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_d4318983c2360da53c65e8063eabt720",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_230263bf16a5a08da2a0f48edaea5795",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_230263bf16a5a08da2a0f48edaea5931",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_44d37a79883319362dc6757137315d26",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_44d37a79883319362dc6757137314w25",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_d92d896f5a79d829e6f020eb6f3f6e05",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GatherNd_d92d896f5a79d829e6f020eb6f3f6525",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "negative_index_support",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

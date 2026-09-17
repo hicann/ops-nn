@@ -24,6 +24,7 @@
 #include "compliant_node_builder.h"
 #include "common/inc/error_util.h"
 #include "platform/platform_info.h"
+#include "common/inc/op_host/npu_arch_util.h"
 #include "ge/ge_utils.h"
 #include "ge/es_graph_builder.h"
 #include "version/ge-compiler_version.h"
@@ -36,7 +37,6 @@ using namespace fusion;
 namespace OPS {
 namespace NN {
 namespace {
-
 const std::string PASS_NAME = "GatherToGatherV2FusionPass";
 const int64_t CAPTURE_IDX_OUTPUT = 0l;
 constexpr int32_t GE_COMPILER_VERSION_9_0 = 90000000;
@@ -50,7 +50,7 @@ bool IsTargetPlatform()
     OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
                false, PASS_NAME.c_str(), "Get platformInfo failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
-    bool isSupported = (soc == "Ascend950" || soc == "MC62");
+    bool isSupported = (soc == "MC62" || soc == "Ascend950" || ops::IsDav3510Arch());
     if (!isSupported) {
         OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported.", soc.c_str());
         return false;

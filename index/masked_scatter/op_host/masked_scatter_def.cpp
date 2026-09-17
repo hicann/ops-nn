@@ -96,6 +96,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "masked_scatter_apt");
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
 
         OpAICoreConfig aicore_config_910B;
         aicore_config_910B.DynamicCompileStaticFlag(true)

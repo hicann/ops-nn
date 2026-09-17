@@ -1,0 +1,493 @@
+{
+    "op_type": "ScatterUpdate",
+    "op_list": [
+      {
+        "bin_filename": "ScatterUpdate_af73979639cedf6a56b77932ce5d26b6",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_40a17d59649f2152504e77f5aa9c3bdb",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_40ab8e237639e3d59531596577dd7cce",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_a438a20ae7b53fee52ad749b6eb2d4bc",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_505fe7a4ead48684de27a9edd2dcdf35",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_845bdcd8aa42597f2bd3428c633241c7",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_f9803d466881adf390f2bb9734e7fbc2",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "ScatterUpdate_5421a41e19da4934cc4dab1288514f4c",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "updates",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic",
+            "dtype_match_mode": "DtypeByte"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      }
+    ]
+  }

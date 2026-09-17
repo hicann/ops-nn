@@ -15,7 +15,6 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-
 class IndexFillD : public OpDef {
 public:
     const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
@@ -39,6 +38,7 @@ public:
             .ExtendCfgInfo("opFile.value", "index_fill_d_apt");
 
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
     }
 };
 

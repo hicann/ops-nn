@@ -17,6 +17,7 @@
 #include "es_nn_ops.h"
 #include "es_math_ops.h"
 #include "platform/platform_info.h"
+#include "common/inc/op_host/npu_arch_util.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
 
@@ -77,7 +78,7 @@ bool IsTargetPlatform()
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) != SUCCESS,
         false, kPassName.c_str(), "Get platform_info failed.");
     const std::string soc = platform_info.str_info.short_soc_version;
-    bool is_platform950 = (soc == "Ascend950");
+    bool is_platform950 = (soc == "Ascend950" || ops::IsDav3510Arch());
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s", soc.c_str());
     if (!is_platform950) {
         OPS_LOG_D(kPassName.c_str(), "Platform is not support, only work on Ascend950.");

@@ -25,6 +25,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/ge_utils.h"
 #include "platform/platform_info.h"
+#include "common/inc/op_host/npu_arch_util.h"
 #include "version/ge-compiler_version.h"
 #include "acl/acl_rt.h"
 
@@ -109,7 +110,7 @@ bool IsSupportSoc()
         return false;
     }
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
-    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc) {
+    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc || ops::IsDav3510Arch()) {
         OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
         return false;
     }

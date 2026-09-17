@@ -84,6 +84,7 @@ public:
             .PrecisionReduceFlag(true);
 
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
     }
 };
 

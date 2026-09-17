@@ -16,7 +16,6 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-
 static const int64_t AXIS_DEFAULT = 0;
 
 static const std::vector<ge::DataType> varDataType = {
@@ -61,6 +60,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "scatter_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 

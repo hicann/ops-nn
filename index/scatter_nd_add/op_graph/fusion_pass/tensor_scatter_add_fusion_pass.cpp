@@ -28,6 +28,7 @@
 #include "compliant_node_builder.h"
 #include "common/inc/error_util.h"
 #include "platform/platform_info.h"
+#include "common/inc/op_host/npu_arch_util.h"
 #include "ge/ge_utils.h"
 #include "ge/es_graph_builder.h"
 #include <set>
@@ -39,7 +40,6 @@ using namespace fusion;
 namespace OPS {
 namespace NN {
 namespace {
-
 const std::string PASS_NAME = "TensorScatterAddFusionPass";
 const int64_t CAPTURE_IDX_OUTPUT = 0l;
 const std::set<std::string> SUPPORTED_OP_TYPES = {"TensorScatterAdd", "ScatterNonAliasingAdd"};
@@ -59,7 +59,7 @@ static bool IsAscend950()
         OPS_LOG_D(PASS_NAME.c_str(), "Get platformInfo failed.");
         return false;
     }
-    return platformInfo.str_info.short_soc_version == "Ascend950";
+    return platformInfo.str_info.short_soc_version == "Ascend950" || ops::IsDav3510Arch();
 }
 
 static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,

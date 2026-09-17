@@ -35,6 +35,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/ge_utils.h"
 #include "platform/platform_info.h"
+#include "common/inc/op_host/npu_arch_util.h"
 
 using namespace ge;
 using namespace fe;
@@ -76,7 +77,7 @@ inline bool IsRegbasePlatform()
     OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS, false,
                kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
-    bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62CM12A");
+    bool isRegbasePlatform = (socVersion == "MC62CM12A" || socVersion == "Ascend950" || ops::IsDav3510Arch());
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
     return isRegbasePlatform;
 }

@@ -86,6 +86,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "gather_elements_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
 
         OpAICoreConfig aicoreConfig910b;
         aicoreConfig910b.DynamicCompileStaticFlag(true)

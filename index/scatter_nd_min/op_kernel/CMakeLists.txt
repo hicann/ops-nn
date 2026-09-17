@@ -10,6 +10,6 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/scatter_nd_min.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     OPTIONS "--cce-no-dcache-flush"
 )

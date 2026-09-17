@@ -84,6 +84,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "scatter_nd_update_apt");
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
 
         OpAICoreConfig aicoreConfigArch22;
         aicoreConfigArch22.Input("var")

@@ -1,0 +1,1165 @@
+{
+    "op_type": "InplaceIndexFill",
+    "op_list": [
+      {
+        "bin_filename": "InplaceIndexFill_float32int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_float32int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_float16int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_float16int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_bf16int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_bfloat16int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int32int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int32int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int64int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int64int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_boolint32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_boolint64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int8int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int8int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_uint8int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_uint8int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int16int32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_int16int64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_doubleint32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "InplaceIndexFill_doubleint64",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "value",
+            "index": 2,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "double",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      }
+    ]
+}

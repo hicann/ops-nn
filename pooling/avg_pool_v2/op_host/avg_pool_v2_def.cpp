@@ -15,7 +15,6 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-
 class AvgPoolV2 : public OpDef {
 public:
     const std::vector<ge::DataType> AvgPoolV2XDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
@@ -53,6 +52,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "avg_pool_v2_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
+        this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };
 
