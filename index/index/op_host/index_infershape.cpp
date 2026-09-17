@@ -48,6 +48,9 @@ static graphStatus CanBroadcast(const string& name, const vector<vector<int64_t>
             int64_t dim_index = static_cast<int64_t>(shape.size()) - static_cast<int64_t>(i) - 1;
             if (dim_index >= 0) {
                 int64_t dim = shape[dim_index];
+                if (dim == UNKNOWN_DIM) {
+                    continue;
+                }
                 if (dim <= 0) {
                     OP_LOGE_FOR_INVALID_VALUE(name, "dim", std::to_string(dim).c_str(), "> 0");
                     return GRAPH_FAILED;
@@ -77,15 +80,23 @@ static vector<int64_t> ComputeBroadcastShape(const vector<vector<int64_t>>& shap
 
     for (size_t i = 0; i < max_dims; ++i) {
         int64_t current_dim = 1;
+        bool has_unknown_dim = false;
         for (const auto& shape : shapes) {
             // 计算当前维度在原始形状中的索引（从后往前）
             int64_t dim_index = static_cast<int64_t>(shape.size()) - static_cast<int64_t>(i) - 1;
             if (dim_index >= 0) {
                 int64_t dim = shape[dim_index];
+                if (dim == UNKNOWN_DIM) {
+                    has_unknown_dim = true;
+                    continue;
+                }
                 current_dim = max(current_dim, dim);
             }
         }
 
+        if (has_unknown_dim && current_dim == 1) {
+            current_dim = UNKNOWN_DIM;
+        }
         broadcast_shape.push_back(current_dim);
     }
     // 反转得到正确的维度顺序（因为我们是从后往前处理的）
@@ -198,13 +209,18 @@ static string VectorToString(const vector<int64_t>& vec)
     return ss.str();
 }
 
-// 计算广播后的目标形状
 static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "index infershape begins");
     auto xTensor = context->GetInputTensor(IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xTensor);
     auto xStorageShape = xTensor->GetStorageShape();
+    auto yShape = context->GetOutputShape(IDX_Y);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+    if (Ops::Base::IsUnknownRank(xStorageShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
+    }
     size_t xDimNum = xStorageShape.GetDimNum();
     vector<int64_t> xShape(xDimNum);
     for (size_t i = 0; i < xDimNum; i++) {
@@ -215,8 +231,14 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
     auto sizes_tensor = context->GetInputTensor(IDX_SIZES);
     OP_CHECK_NULL_WITH_CONTEXT(context, sizes_tensor);
     const int64_t* indexed_sizes = sizes_tensor->GetData<int64_t>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, indexed_sizes);
     vector<int64_t> indexed_sizes_vec(xDimNum, 0);
     int64_t indexed_sizes_num = sizes_tensor->GetShapeSize();
+    OP_CHECK_IF(
+        (indexed_sizes_num > static_cast<int64_t>(xDimNum)),
+        OP_LOGE(context->GetNodeName(), "The element num of indexedSizes is %ld, which is larger than rank of x %zu.",
+                indexed_sizes_num, xDimNum),
+        return ge::GRAPH_FAILED);
     int indicesIdx = IDX_INDICES_START;
     vector<vector<int64_t>> indicesShapeList;
     for (int64_t i = 0; i < indexed_sizes_num; i++) {
@@ -226,6 +248,10 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
             indicesIdx++;
             OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensor);
             auto indicesStorageShape = indicesTensor->GetStorageShape();
+            if (Ops::Base::IsUnknownRank(indicesStorageShape)) {
+                Ops::Base::SetUnknownRank(*yShape);
+                return ge::GRAPH_SUCCESS;
+            }
             size_t indicesDimNum = indicesStorageShape.GetDimNum();
             vector<int64_t> indicesShape(indicesDimNum);
             for (size_t j = 0; j < indicesDimNum; j++) {
@@ -243,8 +269,6 @@ static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
     auto outputShape = ComputeOutputShape(xShape, indexed_sizes_vec, broadShapeList[0]);
     OP_LOGD(context->GetNodeName(), "calculate outputShape = %s", VectorToString(outputShape).c_str());
 
-    auto yShape = context->GetOutputShape(IDX_Y);
-    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     yShape->SetDimNum(static_cast<size_t>(outputShape.size()));
     for (size_t i = 0; i < outputShape.size(); i++) {
         yShape->SetDim(i, outputShape[i]);
