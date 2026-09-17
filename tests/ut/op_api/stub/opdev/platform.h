@@ -30,6 +30,7 @@ enum class SocVersion {
     ASCEND610LITE,
     KIRINX90,
     KIRIN9030,
+    ASCEND5162A,
     RESERVED_VERSION = 99999
 };
 
@@ -61,9 +62,9 @@ class PlatformInfo {
     friend class PlatformThreadLockCtx;
 
 public:
-    PlatformInfo(){};
+    PlatformInfo() {};
 
-    PlatformInfo(int32_t deviceId) : deviceId_(deviceId){};
+    PlatformInfo(int32_t deviceId) : deviceId_(deviceId) {};
 
     SocVersion GetSocVersion() const;
 
@@ -120,7 +121,7 @@ public:
     ~SocVersionManager();
 
 private:
-    SocVersion originalVersion_; //保存原始的Soc版本
+    SocVersion originalVersion_; // 保存原始的Soc版本
 
     SocVersionManager(const SocVersionManager&) = delete;
     SocVersionManager(const SocVersionManager&&) = delete;
@@ -137,7 +138,7 @@ public:
     ~NpuArchManager();
 
 private:
-    NpuArch originalArch_; //保存原始的npu arch
+    NpuArch originalArch_; // 保存原始的npu arch
 
     NpuArchManager(const NpuArchManager&) = delete;
     NpuArchManager(const NpuArchManager&&) = delete;

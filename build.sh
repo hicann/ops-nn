@@ -11,7 +11,7 @@
 set -e
 RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph" "tfplugin")
 
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62")
+SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "ascend910b" "ascend910" "kirinx90" "kirin9030" "mc62" "ascend5162a")
 declare -A SOC_TO_ARCH
 SOC_TO_ARCH=(["ascend310b"]="3002" ["ascend310p"]="2002" ["ascend910_93"]="2201" ["ascend910b"]="2201"
             ["ascend950"]="3510" ["ascend350"]="3510" ["ascend910"]="1001" ["mc62"]="5102")
@@ -396,7 +396,7 @@ usage() {
   echo "                     Example: --ccache=off to disable ccache"
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b"
-	echo "    --soc supported prefixes: [ascend910b ascend910_93 ascend950 ascend350 ascend310p kirinx90 kirin9030 mc62], case-insensitive"
+	echo "    --soc supported prefixes: [ascend910b ascend910_93 ascend950 ascend350 ascend310p kirinx90 kirin9030 mc62 ascend5162a], case-insensitive"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
   echo "    --tfplugin build optf_plugin_nn.so"
   echo "    --onnxplugin build oponnx_plugin_nn.so"
