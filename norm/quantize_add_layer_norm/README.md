@@ -95,7 +95,7 @@
       <td>scales</td>
       <td>输入</td>
       <td>表示量化的缩放因子，对应公式中的`scales`。shape与`gamma`的shape保持一致。</td>
-      <td>FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
