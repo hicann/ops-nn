@@ -170,7 +170,7 @@ __aicore__ inline void ComputeDINew(int64_t gmOffGi, int64_t bRows, int64_t hLen
                                     int64_t blkAligned)
 {
     SyncM2toV();
-    Duplicate(this->ubGate, 1.0f, blkAligned);
+    Duplicate(this->ubGate, FLOAT_ONE, blkAligned);
     Sub(this->ubTmp, this->ubGate, this->ubUpdate, blkAligned);
     Mul(this->ubTmp2, this->ubGradH, this->ubTmp, blkAligned);
     Mul(this->ubTmp, this->ubNew, this->ubNew, blkAligned);
@@ -206,8 +206,10 @@ __aicore__ inline void ComputeDUpdate(int64_t gmOffGi, int64_t bRows, int64_t hL
     Sub(this->ubTmp2, this->ubGate, this->ubUpdate, blkAligned);
     Mul(this->ubTmp3, this->ubTmp, this->ubTmp2, blkAligned);
     SyncVtoM3();
-    CopyOutRow(this->workGm.dGiGm, this->ubTmp3, gmOffGi + H, 0, bRows, hLen, gmGateStride, blkAligned);
-    CopyOutRow(this->workGm.dGhGm, this->ubTmp3, gmOffGi + H, 0, bRows, hLen, gmGateStride, blkAligned);
+    CopyOutRow(this->workGm.dGiGm, this->ubTmp3, gmOffGi + GATE_IDX_UPDATE * H, 0, bRows, hLen, gmGateStride,
+               blkAligned);
+    CopyOutRow(this->workGm.dGhGm, this->ubTmp3, gmOffGi + GATE_IDX_UPDATE * H, 0, bRows, hLen, gmGateStride,
+               blkAligned);
     SyncM3toV();
 }
 
@@ -266,7 +268,7 @@ __aicore__ inline void StoreHPrevHTile(int64_t tIdx, int64_t gateIdx, int64_t mS
     int64_t hAligned = ((hLen + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
     int64_t blkAligned = bRows * hAligned;
 
-    Duplicate(this->ubTmp2, 0.0f, blkAligned);
+    Duplicate(this->ubTmp2, FLOAT_ZERO, blkAligned);
     SyncVtoM2();
     this->ReadHPrev(tIdx, mStart, bOff, bRows, hOff, hLen, blkAligned, this->ubTmp2);
     SyncM2toM3();
@@ -435,7 +437,7 @@ __aicore__ inline void BinaryReduceBiasInPlace(LocalTensor<float>& cache, int64_
         return;
     }
     int64_t reduceNum = rows;
-    while (reduceNum > 2) {
+    while (reduceNum > BINARY_REDUCE_PAIR) {
         int64_t point = FindReduceCutPoint(reduceNum);
         int64_t remain = reduceNum - point;
         for (int64_t i = 0; i < remain; i++) {
@@ -493,13 +495,13 @@ __aicore__ inline void ProcessBiasReduce(GlobalTensor<DTYPE>& srcGm, GlobalTenso
     if (nStart + nCnt > cols) {
         nCnt = cols - nStart;
     }
-    int64_t alignMask = (sizeof(DTYPE) == 2) ? 127 : 7;
+    int64_t alignMask = (sizeof(DTYPE) == 2) ? ALIGN_256B_FP16_MASK : ALIGN_32B_FP32_MASK;
     int64_t cAligned = ((nCnt + alignMask) / (alignMask + 1)) * (alignMask + 1);
     int64_t maxRowsInCache = allocLength / cAligned;
     if (maxRowsInCache < 1) {
         maxRowsInCache = 1;
     }
-    Duplicate(this->ubTmp3, 0.0f, cAligned);
+    Duplicate(this->ubTmp3, FLOAT_ZERO, cAligned);
     for (int64_t rStart = 0; rStart < rows; rStart += maxRowsInCache) {
         int64_t batchRows = (rStart + maxRowsInCache > rows) ? (rows - rStart) : maxRowsInCache;
         CopyInBiasBatch(srcGm, this->ubTmp, rStart * cols + nStart, batchRows, nCnt, cols, cAligned);

@@ -24,10 +24,16 @@ using namespace AscendC;
 
 constexpr int64_t GRU_GATE_SIZE = 3;
 constexpr int64_t FLOAT_BYTES = 4;
+constexpr float FLOAT_ZERO = 0.0f;
+constexpr float FLOAT_ONE = 1.0f;
 constexpr int64_t DEFAULT_UB_BUF_ELEMENTS = 4096;
 constexpr int64_t ALIGN_32B_FP32_MASK = 7;
 constexpr int64_t ALIGN_32B_FP32 = 8;
+constexpr int64_t ALIGN_256B_FP16_MASK = 127;
+constexpr int64_t ALIGN_256B_FP16 = 128;
+constexpr int64_t GATE_IDX_UPDATE = 1;
 constexpr int64_t GATE_IDX_NEW = 2;
+constexpr int64_t BINARY_REDUCE_PAIR = 2;
 constexpr int64_t AIV_PER_AIC = 2;
 // 跨核事件同步: mode 2 = sub-block (AIC↔AIV 配对), flag 为硬件事件 ID
 constexpr uint8_t SYNC_MODE2 = 2;
