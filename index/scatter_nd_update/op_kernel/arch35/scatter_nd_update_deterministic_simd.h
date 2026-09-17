@@ -43,7 +43,7 @@ private:
     TYPE_T idxLoopSize = 0;
     TYPE_T updateLoopSize = 0;
     int32_t updateCount = 0;
-    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 2> inQueue_;
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DOUBLE_BUFFER> inQueue_;
 
     int64_t colBlockLoop_ = 0;
     int64_t colBlockTail_ = 0;
@@ -90,7 +90,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
     this->pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(INDICES_T));
     this->pipe_.InitBuffer(this->outOfstBuf_,
                            Ops::Base::CeilAlign(this->indicesUbFactor * sizeof(OFFSET_T), UB_AGLIN_VALUE));
-    this->pipe_.InitBuffer(inQueue_, 2, Ops::Base::CeilAlign(colUbFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
+    this->pipe_.InitBuffer(inQueue_, DOUBLE_BUFFER,
+                           Ops::Base::CeilAlign(colUbFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
 
     LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
     for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {
@@ -117,7 +118,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
         return;
     }
     this->pipe_.Reset();
-    this->pipe_.InitBuffer(inQueue_, 2,
+    this->pipe_.InitBuffer(inQueue_, DOUBLE_BUFFER,
                            Ops::Base::CeilAlign(this->tiling_.afterAxisFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
 
     if (this->blockIdx == this->tiling_.usedCoreNumBefore - 1) {
