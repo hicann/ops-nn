@@ -48,15 +48,13 @@ __aicore__ inline void GetContinuousInput(MicroAPI::RegTensor<computeType>& grad
 
 template <typename T>
 __aicore__ inline void GradientAccBigC(__local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,
-                                       T scatterIndex, MicroAPI::RegTensor<int32_t> divisorReg,
+                                       T scatterIndex, MicroAPI::RegTensor<float> divisorReg,
                                        MicroAPI::MaskReg& pregRes)
 {
     AscendC::MicroAPI::RegTensor<computeType> scatterAccResReg;
-    AscendC::MicroAPI::RegTensor<computeType> divisorCastReg;
     AscendC::MicroAPI::RegTensor<computeType> divisorResReg;
     AscendC::MicroAPI::DataCopy(scatterAccResReg, yAddr + scatterIndex);
-    AscendC::MicroAPI::Cast<computeType, int32_t, castTraitI32F32>(divisorCastReg, divisorReg, pregRes);
-    AscendC::MicroAPI::Div<computeType, &divHighPrecisionMode>(divisorResReg, gradReg, divisorCastReg, pregRes);
+    AscendC::MicroAPI::Div<computeType, &divHighPrecisionMode>(divisorResReg, gradReg, divisorReg, pregRes);
     AscendC::MicroAPI::Add(scatterAccResReg, scatterAccResReg, divisorResReg, pregRes);
     AscendC::MicroAPI::DataCopy(yAddr + scatterIndex, scatterAccResReg, pregRes);
 }
@@ -66,7 +64,7 @@ __aicore__ inline void DoSingleCNdhwc(__local_mem__ computeType* yAddr, __local_
                                       uint32_t gradMaskCount, int32_t dOutputActual, int32_t hOutputActual,
                                       int32_t wOutputActual, int32_t cOutputAligned, int32_t cOffset, int32_t nOffset,
                                       int32_t dkStart, int32_t dkEnd, int32_t hkStart, int32_t hkEnd, int32_t wkStart,
-                                      int32_t wkEnd, MicroAPI::RegTensor<int32_t>& divisorReg, int32_t dIndex,
+                                      int32_t wkEnd, MicroAPI::RegTensor<float>& divisorReg, int32_t dIndex,
                                       int32_t hIndex, int32_t wIndex)
 {
     int32_t scatterIndex = 0;
@@ -99,7 +97,7 @@ __aicore__ inline void DoMulCNdhwc(__local_mem__ computeType* yAddr, __local_mem
                                    int32_t cOutputAligned, MicroAPI::RegTensor<int32_t>& zeroConstReg,
                                    MicroAPI::RegTensor<int32_t>& wMaxReg, MicroAPI::RegTensor<int32_t>& hMaxReg,
                                    MicroAPI::RegTensor<int32_t>& dMaxReg, uint16_t kD, uint16_t kH, uint16_t kW,
-                                   MicroAPI::RegTensor<int32_t>& divisorReg, MicroAPI::RegTensor<int32_t>& wIndexReg,
+                                   MicroAPI::RegTensor<float>& divisorReg, MicroAPI::RegTensor<int32_t>& wIndexReg,
                                    MicroAPI::RegTensor<int32_t>& hIndexReg, MicroAPI::RegTensor<int32_t>& dIndexReg,
                                    AscendC::MicroAPI::RegTensor<T3, Trait>& tmplWRegIdxT3)
 {
@@ -681,7 +679,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint16_t padDownH = static_cast<uint16_t>(tilingData_->padBottom);
     uint16_t padW = static_cast<uint16_t>(tilingData_->padLeft);
     uint16_t padRightW = static_cast<uint16_t>(tilingData_->padRight);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    float divisorOverride = static_cast<float>(tilingData_->divisorOverride);
     uint32_t dGradActualStart = static_cast<uint32_t>(dGradActualStart_);
     uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
     uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
@@ -720,7 +718,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                         AscendC::MicroAPI::RegTensor<T3, Trait> outWStart;
                         AscendC::MicroAPI::RegTensor<T3, Trait> outHStart;
                         AscendC::MicroAPI::RegTensor<T3, Trait> outDStart;
-                        AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+                        AscendC::MicroAPI::RegTensor<float> divisorReg;
                         AscendC::MicroAPI::Duplicate(outDStart, dGradOffsetMulStrideD);
                         AscendC::MicroAPI::Duplicate(outHStart, hGradOffsetMulStrideH);
                         AscendC::MicroAPI::Duplicate(outWStart, wGradOffsetMulStrideW);
@@ -784,7 +782,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint32_t dGradActualStart = static_cast<uint32_t>(dGradActualStart_);
     uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
     uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    float divisorOverride = static_cast<float>(tilingData_->divisorOverride);
     uint16_t kD = static_cast<uint16_t>(tilingData_->dKernel);
     uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
     uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);
@@ -860,7 +858,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                             AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
                             AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
                             AscendC::MicroAPI::RegTensor<int32_t> dIndexReg;
-                            AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+                            AscendC::MicroAPI::RegTensor<float> divisorReg;
                             AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
                             AscendC::MicroAPI::RegTensor<T3, Trait> tmplWRegIdx;
                             AscendC::MicroAPI::RegTensor<T3, Trait> outWStart;
@@ -919,7 +917,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                         AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
                         AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
                         AscendC::MicroAPI::RegTensor<int32_t> dIndexReg;
-                        AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+                        AscendC::MicroAPI::RegTensor<float> divisorReg;
                         AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
                         AscendC::MicroAPI::RegTensor<T3, Trait> tmplWRegIdx;
                         AscendC::MicroAPI::RegTensor<T3, Trait> outWStart;
@@ -972,7 +970,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
                     AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
                     AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
                     AscendC::MicroAPI::RegTensor<int32_t> dIndexReg;
-                    AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+                    AscendC::MicroAPI::RegTensor<float> divisorReg;
                     AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
                     AscendC::MicroAPI::RegTensor<T3, Trait> tmplWRegIdx;
                     AscendC::MicroAPI::RegTensor<T3, Trait> outWStart;
@@ -1027,7 +1025,7 @@ __aicore__ inline void DoMergeHWBlock3D(
     uint32_t wGradActualStart, T3 dGradOffsetMulStrideD, T3 hGradOffset, T3 wGradOffset, int32_t wOutputActual,
     int32_t hOutputActual, int32_t dOutputActual, uint16_t cOutputAligned, uint16_t cOutputActual, int32_t dOutput,
     int32_t hOutput, int32_t wOutput, uint16_t kD, uint16_t kH, uint16_t kW, uint16_t padD, uint16_t padH,
-    uint16_t padW, uint16_t padBackD, uint16_t padDownH, uint16_t padRightW, int32_t divisorOverride, uint32_t strideD,
+    uint16_t padW, uint16_t padBackD, uint16_t padDownH, uint16_t padRightW, float divisorOverride, uint32_t strideD,
     uint32_t strideH, uint32_t strideW, int32_t curDIndex, int32_t curHIndex, int32_t curWIndex)
 {
     __VEC_SCOPE__
@@ -1047,7 +1045,7 @@ __aicore__ inline void DoMergeHWBlock3D(
         AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
         AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
         AscendC::MicroAPI::RegTensor<int32_t> dIndexReg;
-        AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+        AscendC::MicroAPI::RegTensor<float> divisorReg;
         AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
         AscendC::MicroAPI::RegTensor<T3, Trait> tmplWRegIdx;
         AscendC::MicroAPI::RegTensor<T3, Trait> outWStart;
@@ -1107,7 +1105,7 @@ __aicore__ inline void DoMergeDHWCBlock3D(
     uint32_t wGradActualStart, T3 dGradOffset, T3 hGradOffset, T3 wGradOffset, int32_t wOutputActual,
     int32_t hOutputActual, int32_t dOutputActual, uint16_t cOutputAligned, uint16_t cOutputActual, int32_t dOutput,
     int32_t hOutput, int32_t wOutput, uint16_t kD, uint16_t kH, uint16_t kW, uint16_t padD, uint16_t padH,
-    uint16_t padW, uint16_t padBackD, uint16_t padDownH, uint16_t padRightW, int32_t divisorOverride, uint32_t strideD,
+    uint16_t padW, uint16_t padBackD, uint16_t padDownH, uint16_t padRightW, float divisorOverride, uint32_t strideD,
     uint32_t strideH, uint32_t strideW, int32_t curDIndex, int32_t curHIndex, int32_t curWIndex)
 {
     __VEC_SCOPE__
@@ -1127,7 +1125,7 @@ __aicore__ inline void DoMergeDHWCBlock3D(
         AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
         AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
         AscendC::MicroAPI::RegTensor<int32_t> dIndexReg;
-        AscendC::MicroAPI::RegTensor<int32_t> divisorReg;
+        AscendC::MicroAPI::RegTensor<float> divisorReg;
         AscendC::MicroAPI::RegTensor<T3, Trait> initialDRegIdx;
         AscendC::MicroAPI::RegTensor<T3, Trait> initialHRegIdx;
         AscendC::MicroAPI::RegTensor<T3, Trait> initialWRegIdx;
@@ -1212,7 +1210,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint32_t dGradActualStart = static_cast<uint32_t>(dGradActualStart_);
     uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
     uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    float divisorOverride = static_cast<float>(tilingData_->divisorOverride);
     uint16_t kD = static_cast<uint16_t>(tilingData_->dKernel);
     uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
     uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);
@@ -1384,7 +1382,7 @@ __aicore__ inline void AvgPool3DGradNDHWC<T1, T3, HAS_DIVISOR, IS_CHECK_RANGE, C
     uint32_t dGradActualStart = static_cast<uint32_t>(dGradActualStart_);
     uint32_t hGradActualStart = static_cast<uint32_t>(hGradActualStart_);
     uint32_t wGradActualStart = static_cast<uint32_t>(wGradActualStart_);
-    int32_t divisorOverride = static_cast<int32_t>(tilingData_->divisorOverride);
+    float divisorOverride = static_cast<float>(tilingData_->divisorOverride);
     uint16_t kD = static_cast<uint16_t>(tilingData_->dKernel);
     uint16_t kH = static_cast<uint16_t>(tilingData_->hKernel);
     uint16_t kW = static_cast<uint16_t>(tilingData_->wKernel);

@@ -35,8 +35,8 @@ OP_TYPE_REGISTER(AvgPool3DGrad);
 
 const aclTensor* AvgPool3DGrad(const aclTensor* self, const aclTensor* shapeOrigInput, const aclTensor* gradOutput,
                                const aclIntArray* ksize, const aclIntArray* strides, const aclIntArray* pads,
-                               bool ceilMode, bool countIncludePad, int divisorOverride, const std::string& dataFormat,
-                               aclOpExecutor* executor)
+                               bool ceilMode, bool countIncludePad, int64_t divisorOverride,
+                               const std::string& dataFormat, aclOpExecutor* executor)
 {
     L0_DFX(AvgPool3DGrad, gradOutput, shapeOrigInput, ksize, strides, pads, ceilMode, countIncludePad, divisorOverride,
            dataFormat);

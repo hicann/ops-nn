@@ -103,14 +103,16 @@ __aicore__ inline void ComputeDivisor1D(MicroAPI::RegTensor<int32_t>& divisorAxi
 }
 
 // 3D divisor: D*H*W pool size, optionally dynamic per element (COUNT_PAD / IS_CHECK_RANGE).
+// divisorReg is always float: the divisorOverride (int64 attr) is casted to float at tilingData
+// extraction, and the per-window pool size is computed in int32 then casted to float.
 template <typename T, const MicroAPI::RegTrait& Trait, const uint32_t HAS_DIVISOR, const uint32_t IS_CHECK_RANGE,
           const uint32_t COUNT_PAD>
-__aicore__ inline void GenDivisor3D(MicroAPI::RegTensor<int32_t>& divisorReg, MicroAPI::RegTensor<T, Trait>& outDStart,
+__aicore__ inline void GenDivisor3D(MicroAPI::RegTensor<float>& divisorReg, MicroAPI::RegTensor<T, Trait>& outDStart,
                                     MicroAPI::RegTensor<T, Trait>& outHStart, MicroAPI::RegTensor<T, Trait>& outWStart,
                                     MicroAPI::RegTensor<T, Trait>& zeroConstRegT, int32_t dOutput, int32_t hOutput,
                                     int32_t wOutput, uint16_t padD, uint16_t padH, uint16_t padW, uint16_t padBackD,
                                     uint16_t padDownH, uint16_t padRightW, uint16_t kD, uint16_t kH, uint16_t kW,
-                                    int32_t divisorOverride, uint32_t count)
+                                    float divisorOverride, uint32_t count)
 {
     if constexpr (HAS_DIVISOR == 1) {
         AscendC::MicroAPI::Duplicate(divisorReg, divisorOverride);
@@ -123,10 +125,11 @@ __aicore__ inline void GenDivisor3D(MicroAPI::RegTensor<int32_t>& divisorReg, Mi
         ComputeDivisor1D<T, Trait, COUNT_PAD>(divisorD, outDStart, zeroConstRegT, dOutput, padD, padBackD, kD, count);
         ComputeDivisor1D<T, Trait, COUNT_PAD>(divisorH, outHStart, zeroConstRegT, hOutput, padH, padDownH, kH, count);
         ComputeDivisor1D<T, Trait, COUNT_PAD>(divisorW, outWStart, zeroConstRegT, wOutput, padW, padRightW, kW, count);
-        AscendC::MicroAPI::Mul(divisorReg, divisorD, divisorH, maskI32);
-        AscendC::MicroAPI::Mul(divisorReg, divisorReg, divisorW, maskI32);
+        AscendC::MicroAPI::Mul(divisorD, divisorD, divisorH, maskI32);
+        AscendC::MicroAPI::Mul(divisorD, divisorD, divisorW, maskI32);
+        AscendC::MicroAPI::Cast<float, int32_t, castTraitI32F32>(divisorReg, divisorD, maskI32);
     } else {
-        AscendC::MicroAPI::Duplicate(divisorReg, int32_t(kD * kH * kW));
+        AscendC::MicroAPI::Duplicate(divisorReg, static_cast<float>(int32_t(kD * kH * kW)));
     }
 }
 
@@ -201,19 +204,18 @@ __aicore__ inline void FilterMask3D(MicroAPI::MaskReg& preg, MicroAPI::RegTensor
 }
 
 // 3D gradient scatter accumulate: gradReg / divisor adds into yAddr at scatterIndexReg.
+// divisorReg is always float: divisorOverride casted at tilingData extraction, or the pool size
+// casted in GenDivisor3D.
 template <typename T>
 __aicore__ inline void GradientAcc(__local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,
-                                   MicroAPI::RegTensor<T>& scatterIndexReg, MicroAPI::RegTensor<int32_t>& divisorReg,
+                                   MicroAPI::RegTensor<T>& scatterIndexReg, MicroAPI::RegTensor<float>& divisorReg,
                                    MicroAPI::MaskReg& pregRes)
 {
     AscendC::MicroAPI::RegTensor<computeType> scatterAccResReg;
-    AscendC::MicroAPI::RegTensor<computeType> divisorCastReg;
     AscendC::MicroAPI::RegTensor<computeType> divisorResReg;
     AscendC::MicroAPI::DataCopyGather(scatterAccResReg, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)scatterIndexReg,
                                       pregRes);
-    AscendC::MicroAPI::Cast<computeType, int32_t, castTraitI32F32>(divisorCastReg, divisorReg, pregRes);
-
-    AscendC::MicroAPI::Div<computeType, &divHighPrecisionMode>(divisorResReg, gradReg, divisorCastReg, pregRes);
+    AscendC::MicroAPI::Div<computeType, &divHighPrecisionMode>(divisorResReg, gradReg, divisorReg, pregRes);
     AscendC::MicroAPI::Add(scatterAccResReg, scatterAccResReg, divisorResReg, pregRes);
     AscendC::MicroAPI::DataCopyScatter(yAddr, scatterAccResReg,
                                        (AscendC::MicroAPI::RegTensor<uint32_t>&)scatterIndexReg, pregRes);
