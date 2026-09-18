@@ -179,6 +179,13 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
         return;
     }
 
+    // 如果kernel拆分，则跳过扩维，否则可能存在跨group数据混叠风险
+    if (checkLargeSpecs()) {
+        OP_LOGD(opName_, "checkLargeSpecs success, need to disableGroupEnlarge.");
+        disableGroupEnlarge();
+        return;
+    }
+
     runInfo_.mag_factor = CalcRealGroupMagFactor(groups);
     // 判断扩维因子
     if (runInfo_.mag_factor <= 1) {
