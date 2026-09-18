@@ -24,8 +24,8 @@ static const std::string OPAPI_BUILTIN_SO_NAME = "libopapi_nn.so";
 static const std::string OPAPI_CUSTOM_SO_NAME = "libcust_opapi.so";
 static const std::string LEGACY_SO_NAME = "libophost_comm_legacy.so";
 static const std::string OPHOST_PATH = "/built-in/op_impl/ai_core/tbe/op_host/lib/linux/";
-const static std::set<std::string> SUPPORTED_VERS = {"ascend910b", "ascend910_93", "ascend310p", "ascend310b",
-                                                     "ascend910"};
+const static std::set<std::string> SUPPORTED_VERS = {"ascend910b", "ascend910_93", "ascend310p",
+                                                     "ascend310b", "ascend910",    "ascend950"};
 static const Ops::NN::LegacyCommonMgr LEGACY_COMMMON_MGR;
 } // namespace
 
