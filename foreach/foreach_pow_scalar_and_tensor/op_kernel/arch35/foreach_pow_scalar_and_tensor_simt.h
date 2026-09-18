@@ -14,8 +14,8 @@
  * \file foreach_pow_scalar_and_tensor_simt.h
  * \brief SIMT kernel implementation for foreach_pow_scalar_and_tensor (arch35 / Ascend950).
  *        Computes y_i[j] = scalar ^ x_i[j] for each element of the tensor list.
- *        Float paths handle negative base (integer exponent -> real, non-integer -> NaN)
- *        and 0^0 = 1 per IEEE 754 / PyTorch semantics; int32 uses integer fast power.
+ *        Float paths rely on device powf (IEEE 754 semantics, requires fast-math off);
+ *        int32 uses integer fast power.
  */
 
 #ifndef FOREACH_POW_SCALAR_AND_TENSOR_SIMT_H
@@ -25,9 +25,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "simt_api/asc_simt.h"
 #include "simt_api/math_functions.h"
-#include "simt_api/device_functions.h"
-#include "simt_api/asc_fp16.h"
-#include "simt_api/asc_bf16.h"
 #include "foreach_pow_scalar_and_tensor_tiling_data.h"
 #include "foreach_pow_scalar_and_tensor_tiling_key.h"
 
@@ -69,35 +66,6 @@ __simt_callee__ inline int64_t IntPow(int64_t base, int32_t exp)
 }
 
 /**
- * \brief Float power with negative-base handling (IEEE 754 / PyTorch semantics):
- *        - base == 0 && exp == 0 -> 1.0 (hardware powf(0,0) may not return 1.0)
- *        - base >= 0             -> powf(base, exp)
- *        - base < 0, integer exp -> powf(fabsf(base), exp), negated if exp is odd
- *        - base < 0, non-integer exp -> NaN (real domain undefined)
- */
-__simt_callee__ inline float PowFloatNegBase(float base, float exp)
-{
-    if (base == 0.0f && exp == 0.0f) {
-        return 1.0f;
-    }
-    if (base >= 0.0f) {
-        return powf(base, exp);
-    }
-    float floorExp = floorf(exp);
-    if (floorExp == exp) {
-        float result = powf(fabsf(base), exp);
-        int64_t intExp = static_cast<int64_t>(exp);
-        if (intExp & 1) {
-            result = -result;
-        }
-        return result;
-    }
-    // Negative base with non-integer exponent is undefined in the reals -> NaN.
-    // powf naturally yields NaN here, avoiding an unprotected division.
-    return powf(base, exp);
-}
-
-/**
  * \brief Per-dtype pow dispatch: y = scalar ^ x. ST is the scalar type, T the tensor type.
  */
 template <typename T, typename ST>
@@ -106,39 +74,38 @@ __simt_callee__ inline T ComputePow(ST scalarVal, T xVal);
 template <>
 __simt_callee__ inline float ComputePow<float, float>(float scalarVal, float xVal)
 {
-    return PowFloatNegBase(scalarVal, xVal);
+    return powf(scalarVal, xVal);
 }
 
 template <>
 __simt_callee__ inline half ComputePow<half, float>(float scalarVal, half xVal)
 {
-    float xFloat = static_cast<float>(xVal);
-    float result = PowFloatNegBase(scalarVal, xFloat);
-    return static_cast<half>(result);
+    return static_cast<half>(powf(scalarVal, static_cast<float>(xVal)));
 }
 
 template <>
 __simt_callee__ inline bfloat16_t ComputePow<bfloat16_t, float>(float scalarVal, bfloat16_t xVal)
 {
-    float xFloat = static_cast<float>(xVal);
-    float result = PowFloatNegBase(scalarVal, xFloat);
-    return static_cast<bfloat16_t>(result);
+    return static_cast<bfloat16_t>(powf(scalarVal, static_cast<float>(xVal)));
 }
 
 template <>
 __simt_callee__ inline int32_t ComputePow<int32_t, int64_t>(int64_t scalarVal, int32_t xVal)
 {
     if (xVal < 0) {
+        if (scalarVal == 1) {
+            return 1;
+        }
+        if (scalarVal == -1) {
+            return ((-(static_cast<int64_t>(xVal))) % 2 == 0) ? 1 : -1;
+        }
         return 0;
-    }
-    if (xVal == 0) {
-        return 1;
     }
     return static_cast<int32_t>(IntPow(scalarVal, xVal));
 }
 
 /**
- * \brief SIMT VF kernel: compute scalar ^ x for all elements across all tensors.
+ * \brief SIMT VF kernel: compute scalar ^ x for all elements of one tensor.
  */
 template <typename T, typename ST>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarAndTensorSimt(int32_t tensorId,

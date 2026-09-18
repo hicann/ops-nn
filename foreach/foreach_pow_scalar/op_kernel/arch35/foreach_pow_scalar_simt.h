@@ -96,7 +96,7 @@ __simt_callee__ inline int32_t PowiImpl(int32_t base, int32_t exp)
 }
 
 /**
- * \brief SIMT VF kernel: compute y = x^scalar for all elements across all tensors
+ * \brief SIMT VF kernel: compute y = x^scalar for all elements of one tensor
  */
 template <typename T, typename S>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarSimt(int32_t tensorId, int64_t count,
