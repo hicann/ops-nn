@@ -14,6 +14,7 @@
  */
 
 #include "log/log.h"
+#include "op_common/op_host/util/shape_util.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;
@@ -26,6 +27,10 @@ inline ge::graphStatus CopyShapeInputToOutputWithIdx(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
     auto outShape = context->GetOutputShape(outputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+    if (Ops::Base::IsUnknownRank(*inShape)) {
+        Ops::Base::SetUnknownRank(*outShape);
+        return ge::GRAPH_SUCCESS;
+    }
     *outShape = *inShape;
     return ge::GRAPH_SUCCESS;
 }
@@ -40,8 +45,14 @@ static ge::graphStatus InferShape4ApplyAdagrad(gert::InferShapeContext* context)
 static ge::graphStatus InferDataType4ApplyAdagrad(gert::InferDataTypeContext* context)
 {
     constexpr size_t inputVarIdx = 0;
+    constexpr size_t inputNum = 4;
     constexpr size_t outputVarIdx = 0;
-    context->SetOutputDataType(outputVarIdx, context->GetInputDataType(inputVarIdx));
+    const ge::DataType varDtype = context->GetInputDataType(inputVarIdx);
+    for (size_t inputIdx = inputVarIdx + 1; inputIdx < inputNum; ++inputIdx) {
+        OP_CHECK_IF(context->GetInputDataType(inputIdx) != varDtype,
+                    OP_LOGE(context->GetNodeName(), "All input dtypes must be the same."), return ge::GRAPH_FAILED);
+    }
+    context->SetOutputDataType(outputVarIdx, varDtype);
     return GRAPH_SUCCESS;
 }
 

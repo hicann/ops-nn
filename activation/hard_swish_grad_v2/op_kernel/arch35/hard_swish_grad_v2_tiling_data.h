@@ -22,9 +22,12 @@
 #include <cstdint>
 
 struct HardSwishGradV2Arch35TilingData {
-    int64_t totalNum = 0;    // total number of elements
-    int64_t blockFactor = 0; // number of elements per AI Core
-    int64_t ubFactor = 0;    // number of elements per UB iteration
+    int64_t totalNum = 0;        // total number of elements
+    int64_t blockFactor = 0;     // number of elements per AI Core
+    int64_t ubFactor = 0;        // number of elements per UB iteration
+    int64_t ioBufferBytes = 0;   // bytes per input/output queue buffer
+    int64_t f32BufferBytes = 0;  // bytes per fp32 intermediate buffer
+    int64_t maskBufferBytes = 0; // bytes for the compare mask buffer
 };
 
 #endif

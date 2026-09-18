@@ -18,6 +18,7 @@ struct ApplyAdagradTilingDataStruct {
     int64_t totalElements = 0;
     int64_t blockFactor = 0;
     int64_t ubFactor = 0;
+    int64_t ioBufferBytes = 0;
 };
 } // namespace ApplyAdagradTilingData
 #endif // OPS_NN_APPLY_ADAGRAD_STRUCT_H

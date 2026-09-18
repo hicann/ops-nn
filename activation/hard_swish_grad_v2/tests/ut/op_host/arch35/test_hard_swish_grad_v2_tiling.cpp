@@ -41,8 +41,12 @@ protected:
 // On success, the raw tiling data is reinterpreted as HardSwishGradV2Arch35TilingData and returned via outTiling.
 static ge::graphStatus RunArch35Tiling(gert::StorageShape& gradShape, gert::StorageShape& selfShape,
                                        gert::StorageShape& outShape, ge::DataType dtype,
-                                       HardSwishGradV2Arch35TilingData& outTiling)
+                                       HardSwishGradV2Arch35TilingData& outTiling,
+                                       ge::DataType selfDtype = ge::DT_UNDEFINED,
+                                       ge::DataType outDtype = ge::DT_UNDEFINED)
 {
+    selfDtype = selfDtype == ge::DT_UNDEFINED ? dtype : selfDtype;
+    outDtype = outDtype == ge::DT_UNDEFINED ? dtype : outDtype;
     std::string op_type("HardSwishGradV2");
     EXPECT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -104,8 +108,8 @@ static ge::graphStatus RunArch35Tiling(gert::StorageShape& gradShape, gert::Stor
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, selfDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -205,6 +209,18 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_fp32_multi_core)
     EXPECT_GT(tiling.ubFactor, 0);
 }
 
+// A single axis above 1e5 exercises the large-axis multi-core path.
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_fp32_large_axis)
+{
+    gert::StorageShape shape = {{131073}, {131073}};
+    HardSwishGradV2Arch35TilingData tiling{};
+    ASSERT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling.totalNum, 131073);
+    EXPECT_GT(tiling.blockFactor, 0);
+    EXPECT_LT(tiling.blockFactor, tiling.totalNum);
+    EXPECT_GT(tiling.ubFactor, 0);
+}
+
 // Empty tensor: arch35 tiling sets all factors to 0 and returns success (ubFactor=0 path).
 TEST_F(HardSwishGradV2TilingArch35, test_tiling_empty_tensor)
 {
@@ -214,6 +230,29 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_empty_tensor)
     EXPECT_EQ(tiling.totalNum, 0);
     EXPECT_EQ(tiling.blockFactor, 0);
     EXPECT_EQ(tiling.ubFactor, 0);
+    EXPECT_EQ(tiling.ioBufferBytes, 0);
+    EXPECT_EQ(tiling.f32BufferBytes, 0);
+    EXPECT_EQ(tiling.maskBufferBytes, 0);
+}
+
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_empty_tensor_axis_variants)
+{
+    const std::vector<std::vector<int64_t>> shapes = {{0}, {0, 3}, {2, 3, 0}, {2, 0, 0, 3}};
+    for (const auto& dims : shapes) {
+        gert::StorageShape shape;
+        for (const auto dim : dims) {
+            shape.MutableOriginShape().AppendDim(dim);
+            shape.MutableStorageShape().AppendDim(dim);
+        }
+        HardSwishGradV2Arch35TilingData tiling{};
+        ASSERT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(tiling.totalNum, 0);
+        EXPECT_EQ(tiling.blockFactor, 0);
+        EXPECT_EQ(tiling.ubFactor, 0);
+        EXPECT_EQ(tiling.ioBufferBytes, 0);
+        EXPECT_EQ(tiling.f32BufferBytes, 0);
+        EXPECT_EQ(tiling.maskBufferBytes, 0);
+    }
 }
 
 // Unsupported dtype is rejected by tiling dtype validation.
@@ -233,10 +272,40 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_shape_mismatch)
     EXPECT_EQ(RunArch35Tiling(gradShape, selfShape, gradShape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
 }
 
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_output_shape_mismatch)
+{
+    gert::StorageShape inputShape = {{8, 8}, {8, 8}};
+    gert::StorageShape outputShape = {{8, 4}, {8, 4}};
+    HardSwishGradV2Arch35TilingData tiling{};
+    EXPECT_EQ(RunArch35Tiling(inputShape, inputShape, outputShape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
+}
+
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_self_dtype_mismatch)
+{
+    gert::StorageShape shape = {{8, 8}, {8, 8}};
+    HardSwishGradV2Arch35TilingData tiling{};
+    EXPECT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling, ge::DT_FLOAT16), ge::GRAPH_FAILED);
+}
+
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_output_dtype_mismatch)
+{
+    gert::StorageShape shape = {{8, 8}, {8, 8}};
+    HardSwishGradV2Arch35TilingData tiling{};
+    EXPECT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling, ge::DT_FLOAT, ge::DT_FLOAT16),
+              ge::GRAPH_FAILED);
+}
+
 // dim num greater than 8 is rejected by tiling shape validation.
 TEST_F(HardSwishGradV2TilingArch35, test_tiling_dim_num_over_8)
 {
     gert::StorageShape shape = {{2, 1, 1, 1, 1, 1, 1, 1, 1}, {2, 1, 1, 1, 1, 1, 1, 1, 1}}; // 9 dims
     HardSwishGradV2Arch35TilingData tiling{};
     EXPECT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
+}
+
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_scalar_rejected)
+{
+    gert::StorageShape scalar = {{}, {}};
+    HardSwishGradV2Arch35TilingData tiling{};
+    EXPECT_EQ(RunArch35Tiling(scalar, scalar, scalar, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
 }

@@ -14,6 +14,19 @@
  */
 
 #include "register/op_impl_registry.h"
+#include "inplace_sub_proto.h"
+
+namespace ge {
+IMPLEMT_VERIFIER(InplaceSub, VerifyInplaceSub)
+{
+    const Shape xShape = op.GetInputDesc("x").GetShape();
+    if (xShape.GetDims() == UNKNOWN_RANK) {
+        return GRAPH_SUCCESS;
+    }
+    return xShape.GetDimNum() == 0 ? GRAPH_FAILED : GRAPH_SUCCESS;
+}
+VERIFY_FUNC_REG(InplaceSub, VerifyInplaceSub);
+} // namespace ge
 
 namespace ops {
 using namespace ge;

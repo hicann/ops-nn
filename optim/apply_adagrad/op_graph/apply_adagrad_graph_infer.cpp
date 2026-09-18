@@ -15,17 +15,38 @@
 
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "apply_adagrad_proto.h"
+
+static constexpr size_t INPUT_VAR_INDEX = 0;
+static constexpr size_t INPUT_NUM = 4;
+static constexpr size_t OUTPUT_VAR_INDEX = 0;
+
+namespace ge {
+IMPLEMT_VERIFIER(ApplyAdagrad, VerifyApplyAdagrad)
+{
+    const DataType varDtype = op.GetInputDesc(INPUT_VAR_INDEX).GetDataType();
+    for (size_t inputIdx = INPUT_VAR_INDEX + 1; inputIdx < INPUT_NUM; ++inputIdx) {
+        if (op.GetInputDesc(inputIdx).GetDataType() != varDtype) {
+            return GRAPH_FAILED;
+        }
+    }
+    return GRAPH_SUCCESS;
+}
+VERIFY_FUNC_REG(ApplyAdagrad, VerifyApplyAdagrad);
+} // namespace ge
 
 namespace ops {
 using namespace ge;
 
-static constexpr size_t INPUT_VAR_INDEX = 0;
-static constexpr size_t OUTPUT_VAR_INDEX = 0;
-
 static ge::graphStatus InferDataTypeApplyAdagrad(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeApplyAdagrad");
-    context->SetOutputDataType(OUTPUT_VAR_INDEX, context->GetInputDataType(INPUT_VAR_INDEX));
+    const ge::DataType varDtype = context->GetInputDataType(INPUT_VAR_INDEX);
+    for (size_t inputIdx = INPUT_VAR_INDEX + 1; inputIdx < INPUT_NUM; ++inputIdx) {
+        OP_CHECK_IF(context->GetInputDataType(inputIdx) != varDtype,
+                    OP_LOGE(context->GetNodeName(), "All input dtypes must be the same."), return ge::GRAPH_FAILED);
+    }
+    context->SetOutputDataType(OUTPUT_VAR_INDEX, varDtype);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeApplyAdagrad");
     return GRAPH_SUCCESS;
 }

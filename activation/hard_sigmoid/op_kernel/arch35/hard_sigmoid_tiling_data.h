@@ -24,10 +24,12 @@
 constexpr int64_t HARD_SIGMOID_BUFFER_NUM = 2;
 
 struct __attribute__((aligned(8))) HardSigmoidTilingData {
-    int64_t totalElements = 0; // 元素总数
-    int64_t blockFactor = 0;   // 单核处理的元素数
-    int64_t ubFactor = 0;      // 单次 UB 搬运/计算的元素数
-    float alpha = 1.0f / 6.0f; // y = clamp(alpha*x + beta, 0, 1)
+    int64_t totalElements = 0;  // 元素总数
+    int64_t blockFactor = 0;    // 单核处理的元素数
+    int64_t ubFactor = 0;       // 单次 UB 搬运/计算的元素数
+    int64_t ioBufferBytes = 0;  // 单个输入/输出队列 buffer 的字节数
+    int64_t f32BufferBytes = 0; // 非 fp32 路径的 fp32 中间 buffer 字节数
+    float alpha = 1.0f / 6.0f;  // y = clamp(alpha*x + beta, 0, 1)
     float beta = 0.5f;
 };
 

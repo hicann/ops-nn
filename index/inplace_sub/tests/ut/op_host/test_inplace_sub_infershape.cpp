@@ -62,6 +62,25 @@ void CheckInferShape(const gert::Shape& inputShape)
     ASSERT_NE(outputDesc, nullptr);
     ExpectShapeEq(*outputDesc, inputShape);
 }
+
+ge::graphStatus RunInferShape(const gert::Shape& inputShape)
+{
+    SetPlatform();
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceSub");
+    if (opImpl == nullptr || opImpl->infer_shape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+
+    gert::Shape xShape = inputShape;
+    gert::Shape outputShape = {};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1}, {1})
+                      .InputShapes({&xShape, &xShape, &xShape})
+                      .OutputShapes({&outputShape})
+                      .Build();
+    return opImpl->infer_shape(holder.GetContext<gert::InferShapeContext>());
+}
 } // namespace
 
 class InplaceSubInferShapeTest : public testing::Test {};
@@ -71,6 +90,10 @@ TEST_F(InplaceSubInferShapeTest, staticShape) { CheckInferShape({4, 8}); }
 TEST_F(InplaceSubInferShapeTest, dynamicShape) { CheckInferShape({2, -1, 16}); }
 
 TEST_F(InplaceSubInferShapeTest, unknownRank) { CheckInferShape({-2}); }
+
+TEST_F(InplaceSubInferShapeTest, rejectScalarX) { EXPECT_EQ(RunInferShape({}), ge::GRAPH_FAILED); }
+
+TEST_F(InplaceSubInferShapeTest, acceptRankOneX) { EXPECT_EQ(RunInferShape({4}), ge::GRAPH_SUCCESS); }
 
 TEST_F(InplaceSubInferShapeTest, inferDataType)
 {

@@ -83,28 +83,32 @@ __aicore__ inline void HardSwishGradV2<T, BUFFER_MODE>::Init(GM_ADDR gradOutput,
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
     ubLength_ = tilingData->ubFactor;
 
+    // Empty tensors and idle cores must not initialize zero-sized queues or GM views.
+    if (blockLength_ <= 0 || ubLength_ <= 0) {
+        blockLength_ = 0;
+        return;
+    }
+
     int64_t offset = tilingData->blockFactor * GetBlockIdx();
     gradOutputGM.SetGlobalBuffer((__gm__ T*)gradOutput + offset, blockLength_);
     selfGM.SetGlobalBuffer((__gm__ T*)self + offset, blockLength_);
     gradInputGM.SetGlobalBuffer((__gm__ T*)gradInput + offset, blockLength_);
 
-    pipe.InitBuffer(gradOutputQueue, BUFFER_NUM, ubLength_ * sizeof(T));
-    pipe.InitBuffer(selfQueue, BUFFER_NUM, ubLength_ * sizeof(T));
-    pipe.InitBuffer(gradInputQueue, BUFFER_NUM, ubLength_ * sizeof(T));
+    pipe.InitBuffer(gradOutputQueue, BUFFER_NUM, tilingData->ioBufferBytes);
+    pipe.InitBuffer(selfQueue, BUFFER_NUM, tilingData->ioBufferBytes);
+    pipe.InitBuffer(gradInputQueue, BUFFER_NUM, tilingData->ioBufferBytes);
 
     // Temporary buffer for intermediate computation
     if constexpr (NEED_CAST) {
         // fp16: two separate fp32 buffers + mask
-        pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(float));
-        pipe.InitBuffer(tmpBuf2, ubLength_ * sizeof(float));
+        pipe.InitBuffer(tmpBuf, tilingData->f32BufferBytes);
+        pipe.InitBuffer(tmpBuf2, tilingData->f32BufferBytes);
     } else {
         // fp32: 1 derivative buffer
-        pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(T));
+        pipe.InitBuffer(tmpBuf, tilingData->ioBufferBytes);
     }
     // Mask buffer for Compares/Select: 1 bit per element, aligned to 256 bytes
-    int64_t maskBytes = (ubLength_ + 7) / 8;
-    maskBytes = (maskBytes + 255) / 256 * 256;
-    pipe.InitBuffer(maskBuf, maskBytes);
+    pipe.InitBuffer(maskBuf, tilingData->maskBufferBytes);
 }
 
 template <typename T, int BUFFER_MODE>
@@ -208,7 +212,7 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardSwishGradV2<T, BUFFER_MODE>::Process()
 {
     // Empty-tensor tiling produces ubFactor=0 (totalNum=0); guard the divide below.
-    if (ubLength_ == 0 || blockLength_ == 0) {
+    if (ubLength_ <= 0 || blockLength_ <= 0) {
         return;
     }
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;

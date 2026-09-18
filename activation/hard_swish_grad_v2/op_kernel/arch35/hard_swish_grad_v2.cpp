@@ -35,13 +35,16 @@ extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput, GM_
 }
 #else
 // Device entry: template for TilingKey dispatch
-template <typename D_T_X, int BUFFER_MODE>
+template <uint32_t SCH_MODE, int BUFFER_MODE>
 __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
                                               GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardSwishGradV2Arch35TilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSwishGradV2Arch35TilingData, tilingData, tiling);
-    NsHardSwishGradV2::HardSwishGradV2<D_T_X, BUFFER_MODE> op;
+    using KernelT = std::conditional_t<
+        SCH_MODE == HARD_SWISH_GRAD_V2_SCH_MODE_FP32, float,
+        std::conditional_t<SCH_MODE == HARD_SWISH_GRAD_V2_SCH_MODE_FP16, half, bfloat16_t> >;
+    NsHardSwishGradV2::HardSwishGradV2<KernelT, BUFFER_MODE> op;
     op.Init(gradOutput, self, out, &tilingData);
     op.Process();
 }

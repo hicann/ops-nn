@@ -16,7 +16,7 @@
  * \brief HardSwishGradV2 tiling key definition
  *
  * Template parameters:
- *   - D_T_X: data type (C_DT_FLOAT, C_DT_FLOAT16, C_DT_BF16)
+ *   - SCH_MODE: integer schedule/data-path selector (0=float32, 1=float16, 2=bfloat16)
  *   - BUFFER_MODE: buffer mode (0=single buffer, 1=double buffer)
  */
 
@@ -25,15 +25,23 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
+// Keep dtype out of the template argument declaration. The integer schedule
+// selector is chosen by host tiling from the validated input dtype.
+#define HARD_SWISH_GRAD_V2_SCH_MODE_FP32 0
+#define HARD_SWISH_GRAD_V2_SCH_MODE_FP16 1
+#define HARD_SWISH_GRAD_V2_SCH_MODE_BF16 2
+
 ASCENDC_TPL_ARGS_DECL(HardSwishGradV2,
-                      ASCENDC_TPL_DATATYPE_DECL(D_T_X, C_DT_FLOAT, C_DT_FLOAT16, C_DT_BF16, ASCENDC_TPL_INPUT(0)),
+                      ASCENDC_TPL_UINT_DECL(SCH_MODE, 2, ASCENDC_TPL_UI_LIST, HARD_SWISH_GRAD_V2_SCH_MODE_FP32,
+                                            HARD_SWISH_GRAD_V2_SCH_MODE_FP16, HARD_SWISH_GRAD_V2_SCH_MODE_BF16),
                       ASCENDC_TPL_UINT_DECL(BUFFER_MODE, 8, ASCENDC_TPL_UI_LIST, 0, 1));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT),
-                                     ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16),
-                                     ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16),
-                                     ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)), );
+ASCENDC_TPL_SEL(
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, HARD_SWISH_GRAD_V2_SCH_MODE_FP32),
+                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, HARD_SWISH_GRAD_V2_SCH_MODE_FP16),
+                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, HARD_SWISH_GRAD_V2_SCH_MODE_BF16),
+                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0, 1)), );
 
 #endif

@@ -40,6 +40,8 @@ public:
         totalElements_ = tilingData->totalElements;
         blockFactor_ = tilingData->blockFactor;
         ubFactor_ = tilingData->ubFactor;
+        ioBufferBytes_ = tilingData->ioBufferBytes;
+        f32BufferBytes_ = tilingData->f32BufferBytes;
         alpha_ = tilingData->alpha;
         beta_ = tilingData->beta;
 
@@ -55,11 +57,11 @@ public:
         xGM_.SetGlobalBuffer((__gm__ T*)x + startIdx_, blockLength_);
         yGM_.SetGlobalBuffer((__gm__ T*)y + startIdx_, blockLength_);
 
-        pipe_.InitBuffer(inQue_, BUFFER_NUM, ubFactor_ * sizeof(T));
-        pipe_.InitBuffer(outQue_, BUFFER_NUM, ubFactor_ * sizeof(T));
+        pipe_.InitBuffer(inQue_, BUFFER_NUM, ioBufferBytes_);
         if constexpr (!std::is_same_v<T, float>) {
-            pipe_.InitBuffer(f32Buf_, ubFactor_ * sizeof(float));
+            pipe_.InitBuffer(f32Buf_, f32BufferBytes_);
         }
+        pipe_.InitBuffer(outQue_, BUFFER_NUM, ioBufferBytes_);
 
         loopCount_ = (blockLength_ + ubFactor_ - 1) / ubFactor_;
     }
@@ -119,11 +121,7 @@ private:
             Cast(f32, xLocal, RoundMode::CAST_NONE, currentChunk);
             Muls(f32, f32, alpha_, currentChunk);
             Adds(f32, f32, beta_, currentChunk);
-            if constexpr (std::is_same_v<T, bfloat16_t>) {
-                Cast(yLocal, f32, RoundMode::CAST_ROUND, currentChunk);
-            } else {
-                Cast(yLocal, f32, RoundMode::CAST_RINT, currentChunk);
-            }
+            Cast(yLocal, f32, RoundMode::CAST_RINT, currentChunk);
             Mins(yLocal, yLocal, static_cast<T>(1.0f), currentChunk);
             Maxs(yLocal, yLocal, static_cast<T>(0.0f), currentChunk);
         }
@@ -155,6 +153,8 @@ private:
     int64_t totalElements_ = 0;
     int64_t blockFactor_ = 0;
     int64_t ubFactor_ = 0;
+    int64_t ioBufferBytes_ = 0;
+    int64_t f32BufferBytes_ = 0;
     int64_t startIdx_ = 0;
     int64_t blockLength_ = 0;
     int64_t loopCount_ = 0;

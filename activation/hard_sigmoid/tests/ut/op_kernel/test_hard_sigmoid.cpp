@@ -40,11 +40,22 @@ void RunHardSigmoidFloat(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_AD
     kernel.Process();
 }
 
+void RunHardSigmoidBfloat16(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+{
+    (void)workspace;
+    const auto* tilingData = reinterpret_cast<const HardSigmoidTilingData*>(tiling);
+    HardSigmoidKernel<bfloat16_t> kernel;
+    kernel.Init(input, output, tilingData);
+    kernel.Process();
+}
+
 void InitTiling(HardSigmoidTilingData* tilingData, int64_t totalElements, int64_t blockFactor, float alpha, float beta)
 {
     tilingData->totalElements = totalElements;
     tilingData->blockFactor = blockFactor;
     tilingData->ubFactor = UB_ELEMENT_COUNT;
+    tilingData->ioBufferBytes = UB_ELEMENT_COUNT * static_cast<int64_t>(sizeof(float));
+    tilingData->f32BufferBytes = 0;
     tilingData->alpha = alpha;
     tilingData->beta = beta;
 }
@@ -96,6 +107,31 @@ void RunEmptyKernelCase()
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(RunHardSigmoidFloat, 1, x.get(), y.get(), workspace.get(), tiling.get());
 }
+
+void RunBfloat16RneMidpointCase()
+{
+    constexpr size_t tensorBytes = 32;
+    GmBuffer x(static_cast<uint8_t*>(AscendC::GmAlloc(tensorBytes)));
+    GmBuffer y(static_cast<uint8_t*>(AscendC::GmAlloc(tensorBytes)));
+    GmBuffer workspace(static_cast<uint8_t*>(AscendC::GmAlloc(tensorBytes)));
+    GmBuffer tiling(static_cast<uint8_t*>(AscendC::GmAlloc(sizeof(HardSigmoidTilingData))));
+    ASSERT_NE(x.get(), nullptr);
+    ASSERT_NE(y.get(), nullptr);
+    ASSERT_NE(workspace.get(), nullptr);
+    ASSERT_NE(tiling.get(), nullptr);
+
+    // BF16 0x3c40 is 0.01171875. The affine result is exactly halfway
+    // between BF16 0.5 and 0.50390625; RNE must choose the even 0.5 (0x3f00).
+    reinterpret_cast<uint16_t*>(x.get())[0] = 0x3c40;
+    auto* tilingData = reinterpret_cast<HardSigmoidTilingData*>(tiling.get());
+    InitTiling(tilingData, 1, 1, 1.0f / 6.0f, 0.5f);
+    tilingData->ioBufferBytes = UB_ELEMENT_COUNT * static_cast<int64_t>(sizeof(uint16_t));
+    tilingData->f32BufferBytes = UB_ELEMENT_COUNT * static_cast<int64_t>(sizeof(float));
+    ICPU_SET_TILING_KEY(0);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(RunHardSigmoidBfloat16, 1, x.get(), y.get(), workspace.get(), tiling.get());
+    EXPECT_EQ(reinterpret_cast<const uint16_t*>(y.get())[0], 0x3f00);
+}
 } // namespace
 
 class HardSigmoidKernelTest : public testing::Test {
@@ -110,3 +146,5 @@ TEST_F(HardSigmoidKernelTest, CustomAttributes) { RunKernelCase(256, 256, 1, 0.2
 TEST_F(HardSigmoidKernelTest, MultiCoreTailBlock) { RunKernelCase(257, 129, 2, 1.0f / 6.0f, 0.5f); }
 
 TEST_F(HardSigmoidKernelTest, EmptyTensor) { RunEmptyKernelCase(); }
+
+TEST_F(HardSigmoidKernelTest, Bfloat16RneMidpoint) { RunBfloat16RneMidpointCase(); }

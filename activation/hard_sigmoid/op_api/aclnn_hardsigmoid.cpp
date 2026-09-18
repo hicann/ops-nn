@@ -52,6 +52,18 @@ static bool CheckShape(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
+static bool CheckFormatValid(const aclTensor* self, const aclTensor* out)
+{
+    if (self->GetStorageFormat() != op::Format::FORMAT_ND || out->GetStorageFormat() != op::Format::FORMAT_ND) {
+        const std::string formatStr = std::string(op::ToString(self->GetStorageFormat()).GetString()) + ", " +
+                                      op::ToString(out->GetStorageFormat()).GetString();
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(ACLNN_HARD_SIGMOID_NAME, "self, out", formatStr.c_str(),
+                                                "the format of self and out must be ND");
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
@@ -60,22 +72,18 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self), ACLNN_ERR_PARAM_INVALID);
 
-    // 3. 检查shape是否满足约束
+    // 3. 检查输入输出的数据格式是否在支持范围内
+    CHECK_RET(CheckFormatValid(self, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
 
-    // 4. 检查输入和输出的类型、数据格式是否一致
+    // 5. 检查输入和输出的类型是否一致
     if (self->GetDataType() != out->GetDataType()) {
         const std::string dtypeStr = std::string(op::ToString(self->GetDataType()).GetString()) + ", " +
                                      op::ToString(out->GetDataType()).GetString();
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_HARD_SIGMOID_NAME, "self, out", dtypeStr.c_str(),
                                                "the dtype of self and out must be the same");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        const std::string formatStr = std::string(op::ToString(self->GetStorageFormat()).GetString()) + ", " +
-                                      op::ToString(out->GetStorageFormat()).GetString();
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(ACLNN_HARD_SIGMOID_NAME, "self, out", formatStr.c_str(),
-                                                "the format of self and out must be the same");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;

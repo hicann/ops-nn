@@ -46,7 +46,8 @@ constexpr const char* COMPILE_INFO = R"({
 
 ge::graphStatus RunInplaceSubTiling(gert::StorageShape xShape, gert::StorageShape indicesShape,
                                     gert::StorageShape vShape, ge::DataType xDtype, ge::DataType indicesDtype,
-                                    ge::DataType vDtype, InplaceSubTilingData* outTilingData = nullptr)
+                                    ge::DataType vDtype, InplaceSubTilingData* outTilingData = nullptr,
+                                    int64_t coreNum = 64, int64_t ubSize = 253952)
 {
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceSub");
     if (opImpl == nullptr || opImpl->tiling == nullptr) {
@@ -61,8 +62,8 @@ ge::graphStatus RunInplaceSubTiling(gert::StorageShape xShape, gert::StorageShap
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     InplaceSubCompileInfo compileInfo;
-    compileInfo.core_num = 64;
-    compileInfo.ub_size = 253952;
+    compileInfo.core_num = coreNum;
+    compileInfo.ub_size = ubSize;
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
@@ -185,6 +186,18 @@ TEST_F(InplaceSubTilingTest, emptyFirstDimSuccess)
     EXPECT_EQ(tilingData.perCoreN, 0);
 }
 
+TEST_F(InplaceSubTilingTest, emptyRankOneSuccess)
+{
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{0}, {0}}, {{0}, {0}}, {{0}, {0}}, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT,
+                                      &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.n, 0);
+    EXPECT_EQ(tilingData.k, 0);
+    EXPECT_EQ(tilingData.innerSize, 1);
+    EXPECT_EQ(tilingData.perCoreN, 0);
+}
+
 TEST_F(InplaceSubTilingTest, rejectEmptyFirstDimWithNonEmptyIndices)
 {
     auto status = RunInplaceSubTiling({{0, 4}, {0, 4}}, {{1}, {1}}, {{1, 4}, {1, 4}}, ge::DT_FLOAT, ge::DT_INT32,
@@ -197,6 +210,51 @@ TEST_F(InplaceSubTilingTest, emptyTailDimSuccess)
     InplaceSubTilingData tilingData;
     auto status = RunInplaceSubTiling({{4, 0}, {4, 0}}, {{2}, {2}}, {{2, 0}, {2, 0}}, ge::DT_FLOAT16, ge::DT_INT32,
                                       ge::DT_FLOAT16, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.n, 4);
+    EXPECT_EQ(tilingData.k, 2);
+    EXPECT_EQ(tilingData.innerSize, 0);
+}
+
+TEST_F(InplaceSubTilingTest, emptyMiddleDimSuccess)
+{
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{4, 3, 0, 5}, {4, 3, 0, 5}}, {{2}, {2}}, {{2, 3, 0, 5}, {2, 3, 0, 5}},
+                                      ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.n, 4);
+    EXPECT_EQ(tilingData.k, 2);
+    EXPECT_EQ(tilingData.innerSize, 0);
+}
+
+TEST_F(InplaceSubTilingTest, emptyLastDimHighRankSuccess)
+{
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{4, 3, 5, 0}, {4, 3, 5, 0}}, {{2}, {2}}, {{2, 3, 5, 0}, {2, 3, 5, 0}},
+                                      ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.n, 4);
+    EXPECT_EQ(tilingData.k, 2);
+    EXPECT_EQ(tilingData.innerSize, 0);
+}
+
+TEST_F(InplaceSubTilingTest, emptyMultipleDimsSuccess)
+{
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{0, 0, 4}, {0, 0, 4}}, {{0}, {0}}, {{0, 0, 4}, {0, 0, 4}}, ge::DT_UINT16,
+                                      ge::DT_INT32, ge::DT_UINT16, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.n, 0);
+    EXPECT_EQ(tilingData.k, 0);
+    EXPECT_EQ(tilingData.innerSize, 0);
+    EXPECT_EQ(tilingData.perCoreN, 0);
+}
+
+TEST_F(InplaceSubTilingTest, emptyMultipleTailDimsSuccess)
+{
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{4, 0, 3, 0}, {4, 0, 3, 0}}, {{2}, {2}}, {{2, 0, 3, 0}, {2, 0, 3, 0}},
+                                      ge::DT_UINT16, ge::DT_INT32, ge::DT_UINT16, &tilingData);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(tilingData.n, 4);
     EXPECT_EQ(tilingData.k, 2);
@@ -228,6 +286,41 @@ TEST_F(InplaceSubTilingTest, rejectMismatchedValueDtype)
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }
 
+TEST_F(InplaceSubTilingTest, rejectInvalidIndicesDtype)
+{
+    auto status = RunInplaceSubTiling({{4, 6}, {4, 6}}, {{2}, {2}}, {{2, 6}, {2, 6}}, ge::DT_FLOAT, ge::DT_INT64,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectMismatchedValueRank)
+{
+    auto status = RunInplaceSubTiling({{4, 6}, {4, 6}}, {{2}, {2}}, {{2, 6, 1}, {2, 6, 1}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectMismatchedValueFirstDim)
+{
+    auto status = RunInplaceSubTiling({{4, 6}, {4, 6}}, {{2}, {2}}, {{3, 6}, {3, 6}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectMismatchedValueTailDim)
+{
+    auto status = RunInplaceSubTiling({{4, 6}, {4, 6}}, {{2}, {2}}, {{2, 5}, {2, 5}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectUnsupportedDtype)
+{
+    auto status = RunInplaceSubTiling({{4, 6}, {4, 6}}, {{2}, {2}}, {{2, 6}, {2, 6}}, ge::DT_DOUBLE, ge::DT_INT32,
+                                      ge::DT_DOUBLE);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
 TEST_F(InplaceSubTilingTest, rejectInt32OverflowShape)
 {
     constexpr int64_t overflowDim = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
@@ -248,5 +341,70 @@ TEST_F(InplaceSubTilingTest, rejectInnerSizeOverflow)
     constexpr int64_t largeDim = std::numeric_limits<int64_t>::max() / 2 + 1;
     auto status = RunInplaceSubTiling({{2, largeDim, 3}, {2, largeDim, 3}}, {{1}, {1}},
                                       {{1, largeDim, 3}, {1, largeDim, 3}}, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectScalarX)
+{
+    auto status = RunInplaceSubTiling({{}, {}}, {{0}, {0}}, {{}, {}}, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectNegativeFirstDim)
+{
+    auto status = RunInplaceSubTiling({{-1, 4}, {-1, 4}}, {{0}, {0}}, {{0, 4}, {0, 4}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectNegativeIndicesLength)
+{
+    auto status = RunInplaceSubTiling({{4, 4}, {4, 4}}, {{-1}, {-1}}, {{-1, 4}, {-1, 4}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectComplexRowElementCountOverflow)
+{
+    constexpr int64_t largeDim = std::numeric_limits<int64_t>::max();
+    auto status = RunInplaceSubTiling({{1, largeDim}, {1, largeDim}}, {{1}, {1}}, {{1, largeDim}, {1, largeDim}},
+                                      ge::DT_COMPLEX64, ge::DT_INT32, ge::DT_COMPLEX64);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectTensorElementCountOverflow)
+{
+    constexpr int64_t maxRows = std::numeric_limits<int32_t>::max();
+    constexpr int64_t rowSize = std::numeric_limits<int64_t>::max() / maxRows + 1;
+    auto status = RunInplaceSubTiling({{maxRows, rowSize}, {maxRows, rowSize}}, {{1}, {1}},
+                                      {{1, rowSize}, {1, rowSize}}, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, combinedWorkOverflowUsesAllCores)
+{
+    constexpr int64_t maxRows = std::numeric_limits<int32_t>::max();
+    constexpr int64_t rowSize = std::numeric_limits<int64_t>::max() / maxRows;
+    InplaceSubTilingData tilingData;
+    auto status = RunInplaceSubTiling({{maxRows, rowSize}, {maxRows, rowSize}}, {{maxRows}, {maxRows}},
+                                      {{maxRows, rowSize}, {maxRows, rowSize}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.needCoreNum, 64);
+    EXPECT_EQ(tilingData.perCoreN, 33554432);
+}
+
+TEST_F(InplaceSubTilingTest, rejectZeroCoreCount)
+{
+    auto status = RunInplaceSubTiling({{4, 4}, {4, 4}}, {{1}, {1}}, {{1, 4}, {1, 4}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT, nullptr, 0);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceSubTilingTest, rejectInsufficientUb)
+{
+    constexpr int64_t dcacheSize = 128 * 1024;
+    auto status = RunInplaceSubTiling({{4, 4}, {4, 4}}, {{1}, {1}}, {{1, 4}, {1, 4}}, ge::DT_FLOAT, ge::DT_INT32,
+                                      ge::DT_FLOAT, nullptr, 64, dcacheSize);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }

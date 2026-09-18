@@ -56,7 +56,7 @@ struct TilingResult {
 };
 
 TilingResult RunTilingCase(const std::vector<int64_t>& dims, ge::DataType dtype, float alpha = 1.0f / 6.0f,
-                           float beta = 0.5f)
+                           float beta = 0.5f, bool withAttrs = true)
 {
     gert::StorageShape shape;
     for (const int64_t dim : dims) {
@@ -108,6 +108,12 @@ TilingResult RunTilingCase(const std::vector<int64_t>& dims, ge::DataType dtype,
         return result;
     }
     auto* workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>>
+        attrs = withAttrs ?
+                    std::vector<std::pair<std::string, Ops::NN::AnyValue>>{
+                        {"alpha", Ops::NN::AnyValue::CreateFrom<float>(alpha)},
+                        {"beta", Ops::NN::AnyValue::CreateFrom<float>(beta)}} :
+                    std::vector<std::pair<std::string, Ops::NN::AnyValue>>{};
     auto contextHolder = gert::TilingContextFaker()
                              .SetOpType("HardSigmoid")
                              .NodeIoNum(1, 1)
@@ -118,8 +124,7 @@ TilingResult RunTilingCase(const std::vector<int64_t>& dims, ge::DataType dtype,
                              .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                              .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                              .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                             .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(alpha)},
-                                         {"beta", Ops::NN::AnyValue::CreateFrom<float>(beta)}})
+                             .NodeAttrs(std::move(attrs))
                              .TilingData(tilingData.get())
                              .Workspace(workspace)
                              .Build();
@@ -152,6 +157,8 @@ TEST(HardSigmoidTilingTest, Float32UsesIndependentCoreAndUbSplits)
     EXPECT_EQ(result.tilingData.totalElements, 262144);
     EXPECT_EQ(result.tilingData.blockFactor, 4096);
     EXPECT_EQ(result.tilingData.ubFactor, 14848);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 14848 * static_cast<int64_t>(sizeof(float)));
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 0);
 }
 
 TEST(HardSigmoidTilingTest, Float16)
@@ -161,6 +168,8 @@ TEST(HardSigmoidTilingTest, Float16)
     EXPECT_EQ(result.blockDim, 1U);
     EXPECT_EQ(result.tilingData.blockFactor, 771);
     EXPECT_EQ(result.tilingData.ubFactor, 19712);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 19712 * static_cast<int64_t>(sizeof(uint16_t)));
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 19712 * static_cast<int64_t>(sizeof(float)));
 }
 
 TEST(HardSigmoidTilingTest, Bfloat16)
@@ -170,6 +179,8 @@ TEST(HardSigmoidTilingTest, Bfloat16)
     EXPECT_EQ(result.blockDim, 1U);
     EXPECT_EQ(result.tilingData.blockFactor, 910);
     EXPECT_EQ(result.tilingData.ubFactor, 19712);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 19712 * static_cast<int64_t>(sizeof(uint16_t)));
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 19712 * static_cast<int64_t>(sizeof(float)));
 }
 
 TEST(HardSigmoidTilingTest, Int32)
@@ -179,6 +190,8 @@ TEST(HardSigmoidTilingTest, Int32)
     EXPECT_EQ(result.blockDim, 1U);
     EXPECT_EQ(result.tilingData.blockFactor, 129);
     EXPECT_EQ(result.tilingData.ubFactor, 11840);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 11840 * static_cast<int64_t>(sizeof(int32_t)));
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 11840 * static_cast<int64_t>(sizeof(float)));
 }
 
 TEST(HardSigmoidTilingTest, CustomAttributes)
@@ -186,6 +199,30 @@ TEST(HardSigmoidTilingTest, CustomAttributes)
     const auto result = RunTilingCase({1024}, ge::DT_FLOAT, 0.2f, 0.4f);
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.blockDim, 1U);
+    EXPECT_FLOAT_EQ(result.tilingData.alpha, 0.2f);
+    EXPECT_FLOAT_EQ(result.tilingData.beta, 0.4f);
+}
+
+TEST(HardSigmoidTilingTest, DefaultAttributesWhenAttrsAbsent)
+{
+    const auto result = RunTilingCase({1024}, ge::DT_FLOAT, 0.0f, 0.0f, false);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_FLOAT_EQ(result.tilingData.alpha, 1.0f / 6.0f);
+    EXPECT_FLOAT_EQ(result.tilingData.beta, 0.5f);
+}
+
+TEST(HardSigmoidTilingTest, ExplicitRoundedDefaultAlphaIsPreserved)
+{
+    const auto result = RunTilingCase({1024}, ge::DT_FLOAT, 0.166667f, 0.5f);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_FLOAT_EQ(result.tilingData.alpha, 0.166667f);
+    EXPECT_FLOAT_EQ(result.tilingData.beta, 0.5f);
+}
+
+TEST(HardSigmoidTilingTest, ExplicitCustomAlphaIsPreserved)
+{
+    const auto result = RunTilingCase({1024}, ge::DT_FLOAT, 0.2f, 0.4f);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_FLOAT_EQ(result.tilingData.alpha, 0.2f);
     EXPECT_FLOAT_EQ(result.tilingData.beta, 0.4f);
 }
@@ -198,6 +235,32 @@ TEST(HardSigmoidTilingTest, EmptyTensor)
     EXPECT_EQ(result.tilingData.totalElements, 0);
     EXPECT_EQ(result.tilingData.blockFactor, 0);
     EXPECT_EQ(result.tilingData.ubFactor, 0);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 0);
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 0);
+}
+
+TEST(HardSigmoidTilingTest, EmptyTensorAxis1)
+{
+    const auto result = RunTilingCase({2, 0, 3}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.blockDim, 1U);
+    EXPECT_EQ(result.tilingData.totalElements, 0);
+    EXPECT_EQ(result.tilingData.blockFactor, 0);
+    EXPECT_EQ(result.tilingData.ubFactor, 0);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 0);
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 0);
+}
+
+TEST(HardSigmoidTilingTest, EmptyTensorLastAxis)
+{
+    const auto result = RunTilingCase({2, 3, 0}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.blockDim, 1U);
+    EXPECT_EQ(result.tilingData.totalElements, 0);
+    EXPECT_EQ(result.tilingData.blockFactor, 0);
+    EXPECT_EQ(result.tilingData.ubFactor, 0);
+    EXPECT_EQ(result.tilingData.ioBufferBytes, 0);
+    EXPECT_EQ(result.tilingData.f32BufferBytes, 0);
 }
 
 TEST(HardSigmoidTilingTest, UnsupportedDtype) { EXPECT_EQ(RunTilingCase({128}, ge::DT_INT8).status, ge::GRAPH_FAILED); }
@@ -221,4 +284,9 @@ TEST(HardSigmoidTilingTest, JustBelowTwoMinimumCopyChunksUsesOneCore)
 TEST(HardSigmoidTilingTest, RejectsNegativeDimensions)
 {
     EXPECT_EQ(RunTilingCase({-1, -1}, ge::DT_FLOAT).status, ge::GRAPH_FAILED);
+}
+
+TEST(HardSigmoidTilingTest, RejectsMoreThanEightDimensions)
+{
+    EXPECT_EQ(RunTilingCase({1, 1, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT).status, ge::GRAPH_FAILED);
 }

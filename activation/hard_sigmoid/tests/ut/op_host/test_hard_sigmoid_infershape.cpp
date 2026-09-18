@@ -69,6 +69,22 @@ TEST(HardSigmoidInferShapeTest, UnknownRank) { RunInferShapeCase({-2}); }
 
 TEST(HardSigmoidInferShapeTest, UnknownDim) { RunInferShapeCase({-1, 4}); }
 
+TEST(HardSigmoidInferShapeTest, RejectsMoreThanEightDimensions)
+{
+    gert::Shape inputShape = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    gert::Shape outputShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&inputShape})
+                      .OutputShapes({&outputShape})
+                      .Build();
+    auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("HardSigmoid");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    EXPECT_EQ(impl->infer_shape(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 TEST(HardSigmoidInferShapeTest, InferDataType)
 {
     RunInferDataTypeCase(ge::DT_FLOAT);

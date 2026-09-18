@@ -43,6 +43,10 @@ constexpr int64_t SIZE_5 = 5;
 constexpr int64_t SIZE_8 = 8;
 constexpr int64_t SIZE_11 = 11;
 constexpr size_t MAX_DIM_NUM = 8;
+constexpr int64_t MASK_ALIGN_BYTES = 256;
+constexpr uint32_t SCH_MODE_FP32 = 0;
+constexpr uint32_t SCH_MODE_FP16 = 1;
+constexpr uint32_t SCH_MODE_BF16 = 2;
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -73,10 +77,18 @@ static ge::graphStatus CheckShapeInfo(const gert::TilingContext* context, gert::
 {
     auto inputGradOutput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGradOutput);
+    OP_CHECK_IF(inputGradOutput->GetStorageShape().GetDimNum() == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "grad_output", "0",
+                                                         "The dim num of grad_output must be at least 1"),
+                return ge::GRAPH_FAILED);
     shapeGradOutput = EnsureNotScalar(inputGradOutput->GetStorageShape());
 
     auto inputSelf = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
+    OP_CHECK_IF(inputSelf->GetStorageShape().GetDimNum() == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "self", "0",
+                                                         "The dim num of self must be at least 1"),
+                return ge::GRAPH_FAILED);
     auto shapeSelf = EnsureNotScalar(inputSelf->GetStorageShape());
     OP_CHECK_IF(shapeGradOutput != shapeSelf,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -87,6 +99,10 @@ static ge::graphStatus CheckShapeInfo(const gert::TilingContext* context, gert::
 
     auto outputOut = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputOut);
+    OP_CHECK_IF(outputOut->GetStorageShape().GetDimNum() == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "out", "0",
+                                                         "The dim num of out must be at least 1"),
+                return ge::GRAPH_FAILED);
     auto shapeOut = EnsureNotScalar(outputOut->GetStorageShape());
     OP_CHECK_IF(shapeOut != shapeGradOutput,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -147,6 +163,20 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     return ge::GRAPH_SUCCESS;
 }
 
+static void SetEmptyTiling(gert::TilingContext* context, HardSwishGradV2Arch35TilingData* tiling, ge::DataType dataType)
+{
+    tiling->totalNum = 0;
+    tiling->blockFactor = 0;
+    tiling->ubFactor = 0;
+    tiling->ioBufferBytes = 0;
+    tiling->f32BufferBytes = 0;
+    tiling->maskBufferBytes = 0;
+    context->SetBlockDim(1);
+    const uint32_t schMode = dataType == ge::DT_FLOAT ? SCH_MODE_FP32 :
+                                                        (dataType == ge::DT_FLOAT16 ? SCH_MODE_FP16 : SCH_MODE_BF16);
+    ASCENDC_TPL_SEL_PARAM(context, schMode, 0ULL);
+}
+
 static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
 {
     // 1. Get platform info
@@ -157,7 +187,7 @@ static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
 
     // 2. Get shape and dtype
     int64_t totalIdx;
-    ge::DataType dataType;
+    ge::DataType dataType = ge::DT_UNDEFINED;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetShapeAttrsInfo failed"), return ge::GRAPH_FAILED);
 
@@ -174,12 +204,7 @@ static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
         OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Set tiling data failed"), return ge::GRAPH_FAILED);
 
     if (totalIdx == 0) {
-        tiling->totalNum = 0;
-        tiling->blockFactor = 0;
-        tiling->ubFactor = 0;
-        context->SetBlockDim(1);
-        uint32_t dTypeX = static_cast<uint32_t>(dataType);
-        ASCENDC_TPL_SEL_PARAM(context, dTypeX, 0ULL);
+        SetEmptyTiling(context, tiling, dataType);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -201,11 +226,16 @@ static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
     int64_t ubBlockSize = GetUbBlockSize(context);
     int64_t alignUnit = std::max(ubBlockSize, VECTOR_ALIGN_ELEM);
     tiling->ubFactor = FloorAlign(FloorDiv((static_cast<int64_t>(ubSize) / typeSize), bufferNum), alignUnit);
+    tiling->ioBufferBytes = tiling->ubFactor * typeSize;
+    tiling->f32BufferBytes = (dataType == ge::DT_FLOAT) ? 0 : tiling->ubFactor * static_cast<int64_t>(sizeof(float));
+    int64_t maskBytes = (tiling->ubFactor + 7) / 8;
+    tiling->maskBufferBytes = (maskBytes + MASK_ALIGN_BYTES - 1) / MASK_ALIGN_BYTES * MASK_ALIGN_BYTES;
 
     context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
 
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer);
+    const uint32_t schMode = dataType == ge::DT_FLOAT ? SCH_MODE_FP32 :
+                                                        (dataType == ge::DT_FLOAT16 ? SCH_MODE_FP16 : SCH_MODE_BF16);
+    ASCENDC_TPL_SEL_PARAM(context, schMode, useDoubleBuffer);
 
     return ge::GRAPH_SUCCESS;
 }

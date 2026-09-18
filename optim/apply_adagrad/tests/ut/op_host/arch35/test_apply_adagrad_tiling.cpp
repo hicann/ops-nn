@@ -19,6 +19,7 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "../../../../op_host/arch35/apply_adagrad_tiling_arch35.h"
+#include "../../../../op_kernel/arch35/apply_adagrad_tiling_key.h"
 
 using namespace ge;
 using namespace ut_util;
@@ -74,7 +75,7 @@ static string to_string(const std::stringstream& tiling_data)
 
 static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr, gert::StorageShape& grad,
                    gert::StorageShape& var_out, ge::DataType varDtype, ge::Format format, bool updateSlots,
-                   bool useLocking, const string& expectData)
+                   bool useLocking, const string& expectData, bool withAttrs = true, uint32_t expectBlockDim = 0)
 {
     optiling::ApplyAdagradCompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -96,23 +97,25 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(32);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
 
-    auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(4, 1)
-                      .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({&var, &accum, &lr, &grad})
-                      .OutputShapes({&var_out})
-                      .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                      .NodeInputTd(0, varDtype, format, format)
-                      .NodeInputTd(1, varDtype, format, format)
-                      .NodeInputTd(2, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, varDtype, format, format)
-                      .NodeOutputTd(0, varDtype, format, format)
-                      .NodeAttrs({{"update_slots", Ops::NN::AnyValue::CreateFrom<bool>(updateSlots)},
-                                  {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
-                      .TilingData(param.get())
-                      .Workspace(wsSize)
-                      .Build();
+    auto faker = gert::TilingContextFaker();
+    faker.NodeIoNum(4, 1)
+        .IrInstanceNum({1, 1, 1, 1})
+        .InputShapes({&var, &accum, &lr, &grad})
+        .OutputShapes({&var_out})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, varDtype, format, format)
+        .NodeInputTd(1, varDtype, format, format)
+        .NodeInputTd(2, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(3, varDtype, format, format)
+        .NodeOutputTd(0, varDtype, format, format)
+        .TilingData(param.get())
+        .Workspace(wsSize);
+    if (withAttrs) {
+        faker.NodeAttrs({{"update_slots", Ops::NN::AnyValue::CreateFrom<bool>(updateSlots)},
+                         {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}});
+    }
+    auto holder = faker.Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -123,6 +126,13 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
 
     // workspaces nullptr return failed
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+    if (!withAttrs) {
+        EXPECT_EQ(tilingContext->GetTilingKey(),
+                  GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_0, UPDATE_SLOTS_TPL_TRUE, APPLY_ADAGRAD_TPL_FP32));
+    }
+    if (expectBlockDim != 0) {
+        EXPECT_EQ(tilingContext->GetBlockDim(), expectBlockDim);
+    }
     // check tiling result
     auto tilingDataResult = TilingData2Str(tilingContext->GetRawTilingData());
     EXPECT_EQ(tilingDataResult, expectData);
@@ -130,7 +140,8 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
 
 static void DoFailedTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr,
                          gert::StorageShape& grad, ge::DataType varDtype, ge::DataType accumDtype, ge::DataType lrDtype,
-                         ge::DataType gradDtype)
+                         ge::DataType gradDtype, gert::StorageShape* outputShape = nullptr,
+                         ge::DataType outputDtype = ge::DT_UNDEFINED)
 {
     optiling::ApplyAdagradCompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -150,20 +161,22 @@ static void DoFailedTest(gert::StorageShape& var, gert::StorageShape& accum, ger
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(32);
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
-    gert::StorageShape var_out = var;
+    gert::StorageShape defaultOutputShape = var;
+    gert::StorageShape* varOut = outputShape == nullptr ? &defaultOutputShape : outputShape;
+    ge::DataType varOutDtype = outputDtype == ge::DT_UNDEFINED ? varDtype : outputDtype;
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 1)
                       .IrInstanceNum({1, 1, 1, 1})
                       .InputShapes({&var, &accum, &lr, &grad})
-                      .OutputShapes({&var_out})
+                      .OutputShapes({varOut})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, accumDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, lrDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, gradDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, varOutDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"update_slots", Ops::NN::AnyValue::CreateFrom<bool>(true)},
                                   {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
@@ -196,7 +209,7 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_1000)
     auto dataFormat = ge::FORMAT_ND;
     bool updateSlots = false;
     bool useLocking = false;
-    string expectData = "3840 1024 8768 ";
+    string expectData = "3840 1024 8768 35072 ";
     RUN_TEST_WITH_SHAPE(768, 5);
 }
 
@@ -206,7 +219,7 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_fp16_update_slots_true)
     auto dataFormat = ge::FORMAT_ND;
     bool updateSlots = true;
     bool useLocking = false;
-    string expectData = "1024 1024 6400 ";
+    string expectData = "1024 1024 6400 12800 ";
     RUN_TEST_WITH_SHAPE(1024);
 }
 
@@ -216,8 +229,28 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_bf16_multi_core)
     auto dataFormat = ge::FORMAT_ND;
     bool updateSlots = true;
     bool useLocking = true;
-    string expectData = "65536 2048 6400 ";
+    string expectData = "65536 2048 6400 12800 ";
     RUN_TEST_WITH_SHAPE(256, 256);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_default_attrs)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    gert::StorageShape varOut = var;
+    DoTest(var, accum, lr, grad, varOut, ge::DT_FLOAT, ge::FORMAT_ND, true, false, "16 512 8768 35072 ", false, 1);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_large_axis)
+{
+    gert::StorageShape var = {{131073}, {131073}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    gert::StorageShape varOut = var;
+    DoTest(var, accum, lr, grad, varOut, ge::DT_FLOAT, ge::FORMAT_ND, true, false, "131073 2560 8768 35072 ", true, 52);
 }
 
 TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_empty_tensor)
@@ -226,8 +259,33 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_empty_tensor)
     auto dataFormat = ge::FORMAT_ND;
     bool updateSlots = false;
     bool useLocking = false;
-    string expectData = "0 0 1 ";
+    string expectData = "0 0 1 4 ";
     RUN_TEST_WITH_SHAPE(0);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_empty_tensor_each_axis)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+    string expectData = "0 0 1 4 ";
+    RUN_TEST_WITH_SHAPE(0, 3);
+    RUN_TEST_WITH_SHAPE(3, 0);
+    RUN_TEST_WITH_SHAPE(0, 0);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_empty_tensor_4d_each_axis)
+{
+    auto varDtype = ge::DT_FLOAT;
+    auto dataFormat = ge::FORMAT_ND;
+    bool updateSlots = true;
+    bool useLocking = false;
+    string expectData = "0 0 1 4 ";
+    RUN_TEST_WITH_SHAPE(0, 2, 3, 4);
+    RUN_TEST_WITH_SHAPE(2, 0, 3, 4);
+    RUN_TEST_WITH_SHAPE(2, 3, 0, 4);
+    RUN_TEST_WITH_SHAPE(2, 3, 4, 0);
 }
 
 TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_mismatched_shape_failed)
@@ -237,6 +295,25 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_mismatched_shape_failed)
     gert::StorageShape lr = {{1}, {1}};
     gert::StorageShape grad = {{16}, {16}};
     DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_grad_shape_mismatch_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = {{8}, {8}};
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_output_shape_mismatch_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    gert::StorageShape varOut = {{8}, {8}};
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, &varOut);
 }
 
 TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_lr_non_scalar_failed)
@@ -255,4 +332,40 @@ TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_mismatched_dtype_failed)
     gert::StorageShape lr = {{1}, {1}};
     gert::StorageShape grad = {{16}, {16}};
     DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_unsupported_var_dtype_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    DoFailedTest(var, accum, lr, grad, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_lr_dtype_mismatch_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_grad_dtype_mismatch_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16);
+}
+
+TEST_F(ApplyAdagradTilingTest, apply_adagrad_tiling_output_dtype_mismatch_failed)
+{
+    gert::StorageShape var = {{16}, {16}};
+    gert::StorageShape accum = var;
+    gert::StorageShape lr = {{1}, {1}};
+    gert::StorageShape grad = var;
+    DoFailedTest(var, accum, lr, grad, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, nullptr, ge::DT_FLOAT16);
 }

@@ -25,7 +25,17 @@ __global__ __aicore__ void apply_adagrad(GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
     REGISTER_TILING_DEFAULT(ApplyAdagradTilingDataStruct);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdagradTilingDataStruct, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    NsApplyAdagrad::ApplyAdagradKernel<DTYPE_VAR, (updateSlots > 0)> op;
-    op.Init(var, accum, lr, grad, var_out, &tilingData);
-    op.Process();
+    if constexpr (dType == APPLY_ADAGRAD_TPL_FP16) {
+        NsApplyAdagrad::ApplyAdagradKernel<half, (updateSlots > 0)> op;
+        op.Init(var, accum, lr, grad, var_out, &tilingData);
+        op.Process();
+    } else if constexpr (dType == APPLY_ADAGRAD_TPL_BF16) {
+        NsApplyAdagrad::ApplyAdagradKernel<bfloat16_t, (updateSlots > 0)> op;
+        op.Init(var, accum, lr, grad, var_out, &tilingData);
+        op.Process();
+    } else {
+        NsApplyAdagrad::ApplyAdagradKernel<float, (updateSlots > 0)> op;
+        op.Init(var, accum, lr, grad, var_out, &tilingData);
+        op.Process();
+    }
 }

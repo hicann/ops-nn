@@ -36,6 +36,7 @@ constexpr int32_t ACCUM_INDEX = 1;
 constexpr int32_t LR_INDEX = 2;
 constexpr int32_t GRAD_INDEX = 3;
 constexpr int32_t INPUT_NUM = 4;
+constexpr int32_t VAR_OUTPUT_INDEX = 0;
 constexpr int64_t MIN_BITS_PER_CORE = 32768;
 constexpr int64_t BLOCK_ALIGN = 512;
 constexpr int64_t UB_RESERVED = 256;
@@ -132,7 +133,7 @@ ge::graphStatus ApplyAdagradTiling::CheckDtype()
         }
     }
 
-    auto outputDesc = tilingContext_->GetOutputDesc(0);
+    auto outputDesc = tilingContext_->GetOutputDesc(VAR_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
     auto outputDtype = outputDesc->GetDataType();
     if (outputDtype != varDtype_) {
@@ -168,17 +169,22 @@ ge::graphStatus ApplyAdagradTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, accumStorageShape);
     auto gradStorageShape = tilingContext_->GetInputShape(GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, gradStorageShape);
+    auto varOutStorageShape = tilingContext_->GetOutputShape(VAR_OUTPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, varOutStorageShape);
 
     const gert::Shape& varShape = EnsureNotScalar(varStorageShape->GetStorageShape());
     const gert::Shape& accumShape = EnsureNotScalar(accumStorageShape->GetStorageShape());
     const gert::Shape& gradShape = EnsureNotScalar(gradStorageShape->GetStorageShape());
-    if (varShape != accumShape || varShape != gradShape) {
+    const gert::Shape& varOutShape = EnsureNotScalar(varOutStorageShape->GetStorageShape());
+    if (varShape != accumShape || varShape != gradShape || varShape != varOutShape) {
         std::string varShapeStr = Ops::Base::ToString(varShape);
         std::string accumShapeStr = Ops::Base::ToString(accumShape);
         std::string gradShapeStr = Ops::Base::ToString(gradShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "var, accum and grad",
-                                               (varShapeStr + ", " + accumShapeStr + " and " + gradShapeStr).c_str(),
-                                               "The shapes of var, accum and grad should be the same");
+        std::string varOutShapeStr = Ops::Base::ToString(varOutShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext_->GetNodeName(), "var, accum, grad and var(output)",
+            (varShapeStr + ", " + accumShapeStr + ", " + gradShapeStr + " and " + varOutShapeStr).c_str(),
+            "The shapes of var, accum, grad and var(output) should be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -194,6 +200,7 @@ ge::graphStatus ApplyAdagradTiling::ComputeTiling()
     if (totalElements_ == 0) {
         tiling_->blockFactor = 0;
         tiling_->ubFactor = 1;
+        tiling_->ioBufferBytes = GetDtypeBytes(varDtype_);
         blockNum_ = 1;
         return ge::GRAPH_SUCCESS;
     }
@@ -282,6 +289,7 @@ ge::graphStatus ApplyAdagradTiling::ComputeUbTiling(uint64_t ubSize)
                                               "UB size is insufficient for one aligned tile"),
         return ge::GRAPH_FAILED);
     tiling_->ubFactor = std::max<int64_t>(alignFactor, (maxElementNum / alignFactor) * alignFactor);
+    tiling_->ioBufferBytes = tiling_->ubFactor * dtypeBytes;
     return ge::GRAPH_SUCCESS;
 }
 

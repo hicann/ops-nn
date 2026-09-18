@@ -40,6 +40,7 @@ constexpr size_t WS_SYS_SIZE = 0U;
 constexpr int64_t UB_RESERVE_BYTES = 8192; // 预留系统/对齐余量
 constexpr int64_t MIN_COPY_BYTES = 16 * 1024;
 constexpr int64_t F32_TEMP_BYTES = static_cast<int64_t>(sizeof(float)); // 非 fp32 路径的 fp32 中间缓冲
+constexpr size_t MAX_DIM_NUM = 8;
 
 struct HardSigmoidCompileInfo {
     uint64_t coreNum = 0;
@@ -112,6 +113,11 @@ void SetAttrs(gert::TilingContext* context, HardSigmoidTilingData* tilingData)
 template <typename ShapeT>
 ge::graphStatus GetTotalElements(gert::TilingContext* context, const ShapeT& storageShape, int64_t& totalElements)
 {
+    OP_CHECK_IF(storageShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input_x",
+                                                         std::to_string(storageShape.GetDimNum()).c_str(),
+                                                         "The dim num of input_x must be less than or equal to 8"),
+                return ge::GRAPH_FAILED);
     for (size_t i = 0; i < storageShape.GetDimNum(); ++i) {
         OP_CHECK_IF(storageShape.GetDim(i) < 0,
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input_x",
@@ -170,6 +176,10 @@ ge::graphStatus SetBlockTiling(gert::TilingContext* context, ge::DataType dtype,
             platformValues.c_str());
         return ge::GRAPH_FAILED;
     }
+    const int64_t typeBytes = StorageBytesPerElement(dtype);
+    tilingData->ioBufferBytes = tilingData->ubFactor * typeBytes;
+    tilingData->f32BufferBytes = (dtype == ge::DT_FLOAT) ? 0 :
+                                                           tilingData->ubFactor * static_cast<int64_t>(sizeof(float));
 
     const int64_t totalElements = tilingData->totalElements;
     const int64_t minCopyElements = CeilDiv(MIN_COPY_BYTES, StorageBytesPerElement(dtype));

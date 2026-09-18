@@ -9,6 +9,7 @@
  */
 
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 namespace {
 ge::graphStatus InplaceSubInferShape(gert::InferShapeContext* context)
@@ -16,6 +17,13 @@ ge::graphStatus InplaceSubInferShape(gert::InferShapeContext* context)
     const gert::Shape* xShape = context->GetInputShape(0);
     gert::Shape* yShape = context->GetOutputShape(0);
     if (xShape == nullptr || yShape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    if (Ops::Base::IsUnknownRank(*xShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
+    }
+    if (xShape->GetDimNum() == 0) {
         return ge::GRAPH_FAILED;
     }
     *yShape = *xShape;

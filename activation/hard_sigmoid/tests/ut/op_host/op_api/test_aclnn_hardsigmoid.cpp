@@ -184,3 +184,28 @@ TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_014)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
 }
+
+// self和out格式相同但不在支持范围内
+TEST_F(l2_hardsigmoid_test, l2_hardsigmoid_test_015)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto outDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto ut = OP_API_UT(aclnnHardsigmoid, INPUT(selfDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_hardsigmoid_test, WorkspaceSizeNull)
+{
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnHardsigmoidGetWorkspaceSize(nullptr, nullptr, nullptr, &executor), ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnInplaceHardsigmoidGetWorkspaceSize(nullptr, nullptr, &executor), ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_hardsigmoid_test, ExecutorNull)
+{
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(aclnnHardsigmoidGetWorkspaceSize(nullptr, nullptr, &workspaceSize, nullptr), ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnInplaceHardsigmoidGetWorkspaceSize(nullptr, &workspaceSize, nullptr), ACLNN_ERR_PARAM_NULLPTR);
+}

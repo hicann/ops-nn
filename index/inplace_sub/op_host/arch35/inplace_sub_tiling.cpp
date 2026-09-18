@@ -169,7 +169,9 @@ static void SetInplaceSubTilingData(InplaceSubTilingData* tiling, int32_t n, int
 {
     int32_t perCoreN = 0;
     int32_t needCoreNum = 1;
-    int64_t totalWork = (static_cast<int64_t>(n) + static_cast<int64_t>(k)) * innerSize;
+    const int64_t totalRows = static_cast<int64_t>(n) + static_cast<int64_t>(k);
+    const int64_t totalWork = (innerSize != 0 && totalRows > INT64_MAX_VALUE / innerSize) ? INT64_MAX_VALUE :
+                                                                                            totalRows * innerSize;
     if (totalWork > 0) {
         int64_t perCoreWork = std::max(Ops::Base::CeilDiv(totalWork, coreNum), MIN_ELEMENTS_PER_CORE);
         needCoreNum = static_cast<int32_t>(Ops::Base::CeilDiv(totalWork, perCoreWork));

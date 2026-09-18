@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <array>
 #include <iostream>
 #include <gtest/gtest.h>
 #include <vector>
@@ -76,6 +77,31 @@ static void RunInferDataTypeCase(ge::DataType dtype)
     EXPECT_EQ(context->GetOutputDataType(0), dtype);
 }
 
+static void RunInferDataTypeMismatchCase(size_t mismatchInputIdx)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagrad")->infer_datatype;
+    ASSERT_NE(inferDataTypeFunc, nullptr);
+
+    std::array<ge::DataType, 4> inputDtypes = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    inputDtypes[mismatchInputIdx] = ge::DT_FLOAT16;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .NodeInputTd(0, inputDtypes[0], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, inputDtypes[1], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, inputDtypes[2], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, inputDtypes[3], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputDataTypes({&inputDtypes[0], &inputDtypes[1], &inputDtypes[2], &inputDtypes[3]})
+                      .OutputDataTypes({&outputDtype})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(inferDataTypeFunc(context), ge::GRAPH_FAILED);
+}
+
 TEST_F(ApplyAdagradTest, apply_adagrad_infer_shape_fp16_1d)
 {
     gert::StorageShape var = {{64}, {-1}};
@@ -113,4 +139,11 @@ TEST_F(ApplyAdagradTest, apply_adagrad_infer_datatype_follow_var)
     RunInferDataTypeCase(ge::DT_FLOAT);
     RunInferDataTypeCase(ge::DT_FLOAT16);
     RunInferDataTypeCase(ge::DT_BF16);
+}
+
+TEST_F(ApplyAdagradTest, apply_adagrad_infer_datatype_rejects_mismatched_inputs)
+{
+    RunInferDataTypeMismatchCase(1);
+    RunInferDataTypeMismatchCase(2);
+    RunInferDataTypeMismatchCase(3);
 }

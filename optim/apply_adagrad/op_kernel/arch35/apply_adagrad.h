@@ -75,7 +75,6 @@ __simd_vf__ inline void ApplyAdagradVF(__ubuf__ T* varAddr, __ubuf__ T* accumAdd
     AscendC::Reg::RegTensor<float> gradSquareReg;
     AscendC::Reg::RegTensor<float> denomReg;
     AscendC::Reg::RegTensor<float> varOutReg;
-    AscendC::Reg::RegTensor<float> zeroReg;
     AscendC::Reg::MaskReg mask;
     uint32_t remain = count;
 
@@ -92,17 +91,19 @@ __simd_vf__ inline void ApplyAdagradVF(__ubuf__ T* varAddr, __ubuf__ T* accumAdd
             Mul(gradSquareReg, gradReg, gradReg, mask);
             if constexpr (UPDATE_SLOTS) {
                 Add(accumOutReg, accumReg, gradSquareReg, mask);
+                Sqrt(denomReg, accumOutReg, mask);
             } else {
-                AscendC::Reg::Duplicate(zeroReg, 0.0f, mask);
-                Add(accumOutReg, accumReg, zeroReg, mask);
+                // CODE.12/1: do not rewrite accum through +/-0; sqrt the original value so -0.0 keeps its sign.
+                Sqrt(denomReg, accumReg, mask);
             }
-            Sqrt(denomReg, accumOutReg, mask);
             Muls(gradSquareReg, gradReg, lr, mask);
             Div(gradSquareReg, gradSquareReg, denomReg, mask);
             Sub(varOutReg, varReg, gradSquareReg, mask);
 
             StoreFromFp32<T>(varOutAddr, varOutReg, offset, mask);
-            StoreFromFp32<T>(accumOutAddr, accumOutReg, offset, mask);
+            if constexpr (UPDATE_SLOTS) {
+                StoreFromFp32<T>(accumOutAddr, accumOutReg, offset, mask);
+            }
         }
         remain = remain > oneRepeatSize ? remain - oneRepeatSize : 0;
     }
@@ -142,6 +143,7 @@ private:
     int64_t blockOffset_ = 0;
     int64_t blockLen_ = 0;
     int64_t ubFactor_ = 0;
+    int64_t ioBufferBytes_ = 0;
     float lrScalar_ = 0.0f;
 };
 
@@ -151,6 +153,7 @@ __aicore__ inline void ApplyAdagradKernel<T, UPDATE_SLOTS>::Init(
     const ApplyAdagradTilingData::ApplyAdagradTilingDataStruct* tiling)
 {
     ubFactor_ = tiling->ubFactor;
+    ioBufferBytes_ = tiling->ioBufferBytes;
     if (tiling->totalElements <= 0 || tiling->blockFactor <= 0) {
         return;
     }
@@ -175,11 +178,11 @@ __aicore__ inline void ApplyAdagradKernel<T, UPDATE_SLOTS>::Init(
 template <typename T, bool UPDATE_SLOTS>
 __aicore__ inline void ApplyAdagradKernel<T, UPDATE_SLOTS>::InitBuffers()
 {
-    pipe_.InitBuffer(varQue_, 1, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(accumQue_, 1, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(gradQue_, 1, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(varOutQue_, 1, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(accumOutQue_, 1, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(varQue_, 1, ioBufferBytes_);
+    pipe_.InitBuffer(accumQue_, 1, ioBufferBytes_);
+    pipe_.InitBuffer(gradQue_, 1, ioBufferBytes_);
+    pipe_.InitBuffer(varOutQue_, 1, ioBufferBytes_);
+    pipe_.InitBuffer(accumOutQue_, 1, ioBufferBytes_);
     pipe_.InitBuffer(scalarBuf_, SCALAR_UB_SIZE);
 }
 

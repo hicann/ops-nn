@@ -17,11 +17,14 @@
 #include "inplace_sub_tiling_data.h"
 #include "simt_api/common_functions.h"
 #include "simt_api/asc_simt.h"
+#include "simt_api/device_sync_functions.h"
 
 namespace {
 using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
+constexpr uint32_t UB_CHUNK_BYTES = 16384;
+constexpr int32_t DB_BUFFER = 2;
 
 template <typename T>
 __simt_callee__ __aicore__ inline T SubValue(T lhs, T rhs)
@@ -39,31 +42,67 @@ __simt_callee__ __aicore__ inline int32_t NormalizeIndex(int32_t index, int32_t 
 }
 
 template <typename T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void InplaceSubCompute(
-    int32_t needCoreNum, int32_t coreId, int32_t n, int32_t k, int64_t rowSize, int32_t perCoreN, __gm__ T* xGm,
-    __gm__ int32_t* indicesGm, __gm__ T* vGm, __gm__ T* yGm)
+__aicore__ inline void InplaceSubCopy(int32_t needCoreNum, int32_t coreId, int32_t n, int64_t rowSize, int32_t perCoreN,
+                                      __gm__ T* xGm, __gm__ T* yGm, TPipe& pipe)
 {
     if (coreId >= needCoreNum) {
         return;
     }
-    int32_t startRow = coreId * perCoreN;
-    int32_t endRow = startRow + perCoreN;
-    if (endRow > n) {
-        endRow = n;
+    int64_t startRow = static_cast<int64_t>(coreId) * static_cast<int64_t>(perCoreN);
+    int64_t endRow = startRow + static_cast<int64_t>(perCoreN);
+    if (endRow > static_cast<int64_t>(n)) {
+        endRow = static_cast<int64_t>(n);
     }
     if (startRow >= endRow) {
         return;
     }
 
+    constexpr int64_t chunkElems = static_cast<int64_t>(UB_CHUNK_BYTES / sizeof(T));
     int64_t startElem = static_cast<int64_t>(startRow) * rowSize;
     int64_t endElem = static_cast<int64_t>(endRow) * rowSize;
-    for (int64_t idx = startElem + static_cast<int64_t>(threadIdx.x); idx < endElem;
-         idx += static_cast<int64_t>(THREAD_NUM)) {
-        yGm[idx] = xGm[idx];
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> que;
+    pipe.InitBuffer(que, DB_BUFFER, UB_CHUNK_BYTES);
+    GlobalTensor<T> xGlobal;
+    GlobalTensor<T> yGlobal;
+    xGlobal.SetGlobalBuffer(xGm);
+    yGlobal.SetGlobalBuffer(yGm);
+    for (int64_t offset = startElem; offset < endElem; offset += chunkElems) {
+        int64_t len = endElem - offset;
+        if (len > chunkElems) {
+            len = chunkElems;
+        }
+        DataCopyExtParams params{1, static_cast<uint32_t>(len * sizeof(T)), 0, 0, 0};
+        DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
+        LocalTensor<T> inLocal = que.AllocTensor<T>();
+        DataCopyPad(inLocal, xGlobal[offset], params, padParams);
+        que.EnQue(inLocal);
+        LocalTensor<T> outLocal = que.DeQue<T>();
+        DataCopyPad(yGlobal[offset], outLocal, params);
+        que.FreeTensor(outLocal);
+    }
+}
+
+template <typename T>
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void InplaceSubUpdate(int32_t needCoreNum, int32_t coreId,
+                                                                                  int32_t n, int32_t k, int64_t rowSize,
+                                                                                  int32_t perCoreN,
+                                                                                  __gm__ int32_t* indicesGm,
+                                                                                  __gm__ T* vGm, __gm__ T* yGm)
+{
+    if (coreId >= needCoreNum) {
+        return;
+    }
+    int64_t startRow = static_cast<int64_t>(coreId) * static_cast<int64_t>(perCoreN);
+    int64_t endRow = startRow + static_cast<int64_t>(perCoreN);
+    if (endRow > static_cast<int64_t>(n)) {
+        endRow = static_cast<int64_t>(n);
+    }
+    if (startRow >= endRow) {
+        return;
     }
 
     for (int32_t kIdx = 0; kIdx < k; ++kIdx) {
-        int32_t dstRow = NormalizeIndex(indicesGm[kIdx], n);
+        int64_t dstRow = static_cast<int64_t>(NormalizeIndex(indicesGm[kIdx], n));
         if (dstRow < startRow || dstRow >= endRow) {
             continue;
         }
@@ -85,9 +124,17 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR v, GM_ADDR y,
     __gm__ T* yGm = reinterpret_cast<__gm__ T*>(y);
     int32_t blockIdx = static_cast<int32_t>(GetBlockIdx());
     int64_t rowSize = tilingData->innerSize * ELEMENTS_PER_VALUE;
+    TPipe pipe;
 
-    asc_vf_call<InplaceSubCompute<T>>(dim3(THREAD_NUM), tilingData->needCoreNum, blockIdx, tilingData->n, tilingData->k,
-                                      rowSize, tilingData->perCoreN, xGm, indicesGm, vGm, yGm);
+    // Phase 1: copy the aliased input to output.  All cores must finish this
+    // phase before any indexed update can touch another core's rows.
+    InplaceSubCopy(tilingData->needCoreNum, blockIdx, tilingData->n, rowSize, tilingData->perCoreN, xGm, yGm, pipe);
+    SyncAll();
+
+    // Phase 2: each core owns a disjoint row range, so duplicate indices are
+    // applied in manifest order without cross-core read/write races.
+    asc_vf_call<InplaceSubUpdate<T>>(dim3(THREAD_NUM), tilingData->needCoreNum, blockIdx, tilingData->n, tilingData->k,
+                                     rowSize, tilingData->perCoreN, indicesGm, vGm, yGm);
 }
 
 } // namespace
