@@ -91,17 +91,19 @@ aicpu::KernelStatus ComputeSequential(T* input, T* output, T* dims_exp_sum, T* d
     Eigen::array<int, 1> softmax_axes{{1}};
     dims_max = logits.maximum(softmax_axes);
 
-    IterateBatches(info.total, info.inner_size, info.dims[info.pivot], [&](int64_t index, int64_t index_dst) {
-        *(output + index) = Eigen::numext::exp(*(input + index) - dims_maximum[index_dst]);
-        dims_exp_sum[index_dst] += (*(output + index));
-    });
+    IterateBatches(info.total, info.inner_size, info.dims[info.pivot],
+                   [&input, &output, &dims_maximum, &dims_exp_sum](int64_t index, int64_t index_dst) {
+                       *(output + index) = Eigen::numext::exp(*(input + index) - dims_maximum[index_dst]);
+                       dims_exp_sum[index_dst] += (*(output + index));
+                   });
 
     dims_sum = dims_sum.inverse();
 
-    IterateBatches(info.total, info.inner_size, info.dims[info.pivot], [&](int64_t index, int64_t index_dst) {
-        *(output + index) = (*(output + index)) * (dims_exp_sum[index_dst]);
-        *(output + index) = Eigen::numext::log(*(output + index));
-    });
+    IterateBatches(info.total, info.inner_size, info.dims[info.pivot],
+                   [&output, &dims_exp_sum](int64_t index, int64_t index_dst) {
+                       *(output + index) = (*(output + index)) * (dims_exp_sum[index_dst]);
+                       *(output + index) = Eigen::numext::log(*(output + index));
+                   });
 
     return aicpu::KERNEL_STATUS_OK;
 }
@@ -144,7 +146,8 @@ aicpu::KernelStatus ComputeParallel(const aicpu::CpuKernelContext& ctx, T* input
 {
     std::int64_t per_unit_size{info.length / std::min(std::max(1L, static_cast<int64_t>(cores) - 2L), info.length)};
     std::atomic<bool> failed{false};
-    auto sharder = [&](std::int64_t begin, std::int64_t end) {
+    auto sharder = [&input, &output, &dims_exp_sum, &dims_maximum, &info, &failed](std::int64_t begin,
+                                                                                   std::int64_t end) {
         for (int64_t index = begin; index < end; ++index) {
             ComputeOneBatch<T>(input, output, dims_exp_sum, dims_maximum, index, info.inner_size, info.dims[info.pivot],
                                failed);

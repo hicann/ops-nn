@@ -27,15 +27,15 @@ const char* const kScatterNdMax = "ScatterNdMax";
 const int64_t kParallelDataNum = 32 * 1024;
 const int32_t kSplitSize = 64 * 1024;
 
-#define DO_SCATTER_ND_MAX_COMPUTE_CASE(DTYPE, TYPE, ITYPE, CTX) \
-    case (DTYPE):                                                \
-    do {                                                         \
-        if ((ITYPE) == DT_INT32) {                               \
-            return DoScatterNdMaxCompute<TYPE, int32_t>(CTX);    \
-        } else {                                                 \
-            return DoScatterNdMaxCompute<TYPE, int64_t>(CTX);    \
-        }                                                        \
-    } while (0)
+#define DO_SCATTER_ND_MAX_COMPUTE_CASE(DTYPE, TYPE, ITYPE, CTX)   \
+    case (DTYPE):                                                 \
+        do {                                                      \
+            if ((ITYPE) == DT_INT32) {                            \
+                return DoScatterNdMaxCompute<TYPE, int32_t>(CTX); \
+            } else {                                              \
+                return DoScatterNdMaxCompute<TYPE, int64_t>(CTX); \
+            }                                                     \
+        } while (0)
 } // namespace
 
 namespace aicpu {
@@ -74,8 +74,8 @@ uint32_t ScatterNdMaxCpuKernel::Compute(CpuKernelContext& ctx)
 template <typename T>
 uint32_t ScatterNdMaxCpuKernel::InitScatterNdMaxOutput(const CpuKernelContext& ctx)
 {
-    auto input_ref = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto output_ref = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto input_ref = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto output_ref = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     std::atomic<uint32_t> work_ret(KERNEL_STATUS_OK);
     int64_t total_value_num = ctx.Input(0)->NumElements();
     if (total_value_num >= kParallelDataNum) {
@@ -88,10 +88,11 @@ uint32_t ScatterNdMaxCpuKernel::InitScatterNdMaxOutput(const CpuKernelContext& c
                            "max_thread_num must not be equal to zero.");
         size_t chunk_bytes = static_cast<size_t>(total_value_num / max_thread_num) * sizeof(T);
         size_t final_chunk_bytes = static_cast<size_t>(total_value_num % max_thread_num) * sizeof(T) + chunk_bytes;
-        auto copy_output_shard = [&](size_t begin_idx, size_t end_idx) {
+        auto copy_output_shard = [&max_thread_num, &final_chunk_bytes, &chunk_bytes, &total_value_num, &work_ret,
+                                  &output_ref, &input_ref](size_t begin_idx, size_t end_idx) {
             for (size_t shard_id = begin_idx; shard_id < end_idx; ++shard_id) {
-                size_t copy_bytes =
-                    (shard_id == static_cast<size_t>(max_thread_num - 1)) ? final_chunk_bytes : chunk_bytes;
+                size_t copy_bytes = (shard_id == static_cast<size_t>(max_thread_num - 1)) ? final_chunk_bytes :
+                                                                                            chunk_bytes;
                 int64_t data_base = static_cast<int64_t>(shard_id) * (total_value_num / max_thread_num);
                 if (data_base >= total_value_num) {
                     work_ret = KERNEL_STATUS_PARAM_INVALID;
@@ -127,7 +128,7 @@ uint32_t ScatterNdMaxCpuKernel::CheckScatterNdMaxShapeAndData(const CpuKernelCon
 {
     auto shape_ref = ctx.Input(0)->GetTensorShape();
     auto shape_output = ctx.Output(0)->GetTensorShape();
-    auto input_indices = reinterpret_cast<TI*>(ctx.Input(1)->GetData());
+    auto input_indices = PtrToPtr<void, TI>(ctx.Input(1)->GetData());
     size_t value_dim_num_ref = static_cast<size_t>(shape_ref->GetDims());
     std::vector<int64_t> value_dim_ref = shape_ref->GetDimSizes();
     std::vector<int64_t> value_dim_output = shape_output->GetDimSizes();
@@ -151,9 +152,9 @@ uint32_t ScatterNdMaxCpuKernel::CheckScatterNdMaxShapeAndData(const CpuKernelCon
 template <typename T, typename TI>
 uint32_t ScatterNdMaxCpuKernel::DoScatterNdMaxCompute(CpuKernelContext& ctx)
 {
-    auto input_ref = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto input_indices = reinterpret_cast<TI*>(ctx.Input(1)->GetData());
-    auto input_updates = reinterpret_cast<T*>(ctx.Input(2)->GetData());
+    auto input_ref = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto input_indices = PtrToPtr<void, TI>(ctx.Input(1)->GetData());
+    auto input_updates = PtrToPtr<void, T>(ctx.Input(2)->GetData());
     auto shape_ref = ctx.Input(0)->GetTensorShape();
     auto shape_indices = ctx.Input(1)->GetTensorShape();
     auto shape_updates = ctx.Input(2)->GetTensorShape();
@@ -201,7 +202,8 @@ uint32_t ScatterNdMaxCpuKernel::DoScatterNdMaxCompute(CpuKernelContext& ctx)
             }
         }
     }
-    KERNEL_CHECK_FALSE((InitScatterNdMaxOutput<T>(ctx) == KERNEL_STATUS_OK), KERNEL_STATUS_PARAM_INVALID, "InitOutput failed.");
+    KERNEL_CHECK_FALSE((InitScatterNdMaxOutput<T>(ctx) == KERNEL_STATUS_OK), KERNEL_STATUS_PARAM_INVALID,
+                       "InitOutput failed.");
     return KERNEL_STATUS_OK;
 }
 

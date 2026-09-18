@@ -53,8 +53,8 @@ KernelStatus SparseSegmentSumCpuKernel::SparseSegmentCheck(const CpuKernelContex
 template <typename T1, typename T2>
 KernelStatus SparseSegmentSumCpuKernel::SparseSegmentDataCheckWithType(const CpuKernelContext& ctx) const
 {
-    auto indices_ptr = reinterpret_cast<T1*>(ctx.Input(1)->GetData());
-    auto segment_ids_ptr = reinterpret_cast<T2*>(ctx.Input(2)->GetData());
+    auto indices_ptr = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
+    auto segment_ids_ptr = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
     size_t m = ctx.Input(2)->GetTensorShape()->NumElements();
     auto x_dim0 = ctx.Input(0)->GetTensorShape()->GetDimSize(0);
 
@@ -176,10 +176,10 @@ KernelStatus SparseSegmentSumCpuKernel::ComputeKernelWithType(const CpuKernelCon
 {
     size_t n = ctx.Input(0)->GetTensorShape()->NumElements() / ctx.Input(0)->GetTensorShape()->GetDimSize(0);
     size_t num_indices = ctx.Input(2)->GetTensorShape()->NumElements();
-    auto x_ptr = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto indices_ptr = reinterpret_cast<T1*>(ctx.Input(1)->GetData());
-    auto segment_ids_ptr = reinterpret_cast<T2*>(ctx.Input(2)->GetData());
-    auto y_ptr = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto x_ptr = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto indices_ptr = PtrToPtr<void, T1>(ctx.Input(1)->GetData());
+    auto segment_ids_ptr = PtrToPtr<void, T2>(ctx.Input(2)->GetData());
+    auto y_ptr = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     if (num_indices == 0) {
         return KERNEL_STATUS_OK;
     }

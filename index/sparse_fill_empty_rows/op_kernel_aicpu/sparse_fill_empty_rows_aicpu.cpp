@@ -90,9 +90,9 @@ KernelStatus SparseFillEmptyRowsCpuKernel::ComputeSparseFillEmptyRows(const CpuK
     Tensor* emptyRowIndicator = ctx.Output(kEmptyRowIndicatorOutput);
     Tensor* reverseIndexMap = ctx.Output(kReverseIndexMapOutput);
 
-    const T defaultValue = reinterpret_cast<T*>(defaultValueTensor->GetData())[0];
+    const T defaultValue = PtrToPtr<void, T>(defaultValueTensor->GetData())[0];
     const int64_t n = indices->GetTensorShape()->GetDimSize(0);
-    const int64_t denseRows = reinterpret_cast<int64_t*>(denseShape->GetData())[0];
+    const int64_t denseRows = PtrToPtr<void, int64_t>(denseShape->GetData())[0];
     const int64_t rank = indices->GetTensorShape()->GetDimSize(1);
     if (denseRows < 0) {
         KERNEL_LOG_ERROR("dense_shape[0] must be non-negative, but got %ld.", denseRows);
@@ -114,13 +114,13 @@ KernelStatus SparseFillEmptyRowsCpuKernel::ComputeSparseFillEmptyRows(const CpuK
 
     EigenTensor indicesEigen(indices, indices->GetData());
     const auto indicesMatrix = indicesEigen.matrix<int64_t>();
-    auto* valuesData = reinterpret_cast<T*>(values->GetData());
-    auto* emptyRowIndicatorData = reinterpret_cast<bool*>(emptyRowIndicator->GetData());
-    auto* reverseIndexMapData = reinterpret_cast<int64_t*>(reverseIndexMap->GetData());
+    auto* valuesData = PtrToPtr<void, T>(values->GetData());
+    auto* emptyRowIndicatorData = PtrToPtr<void, bool>(emptyRowIndicator->GetData());
+    auto* reverseIndexMapData = PtrToPtr<void, int64_t>(reverseIndexMap->GetData());
 
     EigenTensor outputIndicesEigen(outputIndices, outputIndices->GetData());
     auto outputIndicesMatrix = outputIndicesEigen.matrix<int64_t>();
-    auto* outputValuesData = reinterpret_cast<T*>(outputValues->GetData());
+    auto* outputValuesData = PtrToPtr<void, T>(outputValues->GetData());
     for (int64_t i = 0; i < n; ++i) {
         const int64_t row = indicesMatrix(i, 0);
         if (row < 0 || row >= denseRows) {
