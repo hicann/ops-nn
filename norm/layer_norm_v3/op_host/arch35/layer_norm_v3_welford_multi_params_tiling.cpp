@@ -22,7 +22,6 @@ constexpr static int64_t WELFORD_MP_CONSTANT_TWO = 2;
 constexpr static int64_t WELFORD_MP_TILELENGTH_STEP_SIZE = 64;
 constexpr static int64_t WELFORD_MP_DOUBLE_BUFFER = 2;
 constexpr static int64_t WELFORD_MP_AGGREGATION_COUNT = 256;
-constexpr static uint32_t WELFORD_MP_DEFAULT_WORKSPACE = 16 * 1024 * 1024;
 constexpr static int64_t WELFORD_MP_B32_SIZE = 4;
 constexpr static int64_t WELFORD_MP_B16_SIZE = 2;
 
@@ -141,7 +140,10 @@ ge::graphStatus LayerNormV3WelfordMultiParamsTiling::PostTiling()
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = WELFORD_MP_DEFAULT_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    currentWorkspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

@@ -20,7 +20,6 @@ namespace optiling {
 static constexpr uint32_t CONST_TWO = 2;
 static constexpr uint32_t BYTES_OF_FLOAT = 4;
 static constexpr uint32_t KERNEL_BUFFER_NUM = 2;
-static constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
 static constexpr int64_t MAX_SIZE_PER_CORE = 4096;
 static constexpr int64_t EMPTY_TENSOR_KEY = 9;
 
@@ -178,7 +177,10 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::PostTiling()
 
 ge::graphStatus AddLayerNormQuantEmptyTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = MIN_WORKSPACE_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     tilingData_.set_workspaceSize(workspaceSize_);
     return ge::GRAPH_SUCCESS;
 }

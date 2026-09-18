@@ -54,8 +54,6 @@ constexpr int64_t DIM_2 = 2;
 constexpr int64_t DIM_3 = 3;
 constexpr int64_t DIM_4 = 4;
 
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
-
 constexpr int64_t INPUT_NUM = 5;
 constexpr int64_t OUTPUT_NUM = 5;
 
@@ -429,7 +427,10 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::DoLibApiTiling() { return ge::GRAP
 ge::graphStatus BatchNormV3RegbaseTilingBase::GetWorkspaceSize()
 {
     // 计算workspace大小
-    workspaceSize_ = MINIMAL_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 

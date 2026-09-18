@@ -50,8 +50,6 @@ static const int32_t INDEX_MOMENTUM = 1;
 static const int32_t INDEX_IS_TRAINING = 2;
 constexpr float DEFAULT_EPSILON = 1e-5;
 constexpr float DEFAULT_MOMENTUM = 0.1;
-
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 } // namespace
 
 namespace optiling {
@@ -380,7 +378,10 @@ uint64_t BatchNormV3WelfordReduceTilingBase::GetTilingKey() const { return TILIN
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetWorkspaceSize()
 {
     // 计算workspace大小
-    workspaceSize_ = MINIMAL_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 

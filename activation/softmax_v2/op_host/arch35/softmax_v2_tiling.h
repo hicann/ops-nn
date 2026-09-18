@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <exe_graph/runtime/tiling_context.h>
+#include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
 using namespace Ops::NN::Optiling;
@@ -195,9 +196,6 @@ constexpr uint32_t ROW_FIVE_OFFSET = 5;
 constexpr uint32_t ROW_SIX_OFFSET = 6;
 constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 
-// 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
-
 class SoftmaxV2TilingBase : virtual public TilingBaseClass {
 public:
     explicit SoftmaxV2TilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
@@ -221,7 +219,10 @@ protected:
     ge::graphStatus GetWorkspaceSize() override
     {
         // 计算workspace大小
-        workspaceSize_ = MINIMAL_WORKSPACE;
+        auto platformInfo = context_->GetPlatformInfo();
+        OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+        workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
         return ge::GRAPH_SUCCESS;
     }
     // 7、保存Tiling数据

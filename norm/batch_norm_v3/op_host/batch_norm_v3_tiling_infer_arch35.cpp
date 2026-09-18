@@ -45,8 +45,6 @@ static const int32_t INDEX_EPSILON = 0;
 static const int32_t INDEX_IS_TRAINING = 2;
 constexpr float DEFAULT_EPSILON = 1e-5;
 
-// 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
-constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 } // namespace
 
 namespace optiling {
@@ -352,7 +350,10 @@ uint64_t BatchNormV3InferTiling::GetTilingKey() const
 ge::graphStatus BatchNormV3InferTiling::GetWorkspaceSize()
 {
     // 计算workspace大小
-    workspaceSize_ = MINIMAL_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 

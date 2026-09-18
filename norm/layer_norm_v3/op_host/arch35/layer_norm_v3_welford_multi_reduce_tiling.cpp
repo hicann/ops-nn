@@ -22,7 +22,6 @@ constexpr static int64_t CONSTANT_TWO = 2;
 constexpr static int64_t TILELENGTH_STEP_SIZE = 64;
 constexpr static int64_t DOUBLE_BUFFER = 2;
 constexpr static int64_t AGGREGATION_COUNT = 256;
-constexpr static uint32_t DEFAULT_WORKSPACE = 16 * 1024 * 1024;
 constexpr static int64_t B32_SIZE = 4;
 constexpr static int64_t B16_SIZE = 2;
 
@@ -241,7 +240,10 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::PostTiling()
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = DEFAULT_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    currentWorkspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

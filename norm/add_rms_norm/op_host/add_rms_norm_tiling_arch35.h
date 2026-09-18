@@ -129,9 +129,11 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     auto dataType = context->GetInputDesc(0)->GetDataType();
     uint32_t dtypeKey = DTYPE_KEY_FP16;
     size_t usrSize = 256;
-    size_t sysWorkspaceSize = 16UL * 1024UL * 1024UL;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    currentWorkspace[0] = usrSize + sysWorkspaceSize;
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    currentWorkspace[0] = usrSize + ascendcPlatform.GetLibApiWorkSpaceSize();
     uint32_t numColAlign = 0;
     uint32_t blockFactor;
     uint32_t ubFactor;

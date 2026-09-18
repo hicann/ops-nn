@@ -32,7 +32,6 @@ static constexpr int64_t DIM_1 = 1;
 static constexpr int64_t DIM_2 = 2;
 static constexpr int64_t DIM_3 = 3;
 static constexpr int64_t DIM_4 = 4;
-static constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 static constexpr int64_t B16_BLOCK_ALIGN_NUM = 16;
 static constexpr int64_t B32_BLOCK_ALIGN_NUM = 8;
 static constexpr float DEFAULT_EPSILON = 1e-5;
@@ -274,7 +273,10 @@ ge::graphStatus BatchNormV3TilingBase::GetShapeAttrsInfo()
 ge::graphStatus BatchNormV3TilingBase::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = MINIMAL_WORKSPACE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaces[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
 }

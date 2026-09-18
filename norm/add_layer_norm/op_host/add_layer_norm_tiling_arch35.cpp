@@ -18,7 +18,6 @@
 namespace optiling {
 constexpr int64_t MIN_DATANUM_PER_CORE = 1024;
 constexpr int64_t UB_RESERVED_SIZE = 256;
-constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
 constexpr int64_t INPUT_NUM = 4;
 constexpr int64_t OUTPUT_NUM = 2;
 constexpr int64_t TOTAL_OUTPUT_NUM = 4;
@@ -682,7 +681,10 @@ ge::graphStatus AddLayerNormRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_S
 
 ge::graphStatus AddLayerNormRegbaseTiling::GetWorkspaceSize()
 {
-    workspaceSize_ = MIN_WORKSPACE_SIZE;
+    auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;
 }
 
