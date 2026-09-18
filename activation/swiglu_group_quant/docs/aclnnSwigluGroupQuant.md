@@ -36,18 +36,19 @@ SwigluGroupQuant算子实现SwiGLU激活函数与分组量化融合计算。支�
 
 ### 计算公式
 
-#### 基础计算流程
+**基础计算流程**
 
-```Cpp
-步骤〇：GroupIndex处理（可选）→ 计算real_bs
-步骤一：输入切分（仅处理前real_bs行）
-步骤二：Clamp处理（可选，仅处理前real_bs行）
-步骤三：SwiGLU激活（仅处理前real_bs行）
-步骤四：Weight加权（可选，仅处理前real_bs行）
-步骤五：量化计算（仅处理前real_bs行）
+```txt
+步骤一：GroupIndex处理（可选）→ 计算real_bs
+步骤二：输入切分（仅处理前real_bs行）
+步骤三：Clamp处理（可选，仅处理前real_bs行）
+步骤四：SwiGLU激活（仅处理前real_bs行）
+步骤五：Weight加权（可选，仅处理前real_bs行）
+步骤六：量化计算（仅处理前real_bs行）
 ```
 
-#### 步骤〇：GroupIndex处理（可选）
+<details>
+<summary><strong>步骤一：GroupIndex处理（可选）</strong></summary>
 
 当提供`group_index`时，用于动态计算实际处理的token数量：
 
@@ -67,7 +68,10 @@ $$
 
 **MoE场景说明**：在MoE推理中，不同专家可能处理不同数量的token，group_index允许动态调整处理范围，避免处理空数据。
 
-#### 步骤一：输入切分
+</details>
+
+<details>
+<summary><strong>步骤二：输入切分</strong></summary>
 
 输入张量$\mathbf{x} \in \mathbb{R}^{N \times D}$沿最后一维切分为两部分：
 
@@ -79,7 +83,10 @@ $$
 \mathbf{x}_1[n, d] = \mathbf{x}[n, d + D/2], \quad d \in [0, D/2)
 $$
 
-#### 步骤二：Clamp处理（可选）
+</details>
+
+<details>
+<summary><strong>步骤三：Clamp处理（可选）</strong></summary>
 
 当`clamp_limit > 0`时，对输入进行限制：
 
@@ -98,7 +105,10 @@ $$
 - $\mathbf{x}_0$（门控分支）限制为正值范围$[0, c]$，防止sigmoid梯度消失
 - $\mathbf{x}_1$（线性分支）限制为对称范围$[-c, c]$，防止数值溢出
 
-#### 步骤三：SwiGLU激活
+</details>
+
+<details>
+<summary><strong>步骤四：SwiGLU激活</strong></summary>
 
 SwiGLU激活函数定义（逐元素计算）：
 
@@ -124,7 +134,13 @@ t_4[n, d] &= \frac{\mathbf{x}_0'[n, d]}{t_3[n, d]} = \text{Swish}(\mathbf{x}_0'[
 \end{aligned}
 $$
 
-#### 步骤四：Weight加权（可选）
+**yOrigin输出**：
+outputOrigin设置为True时，`yOrigin`输出SwiGLU的结果$\mathbf{y}_{\text{swiglu}}$。
+
+</details>
+
+<details>
+<summary><strong>步骤五：Weight加权（可选）</strong></summary>
 
 当提供`weight`时，对SwiGLU输出进行加权：
 
@@ -136,11 +152,13 @@ $$
 
 **MoE场景**：weight来自专家路由器的softmax输出，表示该token对当前专家的权重。
 
-#### 步骤五：量化计算
+</details>
 
----
+<details>
+<summary><strong>步骤六：量化计算</strong></summary>
 
-#### quant_mode=0 (Block Quant)
+<details>
+<summary><strong>quant_mode=0 (Block Quant)</strong></summary>
 
 **分组划分**：将输出沿最后一维按128元素为一组划分：
 
@@ -229,9 +247,10 @@ $$
 
 其中`cast_fp8_rint`为FP32到FP8的类型转换，采用**RINT（就近舍入）**模式。
 
----
+</details>
 
-#### quant_mode=1 (MX Quant)
+<details>
+<summary><strong>quant_mode=1 (MX Quant)</strong></summary>
 
 **MX量化原理**：采用**E8M0 Scale** + **FP8 Data**的组合。
 
@@ -294,9 +313,10 @@ $$
 \mathbf{y}_{\text{quant}}[j] = \text{cast\_fp8\_rint}\left(\mathbf{y}_{\text{weighted}}[j] \cdot \text{InvScale}_i\right), \quad j \in \text{group } i
 $$
 
----
+</details>
 
-#### quant_mode=2 (HiFp8 Static Quant)
+<details>
+<summary><strong>quant_mode=2 (HiFp8 Static Quant)</strong></summary>
 
 **静态量化说明**：使用预先提供的`invScale`对加权后的SwiGLU输出进行缩放量化。
 
@@ -326,9 +346,10 @@ $$
 
 **MoE场景说明**：在MoE推理中，不同专家处理不同数量的token，groupIndex用于标识每个专家处理的token范围，invScale为每个专家预先计算的静态缩放因子。
 
----
+</details>
 
-#### quant_mode=3 (HiFp8 Dynamic Quant)
+<details>
+<summary><strong>quant_mode=3 (HiFp8 Dynamic Quant)</strong></summary>
 
 **动态量化说明**：根据加权后的SwiGLU输出动态计算缩放因子进行量化。
 
@@ -394,6 +415,10 @@ $$
 
 **MoE场景说明**：在MoE推理中，不同专家处理不同数量的token，groupIndex用于标识每个专家处理的token范围，每个group独立计算缩放因子以适应不同数据分布。
 
+</details>
+
+</details>
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnSwigluGroupQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwigluGroupQuant”接口执行计算。
@@ -456,7 +481,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>SwiGLU输入。</td>
-      <td><ul><li>shape为[...,D]。</li><li>D必须大于等于256，且能被256整除。</li><li>维度需为2-8维，其中quantMode为1时为2-7维。</li><li>quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
+      <td><ul><li>shape为[...,D]。</li><li>D须能被256整除。</li><li>维度需为2-8维，其中quantMode为1时为2-7维。</li><li>quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -555,8 +580,8 @@ aclnnStatus aclnnSwigluGroupQuant(
     <tr>
       <td>outputOrigin（bool）</td>
       <td>输入</td>
-      <td>是否输出量化前的SwiGLU结果。</td>
-      <td><ul><li>true表示支持输出原始激活值yOrigin，false表示不支持输出原始激活值yOrigin。</li><li>quantMode为0或1时支持false。</li><li>quantMode为2或3时true/false都支持。</li></ul></td>
+      <td>是否输出weight加权前的SwiGLU结果。</td>
+      <td><ul><li>true表示输出yOrigin，为false时yOrigin输出无效。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -585,7 +610,7 @@ aclnnStatus aclnnSwigluGroupQuant(
     <tr>
       <td>yOriginOut（aclTensor*）</td>
       <td>输出</td>
-      <td>量化前的SwiGLU结果。</td>
+      <td>weight加权前的SwiGLU结果。</td>
       <td><ul><li>shape为[...,D/2]。</li><li>数据类型需与x一致。</li><li>不支持空指针。</li><li>quantMode为0或1时支持空Tensor；quantMode为2或3不支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -840,6 +865,7 @@ struct SwigluGroupQuantCase {
     double dstTypeMax;
     aclDataType yDataType;
     int64_t yElementSize;
+    bool outputOrigin;
     bool hasScaleInput;
     std::vector<int64_t> scaleShape;
 };
@@ -895,7 +921,7 @@ int RunSwigluGroupQuantCase(const SwigluGroupQuantCase& testCase, aclrtStream st
     }
 
     double clampLimit = -1.0;
-    bool outputOrigin = false;
+    bool outputOrigin = testCase.outputOrigin;
     const aclTensor* scaleTensor = testCase.hasScaleInput ? scaleResource.tensor : nullptr;
 
     LOG_PRINT("Run %s: quant_mode=%ld\n", testCase.name, testCase.quantMode);
@@ -970,10 +996,13 @@ int main()
     }
 
     std::vector<SwigluGroupQuantCase> testCases = {
-        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
-        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, {}},
-        {"hifp8_static", 2, 0, false, {1}, ACL_FLOAT, false, 27, 448.0, ACL_HIFLOAT8, 1, true, {1}},
-        {"hifp8_dynamic", 3, 0, false, {1}, ACL_FLOAT, false, 27, 15.0, ACL_HIFLOAT8, 1, false, {}},
+        {"block_fp8", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, false, {}},
+        {"block_fp8_y_origin", 0, 0, false, {2, 1}, ACL_FLOAT, false, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, true, false, {}},
+        {"mx_fp8", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, false, false, {}},
+        {"mx_fp8_y_origin", 1, 0, true, {2, 2, 2}, ACL_FLOAT8_E8M0, true, 36, 448.0, ACL_FLOAT8_E4M3FN, 1, true,
+         false, {}},
+        {"hifp8_static", 2, 0, false, {1}, ACL_FLOAT, false, 27, 448.0, ACL_HIFLOAT8, 1, false, true, {1}},
+        {"hifp8_dynamic", 3, 0, false, {1}, ACL_FLOAT, false, 27, 15.0, ACL_HIFLOAT8, 1, false, false, {}},
     };
 
     for (const auto& testCase : testCases) {

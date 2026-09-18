@@ -78,6 +78,7 @@ constexpr int64_t BLOCK_QUANT_YORIGIN_TILING_KEY = 1100;
 constexpr int64_t MX_QUANT_TILING_KEY = 2000;
 constexpr int64_t MX_QUANT_YORIGIN_TILING_KEY = 2100;
 constexpr int64_t MXFP4_QUANT_TILING_KEY = 3000;
+constexpr int64_t MXFP4_QUANT_YORIGIN_TILING_KEY = 3100;
 
 int64_t ShapeElementNum(const gert::Shape& shape)
 {
@@ -191,8 +192,6 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
     if (outputOriginAttr != nullptr) {
         outputOrigin_ = *outputOriginAttr;
     }
-    OP_CHECK_IF(outputOrigin_, OP_LOGE(context_->GetNodeName(), "attr output_origin must be false."),
-                return ge::GRAPH_FAILED);
 
     if (GetClampLimitAttr(attrs) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
@@ -422,17 +421,19 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
     for (size_t i = 0; i < xDimNum - 1; i++) {
         bs_ = bs_ * xStorageShape.GetDim(i);
     }
-    // Empty tensor is not supported, so every outer dim must be positive.
-    OP_CHECK_IF((bs_ <= 0),
+    // Empty tensor is supported: when bs is 0 the input and outputs are all empty and no data
+    // needs to be processed, so only negative dims (unknown dim leaked in) are rejected here.
+    OP_CHECK_IF((bs_ < 0),
                 OP_LOGE(context_->GetNodeName(),
-                        "input x is empty tensor, which is not supported, the product of dims except the last one "
-                        "is %ld.",
-                        bs_),
+                        "the product of input x dims except the last one should be non-negative, but is %ld.", bs_),
                 return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
-    OP_CHECK_IF((d_ < D_LIMIT || d_ % D_LIMIT != 0),
+    // An empty x (last dim 0) is supported; otherwise the last dim must be >= D_LIMIT and
+    // divisible by D_LIMIT.
+    OP_CHECK_IF((d_ != 0 && (d_ < D_LIMIT || d_ % D_LIMIT != 0)),
                 OP_LOGE(context_->GetNodeName(),
-                        "input x last dim should be greater than or equal to %ld and divisible by %ld, got %ld.",
+                        "input x last dim should be 0(empty) or greater than or equal to %ld and divisible by %ld, "
+                        "got %ld.",
                         D_LIMIT, D_LIMIT, d_),
                 return ge::GRAPH_FAILED);
 
@@ -578,7 +579,10 @@ int64_t SwigluGroupQuantTiling::CalcMxFp4QuantTotalSize(int64_t rowFactor, int64
     int64_t ySize = rowFactor * RoundUp(CeilDiv(dFactor, FP4_PACK_NUM), FP8_ALIGN_NUM) * FP8_BYTES * DOUBLE_BUFFER;
     int64_t scaleSize = rowFactor * RoundUp(tryScaleCol, FP8_ALIGN_NUM) * FP8_BYTES * DOUBLE_BUFFER;
     int64_t totalSize = x0Size + x1Size + swigluSize + maxExpSize + invScaleSize + ySize + scaleSize;
-    return AddWeightSize(totalSize, rowFactor);
+    totalSize = AddWeightSize(totalSize, rowFactor);
+    // When outputOrigin is enabled, the yOrigin queue keeps the pre-weight swiglu result while
+    // quantization consumes the swiglu result from the swiglu buffer, so both are reserved in UB.
+    return AddYOriginSize(totalSize, rowFactor, dFactor);
 }
 
 void SwigluGroupQuantTiling::CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize)
@@ -653,6 +657,27 @@ ge::graphStatus SwigluGroupQuantTiling::CalcMxFp4QuantOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void SwigluGroupQuantTiling::SetEmptyTiling()
+{
+    // Zero workload: one core is launched whose row loop count is 0, so the kernel returns without
+    // touching global memory. rowFactor/dFactor stay positive to keep kernel queue buffers valid.
+    // Group-index tiling (gFactor/gLoop) is still computed by CalcGroupIndexTiling so the kernel
+    // derives realBs = min(sum(groupIndex), bs) = 0 and exits from the group path as well. The
+    // kernel also returns directly when splitD is 0, which covers d == 0 with a non-empty
+    // group_index (realBs > 0 recomputes non-zero row loops in that path).
+    rowOfFormerBlock_ = 0;
+    rowOfTailBlock_ = 0;
+    rowLoopOfFormerBlock_ = 0;
+    rowLoopOfTailBlock_ = 0;
+    tailRowFactorOfFormerBlock_ = 0;
+    tailRowFactorOfTailBlock_ = 0;
+    rowFactor_ = 1;
+    dLoop_ = 1;
+    dFactor_ = std::max(splitD_, splitFactor_);
+    tailDFactor_ = dFactor_;
+    usedCoreNums_ = 1;
+}
+
 void SwigluGroupQuantTiling::SetTilingData()
 {
     tilingData_.set_bs(bs_);
@@ -679,6 +704,25 @@ void SwigluGroupQuantTiling::SetTilingData()
     tilingData_.set_tailGFactor(tailGFactor_);
     tilingData_.set_coreNum(coreNum_);
     tilingData_.set_hasClampLimit(hasClampLimit_);
+
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupQuantTiling shape: bs:%ld, d:%ld, splitD:%ld, scaleCol:%ld, g:%ld, hasGroupIndex:%d, "
+            "hasWeight:%d.",
+            bs_, d_, splitD_, scaleCol_, g_, static_cast<int32_t>(hasGroupIndex_), static_cast<int32_t>(hasWeight_));
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupQuantTiling rowTiling: rowOfFormerBlock:%ld, rowOfTailBlock:%ld, rowLoopOfFormerBlock:%ld, "
+            "rowLoopOfTailBlock:%ld, rowFactor:%ld, tailRowFactorOfFormerBlock:%ld, tailRowFactorOfTailBlock:%ld.",
+            rowOfFormerBlock_, rowOfTailBlock_, rowLoopOfFormerBlock_, rowLoopOfTailBlock_, rowFactor_,
+            tailRowFactorOfFormerBlock_, tailRowFactorOfTailBlock_);
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupQuantTiling dTiling: dLoop:%ld, dFactor:%ld, tailDFactor:%ld, clampLimit:%f, "
+            "hasClampLimit:%ld, roundScale:%ld, outputOrigin:%d.",
+            dLoop_, dFactor_, tailDFactor_, clampLimit_, hasClampLimit_, roundScale_,
+            static_cast<int32_t>(outputOrigin_));
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupQuantTiling groupIndexTiling: gLoop:%ld, gFactor:%ld, tailGFactor:%ld, coreNum:%ld, "
+            "ubSize:%luB.",
+            gLoop_, gFactor_, tailGFactor_, coreNum_, ubSize_);
 }
 
 ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
@@ -686,6 +730,11 @@ ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
     ge::graphStatus status = CalcGroupIndexTiling();
     if (status == ge::GRAPH_FAILED) {
         return status;
+    }
+    if (bs_ == 0 || d_ == 0) {
+        SetEmptyTiling();
+        SetTilingData();
+        return ge::GRAPH_SUCCESS;
     }
     if (quantMode_ == BLOCK_QUANT) {
         status = CalcBlockQuantOpTiling();
@@ -708,7 +757,7 @@ void SwigluGroupQuantTiling::SetTilingKey()
     }
     if (quantMode_ == MX_QUANT) {
         if (isMxFp4Quant_) {
-            tilingKey_ = MXFP4_QUANT_TILING_KEY;
+            tilingKey_ = outputOrigin_ ? MXFP4_QUANT_YORIGIN_TILING_KEY : MXFP4_QUANT_TILING_KEY;
         } else if (outputOrigin_) {
             tilingKey_ = MX_QUANT_YORIGIN_TILING_KEY;
         } else {
@@ -743,6 +792,11 @@ ge::graphStatus SwigluGroupQuantTiling::DoOpTiling()
     }
     SetTilingKey();
 
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupQuantTiling done: quantMode:%ld, dstType:%s, tilingKey:%lu, blockDim:%lu, "
+            "workspaceSize:%luB.",
+            quantMode_, ge::TypeUtils::DataTypeToSerialString(dstType_).c_str(), tilingKey_,
+            hasGroupIndex_ ? coreNum_ : usedCoreNums_, workspaceSize_);
     return ge::GRAPH_SUCCESS;
 }
 

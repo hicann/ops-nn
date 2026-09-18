@@ -51,8 +51,8 @@ namespace ge {
  * clamps SwiGLU inputs before activation.
  * @li dst_type_max: Optional float. Maximum finite value used by quant_mode=3 scale calculation.
  * Defaults to 15.0.
- * @li output_origin: Optional bool. Writes the pre-quantized SwiGLU result to y_origin. quant_mode 0/1
- * only support false, quant_mode 2/3 support both true and false. Defaults to false.
+ * @li output_origin: Optional bool. Writes the SwiGLU result before the weight multiplication to
+ * y_origin. Defaults to false.
  *
  * @par Outputs:
  * @li y: Quantized output tensor. The shape is the input x shape with the last dimension halved for all
@@ -60,9 +60,9 @@ namespace ge {
  * Empty tensors are supported for quant_mode 0/1 and not supported for quant_mode 2/3.
  * @li y_scale: Scale tensor. float32 for Block FP8, HiFloat8 static and HiFloat8 dynamic quantization,
  * float8_e8m0 for MX. Empty tensors are supported for quant_mode 0/1 and not supported for quant_mode 2/3.
- * @li y_origin: SwiGLU result before quantization, with the same dtype and rank as x, the same dims as x
- * except that the last dimension is halved. Empty tensors are supported for quant_mode 0/1 and not supported
- * for quant_mode 2/3.
+ * @li y_origin: SwiGLU result before the weight multiplication, with the same dtype and rank as x, the
+ * same dims as x except that the last dimension is halved. Empty tensors are supported for quant_mode
+ * 0/1 and not supported for quant_mode 2/3.
  *
  * @par Third-party framework compatibility
  * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.

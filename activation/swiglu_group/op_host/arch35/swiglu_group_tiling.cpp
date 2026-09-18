@@ -244,18 +244,17 @@ ge::graphStatus SwigluGroupTiling::GetShapeAttrsInfoInner()
     for (size_t i = 0; i < xDimNum - 1; i++) {
         bs_ = bs_ * xStorageShape.GetDim(i);
     }
-    // Empty tensor is not supported, so every dim must be positive. The last dim is checked below;
-    // bs_ is the product of the remaining dims, which is positive only when none of them is 0.
-    OP_CHECK_IF((bs_ <= 0),
+    // Empty tensor is supported: when bs is 0 the input and output are both empty and no data
+    // needs to be processed, so only negative dims (unknown dim leaked in) are rejected here.
+    OP_CHECK_IF((bs_ < 0),
                 OP_LOGE(context_->GetNodeName(),
-                        "input x is empty tensor, which is not supported, the product of dims except the last one "
-                        "is %ld.",
-                        bs_),
+                        "the product of input x dims except the last one should be non-negative, but is %ld.", bs_),
                 return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
-    OP_CHECK_IF((d_ <= 0 || d_ % NUM_TWO != 0),
-                OP_LOGE(context_->GetNodeName(), "input x last dim should be positive and divisible by %ld, got %ld.",
-                        NUM_TWO, d_),
+    // An empty x (last dim 0) is supported; otherwise the last dim must be divisible by 2.
+    OP_CHECK_IF((d_ < 0 || d_ % NUM_TWO != 0),
+                OP_LOGE(context_->GetNodeName(),
+                        "input x last dim should be non-negative and divisible by %ld, got %ld.", NUM_TWO, d_),
                 return ge::GRAPH_FAILED);
 
     if (CheckWeightInfo() == ge::GRAPH_FAILED || CheckGroupIndexInfo() == ge::GRAPH_FAILED) {
@@ -402,12 +401,38 @@ ge::graphStatus SwigluGroupTiling::CalcOpTiling()
     if (status == ge::GRAPH_FAILED) {
         return status;
     }
+    if (bs_ == 0 || d_ == 0) {
+        SetEmptyTiling();
+        SetTilingData();
+        return ge::GRAPH_SUCCESS;
+    }
     InitCoreTiling();
     int64_t rowOnceLoop = std::min(rowOfFormerBlock_, static_cast<int64_t>(1));
     int64_t dChunk = ASCEND950_CACHE_LINE_BYTES / xElemBytes_; // elements per cacheline
     CalcDAndRowFactorTiling(rowOnceLoop, dChunk);
     SetTilingData();
     return ge::GRAPH_SUCCESS;
+}
+
+void SwigluGroupTiling::SetEmptyTiling()
+{
+    // Zero workload: one core is launched whose row loop count is 0, so the kernel returns without
+    // touching global memory. rowFactor/dFactor stay positive to keep kernel queue buffers valid.
+    // Group-index tiling (gFactor/gLoop) is still computed by CalcGroupIndexTiling so the kernel
+    // derives realBs = min(sum(groupIndex), bs) = 0 and exits from the group path as well. The
+    // kernel also returns directly when splitD is 0, which covers d == 0 with a non-empty
+    // group_index (realBs > 0 recomputes non-zero row loops in that path).
+    rowOfFormerBlock_ = 0;
+    rowOfTailBlock_ = 0;
+    rowLoopOfFormerBlock_ = 0;
+    rowLoopOfTailBlock_ = 0;
+    tailRowFactorOfFormerBlock_ = 0;
+    tailRowFactorOfTailBlock_ = 0;
+    rowFactor_ = 1;
+    dLoop_ = 1;
+    dFactor_ = std::max(splitD_, static_cast<int64_t>(1));
+    tailDFactor_ = dFactor_;
+    usedCoreNums_ = 1;
 }
 
 void SwigluGroupTiling::SetTilingData()
@@ -433,6 +458,22 @@ void SwigluGroupTiling::SetTilingData()
     tilingData_.set_tailGFactor(tailGFactor_);
     tilingData_.set_coreNum(coreNum_);
     tilingData_.set_hasClampLimit(hasClampLimit_);
+
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupTiling shape: bs:%ld, d:%ld, splitD:%ld, g:%ld, hasGroupIndex:%d, hasWeight:%d.", bs_, d_,
+            splitD_, g_, static_cast<int32_t>(hasGroupIndex_), static_cast<int32_t>(hasWeight_));
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupTiling rowTiling: rowOfFormerBlock:%ld, rowOfTailBlock:%ld, rowLoopOfFormerBlock:%ld, "
+            "rowLoopOfTailBlock:%ld, rowFactor:%ld, tailRowFactorOfFormerBlock:%ld, tailRowFactorOfTailBlock:%ld.",
+            rowOfFormerBlock_, rowOfTailBlock_, rowLoopOfFormerBlock_, rowLoopOfTailBlock_, rowFactor_,
+            tailRowFactorOfFormerBlock_, tailRowFactorOfTailBlock_);
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupTiling dTiling: dLoop:%ld, dFactor:%ld, tailDFactor:%ld, clampLimit:%f, hasClampLimit:%ld.",
+            dLoop_, dFactor_, tailDFactor_, clampLimit_, hasClampLimit_);
+    OP_LOGD(context_->GetNodeName(),
+            "SwigluGroupTiling groupIndexTiling: gLoop:%ld, gFactor:%ld, tailGFactor:%ld, coreNum:%ld, "
+            "ubSize:%luB.",
+            gLoop_, gFactor_, tailGFactor_, coreNum_, ubSize_);
 }
 
 void SwigluGroupTiling::SetTilingKey()
@@ -464,6 +505,8 @@ ge::graphStatus SwigluGroupTiling::DoOpTiling()
     }
     SetTilingKey();
 
+    OP_LOGD(context_->GetNodeName(), "SwigluGroupTiling done: tilingKey:%lu, blockDim:%lu, workspaceSize:%luB.",
+            tilingKey_, hasGroupIndex_ ? coreNum_ : usedCoreNums_, workspaceSize_);
     return ge::GRAPH_SUCCESS;
 }
 

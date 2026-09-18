@@ -169,12 +169,11 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_error_block_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8_output_origin)
 {
     TilingCase tc;
     tc.outputOrigin = true;
     tc.roundScale = true;
-    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 
@@ -195,7 +194,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8_output_origin)
 {
     TilingCase tc;
     tc.scaleDtype = ge::DT_FLOAT8_E8M0;
@@ -203,7 +202,40 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_fp8_y_origin)
     tc.quantMode = 1;
     tc.roundScale = true;
     tc.outputOrigin = true;
-    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp4_output_origin)
+{
+    TilingCase tc;
+    tc.yDtype = ge::DT_FLOAT4_E2M1;
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.xShape = {{2, 8, 1024}, {2, 8, 1024}};
+    tc.yShape = {{2, 8, 512}, {2, 8, 512}};
+    tc.scaleShape = {{2, 8, 8, 2}, {2, 8, 8, 2}};
+    tc.yOriginShape = {{2, 8, 512}, {2, 8, 512}};
+    tc.dstType = ge::DT_FLOAT4_E2M1;
+    tc.quantMode = 1;
+    tc.roundScale = true;
+    tc.outputOrigin = true;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp4_output_origin_weight)
+{
+    TilingCase tc;
+    tc.yDtype = ge::DT_FLOAT4_E2M1;
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.xShape = {{2, 8, 1024}, {2, 8, 1024}};
+    tc.yShape = {{2, 8, 512}, {2, 8, 512}};
+    tc.scaleShape = {{2, 8, 8, 2}, {2, 8, 8, 2}};
+    tc.yOriginShape = {{2, 8, 512}, {2, 8, 512}};
+    tc.dstType = ge::DT_FLOAT4_E2M1;
+    tc.quantMode = 1;
+    tc.roundScale = true;
+    tc.outputOrigin = true;
+    tc.hasWeight = true;
+    tc.weightShape = {{16}, {16}};
     ExecuteTilingCase(tc);
 }
 

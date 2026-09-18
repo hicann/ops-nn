@@ -153,10 +153,13 @@ def _compute_swiglu(x, weight=None, clamp_limit=None):
         x1 = np.minimum(limit, np.maximum(x1, -limit))
 
     y_origin = _silu(x0) * x1
+    y_weighted = y_origin
     weight = _to_numpy(weight)
     if weight is not None:
-        y_origin *= weight.reshape(-1, 1).astype(np.float32)
-    return y_origin.reshape(*orig_shape[:-1], hidden)
+        y_weighted = y_origin * weight.reshape(-1, 1).astype(np.float32)
+    y_origin = y_origin.reshape(*orig_shape[:-1], hidden)
+    y_weighted = y_weighted.reshape(*orig_shape[:-1], hidden)
+    return y_origin, y_weighted
 
 
 def _token_num(x):
@@ -356,12 +359,12 @@ def aclnn_swiglu_group_quant_golden(
     quant_mode = int(quantMode)
     token_num = _token_num(x)
     real_bs = _real_token_num(x, groupIndexOptional)
-    y_origin = _compute_swiglu(x, weightOptional, clampLimit)
+    y_origin, y_quant = _compute_swiglu(x, weightOptional, clampLimit)
 
     if dst_type in (DT_FLOAT4_E2M1, DT_FLOAT4_E1M2):
-        y, y_scale = _quantize_fp4(y_origin, dst_type)
+        y, y_scale = _quantize_fp4(y_quant, dst_type)
     else:
-        y, y_scale = _quantize_fp8(y_origin, dst_type, quant_mode, bool(roundScale))
+        y, y_scale = _quantize_fp8(y_quant, dst_type, quant_mode, bool(roundScale))
 
     y_origin = _cast_y_origin(y_origin, x)
     y = _merge_output_buffer(y, yOut, token_num, real_bs)
@@ -449,12 +452,12 @@ def swiglu_group_quant_golden(
     quant_mode = int(quant_mode)
     token_num = _token_num(x)
     real_bs = _real_token_num(x, group_index)
-    y_origin = _compute_swiglu(x, weight, clamp_limit)
+    y_origin, y_quant = _compute_swiglu(x, weight, clamp_limit)
 
     if dst_type in (DT_FLOAT4_E2M1, DT_FLOAT4_E1M2):
-        y, y_scale = _quantize_fp4(y_origin, dst_type, pack=False)
+        y, y_scale = _quantize_fp4(y_quant, dst_type, pack=False)
     else:
-        y, y_scale = _quantize_fp8(y_origin, dst_type, quant_mode, bool(round_scale))
+        y, y_scale = _quantize_fp8(y_quant, dst_type, quant_mode, bool(round_scale))
 
     y_origin = _cast_y_origin(y_origin, x) if output_origin else None
     y = _merge_output_buffer(y, None, token_num, real_bs)

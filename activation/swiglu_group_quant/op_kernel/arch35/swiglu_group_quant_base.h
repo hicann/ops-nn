@@ -218,10 +218,11 @@ __simd_callee__ inline void FP16Convert(AscendC::Reg::RegTensor<half>& output, A
                                    (AscendC::Reg::RegTensor<uint16_t>&)input, specialMask);
 }
 
-template <typename T, bool hasTopkWeight = false, bool hasClampValue = false>
-__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0LocalAddr, __ubuf__ T* x1LocalAddr,
-                                          __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount, uint32_t sregNum,
-                                          uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
+template <typename T, bool hasTopkWeight = false, bool hasClampValue = false, bool hasOriginOutput = false>
+__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* yOriginLocalAddr, __ubuf__ T* x0LocalAddr,
+                                          __ubuf__ T* x1LocalAddr, __ubuf__ float* topkWeightLocalAddr,
+                                          uint16_t loopCount, uint32_t sregNum, uint32_t curColNumAlign,
+                                          const uint16_t curRowNum, float clampValue)
 {
     RegTensor<float> weight;
     RegTensor<float> x0;
@@ -246,6 +247,9 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0
                 Mins(x1, x1, clampValue, pregLoop);
             }
             VFSwiGlu(y, x0, x1, one, tmp, pregLoop);
+            if constexpr (hasOriginOutput) {
+                StoreOutputData<T>(yOriginLocalAddr, y, pregLoop, j * VL_FP32 + i * curColNumAlign);
+            }
             if constexpr (hasTopkWeight) {
                 Mul(y, y, weight, pregLoop);
             }
@@ -254,21 +258,23 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0
     }
 }
 
-template <typename T, bool hasTopkWeight = false, bool hasClampValue = false>
-__aicore__ inline void VFProcessSwiglu(const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local,
-                                       const LocalTensor<T>& x1Local, const LocalTensor<float>& topkWeightLocal,
-                                       const uint16_t curRowNum, const uint32_t curColNum, float clampValue)
+template <typename T, bool hasTopkWeight = false, bool hasClampValue = false, bool hasOriginOutput = false>
+__aicore__ inline void VFProcessSwiglu(const LocalTensor<T>& yLocal, const LocalTensor<T>& yOriginLocal,
+                                       const LocalTensor<T>& x0Local, const LocalTensor<T>& x1Local,
+                                       const LocalTensor<float>& topkWeightLocal, const uint16_t curRowNum,
+                                       const uint32_t curColNum, float clampValue)
 {
     __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* yOriginLocalAddr = hasOriginOutput ? (__ubuf__ T*)yOriginLocal.GetPhyAddr() : nullptr;
     __ubuf__ T* x0LocalAddr = (__ubuf__ T*)x0Local.GetPhyAddr();
     __ubuf__ T* x1LocalAddr = (__ubuf__ T*)x1Local.GetPhyAddr();
     __ubuf__ float* topkWeightLocalAddr = hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
     uint16_t loopCount = CeilDiv(curColNum, VL_FP32);
     uint32_t sregNum = curColNum;
     uint32_t curColNumAlign = RoundUp<T>(curColNum);
-    AscendC::VF_CALL<VFProcessSwigluVf<T, hasTopkWeight, hasClampValue>>(yLocalAddr, x0LocalAddr, x1LocalAddr,
-                                                                         topkWeightLocalAddr, loopCount, sregNum,
-                                                                         curColNumAlign, curRowNum, clampValue);
+    AscendC::VF_CALL<VFProcessSwigluVf<T, hasTopkWeight, hasClampValue, hasOriginOutput>>(
+        yLocalAddr, yOriginLocalAddr, x0LocalAddr, x1LocalAddr, topkWeightLocalAddr, loopCount, sregNum, curColNumAlign,
+        curRowNum, clampValue);
 }
 
 template <typename T>
@@ -567,6 +573,10 @@ __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __u
             }
             VFSwiGlu(xLeft, x0Left, x1Left, one, tmp, pregMain);
             VFSwiGlu(xRight, x0Right, x1Right, one, tmp, pregMain);
+            if constexpr (hasOutput) {
+                StoreOutputData<T1>(yOriginLocalAddr, xLeft, pregMain, 2 * j * VL_FP32 + i * curColNumAlign);
+                StoreOutputData<T1>(yOriginLocalAddr, xRight, pregMain, (2 * j + 1) * VL_FP32 + i * curColNumAlign);
+            }
             if constexpr (hasTopkWeight) {
                 Mul(xLeft, xLeft, weight, pregMain);
             }
@@ -575,10 +585,6 @@ __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __u
                 Mul(xRight, xRight, weight, pregMain);
             }
             Add(xRight, xRight, zero, pregMain);
-            if constexpr (hasOutput) {
-                StoreOutputData<T1>(yOriginLocalAddr, xLeft, pregMain, 2 * j * VL_FP32 + i * curColNumAlign);
-                StoreOutputData<T1>(yOriginLocalAddr, xRight, pregMain, (2 * j + 1) * VL_FP32 + i * curColNumAlign);
-            }
             Muls(xAbsLeft, xLeft, 0.0f, pregMain);
             Compare<float, CMPMODE::NE>(compareLeft, xAbsLeft, xAbsLeft, pregMain);
             Not(compareLeft, compareLeft, pregMain);
@@ -921,6 +927,11 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
             }
             VFSwiGlu(yLayout0, x0Layout0, x1Layout0, one, tmp, pregMain0);
             VFSwiGlu(yLayout1, x0Layout1, x1Layout1, one, tmp, pregMain0);
+            if constexpr (hasOutput) {
+                Interleave(y0, y1, yLayout0, yLayout1);
+                StoreOutputData<T0>(yOriginLocalAddr, y0, pregMain0, 2 * j * VL_FP32 + i * curColNumAlignT);
+                StoreOutputData<T0>(yOriginLocalAddr, y1, pregMain0, (2 * j + 1) * VL_FP32 + i * curColNumAlignT);
+            }
             if constexpr (hasWeight) {
                 Mul(yLayout0, yLayout0, weight, pregMain0);
                 Mul(yLayout1, yLayout1, weight, pregMain0);
@@ -929,10 +940,6 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
             Add(yLayout1, yLayout1, zero, pregMain0);
             // 合并奇偶位置
             Interleave(y0, y1, yLayout0, yLayout1);
-            if constexpr (hasOutput) {
-                StoreOutputData<T0>(yOriginLocalAddr, y0, pregMain0, 2 * j * VL_FP32 + i * curColNumAlignT);
-                StoreOutputData<T0>(yOriginLocalAddr, y1, pregMain0, (2 * j + 1) * VL_FP32 + i * curColNumAlignT);
-            }
             StoreOutputData<float>(yLocalAddr, y0, pregMain0, 2 * j * VL_FP32 + i * curColNumAlignFloat);
             StoreOutputData<float>(yLocalAddr, y1, pregMain0, (2 * j + 1) * VL_FP32 + i * curColNumAlignFloat);
 
