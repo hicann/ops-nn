@@ -1600,7 +1600,7 @@ bool IsCapableForMultiMul(const aclTensor* self, const aclTensor* mat2, const ac
     if (self->IsEmpty() || mat2->IsEmpty()) {
         return false;
     }
-    if (self->GetViewShape().GetDimNum() != 2 || mat2->GetViewShape().GetDimNum() != 2) {
+    if (self->GetViewShape().GetDimNum() != MM_DIM || mat2->GetViewShape().GetDimNum() != MM_DIM) {
         return false;
     }
     if (self->GetStorageFormat() != op::Format::FORMAT_ND || mat2->GetStorageFormat() != op::Format::FORMAT_ND) {
