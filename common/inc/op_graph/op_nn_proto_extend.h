@@ -1888,6 +1888,14 @@ currently supported.
     .OUTPUT(y, TensorType::BasicType())
     .OP_END_FACTORY_REG(MaskedSelect)
 
+#ifndef OPS_PROTO_DEF_NPUGETFLOATSTATUS
+#define OPS_PROTO_DEF_NPUGETFLOATSTATUS
+        REG_OP(NPUGetFloatStatus)
+    .INPUT(addr, TensorType({DT_FLOAT}))
+    .OUTPUT(data, TensorType({DT_FLOAT}))
+    .OP_END_FACTORY_REG(NPUGetFloatStatus)
+#endif
+
     /**
     * @brief Quantizes the input of int8.
 
