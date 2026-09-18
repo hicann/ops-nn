@@ -338,20 +338,20 @@ int main() {
   aclTensor* gradOutput = nullptr;
   aclTensor* self = nullptr;
   aclTensor* gradInput = nullptr;
-  aclScalar* lambda = nullptr;
+  aclScalar* lambd = nullptr;
   std::vector<float> gradOutputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<float> selfHostData = {1, 1, 1, 2, 1, 2, 3, 3};
   std::vector<float> gradInputHostData = {0, 0, 0, 0, 0, 0, 0, 0};
-  float lambdaValue = 1.2f;
+  float lambdValue = 1.2f;
   // 创建gradOutput aclTensor
   ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // lambda aclScalar
-  lambda = aclCreateScalar(&lambdaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(lambda != nullptr, LOG_PRINT("aclCreateScalar failed.\n"); return -1);
+  // lambd aclScalar
+  lambd = aclCreateScalar(&lambdValue, aclDataType::ACL_FLOAT);
+  CHECK_RET(lambd != nullptr, LOG_PRINT("aclCreateScalar failed.\n"); return -1);
   // 创建gradInput aclTensor
   ret = CreateAclTensor(gradInputHostData, gradInputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT, &gradInput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -360,7 +360,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor = nullptr;
   // 调用aclnnSoftshrinkBackward第一段接口
-  ret = aclnnSoftshrinkBackwardGetWorkspaceSize(gradOutput, self, lambda, gradInput, &workspaceSize, &executor);
+  ret = aclnnSoftshrinkBackwardGetWorkspaceSize(gradOutput, self, lambd, gradInput, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftshrinkBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
@@ -387,7 +387,7 @@ int main() {
   // 6. 释放aclTensor和aclScalar
   aclDestroyTensor(gradOutput);
   aclDestroyTensor(self);
-  aclDestroyScalar(lambda);
+  aclDestroyScalar(lambd);
   aclDestroyTensor(gradInput);
 
   // 7. 释放device资源
