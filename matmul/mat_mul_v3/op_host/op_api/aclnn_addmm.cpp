@@ -723,7 +723,9 @@ public:
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
         if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
-            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            bool enableGemm16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(),
+                                                            output->GetDataType(), cubeMathType);
+            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor, enableGemm16In32Out);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
             return ACLNN_SUCCESS;
