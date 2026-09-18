@@ -82,11 +82,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> add_rms_norm_dynamic_
                 "x1 dtype must be float16 or bfloat16, but got ", input_dtype);
     TORCH_CHECK(x2.scalar_type() == input_dtype, "x2 dtype must match x1 dtype: ", input_dtype, " vs ",
                 x2.scalar_type());
+    TORCH_CHECK(gamma.scalar_type() == input_dtype || gamma.scalar_type() == at::kFloat,
+                "gamma dtype must match x1 dtype (", input_dtype, ") or be float, but got ", gamma.scalar_type());
 
     if (beta.has_value() && beta->defined()) {
         TORCH_CHECK(beta->device().type() == at::kPrivateUse1, "beta must be on NPU device");
         TORCH_CHECK(beta->dim() == 1, "beta must be 1-dimensional, but got ", beta->dim());
         TORCH_CHECK(beta->size(0) == x1.size(-1), "beta size must match x1 last dimension");
+        TORCH_CHECK(beta->scalar_type() == gamma.scalar_type(),
+                    "beta dtype must match gamma dtype: ", gamma.scalar_type(), " vs ", beta->scalar_type());
     }
     if (x3.has_value() && x3->defined()) {
         TORCH_CHECK(x3->device().type() == at::kPrivateUse1, "x3 must be on NPU device");
@@ -94,11 +98,22 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> add_rms_norm_dynamic_
         TORCH_CHECK(x3->scalar_type() == input_dtype, "x3 dtype must match x1");
     }
 
+    // NOTE: the shape/dtype/value-domain checks above and below mirror
+    // register_meta() in add_rms_norm_dynamic_quant.py and must stay in lockstep
+    // with it (same order, same accept/reject semantics). Because they sit behind
+    // the NPU device checks, exercising them requires Ascend 950 hardware; the
+    // device-independent coverage lives in the Meta kernel tests.
     aclDataType y_acltype = GetAclDataTypeFromDstType(dst_type);
     at::ScalarType y_scalar = GetScalarTypeFromDstType(dst_type);
+    TORCH_CHECK(scale_alg == 0 || scale_alg == 1, "scale_alg must be 0 (OCP) or 1 (cuBLAS, FP8 only), but got ",
+                scale_alg);
     if (IsFp4DstType(dst_type)) {
         TORCH_CHECK(x1.size(-1) % 2 == 0, "x1 last dim must be even for FP4 dst_type, but got ", x1.size(-1));
         TORCH_CHECK(scale_alg == 0, "scale_alg must be 0 (OCP) for FP4 dst_type, but got ", scale_alg);
+        TORCH_CHECK(round_mode == "rint" || round_mode == "floor" || round_mode == "round",
+                    "round_mode must be rint, floor or round for FP4 dst_type, but got ", round_mode);
+    } else {
+        TORCH_CHECK(round_mode == "rint", "round_mode must be rint for FP8 dst_type, but got ", round_mode);
     }
     char* round_mode_ptr = const_cast<char*>(round_mode.data());
 

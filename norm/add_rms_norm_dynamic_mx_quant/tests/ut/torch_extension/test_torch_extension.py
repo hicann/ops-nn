@@ -553,3 +553,80 @@ class TestRepresentativeShapes:
         # 4. y / mxscale non-zero and finite
         assert not torch.all(y.view(torch.uint8) == 0), "y all zeros"
         assert not torch.all(mxscale.view(torch.uint8) == 0), "mxscale all zeros"
+
+
+# ---------------------------------------------------------------------------
+# csrc value-domain checks (negative cases) — hardware-gated
+# ---------------------------------------------------------------------------
+# The TORCH_CHECKs in csrc/add_rms_norm_dynamic_quant.cpp sit behind the NPU
+# device checks, so they can only fire on real Ascend 950 hardware. They mirror
+# register_meta() in the torch extension frontend; the device-independent
+# mirror coverage lives in test_torch_extension_param_validation.py.
+
+
+class TestCsrcValueChecks:
+    """Negative cases for the csrc value-domain validation."""
+
+    def _base(self, shape=(4, 64), dtype_str="fp16"):
+        x1, x2, g, _, _ = _make_inputs(shape, dtype_str, has_beta=False, has_x3=False)
+        return x1, x2, g
+
+    def test_gamma_dtype_mismatch(self):
+        x1, x2, _ = self._base()
+        gamma = torch.ones(64, dtype=torch.float64, device="npu")
+        with pytest.raises(RuntimeError, match="gamma dtype must match x1 dtype"):
+            _call_op(x1, x2, gamma, None, None, 36, True)
+
+    def test_gamma_fp32_accepted(self):
+        x1, x2, _ = self._base()
+        gamma = torch.ones(64, dtype=torch.float32, device="npu")
+        y, _, _, _ = _call_op(x1, x2, gamma, None, None, 36, True)
+        assert y.dtype == torch.float8_e4m3fn
+
+    def test_x2_dtype_mismatch(self):
+        x1, _, g = self._base()
+        x2 = torch.randn(4, 64, dtype=torch.float32, device="npu")
+        with pytest.raises(RuntimeError, match="x2 dtype must match x1 dtype"):
+            _call_op(x1, x2, g, None, None, 36, True)
+
+    def test_beta_dtype_mismatch(self):
+        x1, x2, _ = self._base()
+        gamma = torch.ones(64, dtype=torch.float32, device="npu")
+        beta = torch.zeros(64, dtype=torch.float16, device="npu")
+        with pytest.raises(RuntimeError, match="beta dtype must match gamma dtype"):
+            _call_op(x1, x2, gamma, beta, None, 36, True)
+
+    @pytest.mark.parametrize(
+        "dst_type,round_mode,frag",
+        [
+            (36, "floor", "round_mode must be rint for FP8"),
+            (40, "bogus", "round_mode must be rint, floor or round for FP4"),
+        ],
+        ids=["fp8_floor", "fp4_bogus"],
+    )
+    def test_round_mode_invalid(self, dst_type, round_mode, frag):
+        x1, x2, g = self._base()
+        with pytest.raises(RuntimeError, match=frag):
+            torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant(
+                x1, x2, g, round_mode=round_mode, dst_type=dst_type
+            )
+
+    @pytest.mark.parametrize(
+        "dst_type,scale_alg,frag",
+        [
+            (36, 2, r"scale_alg must be 0 \(OCP\) or 1"),
+            (40, 1, r"scale_alg must be 0 \(OCP\) for FP4"),
+        ],
+        ids=["fp8_alg2", "fp4_alg1"],
+    )
+    def test_scale_alg_invalid(self, dst_type, scale_alg, frag):
+        x1, x2, g = self._base()
+        with pytest.raises(RuntimeError, match=frag):
+            torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant(
+                x1, x2, g, scale_alg=scale_alg, dst_type=dst_type
+            )
+
+    def test_dst_type_out_of_domain(self):
+        x1, x2, g = self._base()
+        with pytest.raises(RuntimeError, match="dst_type must be 35"):
+            torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, g, dst_type=23)
