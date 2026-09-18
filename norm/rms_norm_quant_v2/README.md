@@ -30,7 +30,7 @@
     $$
     y2=round((y/scales2)+zero\_points2)
     $$
-    
+
   - divMode为False时：
 
     $$
@@ -120,6 +120,13 @@
       <td>可选属性</td>
       <td><ul><li>公式中决定量化公式是否使用除法的参数，对应公式中的`divMode`。</li><li>默认值为true。</li></ul></td>
       <td>BOOL</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type</td>
+      <td>可选属性</td>
+      <td><ul><li>表示指定数据转换后y的类型，对应公式中的`y1`或`y2`的数据类型。</li><li>输入范围为{2, 29, 34, 35, 36}，分别对应{INT8, INT4, HIFLOAT8, FLOAT8_E5M2, FLOAT8_E4M3FN}。</li><li>默认值为2。</li></ul></td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>

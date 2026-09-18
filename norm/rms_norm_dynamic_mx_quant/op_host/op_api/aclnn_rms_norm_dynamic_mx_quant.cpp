@@ -37,13 +37,14 @@ constexpr int IDX_1 = 1;
 constexpr int IDX_2 = 2;
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, aclTensor* yOut, aclTensor* mxscaleOut,
-                         bool outputRstd, aclTensor* rstdOut)
+                         const char* roundMode, bool outputRstd, aclTensor* rstdOut)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(gamma, return false);
     // beta 是可选输入，不校验nullptr
     OP_CHECK_NULL(yOut, return false);
     OP_CHECK_NULL(mxscaleOut, return false);
+    CHECK_RET(roundMode != nullptr, false);
     // rstdOut 根据 outputRstd 决定是否校验
     if (outputRstd) {
         OP_CHECK_NULL(rstdOut, return false);
@@ -109,8 +110,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 检查必选输入/输出是否为空指针
-    CHECK_RET(CheckNotNull(x, gamma, yOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(roundMode != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x, gamma, yOut, mxscaleOut, roundMode, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 校验x除尾轴外的维度不能为0
     auto xShape = x->GetViewShape();

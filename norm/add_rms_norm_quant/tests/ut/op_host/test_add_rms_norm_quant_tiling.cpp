@@ -7,6 +7,7 @@
  * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
  * the software repository for the full text of the License.
  */
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -35,6 +36,23 @@ struct AddRmsNormQuantCompileInfo {
     platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
     uint64_t totalCoreNum = 0;
     uint64_t maxUbSize = 0;
+};
+
+struct AddRmsNormQuantRegbaseTilingDataMirror {
+    uint64_t numM;
+    uint64_t numN;
+    uint64_t baseM;
+    uint64_t baseN;
+    uint64_t baseNReduceAlign;
+    uint64_t baseNDtypeAlign;
+    uint64_t powerLoop;
+    uint64_t powerSplit;
+    uint64_t mPerCore;
+    uint64_t mLastCore;
+    float avgFactor;
+    float epsilon;
+    uint32_t divMode;
+    uint32_t hasResOut;
 };
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
@@ -423,9 +441,7 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -447,6 +463,13 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1172);
+    auto* rawTilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(rawTilingData, nullptr);
+    ASSERT_NE(rawTilingData->GetData(), nullptr);
+    ASSERT_GE(rawTilingData->GetDataSize(), sizeof(AddRmsNormQuantRegbaseTilingDataMirror));
+    AddRmsNormQuantRegbaseTilingDataMirror tilingData{};
+    std::memcpy(&tilingData, rawTilingData->GetData(), sizeof(tilingData));
+    EXPECT_FLOAT_EQ(tilingData.epsilon, 1e-6F);
     // dlog_setlevel(0, 3, 0);
 }
 

@@ -37,7 +37,7 @@ constexpr uint32_t X_BUF_CNT = 3;
 // NormCommon::ReduceSumRstd 以 2 个 fp32 vreg 为一个 repeat（见 norm_common/op_kernel/
 // reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
 constexpr uint32_t REDUCE_VREG_PER_REPEAT = 2;
-constexpr float DEFAULT_EPSILON = 1e-5;
+constexpr float DEFAULT_EPSILON = 1e-6F;
 const gert::Shape g_vec_1_shape = {1};
 /**
  * Ensure that the returned shape is non-scalar.

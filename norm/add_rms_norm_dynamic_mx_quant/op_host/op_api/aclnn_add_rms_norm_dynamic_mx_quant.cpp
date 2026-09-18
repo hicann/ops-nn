@@ -38,7 +38,8 @@ constexpr int IDX_2 = 2;
 constexpr int IDX_3 = 3;
 
 static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* yOut,
-                         aclTensor* xOut, aclTensor* mxscaleOut, bool outputRstd, aclTensor* rstdOut)
+                         aclTensor* xOut, aclTensor* mxscaleOut, const char* roundMode, bool outputRstd,
+                         aclTensor* rstdOut)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
@@ -47,6 +48,7 @@ static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTens
     OP_CHECK_NULL(yOut, return false);
     OP_CHECK_NULL(xOut, return false);
     OP_CHECK_NULL(mxscaleOut, return false);
+    CHECK_RET(roundMode != nullptr, false);
     if (outputRstd) {
         OP_CHECK_NULL(rstdOut, return false);
     }
@@ -108,8 +110,8 @@ static aclnnStatus GetWorkspaceSizeImpl(const aclTensor* x1, const aclTensor* x2
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    CHECK_RET(CheckNotNull(x1, x2, gamma, yOut, xOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(roundMode != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x1, x2, gamma, yOut, xOut, mxscaleOut, roundMode, outputRstd, rstdOut),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     auto x1Shape = x1->GetViewShape();
     auto gammaDimNum = gamma->GetViewShape().GetDimNum();
