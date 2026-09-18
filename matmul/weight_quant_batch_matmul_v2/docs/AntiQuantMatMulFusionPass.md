@@ -38,8 +38,9 @@ Ascend 950PR/Ascend 950DT
 - Add节点的常量输入和Mul节点的常量输入必须为Const节点。
 - MatMul输入x和weight的数据类型必须为FLOAT16，输出数据类型必须为FLOAT16。
 - AscendAntiQuant输入数据类型必须为INT8，输出数据类型必须为FLOAT16。
-- 输入shape必须为2D，不支持动态shape。
+- MatMul和AscendAntiQuant节点输入shape必须为2D，不支持动态shape。
 - Mul的常量scale元素数仅支持1或N（weight的N维度），Add的常量offset元素数仅支持1或N。
+- Add和Mul节点的shape要求保持一致， 均为(1,n)或者(n,)或者(1,)。在不存在Add，存在Mul的场景下，Mul节点的shape必须为(1,)。
 <!-- npu="910b" -->
 - 在Atlas A2 训练系列产品/Atlas A2 推理系列产品场景下，需满足shape准入条件：M<=64、K>=5120、N>=5120，且(K,N)不能为(5120,10240)或(10240,5120)。
 <!-- end -->

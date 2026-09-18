@@ -883,7 +883,7 @@ static inline bool CheckA8W4ScaleX1Shape(const TupleOptional& optionalTensors, c
             x1Scale->GetViewShape().GetDim(2) != 2) { // 2: 最后一维为2
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1Scale",
-                FormatString("%ld, %ld, %ld", x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
+                FormatString("[%ld, %ld, %ld]", x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
                              x1Scale->GetViewShape().GetDim(MAX_DIM_VALUE))
                     .c_str(),
                 FormatString("the shape of x1Scale must be [%ld, %ld, 2]", groupDimM, CeilDiv(groupDimK, 2L)).c_str());
@@ -906,7 +906,7 @@ static inline bool CheckA8W4ScaleX2Shape(const TupleOptional& optionalTensors, c
         if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != CeilDiv(groupDimK, x2ScaleReshapeFactor) ||
             x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX) != MX_SCALE_LAST_DIM) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale",
-                                                  FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim,
+                                                  FormatString("[%ld, %ld, %ld]", x2ScaleNDim, x2ScaleGroupDim,
                                                                x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX))
                                                       .c_str(),
                                                   FormatString("the shape of x2Scale must be [%ld, %ld, 2]", groupDimN,
@@ -917,7 +917,7 @@ static inline bool CheckA8W4ScaleX2Shape(const TupleOptional& optionalTensors, c
     } else if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale",
-            FormatString("%ld, %ld", x2ScaleNDim, x2ScaleGroupDim).c_str(),
+            FormatString("[%ld, %ld]", x2ScaleNDim, x2ScaleGroupDim).c_str(),
             FormatString("the shape of x2Scale must be [%ld, %ld]", groupDimN, groupDimK).c_str());
         return false;
     }
@@ -933,7 +933,7 @@ static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors
         if (bias->GetViewShape().GetDim(0) != 1 || bias->GetViewShape().GetDim(1) != x2NDim) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
-                FormatString("%ld, %ld", bias->GetViewShape().GetDim(0), bias->GetViewShape().GetDim(1)).c_str(),
+                FormatString("[%ld, %ld]", bias->GetViewShape().GetDim(0), bias->GetViewShape().GetDim(1)).c_str(),
                 FormatString("the shape of bias must be [1, %ld]", x2NDim).c_str());
             return false;
         }
@@ -942,7 +942,7 @@ static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors
     if (out->GetViewShape().GetDim(0) != x1MDim || out->GetViewShape().GetDim(1) != x2NDim) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "out",
-            FormatString("%ld, %ld", out->GetViewShape().GetDim(0), out->GetViewShape().GetDim(1)).c_str(),
+            FormatString("[%ld, %ld]", out->GetViewShape().GetDim(0), out->GetViewShape().GetDim(1)).c_str(),
             FormatString("the shape of out must be [%ld, %ld]", x1MDim, x2NDim).c_str());
         return false;
     }
@@ -951,7 +951,7 @@ static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors
         if (yScale->GetViewShape().GetDim(1) != x2NDim || yScale->GetViewShape().GetDim(0) != 1) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "yScale",
-                FormatString("%ld, %ld", yScale->GetViewShape().GetDim(0), yScale->GetViewShape().GetDim(1)).c_str(),
+                FormatString("[%ld, %ld]", yScale->GetViewShape().GetDim(0), yScale->GetViewShape().GetDim(1)).c_str(),
                 FormatString("the shape of yScale must be [1, %ld]", x2NDim).c_str());
             return false;
         }
