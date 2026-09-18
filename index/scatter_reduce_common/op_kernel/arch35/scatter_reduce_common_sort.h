@@ -49,7 +49,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pri
     const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     for (ADDR_T p = 0; p < primed; p++) {
-        uint32_t pp = originPosGm_.GetValue(startJ + p);
+        ADDR_T pp = originPosGm_.GetValue(startJ + p);
         LocalTensor<PARAMS_T> b = updQue.template AllocTensor<PARAMS_T>();
         DataCopyPad(b, xGm_[static_cast<ADDR_T>(pp) * rowStride + colOff], cp, pad);
         updQue.EnQue(b);
@@ -64,7 +64,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pre
     ADDR_T rowStride, ADDR_T colOff, const DataCopyExtParams& cp, const DataCopyPadExtParams<PARAMS_T>& pad)
 {
     if (j + AHEAD < cnt) {
-        uint32_t posN = originPosGm_.GetValue(startJ + j + AHEAD);
+        ADDR_T posN = originPosGm_.GetValue(startJ + j + AHEAD);
         LocalTensor<PARAMS_T> bn = updQue.template AllocTensor<PARAMS_T>();
         DataCopyPad(bn, xGm_[static_cast<ADDR_T>(posN) * rowStride + colOff], cp, pad);
         updQue.EnQue(bn);
@@ -207,190 +207,27 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Nar
     }
 }
 
-// TILED merge-sort capacity unit: <= the measured single-call AscendC::Sort limit (~9700), 32-aligned.
-// 宽索引档的低位宽度, 必须与 host tiling 的 INDEX_LO_BITS 一致。取 30 而非 31: 归并树用
-// INT32_MAX(2^31-1) 作补齐哨兵, lo 若取 31 位则最大合法 lo 恰等于哨兵, 段边界判定会把真实数据
-// 当成填充。30 位下哨兵稳稳高于所有 lo, 且桶数(=ceil(dim0/2^30))在任何现实 dim0 下都只有个位数。
-constexpr int32_t INDEX_LO_BITS = 30;
-constexpr int32_t INDEX_LO_MASK_SHIFT = 32 - INDEX_LO_BITS; // 左移再逻辑右移, 清掉高 2 位
-
-constexpr uint32_t SORT_TILE = 8192;
-constexpr uint32_t SORT_KMAX = 64; // tiles merged in one pass; M up to KMAX*TILE = 512K (far beyond any case)
-
-// 宽索引档: 把排序 key 截到低 INDEX_LO_BITS 位(左移再逻辑右移清掉高位)。regbase(MicroAPI VF)写法,
-// 与本目录 SubwordWidenToI32 同构: 全部包在 __VEC_SCOPE__ 内, 尾块用 UpdateMask 只算有效 lane,
-// 不在 kernel 侧补 pad。用 uint32 视图保证右移是**逻辑**移位(int32 会符号扩展, 高位清不掉)。
-// 窄档 + int64 索引专用: 在**截断之前**判越界, 把越界项的 key 钉成 OOB_KEY。
-//
-// 为什么必须做: 排序只保证"key 相同的排在一起", 不保证"同一索引的多条相邻"。窄档下 int64 的
-// 越界大值(如 2^32+5)被 Cast 截成低 32 位后可能落进合法区间(5), 与合法的 5 撞 key ->
-// 排序后可能出现 5, 2^32+5, 5 -> 同一行被切成两段。越界项虽会被消费端守卫跳过, 但**分段已被打断**:
-//   * MUL/MAX/MIN 可结合可交换, 分两段各自折叠仍正确;
-//   * DIV 走行归属(一行只能一个核独占, 连除不可拆), 同一行出现两段可能被两个核同时认领 -> 竞争写。
-// 钉成 OOB_KEY(=2^30, 大于所有合法 key、小于归并哨兵 INT32_MAX)后, 越界项整体聚到末尾,
-// 合法索引的 key 互不碰撞, 同索引必然连续成段。
-//
-// int32 索引不需要本处理: 值本身就装得下, key = 原值, 天然无碰撞(负数排最前、>=dim0 的排最后,
-// 都不会插进合法段中间)。宽档同样不需要: 分区按**真值**分桶, 越界项进溢出桶。
-__aicore__ inline void BuildSortKeyI64(const LocalTensor<int32_t>& keys, __local_mem__ int32_t* rawI32, uint32_t n,
-                                       int32_t varFirstDim, bool wide)
-{
-    constexpr uint32_t VL_B32 = GetVecLen() / sizeof(uint32_t);
-    constexpr int32_t OOB_KEY = 1 << INDEX_LO_BITS; // 大于所有合法 key, 小于归并哨兵 INT32_MAX
-    (void)varFirstDim;
-    __local_mem__ int32_t* dstAddr = (__local_mem__ int32_t*)keys.GetPhyAddr();
-    uint16_t loopTimes = static_cast<uint16_t>((n + VL_B32 - 1) / VL_B32);
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<int32_t> lo;
-        Reg::RegTensor<int32_t> hi;
-        Reg::RegTensor<int32_t> t0;
-        Reg::RegTensor<int32_t> t1;
-        Reg::RegTensor<int32_t> key;
-        Reg::MaskReg preg;
-        uint32_t sregMask = n;
-        for (uint16_t i = 0; i < loopTimes; i++) {
-            preg = Reg::UpdateMask<int32_t>(sregMask);
-            // int64 缓冲按 int32 视图去交织: 偶数位=低 32 位(lo), 奇数位=高 32 位(hi)。
-            // 全程不经 Cast(int64->int32) —— 该转换是截断还是饱和从未验证。
-            Reg::DataCopy<int32_t, Reg::LoadDist::DIST_DINTLV_B32>(lo, hi, rawI32 + i * VL_B32 * 2);
-            if (wide) {
-                // 宽档: key = 低 INDEX_LO_BITS 位(桶内偏移), 高位由桶号承载; 越界项由第 2 趟稳定分区
-                // 按**真值**归入溢出桶, 故此处不需判越界。
-                Reg::ShiftLefts(reinterpret_cast<Reg::RegTensor<uint32_t>&>(key),
-                                reinterpret_cast<Reg::RegTensor<uint32_t>&>(lo),
-                                static_cast<int16_t>(INDEX_LO_MASK_SHIFT), preg);
-                Reg::ShiftRights(reinterpret_cast<Reg::RegTensor<uint32_t>&>(key),
-                                 reinterpret_cast<Reg::RegTensor<uint32_t>&>(key),
-                                 static_cast<int16_t>(INDEX_LO_MASK_SHIFT), preg);
-            } else {
-                // 窄档: 把越界项的 key 钉到 OOB_KEY, 使其整体聚到末尾, **不插进合法段中间**。
-                // 这一步是必需的: 排序只保证"key 相同的排一起", 不保证"同一索引的多条相邻";
-                // 越界大值(2^32+7)截断后 key=7 会与合法索引 7 撞车, 块内顺序任意 -> 同一行被切成
-                // 多段 -> 跨核合并/行归属逻辑失效(实测表现为设备死等, 无 AICORE error)。
-                //
-                // 纯算术实现(不用 Compares/Select: 其掩码极性与参数序未经验证):
-                //     nz  = min(|hi|, 1)              hi != 0 -> 1
-                //     ns  = (uint32)lo >> 31          lo 符号位 -> 1
-                //     key = max( min(lo, OOB), OOB * max(nz, ns) )
-                // 合法(hi=0, lo>=0, lo<dim0<=OOB): max(lo, 0) = lo
-                // hi!=0 或 lo<0: 结果恒为 OOB_KEY
-                // hi=0 但 lo>=dim0: 结果 >= dim0, 本就不与合法 key 冲突
-                Reg::Abs(t0, hi, preg);
-                Reg::Mins(t0, t0, static_cast<int32_t>(1), preg); // nz
-                Reg::ShiftRights(reinterpret_cast<Reg::RegTensor<uint32_t>&>(t1),
-                                 reinterpret_cast<Reg::RegTensor<uint32_t>&>(lo), static_cast<int16_t>(31), preg);
-                Reg::Maxs(t0, t0, static_cast<int32_t>(0), preg);
-                Reg::Max(t0, t0, t1, preg); // max(nz, ns)
-                Reg::Muls(t0, t0, static_cast<int32_t>(OOB_KEY), preg);
-                Reg::Mins(key, lo, static_cast<int32_t>(OOB_KEY), preg);
-                Reg::Max(key, key, t0, preg);
-            }
-            auto dstReg = Reg::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
-            Reg::DataCopy<int32_t, Reg::StoreDist::DIST_NORM>(dstAddr, key, dstReg, preg);
-        }
-    }
-}
-
-__aicore__ inline void MaskKeyToLoBits(const LocalTensor<int32_t>& keys, uint32_t n)
-{
-    constexpr uint32_t VL_B32 = GetVecLen() / sizeof(uint32_t);
-    __local_mem__ uint32_t* addr = (__local_mem__ uint32_t*)keys.GetPhyAddr();
-    uint16_t loopTimes = static_cast<uint16_t>((n + VL_B32 - 1) / VL_B32);
-    __VEC_SCOPE__
-    {
-        Reg::RegTensor<uint32_t> v;
-        Reg::MaskReg preg;
-        uint32_t sregMask = n;
-        for (uint16_t i = 0; i < loopTimes; i++) {
-            auto ar = Reg::CreateAddrReg<uint32_t>(i, static_cast<uint16_t>(VL_B32));
-            preg = Reg::UpdateMask<uint32_t>(sregMask);
-            Reg::DataCopy<uint32_t, Reg::LoadDist::DIST_NORM>(v, addr, ar);
-            // 移位量必须是 int16_t: regbase 的 ShiftLefts/ShiftRights 对标量参数有
-            // static_assert(SupportType<U, int16_t>()), 传 uint32_t 会在实例化处报
-            // "current scalarValue data type is not supported"(错误信息指向 impl 头文件, 不指向调用点)。
-            Reg::ShiftLefts(v, v, static_cast<int16_t>(INDEX_LO_MASK_SHIFT), preg);
-            Reg::ShiftRights(v, v, static_cast<int16_t>(INDEX_LO_MASK_SHIFT), preg);
-            Reg::DataCopy<uint32_t, Reg::StoreDist::DIST_NORM>(addr, v, ar, preg);
-        }
-    }
-}
+// 归并分片单位由 host 按 UB 容量反解(见 ResolveSortTile)经 tiling 下发, 此处不再有任何常量。
+// 排序分片大小不写死: host 按 UB 实测容量反解(见 ResolveSortTile), 经 tiling 下发。
+// 写死意味着"先手算 buffer 再拿 UB 判, 判不下就拍个更小的数", 既是魔数又要 host/kernel 两处同步。
 
 // Phase 1 of every sort-based reducer: produce, in GM, sortedIdx[M] (ascending int32 keys) + originPos[M]
-// (original update slot per sorted slot), then SyncAll. M<=SORT_TILE: one core, one AscendC::Sort (fast path,
-// already optimal for small M). M>SORT_TILE: a TRUE PARALLEL MERGE SORT -- all P2 (=largest pow2<=blockNum)
+// (original update slot per sorted slot), then SyncAll. M<=sortTile: one core, one AscendC::Sort (fast path,
+// already optimal for small M). M>sortTile: a TRUE PARALLEL MERGE SORT -- all P2 (=largest pow2<=blockNum)
 // cores sort an equal chunk in parallel, then a binary merge tree where, EVERY round, every core produces its
 // own contiguous runLen0-wide slice of the round output via a merge-path co-rank (so the merge runs on all
 // cores too, not just core 0). Chunks pad to runLen0 with INT32_MAX so all runs share a length and a core's
-// slice never spans more than one merge pair. No capacity cap, no gate, any M. Shared by SortReduceProcess
-// (MUL/MAX/MIN) and SortDivRowProcess (DIV).
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline ADDR_T ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::RowOf(ADDR_T k)
 {
-    // **行号身份一律以原始索引为准**, 不读排序 key。
+    // 排序 key 就是索引真值(不再折算低位), 故行号直接取 key, 无需经 originPos 回读原始索引。
     //
-    // 排序 key 只承担一件事: 把"可能相同"的索引排到相邻位置。它是 32 位的(硬件 Sort 的 key 只能 32 位),
-    // 因此 int64 索引进 key 时会丢高位 —— 但这不影响正确性, 因为:
-    //   * 同一个索引的多条必然得到同一 key -> 必然相邻 -> 段判定(比较真值)把它们合并;      [不漏]
-    //   * 不同索引撞上同一 key(如 5 与 2^32+5)只会让两行恰好相邻, 段判定比较**真值**后自然分开,
-    //     越界的那条再被消费端的 r<0 || r>=varFirstDim 守卫跳过。                          [不错]
-    // 若改读 key, 上面第二种情况会把 2^32+5 洗白成合法行号 5, 静默写错行 —— 这正是本次重构要根除的。
-    // 代价: 每次多一条标量 GM 读(originPos -> idx)。以正确性换, 且不引入任何 64 位矢量运算。
-    return static_cast<ADDR_T>(idxGm_.GetValue(static_cast<ADDR_T>(originPosGm_.GetValue(k))));
-}
-
-// 宽索引档第 2 趟基数排序: 按 hi=idx>>30 做稳定分区。core 0 单核执行(桶数为个位数, 且宽档本身是
-// 极端大表场景, 正确性优先), 完成后 DCCI 刷写 + SyncAll, 与 SortIndices 的收尾同一套一致性保证。
-template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
-__aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::StablePartitionByHi(ADDR_T M)
-{
-    // +1 = 溢出桶: 越界索引(r<0 或 r>=varFirstDim)不参与合法分桶。它们**必须**有归宿 ——
-    // 索引值是输入数据, 内核语义是"越界跳过"(与 A2 的行区间归属判断等价), 所以输入里完全可能出现
-    // 任意 int64 值(负数 / 2^40 / INT64_MAX)。这些值的 hi 远超 bucketNum, 若直接拿去索引计数数组
-    // 会越界写栈(静默踩内存)。统一归入末尾的溢出桶, 排到最后, 之后照样被消费者的边界守卫跳过。
-    constexpr int32_t MAX_BUCKETS = 64 + 1; // 64 个合法桶(首维上限 2^36) + 1 个溢出桶
-    const ADDR_T bucketNum = static_cast<ADDR_T>(tiling_.bucketNum);
-    const ADDR_T varFirstDim = static_cast<ADDR_T>(tiling_.varFirstDim);
-    const ADDR_T ovf = bucketNum; // 溢出桶下标
-    // 双保险: 调用点已保证只有宽档进来; 此处再挡一次, 但**不能依赖它**(见调用点注释)。
-    // SyncAll 要求参与核集合完全一致; 窄档下各消费路径(尤其 SortScalarSliceSize1 的行归属)
-    // 本就不做集合同步, 在此凭空插一次全局同步会让先到的核等一个永远不来的核 -> 设备侧挂死
-    // (无 AICORE error, 表现为跑批 Timeout)。实测: fc_alloob_s1big_i64 / fc_crossbucket_flo64 复现。
-    if (bucketNum <= 1) {
-        return;
-    }
-    if (blockIdx_ == 0) {
-        ADDR_T cnt[MAX_BUCKETS];
-        ADDR_T off[MAX_BUCKETS];
-        for (ADDR_T b = 0; b <= bucketNum; b++) {
-            cnt[b] = 0;
-        }
-        for (ADDR_T k = 0; k < M; k++) { // 计数
-            const ADDR_T r = RowOf(k);
-            const ADDR_T b = (r < 0 || r >= varFirstDim) ? ovf : (r >> INDEX_LO_BITS);
-            cnt[b] += 1;
-        }
-        ADDR_T acc = 0;
-        for (ADDR_T b = 0; b <= bucketNum; b++) { // 前缀和 -> 每桶输出起点(含溢出桶, 排在最后)
-            off[b] = acc;
-            acc += cnt[b];
-        }
-        for (ADDR_T k = 0; k < M; k++) { // 按序 scatter: 同桶内保持原有(lo 升序)次序 => 稳定
-            const ADDR_T r = RowOf(k);
-            const ADDR_T b = (r < 0 || r >= varFirstDim) ? ovf : (r >> INDEX_LO_BITS);
-            const ADDR_T dst = off[b];
-            off[b] = dst + 1;
-            scratchKeysGm_.SetValue(dst, sortedIdxGm_.GetValue(k));
-            scratchPosGm_.SetValue(dst, originPosGm_.GetValue(k));
-        }
-        for (ADDR_T k = 0; k < M; k++) { // 写回
-            sortedIdxGm_.SetValue(k, scratchKeysGm_.GetValue(k));
-            originPosGm_.SetValue(k, scratchPosGm_.GetValue(k));
-        }
-        AscendC::DataCacheCleanAndInvalid<int32_t, AscendC::CacheLine::ENTIRE_DATA_CACHE,
-                                          AscendC::DcciDst::CACHELINE_OUT>(sortedIdxGm_);
-    }
-    AscendC::SyncAll();
+    // 这一点顺带消掉了补齐哨兵的隐患: 归并把每个 run 的尾部补到 runLen0, 补齐项 key = SENT
+    // (索引类型最大值)。当输入里真的含有该值(用例集的 ixI64MAX 注入 2^63-1)时, 补齐项与真实项
+    // key 相等、可能被排进 [0, M) —— 若行号仍走 originPos(补齐项被置 0), 就会把第 0 条更新重复
+    // 应用一次。改读 key 后, 补齐项返回 SENT, 必然 >= varFirstDim, 被消费端的越界守卫跳过。
+    // originPos 仍用于取 updates 行, 但那只发生在越界守卫之后。
+    return static_cast<ADDR_T>(sortedIdxGm_.GetValue(k));
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
@@ -399,16 +236,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     const ADDR_T blockN = static_cast<ADDR_T>(tiling_.blockNum);
 
     // ---------- small-M fast path: a single AscendC::Sort on core 0 ----------
-    if (M <= static_cast<ADDR_T>(SORT_TILE)) {
+    if (M <= static_cast<ADDR_T>(tiling_.sortTile)) {
         SortIndicesSmallM(M);
-        // ⚠️ 调用点必须包在 wideIndex 判断里, **不能进函数再靠提前 return 绕开**:
-        // StablePartitionByHi 末尾有 AscendC::SyncAll(), 而同步原语的对称性要在**调用层**保证 ——
-        // 窄档各消费路径本就不做集合同步, 只要有核走了不同分支, 就会出现"部分核发了同步、
-        // 部分核没发"→ 永久死等(无 AICORE error, 表现为跑批 Timeout)。
-        // 实测: 函数内提前 return 仍挂(fc_overint32_s4_i32 等), 调用点包起来后 4/4 PASS。
-        if (tiling_.wideIndex != 0) {
-            StablePartitionByHi(M);
-        }
         return;
     }
 
@@ -417,7 +246,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
     while (P2 * 2 <= blockN) {
         P2 *= 2;
     }
-    while ((M + P2 - 1) / P2 > static_cast<ADDR_T>(SORT_TILE)) {
+    while ((M + P2 - 1) / P2 > static_cast<ADDR_T>(tiling_.sortTile)) {
         P2 *= 2;
     } // ... raised so each chunk fits one Sort
     const ADDR_T runLen0 = (M + P2 - 1) / P2; // padded chunk length (every run is this long)
@@ -434,9 +263,6 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
 
     SortLocalRuns(M, P2, runLen0, curSel);
     SortMergeTree(M, P2, runLen0, nRounds, curSel);
-    if (tiling_.wideIndex != 0) { // 同上: 同步对称性在调用层保证
-        StablePartitionByHi(M);
-    }
     // result is in buffer curSel == 1 (sortedIdx/originPos) by the start-parity choice.
 }
 
@@ -445,53 +271,47 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::SortIndicesSmallM(ADDR_T M)
 {
-    constexpr int32_t shiftOff = 32 / sizeof(int32_t);
+    constexpr int32_t shiftOff = 32 / sizeof(INDICES_T);
     constexpr uint32_t SORT_PAD = 2 * 32;
-    constexpr uint32_t tPad = (SORT_TILE + 31) / 32 * 32;
+    const uint32_t tPad = (static_cast<uint32_t>(tiling_.sortTile) + 31) / 32 * 32;
     if (blockIdx_ == 0) {
-        TBuf<TPosition::VECCALC> bRaw, bI32, bSorted, bOrigin;
-        pipe_.InitBuffer(bRaw, tPad * sizeof(INDICES_T) + SORT_PAD);
-        pipe_.InitBuffer(bI32, tPad * sizeof(int32_t) + SORT_PAD);
-        pipe_.InitBuffer(bSorted, (tPad + shiftOff) * sizeof(int32_t) + SORT_PAD);
+        TBuf<TPosition::VECCALC> bKey, bSorted, bOrigin, bPos64;
+        pipe_.InitBuffer(bKey, tPad * sizeof(INDICES_T) + SORT_PAD);
+        pipe_.InitBuffer(bSorted, (tPad + shiftOff) * sizeof(INDICES_T) + SORT_PAD);
         pipe_.InitBuffer(bOrigin, tPad * sizeof(uint32_t) + SORT_PAD);
-        LocalTensor<INDICES_T> rawUb = bRaw.Get<INDICES_T>();
-        LocalTensor<int32_t> i32Ub = bI32.Get<int32_t>();
-        LocalTensor<uint32_t> originUb = bOrigin.Get<uint32_t>();
-        LocalTensor<int32_t> shiftSorted = bSorted.Get<int32_t>()[shiftOff];
+        pipe_.InitBuffer(bPos64, tPad * sizeof(int64_t) + SORT_PAD);
+        LocalTensor<INDICES_T> keyUb = bKey.Get<INDICES_T>();
+        LocalTensor<uint32_t> originUb = bOrigin.Get<uint32_t>(); // Sort 的载荷: 分片内局部位置 <= sortTile
+        LocalTensor<int64_t> pos64Ub = bPos64.Get<int64_t>();     // 全局位置: 0..M-1, M 可超 2^32
+        LocalTensor<INDICES_T> shiftSorted = bSorted.Get<INDICES_T>()[shiftOff];
         DataCopyPadExtParams<INDICES_T> padIdx{false, 0, 0, 0};
         const event_t e2v = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE2_V));
         const event_t v2m3 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::V_MTE3));
         DataCopyExtParams cpIdx{1, static_cast<uint32_t>(M * sizeof(INDICES_T)), 0, 0, 0};
-        if constexpr (sizeof(INDICES_T) == 8) {
-            // int64 索引: 直接由原始缓冲构造 key(DIST_DINTLV_B32 取低字), **不走 Cast(int64->int32)**。
-            DataCopyPad(rawUb, idxGm_, cpIdx, padIdx);
-            SetFlag<HardEvent::MTE2_V>(e2v);
-            WaitFlag<HardEvent::MTE2_V>(e2v);
-            BuildSortKeyI64(i32Ub, (__local_mem__ int32_t*)rawUb.GetPhyAddr(), static_cast<uint32_t>(M),
-                            static_cast<int32_t>(tiling_.varFirstDim), tiling_.wideIndex != 0);
-            PipeBarrier<PIPE_V>();
-        } else {
-            DataCopyPad(i32Ub, idxGm_, cpIdx, padIdx);
-            SetFlag<HardEvent::MTE2_V>(e2v);
-            WaitFlag<HardEvent::MTE2_V>(e2v);
-            if (tiling_.wideIndex != 0) { // int32 索引 + 宽档: 值已是 32 位, 掩低位即精确桶内偏移
-                MaskKeyToLoBits(i32Ub, static_cast<uint32_t>(M));
-                PipeBarrier<PIPE_V>();
-            }
-        }
-        AscendC::Sort<int32_t, true, scatterSortConfig>(shiftSorted, originUb, i32Ub, static_cast<uint32_t>(M));
-        DataCopyExtParams cpOut{1, static_cast<uint32_t>(M * sizeof(int32_t)), 0, 0, 0};
+        // key 就是索引真值本身(AscendC::Sort 支持 int64 key)。不再折算低位 + 第二趟分区:
+        // 折算会让不同真值撞同一 key, 相同真值因此可能被切成多段, 是历史上设备死等的根因。
+        DataCopyPad(keyUb, idxGm_, cpIdx, padIdx);
+        SetFlag<HardEvent::MTE2_V>(e2v);
+        WaitFlag<HardEvent::MTE2_V>(e2v);
+        AscendC::Sort<INDICES_T, true, scatterSortConfig>(shiftSorted, originUb, keyUb, static_cast<uint32_t>(M));
+        // key 与 position 元素宽度不同(key 是索引真值, position 恒 4 字节), 必须各用各的字节数。
+        DataCopyExtParams cpKey{1, static_cast<uint32_t>(M * sizeof(INDICES_T)), 0, 0, 0};
+        DataCopyExtParams cpPos{1, static_cast<uint32_t>(M * sizeof(int64_t)), 0, 0, 0};
+        // 位置下标展宽到 64 位再落盘: GM 的位置数组是 int64, 才能表示 M >= 2^32 的下标。
+        // ⚠️ Cast 是 V 管道写 pos64Ub, 必须排在 V->MTE3 同步**之前**, 否则 MTE3 可能搬到未写完的缓冲。
+        Cast(pos64Ub, originUb.template ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, static_cast<int32_t>(M));
+        PipeBarrier<PIPE_V>();
         SetFlag<HardEvent::V_MTE3>(v2m3);
         WaitFlag<HardEvent::V_MTE3>(v2m3);
-        DataCopyPad(sortedIdxGm_, shiftSorted, cpOut);
-        DataCopyPad(originPosGm_, originUb, cpOut);
+        DataCopyPad(sortedIdxGm_, shiftSorted, cpKey);
+        DataCopyPad(originPosGm_, pos64Ub, cpPos);
     }
     // core 0 wrote sortedIdx/originPos via MTE3; phase 3 reads them with scalar GetValue on EVERY core.
     // Without flushing core 0's writes to GM and invalidating the other cores' stale cache lines, those
     // scalar reads can return stale data -> a few wrong originPos -> ~99% precision (same hazard the
     // merge-sort path guards at line 277; the single-core fast path needs it too).
-    AscendC::DataCacheCleanAndInvalid<int32_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(
-        sortedIdxGm_);
+    AscendC::DataCacheCleanAndInvalid<INDICES_T, AscendC::CacheLine::ENTIRE_DATA_CACHE,
+                                      AscendC::DcciDst::CACHELINE_OUT>(sortedIdxGm_);
     AscendC::SyncAll();
 }
 
@@ -501,23 +321,25 @@ template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::SortLocalRuns(ADDR_T M, ADDR_T P2,
                                                                                            ADDR_T runLen0, int curSel)
 {
-    constexpr int32_t shiftOff = 32 / sizeof(int32_t);
+    constexpr int32_t shiftOff = 32 / sizeof(INDICES_T);
     constexpr uint32_t SORT_PAD = 2 * 32;
-    constexpr uint32_t tPad = (SORT_TILE + 31) / 32 * 32;
-    constexpr int32_t SENT = 2147483647; // INT32_MAX padding key: sorts after every in-range index
+    const uint32_t tPad = (static_cast<uint32_t>(tiling_.sortTile) + 31) / 32 * 32;
+    // 补齐哨兵: 取索引类型的最大值, 排在所有真实索引之后。key 即索引真值, 故哨兵随类型走。
+    constexpr INDICES_T SENT = (sizeof(INDICES_T) == 8) ? static_cast<INDICES_T>(9223372036854775807LL) :
+                                                          static_cast<INDICES_T>(2147483647);
     const ADDR_T blockN = static_cast<ADDR_T>(tiling_.blockNum);
 
     // ---- local sort: core handles runs r = blockIdx_, blockIdx_+blockN, ... ; pad tail to runLen0 with SENT ----
     {
-        TBuf<TPosition::VECCALC> bRaw, bI32, bSorted, bOrigin;
-        pipe_.InitBuffer(bRaw, tPad * sizeof(INDICES_T) + SORT_PAD);
-        pipe_.InitBuffer(bI32, tPad * sizeof(int32_t) + SORT_PAD);
-        pipe_.InitBuffer(bSorted, (tPad + shiftOff) * sizeof(int32_t) + SORT_PAD);
+        TBuf<TPosition::VECCALC> bKey, bSorted, bOrigin, bPos64;
+        pipe_.InitBuffer(bKey, tPad * sizeof(INDICES_T) + SORT_PAD);
+        pipe_.InitBuffer(bSorted, (tPad + shiftOff) * sizeof(INDICES_T) + SORT_PAD);
         pipe_.InitBuffer(bOrigin, tPad * sizeof(uint32_t) + SORT_PAD);
-        LocalTensor<INDICES_T> rawUb = bRaw.Get<INDICES_T>();
-        LocalTensor<int32_t> i32Ub = bI32.Get<int32_t>();
-        LocalTensor<uint32_t> originUb = bOrigin.Get<uint32_t>();
-        LocalTensor<int32_t> shiftSorted = bSorted.Get<int32_t>()[shiftOff];
+        pipe_.InitBuffer(bPos64, tPad * sizeof(int64_t) + SORT_PAD);
+        LocalTensor<INDICES_T> keyUb = bKey.Get<INDICES_T>();
+        LocalTensor<uint32_t> originUb = bOrigin.Get<uint32_t>(); // Sort 的载荷: 分片内局部位置 <= sortTile
+        LocalTensor<int64_t> pos64Ub = bPos64.Get<int64_t>();     // 全局位置: 0..M-1, M 可超 2^32
+        LocalTensor<INDICES_T> shiftSorted = bSorted.Get<INDICES_T>()[shiftOff];
         DataCopyPadExtParams<INDICES_T> padIdx{false, 0, 0, 0};
         const event_t e2v = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE2_V));
         const event_t v2s = static_cast<event_t>(pipe_.FetchEventID(HardEvent::V_S));
@@ -533,44 +355,35 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             const ADDR_T cl = (cs >= M) ? 0 : ((M - cs < runLen0) ? (M - cs) : runLen0);
             if (cl > 0) {
                 DataCopyExtParams cpIdx{1, static_cast<uint32_t>(cl * sizeof(INDICES_T)), 0, 0, 0};
-                if constexpr (sizeof(INDICES_T) == 8) {
-                    // 同 SortIndicesSmallM: int64 索引由原始缓冲直接构造 key, 不经 Cast。
-                    DataCopyPad(rawUb, idxGm_[cs], cpIdx, padIdx);
-                    SetFlag<HardEvent::MTE2_V>(e2v);
-                    WaitFlag<HardEvent::MTE2_V>(e2v);
-                    BuildSortKeyI64(i32Ub, (__local_mem__ int32_t*)rawUb.GetPhyAddr(), static_cast<uint32_t>(cl),
-                                    static_cast<int32_t>(tiling_.varFirstDim), tiling_.wideIndex != 0);
-                    PipeBarrier<PIPE_V>();
-                } else {
-                    DataCopyPad(i32Ub, idxGm_[cs], cpIdx, padIdx);
-                    SetFlag<HardEvent::MTE2_V>(e2v);
-                    WaitFlag<HardEvent::MTE2_V>(e2v);
-                    if (tiling_.wideIndex != 0) {
-                        MaskKeyToLoBits(i32Ub, static_cast<uint32_t>(cl));
-                        PipeBarrier<PIPE_V>();
-                    }
-                }
-                AscendC::Sort<int32_t, true, scatterSortConfig>(shiftSorted, originUb, i32Ub,
-                                                                static_cast<uint32_t>(cl));
-                Adds(originUb.template ReinterpretCast<int32_t>(), originUb.template ReinterpretCast<int32_t>(),
-                     static_cast<int32_t>(cs), static_cast<int32_t>(cl));
+                DataCopyPad(keyUb, idxGm_[cs], cpIdx, padIdx);
+                SetFlag<HardEvent::MTE2_V>(e2v);
+                WaitFlag<HardEvent::MTE2_V>(e2v);
+                AscendC::Sort<INDICES_T, true, scatterSortConfig>(shiftSorted, originUb, keyUb,
+                                                                  static_cast<uint32_t>(cl));
+                // 局部位置(<= runLen0, 32 位足够) -> 全局位置(cs + local, 可超 2^32)。
+                // 展宽后再加基址, 加法与存储都在 64 位, 这是 M >= 2^32 不回绕的关键一步。
+                Cast(pos64Ub, originUb.template ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+                     static_cast<int32_t>(cl));
+                PipeBarrier<PIPE_V>();
+                Adds(pos64Ub, pos64Ub, static_cast<int64_t>(cs), static_cast<int32_t>(cl));
                 PipeBarrier<PIPE_V>();
             }
             SetFlag<HardEvent::V_S>(v2s);
             WaitFlag<HardEvent::V_S>(v2s);
             for (ADDR_T p = cl; p < runLen0; p++) {
                 shiftSorted.SetValue(p, SENT);
-                originUb.SetValue(p, 0u);
+                pos64Ub.SetValue(p, 0);
             }
-            DataCopyExtParams cpOut{1, static_cast<uint32_t>(runLen0 * sizeof(int32_t)), 0, 0, 0};
+            DataCopyExtParams cpKey{1, static_cast<uint32_t>(runLen0 * sizeof(INDICES_T)), 0, 0, 0};
+            DataCopyExtParams cpPos{1, static_cast<uint32_t>(runLen0 * sizeof(int64_t)), 0, 0, 0};
             SetFlag<HardEvent::S_MTE3>(s2m3);
             WaitFlag<HardEvent::S_MTE3>(s2m3);
             if (curSel == 1) {
-                DataCopyPad(sortedIdxGm_[cs], shiftSorted, cpOut);
-                DataCopyPad(originPosGm_[cs], originUb, cpOut);
+                DataCopyPad(sortedIdxGm_[cs], shiftSorted, cpKey);
+                DataCopyPad(originPosGm_[cs], pos64Ub, cpPos);
             } else {
-                DataCopyPad(scratchKeysGm_[cs], shiftSorted, cpOut);
-                DataCopyPad(scratchPosGm_[cs], originUb, cpOut);
+                DataCopyPad(scratchKeysGm_[cs], shiftSorted, cpKey);
+                DataCopyPad(scratchPosGm_[cs], pos64Ub, cpPos);
             }
             SetFlag<HardEvent::MTE3_MTE2>(m3m2);
             WaitFlag<HardEvent::MTE3_MTE2>(m3m2);
@@ -582,8 +395,8 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         }
     }
     // flush this core's runs to GM + invalidate stale lines so other cores' scalar reads next see fresh data
-    AscendC::DataCacheCleanAndInvalid<int32_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(
-        sortedIdxGm_);
+    AscendC::DataCacheCleanAndInvalid<INDICES_T, AscendC::CacheLine::ENTIRE_DATA_CACHE,
+                                      AscendC::DcciDst::CACHELINE_OUT>(sortedIdxGm_);
     AscendC::SyncAll();
 }
 
@@ -595,23 +408,25 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
                                                                                            ADDR_T nRounds, int curSel)
 {
     constexpr uint32_t SORT_PAD = 2 * 32;
-    constexpr uint32_t tPad = (SORT_TILE + 31) / 32 * 32;
-    constexpr int32_t SENT = 2147483647; // INT32_MAX padding key: sorts after every in-range index
+    const uint32_t tPad = (static_cast<uint32_t>(tiling_.sortTile) + 31) / 32 * 32;
+    // 补齐哨兵: 取索引类型的最大值, 排在所有真实索引之后。key 即索引真值, 故哨兵随类型走。
+    constexpr INDICES_T SENT = (sizeof(INDICES_T) == 8) ? static_cast<INDICES_T>(9223372036854775807LL) :
+                                                          static_cast<INDICES_T>(2147483647);
     const ADDR_T blockN = static_cast<ADDR_T>(tiling_.blockNum);
 
     // ---- merge tree: each round, each core produces its slice [s*runLen0,(s+1)*runLen0) via merge-path ----
     TBuf<TPosition::VECCALC> bOK, bOP;
-    pipe_.InitBuffer(bOK, tPad * sizeof(int32_t) + SORT_PAD);
-    pipe_.InitBuffer(bOP, tPad * sizeof(uint32_t) + SORT_PAD);
-    LocalTensor<int32_t> okUb = bOK.Get<int32_t>();
-    LocalTensor<uint32_t> opUb = bOP.Get<uint32_t>();
+    pipe_.InitBuffer(bOK, tPad * sizeof(INDICES_T) + SORT_PAD);
+    pipe_.InitBuffer(bOP, tPad * sizeof(int64_t) + SORT_PAD);
+    LocalTensor<INDICES_T> okUb = bOK.Get<INDICES_T>();
+    LocalTensor<int64_t> opUb = bOP.Get<int64_t>();
     const event_t s2m3 = static_cast<event_t>(pipe_.FetchEventID(HardEvent::S_MTE3));
     const event_t m3s = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_S));
     for (ADDR_T rr = 0; rr < nRounds; rr++) {
         const ADDR_T curRunLen = runLen0 << rr;
         const ADDR_T pairOut = curRunLen * 2;
-        GlobalTensor<int32_t> ck = (curSel == 1) ? sortedIdxGm_ : scratchKeysGm_;
-        GlobalTensor<uint32_t> cp = (curSel == 1) ? originPosGm_ : scratchPosGm_;
+        GlobalTensor<INDICES_T> ck = (curSel == 1) ? sortedIdxGm_ : scratchKeysGm_;
+        GlobalTensor<int64_t> cp = (curSel == 1) ? originPosGm_ : scratchPosGm_;
         for (ADDR_T s = static_cast<ADDR_T>(blockIdx_); s < P2; s += blockN) {
             const ADDR_T oBase = s * runLen0;
             const ADDR_T pairBase = (oBase / pairOut) * pairOut;
@@ -623,9 +438,9 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             ADDR_T iMax = (localLo < curRunLen) ? localLo : curRunLen;
             while (iMin < iMax) {
                 const ADDR_T mid = (iMin + iMax + 1) / 2;
-                const int32_t lp = ck.GetValue(leftBase + mid - 1);
+                const INDICES_T lp = ck.GetValue(leftBase + mid - 1);
                 const ADDR_T rj = localLo - mid;
-                const int32_t rv = (rj >= curRunLen) ? SENT : ck.GetValue(rightBase + rj);
+                const INDICES_T rv = (rj >= curRunLen) ? SENT : ck.GetValue(rightBase + rj);
                 if (lp <= rv) {
                     iMin = mid;
                 } else {
@@ -655,21 +470,22 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
                     ri++;
                 }
             }
-            DataCopyExtParams cpS{1, static_cast<uint32_t>(runLen0 * sizeof(int32_t)), 0, 0, 0};
+            DataCopyExtParams cpSK{1, static_cast<uint32_t>(runLen0 * sizeof(INDICES_T)), 0, 0, 0};
+            DataCopyExtParams cpSP{1, static_cast<uint32_t>(runLen0 * sizeof(int64_t)), 0, 0, 0};
             SetFlag<HardEvent::S_MTE3>(s2m3);
             WaitFlag<HardEvent::S_MTE3>(s2m3);
             if (curSel == 1) { // out is the other buffer (scratch)
-                DataCopyPad(scratchKeysGm_[oBase], okUb, cpS);
-                DataCopyPad(scratchPosGm_[oBase], opUb, cpS);
+                DataCopyPad(scratchKeysGm_[oBase], okUb, cpSK);
+                DataCopyPad(scratchPosGm_[oBase], opUb, cpSP);
             } else {
-                DataCopyPad(sortedIdxGm_[oBase], okUb, cpS);
-                DataCopyPad(originPosGm_[oBase], opUb, cpS);
+                DataCopyPad(sortedIdxGm_[oBase], okUb, cpSK);
+                DataCopyPad(originPosGm_[oBase], opUb, cpSP);
             }
             SetFlag<HardEvent::MTE3_S>(m3s);
             WaitFlag<HardEvent::MTE3_S>(m3s);
         }
         // flush this round's writes to GM + invalidate, so the next round's cross-core scalar reads are fresh
-        AscendC::DataCacheCleanAndInvalid<int32_t, AscendC::CacheLine::ENTIRE_DATA_CACHE,
+        AscendC::DataCacheCleanAndInvalid<INDICES_T, AscendC::CacheLine::ENTIRE_DATA_CACHE,
                                           AscendC::DcciDst::CACHELINE_OUT>(sortedIdxGm_);
         curSel ^= 1;
         AscendC::SyncAll();
@@ -813,7 +629,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Fol
         k++;
     }
     if (r >= 0 && static_cast<ADDR_T>(r) < varFirstDim) {
-        uint32_t p0 = originPosGm_.GetValue(s);
+        ADDR_T p0 = originPosGm_.GetValue(s);
         LoadWiden(accUb, varUb, xGm_, static_cast<ADDR_T>(p0) * sliceSize + c0, chunkW, evMV0, cp, pad);
         if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
             ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
@@ -890,7 +706,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
             if (segEnd > posEnd)
                 break; // 该段已整体处理完, 后续位置归下一个核
         } else {       // owner of a split row -> pure in-range partial, finish in 3b
-            uint32_t p0 = originPosGm_.GetValue(segStart);
+            ADDR_T p0 = originPosGm_.GetValue(segStart);
             LoadWiden(accUb, varUb, xGm_, static_cast<ADDR_T>(p0) * sliceSize + c0, chunkW, evMV0, cp, pad);
             if constexpr ((Mode == MODE_MAX || Mode == MODE_MIN) && AscendC::IsSameType<PARAMS_T, int8_t>::value) {
                 ShiftRight(tmp, accUb, INT8_SIGN_SHIFT, static_cast<int32_t>(chunkW));
@@ -1171,7 +987,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Sor
         }
         AccT acc = static_cast<AccT>(outputGm_.GetValue(static_cast<ADDR_T>(r))); // var[r], widened to AccT
         for (ADDR_T j = segStart; j < segEnd; j++) {
-            const uint32_t p = originPosGm_.GetValue(j);
+            const ADDR_T p = originPosGm_.GetValue(j);
             const AccT u = static_cast<AccT>(xGm_.GetValue(static_cast<ADDR_T>(p)));
             if constexpr (Mode == MODE_MUL) {
                 acc = acc * u;

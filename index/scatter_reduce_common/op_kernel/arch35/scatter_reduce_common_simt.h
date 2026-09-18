@@ -28,9 +28,8 @@ namespace ScatterReduceCommon {
 using namespace AscendC;
 
 // sliceSize==1 scalar-path cap: M + varFirstDim must fit the single-core UB staging (idx+upd+var+acc). Above
-// this, the sort + scalar row-fold path takes over (no UB limit). 8192 covers every realistic 1-D case (test
+// this, the sort + scalar row-fold path takes over (no UB limit). 分片阈值不写死, 由 host 按 UB 反解下发 (test
 // set maxes at M=4096, varFirstDim=1000) with margin and stays UB-safe even for int64 indices.
-constexpr uint32_t SCALAR_SLICE1_CAP = 8192;
 constexpr SortConfig scatterSortConfig{SortType::RADIX_SORT, false}; // radix sort of int32 index keys
 
 // Subword (int8/uint8) <-> int32 conversion via Reg. High-level Cast<int32,int8> is broken on
@@ -145,15 +144,12 @@ public:
     __aicore__ inline void SortScalarSliceSize1(ADDR_T M, ADDR_T varFirstDim);
     // Phase 1 of both sort reducers: core 0 sorts indices into sortedIdx/originPos workspace, then SyncAll.
     __aicore__ inline void SortIndices(ADDR_T M);
-    // 宽索引档(tiling_.wideIndex=1)第 2 趟基数: 对已按 lo 排好的数组按 hi 做**稳定**分区, 使全局按
-    // (hi, lo) 有序。稳定性由"计数->前缀->按序 scatter"保证, 因此第 1 趟的 lo 序在桶内不被打乱。
-    __aicore__ inline void StablePartitionByHi(ADDR_T M);
     // 取排序槽 k 对应的**完整**行号。窄档直接读 sortedIdx(它就是完整 index); 宽档 sortedIdx 只存
     // lo(低 30 位), 完整值由 originPos 回读原始 int64 索引得到 —— 这样消费者无需桶边界表, 也天然
     // 避免"跨桶 lo 相同被误判为同一行"的坑。
     __aicore__ inline ADDR_T RowOf(ADDR_T k);
     // SortIndices sub-phases (pure code-motion split of SortIndices; same execution order, same sync pairing):
-    //   SortIndicesSmallM  : M<=SORT_TILE fast path -- core 0 single AscendC::Sort + collective DCCI + SyncAll.
+    //   SortIndicesSmallM  : M<=tiling_.sortTile fast path -- core 0 single AscendC::Sort + collective DCCI + SyncAll.
     //   SortLocalRuns      : large-M phase 2 -- each core sorts its runLen0-wide chunks (pad tail with SENT),
     //                        writes them into the curSel buffer, then the collective DCCI + SyncAll.
     //   SortMergeTree      : large-M merge tree -- each round each core emits its merge-path slice; flips curSel.
@@ -232,12 +228,12 @@ private:
     const ScatterReduceSimtTilingData& tiling_;
     TPipe& pipe_;
     GlobalTensor<INDICES_T> idxGm_;
-    GlobalTensor<PARAMS_T> xGm_;          // updates
-    GlobalTensor<PARAMS_T> outputGm_;     // var (in-place reduce target)
-    GlobalTensor<int32_t> sortedIdxGm_;   // workspace: sorted index values [M]
-    GlobalTensor<uint32_t> originPosGm_;  // workspace: original update position per sorted slot [M]
-    GlobalTensor<int32_t> scratchKeysGm_; // workspace: K pre-merge sorted index runs [M] (tiled merge-sort)
-    GlobalTensor<uint32_t> scratchPosGm_; // workspace: K pre-merge sorted position runs [M] (tiled merge-sort)
+    GlobalTensor<PARAMS_T> xGm_;            // updates
+    GlobalTensor<PARAMS_T> outputGm_;       // var (in-place reduce target)
+    GlobalTensor<INDICES_T> sortedIdxGm_;   // workspace: sorted index values [M] (key = 索引真值)
+    GlobalTensor<int64_t> originPosGm_;     // workspace: original update position per sorted slot [M]
+    GlobalTensor<INDICES_T> scratchKeysGm_; // workspace: K pre-merge sorted index runs [M] (tiled merge-sort)
+    GlobalTensor<int64_t> scratchPosGm_;    // workspace: K pre-merge sorted position runs [M] (tiled merge-sort)
     // split-combine scratch: when one var row's segment spans several cores, each covering core writes its
     // in-range partial product to partialGm_[core] (one CHUNK-wide slot); the row's owner reads back the
     // consecutive covering cores' partials and combines (4 bytes per elem, reinterpreted to the ACC type).
@@ -280,18 +276,21 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
             return;
         }
         // The parallel merge-sort (SortIndices) pads M up to padM = P2*runLen0, where P2 is raised PAST
-        // blockNum until runLen0 = ceil(M/P2) <= SORT_TILE. padM - M can reach ~P2 (thousands for M > ~1M),
+        // blockNum until runLen0 = ceil(M/P2) <= tiling_.sortTile. padM - M can reach ~P2 (thousands for M > ~1M),
         // so each region MUST be padM wide. The old "+128" margin assumed padM - M <= coreNum, which is FALSE
         // once P2 grows past coreNum -- the sort then wrote into the next region -> VEC_ERROR / wrong output on
         // large-index cases. Compute the exact padM here (mirrors SortIndices and the host tiling).
-        constexpr ADDR_T SORT_TILE_LOCAL = 8192; // MUST match SORT_TILE in scatter_reduce_common_sort.h
+        // 分片阈值必须与 SortIndices 同源: 都读 host 下发的 tiling_.sortTile(host 按 UB 实测容量反解)。
+        // 写死常量会与 SortIndices 算出不同的 padM(阈值越小 -> P2 越大 -> padM 越大), 差值可达 P2 量级,
+        // 远超下面 +128 的余量, 于是各子区基址错位、排序写出区间重叠 -> 越界写/静默错值。
+        const ADDR_T sortTile = static_cast<ADDR_T>(tiling_.sortTile);
         ADDR_T padM = totalIdxn_;
-        if (totalIdxn_ > SORT_TILE_LOCAL) {
+        if (totalIdxn_ > sortTile) {
             ADDR_T p2 = 1;
             while (p2 * 2 <= static_cast<ADDR_T>(tiling_.blockNum)) {
                 p2 *= 2;
             }
-            while ((totalIdxn_ + p2 - 1) / p2 > SORT_TILE_LOCAL) {
+            while ((totalIdxn_ + p2 - 1) / p2 > sortTile) {
                 p2 *= 2;
             }
             padM = p2 * ((totalIdxn_ + p2 - 1) / p2);
@@ -300,11 +299,16 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
         // layout: sortedIdx[M] | originPos[M] | scratchKeys[M] | scratchPos[M] | per-core partials.
         // scratchKeys/scratchPos hold the K pre-merge sorted runs that the tiled merge-sort folds into
         // sortedIdx/originPos (they are free during phase 3, where only partials are used).
-        sortedIdxGm_.SetGlobalBuffer((__gm__ int32_t*)userWs);
-        originPosGm_.SetGlobalBuffer((__gm__ uint32_t*)(userWs + mAlign * sizeof(int32_t)));
-        scratchKeysGm_.SetGlobalBuffer((__gm__ int32_t*)(userWs + 2 * mAlign * sizeof(int32_t)));
-        scratchPosGm_.SetGlobalBuffer((__gm__ uint32_t*)(userWs + 3 * mAlign * sizeof(int32_t)));
-        partialGm_.SetGlobalBuffer((__gm__ int32_t*)(userWs + 4 * mAlign * sizeof(int32_t)));
+        // layout: sortedIdx[mAlign x sizeof(INDICES_T)] | originPos[mAlign x 4]
+        //       | scratchKeys[mAlign x sizeof(INDICES_T)] | scratchPos[mAlign x 4] | partials
+        // key 是索引真值, 故两个 key 区按索引类型宽度计; host 的 workspace 公式必须同源。
+        constexpr ADDR_T KEY_SZ = static_cast<ADDR_T>(sizeof(INDICES_T));
+        constexpr ADDR_T POS_SZ = static_cast<ADDR_T>(sizeof(int64_t));
+        sortedIdxGm_.SetGlobalBuffer((__gm__ INDICES_T*)userWs);
+        originPosGm_.SetGlobalBuffer((__gm__ int64_t*)(userWs + mAlign * KEY_SZ));
+        scratchKeysGm_.SetGlobalBuffer((__gm__ INDICES_T*)(userWs + mAlign * (KEY_SZ + POS_SZ)));
+        scratchPosGm_.SetGlobalBuffer((__gm__ int64_t*)(userWs + mAlign * (2 * KEY_SZ + POS_SZ)));
+        partialGm_.SetGlobalBuffer((__gm__ int32_t*)(userWs + mAlign * 2 * (KEY_SZ + POS_SZ)));
     }
 }
 
@@ -329,8 +333,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pro
         // sliceSize==1, small (M + varFirstDim fit single-core UB): 1D scalar reduce (product/max/min). One core
         // stages it all in UB and scalar-folds in fp32 -- crisply bounded, beats the multi-core sort's setup for
         // the tiny work. Cap is UB capacity (not a magic 256), so all realistic 1-D cases land here.
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 &&
-            (totalIdxn_ + varFirstDim) <= static_cast<ADDR_T>(SCALAR_SLICE1_CAP)) {
+        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 && tiling_.scalarPath != 0) {
             if (blockIdx_ == 0) {
                 ScalarReduce1D<Mode, PARAMS_T, INDICES_T, ADDR_T>(pipe_, idxGm_, xGm_, outputGm_, totalIdxn_,
                                                                   varFirstDim);
@@ -353,8 +356,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Pro
     if constexpr (Mode == MODE_DIV) {
         // sliceSize==1 small -> single-core scalar sequential divide (ScalarDiv1D: /0 keeps var for int, ->inf
         // for float, reference-exact). Large -> sort + scalar row-fold (sequential divide, same /0 rule).
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 &&
-            (totalIdxn_ + varFirstDim) <= static_cast<ADDR_T>(SCALAR_SLICE1_CAP)) {
+        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 && tiling_.scalarPath != 0) {
             if (blockIdx_ == 0) {
                 ScalarDiv1D<PARAMS_T, INDICES_T, ADDR_T>(pipe_, idxGm_, xGm_, outputGm_, totalIdxn_, varFirstDim);
             }

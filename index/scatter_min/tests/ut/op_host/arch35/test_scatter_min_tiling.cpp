@@ -203,18 +203,46 @@ TEST_F(ScatterMinTiling, test_tiling_var_dim0_over_int32max)
 // 桶数上限: 宽档按 2^30 一桶分区, kernel 侧计数数组只有 64 桶(+1 溢出桶), 故 host 必须在
 // 桶数 > 64 时拒收, 否则 kernel 里会越界写计数数组。这两条只能在 host UT 覆盖 ——
 // 64 桶对应 var 首维 2^36, 真机上 var 本身就要 68GB, 物理上无法造用例。
-TEST_F(ScatterMinTiling, test_tiling_wide_buckets_at_cap)
+TEST_F(ScatterMinTiling, test_tiling_wide_buckets_single_window)
 {
     uint64_t key = 0xFFFF;
-    auto st = RunScatterMinTiling({{68719476736L}, {68719476736L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
-                                  true, key);
+    auto st = RunScatterMinTiling({{137438953472L}, {137438953472L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT,
+                                  ge::DT_INT64, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ScatterMinTiling, test_tiling_wide_buckets_over_cap)
+// indices 为空 -> 本轮零工作量, 不会走排序分桶, 首维再大也不应被拒收。
+TEST_F(ScatterMinTiling, test_tiling_empty_indices_is_noop)
 {
     uint64_t key = 0xFFFF;
-    auto st = RunScatterMinTiling({{69793218560L}, {69793218560L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
-                                  true, key);
-    EXPECT_EQ(st, ge::GRAPH_FAILED);
+    auto st = RunScatterMinTiling({{1099511627776L, 4L}, {1099511627776L, 4L}}, {{0}, {0}}, {{0, 4}, {0, 4}},
+                                  ge::DT_FLOAT, ge::DT_INT64, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterMinTiling, test_tiling_wide_buckets_multi_window)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{138512695296L}, {138512695296L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT,
+                                  ge::DT_INT64, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+// 首维 2^40 = 1024 个桶, 需要 16 个窗口: 桶数无上限, tiling 不拦, 与 A2 支持面一致。
+TEST_F(ScatterMinTiling, test_tiling_huge_first_dim_no_cap)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{1099511627776L}, {1099511627776L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT,
+                                  ge::DT_INT64, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+}
+
+// var 首维取 int64 上界(9223372036854775807): 排序 key 就是索引真值, 不分桶, 首维不再有任何上限。
+// 用空 indices 构造零工作量, 使该 shape 在 tiling 层可判定而无需真实显存。
+TEST_F(ScatterMinTiling, test_tiling_first_dim_int64_max)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMinTiling({{9223372036854775807L, 1L}, {9223372036854775807L, 1L}}, {{0}, {0}},
+                                  {{0, 1}, {0, 1}}, ge::DT_FLOAT, ge::DT_INT64, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
 }
