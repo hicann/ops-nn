@@ -24,7 +24,7 @@ extern "C" {
  * shape与self满足broadcast关系。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16。
  * shape与gradOutput满足broadcast关系。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
- * @param [in] lambda: npu host侧的aclScalar，表示Softshrink计算的非负阈值。
+ * @param [in] lambd: npu host侧的aclScalar，表示Softshrink计算的非负阈值。
  * @param [out] gradInput: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16。
  * shape与gradOutput和self的broadcast结果一致。支持[非连续的Tensor](#非连续Tensor说明)，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
@@ -32,7 +32,7 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSoftshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-                                                              const aclScalar* lambda, aclTensor* gradInput,
+                                                              const aclScalar* lambd, aclTensor* gradInput,
                                                               uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**

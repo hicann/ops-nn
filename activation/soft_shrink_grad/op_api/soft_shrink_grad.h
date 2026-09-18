@@ -18,7 +18,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* SoftShrinkGrad(const aclTensor* gradOutput, const aclTensor* self, float lambda,
+const aclTensor* SoftShrinkGrad(const aclTensor* gradOutput, const aclTensor* self, float lambd,
                                 aclOpExecutor* executor);
 } // namespace l0op
 

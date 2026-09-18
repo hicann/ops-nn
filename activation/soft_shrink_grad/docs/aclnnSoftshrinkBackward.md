@@ -56,7 +56,7 @@
 aclnnStatus aclnnSoftshrinkBackwardGetWorkspaceSize(
   const aclTensor* gradOutput,
   const aclTensor* self,
-  const aclScalar* lambda,
+  const aclScalar* lambd,
   aclTensor*       gradInput,
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
@@ -117,7 +117,7 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>√</td>
     </tr>
       <tr>
-      <td>lambda（aclScalar*）</td>
+      <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>Softshrink计算的阈值，公式中的λ。</td>
       <td>不能传入空指针，取值必须大于或等于0。</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnSoftshrinkBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>gradOutput、self、lambda、gradInput、workspaceSize或executor存在空指针。</td>
+      <td>gradOutput、self、lambd、gradInput、workspaceSize或executor存在空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>self和gradOutput的shape不满足broadcast规则。</td>
     </tr>
     <tr>
-      <td>lambda为NaN或小于0。</td>
+      <td>lambd为NaN或小于0。</td>
     </tr>
     <tr>
       <td>gradInput的shape与self和gradOutput的broadcast结果不一致。</td>
