@@ -3428,6 +3428,36 @@ currently supported.
     .ATTR(transpose_b, Bool, false)
     .OP_END_FACTORY_REG(GEMM)
 
+#ifndef OPS_PROTO_DEF_SCATTERMAXWITHARGMAX
+#define OPS_PROTO_DEF_SCATTERMAXWITHARGMAX
+    /**
+            * @par Inputs:
+            * Three inputs, including:
+            * @li x: An ND Tensor .
+
+            * Must be one of the following types: float
+            * @li indices: An ND Tensor . \n
+
+            * Must be one of the following types: int32
+            * @li updates: An ND Tensor .
+
+            * Must be one of the following types: float
+
+            * @par Outputs:
+            * y: A Tensor. Has the same type and format as input "x" . \n
+
+            * @par Outputs:
+            * argmax: A Tensor. Has the same type and format as input "indices" . \n
+            */
+    REG_OP(ScatterMaxWithArgmax)
+    .INPUT(x, TensorType({DT_FLOAT}))
+    .INPUT(indices, TensorType({DT_INT32}))
+    .INPUT(updates, TensorType({DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT}))
+    .OUTPUT(argmax, TensorType({DT_INT32}))
+    .OP_END_FACTORY_REG(ScatterMaxWithArgmax)
+#endif
+
     /**
     * @brief Concatenates a list of N tensors along the first dimension.
     * @par Inputs:
