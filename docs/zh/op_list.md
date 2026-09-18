@@ -4058,7 +4058,7 @@
     <td>AI Core</td>
     <td>实现Adagrad Dual Averaging优化器的核心更新操作，用于深度学习模型训练中的参数更新。</td>
   </tr>
-   <tr>
+  <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_adagrad_v2/README.md">inplace_apply_adagrad_v2</a></td>
     <td>✓</td>
@@ -4067,16 +4067,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现Adagrad V2优化器单步参数更新功能，原地更新权重参数var及梯度累加器accum。</td>
-   </tr>
-   <tr>
-    <td>optim</td>
-    <td><a href="../../optim/inplace_apply_adam_with_amsgrad/README.md">inplace_apply_adam_with_amsgrad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现Adam优化器带AMSGrad修正的原地参数更新功能，原地更新权重参数var及一阶矩m、二阶矩v、二阶矩历史最大值vhat四个状态张量。</td>
    </tr>
    <tr>
     <td>optim</td>
@@ -4737,26 +4727,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入特征图按ROI区域进行最大池化，输出固定尺寸的池化结果，用于目标检测等任务。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/act_ulq_clamp_max_grad/README.md">act_ulq_clamp_max_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>ULQ量化感知训练clamp上界截断的反向梯度算子，输出0维标量。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/act_ulq_clamp_min_grad/README.md">act_ulq_clamp_min_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>ULQ量化感知训练clamp下界截断的反向梯度算子，输出0维标量。</td>
   </tr>
   <tr>
     <td>quant</td>
