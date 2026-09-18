@@ -18,17 +18,18 @@ The operator copies ``x`` into ``y`` and then accumulates ``v`` into the rows
     row_j = ((indices_j % N) + N) % N
     y[row_j, ...] += v[j, ...]
 
-Only one registration key is needed: kernel and GEIR both resolve the snake-case
-operator name and share :class:`InplaceAddKernelSpec`.  The legacy ``__golden__``
-entry remains available and calls the same Torch computation core.
+Kernel and GEIR resolve the snake-case operator name and share
+:class:`InplaceAddKernelSpec`.  TensorFlow E2E cases resolve the exact CSV
+``api_name`` and use :class:`InplaceAddTensorFlowSpec`.  The legacy
+``__golden__`` entry remains available and calls the same Torch computation core.
 
 The CPU golden is used only as the precision truth and is never timed as the XPU
 competitor.  It computes in the dtype TTK supplies, so a Promote call that supplies
 float32 or float64 is not cast back down to the original input dtype.  The default
 third-party leg uses native ``torch.index_add`` because it covers the complete dtype
-matrix.  The exact TensorFlow counterpart, ``tf.raw_ops.InplaceAdd``, is also
-registered and can be selected through TTK's ``--provider tf`` filter when the
-endpoint supports the testcase dtype.
+matrix.  The exact TensorFlow counterpart, ``tf.raw_ops.InplaceAdd``, is both
+registered as a TensorFlow E2E TestSpec and available through TTK's
+``--provider tf`` filter when the endpoint supports the testcase dtype.
 
 The CPU golden and Torch third-party leg share index normalization, wide-unsigned
 adaptation, and output restoration.  In TTK's NumPy path, complex32 is represented
@@ -43,8 +44,12 @@ import numpy as np
 import torch
 
 __spec__ = {
-    # kernel and GEIR both resolve the snake-case operator name and share one Spec.
+    # Kernel and GEIR resolve the snake-case operator name.
     "inplace_add": "InplaceAddKernelSpec",
+    # E2E resolves the exact CSV api_name. Accept both spellings supported by
+    # TTK's TensorFlow resolver because upstream case generators use both forms.
+    "tf.raw_ops.InplaceAdd": "InplaceAddTensorFlowSpec",
+    "tensorflow.raw_ops.InplaceAdd": "InplaceAddTensorFlowSpec",
 }
 
 __golden__ = {
@@ -310,6 +315,50 @@ class InplaceAddKernelSpec:
     tolerance = _TOL
 
 
+def _to_numpy_array(value):
+    """Convert a framework tensor to a detached host array for CPU golden use."""
+    if isinstance(value, np.ndarray):
+        return np.array(value, copy=True)
+    if isinstance(value, torch.Tensor):
+        tensor = value.detach().cpu()
+        if tensor.dtype == torch.bfloat16:
+            from ml_dtypes import bfloat16
+
+            return tensor.view(torch.int16).numpy().view(dtype=bfloat16).copy()
+        return tensor.numpy().copy()
+    if hasattr(value, "numpy"):
+        return np.array(value.numpy(), copy=True)
+    return np.array(value, copy=True)
+
+
+def _promote_reference_array(array):
+    """Promote floating inputs so cross-check uses an independent CPU truth."""
+    target_dtype = {
+        "float16": np.float32,
+        "bfloat16": np.float32,
+        "float32": np.float64,
+        "complex64": np.complex128,
+    }.get(array.dtype.name)
+    return array.astype(target_dtype) if target_dtype is not None else array
+
+
+def tensorflow_inplace_add_golden(x, i, v, name=None, **kwargs):
+    """CPU golden for ``tf.raw_ops.InplaceAdd(x, i, v, name)`` E2E cases."""
+    del name, kwargs
+    x_array = _promote_reference_array(_to_numpy_array(x))
+    indices_array = _to_numpy_array(i)
+    v_array = _promote_reference_array(_to_numpy_array(v))
+    return [_inplace_add_golden_compute(x_array, indices_array, v_array)]
+
+
+class InplaceAddTensorFlowSpec:
+    """TensorFlow E2E spec registered by the CSV ``api_name``."""
+
+    golden = staticmethod(tensorflow_inplace_add_golden)
+    third_party = {"tf": "tf.raw_ops.InplaceAdd"}
+    tolerance = _TOL
+
+
 def inplace_add_golden(x, indices, v, *args, **kwargs):
     """Compatibility entry for the historical ``__golden__`` kernel loader.
 
@@ -326,10 +375,9 @@ def inplace_add_golden(x, indices, v, *args, **kwargs):
 # 【不存在】ACLNN 通路：op_host/ 下无 op_api 目录、docs/ 下无 aclnnInplaceAdd.md，
 # 本算子不交付 aclnn 接口；同名 aclnnInplaceAdd 是逐元素/Broadcast 的 self += alpha * other，
 # 与按索引行更新的语义不同，不能拿来顶替。
-# 【不存在】e2e 通路：op-plugin 517f2e7 中，aten::add_ 调用逐元素 aclnnInplaceAdd，
-# 而 aten::index_add 调用 aclnnIndexAdd；两者都不会派发到本算子，当前没有可注册的
-# indexed InplaceAdd torch API。
+# 【不存在】Torch E2E 通路：op-plugin 517f2e7 中，aten::add_ 调用逐元素
+# aclnnInplaceAdd，而 aten::index_add 调用 aclnnIndexAdd；两者都不会派发到本算子。
+# 【存在】TensorFlow E2E 通路：CANN 的 TensorFlow parser 注册 InplaceAdd，TTK 用
+# tf.raw_ops.InplaceAdd 作为 CSV api_name，并通过上面的 InplaceAddTensorFlowSpec
+# 取得 golden、third_party 和 tolerance。
 # 【不存在】ONNX 通路：framework/ 下只有 TensorFlow parser，无 ONNX parser。
-# 注：TensorFlow parser 与 AInplaceAddFusionPass 是框架/图侧通路，按框架用例验证；
-# 上面的 tf.raw_ops.InplaceAdd 仅作为 TestSpec 的远端 XPU 竞品实现，不代表本算子
-# 新增了 api_name 或 NPU E2E 注册通路。
