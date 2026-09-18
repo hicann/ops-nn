@@ -81,13 +81,14 @@ int main()
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> selfShape = {4, 2};
-    std::vector<int64_t> outShape = {2, 7};
+    // 实际使用按照“self元素总数”作为最大的N值，申请out内存
+    std::vector<int64_t> outShape = {2, 8};
     void* selfDeviceAddr = nullptr;
     void* outDeviceAddr = nullptr;
     aclTensor* self = nullptr;
     aclTensor* out = nullptr;
     std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<int64_t> outHostData(14, 0);
+    std::vector<int64_t> outHostData(16, 0);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
