@@ -81,7 +81,7 @@ bool AddRmsNormCastRegbaseTiling::CheckInputShapeDim()
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
     const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
 
-    // Not support zero shape.
+    // Check rank and negative dimensions.
     size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
@@ -103,7 +103,16 @@ bool AddRmsNormCastRegbaseTiling::CheckInputShapeValue()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
     const gert::StorageShape* y1Shape = context_->GetOutputShape(Y1_INDEX);
     const gert::StorageShape* y2Shape = context_->GetOutputShape(Y2_INDEX);
+    const gert::StorageShape* rstdShape = context_->GetOutputShape(RSTD_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
+
+    const gert::Shape& x1StorageShape = x1Shape->GetStorageShape();
+    const gert::Shape& rstdStorageShape = rstdShape->GetStorageShape();
+    OP_CHECK_IF(x1StorageShape.GetShapeSize() == 0 && rstdStorageShape.GetShapeSize() > 0,
+                OP_LOGE(nodeName.c_str(),
+                        "The empty tensor case where the non-Norm dimension element count is greater than 0 and the "
+                        "Norm dimension element count is 0 is currently not supported."),
+                return false);
 
     // Check x1&x2&y1&y2&x's shape should be equal
     if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {

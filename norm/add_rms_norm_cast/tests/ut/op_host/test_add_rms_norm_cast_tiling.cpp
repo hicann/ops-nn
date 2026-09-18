@@ -19,6 +19,7 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "../../../op_host/add_rms_norm_cast_tiling.h"
 
 using namespace ut_util;
 using namespace std;
@@ -30,6 +31,54 @@ protected:
 
     static void TearDownTestCase() { std::cout << "AddRmsNormCastTiling TearDown" << std::endl; }
 };
+
+TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_regbase_empty_reduction)
+{
+    gert::StorageShape inputShape = {{4, 0}, {4, 0}};
+    gert::StorageShape gammaShape = {{0}, {0}};
+    gert::StorageShape rstdShape = {{4, 1}, {4, 1}};
+
+    fe::PlatFormInfos platformInfo;
+    ASSERT_TRUE(platformInfo.Init());
+    std::map<std::string, std::string> versionInfo = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    platformInfo.SetPlatformRes("version", versionInfo);
+
+    optiling::AddRmsNormCastCompileInfo compileInfo{64, 245760, platform_ascendc::SocVersion::ASCEND950};
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    ASSERT_NE(tilingData, nullptr);
+    ASSERT_NE(workspaceHolder, nullptr);
+    auto* workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AddRmsNormCast")
+                      .NodeIoNum(3, 4)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&inputShape, &inputShape, &gammaShape})
+                      .OutputShapes({&inputShape, &inputShape, &rstdShape, &inputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
+                      .TilingData(tilingData.get())
+                      .Workspace(workspace)
+                      .Build();
+
+    auto* context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    optiling::AddRmsNormCastRegbaseTiling regbaseTiling(context);
+    EXPECT_FALSE(regbaseTiling.CheckInputShapeValue());
+
+    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormCast");
+    ASSERT_NE(opImpl, nullptr);
+    ASSERT_NE(opImpl->tiling, nullptr);
+    EXPECT_EQ(opImpl->tiling(context), ge::GRAPH_FAILED);
+}
 
 TEST_F(AddRmsNormCastTiling, add_rms_norm_cast_tiling_001)
 {

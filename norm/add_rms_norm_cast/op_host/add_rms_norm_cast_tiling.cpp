@@ -49,6 +49,12 @@ constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
 
+static bool IsArch3510(const gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
+}
+
 static void SetByDtype(ge::DataType dataType, uint32_t& dtypeTey, uint32_t& dataPerBlock)
 {
     switch (dataType) {
@@ -120,7 +126,8 @@ static bool CheckX1X2YShapes(const gert::TilingContext* context, const gert::Sto
                              const gert::StorageShape* rstd_shape, size_t x1DimNum, bool rstdEmpty)
 {
     for (uint32_t i = 0; i < x1DimNum; i++) {
-        if (x1_shape->GetStorageShape().GetDim(i) == 0) {
+        // Only the DAV_3510 case with a non-empty rstd is handled by its platform-specific tiling.
+        if (x1_shape->GetStorageShape().GetDim(i) == 0 && (!IsArch3510(context) || rstdEmpty)) {
             if (!rstdEmpty) {
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                     context->GetNodeName(), "x1 and rstd",

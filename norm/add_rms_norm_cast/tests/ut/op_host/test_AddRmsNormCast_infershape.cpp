@@ -1,20 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
- *
- *
- * @file test_AddRmsNorm_proto.cpp
- *
- * @brief
- *
- * @version 1.0
- *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <gtest/gtest.h>
 #include <iostream>
@@ -71,6 +62,22 @@ TEST_F(AddRmsNormCast, AddRmsNormCast_infershape_case_1)
     EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
     EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
     EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
+}
+
+TEST_F(AddRmsNormCast, AddRmsNormCast_infershape_empty_reduction)
+{
+    ge::op::AddRmsNormCast op;
+    op.UpdateInputDesc("x1", create_desc({4, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({4, 0}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({0}, ge::DT_FLOAT16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    const std::vector<int64_t> expectedOutputShape = {4, 0};
+    const std::vector<int64_t> expectedRstdShape = {4, 1};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expectedOutputShape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expectedOutputShape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expectedRstdShape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expectedOutputShape);
 }
 
 TEST_F(AddRmsNormCast, AddRmsNormCast_InferDtype_case_0)

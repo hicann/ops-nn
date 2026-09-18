@@ -156,7 +156,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>需要与入参`x1`的数据格式保持一致。</li><li>维度数与入参`x1`保持一致，其中不需要norm的维度（`x1`的维度减去`gamma`的维度后的前几维）与`x1`对应维度保持一致，需要norm的维度（与`gamma`维度数相同的后几维）均为1。`rstdOut` shape与`x1` shape、`gamma` shape关系举例：若`x1` shape为(2,3,4,8)，`gamma` shape为(8)，则`rstdOut` shape为(2,3,4,1)；若`x1` shape为(2,3,4,8)，`gamma` shape为(4,8)，则`rstdOut` shape为(2,3,1,1)。</li><li>当输入`x1`为空tensor时，`rstdOut`也必须为空tensor。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>需要与入参`x1`的数据格式保持一致。</li><li>维度数与入参`x1`保持一致，其中不需要norm的维度（`x1`的维度减去`gamma`的维度后的前几维）与`x1`对应维度保持一致，需要norm的维度（与`gamma`维度数相同的后几维）均为1。`rstdOut` shape与`x1` shape、`gamma` shape关系举例：若`x1` shape为(2,3,4,8)，`gamma` shape为(8)，则`rstdOut` shape为(2,3,4,1)；若`x1` shape为(2,3,4,8)，`gamma` shape为(4,8)，则`rstdOut` shape为(2,3,1,1)。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -281,6 +281,7 @@ aclnnStatus aclnnAddRmsNormCast(
   参数x1、x2、gamma、y1Out、y2Out、rstdOut、xOut的shape中每一维大小都不大于INT32的最大值2147483647。
 
 - 边界值场景说明：
+  - 当前不支持非Norm维度元素总数大于0且Norm维度元素总数为0的空Tensor场景。
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 
