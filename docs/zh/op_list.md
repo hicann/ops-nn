@@ -4790,16 +4790,6 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/psroi_pooling_v2/README.md">psroi_pooling_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>对输入特征图执行位置敏感RoI平均池化，适用于R-FCN等目标检测网络。</td>
-  </tr>
-  <tr>
-    <td>pooling</td>
     <td><a href="../../pooling/roi_pooling/README.md">roi_pooling</a></td>
     <td>✓</td>
     <td>✓</td>
