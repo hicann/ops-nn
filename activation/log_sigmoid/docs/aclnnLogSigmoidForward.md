@@ -103,7 +103,7 @@ aclnnStatus aclnnLogSigmoidForward(
       <tr>
       <td>buffer（aclTensor*）</td>
       <td>输出</td>
-      <td>用于保存正向计算的中间结果，暂无用，可以传入nullptr。</td>
+      <td>占位参数，当前版本暂不使用，可传入空指针或预留内存。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -313,7 +313,7 @@ int main() {
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建out aclTensor
+  // 创建buffer aclTensor
   ret = CreateAclTensor(bufferHostData, bufferShape, &bufferDeviceAddr, aclDataType::ACL_FLOAT, &buffer);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
