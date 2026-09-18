@@ -266,4 +266,105 @@ REG_OP(Reshape)
     .ATTR(num_axes, Int, -1)
     .OP_END_FACTORY_REG(Reshape);
 
+/**
+ *@brief Computes the mean of elements across dimensions of a tensor. \n
+
+ *@par Inputs:
+ *@li x: A ND Tensor. Must be one of the following types: float16, float32, bfloat16, int32.
+ *@li axes: A ND Tensor of type int32 or int64. The dimensions to reduce. \n
+
+ *@par Attributes:
+ *@li keep_dims: An optional bool. If true, retains reduced dimensions with length 1. Defaults to false.
+ *@li noop_with_empty_axes: An optional bool. Defaults to true. \n
+
+ *@par Outputs:
+ *y: A ND Tensor. Has the same type as "x".
+ */
+REG_OP(ReduceMean)
+    .INPUT(x, TensorType::NumberType())
+    .INPUT(axes, TensorType::IndexNumberType())
+    .OUTPUT(y, TensorType::NumberType())
+    .ATTR(keep_dims, Bool, false)
+    .ATTR(noop_with_empty_axes, Bool, true)
+    .OP_END_FACTORY_REG(ReduceMean);
+
+/**
+ *@brief Returns (x1 - x2)(x1 - x2) element-wise. \n
+
+ *@par Inputs:
+ *@li x1: A ND Tensor. Must be one of the following types: bfloat16, float16, float32, double, int32, int64,
+ *     complex64, complex128.
+ *@li x2: A ND Tensor. Has the same type as "x1". \n
+
+ *@par Outputs:
+ *y: A ND Tensor. Has the same type as "x1".
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator SquaredDifference.
+ */
+REG_OP(SquaredDifference)
+    .INPUT(x1, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .INPUT(x2, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_INT32, DT_INT64, DT_COMPLEX64, DT_COMPLEX128}))
+    .OP_END_FACTORY_REG(SquaredDifference);
+
+/**
+ *@brief Returns x1 - x2 element-wise. Support broadcasting operations. \n
+
+ *@par Inputs:
+ *@li x1: A ND Tensor. Must be one of the following types: float32, float16, double, uint8, int8, uint16, int16,
+ *     int32, int64, bool, complex64, complex128, bfloat16, complex32.
+ *@li x2: A ND Tensor. Has the same type as "x1". \n
+
+ *@par Outputs:
+ *y: A ND Tensor. Has the same type as "x1".
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator Sub.
+ */
+REG_OP(Sub)
+    .INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32, DT_INT64,
+                           DT_BOOL, DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32, DT_INT64,
+                           DT_BOOL, DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16, DT_INT32, DT_INT64,
+                           DT_BOOL, DT_COMPLEX64, DT_COMPLEX128, DT_BF16, DT_COMPLEX32}))
+    .OP_END_FACTORY_REG(Sub);
+
+/**
+ *@brief Returns x1 * x2 element-wise. Support broadcasting operations. \n
+
+ *@par Inputs:
+ *@li x1: A ND Tensor. Must be one of the following types: bool, float16, float32, double, uint8, int8, uint16,
+ *     int16, int32, int64, bfloat16, complex64, complex128, complex32.
+ *@li x2: A ND Tensor. Must be one of the same types as "x1". \n
+
+ *@par Outputs:
+ *y: A ND Tensor. The promoted type of "x1" and "x2".
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator Mul.
+ */
+REG_OP(Mul)
+    .INPUT(x1, "T1")
+    .INPUT(x2, "T2")
+    .OUTPUT(y, "T3")
+    .DATATYPE(T1, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16,
+                              DT_INT32, DT_INT64, DT_BF16, DT_COMPLEX64, DT_COMPLEX128, DT_COMPLEX32}))
+    .DATATYPE(T2, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_UINT8, DT_INT8, DT_UINT16, DT_INT16,
+                              DT_INT32, DT_INT64, DT_BF16, DT_COMPLEX64, DT_COMPLEX128, DT_COMPLEX32}))
+    .DATATYPE(T3, Promote({"T1", "T2"}))
+    .OP_END_FACTORY_REG(Mul);
+
+/**
+ *@brief Computes reciprocal of square root of "x" element-wise: y = 1/sqrt{x}. \n
+
+ *@par Inputs:
+ *x: An ND or 5HD Tensor. Must be one of the following types: bfloat16, float16, float32, double,
+ *     complex32, complex64, complex128. \n
+
+ *@par Outputs:
+ *y: An ND or 5HD Tensor. Has the same type as "x".
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator Rsqrt.
+ */
+REG_OP(Rsqrt).INPUT(x, TensorType::UnaryDataType()).OUTPUT(y, TensorType::UnaryDataType()).OP_END_FACTORY_REG(Rsqrt);
+
 } // namespace ge
