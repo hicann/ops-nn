@@ -134,7 +134,6 @@ int main()
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(self);
     aclDestroyTensor(out);
-    return 0;
 
     // 7. 释放device 资源
     aclrtFree(selfDeviceAddr);
@@ -145,4 +144,5 @@ int main()
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
+    return 0;
 }
