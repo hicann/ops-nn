@@ -7,13 +7,16 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    if("ascend950" IN_LIST ASCEND_COMPUTE_UNIT OR "ascend950pr_9599" IN_LIST ASCEND_COMPUTE_UNIT)
-        # ascend950 (arch35 / RegBase) kernel UT. Single soc+op case, default
-        # DTYPE_X=float (multiple dtypes would collide on CMake target names,
-        # so keep one line).
-        AddOpTestCase(silu_mul "ascend950pr_9599" "-DDTYPE_X=float")
-    else()
-        AddOpTestCase(silu_mul "ascend910B1" "")
-    endif()
-endif()
+# ascend910b / ascend910_93 -> default kernel src op_kernel/silu_mul.cpp;
+# ascend950 (arch35 / RegBase) -> op_kernel/arch35/silu_mul.cpp, compiled per
+# compute unit via add_kernel_sources (kernelSrc.value override).
+add_kernel_sources(
+    COMPUTE_UNITS ascend910b ascend910_93
+    AUTO_SYNC false
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/silu_mul.cpp
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+)

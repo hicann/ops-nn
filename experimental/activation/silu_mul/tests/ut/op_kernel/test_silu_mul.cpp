@@ -17,6 +17,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <cstdint>
 #include <type_traits>
 #include "gtest/gtest.h"
@@ -59,6 +60,15 @@ struct DataTypeName<bfloat16_t> {
 
 TEST_F(silu_mul_test, test_silu_mul_dynamic)
 {
+#if defined(UT_SOC_VERSION)
+    // opFile=silu_mul makes the framework glob "test_silu_mul*.cpp" into every
+    // soc's UT target. This 910b test only understands SiluMulTilingData, so
+    // skip it when compiled into a non-910b build (e.g. the ascend950 UT target
+    // would otherwise feed the arch35 kernel an old-layout tiling buffer).
+    if (std::string_view(UT_SOC_VERSION) != "Ascend910B1") {
+        GTEST_SKIP() << "910b tiling-layout UT compiled into a non-910b build";
+    }
+#endif
     const char* dtypeStr = DataTypeName<DTYPE_X>::val;
     std::cout << ">>> Current Test Type: " << dtypeStr << std::endl;
 

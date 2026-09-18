@@ -26,8 +26,12 @@
 #include "log/log.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
+
+// Arch35 (ascend950) tiling entry, defined in silu_mul_tiling_arch35.cpp
+ge::graphStatus Tiling4SiluMulArch35(gert::TilingContext* context);
 
 static constexpr int32_t UB_SIZE = 184 * 1024;
 static constexpr int32_t ONE_BLOCK_SIZE = 32;
@@ -45,7 +49,7 @@ static constexpr int32_t LENGTH_LIMIT = 200000;
 
 class SiluMulTiling {
 public:
-    explicit SiluMulTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit SiluMulTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunBigKernelTiling();
     ge::graphStatus FillTilingKey();
 
@@ -179,6 +183,11 @@ static ge::graphStatus TilingPrepare4SiluMulTiling([[maybe_unused]] gert::Tiling
 
 static ge::graphStatus TilingSiluMulTiling(gert::TilingContext* context)
 {
+    // ascend950 (RegBase SoC) uses the arch35 tiling path: UB size is queried from
+    // the platform and the core-num estimation uses the full lastDimSize.
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return Tiling4SiluMulArch35(context);
+    }
     SiluMulTiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }
