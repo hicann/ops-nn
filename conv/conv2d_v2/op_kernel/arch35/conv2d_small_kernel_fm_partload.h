@@ -56,15 +56,15 @@ private:
     __aicore__ inline void ProcessOneBatch(uint32_t kL0, uint32_t kL0Iters, uint32_t kernelHxW, uint32_t convN,
                                            uint64_t hwOut, GM_ADDR y, const ExtendParams* extendParams,
                                            LocalTensor<weightType>& bl1Full, bool firstCinPrefetched, GM_ADDR bias,
-                                           bool& needLoadBias);
+                                           bool& needLoadBias, GM_ADDR x);
     __aicore__ inline void ProcessHwMode(uint32_t kL0, uint32_t kL0Iters, uint32_t kernelHxW, uint32_t mmadN,
                                          uint64_t hwOut, GM_ADDR y, const ExtendParams* extendParams,
                                          LocalTensor<weightType>& bl1Full, bool firstCinPrefetched, GM_ADDR bias,
-                                         bool& needLoadBias);
+                                         bool& needLoadBias, GM_ADDR x);
     __aicore__ inline void ProcessMMode(uint32_t kL0, uint32_t kL0Iters, uint32_t kernelHxW, uint32_t mmadN,
                                         uint64_t hwOut, GM_ADDR y, const ExtendParams* extendParams,
                                         LocalTensor<weightType>& bl1Full, bool firstCinPrefetched, GM_ADDR bias,
-                                        bool& needLoadBias);
+                                        bool& needLoadBias, GM_ADDR x);
 };
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -192,44 +192,16 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     this->l0Pingpong_ = 0;
     this->l1Pingpong_ = 0;
     if (this->singleCoreBatch_ <= 1) {
-        ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, false, bias, needLoadBias);
+        ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, false, bias, needLoadBias, x);
     } else {
-        uint32_t firstCurHi;
-        uint32_t firstHiLoadOff;
-        uint32_t firstCurWi = this->orgWin_;
-        uint32_t firstWiLoadOff = 0;
-        if constexpr (IsHwMode) {
-            uint32_t firstHo = this->hoL0_ < this->actualHo_ ? this->hoL0_ : this->actualHo_;
-            uint32_t firstWo = this->woL0_ < this->actualWo_ ? this->woL0_ : this->actualWo_;
-            uint32_t firstPadTop;
-            uint32_t firstPadBottom;
-            int32_t firstPadLeft;
-            int32_t firstPadRight;
-            this->CalcChunkFmap(0, firstHo, firstCurHi, firstPadTop, firstPadBottom, firstHiLoadOff);
-            this->CalcChunkFmapW(0, firstWo, firstCurWi, firstPadLeft, firstPadRight, firstWiLoadOff);
-        } else {
-            uint32_t firstCurM = this->hoL0_ < this->actualM_ ? this->hoL0_ : this->actualM_;
-            uint32_t firstPadTop;
-            uint32_t firstPadBottom;
-            this->CalcChunkFmap(0, firstCurM, firstCurHi, firstPadTop, firstPadBottom, firstHiLoadOff);
-        }
-
-        this->PrefetchFirstCinBlock(kernelHxW, firstCurHi, firstHiLoadOff, firstCurWi, firstWiLoadOff, 0, false);
+        // Batch 0's chunk 0 sync-loads its first cin block; chunk 0 of later batches and
+        // later chunks are prefetched by PrefetchNextUnit inside ProcessCinBlocks.
         for (this->innerBatchIter_ = 0; this->innerBatchIter_ < this->singleCoreBatch_; this->innerBatchIter_++) {
             this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_;
             this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
 
-            ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, true, bias, needLoadBias);
-            if (this->innerBatchIter_ + 1 < this->singleCoreBatch_) {
-                uint32_t savedBatchIdx = this->curBatchIdx_;
-                this->curBatchIdx_ = this->batchStart_ + this->innerBatchIter_ + 1;
-                this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
-                uint32_t nextBatchBuf = this->l1Pingpong_ % 2;
-                this->PrefetchFirstCinBlock(kernelHxW, firstCurHi, firstHiLoadOff, firstCurWi, firstWiLoadOff,
-                                            nextBatchBuf, false);
-                this->curBatchIdx_ = savedBatchIdx;
-                this->SetFmapGmBatch(x, this->curBatchIdx_, 0);
-            }
+            ProcessOneBatch(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, this->innerBatchIter_ > 0,
+                            bias, needLoadBias, x);
         }
     }
     WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
@@ -251,14 +223,14 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
                                                        uint32_t convN, uint64_t hwOut, GM_ADDR y,
                                                        const ExtendParams* extendParams,
                                                        LocalTensor<weightType>& bl1Full, bool firstCinPrefetched,
-                                                       GM_ADDR bias, bool& needLoadBias)
+                                                       GM_ADDR bias, bool& needLoadBias, GM_ADDR x)
 {
     if constexpr (IsHwMode) {
         ProcessHwMode(kL0, kL0Iters, kernelHxW, convN, hwOut, y, extendParams, bl1Full, firstCinPrefetched, bias,
-                      needLoadBias);
+                      needLoadBias, x);
     } else {
         ProcessMMode(kL0, kL0Iters, kernelHxW, convN, hwOut, y, extendParams, bl1Full, firstCinPrefetched, bias,
-                     needLoadBias);
+                     needLoadBias, x);
     }
 }
 
@@ -272,7 +244,8 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
                                                                                        const ExtendParams* extendParams,
                                                                                        LocalTensor<weightType>& bl1Full,
                                                                                        bool firstCinPrefetched,
-                                                                                       GM_ADDR bias, bool& needLoadBias)
+                                                                                       GM_ADDR bias, bool& needLoadBias,
+                                                                                       GM_ADDR x)
 {
     // HW-mode: nested Ho/Wo-chunk loop; each chunk accumulates over all cin blocks.
     // Weight already fully loaded into L1 (one-shot), so loadWeight = false.
@@ -311,10 +284,12 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
             mp.cmatrixInitVal = !(this->tiling_->hasBias);
             mp.cmatrixSource = (this->tiling_->hasBias != 0);
 
-            bool chunkPrefetched = firstCinPrefetched && firstChunk;
+            // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
+            // cross-batch); later chunks by the cross-chunk preload inside ProcessCinBlocks.
+            bool chunkPrefetched = firstCinPrefetched || !firstChunk;
             this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
                                    curWi, wiLoadOff, curM, hoOff, woOff, padLeft, padRight, false, chunkPrefetched,
-                                   extendParams, bias, 0, needLoadBias, false);
+                                   extendParams, bias, 0, needLoadBias, false, curHo, curWo, x);
             firstChunk = false;
 
             uint32_t outOff = (this->hoIdxStart_ + hoOff) * static_cast<uint32_t>(this->tiling_->wout) +
@@ -338,7 +313,8 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
                                                                                       const ExtendParams* extendParams,
                                                                                       LocalTensor<weightType>& bl1Full,
                                                                                       bool firstCinPrefetched,
-                                                                                      GM_ADDR bias, bool& needLoadBias)
+                                                                                      GM_ADDR bias, bool& needLoadBias,
+                                                                                      GM_ADDR x)
 {
     // M-mode: M-loop -> CinL1 chunk loop -> KL0 inner loop -> Fixpipe.
     // Weight already fully loaded into L1 (one-shot), so loadWeight = false.
@@ -369,10 +345,12 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
 
         // ProcessCinBlocks handles the CinL1 chunk loop + KL0 inner loop internally.
         // loadWeight = false: weight already fully loaded, skip per-chunk LoadWeightL1Block.
-        bool chunkPrefetched = firstCinPrefetched && (mOff == 0);
+        // Chunk 0 of the batch is prefetched when firstCinPrefetched (batch prologue /
+        // cross-batch); later chunks by the cross-M preload inside ProcessCinBlocks.
+        bool chunkPrefetched = firstCinPrefetched || (mOff > 0);
         this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
                                this->orgWin_, 0, curM, mOff, 0, 0, 0, false, chunkPrefetched, extendParams, bias, 0,
-                               needLoadBias, false);
+                               needLoadBias, false, 0, 0, x);
 
         // Fixpipe out (supports NHWC and NCHW output formats).
         this->CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
