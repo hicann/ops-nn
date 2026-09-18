@@ -160,6 +160,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
                     }
                     uint64_t varGmOffset = indicesValue * this->tilingData_.varStride +
                                            this->blockIdx_ * this->tilingData_.normBlockColNum;
+                    AscendC::PipeBarrier<PIPE_MTE3>();
                     CopyOutUpdates(varGmOffset, j * updateOneColAlign_, updateBlockColNum_, updatesLocal);
                 }
                 updatesQueue_.FreeTensor(updatesLocal);
