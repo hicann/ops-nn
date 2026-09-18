@@ -43,11 +43,13 @@ protected:
     __aicore__ inline void WaitVToMte3();
     __aicore__ inline void WaitMte2ToS();
     __aicore__ inline void WaitSToV();
+    __aicore__ inline void WaitMte3ToV();
     __aicore__ inline void WaitMte3ToMte2();
     __aicore__ inline static int64_t CeilDiv(int64_t x, int64_t y) { return y == 0 ? 0 : (x + y - 1) / y; }
 
-    __aicore__ inline void CopyIn(int64_t tokenIdx, int64_t curTileTokens);
+    __aicore__ inline void CopyIn(int64_t tokenIdx, int64_t curTileTokens, bool loadWeight = true);
     __aicore__ inline void ComputeSwiGLU(LocalTensor<float>& xFloatLocalTensor, int64_t curTileTokens);
+    __aicore__ inline void ApplyWeight(LocalTensor<float>& xFloatLocalTensor, int64_t curTileTokens);
     __aicore__ inline void QuantizeOut(LocalTensor<float>& xFloatLocalTensor, int64_t tokenIdx, int64_t curTileTokens,
                                        float divScale);
     __aicore__ inline void CopyOutOrigin(LocalTensor<float>& xFloatLocalTensor, int64_t tokenIdx,
@@ -124,6 +126,15 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::WaitMte3ToMt
     SetFlag<HardEvent::MTE3_MTE2>(event);
     WaitFlag<HardEvent::MTE3_MTE2>(event);
     pipe_->ReleaseEventID<AscendC::HardEvent::MTE3_MTE2>(event);
+}
+
+template <typename Derived, typename T>
+__aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::WaitMte3ToV()
+{
+    event_t event = static_cast<event_t>(pipe_->AllocEventID<HardEvent::MTE3_V>());
+    SetFlag<HardEvent::MTE3_V>(event);
+    WaitFlag<HardEvent::MTE3_V>(event);
+    pipe_->ReleaseEventID<AscendC::HardEvent::MTE3_V>(event);
 }
 
 template <typename Derived, typename T>
@@ -245,7 +256,8 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CalcCoreGrou
 }
 
 template <typename Derived, typename T>
-__aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64_t tokenIdx, int64_t curTileTokens)
+__aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64_t tokenIdx, int64_t curTileTokens,
+                                                                           bool loadWeight)
 {
     LocalTensor<T> xTLocalTensor = xQueue_.AllocTensor<T>();
     int64_t copySize = curTileTokens * dimH_;
@@ -272,7 +284,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64
         xQueue_.EnQue<float>(xFloatLocalTensor);
     }
 
-    if (hasWeight_) {
+    if (hasWeight_ && loadWeight) {
         LocalTensor<float> weightLocalTensor = weightQueue_.AllocTensor<float>();
         DataCopyParams weightCopyParams(1, static_cast<uint32_t>(curTileTokens) * sizeof(float), 0, 0);
         DataCopyPadParams weightPadParams{false, 0, 0, 0};
@@ -310,18 +322,24 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ComputeSwiGL
     PipeBarrier<PIPE_V>();
     Mul(x0FloatLocalTensor, x0FloatLocalTensor, x1FloatLocalTensor, static_cast<uint32_t>(computeSize));
     PipeBarrier<PIPE_V>();
+}
 
-    if (hasWeight_) {
-        LocalTensor<float> weightLocalTensor = weightQueue_.DeQue<float>();
-        WaitMte2ToS();
-        for (int64_t t = 0; t < curTileTokens; t++) {
-            float weightVal = weightLocalTensor.GetValue(static_cast<uint32_t>(t));
-            WaitSToV();
-            Muls(x0FloatLocalTensor[t * dimH_], x0FloatLocalTensor[t * dimH_], weightVal, static_cast<uint32_t>(dimH_));
-            PipeBarrier<PIPE_V>();
-        }
-        weightQueue_.FreeTensor(weightLocalTensor);
+template <typename Derived, typename T>
+__aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ApplyWeight(LocalTensor<float>& xFloatLocalTensor,
+                                                                                int64_t curTileTokens)
+{
+    if (!hasWeight_) {
+        return;
     }
+    LocalTensor<float> weightLocalTensor = weightQueue_.DeQue<float>();
+    WaitMte2ToS();
+    for (int64_t t = 0; t < curTileTokens; t++) {
+        float weightVal = weightLocalTensor.GetValue(static_cast<uint32_t>(t));
+        WaitSToV();
+        Muls(xFloatLocalTensor[t * dimH_], xFloatLocalTensor[t * dimH_], weightVal, static_cast<uint32_t>(dimH_));
+        PipeBarrier<PIPE_V>();
+    }
+    weightQueue_.FreeTensor(weightLocalTensor);
 }
 
 template <typename Derived, typename T>
@@ -398,7 +416,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ProcessOutpu
         int64_t tileEnd = AscendC::Std::min(tokenIdx + tileTokens_, tokenEnd);
         int64_t curTileTokens = tileEnd - tokenIdx;
 
-        CopyIn(tokenIdx, curTileTokens);
+        CopyIn(tokenIdx, curTileTokens, false);
         LocalTensor<float> xFloatLocalTensor = xQueue_.DeQue<float>();
         ComputeSwiGLU(xFloatLocalTensor, curTileTokens);
         CopyOutOrigin(xFloatLocalTensor, tokenIdx, curTileTokens);
