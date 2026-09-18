@@ -126,20 +126,20 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行RReluWithNoise计算的入参，公式中的self。</td>
-      <td><ul><li>shape支持的维度不超过32。</li><li>数据类型需要和out的数据类型保持一致。</li><li>shape需要和out的shape保持一致。</li><li>数据格式需要和out的数据格式类型保持一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape支持的维度不超过25。</li><li>数据类型需要和out的数据类型保持一致。</li><li>shape需要和out的shape保持一致。</li><li>数据格式需要和out的数据格式类型保持一致。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-32</td>
+      <td>0-25</td>
       <td>√</td>
     </tr>
     <tr>
       <td>noise（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的noise_i。</td>
-      <td><ul><li>Size需要不小于self（shape建议与self一致）。</li><li>数据类型需要和self的数据类型保持一致。</li><li>shape需要和self的shape保持一致。</li><li>shape支持的维度不超过32。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>Size需要不小于self（shape建议与self一致）。</li><li>数据类型需要和self的数据类型保持一致。</li><li>shape需要和self的shape保持一致。</li><li>shape支持的维度不超过25。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-32</td>
+      <td>0-25</td>
       <td>√</td>
     </tr>
       <tr>
@@ -267,7 +267,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>self、out的shape不一致。</td>
     </tr>
     <tr>
-      <td>self或noise的shape维度超过32。</td>
+      <td>self或noise的shape维度超过25。</td>
     </tr>
   </tbody></table>
 
@@ -344,20 +344,20 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>self</td>
       <td>输入</td>
       <td>公式中的self。</td>
-      <td>shape支持的维度不超过32。</td>
+      <td>shape支持的维度不超过25。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-32</td>
+      <td>0-25</td>
       <td>√</td>
     </tr>
     <tr>
       <td>noise</td>
       <td>输入</td>
       <td>公式中的noise_i。</td>
-      <td><ul><li>Size需要不小于self（shape建议与self一致）。</li><li>数据类型需要和self的数据类型保持一致。</li><li>数据格式需要和self的数据格式保持一致。</li><li>shape支持的维度不超过32。</li></ul></td>
+      <td><ul><li>Size需要不小于self（shape建议与self一致）。</li><li>数据类型需要和self的数据类型保持一致。</li><li>数据格式需要和self的数据格式保持一致。</li><li>shape支持的维度不超过25。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-32</td>
+      <td>0-25</td>
       <td>√</td>
     </tr>
       <tr>
@@ -471,7 +471,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>self、noise的数据类型、数据格式不一致。</td>
     </tr>
     <tr>
-      <td>self或noise的shape维度超过32。</td>
+      <td>self或noise的shape维度超过25。</td>
     </tr>
   </tbody></table>
 
