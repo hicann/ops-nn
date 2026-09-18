@@ -17,12 +17,9 @@
 #include "../../op_kernel/arch35/scatter_reduce_common_struct.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
+#include "tiling/tiling_api.h"
 
 namespace optiling {
-// 排序 key 的低位宽度。取 30 而非 31: 归并树用 INT32_MAX(2^31-1) 作补齐哨兵, 若 lo 取 31 位则 lo 的
-// 最大合法值恰好等于哨兵, 段边界判定会把真实数据当成填充。30 位下哨兵稳稳高于所有 lo。
-constexpr uint64_t INDEX_LO_BITS = 30UL;
-constexpr uint64_t INDEX_LO_SPAN = 1UL << INDEX_LO_BITS;
 
 constexpr size_t VAR_IDX = 0;
 constexpr size_t INDICES_IDX = 1;
@@ -172,6 +169,56 @@ static uint64_t ResolveUbChunkMax(const gert::TilingContext* context)
     return (chunkMax < BLOCK_BYTES) ? BLOCK_BYTES : chunkMax; // 保底一个对齐粒度
 }
 
+// 排序分片按 UB **实测容量反解**, 不写死: 每个元素在 UB 上同时占 key + sorted + 载荷(uint32)
+// + 全局位置(int64) 四份; bSorted 另有 shiftOff 个元素的头部余量, 每个 InitBuffer 留 32B 对齐。
+// 写死分片会退化成"手算 buffer -> 跟 UB 比 -> 不够就拍个更小的数", 且要 host/kernel 两处同步。
+static uint64_t ResolveSortTile(const gert::TilingContext* context, uint64_t keyBytes)
+{
+    constexpr uint64_t BLOCK_BYTES = static_cast<uint64_t>(ScatterReduceCommon::UB_BLOCK_BYTES);
+    constexpr uint64_t BUF_COUNT = 4UL;              // bKey / bSorted / bOrigin / bPos64
+    constexpr uint64_t SORT_PAD = 2UL * BLOCK_BYTES; // 与 kernel 侧 SORT_PAD 一致
+    uint64_t ubSize = 0;
+    platform_ascendc::PlatformAscendC(context->GetPlatformInfo())
+        .GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    const uint64_t elemBytes = keyBytes * 2UL + sizeof(uint32_t) + sizeof(int64_t);
+    const uint64_t reserve = BUF_COUNT * SORT_PAD + BLOCK_BYTES;
+    const uint64_t usable = (ubSize > reserve) ? (ubSize - reserve) : 0UL;
+    // AscendC::Sort 对 calCount **没有上限**(接口只要求 32B 对齐、张量不重叠), 其临时缓冲尺寸由
+    // GetSortTmpSize 给出。所以分片大小完全由 UB 容量决定, 不存在什么"单次调用经验上限":
+    // 先按不含 tmp 的估计起步, 再把 tmp 算进去逐步收缩, 直到真正装得下。
+    uint64_t tile = (elemBytes == 0UL) ? BLOCK_BYTES : usable / elemBytes / BLOCK_BYTES * BLOCK_BYTES;
+    platform_ascendc::PlatformAscendC plat(context->GetPlatformInfo());
+    while (tile > BLOCK_BYTES) {
+        const uint64_t tmpBytes = static_cast<uint64_t>(
+            AscendC::GetSortTmpSize(plat, static_cast<uint32_t>(tile), static_cast<uint32_t>(keyBytes)));
+        if (tile * elemBytes + tmpBytes + reserve <= ubSize) {
+            break;
+        }
+        const uint64_t next = tile * 3UL / 4UL / BLOCK_BYTES * BLOCK_BYTES;
+        tile = (next >= tile) ? (tile - BLOCK_BYTES) : next; // 严格递减, 循环必然终止
+    }
+    return (tile < BLOCK_BYTES) ? BLOCK_BYTES : tile; // 保底一个对齐粒度: 装不下就继续切, 不拒收
+}
+
+// 单核标量路径的选路判定: 该路径把 indices/updates/var 整体放进 UB(见 scatter_reduce_common_scalar.h
+// 的 idxBuf/updBuf/varBuf/accBuf), 因此判据必须是"这几块真的放得下", 而不是拿 (M + dim0) 去跟一个
+// 写死的数比 —— 那样既不管 dtype 宽度, 也把某台机器的 UB 焊进了算子。放不下就走 sort 路径, 不拒收。
+static bool ResolveScalarPath(const gert::TilingContext* context, uint64_t indicesNum, uint64_t varFirstDim,
+                              uint64_t keyBytes)
+{
+    constexpr uint64_t BLOCK_BYTES = static_cast<uint64_t>(ScatterReduceCommon::UB_BLOCK_BYTES);
+    constexpr uint64_t BUF_COUNT = 4UL;           // idxBuf / updBuf / varBuf / accBuf
+    constexpr uint64_t ACC_BYTES = sizeof(float); // 窄 dtype 会额外开 float 累加缓冲, 按最坏情形计
+    uint64_t ubSize = 0;
+    platform_ascendc::PlatformAscendC(context->GetPlatformInfo())
+        .GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    auto varDesc = context->GetInputDesc(VAR_IDX);
+    const int32_t varSzI = (varDesc == nullptr) ? -1 : ge::GetSizeByDataType(varDesc->GetDataType());
+    const uint64_t varSz = (varSzI <= 0) ? ACC_BYTES : static_cast<uint64_t>(varSzI);
+    const uint64_t need = indicesNum * (keyBytes + varSz) + varFirstDim * (varSz + ACC_BYTES) + BUF_COUNT * BLOCK_BYTES;
+    return need <= ubSize;
+}
+
 ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
 {
     if (CheckScatterReduceInputs(context) != ge::GRAPH_SUCCESS) {
@@ -185,25 +232,21 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     auto& indicesShape = indicesShapePtr->GetStorageShape();
 
     uint64_t varFirstDim = (varShape.GetDimNum() == 0) ? 1 : varShape.GetDim(0);
-    // 硬件 AscendC::Sort 的排序 key 只能是 32 位(官方 API: T = half/float/bf16/int16/uint16/int32/uint32),
-    // 而 in-bound 的 index 值域是 [0, varFirstDim)。varFirstDim 超过 2^30 时单趟 32 位 key 装不下, 改走
-    // 两趟基数排序: 第 1 趟用现有流水按 lo(低 30 位)排, 第 2 趟按 hi 做稳定分区, 结果即按 (hi, lo) 全序。
-    // 不再拒收大 shape —— A2(910B) 的 TIK 实现对 var 首维没有任何上限, 拒收会让 A5 支持面窄于 A2。
-    const bool wideIndex = (varFirstDim > INDEX_LO_SPAN);
-    const uint64_t bucketNum = wideIndex ? ((varFirstDim + INDEX_LO_SPAN - 1UL) / INDEX_LO_SPAN) : 1UL;
-    // 桶数上限与 kernel 侧 StablePartitionByHi 的 MAX_BUCKETS 必须一致: 该函数用固定长度的局部数组做
-    // 计数/前缀, 桶数超出会越界写栈。64 个桶 = 首维 2^36 行, 即便 int8+sliceSize=1 的最小体积配置也要
-    // 68.7GB var, 超出当前任何硬件的显存, 故这是**不可达分支**; 但仍显式拒收而不是静默踩内存。
-    constexpr uint64_t MAX_BUCKETS_HOST = 64UL;
-    if (bucketNum > MAX_BUCKETS_HOST) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "var", std::to_string(varFirstDim).c_str(),
-            "var first axis exceeds the wide-index sort capacity (64 buckets of 2^30 rows)");
-        return ge::GRAPH_FAILED;
-    }
+    // 排序 key 直接用索引真值(AscendC::Sort 的 key 支持 int64), 不再折算低位 + 第二趟分区。
+    // 因此 var 首维没有任何上限, 与 A2(910B) 一致: 不分桶, 也就没有桶数带来的边界。
     uint64_t varTotal = varShape.GetShapeSize();
     uint64_t sliceSize = (varFirstDim == 0) ? 0 : varTotal / varFirstDim;
     uint64_t indicesNum = indicesShape.GetShapeSize();
+
+    // kernel 侧 Init 的布局: sortedIdx[mAlign x keySz] | originPos[mAlign x 4]
+    //                        | scratchKeys[mAlign x keySz] | scratchPos[mAlign x 4] | partials
+    // key 是索引真值, 两个 key 区按索引 dtype 宽度计 —— 必须与 kernel 同源, 否则区间重叠。
+    auto indicesDesc = context->GetInputDesc(INDICES_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+    const int32_t keySzI = ge::GetSizeByDataType(indicesDesc->GetDataType());
+    OP_CHECK_IF(keySzI <= 0, OP_LOGE(context->GetNodeName(), "get indices dtype size fail."), return ge::GRAPH_FAILED);
+    const uint64_t keySz = static_cast<uint64_t>(keySzI);
+    const uint64_t sortTile = ResolveSortTile(context, keySz);
 
     uint64_t coreNum = 1;
     if (ResolveCoreNum(context, coreNum) != ge::GRAPH_SUCCESS) {
@@ -223,9 +266,9 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     td->tailBlockTilingSize = tailCoreIndices * sliceSize;
     td->sliceSize = sliceSize;
     td->varFirstDim = varFirstDim;
+    td->scalarPath = ResolveScalarPath(context, indicesNum, varFirstDim, keySz) ? 1UL : 0UL;
+    td->sortTile = sortTile;
     td->ubChunkMax = ResolveUbChunkMax(context);
-    td->wideIndex = wideIndex ? 1UL : 0UL;
-    td->bucketNum = bucketNum;
 
     context->SetBlockDim(blockNum);
     context->SetTilingKey(0);
@@ -239,18 +282,17 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     // is safe. Keep sliceSize here (not CHUNK) so host can never under-allocate the partial region.
     uint64_t sliceAlign = (sliceSize + 7UL) / 8UL * 8UL;
     // Each sort buffer must hold padM = P2 * runLen0 (the merge-sort pads every run to runLen0), NOT just
-    // indicesNum. P2 is raised past coreNum until runLen0 <= SORT_TILE, so padM - indicesNum can reach up to
+    // indicesNum. P2 is raised past coreNum until runLen0 <= sortTile, so padM - indicesNum can reach up to
     // P2-1 (thousands at large M) -- far beyond the old fixed +128 margin, which under-allocated and let the
     // sort write out of bounds (VEC_ERROR) for indicesNum above ~1M. Replicate the kernel's exact P2/runLen0
     // (scatter_reduce_common_sort.h SortIndices) so the host sizes each region to the true padM.
-    constexpr uint64_t SORT_TILE_HOST = 8192UL; // MUST match SORT_TILE in scatter_reduce_common_sort.h
     uint64_t padM = indicesNum;
-    if (indicesNum > SORT_TILE_HOST) {
+    if (indicesNum > sortTile) {
         uint64_t p2 = 1UL;
         while (p2 * 2UL <= blockNum) {
             p2 *= 2UL;
         }
-        while ((indicesNum + p2 - 1UL) / p2 > SORT_TILE_HOST) {
+        while ((indicesNum + p2 - 1UL) / p2 > sortTile) {
             p2 *= 2UL;
         }
         uint64_t runLen0 = (indicesNum + p2 - 1UL) / p2;
@@ -259,7 +301,7 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     uint64_t mAlign = ((padM + 7UL) / 8UL * 8UL) + 128UL; // 8B align + 128B margin on top of the true padM
     // kernel layout: sortedIdx[mAlign] | originPos[mAlign] | scratchKeys[mAlign] | scratchPos[mAlign] |
     // partials[blockNum][sAlign]
-    workspaces[0] = SYS_WORKSPACE + mAlign * 4UL * 4UL +                // 4 buffers of mAlign int32_t each
+    workspaces[0] = SYS_WORKSPACE + mAlign * 2UL * (keySz + 8UL) +
                     static_cast<uint64_t>(blockNum) * sliceAlign * 4UL; // per-core partial slots
     return ge::GRAPH_SUCCESS;
 }

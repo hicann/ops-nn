@@ -44,9 +44,9 @@ struct ScatterReduceSimtTilingData {
     uint64_t tailBlockTilingSize; // update elements handled on the last used core
     uint64_t sliceSize;           // elements per index slice (product of var tail dims)
     uint64_t varFirstDim;         // var dim0 size (index bound)
-    uint64_t ubChunkMax;          // phase-3 列切分上限, host 按 UB 实测容量与每列存活开销反解
-    uint64_t wideIndex; // 1 = index 值域超 2^30, 排序走 (lo 排序 + hi 稳定分区) 两趟基数; 0 = 原窄路径
-    uint64_t bucketNum; // wideIndex=1 时的桶数 = ceil(varFirstDim / 2^30); 窄路径恒为 1
+    uint64_t scalarPath; // 1 = 整个 var + indices 能同时放进 UB, 走单核标量路径; host 按实测 UB 判定
+    uint64_t sortTile;   // 排序分片元素数, host 按 UB 实测容量反解并 32 对齐(不写死)
+    uint64_t ubChunkMax; // phase-3 列切分上限, host 按 UB 实测容量与每列存活开销反解
 };
 } // namespace ScatterReduceCommon
 
