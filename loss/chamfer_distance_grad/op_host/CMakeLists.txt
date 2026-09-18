@@ -9,6 +9,3 @@
 # ----------------------------------------------------------------------------
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE chamfer_distance_grad ACLNNTYPE aclnn_exclude)
-if(TARGET ${OPHOST_NAME}_tiling_obj)
-    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/arch35/chamfer_distance_grad_tiling.cpp)
-endif()

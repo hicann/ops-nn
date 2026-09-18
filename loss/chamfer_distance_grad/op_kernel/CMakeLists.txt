@@ -12,7 +12,3 @@ add_kernel_sources(
     COMPUTE_UNITS ascend910b ascend910_93
     IMPL_MODE optional
 )
-add_kernel_sources(
-    COMPUTE_UNITS ascend950
-    AUTO_SYNC true
-)

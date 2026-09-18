@@ -20,7 +20,6 @@
 #include "platform/platform_infos_def.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "op_host/tiling_util.h"
 namespace {
 constexpr uint32_t WORKSPACE_16MBYTE_SIZE = 16 * 1024 * 1024;
 }
@@ -121,16 +120,11 @@ void ChamferDistanceGradTiling::TilingDataPrint()
     OP_LOGD(TilingContext, "task_tail_core:     %lu.", task_tail_core);
 }
 
-ge::graphStatus DoChamferDistanceGradTiling950(gert::TilingContext* context);
-
 static ge::graphStatus TilingChamferDistanceGrad(gert::TilingContext* context)
 {
-    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
-        ChamferDistanceGradTiling tilingObject(context);
-        tilingObject.Init();
-        return tilingObject.RunKernelTiling();
-    }
-    return DoChamferDistanceGradTiling950(context);
+    ChamferDistanceGradTiling tilingObject(context);
+    tilingObject.Init();
+    return tilingObject.RunKernelTiling();
 }
 
 static ge::graphStatus TilingPrepareForChamferDistanceGrad(gert::TilingParseContext* context)

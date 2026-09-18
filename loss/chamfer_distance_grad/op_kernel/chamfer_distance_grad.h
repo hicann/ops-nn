@@ -63,7 +63,7 @@ private:
 public:
     __aicore__ inline ChamferDistanceGrad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR grad_dist1, GM_ADDR grad_dist2,
                                           GM_ADDR idx1, GM_ADDR idx2, GM_ADDR grad_xyz1, GM_ADDR grad_xyz2,
-                                          const ChamferDistanceGradTilingData* tiling_data)
+                                          ChamferDistanceGradTilingData* tiling_data)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->core_num = GetBlockNum();

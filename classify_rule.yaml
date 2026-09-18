@@ -1897,8 +1897,6 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/chamfer_distance/tests/
         - ops/ops-nn/loss/chamfer_distance_grad/examples/
         - ops/ops-nn/loss/chamfer_distance_grad/tests/
-        - ops/ops-nn/loss/chamfer_distance_grad/op_kernel/arch35/
-        - ops/ops-nn/loss/chamfer_distance_grad/op_host/arch35/
         - ops/ops-nn/loss/cross_entropy_loss/examples/
         - ops/ops-nn/loss/cross_entropy_loss/tests/
         - ops/ops-nn/loss/cross_entropy_loss_grad/examples/
