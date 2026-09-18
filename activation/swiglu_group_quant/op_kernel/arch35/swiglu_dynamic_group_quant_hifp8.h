@@ -109,11 +109,13 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessCoreMax(int
         this->CopyIn(tokenIdx, curTileTokens);
         LocalTensor<float> xFloatLocalTensor = this->xQueue_.template DeQue<float>();
         this->ComputeSwiGLU(xFloatLocalTensor, curTileTokens);
-        ComputeTileMax(reduceMaxLocalTensor, xFloatLocalTensor, tileIdx, curTileTokens);
         if (this->outputOrigin_) {
             this->CopyOutOrigin(xFloatLocalTensor, tokenIdx, curTileTokens);
             PipeBarrier<PIPE_MTE3>();
+            this->WaitMte3ToV();
         }
+        this->ApplyWeight(xFloatLocalTensor, curTileTokens);
+        ComputeTileMax(reduceMaxLocalTensor, xFloatLocalTensor, tileIdx, curTileTokens);
         this->xQueue_.template FreeTensor<float>(xFloatLocalTensor);
         tokenIdx += curTileTokens;
         tileIdx += 1;
@@ -139,6 +141,7 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessSwigluQuant
         this->CopyIn(tokenIdx, curTileTokens);
         LocalTensor<float> xFloatLocalTensor = this->xQueue_.template DeQue<float>();
         this->ComputeSwiGLU(xFloatLocalTensor, curTileTokens);
+        this->ApplyWeight(xFloatLocalTensor, curTileTokens);
         float divScale;
         if (this->isGroup_) {
             divScale = dstTypeMax_ / globalScale_;

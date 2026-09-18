@@ -8,6 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include "gtest/gtest.h"
@@ -321,4 +323,111 @@ TEST_F(SwigluGroupQuantKernelTest, hifp8_static_output_origin) { RunHifp8KernelW
 TEST_F(SwigluGroupQuantKernelTest, hifp8_dynamic) { RunHifp8KernelWithTilingKey(4000, false, false); }
 
 TEST_F(SwigluGroupQuantKernelTest, hifp8_dynamic_output_origin) { RunHifp8KernelWithTilingKey(4000, false, true); }
+
+float HostSilu(float v) { return v / (1.0f + std::exp(-v)); }
+
+void RunHifp8YOriginWeightVerify(uint64_t tilingKey, bool isDynamic)
+{
+    constexpr int64_t totalTokens = 4;
+    constexpr int64_t dimH = 128;
+    constexpr int64_t dim2H = 2 * dimH;
+    constexpr int64_t groupNum = 1;
+    constexpr int64_t usedCoreNum = 2;
+    constexpr int64_t tokensPerCore = totalTokens / usedCoreNum;
+    constexpr int64_t tileLength = tokensPerCore * dimH;
+    constexpr uint32_t blockDim = 2;
+    constexpr float dstTypeMax = 15.0f;
+
+    const float gateVals[totalTokens] = {2.0f, 1.0f, 1.5f, 0.5f};
+    const float upVals[totalTokens] = {3.0f, 1.0f, 2.0f, 1.0f};
+    const float weightVals[totalTokens] = {2.0f, 0.5f, 3.0f, 1.5f};
+
+    const size_t inputSize = totalTokens * dim2H * sizeof(half);
+    const size_t outputYSize = totalTokens * dimH * sizeof(uint8_t);
+    const size_t outputScaleSize = groupNum * sizeof(float);
+    const size_t yOriginSize = totalTokens * dimH * sizeof(half);
+    const size_t weightSize = totalTokens * sizeof(float);
+    const size_t tilingDataSize = sizeof(SwigluGroupQuantHifp8TilingData);
+
+    uint8_t* x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(inputSize));
+    uint8_t* weight = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(weightSize));
+    uint8_t* scale = isDynamic ? nullptr : reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
+    uint8_t* y = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputYSize));
+    uint8_t* yScale = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(outputScaleSize));
+    uint8_t* yOrigin = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(yOriginSize));
+    uint8_t* workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint8_t* tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
+
+    auto* xHalf = reinterpret_cast<half*>(x);
+    for (int64_t t = 0; t < totalTokens; t++) {
+        for (int64_t j = 0; j < dimH; j++) {
+            xHalf[t * dim2H + j] = static_cast<half>(gateVals[t]);
+            xHalf[t * dim2H + dimH + j] = static_cast<half>(upVals[t]);
+        }
+    }
+    auto* weightFp32 = reinterpret_cast<float*>(weight);
+    for (int64_t t = 0; t < totalTokens; t++) {
+        weightFp32[t] = weightVals[t];
+    }
+    if (!isDynamic) {
+        reinterpret_cast<float*>(scale)[0] = 1.0f;
+    }
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    auto* tilingData = reinterpret_cast<SwigluGroupQuantHifp8TilingData*>(tiling);
+    tilingData->totalTokens = totalTokens;
+    tilingData->dim2H = dim2H;
+    tilingData->dimH = dimH;
+    tilingData->isGroup = 0;
+    tilingData->hasWeight = 1;
+    tilingData->hasClamp = 0;
+    tilingData->outputOrigin = 1;
+    tilingData->clampLimit = 0.0f;
+    tilingData->dstTypeMax = dstTypeMax;
+    tilingData->tileTokens = tokensPerCore;
+    tilingData->usedCoreNum = usedCoreNum;
+    tilingData->tokensPerCore = tokensPerCore;
+    tilingData->groupNum = groupNum;
+    tilingData->tileLength = tileLength;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    auto swigluGroupQuantKernel = [](GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y,
+                                     GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
+        ::swiglu_group_quant(x, weight, groupIndex, scale, y, yScale, yOrigin, workspace, tiling);
+    };
+    ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, weight, nullptr, scale, y, yScale, yOrigin, workspace, tiling);
+
+    // yOrigin excludes weight: yOrigin = silu(gate) * up
+    auto* yOriginHalf = reinterpret_cast<half*>(yOrigin);
+    for (int64_t t = 0; t < totalTokens; t++) {
+        float expected = HostSilu(gateVals[t]) * upVals[t];
+        for (int64_t j = 0; j < dimH; j++) {
+            EXPECT_NEAR(static_cast<float>(yOriginHalf[t * dimH + j]), expected, 1e-2f);
+        }
+    }
+
+    // dynamic scale is derived from amax of weight-multiplied values: yScale = amax(w * silu(gate) * up) / dstTypeMax
+    if (isDynamic) {
+        float amax = 0.0f;
+        for (int64_t t = 0; t < totalTokens; t++) {
+            amax = std::max(amax, std::fabs(HostSilu(gateVals[t]) * upVals[t] * weightVals[t]));
+        }
+        EXPECT_NEAR(reinterpret_cast<float*>(yScale)[0], amax / dstTypeMax, 2e-3f);
+    }
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(weight);
+    if (!isDynamic) {
+        AscendC::GmFree(scale);
+    }
+    AscendC::GmFree(y);
+    AscendC::GmFree(yScale);
+    AscendC::GmFree(yOrigin);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(SwigluGroupQuantKernelTest, hifp8_static_y_origin_excludes_weight) { RunHifp8YOriginWeightVerify(4100, false); }
+
+TEST_F(SwigluGroupQuantKernelTest, hifp8_dynamic_y_origin_excludes_weight) { RunHifp8YOriginWeightVerify(4000, true); }
 } // namespace
