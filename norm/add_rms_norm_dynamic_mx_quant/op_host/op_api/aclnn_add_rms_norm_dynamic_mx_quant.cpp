@@ -109,6 +109,7 @@ static aclnnStatus GetWorkspaceSizeImpl(const aclTensor* x1, const aclTensor* x2
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     CHECK_RET(CheckNotNull(x1, x2, gamma, yOut, xOut, mxscaleOut, outputRstd, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(roundMode != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
     auto x1Shape = x1->GetViewShape();
     auto gammaDimNum = gamma->GetViewShape().GetDimNum();
