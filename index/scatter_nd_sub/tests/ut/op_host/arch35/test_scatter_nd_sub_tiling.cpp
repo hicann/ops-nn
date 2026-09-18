@@ -61,6 +61,7 @@ struct ScatterNdSubTilingResult {
     int64_t totalVarElements;
     int64_t numSlices;
     int64_t sliceSize;
+    int64_t indicesLastDim;
 };
 
 static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_list<int64_t>& varShape,
@@ -68,7 +69,7 @@ static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_
                                                          const std::initializer_list<int64_t>& updatesShape,
                                                          ge::DataType varDtype, ge::DataType indicesDtype)
 {
-    ScatterNdSubTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
+    ScatterNdSubTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0, 0};
 
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -133,6 +134,7 @@ static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_
             result.totalVarElements = td->totalVarElements;
             result.numSlices = td->numSlices;
             result.sliceSize = td->sliceSize;
+            result.indicesLastDim = td->indicesLastDim;
         }
     }
     return result;
@@ -176,9 +178,34 @@ TEST_F(TestScatterNdSubTiling, scatter_nd_sub_int32_3d_indices)
     EXPECT_EQ(result.sliceSize, 427);
 }
 
-TEST_F(TestScatterNdSubTiling, scatter_nd_sub_1d_indices_failed)
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_1d_indices)
 {
+    // 1D indices: single slice, last dim as index depth
     auto result = DoScatterNdSubTilingCase({4, 8}, {1}, {8}, ge::DT_FLOAT, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
+    EXPECT_EQ(result.totalVarElements, 32);
+    EXPECT_EQ(result.numSlices, 1);
+    EXPECT_EQ(result.indicesLastDim, 1);
+    EXPECT_EQ(result.sliceSize, 8);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_1d_indices_depth4)
+{
+    // 1D indices with depth 4 on rank-5 var: single slice, updates match var.shape[4:]
+    auto result = DoScatterNdSubTilingCase({2, 5, 2, 8, 4}, {4}, {4}, ge::DT_FLOAT, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
+    EXPECT_EQ(result.totalVarElements, 640);
+    EXPECT_EQ(result.numSlices, 1);
+    EXPECT_EQ(result.indicesLastDim, 4);
+    EXPECT_EQ(result.sliceSize, 4);
+}
+
+TEST_F(TestScatterNdSubTiling, scatter_nd_sub_1d_indices_depth_gt_var_rank_failed)
+{
+    // 1D indices depth 4 exceeds var rank 2
+    auto result = DoScatterNdSubTilingCase({4, 8}, {4}, {}, ge::DT_FLOAT, ge::DT_INT32);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 

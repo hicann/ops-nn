@@ -41,7 +41,7 @@ constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int32_t IDX_VAR = 0;
 constexpr int32_t IDX_INDICES = 1;
 constexpr int32_t IDX_UPDATES = 2;
-constexpr int64_t INDICES_MIN_RANK = 2;
+constexpr int64_t INDICES_MIN_RANK = 1;
 
 struct ScatterNdSubCompileInfo {};
 
@@ -103,7 +103,7 @@ static ge::graphStatus CheckScatterNdSubShapes(gert::TilingContext* context, con
     int64_t indicesRank = static_cast<int64_t>(indicesShape.GetDimNum());
     OP_CHECK_IF(indicesRank < INDICES_MIN_RANK,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
-                                             (std::to_string(indicesRank) + "D").c_str(), "at least 2D"),
+                                             (std::to_string(indicesRank) + "D").c_str(), "at least 1D"),
                 return ge::GRAPH_FAILED);
 
     // constraint: var rank >= indices.shape[-1]

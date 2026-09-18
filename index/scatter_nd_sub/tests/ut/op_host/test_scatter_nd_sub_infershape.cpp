@@ -55,6 +55,23 @@ TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_test2)
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
 
+TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_1d_indices)
+{
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{8, 16}, {8, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                          {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                                          {{{16}, {16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {8, 16},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
 TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_unknown_shape)
 {
     gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
