@@ -10,6 +10,7 @@
 #include "utils/eigen_tensor.h"
 #include "utils/kernel_util.h"
 #include "sparse_segment_sum_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 namespace {
 const uint32_t kInputNum = 3;
@@ -256,5 +257,5 @@ KernelStatus SparseSegmentSumCpuKernel::ComputeKernel(const CpuKernelContext& ct
     }
 }
 
-REGISTER_CPU_KERNEL(SparseSegmentSum, SparseSegmentSumCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(SparseSegmentSum, SparseSegmentSumCpuKernel);
 } // namespace aicpu

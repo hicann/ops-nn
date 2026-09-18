@@ -9,6 +9,7 @@
  */
 
 #include "elu_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 #include <float.h>
 #include "utils/eigen_tensor.h"
 #include "utils/kernel_util.h"
@@ -132,5 +133,5 @@ uint32_t EluCpuKernel::Compute(CpuKernelContext& ctx)
     return KERNEL_STATUS_PARAM_INVALID;
 }
 
-REGISTER_CPU_KERNEL(kElu, EluCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kElu, EluCpuKernel);
 } // namespace aicpu

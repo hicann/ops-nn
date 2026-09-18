@@ -9,6 +9,7 @@
  */
 
 #include "gather_v2_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <complex>
 #include <functional>
@@ -177,5 +178,5 @@ uint32_t GatherV2CpuKernel::Compute(CpuKernelContext& ctx)
     return ctx.Input(1)->GetDataType() == DT_INT32 ? IndicesCompute<int32_t>(ctx) : IndicesCompute<int64_t>(ctx);
 }
 
-REGISTER_CPU_KERNEL(kGatherV2, GatherV2CpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kGatherV2, GatherV2CpuKernel);
 } // namespace aicpu

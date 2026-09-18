@@ -9,6 +9,7 @@
  */
 
 #include "sparse_to_dense_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <algorithm>
 #include <atomic>
@@ -642,5 +643,5 @@ uint32_t SparseToDenseCpuKernel::Compute(CpuKernelContext& ctx)
     return static_cast<uint32_t>(KERNEL_STATUS_OK);
 }
 
-REGISTER_CPU_KERNEL(SPARSETODENSE, SparseToDenseCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(SPARSETODENSE, SparseToDenseCpuKernel);
 } // namespace aicpu

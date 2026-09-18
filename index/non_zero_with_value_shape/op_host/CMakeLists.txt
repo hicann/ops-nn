@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
-                    OPTYPE non_zero_with_value_shape ACLNNTYPE aclnn_exclude)
+                    OPTYPE non_zero_with_value_shape ACLNNTYPE aclnn_exclude HOSTCPU TRUE)

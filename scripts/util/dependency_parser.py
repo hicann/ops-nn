@@ -31,6 +31,7 @@ KEYS = [
     "COMPUTE_UNIT",
     "TILING_DIR",
     "DISABLE_IN_OPP",
+    "HOSTCPU",
 ]
 OP_CATEGORY_SET = {""}
 logger = logging.getLogger()

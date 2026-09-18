@@ -9,6 +9,7 @@
  */
 
 #include "scatter_elements_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <atomic>
 #include <complex>
@@ -333,5 +334,5 @@ uint32_t ScatterElementsCpuKernel::DoCompute(const CpuKernelContext& ctx)
                                                           ScatterDiffNum(info, indices_data, updates, output);
 }
 
-REGISTER_CPU_KERNEL(kScatterElements, ScatterElementsCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kScatterElements, ScatterElementsCpuKernel);
 } // namespace aicpu

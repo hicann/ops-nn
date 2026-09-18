@@ -9,6 +9,7 @@
  */
 
 #include "bucketize_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <algorithm>
 #include <vector>
@@ -196,5 +197,5 @@ uint32_t BucketizeCpuKernel::BucketizeCompute(const CpuKernelContext& ctx) const
     return KERNEL_STATUS_OK;
 }
 
-REGISTER_CPU_KERNEL(kBucketize, BucketizeCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kBucketize, BucketizeCpuKernel);
 } // namespace aicpu

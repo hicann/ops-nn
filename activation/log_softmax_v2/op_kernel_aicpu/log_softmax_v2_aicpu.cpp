@@ -9,6 +9,7 @@
  */
 
 #include "log_softmax_v2_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <securec.h>
 #include <atomic>
@@ -251,5 +252,5 @@ KernelStatus LogSoftmaxV2CpuKernel::LogSoftmaxV2Compute(const CpuKernelContext& 
     return ComputeParallel<T>(ctx, input, output, dims_exp_sum.get(), dims_maximum.get(), info, cores);
 }
 
-REGISTER_CPU_KERNEL(kLogSoftmaxV2, LogSoftmaxV2CpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kLogSoftmaxV2, LogSoftmaxV2CpuKernel);
 } // namespace aicpu

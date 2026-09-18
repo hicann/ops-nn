@@ -9,6 +9,7 @@
  */
 
 #include "index_to_addr_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include "cpu_kernel_utils.h"
 #include "cpu_types.h"
@@ -124,5 +125,5 @@ uint32_t IndexToAddrCpuKernel::Compute(CpuKernelContext& ctx)
     return ret;
 }
 
-REGISTER_CPU_KERNEL(kIndexToAddr, IndexToAddrCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kIndexToAddr, IndexToAddrCpuKernel);
 } // namespace aicpu

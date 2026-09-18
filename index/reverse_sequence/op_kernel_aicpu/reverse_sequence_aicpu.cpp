@@ -9,6 +9,7 @@
  */
 
 #include "reverse_sequence_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 #include "Eigen/Core"
 #include "cpu_kernel_utils.h"
 #include "log.h"
@@ -215,5 +216,5 @@ uint32_t ReverseSequenceMsCpuKernel::Compute(CpuKernelContext& ctx)
     return calls[xDtype_][seqLengthsDtype_](ioAddrs_, xShape_, ctx);
 }
 
-REGISTER_CPU_KERNEL(kReverseSequence, ReverseSequenceMsCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kReverseSequence, ReverseSequenceMsCpuKernel);
 } // namespace aicpu

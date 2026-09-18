@@ -9,6 +9,7 @@
  */
 
 #include "tensor_scatter_update_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <atomic>
 #include <complex>
@@ -373,5 +374,5 @@ uint32_t TensorScatterUpdateCpukernel::Compute(CpuKernelContext& ctx)
     return KERNEL_STATUS_OK;
 }
 
-REGISTER_CPU_KERNEL(kTensorScatterUpdate, TensorScatterUpdateCpukernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kTensorScatterUpdate, TensorScatterUpdateCpukernel);
 } // namespace aicpu

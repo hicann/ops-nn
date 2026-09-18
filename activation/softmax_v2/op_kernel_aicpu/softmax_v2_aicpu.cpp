@@ -12,6 +12,7 @@
 #define EIGEN_USE_SIMPLE_THREAD_POOL
 
 #include "softmax_v2_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <algorithm>
 #include <complex>
@@ -386,5 +387,5 @@ uint32_t SoftmaxV2CpuKernel::Compute(CpuKernelContext& ctx)
     return detail::SoftmaxV2Check(ctx) ? KERNEL_STATUS_PARAM_INVALID : detail::SoftmaxV2Compute(ctx);
 }
 
-REGISTER_CPU_KERNEL(kSoftmaxV2, SoftmaxV2CpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kSoftmaxV2, SoftmaxV2CpuKernel);
 } // namespace aicpu

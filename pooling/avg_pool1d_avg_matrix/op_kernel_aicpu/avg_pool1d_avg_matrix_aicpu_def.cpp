@@ -27,7 +27,6 @@ public:
         this->Attr("count_include_pad").AttrType(OPTIONAL).Bool(false);
 
         ApplyNnAicpuDefaultCfg(*this);
-        this->AICPU().ExtendCfgInfo(OP_INFO_OPS_FLAG.c_str(), OPEN_OPS_FLAG.c_str());
         this->AICPU().ExtendCfgInfo(OP_INFO_SUB_TYPE_OF_INFERSHAPE.c_str(), "3");
     }
 };

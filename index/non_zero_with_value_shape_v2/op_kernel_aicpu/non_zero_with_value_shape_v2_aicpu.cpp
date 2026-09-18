@@ -9,6 +9,7 @@
  */
 
 #include "non_zero_with_value_shape_v2_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include "cpu_kernel_utils.h"
 #include "cpu_tensor.h"
@@ -59,5 +60,5 @@ uint32_t NonZeroWithValueShapeV2CpuKernel::Compute(CpuKernelContext& ctx)
     return KERNEL_STATUS_OK;
 }
 
-REGISTER_CPU_KERNEL(kNonZeroWithValueShapeV2, NonZeroWithValueShapeV2CpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kNonZeroWithValueShapeV2, NonZeroWithValueShapeV2CpuKernel);
 } // namespace aicpu

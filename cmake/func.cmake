@@ -318,6 +318,7 @@ function(add_aicpu_host_kernel_modules host_target_name)
       ${host_target_name} PRIVATE
                     _FORTIFY_SOURCE=2
                     google=ascend_private
+                    OPS_NN_AICPU_HOST_KERNEL
     )
     target_compile_options(
       ${host_target_name} PRIVATE
@@ -508,7 +509,7 @@ endfunction()
 # 需一一对应
 function(add_modules_sources)
   set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DIR)
-  set(oneValueArgs DISABLE_IN_OPP)
+  set(oneValueArgs DISABLE_IN_OPP HOSTCPU)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   if(MODULE_DIR)
@@ -585,6 +586,15 @@ function(add_modules_sources)
   if(AICPU_SRCS)
     add_aicpu_kernel_modules()
     target_sources(${OPHOST_NAME}_aicpu_obj PRIVATE ${AICPU_SRCS})
+  endif()
+
+  if(MODULE_HOSTCPU AND BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND NOT ENABLE_CUSTOM)
+    file(GLOB AICPU_HOST_SRCS ${_OP_ROOT}/op_kernel_aicpu/*_aicpu.cpp)
+    if(AICPU_HOST_SRCS)
+      set(HOST_OBJ_NAME ${OP_NAME}_host_const_obj)
+      add_aicpu_host_kernel_modules(${HOST_OBJ_NAME})
+      target_sources(${HOST_OBJ_NAME} PRIVATE ${AICPU_HOST_SRCS})
+    endif()
   endif()
 
   if(MODULE_OPTYPE)
@@ -1295,7 +1305,7 @@ endmacro()
 # [TILING_DIR archxx...]        每种芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，缺省为空
 # [DISABLE_IN_OPP TRUE/FALSE]   是否在opp包中编译tiling文件，缺省为FALSE
 macro(add_all_modules_sources)
-  set(oneValueArgs DISABLE_IN_OPP)
+  set(oneValueArgs DISABLE_IN_OPP HOSTCPU)
   set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -1316,7 +1326,8 @@ macro(add_all_modules_sources)
 
   add_modules_sources(DIR ${_HOST_DIR} OPTYPE ${MODULE_OPTYPE} ACLNNTYPE ${MODULE_ACLNNTYPE}
       DEPENDENCIES ${MODULE_DEPENDENCIES} COMPUTE_UNIT ${MODULE_COMPUTE_UNIT}
-      TILING_DIR ${MODULE_TILING_DIR} DISABLE_IN_OPP ${MODULE_DISABLE_IN_OPP})
+      TILING_DIR ${MODULE_TILING_DIR} DISABLE_IN_OPP ${MODULE_DISABLE_IN_OPP}
+      HOSTCPU ${MODULE_HOSTCPU})
 
   add_all_ut_sources(OP_NAME ${_OP_NAME})
   unset(_HOST_DIR)

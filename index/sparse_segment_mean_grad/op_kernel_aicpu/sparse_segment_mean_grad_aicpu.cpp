@@ -9,6 +9,7 @@
  */
 
 #include "sparse_segment_mean_grad_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include <algorithm>
 #include <memory>
@@ -248,5 +249,5 @@ uint32_t SparseSegmentMeanGradCpuKernel::Compute(CpuKernelContext& ctx)
     }
 }
 
-REGISTER_CPU_KERNEL(kSparseSegmentMeanGrad, SparseSegmentMeanGradCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kSparseSegmentMeanGrad, SparseSegmentMeanGradCpuKernel);
 } // namespace aicpu

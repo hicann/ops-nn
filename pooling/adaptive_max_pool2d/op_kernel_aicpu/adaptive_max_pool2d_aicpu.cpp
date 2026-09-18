@@ -9,6 +9,7 @@
  */
 
 #include "adaptive_max_pool2d_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 #include <cmath>
 #include "utils/eigen_tensor.h"
 #include "utils/kernel_util.h"
@@ -295,5 +296,5 @@ uint32_t AdaptiveMaxPool2d::Compute(CpuKernelContext& ctx)
     }
 }
 
-REGISTER_CPU_KERNEL(kAdaptiveMaxPool2d, AdaptiveMaxPool2d);
+OPS_NN_REGISTER_CPU_KERNELV2(kAdaptiveMaxPool2d, AdaptiveMaxPool2d);
 } // namespace aicpu

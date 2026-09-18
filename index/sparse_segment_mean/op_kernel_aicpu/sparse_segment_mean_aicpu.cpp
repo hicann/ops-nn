@@ -9,6 +9,7 @@
  */
 
 #include "sparse_segment_mean_aicpu.h"
+#include "aicpu/nn_aicpu_register.h"
 
 #include "cpu_kernel_utils.h"
 #include "utils/eigen_tensor.h"
@@ -192,5 +193,5 @@ KernelStatus SparseSegmentMeanCpuKernel::ComputeKernel(const CpuKernelContext& c
     return KERNEL_STATUS_PARAM_INVALID;
 }
 
-REGISTER_CPU_KERNEL(kSparseSegmentMean, SparseSegmentMeanCpuKernel);
+OPS_NN_REGISTER_CPU_KERNELV2(kSparseSegmentMean, SparseSegmentMeanCpuKernel);
 } // namespace aicpu

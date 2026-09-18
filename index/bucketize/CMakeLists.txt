@@ -10,4 +10,4 @@
 
 # Register the operator at root level. Sources under op_host are collected automatically.
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
-                    OPTYPE bucketize ACLNNTYPE aclnn_exclude)
+                    OPTYPE bucketize ACLNNTYPE aclnn_exclude HOSTCPU TRUE)
