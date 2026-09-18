@@ -33,11 +33,14 @@ tensor "x" on the C axis.
 * averages for training.
 * This operator is used in conjunction with BNTrainingReduce.
 */
+#ifndef OPS_PROTO_DEF_BNTRAININGREDUCE
+#define OPS_PROTO_DEF_BNTRAININGREDUCE
 REG_OP(BNTrainingReduce)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(sum, TensorType({DT_FLOAT}))
     .OUTPUT(square_sum, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(BNTrainingReduce)
+#endif // OPS_PROTO_DEF_BNTRAININGREDUCE
 } // namespace ge
 
 #endif // OPS_BN_TRAINING_REDUCE_PROTO_H_

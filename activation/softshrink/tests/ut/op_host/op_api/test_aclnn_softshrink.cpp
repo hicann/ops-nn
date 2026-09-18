@@ -23,8 +23,8 @@ using namespace std;
 
 class l2_softshrink_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "Softshrink Test Setup" << std::endl; }
-    static void TearDownTestCase() { std::cout << "Softshrink Test TearDown" << std::endl; }
+    static void SetUpTestCase() { std::cout << "SoftShrink Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "SoftShrink Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_softshrink_test, case_1)

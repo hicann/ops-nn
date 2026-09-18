@@ -36,12 +36,15 @@ namespace ge {
  *@par Outputs:
  * y: A ND Tensor of same type and shape as x.
  */
+#ifndef OPS_PROTO_DEF_LPNORMUPDATE
+#define OPS_PROTO_DEF_LPNORMUPDATE
 REG_OP(LpNormUpdate)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(p, Int, 2)
     .ATTR(epsilon, Float, 1.0e-12f)
     .OP_END_FACTORY_REG(LpNormUpdate)
+#endif // OPS_PROTO_DEF_LPNORMUPDATE
 
 } // namespace ge
 

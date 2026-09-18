@@ -59,6 +59,8 @@ namespace ge {
  * Compatible with TensorFlow raw_ops.ApplyFtrlV2.
  */
 
+#ifndef OPS_PROTO_DEF_INPLACEAPPLYFTRLV2
+#define OPS_PROTO_DEF_INPLACEAPPLYFTRLV2
 REG_OP(InplaceApplyFtrlV2)
     .INPUT(var, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .INPUT(accum, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
@@ -74,6 +76,7 @@ REG_OP(InplaceApplyFtrlV2)
     .OUTPUT(linear, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(InplaceApplyFtrlV2)
+#endif // OPS_PROTO_DEF_INPLACEAPPLYFTRLV2
 
 } // namespace ge
 

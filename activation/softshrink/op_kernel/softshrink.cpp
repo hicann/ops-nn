@@ -17,21 +17,17 @@
 
 /*!
  * \file softshrink.cpp
- * \brief Softshrink 算子 Kernel 入口（arch35 - Ascend950，单 schMode 模式）
+ * \brief SoftShrink 算子 Kernel 入口（arch35 - Ascend950，单 schMode 模式）
  *
- * 命名一致性（方案 Z - 完全对齐 hard_shrink）：
- *   目录名 / kernel 文件名 / kernel 函数名 / opFile.value / 头文件守卫 / 宏 全部统一为 softshrink / SOFTSHRINK_*。
- *   class 名 Softshrink、aclnn API 名 aclnnSoftshrink 保持 PascalCase 不变。
- *   关键约束（CANN 构建系统）：kernel 入口函数名必须等于 OP_TYPE 类名的 snake-split，
- *   即 Softshrink → softshrink；目录名 / opFile.value 也按此 snake_case 统一。
+ * GE 算子名保持 SoftShrink，kernel 入口函数仍使用当前 opFile.value 指定的 softshrink。
  *
  * 模板分发（v2：fp16/bf16 均升精到 fp32 计算，与 PyTorch CPU 对齐）：
- *   schMode=0 (FP32): Softshrink<float,       BUFFER_MODE=1, NEED_UPCAST=0> （直通）
- *   schMode=1 (FP16): Softshrink<half,        BUFFER_MODE=1, NEED_UPCAST=1> （升精）
- *   schMode=2 (BF16): Softshrink<bfloat16_t,  BUFFER_MODE=1, NEED_UPCAST=1> （升精）
+ *   schMode=0 (FP32): SoftShrink<float,       BUFFER_MODE=1, NEED_UPCAST=0> （直通）
+ *   schMode=1 (FP16): SoftShrink<half,        BUFFER_MODE=1, NEED_UPCAST=1> （升精）
+ *   schMode=2 (BF16): SoftShrink<bfloat16_t,  BUFFER_MODE=1, NEED_UPCAST=1> （升精）
  *
  * v2 改造说明：
- *   原 fp16 路径 Softshrink<half, 1, 0> 全程 fp16 计算，在 λ ∈ {0.1, 0.3 ...} 等
+ *   原 fp16 路径 SoftShrink<half, 1, 0> 全程 fp16 计算，在 λ ∈ {0.1, 0.3 ...} 等
  *   无法精确 fp16 表示的场景下，会因边界判断与减法误差累积导致与 golden 偏差。
  *   修正后 fp16 也升精到 fp32 计算，完全对齐 PyTorch CPU fp16/bf16 路径：
  *     pytorch/aten/src/ATen/native/cpu/Activation.cpp:642-663 (vector_func)
@@ -43,26 +39,26 @@
 #include "arch35/softshrink.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void softshrink(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void soft_shrink(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    REGISTER_TILING_DEFAULT(SoftshrinkTilingData);
-    GET_TILING_DATA_WITH_STRUCT(SoftshrinkTilingData, tilingData, tiling);
+    REGISTER_TILING_DEFAULT(SoftShrinkTilingData);
+    GET_TILING_DATA_WITH_STRUCT(SoftShrinkTilingData, tilingData, tiling);
 
     if constexpr (schMode == SOFTSHRINK_TPL_SCH_MODE_FP32) {
         // FP32: T=float, NEED_UPCAST=0（直通，COMPUTE_T=float）
-        NsSoftshrink::Softshrink<float, 1, 0> op;
+        NsSoftShrink::SoftShrink<float, 1, 0> op;
         op.Init(x, y, &tilingData);
         op.Process();
     }
     if constexpr (schMode == SOFTSHRINK_TPL_SCH_MODE_FP16) {
         // FP16: T=half, NEED_UPCAST=1（Cast half→fp32→计算→Cast fp32→half）
-        NsSoftshrink::Softshrink<half, 1, 1> op;
+        NsSoftShrink::SoftShrink<half, 1, 1> op;
         op.Init(x, y, &tilingData);
         op.Process();
     }
     if constexpr (schMode == SOFTSHRINK_TPL_SCH_MODE_BF16) {
         // BF16: T=bfloat16_t, NEED_UPCAST=1（Cast bf16→fp32→计算→Cast fp32→bf16）
-        NsSoftshrink::Softshrink<bfloat16_t, 1, 1> op;
+        NsSoftShrink::SoftShrink<bfloat16_t, 1, 1> op;
         op.Init(x, y, &tilingData);
         op.Process();
     }

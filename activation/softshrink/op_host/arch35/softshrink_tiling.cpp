@@ -17,7 +17,7 @@
 
 /*!
  * \file softshrink_tiling.cpp
- * \brief Softshrink 算子 Tiling 实现 (arch35 - Ascend950)
+ * \brief SoftShrink 算子 Tiling 实现 (arch35 - Ascend950)
  *
  * 改造说明：对齐 hard_shrink 风格，使用单 schMode 模板（dtype 路径选择），
  *           BUFFER_NUM 恒定为 2（双缓冲），不再使用 experimental 中的
@@ -28,6 +28,7 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include <graph/utils/type_utils.h>
 #include <cmath>
 #include "../../op_kernel/arch35/softshrink_tiling_data.h"
 #include "../../op_kernel/arch35/softshrink_tiling_key.h"
@@ -69,12 +70,12 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
     return inShape;
 }
 
-struct SoftshrinkPlatInfo {
+struct SoftShrinkPlatInfo {
     int64_t coreNum;
     uint64_t ubSize;
 };
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, SoftshrinkPlatInfo& info)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, SoftShrinkPlatInfo& info)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
@@ -86,12 +87,12 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, SoftshrinkP
     return ge::GRAPH_SUCCESS;
 }
 
-struct SoftshrinkInputInfo {
+struct SoftShrinkInputInfo {
     int64_t totalNum;
     ge::DataType dataType;
 };
 
-static ge::graphStatus GetInputInfo(gert::TilingContext* context, SoftshrinkInputInfo& info)
+static ge::graphStatus GetInputInfo(gert::TilingContext* context, SoftShrinkInputInfo& info)
 {
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
@@ -101,8 +102,9 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context, SoftshrinkInpu
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     info.dataType = inputDesc->GetDataType();
     if (info.dataType != ge::DT_FLOAT16 && info.dataType != ge::DT_FLOAT && info.dataType != ge::DT_BF16) {
-        OP_LOGE(context, "Softshrink: unsupported dtype=%d, expected FLOAT16/FLOAT/BF16",
-                static_cast<int>(info.dataType));
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "input_x",
+                                              ge::TypeUtils::DataTypeToSerialString(info.dataType).c_str(),
+                                              "The dtype of input_x must be DT_FLOAT16, DT_FLOAT, or DT_BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -141,9 +143,9 @@ static uint64_t GetSchModeFromDtype(ge::DataType dataType)
 static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataType dataType)
 {
     context->SetBlockDim(1);
-    SoftshrinkTilingData* tiling = context->GetTilingData<SoftshrinkTilingData>();
+    SoftShrinkTilingData* tiling = context->GetTilingData<SoftShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftShrinkTilingData), 0, sizeof(SoftShrinkTilingData)) != EOK,
                 OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -176,15 +178,16 @@ static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSiz
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
+static ge::graphStatus SoftShrinkTilingFunc(gert::TilingContext* context)
 {
-    SoftshrinkPlatInfo platInfo;
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
+    SoftShrinkPlatInfo platInfo;
     auto ret = GetPlatformInfo(context, platInfo);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
-    SoftshrinkInputInfo inputInfo;
+    SoftShrinkInputInfo inputInfo;
     ret = GetInputInfo(context, inputInfo);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
@@ -207,9 +210,9 @@ static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
     // 三路径 alignElems 统一为 64，与 kernel 内 sizeof(COMPUTE_T)=4 一致
     int64_t alignElems = 256 / static_cast<int64_t>(sizeof(float));
 
-    SoftshrinkTilingData* tiling = context->GetTilingData<SoftshrinkTilingData>();
+    SoftShrinkTilingData* tiling = context->GetTilingData<SoftShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftShrinkTilingData), 0, sizeof(SoftShrinkTilingData)) != EOK,
                 OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = inputInfo.totalNum;
@@ -226,15 +229,18 @@ static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
     context->SetTilingKey(GET_TPL_TILING_KEY(GetSchModeFromDtype(inputInfo.dataType)));
+    OP_LOGI(context->GetNodeName(),
+            "[TilingData] totalNum=%ld, blockFactor=%ld, ubFactor=%ld, lambd=%f, usedCoreNum=%ld", tiling->totalNum,
+            tiling->blockFactor, tiling->ubFactor, tiling->lambd, usedCoreNum);
 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForSoftshrink([[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForSoftShrink([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Softshrink).Tiling(SoftshrinkTilingFunc).TilingParse<SoftshrinkCompileInfo>(TilingParseForSoftshrink);
+IMPL_OP_OPTILING(SoftShrink).Tiling(SoftShrinkTilingFunc).TilingParse<SoftShrinkCompileInfo>(TilingParseForSoftShrink);
 
 } // namespace optiling

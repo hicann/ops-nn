@@ -23,7 +23,7 @@ extern "C" {
  * 功能描述：以元素为单位，强制收缩λ范围内的元素。
  * 计算公式：如下
  * $$
- * Softshrink(x)=
+ * SoftShrink(x)=
  * \begin{cases}
  * x-λ, if x > λ \\
  * x+λ, if x < -λ \\
@@ -48,7 +48,7 @@ ACLNN_API aclnnStatus aclnnSoftshrinkGetWorkspaceSize(const aclTensor* self, con
  * 功能描述：以元素为单位，强制收缩λ范围内的元素。
  * 计算公式：如下
  * $$
- * Softshrink(x)=
+ * SoftShrink(x)=
  * \begin{cases}
  * x-λ, if x > λ \\
  * x+λ, if x < -λ \\

@@ -17,21 +17,28 @@
 
 /*!
  * \file softshrink_infershape.cpp
- * \brief Softshrink 算子形状推导实现
+ * \brief SoftShrink 算子形状推导实现
  *
  * 输出 shape = 输入 shape。canndev 仓原 InferShape 逻辑保留不删，长尾算子仍使用。
  */
 
+#include "util/shape_util.h"
 #include "infershape_elewise_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShape4Softshrink(gert::InferShapeContext* context)
+static ge::graphStatus InferShape4SoftShrink(gert::InferShapeContext* context)
 {
-    return Ops::Base::InferShape4Elewise(context);
+    ge::graphStatus ret = Ops::Base::InferShape4Elewise(context);
+    if (ret == ge::GRAPH_SUCCESS) {
+        const gert::Shape* outputShape = context->GetOutputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+        OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outputShape).c_str());
+    }
+    return ret;
 }
 
-IMPL_OP_INFERSHAPE(Softshrink).InferShape(InferShape4Softshrink);
+IMPL_OP_INFERSHAPE(SoftShrink).InferShape(InferShape4SoftShrink);
 } // namespace ops

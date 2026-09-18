@@ -68,6 +68,8 @@ namespace ge {
  *@par Third-party framework compatibility
  * Compatible with the TensorFlow operator ApplyAdaMax.
  */
+#ifndef OPS_PROTO_DEF_INPLACEAPPLYADAMAX
+#define OPS_PROTO_DEF_INPLACEAPPLYADAMAX
 REG_OP(InplaceApplyAdaMax)
     .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(m, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -83,6 +85,7 @@ REG_OP(InplaceApplyAdaMax)
     .OUTPUT(v, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(InplaceApplyAdaMax)
+#endif // OPS_PROTO_DEF_INPLACEAPPLYADAMAX
 } // namespace ge
 
 #endif // INPLACE_APPLY_ADA_MAX_PROTO_H

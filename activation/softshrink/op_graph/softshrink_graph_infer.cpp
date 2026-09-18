@@ -17,7 +17,7 @@
 
 /*!
  * \file softshrink_graph_infer.cpp
- * \brief Softshrink 算子 InferDataType 实现（图模式）
+ * \brief SoftShrink 算子 InferDataType 实现（图模式）
  *
  * 输出 dtype = 输入 dtype。与 op_host/softshrink_infershape.cpp 分文件放置（参考 ops-cv PR#1126）。
  */
@@ -27,12 +27,12 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferDataType4Softshrink(gert::InferDataTypeContext* context)
+static ge::graphStatus InferDataType4SoftShrink(gert::InferDataTypeContext* context)
 {
     const ge::DataType inputDataType = context->GetInputDataType(0);
     context->SetOutputDataType(0, inputDataType);
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP(Softshrink).InferDataType(InferDataType4Softshrink);
+IMPL_OP(SoftShrink).InferDataType(InferDataType4SoftShrink);
 } // namespace ops

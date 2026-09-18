@@ -57,6 +57,8 @@ namespace ge {
  * None.
  */
 
+#ifndef OPS_PROTO_DEF_INPLACEAPPLYFTRL
+#define OPS_PROTO_DEF_INPLACEAPPLYFTRL
 REG_OP(InplaceApplyFtrl)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -71,6 +73,7 @@ REG_OP(InplaceApplyFtrl)
     .OUTPUT(linear, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(InplaceApplyFtrl)
+#endif // OPS_PROTO_DEF_INPLACEAPPLYFTRL
 
 } // namespace ge
 

@@ -38,6 +38,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the mmcv operator FusedBiasLeakyrelu.
 */
+#ifndef OPS_PROTO_DEF_FUSEDBIASLEAKYRELU
+#define OPS_PROTO_DEF_FUSEDBIASLEAKYRELU
 REG_OP(FusedBiasLeakyRelu)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE}))
     .INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE}))
@@ -45,6 +47,7 @@ REG_OP(FusedBiasLeakyRelu)
     .ATTR(scale, Float, 1.414213562373f)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE}))
     .OP_END_FACTORY_REG(FusedBiasLeakyRelu)
+#endif // OPS_PROTO_DEF_FUSEDBIASLEAKYRELU
 
 } // namespace ge
 

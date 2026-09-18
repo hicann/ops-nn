@@ -10,7 +10,7 @@
 
 /*!
  * \file softshrink_tiling.h
- * \brief Softshrink Tiling 公共类型声明（供 UT 引用）
+ * \brief SoftShrink Tiling 公共类型声明（供 UT 引用）
  */
 
 #ifndef _SOFTSHRINK_TILING_H_
@@ -18,7 +18,7 @@
 
 namespace optiling {
 
-struct SoftshrinkCompileInfo {};
+struct SoftShrinkCompileInfo {};
 
 } // namespace optiling
 

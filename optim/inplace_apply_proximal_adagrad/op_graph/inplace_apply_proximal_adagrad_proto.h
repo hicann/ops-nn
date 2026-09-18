@@ -63,6 +63,8 @@ namespace ge {
  *@par Third-party framework compatibility
  *Compatible with the TensorFlow operator ApplyProximalAdagrad.
  */
+#ifndef OPS_PROTO_DEF_INPLACEAPPLYPROXIMALADAGRAD
+#define OPS_PROTO_DEF_INPLACEAPPLYPROXIMALADAGRAD
 REG_OP(InplaceApplyProximalAdagrad)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -74,5 +76,6 @@ REG_OP(InplaceApplyProximalAdagrad)
     .OUTPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(InplaceApplyProximalAdagrad)
+#endif // OPS_PROTO_DEF_INPLACEAPPLYPROXIMALADAGRAD
 } // namespace ge
 #endif

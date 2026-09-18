@@ -17,7 +17,7 @@
 
 /*!
  * \file softshrink_tiling_key.h
- * \brief Softshrink TilingKey 模板参数定义
+ * \brief SoftShrink TilingKey 模板参数定义
  *
  * TilingKey 映射（单 schMode 模式，对齐 hard_shrink 样板）：
  *   SOFTSHRINK_TPL_SCH_MODE_FP32 (0) : float32 计算路径
@@ -34,7 +34,7 @@
 #define SOFTSHRINK_TPL_SCH_MODE_FP16 1
 #define SOFTSHRINK_TPL_SCH_MODE_BF16 2
 
-ASCENDC_TPL_ARGS_DECL(Softshrink, ASCENDC_TPL_UINT_DECL(schMode, 2, ASCENDC_TPL_UI_LIST, SOFTSHRINK_TPL_SCH_MODE_FP32,
+ASCENDC_TPL_ARGS_DECL(SoftShrink, ASCENDC_TPL_UINT_DECL(schMode, 2, ASCENDC_TPL_UI_LIST, SOFTSHRINK_TPL_SCH_MODE_FP32,
                                                         SOFTSHRINK_TPL_SCH_MODE_FP16, SOFTSHRINK_TPL_SCH_MODE_BF16));
 
 ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SOFTSHRINK_TPL_SCH_MODE_FP32,

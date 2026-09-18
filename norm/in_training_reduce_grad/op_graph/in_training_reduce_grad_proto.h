@@ -39,6 +39,8 @@ namespace ge {
 *@attention Constraints:
 * The preceding layer of this operator must be INTrainingUpdateGrad. \n
 */
+#ifndef OPS_PROTO_DEF_INTRAININGREDUCEGRAD
+#define OPS_PROTO_DEF_INTRAININGREDUCEGRAD
 REG_OP(INTrainingReduceGrad)
     .INPUT(dy, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -49,6 +51,7 @@ REG_OP(INTrainingReduceGrad)
     .INPUT(gamma, TensorType({DT_FLOAT}))
     .OUTPUT(pd_x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(INTrainingReduceGrad)
+#endif // OPS_PROTO_DEF_INTRAININGREDUCEGRAD
 
 } // namespace ge
 

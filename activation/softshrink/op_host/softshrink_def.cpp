@@ -17,27 +17,25 @@
 
 /*!
  * \file softshrink_def.cpp
- * \brief Softshrink 算子定义，声明输入输出和算子配置（Ascend950 / arch35）
+ * \brief SoftShrink 算子定义，声明输入输出和算子配置（Ascend950 / arch35）
  *
- * 命名一致性约定（方案 Z - 完全对齐 hard_shrink）：
- *   - 目录名 / opFile.value / kernel 文件名 / kernel 函数名 / 头文件守卫 / 宏 全部统一为 softshrink / SOFTSHRINK_*
- *   - class 名 Softshrink、aclnn API 名 aclnnSoftshrink、OP_TYPE 名 Softshrink 保持不变（PascalCase）
- *   - CANN 构建系统强约束：kernel 入口函数名必须 = OP_TYPE 类名的 snake-split (Softshrink → softshrink)
+ * GE 算子名与 canndev 原型保持一致：SoftShrink。
+ * 目录名 / opFile.value / kernel 文件名 / kernel 函数名仍保持 softshrink，匹配当前 kernel 入口。
  */
 #include "register/op_def_registry.h"
 
 namespace ops {
-class Softshrink : public OpDef {
+class SoftShrink : public OpDef {
 public:
-    explicit Softshrink(const char* name) : OpDef(name)
+    explicit SoftShrink(const char* name) : OpDef(name)
     {
-        this->Input("x")
+        this->Input("input_x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("y")
+        this->Output("output_y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
@@ -54,13 +52,10 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            // opFile.value 必须与算子目录名 / kernel 入口函数名严格一致（方案 Z）：
-            //   目录名 = activation/softshrink/ → opFile.value = "softshrink"
-            //   不加 _apt 后缀，与 hard_shrink 走同一约定。
-            //   class 名 Softshrink 保持 PascalCase；构建系统按类名 snake-split 推导 kernel 入口名。
+            // opFile.value 与当前算子目录名 / kernel 入口函数名保持一致。
             .ExtendCfgInfo("opFile.value", "softshrink");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
-OP_ADD(Softshrink);
+OP_ADD(SoftShrink);
 } // namespace ops
