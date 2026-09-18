@@ -19,7 +19,7 @@
 #include "error_util.h"
 #include "graph/operator.h"
 #include "stub_ops.h"
-#include "matmul/batch_mat_mul_v3/op_graph/batch_mat_mul_v3_proto.h"
+#include "op_nn_proto_extend.h"
 
 namespace domi {
 using namespace ge;
@@ -76,7 +76,7 @@ static Status ParseOpToGraphBatchMatMulV3(const ge::Operator& op, ge::Graph& gra
     (void)data_2.set_attr_index(1);
     std::vector<ge::Operator> inputs{data_1, data_2};
     std::vector<std::pair<ge::Operator, std::vector<size_t>>> output_indices;
-    auto batch_matmul = op::BatchMatMulV3();
+    auto batch_matmul = op::BatchMatMulV2();
     (void)batch_matmul.set_input_x1(data_1);
     (void)batch_matmul.set_input_x2(data_2);
     (void)batch_matmul.set_attr_adj_x1(transpose_x1);
