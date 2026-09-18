@@ -126,7 +126,7 @@
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-      <td>表示标准化过程中的偏置项，对应公式中的beta。shape必须与gamma一致。</td>
+      <td>表示标准化过程中的偏置项，对应公式中的beta。shape和数据类型需与gamma一致。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -214,7 +214,7 @@
 
 - 当输出y的数据类型为FLOAT4_E2M1或FLOAT4_E1M2，x1尾轴的值必须为偶数。
 
-- 输入gamma、可选输入beta的数据类型只能和x1的数据类型保持一致或者为FLOAT32。
+- 输入gamma的数据类型只能和x1的数据类型保持一致或者为FLOAT32；可选输入beta的shape和数据类型需与gamma完全一致（即gamma为FLOAT32时beta也必须为FLOAT32，不能取x1的数据类型）。
 
 - **边界值场景说明**
   - 当输入是Inf时：1、输出y为0；2、输出x为Inf；3、输出mxscale为255，偶数pad填充值为0；4、输出rstd为0。

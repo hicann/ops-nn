@@ -271,6 +271,8 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
 - gamma需为一维Tensor，长度等于x1最后一维，数据类型与x1一致或为float32；beta（若传入）的shape和数据类型需与gamma一致。
 - dst_type为40/41（FP4）时，x1尾轴必须为偶数，且scale_alg仅支持0。
 - scale_alg为1（cuBLAS实现）时仅支持FP8输出。
+- 参数类型严格校验（eager直调，即`cann_ops_nn.ops.add_rms_norm_dynamic_quant`或直接导入本函数时）：x1/x2/gamma须为`torch.Tensor`，beta/x3须为`torch.Tensor`或`None`；标量参数中dst_type、scale_alg仅接受Python原生int（bool拒绝，`enum.IntEnum`因其为int子类而接受），round_mode仅接受精确str，output_rstd仅接受精确bool，epsilon仅接受精确int/float。传入torch.dtype、numpy标量（含`np.float64`、`np.str_`这类Python内建类型的子类）等第三方类型会在入口直接抛出指名参数的TypeError（如`dst_type=torch.float8_e5m2`被拒绝），不做隐式转换或归一化。
+- 图模式（torch.compile）或经`torch.ops.cann_ops_nn.add_rms_norm_dynamic_quant`调用时，标量参数会先由torch dispatcher按schema完成类型转换：torch.dtype会被框架转换为其内部枚举序号（如`torch.float8_e5m2 -> 23`、`torch.int4 -> 40`），入口类型拦截在该路径不生效，由dst_type值域校验兜底。为避免歧义，请显式传入int枚举值（35/36/40/41）。
 - mxscale输出shape约束：rank(mxscale) = rank(x1) + 1，mxscale.shape[-2] = ceil(ceil(x1.shape[-1] / 32) / 2)，mxscale.shape[-1] = 2，其他维度与x1一致。
 
 ## 确定性计算

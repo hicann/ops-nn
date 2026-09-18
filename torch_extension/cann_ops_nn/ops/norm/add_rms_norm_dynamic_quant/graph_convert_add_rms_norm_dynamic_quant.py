@@ -32,13 +32,6 @@ try:
 except ImportError:
     _TORCHAIR_AVAILABLE = False
 
-_DST_TYPE_MAP = {
-    35: DataType.DT_FLOAT8_E5M2,
-    36: DataType.DT_FLOAT8_E4M3FN,
-    40: DataType.DT_FLOAT4_E2M1,
-    41: DataType.DT_FLOAT4_E1M2,
-}
-
 
 def _is_fp4_dtype(ge_dtype):
     return ge_dtype in (DataType.DT_FLOAT4_E2M1, DataType.DT_FLOAT4_E1M2)
@@ -85,6 +78,14 @@ if _TORCHAIR_AVAILABLE:
         output_rstd: bool = False,
         meta_outputs: TensorSpec = None,
     ):
+        # Defined here (not at module top) so an unavailable torchair degrades
+        # to graph-mode-disabled instead of raising NameError at import time.
+        _DST_TYPE_MAP = {
+            35: DataType.DT_FLOAT8_E5M2,
+            36: DataType.DT_FLOAT8_E4M3FN,
+            40: DataType.DT_FLOAT4_E2M1,
+            41: DataType.DT_FLOAT4_E1M2,
+        }
         y_ge_dtype = _DST_TYPE_MAP.get(dst_type)
         if y_ge_dtype is None:
             raise RuntimeError(f"unsupported dst_type: {dst_type}")
