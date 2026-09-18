@@ -1990,6 +1990,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/kth_value/README.md">kth_value</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>返回输入张量在指定维度上的第k个最小值及其在原输入中的索引。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/linear_index/README.md">linear_index</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2047,6 +2057,26 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/median/README.md">median</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>返回输入张量在指定维度上的中位数及其索引，元素个数为偶数时取两个中间值中较小的值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/nan_median/README.md">nan_median</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>忽略NaN，返回输入张量在指定维度上的中位数及其索引；全为NaN时返回NaN。</td>
   </tr>
   <tr>
     <td>index</td>
