@@ -48,6 +48,7 @@ const std::string SUPPORTED_OP_TYPE = "TensorScatterUpdate";
 constexpr int32_t kPortSelf = 0;
 constexpr int32_t kPortIndices = 1;
 constexpr int32_t kPortUpdates = 2;
+constexpr int32_t PARAM_NUM = 3;
 constexpr int64_t NANO_BLOCK_SIZE = 16;
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,46 @@ static void UpdateInputFormat(GNode& node, uint32_t idx, Format format)
     node.GetInputDesc(idx, desc);
     desc.SetFormat(format);
     node.UpdateInputDesc(idx, desc);
+}
+
+static bool CheckScatterNdUpdateSupported(const std::vector<DataType>& inputDtypes,
+                                          const std::vector<Format>& inputFormats,
+                                          const std::vector<Shape>& inputShapes)
+{
+    auto builder = es::EsGraphBuilder("probe");
+    auto rX = builder.CreateInput(0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
+    auto rIndices = builder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
+    auto rUpdates = builder.CreateInput(2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
+
+    auto scatterNdUpdateOutput = es::ScatterNdUpdate(rX, rIndices, rUpdates, false);
+    GNode scatterNdUpdateNode = *scatterNdUpdateOutput.GetProducer();
+    UpdateInputFormat(scatterNdUpdateNode, kPortSelf, inputFormats[0]);
+    UpdateInputFormat(scatterNdUpdateNode, kPortIndices, inputFormats[1]);
+    UpdateInputFormat(scatterNdUpdateNode, kPortUpdates, inputFormats[2]);
+
+    GraphUniqPtr probeGraph = builder.BuildAndReset({scatterNdUpdateOutput});
+    if (probeGraph == nullptr) {
+        OPS_LOG_W(PASS_NAME.c_str(), "Failed to build probe graph, skip fusion.");
+        return false;
+    }
+
+    if (GeUtils::InferShape(*probeGraph, inputShapes) != SUCCESS) {
+        OPS_LOG_W(PASS_NAME.c_str(), "InferShape for probe graph failed, skip fusion.");
+        return false;
+    }
+
+    bool isOpSupported = false;
+    AscendString unsupportedReason;
+    if (GeUtils::CheckNodeSupportOnAicore(scatterNdUpdateNode, isOpSupported, unsupportedReason) != SUCCESS) {
+        OPS_LOG_W(PASS_NAME.c_str(), "CheckNodeSupportOnAicore returned error, skip fusion.");
+        return false;
+    }
+    if (!isOpSupported) {
+        OPS_LOG_D(PASS_NAME.c_str(), "ScatterNdUpdate not supported on AICore: %s, skip fusion.",
+                  unsupportedReason.GetString());
+        return false;
+    }
+    return true;
 }
 
 static Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<SubgraphInput>& subgraphInputs)
@@ -194,6 +235,23 @@ bool TensorScatterUpdateFusionPass::MeetRequirements(const std::unique_ptr<Match
     }
     if (!isRegbase && inputDesc0.GetDataType() == ge::DT_BOOL) {
         OPS_LOG_D(SUPPORTED_OP_TYPE.c_str(), "TensorScatterUpdateFusionPass not support bool, not changed.");
+        return false;
+    }
+
+    std::vector<DataType> inputDtypes;
+    std::vector<Format> inputFormats;
+    std::vector<Shape> inputShapes;
+    for (int32_t i = 0; i < PARAM_NUM; i++) {
+        TensorDesc desc;
+        OP_LOGE_IF(sourceNode.GetInputDesc(i, desc) != SUCCESS, false, PASS_NAME.c_str(),
+                   "Failed to get input desc %d.", i);
+        inputDtypes.emplace_back(desc.GetDataType());
+        inputFormats.emplace_back(desc.GetFormat());
+        inputShapes.emplace_back(desc.GetShape());
+    }
+
+    if (!CheckScatterNdUpdateSupported(inputDtypes, inputFormats, inputShapes)) {
+        OPS_LOG_D(PASS_NAME.c_str(), "ScatterNdUpdate not supported on AICore for current dtype/format, skip fusion.");
         return false;
     }
 
