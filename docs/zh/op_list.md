@@ -179,16 +179,6 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/fused_bias_leaky_relu_grad/README.md">fused_bias_leaky_relu_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>BiasAdd + LeakyReLU + Scale 三合一反向梯度算子，对应MMCV FusedBiasLeakyReLU反向。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
     <td><a href="../../activation/ge_glu_grad_v2/README.md">ge_glu_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -676,16 +666,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>激活函数，用于将任意实数映射到正数区间。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
-    <td><a href="../../activation/softplus_grad/README.md">softplus_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>Softplus激活函数的反向传播算子，公式：backprops = gradients × sigmoid(features)。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -3787,16 +3767,6 @@
     <td>AI Core</td>
      <td>返回给定张量的矩阵范数或者向量范数。</td>
    </tr>
-   <tr>
-     <td>norm</td>
-     <td><a href="../../norm/lp_norm_update_v2/README.md">lp_norm_update_v2</a></td>
-     <td>✓</td>
-     <td>✓</td>
-     <td>✓</td>
-     <td>✓</td>
-     <td>AI Core</td>
-     <td>Lp范数两步计算的更新阶段算子，计算y=max(x^(1/p),epsilon)。</td>
-   </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/lp_norm_update/README.md">lp_norm_update</a></td>
@@ -4290,16 +4260,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/inplace_apply_centered_rms_prop/README.md">inplace_apply_centered_rms_prop</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>Centered RMSProp优化器步进的in-place实现，每个训练步对一组持久状态（var/mg/ms/mom）执行就地更新，输出Tensor与对应输入Tensor共享GM地址减少显存占用。epsilon加在sqrt内部（sqrt(ms - mg² + ε)），对标TensorFlow的ResourceApplyCenteredRMSProp接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4417,16 +4377,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>结合Adagrad自适应学习率与FOBOS（Forward-Backward Splitting）Proximal近端算法的优化器，基于梯度平方累加器自适应调整学习率，并通过软阈值（L1正则化）与缩放（L2正则化）对模型参数进行原地更新。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/fused_mul_apply_keras_momentum/README.md">fused_mul_apply_keras_momentum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>Keras风格Momentum SGD优化器的融合算子，融合一次梯度乘法后按Momentum SGD公式in-place更新权重var与动量累加器accum，支持标准Momentum与Nesterov Momentum两种模式。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -5520,26 +5470,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_ftrl_v2/README.md">apply_ftrl_v2</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现ftrl v2优化器功能（含l2_shrinkage正则化）。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/apply_keras_momentum/README.md">apply_keras_momentum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行Keras Momentum优化器的单步参数更新，根据动量系数momentum、学习率lr和梯度grad更新累积量accum，并按标准模式或Nesterov模式原地更新权重参数var。对标TensorFlow的ResourceApplyKerasMomentum接口。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/apply_momentum/README.md">apply_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5591,16 +5521,6 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/inplace_apply_power_sign/README.md">inplace_apply_power_sign</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>执行PowerSign优化器的单步参数更新，对权重`var`和一阶矩`m`进行原地更新（inplace语义）。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
     <td><a href="../../optim/inplace_apply_keras_momentum/README.md">inplace_apply_keras_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5618,16 +5538,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>CANN图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新，支持标准动量与Nesterov动量。</td>
-  </tr>
-  <tr>
-    <td>optim</td>
-    <td><a href="../../optim/fused_mul_apply_momentum_extern/README.md">fused_mul_apply_momentum_extern</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>CANN图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新，根据梯度x1、缩放标量x2、动量momentum和学习率lr计算参数更新量，原地更新主权重var、动量缓冲accum及低精度权重副本var_copy，支持标准动量与Nesterov动量。</td>
   </tr>
   <tr>
     <td>hash</td>
