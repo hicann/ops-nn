@@ -499,8 +499,8 @@ uint32_t SparseToDenseCpuKernel::ParallelSetDefaultValue(const CpuKernelContext&
                                                          const Tensor* outputTensor, int64_t outputSize)
 {
     auto typeSize = GetSizeByDataType(static_cast<DataType>(outputTensor->GetDataType()));
-    char* defaultValueAddr = reinterpret_cast<char*>(defaultValueTensor->GetData());
-    char* outputAddr = reinterpret_cast<char*>(outputTensor->GetData());
+    char* defaultValueAddr = PtrToPtr<void, char>(defaultValueTensor->GetData());
+    char* outputAddr = PtrToPtr<void, char>(outputTensor->GetData());
     uint32_t minCoreNum = 1;
     const uint32_t curCoreNum = aicpu::CpuKernelUtils::GetCPUNum(ctx);
     const uint32_t availCoreNum = (curCoreNum > kResvCpuNum) ? (curCoreNum - kResvCpuNum) : 0U;
@@ -542,8 +542,8 @@ uint32_t SparseToDenseCpuKernel::SetDefaultValue(const CpuKernelContext& ctx, co
         KERNEL_LOG_ERROR("Don't support output tensor types");
         return KERNEL_STATUS_PARAM_INVALID;
     }
-    char* defaultValueAddr = reinterpret_cast<char*>(defaultValueTensor->GetData());
-    char* outputAddr = reinterpret_cast<char*>(outputTensor->GetData());
+    char* defaultValueAddr = PtrToPtr<void, char>(defaultValueTensor->GetData());
+    char* outputAddr = PtrToPtr<void, char>(outputTensor->GetData());
     if (outputSize < kParallelDataSize) {
         int64_t remainder = outputSize % kCopyDataSize;
         int64_t piece = outputSize / kCopyDataSize;
@@ -597,10 +597,10 @@ uint32_t SparseToDenseCpuKernel::Compute(CpuKernelContext& ctx)
     size_t outputZeroDimSize = static_cast<size_t>(outputShape->GetDimSize(0));
     for (size_t index = 0; index < outputZeroDimSize; ++index) {
         if (shapeTensor->GetDataType() == DT_INT32) {
-            int32_t* tempDim = reinterpret_cast<int32_t*>(shapeTensor->GetData());
+            int32_t* tempDim = PtrToPtr<void, int32_t>(shapeTensor->GetData());
             denseShape.emplace_back(static_cast<int64_t>(tempDim[index]));
         } else {
-            int64_t* tempDim = reinterpret_cast<int64_t*>(shapeTensor->GetData());
+            int64_t* tempDim = PtrToPtr<void, int64_t>(shapeTensor->GetData());
             denseShape.emplace_back(tempDim[index]);
         }
         if (denseShape[index] < 0) {

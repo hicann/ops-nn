@@ -17,7 +17,7 @@ namespace aicpu {
 class IndexToAddrCpuKernel : public CpuKernel {
 public:
     IndexToAddrCpuKernel() = default;
-    ~IndexToAddrCpuKernel() = default;
+    ~IndexToAddrCpuKernel() override = default;
     uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:

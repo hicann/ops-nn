@@ -27,15 +27,15 @@ const char* const kScatterNdMin = "ScatterNdMin";
 const int64_t kParallelDataNum = 32 * 1024;
 const int32_t kSplitSize = 64 * 1024;
 
-#define DO_SCATTER_ND_MIN_COMPUTE_CASE(DTYPE, TYPE, ITYPE, CTX) \
-    case (DTYPE):                                                \
-    do {                                                         \
-        if ((ITYPE) == DT_INT32) {                               \
-            return DoScatterNdMinCompute<TYPE, int32_t>(CTX);    \
-        } else {                                                 \
-            return DoScatterNdMinCompute<TYPE, int64_t>(CTX);    \
-        }                                                        \
-    } while (0)
+#define DO_SCATTER_ND_MIN_COMPUTE_CASE(DTYPE, TYPE, ITYPE, CTX)   \
+    case (DTYPE):                                                 \
+        do {                                                      \
+            if ((ITYPE) == DT_INT32) {                            \
+                return DoScatterNdMinCompute<TYPE, int32_t>(CTX); \
+            } else {                                              \
+                return DoScatterNdMinCompute<TYPE, int64_t>(CTX); \
+            }                                                     \
+        } while (0)
 } // namespace
 
 namespace aicpu {
@@ -74,8 +74,8 @@ uint32_t ScatterNdMinCpuKernel::Compute(CpuKernelContext& ctx)
 template <typename T>
 uint32_t ScatterNdMinCpuKernel::InitScatterNdMinOutput(const CpuKernelContext& ctx)
 {
-    auto src_ref = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto dst_ref = reinterpret_cast<T*>(ctx.Output(0)->GetData());
+    auto src_ref = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto dst_ref = PtrToPtr<void, T>(ctx.Output(0)->GetData());
     std::atomic<uint32_t> copy_status(KERNEL_STATUS_OK);
     int64_t output_num = ctx.Input(0)->NumElements();
     if (output_num >= kParallelDataNum) {
@@ -88,8 +88,7 @@ uint32_t ScatterNdMinCpuKernel::InitScatterNdMinOutput(const CpuKernelContext& c
         size_t tail_block_size = static_cast<size_t>(output_num % thread_num) * sizeof(T) + block_size;
         auto copy_by_shard = [&](size_t start, size_t end) {
             for (size_t shard_idx = start; shard_idx < end; ++shard_idx) {
-                size_t copy_size =
-                    (shard_idx == static_cast<size_t>(thread_num - 1)) ? tail_block_size : block_size;
+                size_t copy_size = (shard_idx == static_cast<size_t>(thread_num - 1)) ? tail_block_size : block_size;
                 int64_t data_offset = static_cast<int64_t>(shard_idx) * (output_num / thread_num);
                 if (data_offset >= output_num) {
                     copy_status = KERNEL_STATUS_PARAM_INVALID;
@@ -125,7 +124,7 @@ uint32_t ScatterNdMinCpuKernel::CheckScatterNdMinShapeAndData(const CpuKernelCon
 {
     auto x_shape = ctx.Input(0)->GetTensorShape();
     auto y_shape = ctx.Output(0)->GetTensorShape();
-    auto indices_data = reinterpret_cast<TI*>(ctx.Input(1)->GetData());
+    auto indices_data = PtrToPtr<void, TI>(ctx.Input(1)->GetData());
     size_t x_rank = static_cast<size_t>(x_shape->GetDims());
     std::vector<int64_t> x_dims = x_shape->GetDimSizes();
     std::vector<int64_t> y_dims = y_shape->GetDimSizes();
@@ -149,9 +148,9 @@ uint32_t ScatterNdMinCpuKernel::CheckScatterNdMinShapeAndData(const CpuKernelCon
 template <typename T, typename TI>
 uint32_t ScatterNdMinCpuKernel::DoScatterNdMinCompute(CpuKernelContext& ctx)
 {
-    auto ref_data = reinterpret_cast<T*>(ctx.Input(0)->GetData());
-    auto indices_ptr = reinterpret_cast<TI*>(ctx.Input(1)->GetData());
-    auto updates_ptr = reinterpret_cast<T*>(ctx.Input(2)->GetData());
+    auto ref_data = PtrToPtr<void, T>(ctx.Input(0)->GetData());
+    auto indices_ptr = PtrToPtr<void, TI>(ctx.Input(1)->GetData());
+    auto updates_ptr = PtrToPtr<void, T>(ctx.Input(2)->GetData());
     auto ref_shape = ctx.Input(0)->GetTensorShape();
     auto indices_shape = ctx.Input(1)->GetTensorShape();
     auto updates_shape = ctx.Input(2)->GetTensorShape();
@@ -199,7 +198,8 @@ uint32_t ScatterNdMinCpuKernel::DoScatterNdMinCompute(CpuKernelContext& ctx)
             }
         }
     }
-    KERNEL_CHECK_FALSE((InitScatterNdMinOutput<T>(ctx) == KERNEL_STATUS_OK), KERNEL_STATUS_PARAM_INVALID, "InitOutput failed.");
+    KERNEL_CHECK_FALSE((InitScatterNdMinOutput<T>(ctx) == KERNEL_STATUS_OK), KERNEL_STATUS_PARAM_INVALID,
+                       "InitOutput failed.");
     return KERNEL_STATUS_OK;
 }
 
