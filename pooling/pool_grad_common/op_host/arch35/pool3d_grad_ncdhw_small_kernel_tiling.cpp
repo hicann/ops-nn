@@ -149,7 +149,7 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignedAxis(int64_t Pool3DG
     splitData.*axisInner = axisStride;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         splitData.*axisInner = PoolGradTiling::SearchMaxSplit(*this, splitData, axisInner, axisStride,
-                                                              Ops::Base::CeilDiv(axisX / 2, axisStride));
+                                                              Ops::Base::CeilDiv(axisX / DOUBLE, axisStride));
         return true;
     }
     return false;
