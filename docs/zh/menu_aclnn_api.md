@@ -401,7 +401,7 @@
 - [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md)
 - [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md)
 - [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md)
-- [aclnnSoftshrinkBackward](../../activation/soft_shrink_grad/docs/aclnnSoftshrinkBackward.md)
+- [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md)
 - [aclnnSparse4to2QuantMatmulWeightNz](../../matmul/sparse4to2quant_matmul/docs/aclnnSparse4to2QuantMatmulWeightNz.md)
 - [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md)
 - [aclnnSwiGlu](../../activation/swi_glu/docs/aclnnSwiGlu.md)
